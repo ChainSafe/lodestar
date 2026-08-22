@@ -187,7 +187,7 @@ export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
  */
 export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
-export const DOMAIN_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
+export const DOMAIN_BUILDER_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 
 // Participation flag indices
 

@@ -4,7 +4,7 @@ import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
-import {DOMAIN_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DOMAIN_BUILDER_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
@@ -205,33 +205,33 @@ describe("ValidatorStore", () => {
     });
   });
 
-  it("Should sign request auth with fork-independent domain", async () => {
+  it("Should sign builder request auth with fork-independent domain", async () => {
     const data = Buffer.from("https://builder.example.com", "utf8");
     const proposalSlot = 10;
 
-    const signedRequestAuth = await validatorStore.signRequestAuth(pubkeys[0], data, proposalSlot);
+    const signedRequestAuth = await validatorStore.signBuilderRequestAuth(pubkeys[0], data, proposalSlot);
 
     expect(toHexString(signedRequestAuth.message.data)).toBe(toHexString(data));
     expect(signedRequestAuth.message.slot).toBe(proposalSlot);
 
-    const domain = computeDomain(DOMAIN_REQUEST_AUTH, chainConfig.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuth, signedRequestAuth.message, domain);
+    const domain = computeDomain(DOMAIN_BUILDER_REQUEST_AUTH, chainConfig.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, signedRequestAuth.message, domain);
     expect(toHexString(signedRequestAuth.signature)).toBe(toHexString(secretKeys[0].sign(signingRoot).toBytes()));
 
     // Signing root must bind both the auth data and the proposal slot
     const otherData = computeSigningRoot(
-      ssz.gloas.RequestAuth,
+      ssz.gloas.BuilderRequestAuth,
       {data: Buffer.from("other"), slot: proposalSlot},
       domain
     );
-    const otherSlot = computeSigningRoot(ssz.gloas.RequestAuth, {data, slot: proposalSlot + 1}, domain);
+    const otherSlot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, {data, slot: proposalSlot + 1}, domain);
     expect(toHexString(otherData)).not.toBe(toHexString(signingRoot));
     expect(toHexString(otherSlot)).not.toBe(toHexString(signingRoot));
   });
 
-  it("Should reject request auth data with invalid length", async () => {
-    await expect(validatorStore.signRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
-    await expect(validatorStore.signRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
+  it("Should reject builder request auth data with invalid length", async () => {
+    await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
+    await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
   });
 
   it("Should resolve builder entries against key and validator client defaults", () => {

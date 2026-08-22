@@ -361,20 +361,20 @@ export const SignedExecutionPayloadBid = new ContainerType(
 
 // Builder API types (builder-specs)
 
-export const RequestAuth = new ContainerType(
+export const BuilderRequestAuth = new ContainerType(
   {
     data: new ByteListType(MAX_DATA_SIZE),
     slot: Slot,
   },
-  {typeName: "RequestAuth", jsonCase: "eth2"}
+  {typeName: "BuilderRequestAuth", jsonCase: "eth2"}
 );
 
-export const SignedRequestAuth = new ContainerType(
+export const SignedBuilderRequestAuth = new ContainerType(
   {
-    message: RequestAuth,
+    message: BuilderRequestAuth,
     signature: BLSSignature,
   },
-  {typeName: "SignedRequestAuth", jsonCase: "eth2"}
+  {typeName: "SignedBuilderRequestAuth", jsonCase: "eth2"}
 );
 
 export const BuilderPreferences = new ContainerType(
@@ -387,7 +387,7 @@ export const BuilderPreferences = new ContainerType(
 export const BuilderPreferencesRequest = new ContainerType(
   {
     preferences: BuilderPreferences,
-    auth: SignedRequestAuth,
+    auth: SignedBuilderRequestAuth,
   },
   {typeName: "BuilderPreferencesRequest", jsonCase: "eth2"}
 );

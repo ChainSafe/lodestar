@@ -9,11 +9,11 @@ import {
   DOMAIN_BEACON_ATTESTER,
   DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
+  DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
-  DOMAIN_REQUEST_AUTH,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
@@ -152,8 +152,8 @@ export type Signer = SignerLocal | SignerRemote;
 type ValidatorData = ProposerConfig & {
   signer: Signer;
   builderData?: BuilderData;
-  /** Pre-signed request auths keyed by proposal slot and auth data, pruned by proposal slot */
-  requestAuths?: Map<string, gloas.SignedRequestAuth>;
+  /** Pre-signed builder request auths keyed by proposal slot and auth data, pruned by proposal slot */
+  builderRequestAuths?: Map<string, gloas.SignedBuilderRequestAuth>;
 };
 
 export const defaultOptions = {
@@ -1041,23 +1041,25 @@ export class ValidatorStore {
     };
   }
 
-  async signRequestAuth(
+  async signBuilderRequestAuth(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
     data: Uint8Array,
     proposalSlot: Slot
-  ): Promise<gloas.SignedRequestAuth> {
+  ): Promise<gloas.SignedBuilderRequestAuth> {
     if (data.length === 0 || data.length > MAX_DATA_SIZE) {
-      throw Error(`Invalid request auth data length=${data.length}, must be within 1 and ${MAX_DATA_SIZE} bytes`);
+      throw Error(
+        `Invalid builder request auth data length=${data.length}, must be within 1 and ${MAX_DATA_SIZE} bytes`
+      );
     }
 
-    const message: gloas.RequestAuth = {data, slot: proposalSlot};
+    const message: gloas.BuilderRequestAuth = {data, slot: proposalSlot};
 
     const signingSlot = 0;
-    const domain = computeDomain(DOMAIN_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuth, message, domain);
+    const domain = computeDomain(DOMAIN_BUILDER_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, message, domain);
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.REQUEST_AUTH,
+      type: SignableMessageType.BUILDER_REQUEST_AUTH,
       data: message,
     };
 
@@ -1068,36 +1070,37 @@ export class ValidatorStore {
   }
 
   /**
-   * Return a pre-signed request auth for the auth data and proposal slot, or sign and cache a new
+   * Return a pre-signed builder request auth for the auth data and proposal slot, or sign and cache a new
    * one. Signing happens off the block proposal hot path when preferences are submitted ahead of
    * time, cached auths are then used just-in-time when requesting bids at proposal time.
    */
-  async getRequestAuth(
+  async getBuilderRequestAuth(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
     data: Uint8Array,
     proposalSlot: Slot,
     currentSlot: Slot
-  ): Promise<gloas.SignedRequestAuth> {
+  ): Promise<gloas.SignedBuilderRequestAuth> {
     const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
     const authKey = `${proposalSlot}-${toHex(data)}`;
     const validatorData = this.validators.get(pubkeyHex);
-    const cached = validatorData?.requestAuths?.get(authKey);
+    const cached = validatorData?.builderRequestAuths?.get(authKey);
     if (cached !== undefined) {
       return cached;
     }
 
-    const signedRequestAuth = await this.signRequestAuth(pubkeyMaybeHex, data, proposalSlot);
+    const signedRequestAuth = await this.signBuilderRequestAuth(pubkeyMaybeHex, data, proposalSlot);
 
     if (validatorData !== undefined) {
-      const requestAuths = validatorData.requestAuths ?? new Map<string, gloas.SignedRequestAuth>();
+      const builderRequestAuths =
+        validatorData.builderRequestAuths ?? new Map<string, gloas.SignedBuilderRequestAuth>();
       // Prune auths for proposal slots that are already in the past
-      for (const key of requestAuths.keys()) {
+      for (const key of builderRequestAuths.keys()) {
         if (Number(key.slice(0, key.indexOf("-"))) < currentSlot) {
-          requestAuths.delete(key);
+          builderRequestAuths.delete(key);
         }
       }
-      requestAuths.set(authKey, signedRequestAuth);
-      validatorData.requestAuths = requestAuths;
+      builderRequestAuths.set(authKey, signedRequestAuth);
+      validatorData.builderRequestAuths = builderRequestAuths;
     }
 
     return signedRequestAuth;

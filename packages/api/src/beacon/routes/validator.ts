@@ -290,7 +290,7 @@ class BuilderUrlType extends ByteListType {
 export const BuilderEntryType = new ContainerType(
   {
     url: new BuilderUrlType(MAX_BUILDER_URL_SIZE),
-    auth: ssz.gloas.SignedRequestAuth,
+    auth: ssz.gloas.SignedBuilderRequestAuth,
     builderPubkeys: ArrayOf(ssz.BLSPubkey, MAX_BUILDER_PUBKEYS),
     maxExecutionPayment: ssz.Gwei,
     minBid: ssz.Gwei,
@@ -312,7 +312,7 @@ export const BuilderPreferencesEntryType = new ContainerType(
   {
     proposerPubkey: ssz.BLSPubkey,
     url: new BuilderUrlType(MAX_BUILDER_URL_SIZE),
-    auth: ssz.gloas.SignedRequestAuth,
+    auth: ssz.gloas.SignedBuilderRequestAuth,
     maxExecutionPayment: ssz.Gwei,
   },
   {typeName: "BuilderPreferencesEntry", jsonCase: "eth2"}

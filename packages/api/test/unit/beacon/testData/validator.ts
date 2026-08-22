@@ -94,7 +94,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         builders: [
           {
             url: new TextEncoder().encode("https://builder.example.com"),
-            auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
             builderPubkeys: [],
             maxExecutionPayment: 0n,
             minBid: 0n,
@@ -182,7 +182,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         {
           proposerPubkey: new Uint8Array(48).fill(1),
           url: new TextEncoder().encode("https://builder.example.com"),
-          auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+          auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
           maxExecutionPayment: 0n,
         },
       ],

@@ -43,7 +43,7 @@ describe("api/validator - submitBuilderPreferences", () => {
 });
 
 function getEntry(url: string) {
-  const auth = ssz.gloas.SignedRequestAuth.defaultValue();
+  const auth = ssz.gloas.SignedBuilderRequestAuth.defaultValue();
   auth.message.slot = 1;
   return {
     proposerPubkey: new Uint8Array(48),

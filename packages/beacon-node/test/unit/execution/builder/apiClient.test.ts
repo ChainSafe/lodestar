@@ -41,7 +41,7 @@ describe("execution/builder/apiClient", () => {
 });
 
 function getBuilderEntry(url: string, slot: number): routes.validator.BuilderEntry {
-  const auth = ssz.gloas.SignedRequestAuth.defaultValue();
+  const auth = ssz.gloas.SignedBuilderRequestAuth.defaultValue();
   auth.message.data = new Uint8Array([1]);
   auth.message.slot = slot;
   return {

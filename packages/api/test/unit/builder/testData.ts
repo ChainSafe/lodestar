@@ -39,7 +39,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
       parentHash: root,
       parentRoot: root,
       proposerPubkey: fromHexString(pubkeyRand),
-      requestAuth: ssz.gloas.SignedRequestAuth.defaultValue(),
+      requestAuth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       dateMilliseconds: 1710338135000,
       timeoutMs: 1000,
     },

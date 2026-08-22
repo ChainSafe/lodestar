@@ -95,7 +95,7 @@ export class BuilderPreferencesService {
           // succeeded for all builders, else the duty is retried on the next tick
           const dutyEntries: routes.validator.BuilderPreferencesEntry[] = [];
           for (const entry of builderEntries) {
-            const auth = await this.validatorStore.getRequestAuth(duty.pubkey, entry.authData, duty.slot, slot);
+            const auth = await this.validatorStore.getBuilderRequestAuth(duty.pubkey, entry.authData, duty.slot, slot);
             dutyEntries.push({
               proposerPubkey: duty.pubkey,
               url: new Uint8Array(Buffer.from(entry.url, "utf8")),

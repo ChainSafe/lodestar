@@ -206,7 +206,7 @@ describe("api/validator - produceBlockV4", () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
       url: new TextEncoder().encode(builderUrl),
-      auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       builderPubkeys: [],
       maxExecutionPayment: 0n,
       minBid: 0n,
@@ -244,7 +244,7 @@ describe("api/validator - produceBlockV4", () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
       url: new TextEncoder().encode(builderUrl),
-      auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       builderPubkeys: [],
       maxExecutionPayment: 0n,
       minBid: 0n,
@@ -279,7 +279,7 @@ describe("api/validator - produceBlockV4", () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
       url: new TextEncoder().encode(builderUrl),
-      auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       builderPubkeys: [],
       maxExecutionPayment: 0n,
       minBid: 0n,
@@ -314,7 +314,7 @@ describe("api/validator - produceBlockV4", () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
       url: new TextEncoder().encode(builderUrl),
-      auth: ssz.gloas.SignedRequestAuth.defaultValue(),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       builderPubkeys: [],
       maxExecutionPayment: 0n,
       minBid: 0n,

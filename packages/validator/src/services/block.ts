@@ -216,7 +216,7 @@ export class BlockProposingService {
       await Promise.all(
         builderEntries.map(async (entry) => {
           try {
-            const auth = await this.validatorStore.getRequestAuth(pubkey, entry.authData, slot, slot);
+            const auth = await this.validatorStore.getBuilderRequestAuth(pubkey, entry.authData, slot, slot);
             return {
               url: new Uint8Array(Buffer.from(entry.url, "utf8")),
               auth,

@@ -96,7 +96,7 @@ export type Endpoints = {
       parentRoot: Root;
       proposerPubkey: BLSPubkey;
       /** Authenticates the requesting proposer to the builder */
-      requestAuth: gloas.SignedRequestAuth;
+      requestAuth: gloas.SignedBuilderRequestAuth;
       /** Unix timestamp in milliseconds at which the request was sent */
       dateMilliseconds: number;
       /** The proposer's timeout for the request in milliseconds, measured from `dateMilliseconds` */
@@ -278,7 +278,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             parent_root: toRootHex(parentRoot),
             proposer_pubkey: toPubkeyHex(proposerPubkey),
           },
-          body: ssz.gloas.SignedRequestAuth.toJson(requestAuth),
+          body: ssz.gloas.SignedBuilderRequestAuth.toJson(requestAuth),
           headers: {
             [MetaHeader.Version]: config.getForkName(slot),
             [MetaHeader.DateMilliseconds]: dateMilliseconds.toString(),
@@ -292,7 +292,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             parentHash: fromHex(params.parent_hash),
             parentRoot: fromHex(params.parent_root),
             proposerPubkey: fromHex(params.proposer_pubkey),
-            requestAuth: ssz.gloas.SignedRequestAuth.fromJson(body),
+            requestAuth: ssz.gloas.SignedBuilderRequestAuth.fromJson(body),
             dateMilliseconds: parseRequiredUintHeader(
               fromHeaders(headers, MetaHeader.DateMilliseconds),
               MetaHeader.DateMilliseconds
@@ -307,7 +307,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             parent_root: toRootHex(parentRoot),
             proposer_pubkey: toPubkeyHex(proposerPubkey),
           },
-          body: ssz.gloas.SignedRequestAuth.serialize(requestAuth),
+          body: ssz.gloas.SignedBuilderRequestAuth.serialize(requestAuth),
           headers: {
             [MetaHeader.Version]: config.getForkName(slot),
             [MetaHeader.DateMilliseconds]: dateMilliseconds.toString(),
@@ -321,7 +321,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             parentHash: fromHex(params.parent_hash),
             parentRoot: fromHex(params.parent_root),
             proposerPubkey: fromHex(params.proposer_pubkey),
-            requestAuth: ssz.gloas.SignedRequestAuth.deserialize(body),
+            requestAuth: ssz.gloas.SignedBuilderRequestAuth.deserialize(body),
             dateMilliseconds: parseRequiredUintHeader(
               fromHeaders(headers, MetaHeader.DateMilliseconds),
               MetaHeader.DateMilliseconds
