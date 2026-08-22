@@ -423,7 +423,7 @@ export function getBeaconBlockApi({
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
         const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
-        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar()
+        // sent peers could be 0, data_column_sidecar opts out of the zero peers publish error, see gossipTopicAllowPublishToZeroPeers
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
         // A duplicate publish (alreadyPublished=true) means the column is already propagating on the network —
         // expected in self-build flows where peers gossip columns back to us before we publish the envelope.

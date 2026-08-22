@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
@@ -218,7 +217,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   }
 
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(builder.pubkey),
+    builder.pubkey,
     getExecutionPayloadBidSigningRoot(chain.config, bid),
     signedExecutionPayloadBid.signature
   );
@@ -487,7 +486,7 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(builder.pubkey),
+    builder.pubkey,
     getExecutionPayloadBidSigningRoot(chain.config, bid),
     signedExecutionPayloadBid.signature
   );

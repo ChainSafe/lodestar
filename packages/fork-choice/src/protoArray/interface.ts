@@ -160,13 +160,13 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  /** Total weight, ie. attestationScore plus the proposer boost credited to this node */
-  weight: number;
+  /** Total weight in Gwei, ie. attestationScore plus the proposer boost credited to this node */
+  weight: bigint;
   /**
-   * Weight from attester votes only, excluding proposer boost.
+   * Weight in Gwei from attester votes only, excluding proposer boost.
    * Spec: get_attestation_score
    */
-  attestationScore: number;
+  attestationScore: bigint;
   bestChild?: number;
   bestDescendant?: number;
 };

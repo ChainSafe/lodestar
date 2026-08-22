@@ -13,7 +13,7 @@ import {IForkChoice} from "./interface.js";
  * payload may not yet be confirmed canonical, so we report the parent EL block which has
  * been (the bid commits to extending it).
  *
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/bellatrix/fast-confirmation.md#new-get_safe_execution_block_hash
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/bellatrix/fast-confirmation.md#new-get_safe_execution_block_hash
  */
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.debug>): RootHex {
   const confirmedRoot = forkChoice.getConfirmedRoot();
@@ -36,7 +36,7 @@ export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick
  * Get execution payload hash to report as `finalizedBlockHash` in `engine_forkchoiceUpdated`.
  * Mirrors `getSafeExecutionBlockHash`: post-Gloas returns the bid `parent_block_hash`.
  *
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/fork-choice.md#notify_forkchoice_updated
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#notify_forkchoice_updated
  */
 export function getFinalizedExecutionBlockHash(forkChoice: IForkChoice): RootHex {
   return getExecutionBlockHash(forkChoice.getFinalizedBlock());
