@@ -186,6 +186,10 @@ export type EventData = {
     slot: Slot;
     block: RootHex;
     executionOptimistic: boolean;
+    /** Builder index of the bid the block commits to, only set post-gloas */
+    builderIndex?: BuilderIndex;
+    /** Block hash of the bid the block commits to, only set post-gloas */
+    blockHash?: RootHex;
   };
   [EventType.blockGossip]: {
     slot: Slot;
@@ -216,7 +220,14 @@ export type EventData = {
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
   [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: LightClientOptimisticUpdate};
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
-  [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
+  [EventType.payloadAttributes]: {
+    version: ForkName;
+    data: SSEPayloadAttributes;
+    /** Safe execution block hash to use in forkchoiceUpdated, only set post-gloas */
+    safeBlockHash?: RootHex;
+    /** Finalized execution block hash to use in forkchoiceUpdated, only set post-gloas */
+    finalizedBlockHash?: RootHex;
+  };
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
   [EventType.executionPayload]: {
@@ -298,6 +309,15 @@ export type TypeJson<T> = {
   fromJson: (data: unknown) => T; // client
 };
 
+const blockEventType = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {jsonCase: "eth2"}
+);
+
 export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
     return {
@@ -330,14 +350,24 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.headV2]: WithVersion(() => headV2),
 
-    [EventType.block]: new ContainerType(
-      {
-        slot: ssz.Slot,
-        block: stringType,
-        executionOptimistic: ssz.Boolean,
+    [EventType.block]: {
+      toJson: ({slot, block, executionOptimistic, builderIndex, blockHash}) => ({
+        ...blockEventType.toJson({slot, block, executionOptimistic}),
+        ...(builderIndex !== undefined ? {builder_index: ssz.BuilderIndex.toJson(builderIndex)} : {}),
+        ...(blockHash !== undefined ? {block_hash: blockHash} : {}),
+      }),
+      fromJson: (val) => {
+        const {slot, block, executionOptimistic} = blockEventType.fromJson(val);
+        const {builder_index, block_hash} = val as {builder_index?: string; block_hash?: string};
+        return {
+          slot,
+          block,
+          executionOptimistic,
+          ...(builder_index !== undefined ? {builderIndex: ssz.BuilderIndex.fromJson(builder_index)} : {}),
+          ...(block_hash !== undefined ? {blockHash: block_hash} : {}),
+        };
       },
-      {jsonCase: "eth2"}
-    ),
+    },
     [EventType.blockGossip]: new ContainerType(
       {
         slot: ssz.Slot,
@@ -396,7 +426,28 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
+    [EventType.payloadAttributes]: {
+      toJson: ({data, version, safeBlockHash, finalizedBlockHash}) => ({
+        data: getPostBellatrixForkTypes(version).SSEPayloadAttributes.toJson(data),
+        version,
+        ...(safeBlockHash !== undefined ? {safe_block_hash: safeBlockHash} : {}),
+        ...(finalizedBlockHash !== undefined ? {finalized_block_hash: finalizedBlockHash} : {}),
+      }),
+      fromJson: (val) => {
+        const {version} = VersionType.fromJson(val);
+        const {data, safe_block_hash, finalized_block_hash} = val as {
+          data: unknown;
+          safe_block_hash?: string;
+          finalized_block_hash?: string;
+        };
+        return {
+          data: getPostBellatrixForkTypes(version).SSEPayloadAttributes.fromJson(data),
+          version,
+          ...(safe_block_hash !== undefined ? {safeBlockHash: safe_block_hash} : {}),
+          ...(finalized_block_hash !== undefined ? {finalizedBlockHash: finalized_block_hash} : {}),
+        };
+      },
+    },
     [EventType.blobSidecar]: blobSidecarSSE,
     [EventType.dataColumnSidecar]: {
       toJson: (data) => {
