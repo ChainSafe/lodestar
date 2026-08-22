@@ -262,7 +262,16 @@ export class PrepareNextSlotScheduler {
             parentBlockHash,
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {
+            data,
+            version: fork,
+            ...(isForkPostGloas(fork)
+              ? {
+                  safeBlockHash: getSafeExecutionBlockHash(this.chain.forkChoice, this.logger),
+                  finalizedBlockHash: getFinalizedExecutionBlockHash(this.chain.forkChoice),
+                }
+              : {}),
+          });
         }
       } else {
         // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state

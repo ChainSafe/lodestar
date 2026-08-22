@@ -34,6 +34,11 @@
       "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
+    "./execution": {
+      "typescript": "./src/execution/index.ts",
+      "types": "./lib/execution/index.d.ts",
+      "import": "./lib/execution/index.js"
+    },
     "./db": {
       "typescript": "./src/db/index.ts",
       "types": "./lib/db/index.d.ts",

@@ -10,6 +10,7 @@ import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {PayloadAttributesVariant, emitPayloadAttributesForHeadAsync} from "../payloadAttributes.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
@@ -257,6 +258,14 @@ export async function importExecutionPayload(
         this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
       }
     });
+  }
+
+  // Head payload is now known to ELs, let builders start building on the full variant
+  if (blockRootHex === head.blockRoot) {
+    const fullHead = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
+    if (fullHead !== null) {
+      emitPayloadAttributesForHeadAsync.call(this, fullHead, PayloadAttributesVariant.full, slot);
+    }
   }
 
   // 8. Record metrics for payload envelope and column sources

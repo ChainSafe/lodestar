@@ -6,6 +6,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  PayloadStatus,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -34,6 +35,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {PayloadAttributesVariant, emitPayloadAttributesForHeadAsync} from "../payloadAttributes.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
@@ -321,6 +323,17 @@ export async function importBlock(
 
     this.onNewHead(newHead);
 
+    // Let builders start building on the new head right away. The empty variant is always
+    // buildable, the full variant only once the head payload is imported (see importExecutionPayload).
+    if (fork >= ForkSeq.gloas && newHead.blockRoot === blockRootHex) {
+      callInNextEventLoop(() => {
+        emitPayloadAttributesForHeadAsync.call(this, newHead, PayloadAttributesVariant.empty, blockSlot);
+        if (newHead.payloadStatus === PayloadStatus.FULL) {
+          emitPayloadAttributesForHeadAsync.call(this, newHead, PayloadAttributesVariant.full, blockSlot);
+        }
+      });
+    }
+
     this.metrics?.forkChoice.changedHead.inc();
 
     const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
@@ -529,10 +542,16 @@ export async function importBlock(
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
       if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        const committedBid = isGloasBeaconBlock(block.message)
+          ? block.message.body.signedExecutionPayloadBid.message
+          : null;
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...(committedBid !== null
+            ? {builderIndex: committedBid.builderIndex, blockHash: toRootHex(committedBid.blockHash)}
+            : {}),
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
