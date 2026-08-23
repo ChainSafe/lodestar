@@ -6,12 +6,17 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockInputSource,
+} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
+import {config as forkConfig, generateBlockWithColumnSidecars} from "../../../../../utils/blocksAndData.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
@@ -272,5 +277,46 @@ describe("api - beacon - publishBlockV2", () => {
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
+  });
+
+  it("tracks data column publication results", async () => {
+    const {block, blobs, columnSidecars, rootHex} = generateBlockWithColumnSidecars({
+      forkName: ForkName.fulu,
+      returnBlobs: true,
+    });
+    if (blobs === undefined) {
+      throw Error("Missing generated blobs");
+    }
+    const kzgProofs = blobs.flatMap((_, rowIndex) =>
+      columnSidecars.map((columnSidecar) => columnSidecar.kzgProofs[rowIndex])
+    );
+    const blockInput = BlockInputColumns.createFromBlock({
+      forkName: ForkName.fulu,
+      block,
+      blockRootHex: rootHex,
+      source: BlockInputSource.api,
+      seenTimestampSec: 0,
+      daOutOfRange: false,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+
+    modules = getApiTestModules({config: forkConfig});
+    Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+    Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+    modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.network.publishBeaconBlock = vi.fn();
+    modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
+
+    const api = getBeaconBlockApi(modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock: block, blobs, kzgProofs},
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(modules.network.publishDataColumnSidecar).toHaveBeenCalledTimes(columnSidecars.length);
   });
 });

@@ -361,6 +361,19 @@ export function getBeaconBlockApi({
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);
+
+    // Forward the signed block to the winning builder echoed by the validator client so it can
+    // release the payload without waiting for block gossip. Failures are non-fatal, the builder
+    // also sees the block on gossip.
+    if (builderUrl !== undefined && isForkPostGloas(fork)) {
+      const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
+      if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+        chain.builderApiClient.submitSignedBeaconBlock(builderUrl, {data: gloasBlock}).catch((e) => {
+          chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
+        });
+      }
+    }
+
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behavior.
@@ -372,18 +385,6 @@ export function getBeaconBlockApi({
       //        import latency and hopefully bandwidth
       //
       () => network.publishBeaconBlock(signedBlock),
-      // Forward the signed block to the winning builder echoed by the validator client so it can
-      // release the payload without waiting for block gossip. Failures are non-fatal, the builder
-      // also sees the block on gossip.
-      async () => {
-        if (builderUrl === undefined || !isForkPostGloas(fork)) return;
-        const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
-        if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD) return;
-        // Not awaited, publishing the block must not wait on the builder
-        chain.builderApiClient.submitSignedBeaconBlock(builderUrl, {data: gloasBlock}).catch((e) => {
-          chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
-        });
-      },
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
