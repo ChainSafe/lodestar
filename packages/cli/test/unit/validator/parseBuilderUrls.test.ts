@@ -24,6 +24,7 @@ describe("validator / parseBuilderUrls", () => {
 
   it("rejects invalid urls and auth data", () => {
     expect(() => parseBuilderUrls(["builder.example.com"])).toThrow(/Invalid builder url/);
+    expect(() => parseBuilderUrls(["https://builder.example.com/é"])).toThrow(/Invalid builder url/);
     expect(() => parseBuilderUrls(["https://builder.example.com#"])).toThrow(/auth data/);
     expect(() => parseBuilderUrls(["https://builder.example.com#0x"])).toThrow(/auth data/);
     expect(() => parseBuilderUrls(["https://builder.example.com#secret"])).toThrow(/auth data/);

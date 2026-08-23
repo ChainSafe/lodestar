@@ -54,6 +54,29 @@ describe("execution/builder/apiClient", () => {
     expect(logger.warn).toHaveBeenCalledWith("Ignoring builder entry with invalid url", {slot, url: invalidUrl});
   });
 
+  it("ignores builder urls that cannot be safely returned in the response header", async () => {
+    const slot = 1;
+    const invalidUtf8Entry = getBuilderEntry("https://builder.example.com", slot);
+    invalidUtf8Entry.url = new Uint8Array([0xff]);
+    const nonAsciiEntry = getBuilderEntry("https://builder.example.com/é", slot);
+    const validEntry = getBuilderEntry("https://builder.example.com", slot);
+    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    getExecutionPayloadBid.mockResolvedValue({value: () => signedBid});
+
+    const client = new BuilderApiClient({}, config, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [invalidUtf8Entry, nonAsciiEntry, validEntry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48),
+      1_000
+    );
+
+    expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
+    expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
+
   it("ignores signed block submissions to unauthenticated builder urls", async () => {
     const url = "https://builder.example.com";
     const signedBlock = {data: ssz.gloas.SignedBeaconBlock.defaultValue()};

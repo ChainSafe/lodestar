@@ -7,6 +7,7 @@ import {
   MAX_BUILDER_URL_SIZE,
 } from "@lodestar/params";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
+import {isValidAsciiHttpUrl} from "@lodestar/utils";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -185,6 +186,9 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
       }
       if (new TextEncoder().encode(url).length > MAX_BUILDER_URL_SIZE) {
         throw Error(`builders[${i}].url must not exceed ${MAX_BUILDER_URL_SIZE} bytes`);
+      }
+      if (!isValidAsciiHttpUrl(url)) {
+        throw Error(`builders[${i}].url must be a valid HTTP or HTTPS URL using only ASCII characters`);
       }
       if (auth_data !== undefined && (typeof auth_data !== "string" || !BUILDER_AUTH_DATA_PATTERN.test(auth_data))) {
         throw Error(

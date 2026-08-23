@@ -3,7 +3,7 @@ import path from "node:path";
 import {routes} from "@lodestar/api";
 import {BuilderEntryConfig, builderConfigDataFromJson} from "@lodestar/api/keymanager";
 import {MAX_BUILDER_AUTH_DATA_SIZE, MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, isValidAsciiHttpUrl, toHex} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 import {readFile} from "./file.js";
@@ -223,9 +223,7 @@ export function parseBuilderEntries(builders?: unknown): BuilderEntryConfig[] | 
   const {builders: entries} = builderConfigDataFromJson({builders});
   const seenEntries = new Set<string>();
   for (const entry of entries ?? []) {
-    try {
-      new URL(entry.url);
-    } catch {
+    if (!isValidAsciiHttpUrl(entry.url)) {
       throw Error(`Invalid builder url: ${entry.url}`);
     }
     const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
@@ -252,9 +250,7 @@ export function parseBuilderUrls(urls?: string[]): BuilderEntryConfig[] | undefi
     const fragmentIndex = value.indexOf("#");
     const url = fragmentIndex === -1 ? value : value.slice(0, fragmentIndex);
     const authData = fragmentIndex === -1 ? undefined : value.slice(fragmentIndex + 1);
-    try {
-      new URL(url);
-    } catch {
+    if (!isValidAsciiHttpUrl(url)) {
       throw Error(`Invalid builder url: ${url}`);
     }
     if (Buffer.byteLength(url, "utf8") > MAX_BUILDER_URL_SIZE) {

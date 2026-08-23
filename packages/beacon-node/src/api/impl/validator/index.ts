@@ -84,7 +84,7 @@ import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {BUILDER_BID_REQUEST_TIMEOUT_MS, BuilderApiBid} from "../../../execution/builder/apiClient.js";
+import {BUILDER_BID_REQUEST_TIMEOUT_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -2022,10 +2022,9 @@ export function getValidatorApi(
 
       await Promise.all(
         builderPreferences.map(async (entry, i) => {
-          const url = Buffer.from(entry.url).toString("utf8");
-          let builder = url;
+          let builder = Buffer.from(entry.url).toString("utf8");
           try {
-            new URL(url);
+            const url = decodeBuilderUrl(entry.url);
             builder = toPrintableUrl(url);
             const proposerIndex = chain.getHeadState().getBeaconProposer(entry.auth.message.slot);
             const expectedProposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();

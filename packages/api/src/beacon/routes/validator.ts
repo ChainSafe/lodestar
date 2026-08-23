@@ -283,7 +283,7 @@ class BuilderUrlType extends ByteListType {
     return value;
   }
   toJson(value: Uint8Array): unknown {
-    return new TextDecoder().decode(value);
+    return new TextDecoder("utf8", {fatal: true}).decode(value);
   }
 }
 

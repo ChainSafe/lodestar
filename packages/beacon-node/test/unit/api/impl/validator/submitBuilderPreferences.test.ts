@@ -20,10 +20,10 @@ describe("api/validator - submitBuilderPreferences", () => {
     vi.restoreAllMocks();
   });
 
-  it("reports an invalid url by index while submitting the other entries", async () => {
-    const invalidUrl = "not a url";
+  it("reports an invalid UTF-8 url by index while submitting the other entries", async () => {
     const validEntry = getEntry("https://builder.example.com");
-    const invalidEntry = getEntry(invalidUrl);
+    const invalidEntry = getEntry("https://invalid.example.com");
+    invalidEntry.url = new Uint8Array([0xff]);
 
     let error: unknown;
     try {
@@ -33,7 +33,7 @@ describe("api/validator - submitBuilderPreferences", () => {
     }
 
     expect(error).toBeInstanceOf(IndexedError);
-    expect((error as IndexedError).failures).toEqual([{index: 0, message: "Invalid URL"}]);
+    expect((error as IndexedError).failures).toEqual([{index: 0, message: "Builder url must be valid UTF-8"}]);
     expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledOnce();
     expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledWith(
       "https://builder.example.com",
@@ -42,7 +42,7 @@ describe("api/validator - submitBuilderPreferences", () => {
     );
     expect(modules.logger.verbose).toHaveBeenCalledWith(
       "Error on submitBuilderPreferences [0]",
-      {slot: 1, builder: invalidUrl},
+      {slot: 1, builder: "�"},
       expect.any(Error)
     );
   });

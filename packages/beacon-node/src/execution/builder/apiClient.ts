@@ -10,7 +10,7 @@ import {
   createSingleSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas, ssz} from "@lodestar/types";
-import {toHex, toPrintableUrl} from "@lodestar/utils";
+import {isValidAsciiHttpUrl, toHex, toPrintableUrl} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../chain/bls/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 
@@ -33,6 +33,20 @@ const EVENT_LOOP_LAG_BUFFER = 250;
 export const BUILDER_BID_REQUEST_TIMEOUT_MS = 1000 + EVENT_LOOP_LAG_BUFFER;
 
 type BuilderUrl = string;
+
+/** Decode the SSZ URL bytes without allowing replacement characters or unsafe header values. */
+export function decodeBuilderUrl(value: Uint8Array): BuilderUrl {
+  let url: string;
+  try {
+    url = new TextDecoder("utf8", {fatal: true}).decode(value);
+  } catch {
+    throw Error("Builder url must be valid UTF-8");
+  }
+  if (!isValidAsciiHttpUrl(url)) {
+    throw Error("Invalid builder url");
+  }
+  return url;
+}
 
 export type BuilderApiBid = {
   url: BuilderUrl;
@@ -74,19 +88,20 @@ export class BuilderApiClient {
     const requests: {url: BuilderUrl; entry: routes.validator.BuilderEntry}[] = [];
 
     for (const entry of entries) {
-      const url = Buffer.from(entry.url).toString("utf8");
+      const urlForLog = Buffer.from(entry.url).toString("utf8");
+      let url: BuilderUrl;
+      try {
+        url = decodeBuilderUrl(entry.url);
+      } catch {
+        this.logger?.warn("Ignoring builder entry with invalid url", {slot, url: urlForLog});
+        continue;
+      }
+
       const requestKey = `${url}-${toHex(entry.auth.message.data)}`;
       if (seenRequests.has(requestKey)) {
         continue;
       }
       seenRequests.add(requestKey);
-
-      try {
-        new URL(url);
-      } catch {
-        this.logger?.warn("Ignoring builder entry with invalid url", {slot, url});
-        continue;
-      }
 
       // The builder rejects a mismatch, an entry naming a different slot is not used for a bid request
       if (entry.auth.message.slot !== slot) {

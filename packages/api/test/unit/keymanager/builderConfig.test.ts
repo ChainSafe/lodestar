@@ -7,4 +7,16 @@ describe("builderConfigDataFromJson", () => {
       expect(() => builderConfigDataFromJson({min_bid: value})).toThrow();
     }
   });
+
+  it("rejects invalid builder urls", () => {
+    for (const url of [
+      "ftp://builder.example.com",
+      "https://builder.example.com/é",
+      "https://builder.example.com/\npath",
+    ]) {
+      expect(() => builderConfigDataFromJson({builders: [{url}]}), url).toThrow(
+        "builders[0].url must be a valid HTTP or HTTPS URL using only ASCII characters"
+      );
+    }
+  });
 });

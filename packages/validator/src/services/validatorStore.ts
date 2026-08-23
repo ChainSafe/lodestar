@@ -49,7 +49,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {fromHex, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
@@ -531,9 +531,7 @@ export class ValidatorStore {
     // compared as the value derived from the entry url
     const seenEntries = new Set<string>();
     for (const entry of config.builders ?? []) {
-      try {
-        new URL(entry.url);
-      } catch {
+      if (!isValidAsciiHttpUrl(entry.url)) {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
       const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
