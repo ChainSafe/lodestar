@@ -6,7 +6,7 @@ import {
   type TopicValidatorResult,
   gossipsub,
 } from "@libp2p/gossipsub";
-import type {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
+import type {MetricsRegister, ToSendGroupCount, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
 import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
 import type {PeerId} from "@libp2p/interface";
@@ -40,7 +40,13 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
-import {GossipTopicCache, getAllowedTopics, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
+import {
+  GossipTopicCache,
+  getAllowedTopics,
+  getCoreTopicsAtFork,
+  gossipTopicFloodPublish,
+  stringifyGossipTopic,
+} from "./topic.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
@@ -91,6 +97,8 @@ type GossipSubInternal = GossipSub & {
   score: {score: (peerIdStr: string) => number};
   direct: Set<string>;
   topics: Map<string, Set<string>>;
+  selectPeersToPublish: (topic: TopicStr) => {tosend: Set<string>; tosendCount: ToSendGroupCount};
+  opts: {floodPublish: boolean; scoreThresholds: {publishThreshold: number}};
   start: () => Promise<void>;
   stop: () => Promise<void>;
   publish: (topic: TopicStr, data: Uint8Array, opts?: PublishOpts) => Promise<PublishResult>;
@@ -186,6 +194,21 @@ export class Eth2Gossipsub {
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
     })(modules.libp2p.services.components) as GossipSubInternal;
+
+    // gossipsub only supports flood publish globally and it is disabled by default, flood publish per topic
+    // for the topics that need it. Remove once @libp2p/gossipsub supports `PublishOpts.floodPublish`.
+    const selectPeersToPublish = gossipsubInstance.selectPeersToPublish.bind(gossipsubInstance);
+    gossipsubInstance.selectPeersToPublish = (topic) => {
+      const gossipTopic = gossipTopicCache.getKnownTopic(topic);
+      if (
+        gossipsubInstance.opts.floodPublish ||
+        gossipTopic === undefined ||
+        !gossipTopicFloodPublish[gossipTopic.type]
+      ) {
+        return selectPeersToPublish(topic);
+      }
+      return selectAllTopicPeersToPublish(gossipsubInstance, topic);
+    };
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
@@ -598,4 +621,35 @@ export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], l
   }
 
   return directPeers;
+}
+
+/**
+ * Flood publish peer selection, same as gossipsub's own when `floodPublish` is enabled: direct peers and
+ * every peer subscribed to the topic that meets the publish threshold.
+ */
+export function selectAllTopicPeersToPublish(
+  gossipsub: {
+    topics: Map<string, Set<string>>;
+    direct: Set<string>;
+    score: {score: (peerIdStr: string) => number};
+    opts: {scoreThresholds: {publishThreshold: number}};
+  },
+  topic: TopicStr
+): {tosend: Set<string>; tosendCount: ToSendGroupCount} {
+  const tosend = new Set<string>();
+  const tosendCount: ToSendGroupCount = {direct: 0, floodsub: 0, mesh: 0, fanout: 0};
+  const peersInTopic = gossipsub.topics.get(topic);
+  if (peersInTopic === undefined) {
+    return {tosend, tosendCount};
+  }
+  for (const id of peersInTopic) {
+    if (gossipsub.direct.has(id)) {
+      tosend.add(id);
+      tosendCount.direct++;
+    } else if (gossipsub.score.score(id) >= gossipsub.opts.scoreThresholds.publishThreshold) {
+      tosend.add(id);
+      tosendCount.floodsub++;
+    }
+  }
+  return {tosend, tosendCount};
 }

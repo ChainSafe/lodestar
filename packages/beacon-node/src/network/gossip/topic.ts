@@ -416,6 +416,35 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
 };
 
 /**
+ * Topics whose own messages are flood published, i.e. sent to every subscribed peer above the publish
+ * threshold instead of mesh peers only. Applies regardless of the global `--network.disableFloodPublish`
+ * flag, which is on by default since flooding every topic is too much bandwidth (#6596).
+ *
+ * Builder bids are tiny and time critical: the proposer's node must see them before the slot starts
+ * and may not be in our mesh or may be on a different head, so reaching every peer matters more than
+ * the small bandwidth cost. Envelopes are not flooded, they are megabytes and gossip them normally.
+ */
+export const gossipTopicFloodPublish: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: false,
+  [GossipType.blob_sidecar]: false,
+  [GossipType.data_column_sidecar]: false,
+  [GossipType.beacon_aggregate_and_proof]: false,
+  [GossipType.beacon_attestation]: false,
+  [GossipType.voluntary_exit]: false,
+  [GossipType.proposer_slashing]: false,
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: false,
+  [GossipType.sync_committee]: false,
+  [GossipType.light_client_finality_update]: false,
+  [GossipType.light_client_optimistic_update]: false,
+  [GossipType.bls_to_execution_change]: false,
+  [GossipType.execution_payload]: false,
+  [GossipType.payload_attestation_message]: false,
+  [GossipType.execution_payload_bid]: true,
+  [GossipType.proposer_preferences]: false,
+};
+
+/**
  * Whether a publish that reached zero subscribed peers is an acceptable outcome for a topic.
  *
  * Publishing to a topic with no subscribed peers throws `PublishError.NoPeersSubscribedToTopic`, which
