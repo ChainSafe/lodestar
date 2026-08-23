@@ -53,6 +53,7 @@ import {
   GWEI_TO_WEI,
   TimeoutError,
   bigIntMin,
+  byteArrayEquals,
   defer,
   formatWeiToEth,
   fromHex,
@@ -2026,6 +2027,14 @@ export function getValidatorApi(
           try {
             new URL(url);
             builder = toPrintableUrl(url);
+            const proposerIndex = chain.getHeadState().getBeaconProposer(entry.auth.message.slot);
+            const expectedProposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+            if (!byteArrayEquals(entry.proposerPubkey, expectedProposerPubkey)) {
+              throw new ApiError(
+                400,
+                `Invalid proposer pubkey for builder preferences slot=${entry.auth.message.slot}`
+              );
+            }
             await chain.builderApiClient.submitBuilderPreferences(url, entry.proposerPubkey, {
               preferences: {maxExecutionPayment: entry.maxExecutionPayment},
               auth: entry.auth,

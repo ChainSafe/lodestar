@@ -2,9 +2,16 @@ import {routes} from "@lodestar/api";
 import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-import {ForkPostGloas} from "@lodestar/params";
-import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas} from "@lodestar/types";
+import {DOMAIN_BUILDER_REQUEST_AUTH, ForkPostGloas} from "@lodestar/params";
+import {
+  ZERO_HASH,
+  computeDomain,
+  computeSigningRoot,
+  createSingleSignatureSetFromComponents,
+} from "@lodestar/state-transition";
+import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas, ssz} from "@lodestar/types";
 import {toHex, toPrintableUrl} from "@lodestar/utils";
+import type {IBlsVerifier} from "../../chain/bls/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 
 export type BuilderApiClientOpts = {
@@ -45,6 +52,7 @@ export class BuilderApiClient {
   constructor(
     private readonly opts: BuilderApiClientOpts,
     private readonly config: ChainForkConfig,
+    private readonly bls: IBlsVerifier,
     private readonly metrics: Metrics | null = null,
     private readonly logger?: Logger
   ) {}
@@ -97,7 +105,8 @@ export class BuilderApiClient {
       requests.map(async ({url, entry}): Promise<BuilderApiBid | null> => {
         this.metrics?.builderApi.bidRequests.inc();
         try {
-          const res = await this.getClientForUrl(url).getExecutionPayloadBid(
+          const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
+          const res = await client.getExecutionPayloadBid(
             {
               slot,
               parentHash,
@@ -134,7 +143,8 @@ export class BuilderApiClient {
     request: gloas.BuilderPreferencesRequest
   ): Promise<void> {
     try {
-      (await this.getClientForUrl(url).submitBuilderPreferences({proposerPubkey, request})).assertOk();
+      const client = await this.getOrCreateClient(url, proposerPubkey, request.auth);
+      (await client.submitBuilderPreferences({proposerPubkey, request})).assertOk();
       this.metrics?.builderApi.preferencesForwarded.inc({status: "success"});
     } catch (e) {
       this.metrics?.builderApi.preferencesForwarded.inc({status: "error"});
@@ -151,8 +161,15 @@ export class BuilderApiClient {
     url: BuilderUrl,
     signedBlock: WithOptionalBytes<SignedBeaconBlock<ForkPostGloas>>
   ): Promise<void> {
+    const client = this.clients.get(url);
+    if (client === undefined) {
+      this.metrics?.builderApi.blockSubmissions.inc({status: "error"});
+      this.logger?.warn("Ignoring signed block submission to unauthenticated builder", {url});
+      return;
+    }
+
     try {
-      (await this.getClientForUrl(url).submitSignedBeaconBlock({signedBlock}, {retries: 2})).assertOk();
+      (await client.submitSignedBeaconBlock({signedBlock}, {retries: 2})).assertOk();
       this.metrics?.builderApi.blockSubmissions.inc({status: "success"});
     } catch (e) {
       this.metrics?.builderApi.blockSubmissions.inc({status: "error"});
@@ -160,9 +177,27 @@ export class BuilderApiClient {
     }
   }
 
-  private getClientForUrl(url: BuilderUrl): BuilderApi {
+  private async getOrCreateClient(
+    url: BuilderUrl,
+    proposerPubkey: BLSPubkey,
+    auth: gloas.SignedBuilderRequestAuth
+  ): Promise<BuilderApi> {
     let client = this.clients.get(url);
     if (client === undefined) {
+      const domain = computeDomain(DOMAIN_BUILDER_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
+      const signingRoot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, auth.message, domain);
+      const signatureSet = createSingleSignatureSetFromComponents(proposerPubkey, signingRoot, auth.signature);
+
+      let isValid = false;
+      try {
+        isValid = await this.bls.verifySignatureSets([signatureSet]);
+      } catch {
+        // Malformed signatures are invalid request authentication.
+      }
+      if (!isValid) {
+        throw Error("Invalid builder request auth");
+      }
+
       client = getClient(
         {
           baseUrl: url,

@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {IndexedError} from "../../../../../src/api/impl/errors.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -11,7 +11,13 @@ describe("api/validator - submitBuilderPreferences", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     api = getValidatorApi(defaultApiOptions, modules);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("reports an invalid url by index while submitting the other entries", async () => {
@@ -39,6 +45,24 @@ describe("api/validator - submitBuilderPreferences", () => {
       {slot: 1, builder: invalidUrl},
       expect.any(Error)
     );
+  });
+
+  it("rejects preferences not signed by the slot proposer", async () => {
+    const entry = getEntry("https://builder.example.com");
+    entry.proposerPubkey[0] = 1;
+
+    let error: unknown;
+    try {
+      await api.submitBuilderPreferences({builderPreferences: [entry]});
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(IndexedError);
+    expect((error as IndexedError).failures).toEqual([
+      {index: 0, message: "Invalid proposer pubkey for builder preferences slot=1"},
+    ]);
+    expect(modules.chain.builderApiClient.submitBuilderPreferences).not.toHaveBeenCalled();
   });
 });
 
