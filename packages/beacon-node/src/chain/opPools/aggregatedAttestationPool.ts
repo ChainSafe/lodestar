@@ -1,4 +1,4 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";

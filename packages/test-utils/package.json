@@ -56,7 +56,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls-keystore": "^3.1.0",
-    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@lodestar/api": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",

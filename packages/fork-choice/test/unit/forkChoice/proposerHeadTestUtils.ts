@@ -132,7 +132,7 @@ export function setup({
   config: ChainForkConfig;
   headVotes?: number;
   parentVotes?: number;
-  proposerBoost?: {root: RootHex; score: number} | null;
+  proposerBoost?: {root: RootHex; score: bigint} | null;
   store?: IForkChoiceStore;
 }): {forkChoice: ForkChoice; headRoot: RootHex; parentRoot: RootHex} {
   const genesisRoot = getBlockRoot(genesisSlot);
