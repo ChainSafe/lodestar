@@ -199,6 +199,8 @@ All of these are implemented alongside the builder. They improve any external bu
 - Add `safe_block_hash` and `finalized_block_hash` to the gloas `payload_attributes` event. `prepareNextSlot` already computes both for its own `forkchoiceUpdated`.
 - Add the committed bid's `builder_index` and `block_hash` to the `block` event so the reveal decision needs no block fetch.
 
+The last three items extend standard events beyond the beacon-APIs spec. The builder treats the extra fields as optional so it keeps working against other beacon nodes, and section 16 lists the spec changes that would make them standard.
+
 ## 12. Phases
 
 1. Done: `payload_attributes` driven builds, fixed-share policy, reveal via stateless publish, bid publishing change from section 11.
@@ -220,6 +222,38 @@ Verified on a two node minimal preset kurtosis devnet (gloas at genesis, 6s slot
 
 - **Two writers to EL fork choice.** The beacon node issues `forkchoiceUpdated` for sync, the builder for builds. Per the Engine API a build is identified by `payloadId` and a later `forkchoiceUpdated` without attributes does not cancel it, but this needs verification per EL on a devnet.
 - **EMPTY-variant builds move the EL head back one payload** until the next `forkchoiceUpdated`. This is inherent to dual-variant building in ePBS and happens with self-build today. Mitigation: issue the FULL build as soon as the envelope arrives and restore the head after `getPayload`.
-- **Safe and finalized hashes in phase 1.** Not in the `payload_attributes` event yet. Zero hashes are acceptable to some ELs, to be verified. Never point finalized at the head hash. Phase 2 adds the fields to the event.
+- **Safe and finalized hashes against other beacon nodes.** Lodestar emits them in the `payload_attributes` event (section 16). When they are absent the builder currently passes zero hashes, which depends on EL behavior. The portable fallback is what buildoor does: resolve the justified and finalized roots from `finality_checkpoints` to the bid `parent_block_hash` of those blocks (an ancestor the EL is guaranteed to have, one payload behind the true finalized payload when it was delivered), cached per head. Never point finalized at the head hash.
 - **Reveal cutoff default.** `PAYLOAD_ATTESTATION_DUE_BPS` is the natural default, a late envelope can still be imported but will not count as timely.
 - **Which checks remain on API bid publishing.** The operator's builder is trusted, so the simplest rule is none. The argument for keeping self-contained REJECT checks is peer score: a builder bug that signs invalid bids would get our beacon node penalized by every peer it floods. The randao check is branch dependent and should be evaluated against the bid's own parent state if kept, never against the head.
+
+## 16. Proposed beacon-APIs changes
+
+The beacon node side of this design relies on information the beacon-APIs spec does not expose today. Lodestar ships it as optional extensions of standard events; the following changes would make them standard. buildoor, which has the same architecture (consumes `payload_attributes`, calls `engine_forkchoiceUpdated` itself), works around the same gaps on the builder side.
+
+### `payload_attributes`: forkchoice state
+
+Add optional `safe_block_hash` and `finalized_block_hash` next to `parent_block_hash` inside `data`, from `gloas` onwards. Lodestar currently emits them at the top level next to `version` and `data` and will move them to match the spec.
+
+> `safe_block_hash`, `finalized_block_hash`: the execution block hashes the node would pass as `safeBlockHash` and `finalizedBlockHash` in `engine_forkchoiceUpdated` when building on `parent_block_hash`.
+
+Rationale: the event exists so an external process can call `engine_forkchoiceUpdated`, but that call requires a full `ForkchoiceStateV1` and the event only provides the head. From `gloas` onwards the justified and finalized execution hashes depend on whether those blocks' payloads were delivered, which is not observable through the beacon API, so consumers either pass zero hashes (EL defined behavior) or approximate. An external builder is also a second `forkchoiceUpdated` writer on the same execution client as the beacon node; passing different safe and finalized hashes than the node makes the execution client's view flip between the two callers.
+
+### `payload_attributes`: emission semantics post-gloas
+
+The spec only says the frequency may depend on node configuration. Proposed text:
+
+> From `gloas` onwards a block at `proposal_slot` may build on either the parent's delivered payload (full) or the parent's own execution parent (empty), and which one the proposer uses is decided at proposal time. Nodes SHOULD emit this event once per distinct `(parent_block_root, parent_block_hash)` as soon as that parent becomes buildable: the empty variant when the parent block is imported, the full variant when the parent's payload is imported. Nodes MAY emit the same variant again, for example at a fixed point in the slot. Consumers MUST deduplicate by `(proposal_slot, parent_block_root, parent_block_hash)`.
+
+This is what Lodestar does (section 11). Without it builders have to synthesize the empty variant themselves, which buildoor does by swapping the parent hash and reusing the parent slot's withdrawals; the full variant cannot be synthesized since its withdrawals need the beacon state.
+
+### `block`: the committed bid
+
+Add optional `builder_index` and `block_hash` from `gloas` onwards, with the same names and encoding as the existing `execution_payload` event (`builder_index` is `18446744073709551615` for self-build).
+
+> `builder_index`, `block_hash`: the builder index and execution block hash of the `ExecutionPayloadBid` the block commits to.
+
+Rationale: a builder has to reveal within `PAYLOAD_DUE_BPS` of seeing the block, and the only way to learn whether a block commits to its bid today is a block fetch per imported block. The `execution_payload` event already exposes this pair for envelopes.
+
+### Proposer preferences query
+
+A route to read pooled proposer preferences, e.g. `GET /eth/v1/beacon/pool/proposer_preferences?slot=`. Builders learn `fee_recipient` and `target_gas_limit` only from the `proposer_preferences` event, so a builder that starts mid-epoch cannot bid on the next slots. buildoor falls back to `suggested_fee_recipient` from the attributes, which Lodestar emits as the zero address for non-local proposers.
