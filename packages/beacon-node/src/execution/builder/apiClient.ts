@@ -169,7 +169,7 @@ export class BuilderApiClient {
     }
 
     try {
-      (await client.submitSignedBeaconBlock({signedBlock}, {retries: 2, redirect: "manual"})).assertOk();
+      (await client.submitSignedBeaconBlock({signedBlock}, {redirect: "manual"})).assertOk();
       this.metrics?.builderApi.blockSubmissions.inc({status: "success"});
     } catch (e) {
       this.metrics?.builderApi.blockSubmissions.inc({status: "error"});

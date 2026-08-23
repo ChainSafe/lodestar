@@ -79,7 +79,7 @@ describe("execution/builder/apiClient", () => {
     await client.submitSignedBeaconBlock(url, signedBlock);
 
     expect(verifySignatureSets).toHaveBeenCalledOnce();
-    expect(submitSignedBeaconBlock).toHaveBeenCalledWith({signedBlock}, {retries: 2, redirect: "manual"});
+    expect(submitSignedBeaconBlock).toHaveBeenCalledWith({signedBlock}, {redirect: "manual"});
   });
 
   it("does not cache a builder client when request auth is invalid", async () => {
