@@ -93,6 +93,7 @@ describe("execution/builder/apiClient", () => {
     const url = "https://builder.example.com";
     const proposerPubkey = new Uint8Array(48);
     const preferences = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    preferences.auth.message.data = new Uint8Array([1]);
     const signedBlock = {data: ssz.gloas.SignedBeaconBlock.defaultValue()};
     submitBuilderPreferences.mockResolvedValue({assertOk: vi.fn()});
     submitSignedBeaconBlock.mockResolvedValue({assertOk: vi.fn()});
@@ -103,6 +104,34 @@ describe("execution/builder/apiClient", () => {
 
     expect(verifySignatureSets).toHaveBeenCalledOnce();
     expect(submitSignedBeaconBlock).toHaveBeenCalledWith({signedBlock}, {redirect: "manual"});
+  });
+
+  it("rejects empty request auth data even when the builder client is cached", async () => {
+    const slot = 1;
+    const url = "https://builder.example.com";
+    const proposerPubkey = new Uint8Array(48);
+    const preferences = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    preferences.auth.message.data = new Uint8Array([1]);
+    preferences.auth.message.slot = slot;
+    submitBuilderPreferences.mockResolvedValue({assertOk: vi.fn()});
+
+    const entry = getBuilderEntry(url, slot);
+    entry.auth.message.data = new Uint8Array();
+
+    const client = new BuilderApiClient({}, config, bls);
+    await client.submitBuilderPreferences(url, proposerPubkey, preferences);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      proposerPubkey,
+      1_000
+    );
+
+    expect(bids).toEqual([]);
+    expect(verifySignatureSets).toHaveBeenCalledOnce();
+    expect(getExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
   it("does not cache a builder client when request auth is invalid", async () => {

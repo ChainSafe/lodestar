@@ -197,6 +197,10 @@ export class BuilderApiClient {
     proposerPubkey: BLSPubkey,
     auth: gloas.SignedBuilderRequestAuth
   ): Promise<BuilderApi> {
+    if (auth.message.data.length === 0) {
+      throw Error("Builder request auth data must not be empty");
+    }
+
     let client = this.clients.get(url);
     if (client === undefined) {
       const domain = computeDomain(DOMAIN_BUILDER_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
