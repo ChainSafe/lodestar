@@ -990,7 +990,7 @@ export function getValidatorApi(
           });
         }
 
-        const boostedValueNumerator = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
+        const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
         let best: BidCandidate | null = null;
         for (const candidate of candidates) {
           const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
@@ -999,7 +999,7 @@ export function getValidatorApi(
           if (
             best === null ||
             (candidateIsMaxBoost && !bestIsMaxBoost) ||
-            (candidateIsMaxBoost === bestIsMaxBoost && boostedValueNumerator(candidate) > boostedValueNumerator(best))
+            (candidateIsMaxBoost === bestIsMaxBoost && boostedValue(candidate) > boostedValue(best))
           ) {
             best = candidate;
           }
