@@ -315,6 +315,41 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(bidBlock);
   });
 
+  it("ranks builder bids without truncating boosted values", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    apiBid.message.value = 1;
+    const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    p2pBid.message.value = 1;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
+      {url: builderUrl, entry, signedBid: apiBid},
+    ]);
+
+    await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 150n, builders: [entry]},
+    });
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
+  });
+
   it("prefers a max boost builder entry before comparing bid values", async () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
