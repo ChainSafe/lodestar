@@ -254,6 +254,6 @@ Add optional `builder_index` and `block_hash` from `gloas` onwards, with the sam
 
 Rationale: a builder has to reveal within `PAYLOAD_DUE_BPS` of seeing the block, and the only way to learn whether a block commits to its bid today is a block fetch per imported block. The `execution_payload` event already exposes this pair for envelopes.
 
-### Proposer preferences query
+### Proposer preferences query (undecided)
 
-A route to read pooled proposer preferences, e.g. `GET /eth/v1/beacon/pool/proposer_preferences?slot=`. Builders learn `fee_recipient` and `target_gas_limit` only from the `proposer_preferences` event, so a builder that starts mid-epoch cannot bid on the next slots. buildoor falls back to `suggested_fee_recipient` from the attributes, which Lodestar emits as the zero address for non-local proposers.
+Not part of the proposal for now, noted as a possible follow-up. A route to read pooled proposer preferences, e.g. `GET /eth/v1/beacon/pool/proposer_preferences?slot=`, would let a builder that starts mid-epoch bid on the next slots right away. Today builders learn `fee_recipient` and `target_gas_limit` only from the `proposer_preferences` event and miss the slots whose preferences were gossiped before they subscribed. buildoor falls back to `suggested_fee_recipient` from the attributes, which Lodestar emits as the zero address for non-local proposers. The SSE-only approach is good enough for now: the gap is limited to the first slots after startup and preferences for later slots arrive through the stream.
