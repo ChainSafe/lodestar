@@ -209,7 +209,7 @@ The last three items extend standard events beyond the beacon-APIs spec. The bui
 
 ## 13. Alternatives considered
 
-- **Beacon node mediated builds** (`prepare` and `get` routes proxying the Engine API). Single writer to the EL and no JWT in the builder, but adds beacon node routes and state, ties the builder to Lodestar, and makes multiple ELs require multiple beacon nodes in the build path. Kept reachable as an alternative `PayloadSource`.
+- **Beacon node mediated builds** (`prepare` and `get` routes proxying the Engine API). Single writer to the EL and no JWT in the builder, but adds beacon node routes and state, ties the builder to Lodestar, and makes multiple ELs require multiple beacon nodes in the build path. Kept reachable as an alternative `PayloadSource`. Documented in full in [DESIGN_BEACON_NODE_MEDIATED.md](./DESIGN_BEACON_NODE_MEDIATED.md).
 - **Builder embedded in the beacon node, client as signer only.** Lowest latency and no API, but puts policy and key handling in the beacon node and abandons the validator-client-shaped separation the package already commits to.
 - **Competitor-aware pricing** (skip or shade against the best bid seen locally). Can only lose slots under one-shot bidding with a partial view. Possible as a policy plugin, not the baseline.
 - **Beacon node caches payloads, stateful reveal** (as self-build does today). Fewer bytes over HTTP but ties the reveal to one beacon node's cache.
