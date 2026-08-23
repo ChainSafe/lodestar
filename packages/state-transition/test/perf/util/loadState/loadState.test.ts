@@ -20,6 +20,12 @@ describe("loadState", () => {
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
+        // Only read the appended keys directly from the pubkey cache. Requesting the full
+        // `seedValidators + numNewValidators` set would materialize a second ~seedValidators-sized
+        // array (the seed set is already cached at `seedValidators`) and spike peak memory.
+        const newPubkeys = Array.from({length: numNewValidators}, (_, i) =>
+          pubkeyCache.getPubkeyBytesOrThrow(seedValidators + i)
+        );
         // cache all HashObjects
         seedState.hashTreeRoot();
         const newState = seedState.clone();
@@ -31,7 +37,10 @@ describe("loadState", () => {
         }
 
         for (let i = 0; i < numNewValidators; i++) {
-          newState.validators.push(seedState.validators.get(0).clone());
+          // New validators must have distinct pubkeys for lodestar-z's process-wide pubkey cache.
+          const validator = seedState.validators.get(0).clone();
+          validator.pubkey = newPubkeys[i];
+          newState.validators.push(validator);
           newState.inactivityScores.push(seedState.inactivityScores.get(0));
           newState.balances.push(seedState.balances.get(0));
         }
