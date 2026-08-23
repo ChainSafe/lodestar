@@ -69,6 +69,7 @@ The implemented design was chosen because the beacon node must provide the paylo
 
 - The engine port cannot be reached from where the builder runs, for example managed execution clients or strict network separation.
 - The two-writer `forkchoiceUpdated` interaction turns out to be problematic on some EL, for example a later `forkchoiceUpdated` without attributes cancelling a builder's in-progress build.
-- Operators want one beacon node to front several ELs for building; in that case a beacon node side fan-out would make this design strictly more capable than the implemented one.
+
+Note that multiple ELs are not a reason to revisit. What gates building on several ELs is sync, not the build call: an EL can only build on a parent it has imported, and imports only come from a beacon node. If a beacon node ever drives sync for several ELs, the implemented design benefits directly by listing their engine URLs, while this design would additionally need to fan out the build requests.
 
 Adding it does not require changing the rest of the builder: it is a second `PayloadSource` implementation plus the beacon node routes above.
