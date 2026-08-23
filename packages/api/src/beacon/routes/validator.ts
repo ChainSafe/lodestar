@@ -1094,13 +1094,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             >
         ),
         meta: {
-          toJson: ({builderUrl, ...meta}) => ({
-            ...(ProduceBlockV4MetaType.toJson(meta) as Record<string, unknown>),
-            ...(builderUrl !== undefined ? {builder_url: builderUrl} : {}),
-          }),
-          fromJson: (val) => ({
+          toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
+          fromJson: (val, headers) => ({
             ...ProduceBlockV4MetaType.fromJson(val),
-            builderUrl: (val as {builder_url?: string}).builder_url,
+            builderUrl: headers?.get(MetaHeader.BuilderUrl) ?? undefined,
           }),
           toHeadersObject: (meta) => ({
             [MetaHeader.Version]: meta.version,
