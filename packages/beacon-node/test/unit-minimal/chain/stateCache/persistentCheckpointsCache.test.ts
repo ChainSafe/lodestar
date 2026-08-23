@@ -9,15 +9,17 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {RootHex, phase0, ssz} from "@lodestar/types";
-import {mapValues, toHexString} from "@lodestar/utils";
+import {Epoch, RootHex, phase0, ssz} from "@lodestar/types";
+import {fromHex, mapValues, toHexString} from "@lodestar/utils";
 import {FIFOBlockStateCache} from "../../../../src/chain/index.js";
-import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
+import {CPStateDatastore, checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 import {
+  CP_STATE_TIER_BASE,
   PersistentCheckpointStateCache,
+  PersistentCheckpointStateCacheOpts,
   toCheckpointHex,
 } from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
-import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {CacheItemType, CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {generateCachedState} from "../../../utils/state.js";
 
@@ -1066,6 +1068,364 @@ describe("PersistentCheckpointStateCache", () => {
           [cp0b, cp1, cp0a, cp1a],
           [stateBytes["cp0b"], stateBytes["cp1"], stateBytes["cp0a"], cp1aState.serialize()]
         );
+      });
+    });
+  });
+
+  describe("tiered pruning", () => {
+    /** Fresh cache + datastore + fileApisBuffer trio for tiered-pruning tests. */
+    function createTieredCache(opts: Partial<PersistentCheckpointStateCacheOpts> = {}): {
+      cache: PersistentCheckpointStateCache;
+      datastore: CPStateDatastore;
+      fileApisBuffer: Map<string, Uint8Array>;
+    } {
+      const fileApisBuffer = new Map<string, Uint8Array>();
+      const datastore = getTestDatastore(fileApisBuffer);
+      const cache = new PersistentCheckpointStateCache(
+        {
+          config,
+          datastore,
+          logger: testLogger(),
+          blockStateCache: new FIFOBlockStateCache({}, {}),
+        },
+        {maxCPStateEpochsInMemory: 0, ...opts}
+      );
+      return {cache, datastore, fileApisBuffer};
+    }
+
+    function rootHexForEpoch(epoch: number, variant = 0): RootHex {
+      const buf = Buffer.alloc(32);
+      buf.writeUInt32BE(epoch >>> 0, 0);
+      buf[4] = variant;
+      return toHexString(buf);
+    }
+
+    function datastoreKeyHexFor(epoch: Epoch, rootHex: RootHex): string {
+      return toHexString(checkpointToDatastoreKey({epoch, root: fromHex(rootHex)}));
+    }
+
+    /** Per-tier epoch keys of the on-disk retention tiers, read from the private field (test-only). */
+    function dumpTiers(cache: PersistentCheckpointStateCache): Epoch[][] {
+      const tiers = (cache as any).persistentTiers as Map<Epoch, Set<RootHex>>[];
+      return tiers.map((tierMap) => Array.from(tierMap.keys()).sort((a, b) => a - b));
+    }
+
+    /**
+     * Simulate a real "persist to disk" for {epoch, rootHex}: writes real bytes to the datastore (so
+     * fileApisBuffer reflects it), marks the checkpoint as persisted in the cache's internal bookkeeping
+     * (cache + epochIndex) so deleteAllEpochItems() can find and remove it, then runs the tiered-retention
+     * cascade exactly as processPastEpoch() does at its persist site. Bypasses full state-transition
+     * plumbing since the cascade only depends on epoch/rootHex bookkeeping, not on actual state content.
+     */
+    async function persistEpoch(
+      cache: PersistentCheckpointStateCache,
+      datastore: CPStateDatastore,
+      epoch: Epoch,
+      rootHex: RootHex
+    ): Promise<void> {
+      const persistedKey = await datastore.write({epoch, root: fromHex(rootHex)}, new Uint8Array([epoch % 256]));
+      const cacheAny = cache as any;
+      cacheAny.cache.set(`${rootHex}_${epoch}`, {type: CacheItemType.persisted, value: persistedKey});
+      cacheAny.epochIndex.getOrDefault(epoch).add(rootHex);
+      await cacheAny.onPersist(epoch, rootHex);
+    }
+
+    /** Directly seed an already-persisted epoch straight into tier `tier` (skipping lower tiers). */
+    async function seedTierEntry(
+      cache: PersistentCheckpointStateCache,
+      datastore: CPStateDatastore,
+      epoch: Epoch,
+      rootHex: RootHex,
+      tier: number
+    ): Promise<void> {
+      const persistedKey = await datastore.write({epoch, root: fromHex(rootHex)}, new Uint8Array([epoch % 256]));
+      const cacheAny = cache as any;
+      cacheAny.cache.set(`${rootHex}_${epoch}`, {type: CacheItemType.persisted, value: persistedKey});
+      cacheAny.epochIndex.getOrDefault(epoch).add(rootHex);
+      while (cacheAny.persistentTiers.length <= tier) {
+        cacheAny.persistentTiers.push(new Map());
+      }
+      const tierMap = cacheAny.persistentTiers[tier] as Map<Epoch, Set<RootHex>>;
+      const roots = tierMap.get(epoch) ?? new Set<RootHex>();
+      roots.add(rootHex);
+      tierMap.set(epoch, roots);
+    }
+
+    describe("alignedForTier", () => {
+      it("matches (epoch - finalizedEpoch) % base**tier === 0; F aligns at every tier", () => {
+        const {cache} = createTieredCache();
+        const base = CP_STATE_TIER_BASE;
+        const finalizedEpoch = 100;
+        cache.prune(finalizedEpoch, finalizedEpoch);
+        const aligned = (epoch: number, tier: number): boolean => (cache as any).alignedForTier(epoch, tier);
+
+        for (let tier = 0; tier <= 3; tier++) {
+          expect(aligned(finalizedEpoch, tier)).toBe(true);
+        }
+
+        for (const epoch of [
+          finalizedEpoch - 3,
+          finalizedEpoch - 1,
+          finalizedEpoch,
+          finalizedEpoch + 1,
+          finalizedEpoch + 3,
+          finalizedEpoch + base,
+          finalizedEpoch + base * 2,
+          finalizedEpoch + base ** 2,
+        ]) {
+          for (const tier of [0, 1, 2]) {
+            expect(aligned(epoch, tier)).toBe((epoch - finalizedEpoch) % base ** tier === 0);
+          }
+        }
+      });
+
+      it("exactly 1-in-base of consecutive epochs align at tier 1", () => {
+        const {cache} = createTieredCache();
+        const base = CP_STATE_TIER_BASE;
+        const finalizedEpoch = 10;
+        cache.prune(finalizedEpoch, finalizedEpoch);
+        const aligned = (epoch: number, tier: number): boolean => (cache as any).alignedForTier(epoch, tier);
+        let alignedCount = 0;
+        for (let epoch = finalizedEpoch; epoch < finalizedEpoch + base; epoch++) {
+          if (aligned(epoch, 1)) alignedCount++;
+        }
+        expect(alignedCount).toBe(1);
+      });
+    });
+
+    describe.each([0, 1, 2, 3])("cascade at tier %i (base = CP_STATE_TIER_BASE)", (n) => {
+      const base = CP_STATE_TIER_BASE;
+      const spacing = base ** n;
+
+      it("evicted epoch NOT aligned to the next tier is deleted from disk and from all tier buckets", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(0, 0);
+        // base+1 consecutive multiples of `spacing`, starting at k=1: the smallest (k=1) is never a
+        // multiple of `base` (base > 1), so it does not align to tier n+1 -> pruned on overflow.
+        const epochs = Array.from({length: base + 1}, (_, i) => spacing * (i + 1));
+        const root1 = rootHexForEpoch(epochs[0]);
+        await seedTierEntry(cache, datastore, epochs[0], root1, n);
+        for (const epoch of epochs.slice(1)) {
+          await seedTierEntry(cache, datastore, epoch, rootHexForEpoch(epoch), n);
+        }
+        await (cache as any).prunePersistentTier(n);
+
+        expect(fileApisBuffer.has(datastoreKeyHexFor(epochs[0], root1))).toBe(false);
+        for (const tierEpochs of dumpTiers(cache)) {
+          expect(tierEpochs).not.toContain(epochs[0]);
+        }
+        expect(dumpTiers(cache)[n]).toEqual(epochs.slice(1));
+      });
+
+      it("evicted epoch aligned to the next tier is promoted, stays on disk, and leaves tier n", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(0, 0);
+        // base+1 consecutive multiples of `spacing`, starting at k=base: the smallest (k=base) IS a
+        // multiple of `base`, so it aligns to tier n+1 -> promoted on overflow.
+        const epochs = Array.from({length: base + 1}, (_, i) => spacing * (base + i));
+        const root1 = rootHexForEpoch(epochs[0]);
+        await seedTierEntry(cache, datastore, epochs[0], root1, n);
+        for (const epoch of epochs.slice(1)) {
+          await seedTierEntry(cache, datastore, epoch, rootHexForEpoch(epoch), n);
+        }
+        await (cache as any).prunePersistentTier(n);
+
+        expect(fileApisBuffer.has(datastoreKeyHexFor(epochs[0], root1))).toBe(true);
+        expect(dumpTiers(cache)[n]).toEqual(epochs.slice(1));
+        expect(dumpTiers(cache)[n + 1]).toEqual([epochs[0]]);
+      });
+    });
+
+    describe("multi-root epoch", () => {
+      it("an epoch with 2 persisted roots keeps both together on promote", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(0, 0);
+        const base = CP_STATE_TIER_BASE;
+        // anchor is a multiple of `base` -> aligned to tier1, so it is promoted (not pruned) on overflow
+        const anchor = base;
+        const rootA = rootHexForEpoch(anchor, 0);
+        const rootB = rootHexForEpoch(anchor, 1);
+        await persistEpoch(cache, datastore, anchor, rootA);
+        await persistEpoch(cache, datastore, anchor, rootB);
+        expect(dumpTiers(cache)[0]).toEqual([anchor]);
+        expect((cache as any).persistentTiers[0].get(anchor).size).toBe(2);
+
+        // fill tier0 to capacity (`base` epoch keys total) without overflowing yet
+        for (let epoch = anchor + 1; epoch < anchor + base; epoch++) {
+          await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+        }
+        expect(dumpTiers(cache)[0].length).toBe(base);
+
+        // one more epoch overflows tier0: evict oldest (anchor), aligned -> promoted with both roots
+        await persistEpoch(cache, datastore, anchor + base, rootHexForEpoch(anchor + base));
+
+        expect(dumpTiers(cache)[1]).toEqual([anchor]);
+        expect(fileApisBuffer.has(datastoreKeyHexFor(anchor, rootA))).toBe(true);
+        expect(fileApisBuffer.has(datastoreKeyHexFor(anchor, rootB))).toBe(true);
+      });
+
+      it("an epoch with 2 persisted roots is removed together on prune", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(0, 0);
+        const base = CP_STATE_TIER_BASE;
+        // anchor is NOT a multiple of `base` -> not aligned to tier1, so it is pruned on overflow
+        const anchor = 1;
+        const rootA = rootHexForEpoch(anchor, 0);
+        const rootB = rootHexForEpoch(anchor, 1);
+        await persistEpoch(cache, datastore, anchor, rootA);
+        await persistEpoch(cache, datastore, anchor, rootB);
+
+        // fill tier0 to capacity (`base` epoch keys total) without overflowing yet
+        for (let epoch = anchor + 1; epoch <= base; epoch++) {
+          await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+        }
+        expect(dumpTiers(cache)[0].length).toBe(base);
+
+        // one more epoch overflows tier0: evict oldest (anchor), unaligned -> both roots deleted
+        await persistEpoch(cache, datastore, base + 1, rootHexForEpoch(base + 1));
+
+        expect(dumpTiers(cache).flat()).not.toContain(anchor);
+        expect(fileApisBuffer.has(datastoreKeyHexFor(anchor, rootA))).toBe(false);
+        expect(fileApisBuffer.has(datastoreKeyHexFor(anchor, rootB))).toBe(false);
+      });
+    });
+
+    describe("pins (justifiedEpoch guard)", () => {
+      it("a justified epoch survives an eviction that would otherwise delete it; it becomes prunable again once justified advances past it", async () => {
+        const base = CP_STATE_TIER_BASE;
+        // epoch 1 is not a multiple of `base`, so it is normally pruned (not promoted) on overflow
+        const pinnedEpoch = 1;
+
+        // Case A: justifiedEpoch stays pinned to `pinnedEpoch` through the overflow -> guarded, escapes
+        // tier tracking, but its bytes remain on disk (bounce-then-leak edge).
+        {
+          const {cache, datastore, fileApisBuffer} = createTieredCache();
+          const root1 = rootHexForEpoch(pinnedEpoch);
+          cache.prune(0, pinnedEpoch); // finalizedEpoch=0, justifiedEpoch=pinnedEpoch
+          await persistEpoch(cache, datastore, pinnedEpoch, root1);
+          // fill tier0 to capacity (`base` epoch keys total) without overflowing yet
+          for (let epoch = pinnedEpoch + 1; epoch <= base; epoch++) {
+            await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+          }
+          // one more epoch overflows tier0: evict oldest (pinnedEpoch); normally pruned (unaligned),
+          // but guarded by justifiedEpoch
+          await persistEpoch(cache, datastore, base + 1, rootHexForEpoch(base + 1));
+
+          expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(true);
+          for (const tierEpochs of dumpTiers(cache)) {
+            expect(tierEpochs).not.toContain(pinnedEpoch);
+          }
+        }
+
+        // Case B: justifiedEpoch advances off `pinnedEpoch` before the same overflow happens -> it is
+        // pruned normally (not guarded).
+        {
+          const {cache, datastore, fileApisBuffer} = createTieredCache();
+          const root1 = rootHexForEpoch(pinnedEpoch);
+          cache.prune(0, pinnedEpoch);
+          await persistEpoch(cache, datastore, pinnedEpoch, root1);
+          for (let epoch = pinnedEpoch + 1; epoch <= base; epoch++) {
+            await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+          }
+          cache.prune(0, pinnedEpoch + 1); // advance justifiedEpoch off pinnedEpoch
+          await persistEpoch(cache, datastore, base + 1, rootHexForEpoch(base + 1));
+
+          expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(false);
+          expect(dumpTiers(cache).flat()).not.toContain(pinnedEpoch);
+        }
+      });
+    });
+
+    describe("long-leak simulation", () => {
+      // 60 consecutive epochs comfortably overflows tier0 (cap = CP_STATE_TIER_BASE = 16) more than
+      // once and promotes at least one epoch into tier1.
+      const totalEpochs = 60;
+
+      it("persisted states stay bounded (not linear in epochs), and the finalized anchor epoch never gets evicted", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        const finalizedEpoch = 1;
+        cache.prune(finalizedEpoch, finalizedEpoch); // finalized frozen: no pruneFinalized() call in this test
+        for (let epoch = finalizedEpoch; epoch < finalizedEpoch + totalEpochs; epoch++) {
+          await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+        }
+
+        // bounded: far fewer states survive than were ever persisted
+        expect(fileApisBuffer.size).toBeGreaterThan(0);
+        expect(fileApisBuffer.size).toBeLessThan(totalEpochs);
+        // tier0 overflowed (stays at cap) and at least one epoch promoted into tier1
+        expect(dumpTiers(cache)[0].length).toBeLessThanOrEqual(CP_STATE_TIER_BASE);
+        expect(dumpTiers(cache)[1]?.length ?? 0).toBeGreaterThan(0);
+
+        // the finalized anchor epoch (offset 0, aligned at every tier) is never evicted
+        expect(fileApisBuffer.has(datastoreKeyHexFor(finalizedEpoch, rootHexForEpoch(finalizedEpoch)))).toBe(true);
+        expect(dumpTiers(cache).flat()).toContain(finalizedEpoch);
+      });
+
+      it("retains at most CP_STATE_TIER_BASE states per tier, so disk grows O(base × tiers), not linearly", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(1, 1);
+        for (let epoch = 1; epoch <= totalEpochs; epoch++) {
+          await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+        }
+
+        // each tier holds at most CP_STATE_TIER_BASE epoch keys, so total persisted << totalEpochs
+        for (const tierEpochs of dumpTiers(cache)) {
+          expect(tierEpochs.length).toBeLessThanOrEqual(CP_STATE_TIER_BASE);
+        }
+        expect(fileApisBuffer.size).toBeLessThanOrEqual(CP_STATE_TIER_BASE * dumpTiers(cache).length);
+        expect(fileApisBuffer.size).toBeLessThan(totalEpochs);
+      });
+    });
+
+    describe("retention modes", () => {
+      it("flat finite retention mode (maxCPStateEpochsOnDisk) keeps tiers empty and applies legacy flat-window pruning", () => {
+        const flat = createTieredCache({maxCPStateEpochsOnDisk: 1});
+        expect(dumpTiers(flat.cache)).toEqual([[]]);
+        expect((flat.cache as any).isTieredMode).toBe(false);
+
+        flat.cache.add(cp0a, states["cp0a"]);
+        flat.cache.add(cp1, states["cp1"]);
+        // maxTrackedEpochs = maxCPStateEpochsOnDisk(1) + maxCPStateEpochsInMemory(0) = 1
+        expect(flat.cache.get(cp0aHex)).toBeNull();
+        flat.cache.add(cp2, states["cp2"]);
+        expect(flat.cache.get(cp1Hex)).toBeNull();
+        expect(dumpTiers(flat.cache)).toEqual([[]]);
+      });
+
+      it("constructor rejects only a negative maxCPStateEpochsOnDisk; any finite >= 0 is a valid legacy flat window", () => {
+        const build = (maxCPStateEpochsOnDisk: number): PersistentCheckpointStateCache =>
+          new PersistentCheckpointStateCache(
+            {
+              config,
+              datastore: getTestDatastore(new Map()),
+              logger: testLogger(),
+              blockStateCache: new FIFOBlockStateCache({}, {}),
+            },
+            {maxCPStateEpochsInMemory: 0, maxCPStateEpochsOnDisk}
+          );
+
+        expect(() => build(-1)).toThrow();
+        // any finite value >= 0 selects the legacy flat retention (no upper bound); Infinity is tiered
+        expect(() => build(0)).not.toThrow();
+        expect(() => build(CP_STATE_TIER_BASE + 1)).not.toThrow();
+        expect(() => build(100)).not.toThrow();
+        expect(() => build(Infinity)).not.toThrow();
+      });
+    });
+
+    describe("clear()", () => {
+      it("empties fileApisBuffer and resets tiers, leaving no orphaned files", async () => {
+        const {cache, datastore, fileApisBuffer} = createTieredCache();
+        cache.prune(0, 0);
+        for (let epoch = 1; epoch <= 5; epoch++) {
+          await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
+        }
+        expect(fileApisBuffer.size).toBeGreaterThan(0);
+
+        cache.clear();
+
+        expect(fileApisBuffer.size).toBe(0);
+        expect(dumpTiers(cache)).toEqual([[]]);
       });
     });
   });
