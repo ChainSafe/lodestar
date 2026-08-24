@@ -702,18 +702,15 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     return seedBlockState;
   }
 
-  clear(): void {
-    // also remove persisted states from disk, else they are leaked
-    for (const cacheItem of this.cache.values()) {
-      const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
-      if (persistedKey) {
-        void this.datastore.remove(persistedKey).catch((e) => {
-          this.logger.debug("Error removing persisted checkpoint state on clear", {}, e as Error);
-        });
-      }
-    }
-    this.cache.clear();
-    this.epochIndex.clear();
+  async clear(): Promise<void> {
+    // deleteAllEpochItems removes every root of an epoch from disk and clears the cache
+    await Promise.all(
+      Array.from(this.epochIndex.keys()).map((epoch) =>
+        this.deleteAllEpochItems(epoch).catch((e) =>
+          this.logger.debug("Error delete all epoch items on clear", {epoch}, e as Error)
+        )
+      )
+    );
     this.persistentTiers = [new Map()];
   }
 

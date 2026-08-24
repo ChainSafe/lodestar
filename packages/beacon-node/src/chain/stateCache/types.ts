@@ -67,7 +67,7 @@ export interface CheckpointStateCache {
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number>;
-  clear(): void;
+  clear(): Promise<void>;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
   getStates(): IterableIterator<IBeaconStateView>;

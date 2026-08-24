@@ -39,7 +39,7 @@ export type StateRegenerationOpts = {
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
-  dropCache(): void;
+  dropCache(): Promise<void>;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): IBeaconStateView | null;
   getPreStateSync(block: BeaconBlock): IBeaconStateView | null;

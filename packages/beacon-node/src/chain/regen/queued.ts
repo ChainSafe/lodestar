@@ -67,9 +67,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }
 
-  dropCache(): void {
+  async dropCache(): Promise<void> {
     this.blockStateCache.clear();
-    this.checkpointStateCache.clear();
+    await this.checkpointStateCache.clear();
   }
 
   dumpCacheSummary(): routes.lodestar.StateCacheItem[] {

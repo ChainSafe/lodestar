@@ -1427,7 +1427,7 @@ describe("PersistentCheckpointStateCache", () => {
         }
         expect(fileApisBuffer.size).toBeGreaterThan(0);
 
-        cache.clear();
+        await cache.clear();
 
         expect(fileApisBuffer.size).toBe(0);
         expect(dumpTiers(cache)).toEqual([[]]);
