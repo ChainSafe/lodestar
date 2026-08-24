@@ -103,11 +103,6 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
     /\/heze_fork$/,
-    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
-    // boost wrongly denied. Fails identically on every pre-gloas fork.
-    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
-    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
-    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
     // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
     // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
     // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
