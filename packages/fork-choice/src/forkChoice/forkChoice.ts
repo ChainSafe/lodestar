@@ -1741,6 +1741,8 @@ export class ForkChoice implements IForkChoice {
    * May need the justified balances of:
    * - unrealizedJustified: Already available in `CheckpointWithBalance`
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
+   *
+   * @returns Whether either checkpoint was updated.
    */
   private updateCheckpoints(
     justifiedCheckpoint: CheckpointWithHex,
@@ -2049,6 +2051,8 @@ export class ForkChoice implements IForkChoice {
    * Equivalent to:
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_tick
+   *
+   * @returns Whether an epoch-boundary checkpoint was updated.
    */
   private onTick(time: Slot): boolean {
     const previousSlot = this.fcStore.currentSlot;
@@ -2074,8 +2078,7 @@ export class ForkChoice implements IForkChoice {
       return false;
     }
 
-    // If a new epoch, pull-up justification and finalization from previous epoch. Returns whether a
-    // checkpoint moved, so the caller can decide to recompute the head (see `updateTime`).
+    // If a new epoch, pull-up justification and finalization from previous epoch.
     return this.updateCheckpoints(
       this.fcStore.unrealizedJustified.checkpoint,
       this.fcStore.unrealizedFinalizedCheckpoint,
