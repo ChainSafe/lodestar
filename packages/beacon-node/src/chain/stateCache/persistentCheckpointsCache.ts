@@ -443,10 +443,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   }
 
   /**
-   * This is called on every checkpoint event
-   * TODO: rename to onCheckpoint (it updates checkpoints, it does not prune)
+   * This is called on every checkpoint event to refresh the pinned finalized/justified epochs.
    */
-  prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
+  onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
     this.finalizedEpoch = finalizedEpoch;
     this.justifiedEpoch = justifiedEpoch;
   }

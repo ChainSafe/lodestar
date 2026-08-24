@@ -1156,7 +1156,7 @@ describe("PersistentCheckpointStateCache", () => {
         const {cache} = createTieredCache();
         const base = CP_STATE_TIER_BASE;
         const finalizedEpoch = 100;
-        cache.prune(finalizedEpoch, finalizedEpoch);
+        cache.onCheckpoint(finalizedEpoch, finalizedEpoch);
         const aligned = (epoch: number, tier: number): boolean => (cache as any).alignedForTier(epoch, tier);
 
         for (let tier = 0; tier <= 3; tier++) {
@@ -1183,7 +1183,7 @@ describe("PersistentCheckpointStateCache", () => {
         const {cache} = createTieredCache();
         const base = CP_STATE_TIER_BASE;
         const finalizedEpoch = 10;
-        cache.prune(finalizedEpoch, finalizedEpoch);
+        cache.onCheckpoint(finalizedEpoch, finalizedEpoch);
         const aligned = (epoch: number, tier: number): boolean => (cache as any).alignedForTier(epoch, tier);
         let alignedCount = 0;
         for (let epoch = finalizedEpoch; epoch < finalizedEpoch + base; epoch++) {
@@ -1199,7 +1199,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       it("evicted epoch NOT aligned to the next tier is deleted from disk and from all tier buckets", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(0, 0);
+        cache.onCheckpoint(0, 0);
         // base+1 consecutive multiples of `spacing`, starting at k=1: the smallest (k=1) is never a
         // multiple of `base` (base > 1), so it does not align to tier n+1 -> pruned on overflow.
         const epochs = Array.from({length: base + 1}, (_, i) => spacing * (i + 1));
@@ -1219,7 +1219,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       it("evicted epoch aligned to the next tier is promoted, stays on disk, and leaves tier n", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(0, 0);
+        cache.onCheckpoint(0, 0);
         // base+1 consecutive multiples of `spacing`, starting at k=base: the smallest (k=base) IS a
         // multiple of `base`, so it aligns to tier n+1 -> promoted on overflow.
         const epochs = Array.from({length: base + 1}, (_, i) => spacing * (base + i));
@@ -1239,7 +1239,7 @@ describe("PersistentCheckpointStateCache", () => {
     describe("multi-root epoch", () => {
       it("an epoch with 2 persisted roots keeps both together on promote", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(0, 0);
+        cache.onCheckpoint(0, 0);
         const base = CP_STATE_TIER_BASE;
         // anchor is a multiple of `base` -> aligned to tier1, so it is promoted (not pruned) on overflow
         const anchor = base;
@@ -1266,7 +1266,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       it("an epoch with 2 persisted roots is removed together on prune", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(0, 0);
+        cache.onCheckpoint(0, 0);
         const base = CP_STATE_TIER_BASE;
         // anchor is NOT a multiple of `base` -> not aligned to tier1, so it is pruned on overflow
         const anchor = 1;
@@ -1301,7 +1301,7 @@ describe("PersistentCheckpointStateCache", () => {
         {
           const {cache, datastore, fileApisBuffer} = createTieredCache();
           const root1 = rootHexForEpoch(pinnedEpoch);
-          cache.prune(0, pinnedEpoch); // finalizedEpoch=0, justifiedEpoch=pinnedEpoch
+          cache.onCheckpoint(0, pinnedEpoch); // finalizedEpoch=0, justifiedEpoch=pinnedEpoch
           await persistEpoch(cache, datastore, pinnedEpoch, root1);
           // fill tier0 to capacity (`base` epoch keys total) without overflowing yet
           for (let epoch = pinnedEpoch + 1; epoch <= base; epoch++) {
@@ -1316,7 +1316,7 @@ describe("PersistentCheckpointStateCache", () => {
           expect(fileApisBuffer.has(datastoreKeyHexFor(2, rootHexForEpoch(2)))).toBe(false); // evicted instead
 
           // once justified advances off pinnedEpoch, a further overflow evicts it normally (unaligned -> deleted)
-          cache.prune(0, base + 2);
+          cache.onCheckpoint(0, base + 2);
           await persistEpoch(cache, datastore, base + 2, rootHexForEpoch(base + 2));
           expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(false);
           expect(dumpTiers(cache).flat()).not.toContain(pinnedEpoch);
@@ -1327,12 +1327,12 @@ describe("PersistentCheckpointStateCache", () => {
         {
           const {cache, datastore, fileApisBuffer} = createTieredCache();
           const root1 = rootHexForEpoch(pinnedEpoch);
-          cache.prune(0, pinnedEpoch);
+          cache.onCheckpoint(0, pinnedEpoch);
           await persistEpoch(cache, datastore, pinnedEpoch, root1);
           for (let epoch = pinnedEpoch + 1; epoch <= base; epoch++) {
             await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
           }
-          cache.prune(0, pinnedEpoch + 1); // advance justifiedEpoch off pinnedEpoch
+          cache.onCheckpoint(0, pinnedEpoch + 1); // advance justifiedEpoch off pinnedEpoch
           await persistEpoch(cache, datastore, base + 1, rootHexForEpoch(base + 1));
 
           expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(false);
@@ -1349,7 +1349,7 @@ describe("PersistentCheckpointStateCache", () => {
       it("persisted states stay bounded (not linear in epochs), and the finalized anchor epoch never gets evicted", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
         const finalizedEpoch = 1;
-        cache.prune(finalizedEpoch, finalizedEpoch); // finalized frozen: no pruneFinalized() call in this test
+        cache.onCheckpoint(finalizedEpoch, finalizedEpoch); // finalized frozen: no pruneFinalized() call in this test
         for (let epoch = finalizedEpoch; epoch < finalizedEpoch + totalEpochs; epoch++) {
           await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
         }
@@ -1368,7 +1368,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       it("retains at most CP_STATE_TIER_BASE states per tier, so disk grows O(base × tiers), not linearly", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(1, 1);
+        cache.onCheckpoint(1, 1);
         for (let epoch = 1; epoch <= totalEpochs; epoch++) {
           await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
         }
@@ -1421,7 +1421,7 @@ describe("PersistentCheckpointStateCache", () => {
     describe("clear()", () => {
       it("empties fileApisBuffer and resets tiers, leaving no orphaned files", async () => {
         const {cache, datastore, fileApisBuffer} = createTieredCache();
-        cache.prune(0, 0);
+        cache.onCheckpoint(0, 0);
         for (let epoch = 1; epoch <= 5; epoch++) {
           await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
         }
