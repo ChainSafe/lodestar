@@ -36,7 +36,7 @@ export class DeferredVoluntaryExitPool {
       try {
         if (epoch - entry.insertedAtEpoch > this.maxDeferEpochs) {
           this.pool.delete(validatorIndex);
-          this.logger.warn("Deferred voluntary exit expired", {validatorIndex, lastValidity: entry.validity});
+          this.logger.debug("Deferred voluntary exit expired", {validatorIndex, lastValidity: entry.validity});
           continue;
         }
         const validity = state.getVoluntaryExitValidity(entry.exit, true);
@@ -44,7 +44,7 @@ export class DeferredVoluntaryExitPool {
           validExits.push(entry.exit);
           this.pool.delete(validatorIndex);
         } else if (!isTransientExitValidity(validity)) {
-          this.logger.warn("Deferred voluntary exit became permanently invalid", {validatorIndex, validity});
+          this.logger.debug("Deferred voluntary exit became permanently invalid", {validatorIndex, validity});
           this.pool.delete(validatorIndex);
         }
         // Else if still transient - keep
