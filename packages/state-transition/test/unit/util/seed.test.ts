@@ -1,14 +1,19 @@
 import crypto from "node:crypto";
 import {describe, expect, it} from "vitest";
+import {digest} from "@chainsafe/as-sha256";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DOMAIN_PTC_ATTESTER, ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
 import {generateState} from "../../../src/testUtils/state.js";
 import {
+  computeEpochShuffling,
+  computePayloadTimelinessCommitteeForSlot,
   computePayloadTimelinessCommitteeIndices,
+  computePayloadTimelinessCommitteesForEpoch,
   computeProposerIndex,
   getNextSyncCommitteeIndices,
   getRandaoMix,
+  getSeed,
   naiveComputePayloadTimelinessCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
@@ -93,6 +98,42 @@ describe("computePayloadTimelinessCommitteeIndices", () => {
     const expected = naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
     const result = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
     expect(result).toEqual(new Uint32Array(expected));
+  });
+
+  it("should compute an epoch with the same per-slot results", () => {
+    const epochValidatorCount = 16_384;
+    const epochIndices = Uint32Array.from({length: epochValidatorCount}, (_, i) => i);
+    const epochEffectiveBalanceIncrements = new Uint16Array(epochValidatorCount).fill(32);
+    const state = generateState();
+    const epoch = 0;
+    const shuffling = computeEpochShuffling(state, epochIndices, epoch);
+    const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
+    const slotSeedInput = new Uint8Array(epochSeed.length + 8);
+    slotSeedInput.set(epochSeed);
+    const slotSeedView = new DataView(slotSeedInput.buffer);
+    const expected = new Array<Uint32Array>(SLOTS_PER_EPOCH);
+    for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+      slotSeedView.setUint32(epochSeed.length, i, true);
+      slotSeedView.setUint32(epochSeed.length + 4, 0, true);
+      expected[i] = computePayloadTimelinessCommitteeForSlot(
+        digest(slotSeedInput),
+        shuffling.committees[i],
+        epochEffectiveBalanceIncrements
+      );
+    }
+
+    expect(
+      computePayloadTimelinessCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        epochEffectiveBalanceIncrements,
+        shuffling.shuffling
+      )
+    ).toEqual(expected);
+    expect(
+      computePayloadTimelinessCommitteesForEpoch(state, epoch, shuffling.committees, epochEffectiveBalanceIncrements)
+    ).toEqual(expected);
   });
 });
 
