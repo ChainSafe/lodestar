@@ -1291,13 +1291,13 @@ describe("PersistentCheckpointStateCache", () => {
     });
 
     describe("pins (justifiedEpoch guard)", () => {
-      it("a justified epoch survives an eviction that would otherwise delete it; it becomes prunable again once justified advances past it", async () => {
+      it("a justified epoch is never evicted (stays tracked in its tier, not orphaned) and is evicted once justified advances past it", async () => {
         const base = CP_STATE_TIER_BASE;
         // epoch 1 is not a multiple of `base`, so it is normally pruned (not promoted) on overflow
         const pinnedEpoch = 1;
 
-        // Case A: justifiedEpoch stays pinned to `pinnedEpoch` through the overflow -> guarded, escapes
-        // tier tracking, but its bytes remain on disk (bounce-then-leak edge).
+        // Case A: justifiedEpoch stays pinned to `pinnedEpoch` through the overflow -> it is skipped as
+        // the eviction victim, so it stays TRACKED in its tier (not orphaned off-tier) and on disk.
         {
           const {cache, datastore, fileApisBuffer} = createTieredCache();
           const root1 = rootHexForEpoch(pinnedEpoch);
@@ -1307,18 +1307,23 @@ describe("PersistentCheckpointStateCache", () => {
           for (let epoch = pinnedEpoch + 1; epoch <= base; epoch++) {
             await persistEpoch(cache, datastore, epoch, rootHexForEpoch(epoch));
           }
-          // one more epoch overflows tier0: evict oldest (pinnedEpoch); normally pruned (unaligned),
-          // but guarded by justifiedEpoch
+          // overflow tier0: the oldest is pinnedEpoch, but it is the justified pin -> the next-oldest
+          // (epoch 2) is evicted instead; pinnedEpoch stays tracked in tier0 and on disk.
           await persistEpoch(cache, datastore, base + 1, rootHexForEpoch(base + 1));
 
           expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(true);
-          for (const tierEpochs of dumpTiers(cache)) {
-            expect(tierEpochs).not.toContain(pinnedEpoch);
-          }
+          expect(dumpTiers(cache)[0]).toContain(pinnedEpoch); // tracked, NOT orphaned
+          expect(fileApisBuffer.has(datastoreKeyHexFor(2, rootHexForEpoch(2)))).toBe(false); // evicted instead
+
+          // once justified advances off pinnedEpoch, a further overflow evicts it normally (unaligned -> deleted)
+          cache.prune(0, base + 2);
+          await persistEpoch(cache, datastore, base + 2, rootHexForEpoch(base + 2));
+          expect(fileApisBuffer.has(datastoreKeyHexFor(pinnedEpoch, root1))).toBe(false);
+          expect(dumpTiers(cache).flat()).not.toContain(pinnedEpoch);
         }
 
-        // Case B: justifiedEpoch advances off `pinnedEpoch` before the same overflow happens -> it is
-        // pruned normally (not guarded).
+        // Case B: justifiedEpoch advances off `pinnedEpoch` before the overflow happens -> pinnedEpoch is
+        // the eviction victim and is pruned normally (not guarded).
         {
           const {cache, datastore, fileApisBuffer} = createTieredCache();
           const root1 = rootHexForEpoch(pinnedEpoch);

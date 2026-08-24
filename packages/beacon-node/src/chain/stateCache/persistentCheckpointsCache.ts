@@ -479,7 +479,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private async prunePersistentTier(tier: number): Promise<void> {
     const tierMap = this.persistentTiers[tier];
     while (tierMap.size > CP_STATE_TIER_BASE) {
-      const oldestEpoch = Math.min(...tierMap.keys());
+      // Evict the oldest epoch, but never the pinned justified epoch
+      const oldestEpoch = Math.min(...Array.from(tierMap.keys()).filter((epoch) => epoch !== this.justifiedEpoch));
       const roots = tierMap.get(oldestEpoch) as Set<RootHex>;
       tierMap.delete(oldestEpoch);
 
@@ -499,7 +500,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           rootHexes,
         });
         await this.prunePersistentTier(tier + 1);
-      } else if (oldestEpoch !== this.justifiedEpoch) {
+      } else {
         // the oldest epoch is not aligned to the next tier
         await this.deleteAllEpochItems(oldestEpoch);
         this.logger.verbose("Pruned checkpoint states from disk", {epoch: oldestEpoch, tier, rootHexes});
