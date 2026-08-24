@@ -340,7 +340,8 @@ describe("sync / range / batch", async () => {
           forkName: ForkName.gloas,
           sampledColumns,
           custodyColumns: sampledColumns,
-          timeCreatedSec: seenTimestampSec,
+          seenTimestampSec,
+          source: PayloadEnvelopeInputSource.byRange,
           daOutOfRange: false,
         });
         if (addEnvelope) {

@@ -544,15 +544,7 @@ export class BlockInputSync {
       return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
     }
 
-    const parentPayloadInput = this.chain.seenPayloadEnvelopeInputCache.get(parentRootHex);
-    if (parentPayloadInput) {
-      if (parentPayloadInput.getBlockHashHex() === parentBlockHashHex) {
-        return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
-      }
-
-      return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
-    }
-
+    // Parent is in fork choice but its payload `parentBlockHashHex` isn't revealed yet
     return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
   }
 
@@ -894,9 +886,9 @@ export class BlockInputSync {
       this.pendingBlocks.delete(blockRootHex);
 
       if (isForkPostGloas(fork)) {
-        const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+        const payloadInput = await this.chain.seenPayloadEnvelopeInputCache.getOrReload(blockRootHex);
         if (!payloadInput) {
-          this.logger.warn("PayloadEnvelopeInput not seeded during unknown sync processReadyBlock()", logCtx);
+          this.logger.debug("PayloadEnvelopeInput unavailable during unknown sync processReadyBlock()", logCtx);
         } else {
           // Similar to the gossip path: immediately attempt fetch of data columns from the execution engine.
           // The bid already carries the kzg commitments, so there is no reason to wait for the payload to arrive.
@@ -969,12 +961,12 @@ export class BlockInputSync {
    */
   private async reconcilePayloadEnvelope(pendingPayload: PendingPayloadEnvelope): Promise<void> {
     const rootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
+
     if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
       this.pendingPayloads.delete(rootHex);
       return;
     }
 
-    const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
     if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
       // Block not in fork choice yet. payloadInput may be seeded from the block body during download, so a
       // non-null payloadInput does not imply the block is imported; defer regardless and pull the block first.
@@ -990,8 +982,9 @@ export class BlockInputSync {
       return;
     }
 
+    const payloadInput = await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     if (!payloadInput) {
-      this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
+      this.logger.debug("PayloadEnvelopeInput not yet reloadable for imported block, will retry", {
         root: rootHex,
       });
       return;
@@ -1187,7 +1180,7 @@ export class BlockInputSync {
     let slot = getPayloadSyncCacheItemSlot(cacheItem);
     let payloadInput = isPendingPayloadInput(cacheItem)
       ? cacheItem.payloadInput
-      : this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
+      : await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
 
     let i = 0;
@@ -1220,7 +1213,7 @@ export class BlockInputSync {
           slot = envelope.message.payload.slotNumber;
         }
 
-        payloadInput ??= this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
+        payloadInput ??= await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
         if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
           // Block not in fork choice yet. Validating now would throw BLOCK_ROOT_UNKNOWN, so keep the downloaded
           // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
