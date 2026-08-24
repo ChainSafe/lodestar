@@ -77,20 +77,28 @@ async function main(): Promise<void> {
   });
 
   const event = eventContext();
+  const org = process.env.PROJECT_ORG || "ChainSafe";
   const token = process.env.PROJECT_BOARD_TOKEN?.trim() ?? "";
   if (!token) {
-    const skipReason = missingTokenSkipReason(event);
+    const skipReason = missingTokenSkipReason(event, org);
     if (skipReason) {
-      console.warn("PROJECT_BOARD_TOKEN is unavailable for this untrusted PR event; the sweep will reconcile it", {
-        eventName: event.eventName,
-        repository: event.repository,
-        reason: skipReason,
-      });
+      if (skipReason === "unmanaged_repository") {
+        console.log("Project board automation is not configured for this repository; skipping", {
+          eventName: event.eventName,
+          repository: event.repository,
+          reason: skipReason,
+        });
+      } else {
+        console.warn("PROJECT_BOARD_TOKEN is unavailable for this untrusted PR event; the sweep will reconcile it", {
+          eventName: event.eventName,
+          repository: event.repository,
+          reason: skipReason,
+        });
+      }
       return;
     }
     throw new ProjectBoardConfigurationError(event);
   }
-  const org = process.env.PROJECT_ORG || "ChainSafe";
   const projectNumber = Number(process.env.PROJECT_NUMBER || "75");
   const dryRun = !["0", "false"].includes((process.env.DRY_RUN ?? "").trim().toLowerCase());
   console.log(`mode: ${dryRun ? "DRY RUN" : "LIVE"} — org=${org} project=#${projectNumber}`);
