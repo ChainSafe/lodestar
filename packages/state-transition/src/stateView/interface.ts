@@ -9,6 +9,7 @@ import {
   ForkPostElectra,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPostHeze,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -16,6 +17,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -23,6 +25,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -49,6 +52,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 
 /**
  * A read-only view of the BeaconState.
@@ -75,6 +79,8 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
   currentDecisionRoot: RootHex;
@@ -89,7 +95,6 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -238,6 +243,13 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
 export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
   forkName: ForkPostFulu;
   proposerLookahead: fulu.ProposerLookahead;
+  /**
+   * Pre-verify a slice of builder-prefix pending deposits and cache the results on the underlying
+   * `BuilderDepositSignatureCache` (Fulu is the fork immediately before Gloas).
+   */
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult;
+  /** Drop the pre-Gloas builder-deposit signature cache (called once the Gloas fork is finalized). */
+  clearPreGloasBuilderDepositCache(): void;
 }
 
 /** Gloas+ state fields — use isStatePostGloas() guard */
@@ -252,6 +264,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
+  getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
@@ -261,17 +274,22 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
+}
+
+/** Heze+ state fields — use isStatePostHeze() guard */
+export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
+  forkName: ForkPostHeze;
 }
 
 /**
  * Type constraint for the concrete BeaconStateView class.
- * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * Requires all fields from the latest fork interface (IBeaconStateViewHeze) but keeps
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
 export type IBeaconStateViewLatestFork = Omit<
-  IBeaconStateViewGloas,
+  IBeaconStateViewHeze,
   "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
@@ -333,4 +351,8 @@ export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateV
 
 export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
   return isForkPostGloas(state.forkName);
+}
+
+export function isStatePostHeze(state: IBeaconStateView): state is IBeaconStateViewHeze {
+  return isForkPostHeze(state.forkName);
 }

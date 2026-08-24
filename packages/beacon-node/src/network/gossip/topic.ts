@@ -1,12 +1,20 @@
+import {type CompositeTypeAny} from "@chainsafe/ssz";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_DATA_COLUMN_SIDECAR_SIZE,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -124,9 +132,33 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.payload_attestation_message:
       return ssz.gloas.PayloadAttestationMessage;
     case GossipType.execution_payload_bid:
-      return ssz.gloas.SignedExecutionPayloadBid;
+      return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+  }
+}
+
+/**
+ * Return the maximum uncompressed SSZ byte length accepted for a gossip object.
+ */
+export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
+  const {fork} = topic.boundary;
+  // Gloas progressive containers have broad theoretical SSZ max sizes; use the preset p2p bounds instead.
+  switch (topic.type) {
+    case GossipType.beacon_block:
+      return maxPayloadSize;
+    case GossipType.beacon_aggregate_and_proof:
+      return isForkPostGloas(fork) ? MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.attester_slashing:
+      return isForkPostGloas(fork) ? MAX_ATTESTER_SLASHING_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.data_column_sidecar:
+      return isForkPostGloas(fork) ? MAX_DATA_COLUMN_SIDECAR_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.execution_payload:
+      return maxPayloadSize;
+    case GossipType.execution_payload_bid:
+      return isForkPostHeze(fork) ? MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE : MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE;
+    default:
+      return (sszType ?? getGossipSSZType(topic)).maxSize;
   }
 }
 
@@ -246,7 +278,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
+  opts: {subscribeAllSubnets?: boolean; subscribeAllColumnSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -266,7 +298,7 @@ export function getCoreTopicsAtFork(
 
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
-    topics.push(...getDataColumnSidecarTopics(networkConfig));
+    topics.push(...getDataColumnSidecarTopics(networkConfig, opts.subscribeAllColumnSubnets));
   }
 
   // After Deneb and before Fulu also track blob_sidecar_{subnet_id}
@@ -310,14 +342,38 @@ export function getCoreTopicsAtFork(
 }
 
 /**
+ * Build the complete set of valid gossip topic strings across every fork boundary.
+ */
+export function getAllowedTopics(networkConfig: NetworkConfig): Set<string> {
+  const {config} = networkConfig;
+  const allowedTopics = new Set<string>();
+
+  for (const boundary of config.forkBoundariesAscendingEpochOrder) {
+    const topics = getCoreTopicsAtFork(networkConfig, boundary.fork, {
+      subscribeAllSubnets: true,
+      subscribeAllColumnSubnets: true,
+      disableLightClientServer: false,
+    });
+    for (const topic of topics) {
+      allowedTopics.add(stringifyGossipTopic(config, {...topic, boundary}));
+    }
+  }
+
+  return allowedTopics;
+}
+
+/**
  * Pick data column subnets to subscribe to post-fulu.
  */
 export function getDataColumnSidecarTopics(
-  networkConfig: NetworkConfig
+  networkConfig: NetworkConfig,
+  subscribeAllColumnSubnets = false
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [];
 
-  const subnets = networkConfig.custodyConfig.sampledSubnets;
+  const subnets = subscribeAllColumnSubnets
+    ? Array.from({length: networkConfig.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT}, (_, i) => i)
+    : networkConfig.custodyConfig.sampledSubnets;
   for (const subnet of subnets) {
     topics.push({type: GossipType.data_column_sidecar, subnet});
   }
@@ -357,4 +413,42 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+};
+
+/**
+ * Whether a publish that reached zero subscribed peers is an acceptable outcome for a topic.
+ *
+ * Publishing to a topic with no subscribed peers throws `PublishError.NoPeersSubscribedToTopic`, which
+ * propagates to the caller and, for messages submitted through the beacon API, is surfaced to the
+ * validator client. That is the right default: a message that reached nobody is a failed broadcast, and a
+ * VC configured with several beacon nodes can fall back to another one.
+ *
+ * Only topics that have a concrete reason to tolerate it opt out here, ie. are set to `true`, and the
+ * reason is named on the entry. Everything else is `false` and keeps raising. Note this is applied per
+ * publish, a topic set to `false` still honors the global `--network.allowPublishToZeroPeers` flag.
+ */
+export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: false,
+  [GossipType.blob_sidecar]: false,
+  // data_column_sidecar: we ensure having all topic peers via prioritizePeers(). Even with 0 peers on the
+  // topic the overall publish can still succeed, because a supernode rebuilds and publishes the missing
+  // columns for us, so track sent peers as 0 instead of raising
+  [GossipType.data_column_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: false,
+  [GossipType.beacon_attestation]: false,
+  [GossipType.voluntary_exit]: false,
+  [GossipType.proposer_slashing]: false,
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: false,
+  [GossipType.sync_committee]: false,
+  // light_client_finality_update and light_client_optimistic_update: non-mandatory route on most of the
+  // network as of Oct 2022, there may be no peer subscribed to the topic at all. Reason carried over from
+  // the handlers in network.ts, which used to swallow the error instead
+  [GossipType.light_client_finality_update]: true,
+  [GossipType.light_client_optimistic_update]: true,
+  [GossipType.bls_to_execution_change]: false,
+  [GossipType.execution_payload]: false,
+  [GossipType.payload_attestation_message]: false,
+  [GossipType.execution_payload_bid]: false,
+  [GossipType.proposer_preferences]: false,
 };

@@ -23,7 +23,9 @@ import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./b
 import {
   ChainPeersBalancer,
   PeerSyncInfo,
+  ProcessingFaultKind,
   batchStartEpochIsAfterSlot,
+  classifyProcessingFault,
   computeHighestTarget,
   getBatchSlotRange,
   getNextBatchToProcess,
@@ -185,10 +187,6 @@ export class SyncChain {
     this.latestBid = latestBid;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
-
-    if (metrics) {
-      metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(metrics));
-    }
 
     // Trigger event on parent class
     this.sync().then(
@@ -360,9 +358,10 @@ export class SyncChain {
       // If a batch exceeds it's retry limit, maybe downscore peers.
       // shouldDownscoreOnBatchError() functions enforces that all BatchErrorCode values are covered
       if (e instanceof BatchError) {
-        const shouldReportPeer = shouldReportPeerOnBatchError(e.type.code);
+        const shouldReportPeer = shouldReportPeerOnBatchError(e.type.code, this.batches.get(e.type.startEpoch));
         if (shouldReportPeer) {
-          for (const peer of this.peerset.keys()) {
+          // Only the peers actually at fault are reported, never the whole peerset.
+          for (const peer of shouldReportPeer.peers) {
             this.reportPeer(peer, shouldReportPeer.action, shouldReportPeer.reason);
           }
         }
@@ -712,23 +711,41 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
-      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
-      // At least one block was successfully verified and imported, so we can be sure all
-      // previous batches are valid and we only need to download the current failed batch.
-      // TODO: Disabled for now
-      // if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
-      //   this.advanceChain(batch.startEpoch);
-      // }
-
-      // The current batch could not be processed, so either this or previous batches are invalid.
-      // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
-      // Progress will be drop back to `this.startEpoch`
-      for (const pendingBatch of this.batches.values()) {
-        if (pendingBatch.startEpoch < batch.startEpoch) {
-          this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
-          pendingBatch.validationError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      const invalidatePreviousBatches = (): number => {
+        let invalidatedCount = 0;
+        for (const pendingBatch of this.batches.values()) {
+          if (
+            pendingBatch.startEpoch < batch.startEpoch &&
+            pendingBatch.state.status === BatchStatus.AwaitingValidation
+          ) {
+            this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
+            pendingBatch.validationError(res.err);
+            invalidatedCount++;
+          }
         }
+        return invalidatedCount;
+      };
+
+      const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
+      switch (classifyProcessingFault(res.err, batch, prevBatch)) {
+        case ProcessingFaultKind.CurrentBatch:
+          batch.processingError(res.err);
+          break;
+
+        case ProcessingFaultKind.PreviousBatch:
+          // If no previous batch was invalidated, it means the error is on this batch
+          if (invalidatePreviousBatches() === 0) {
+            batch.processingError(res.err);
+          } else {
+            batch.retainForReprocessing();
+          }
+          break;
+
+        case ProcessingFaultKind.Ambiguous:
+          batch.processingError(res.err);
+          invalidatePreviousBatches();
+          break;
       }
     }
 
@@ -752,8 +769,11 @@ export class SyncChain {
 
         // The last batch attempt is right, all others are wrong. Penalize other peers
         const attemptOk = batch.validationSuccess();
-        for (const attempt of batch.failedProcessingAttempts) {
+        for (const attempt of batch.getPeerAttributableAttempts()) {
           if (attempt.hash !== attemptOk.hash) {
+            // attempt.peers contains block/column/envelope peers.
+            // And if there is one bad envelope we will downscore block and column peers to
+            // TODO: resolve this
             for (const badAttemptPeer of attempt.peers) {
               if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
                 // The same peer corrected its previous attempt
@@ -775,7 +795,10 @@ export class SyncChain {
     });
   }
 
-  private scrapeMetrics(metrics: Metrics): void {
+  /**
+   * Called by `RangeSync`'s to avoid collecting metrics of removed chains.
+   */
+  scrapeMetrics(metrics: Metrics): void {
     const syncPeersMetric =
       this.syncType === RangeSyncType.Finalized
         ? metrics.syncRange.finalizedSyncPeers
@@ -811,21 +834,32 @@ export class SyncChain {
  * If peer should not be downscored, returns null.
  */
 export function shouldReportPeerOnBatchError(
-  code: BatchErrorCode
-): {action: PeerAction.LowToleranceError; reason: string} | null {
+  code: BatchErrorCode,
+  batch: Batch | undefined
+): {action: PeerAction.LowToleranceError; reason: string; peers: PeerIdStr[]} | null {
   switch (code) {
-    // A batch could not be processed after max retry limit. It's likely that all peers
-    // in this chain are sending invalid batches repeatedly so are either malicious or faulty.
-    // We drop the chain and report all peers.
-    // There are some edge cases with forks that could cause this situation, but it's unlikely.
+    //  A batch could not be processed after max retry limit. Report
+    // only the peers that served a peer-attributable failed attempt.
     case BatchErrorCode.MAX_PROCESSING_ATTEMPTS:
-      return {action: PeerAction.LowToleranceError, reason: "SyncChainMaxProcessingAttempts"};
+    case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS: {
+      // penalize both the processing-error and execution-error peers
+      const attributablePeers = [
+        ...new Set(batch?.getPeerAttributableAttempts().flatMap((attempt) => attempt.peers) ?? []),
+      ];
+      if (attributablePeers.length === 0) {
+        return null;
+      }
+      const reason =
+        code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS
+          ? "SyncChainMaxProcessingAttempts"
+          : "SyncChainMaxExecutionEngineErrorAttempts";
+      return {action: PeerAction.LowToleranceError, reason, peers: attributablePeers};
+    }
 
     // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
     case BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS:
     case BatchErrorCode.INVALID_COUNT:
     case BatchErrorCode.WRONG_STATUS:
-    case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
       return null;
   }
 }

@@ -35,7 +35,10 @@ export type IChainOptions = BlockProcessOpts &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
+    /** Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks */
+    disableProposerSlashings?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
@@ -48,6 +51,10 @@ export type IChainOptions = BlockProcessOpts &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;
+    /** Builder circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -79,8 +86,6 @@ export type BlockProcessOpts = {
   verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
-  /** Used to specify to skip block signatures validation */
-  skipVerifyBlockSignatures?: boolean;
 };
 
 export type PoolOpts = {
@@ -105,7 +110,9 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoost: true,
   proposerBoostReorg: true,
   computeUnrealized: true,
+  fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
@@ -115,6 +122,7 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  disableProposerSlashings: false,
   broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32

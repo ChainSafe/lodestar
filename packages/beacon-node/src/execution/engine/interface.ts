@@ -1,5 +1,7 @@
 import {routes} from "@lodestar/api";
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
@@ -51,10 +53,18 @@ export enum ExecutionEngineState {
 export type ExecutionRequestType =
   | typeof DEPOSIT_REQUEST_TYPE
   | typeof WITHDRAWAL_REQUEST_TYPE
-  | typeof CONSOLIDATION_REQUEST_TYPE;
+  | typeof CONSOLIDATION_REQUEST_TYPE
+  | typeof BUILDER_DEPOSIT_REQUEST_TYPE
+  | typeof BUILDER_EXIT_REQUEST_TYPE;
 
 export function isExecutionRequestType(type: number): type is ExecutionRequestType {
-  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
+  return (
+    type === DEPOSIT_REQUEST_TYPE ||
+    type === WITHDRAWAL_REQUEST_TYPE ||
+    type === CONSOLIDATION_REQUEST_TYPE ||
+    type === BUILDER_DEPOSIT_REQUEST_TYPE ||
+    type === BUILDER_EXIT_REQUEST_TYPE
+  );
 }
 
 export type ExecutePayloadResponse =
@@ -88,7 +98,7 @@ export type PayloadAttributes = {
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
-  targetGasLimit?: number; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
 };
 
 export type VersionedHashes = Uint8Array[];

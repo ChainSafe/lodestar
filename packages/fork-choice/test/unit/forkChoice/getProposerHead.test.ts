@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
@@ -26,6 +27,14 @@ describe("Forkchoice / GetProposerHead", () => {
   const parentSlot = genesisSlot + 1;
   const headSlot = genesisSlot + 2;
   const validatorCount = 100;
+  const fuluConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+  });
 
   let protoArr: ProtoArray;
 
@@ -109,6 +118,22 @@ describe("Forkchoice / GetProposerHead", () => {
     payloadStatus: PayloadStatus.FULL,
   };
 
+  const epochBoundaryParentBlock = {
+    ...baseParentHeadBlock,
+    slot: SLOTS_PER_EPOCH * 2 - 2,
+    stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 2),
+    blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+    targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+  };
+  const epochBoundaryHeadBlock = {
+    ...baseHeadBlock,
+    slot: SLOTS_PER_EPOCH * 2 - 1,
+    stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 1),
+    parentRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+    blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 1),
+    targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+  };
+
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
@@ -140,6 +165,28 @@ describe("Forkchoice / GetProposerHead", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    confirmedRoot: genesisBlock.blockRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochGreatestUnrealizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    previousEpochGreatestUnrealizedBalances: new Uint16Array(Array(32).fill(150)),
+    previousSlotHead: genesisBlock.blockRoot,
+    currentSlotHead: genesisBlock.blockRoot,
+    stateGetter: () => null,
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong
@@ -151,6 +198,7 @@ describe("Forkchoice / GetProposerHead", () => {
     currentSlot?: Slot;
     secFromSlot?: number;
     expectedNotReorgedReason?: NotReorgedReason;
+    config?: ChainForkConfig;
   }[] = [
     {
       id: "Case that meets all conditions to be re-orged",
@@ -166,12 +214,20 @@ describe("Forkchoice / GetProposerHead", () => {
       expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
     },
     {
-      id: "No reorg when currenSlot is at epoch boundary",
-      parentBlock: {...baseParentHeadBlock},
-      headBlock: {...baseHeadBlock},
+      id: "No reorg when proposer shuffling is not stable",
+      parentBlock: epochBoundaryParentBlock,
+      headBlock: epochBoundaryHeadBlock,
       expectReorg: false,
       currentSlot: SLOTS_PER_EPOCH * 2,
       expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
+    },
+    {
+      id: "Reorg when currentSlot is at a post-Fulu epoch boundary",
+      parentBlock: epochBoundaryParentBlock,
+      headBlock: epochBoundaryHeadBlock,
+      expectReorg: true,
+      currentSlot: SLOTS_PER_EPOCH * 2,
+      config: fuluConfig,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",
@@ -246,6 +302,7 @@ describe("Forkchoice / GetProposerHead", () => {
     currentSlot: proposalSlot,
     secFromSlot,
     expectedNotReorgedReason,
+    config: forkChoiceConfig,
   } of testCases) {
     it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
@@ -254,7 +311,7 @@ describe("Forkchoice / GetProposerHead", () => {
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;
       protoArr.applyScoreChanges({
-        deltas: [0, parentBlock.weight, headBlock.weight],
+        attestationDeltas: [0, parentBlock.weight, headBlock.weight],
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -263,7 +320,7 @@ describe("Forkchoice / GetProposerHead", () => {
         currentSlot,
       });
 
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {
+      const forkChoice = new ForkChoice(forkChoiceConfig ?? config, fcStore, protoArr, validatorCount, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it} from "vitest";
+import {beforeEach, describe, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -30,9 +31,11 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -59,7 +62,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  skippedForks: ["eip8148"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -72,25 +75,48 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/ssz_static\/ForkChoiceNode.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
-    /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light client is implemented
-    /^gloas\/light_client\/.*/,
-    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
+    /^gloas\/light_client\/sync\/.*/,
+    /^heze\/light_client\/sync\/.*/,
     // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
+    // New test suite added by consensus-specs #5441; Lodestar still applies
+    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
+    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    // TODO GLOAS: enable this after gloas fork choice is ready
+    /^gloas\/fork_choice_compliance\/.*/,
+    /^heze\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
+    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    /\/heze_fork$/,
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
+    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
+    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
+    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
+    // so skip rather than raise the timeout and hide the regression.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
+    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["fast_confirmation", "networking"],
+  skippedRunners: ["networking"],
 };
 
 /**
@@ -113,7 +139,6 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
@@ -171,6 +196,7 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
+                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -178,12 +204,26 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(
+                testId,
+                testSuiteDirpath,
+                (testCase, directoryName, testCaseName) => {
+                  pubkeyCache.reset();
+                  return testFunction(testCase, directoryName, testCaseName);
+                },
+                options
+              );
             }
           }
         }

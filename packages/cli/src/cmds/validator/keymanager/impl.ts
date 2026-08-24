@@ -1,5 +1,5 @@
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   BuilderBoostFactorData,
   DeleteRemoteKeyStatus,
@@ -89,7 +89,7 @@ export class KeymanagerApi implements Api {
 
   async getGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGasLimit"]> {
     this.assertValidKnownPubkey(pubkey);
-    const gasLimit = this.validator.validatorStore.getGasLimit(pubkey);
+    const gasLimit = this.validator.validatorStore.getGasLimit(pubkey, this.validator.clock.getCurrentSlot());
     return {data: {pubkey, gasLimit}};
   }
 

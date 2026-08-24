@@ -2,27 +2,32 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
-  EpochDifference,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  GENESIS_EPOCH,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -117,18 +122,13 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
-  // getBeaconProposerOrNull will return null if head state is more than one epoch away
-  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
-  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
-
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus,
-    expectedProposerIndex
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -189,10 +189,12 @@ export async function importBlock(
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
         const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
-        const missedSlotVote = ssz.Root.equals(
-          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
-          rootCache.getBlockRootAtSlot(attestation.data.slot)
-        );
+        const missedSlotVote =
+          attestation.data.slot > GENESIS_SLOT &&
+          ssz.Root.equals(
+            rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+            rootCache.getBlockRootAtSlot(attestation.data.slot)
+          );
         this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
@@ -281,24 +283,21 @@ export async function importBlock(
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
+  // Prune the gloas payload-envelope cache below the new head's parent so it stays bounded during
+  // syncing. On a synced node, cache holds just 2 entries — head (parent for
+  // next-slot production) and head.parent (proposer-boost-reorg fallback)
+  if (fork >= ForkSeq.gloas) {
+    callInNextEventLoop(() => {
+      const newHeadParent = this.forkChoice.getBlockHexDefaultStatus(newHead.parentRoot);
+      if (newHeadParent) {
+        this.seenPayloadEnvelopeInputCache.pruneBelowParent(newHeadParent);
+      }
+    });
+  }
+
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
-
-    try {
-      this.emitter.emit(routes.events.EventType.head, {
-        block: newHead.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-        slot: newHead.slot,
-        state: newHead.stateRoot,
-        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-        executionOptimistic: isOptimisticBlock(newHead),
-      });
-    } catch (e) {
-      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
-    }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
@@ -404,11 +403,7 @@ export async function importBlock(
         notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
+      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
     }
 
     if (shouldOverrideFcu) {
@@ -444,8 +439,8 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
@@ -469,8 +464,15 @@ export async function importBlock(
   // Cache shufflings when crossing an epoch boundary
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    const previousEpoch = blockEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : blockEpoch - 1;
+    if (
+      !this.shufflingCache.has(previousEpoch, postState.previousDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch, postState.currentDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch + 1, postState.nextDecisionRoot)
+    ) {
+      this.shufflingCache.processState(postState);
+      this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    }
   }
 
   if (blockSlot % SLOTS_PER_EPOCH === 0) {

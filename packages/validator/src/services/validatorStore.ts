@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -80,8 +80,9 @@ type DefaultProposerConfig = {
   strictFeeRecipientCheck: boolean;
   feeRecipient: ExecutionAddress;
   builder: {
-    gasLimit: number;
-    selection: routes.validator.BuilderSelection;
+    // Left undefined when not configured so the fork-appropriate default can be resolved per slot
+    gasLimit?: number;
+    selection?: routes.validator.BuilderSelection;
     boostFactor: bigint;
   };
 };
@@ -181,8 +182,8 @@ export class ValidatorStore {
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
-        gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
-        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
+        gasLimit: defaultConfig.builder?.gasLimit,
+        selection: defaultConfig.builder?.selection,
         boostFactor: builderBoostFactor,
       },
     };
@@ -278,9 +279,30 @@ export class ValidatorStore {
     delete validatorData.graffiti;
   }
 
-  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
-    const selection =
-      this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
+  getBuilderSelectionParams(
+    pubkeyHex: PubkeyHex,
+    slot?: Slot
+  ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    // Builder bids post-gloas are in-protocol, so the default strategy uses them regardless of
+    // whether they are received over p2p or through a builder API. Pre-gloas there is no
+    // in-protocol builder, so the default remains local-only (executiononly).
+    const isPostGloas = slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas;
+    const defaultSelection = isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+    let selection =
+      this.validators.get(pubkeyHex)?.builder?.selection ??
+      this.defaultProposerConfig.builder.selection ??
+      defaultSelection;
+
+    // Post-Gloas block production uses standard builder boost factor. Need to normalize the
+    // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
+    // and "executionalways" equivalent before deriving the boost factor.
+    if (isPostGloas) {
+      if (selection === routes.validator.BuilderSelection.BuilderOnly) {
+        selection = routes.validator.BuilderSelection.BuilderAlways;
+      } else if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
+        selection = routes.validator.BuilderSelection.ExecutionAlways;
+      }
+    }
 
     let boostFactor: bigint;
     switch (selection) {
@@ -314,12 +336,33 @@ export class ValidatorStore {
     );
   }
 
-  getGasLimit(pubkeyHex: PubkeyHex): number {
+  getConfiguredDefaultGasLimit(): number | undefined {
+    return this.defaultProposerConfig.builder.gasLimit;
+  }
+
+  getGasLimit(pubkeyHex: PubkeyHex, slot: Slot, logger?: LoggerVc): number {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    return validatorData?.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
+
+    const configuredGasLimit = validatorData.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
+    const scheduledGasLimit = this.config.getScheduledGasLimit(computeEpochAtSlot(slot));
+
+    if (configuredGasLimit !== undefined) {
+      if (scheduledGasLimit !== undefined && configuredGasLimit > scheduledGasLimit) {
+        logger?.warn("Configured gas limit exceeds recommended maximum", {
+          pubkey: pubkeyHex,
+          slot,
+          configuredGasLimit,
+          recommendedGasLimit: scheduledGasLimit,
+        });
+      }
+
+      return configuredGasLimit;
+    }
+
+    return scheduledGasLimit ?? defaultOptions.defaultGasLimit;
   }
 
   setGasLimit(pubkeyHex: PubkeyHex, gasLimit: number): void {
@@ -607,9 +650,11 @@ export class ValidatorStore {
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
     const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
-    const signingRoot = isPostElectra
-      ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
-      : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const signingRoot = computeSigningRoot(
+      this.config.getForkTypes(signingSlot).AggregateAndProof,
+      aggregateAndProof,
+      domain
+    );
 
     const signableMessage: SignableMessage = {
       type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
@@ -723,7 +768,7 @@ export class ValidatorStore {
       proposalSlot: duty.slot,
       validatorIndex: duty.validatorIndex,
       feeRecipient: fromHex(feeRecipient),
-      targetGasLimit: gasLimit,
+      targetGasLimit: BigInt(gasLimit),
     };
 
     const signingSlot = duty.slot;

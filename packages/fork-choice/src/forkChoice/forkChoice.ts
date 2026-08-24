@@ -1,5 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -25,7 +31,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -45,6 +51,13 @@ import {
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
+  type FastConfirmationContext,
+  FastConfirmationRule,
+  FastConfirmationSteps,
+  type IFastConfirmationRule,
+  type IFastConfirmationSpecStore,
+} from "./fastConfirmation/fastConfirmationRule.js";
+import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
@@ -58,7 +71,10 @@ export type ForkChoiceOpts = {
   proposerBoost?: boolean;
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
+  fastConfirmation?: boolean;
 };
+
+const EFFECTIVE_BALANCE_INCREMENT_BIGINT = BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
 export enum UpdateHeadOpt {
   GetCanonicalHead = "getCanonicalHead", // Skip getProposerHead
@@ -139,9 +155,13 @@ export class ForkChoice implements IForkChoice {
   /** Boost the entire branch with this proposer root as the leaf */
   private proposerBoostRoot: RootHex | null = null;
   /** Score to use in proposer boost, evaluated lazily from justified balances */
-  private justifiedProposerBoostScore: number | null = null;
+  private justifiedProposerBoostScore: bigint | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** Optional fast confirmation rule implementation */
+  private readonly fastConfirmationRule?: IFastConfirmationRule;
+  private readonly fastConfirmationContext?: FastConfirmationContext;
+  private fastConfirmationPaused = false;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -166,6 +186,12 @@ export class ForkChoice implements IForkChoice {
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+
+    if (this.opts?.fastConfirmation) {
+      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
+      this.fastConfirmationContext = this.createFastConfirmationContext();
+      metrics?.fastConfirmation.paused.set(0);
+    }
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.voteNextSlots.length);
@@ -205,6 +231,66 @@ export class ForkChoice implements IForkChoice {
    */
   getHead(): ProtoBlock {
     return this.head;
+  }
+
+  getConfirmedRoot(): RootHex {
+    return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+  }
+
+  getFastConfirmationStore(): IFastConfirmationSpecStore {
+    return {
+      confirmedRoot: this.getConfirmedRoot(),
+      previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
+      currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
+      previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
+      previousSlotHead: this.fcStore.previousSlotHead,
+      currentSlotHead: this.fcStore.currentSlotHead,
+    };
+  }
+
+  getConfirmedBlock(): ProtoBlock | null {
+    return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
+  }
+
+  resumeFastConfirmation(): void {
+    this.toggleFastConfirmation(false);
+  }
+
+  pauseFastConfirmation(): void {
+    this.toggleFastConfirmation(true);
+  }
+
+  private toggleFastConfirmation(paused: boolean): void {
+    if (!this.fastConfirmationRule) return;
+    if (paused === this.fastConfirmationPaused) return;
+    this.fastConfirmationPaused = paused;
+    if (paused) {
+      // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Callers run in clock/network handler context with no catch above
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+    }
+    this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
+    this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
+      slot: this.fcStore.currentSlot,
+    });
+  }
+
+  private notifyConfirmedRoot(): void {
+    const confirmedRoot = this.fcStore.confirmedRoot;
+    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock === null) {
+      throw new Error(`Fast confirmation produced root not in protoArray: ${confirmedRoot}`);
+    }
+    this.fcStore.notifyFastConfirmation?.({
+      block: confirmedRoot,
+      slot: confirmedBlock.slot,
+      currentSlot: this.fcStore.currentSlot,
+    });
   }
 
   /**
@@ -310,6 +396,10 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.protoArray.getPreviousProposerBoostRoot();
+  }
+
   /**
    * Decides whether to extend an available payload from the previous slot,
    * corresponding to the beacon block `blockRoot`.
@@ -318,9 +408,9 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
-  /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock): boolean {
-    return this.protoArray.shouldBuildOnFull(head);
+  /** Spec: should_build_on_full(store, head, slot) */
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
+    return this.protoArray.shouldBuildOnFull(head, slot);
   }
 
   /**
@@ -428,26 +518,12 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
-    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
-    });
-    const headNode = this.protoArray.getNode(headBlock.blockRoot, headBlock.payloadStatus);
-    // If headNode is unavailable, give up reorg
-    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+    if (!this.isHeadWeak(headBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#is_parent_strong
-    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
-    });
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentBlock.payloadStatus);
-    // If parentNode is unavailable, give up reorg
-    if (parentNode === undefined || parentNode.weight <= parentThreshold) {
+    if (!this.isParentStrong(parentBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotStrong};
     }
 
@@ -490,7 +566,7 @@ export class ForkChoice implements IForkChoice {
 
     const timer = computeDeltasMetrics?.duration.startTimer();
     const {
-      deltas,
+      attestationDeltas,
       equivocatingValidators,
       oldInactiveValidators,
       newInactiveValidators,
@@ -506,8 +582,8 @@ export class ForkChoice implements IForkChoice {
     );
     timer?.();
 
-    computeDeltasMetrics?.deltasCount.set(deltas.length);
-    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.deltasCount.set(attestationDeltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(attestationDeltas.filter((d) => d === 0).length);
     computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
     computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
     computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
@@ -519,7 +595,7 @@ export class ForkChoice implements IForkChoice {
      * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
      */
-    let proposerBoost: {root: RootHex; score: number} | null = null;
+    let proposerBoost: {root: RootHex; score: bigint} | null = null;
     if (this.opts?.proposerBoost && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
@@ -533,7 +609,7 @@ export class ForkChoice implements IForkChoice {
 
     const currentSlot = this.fcStore.currentSlot;
     this.protoArray.applyScoreChanges({
-      deltas,
+      attestationDeltas,
       proposerBoost,
       justifiedEpoch: this.fcStore.justified.checkpoint.epoch,
       justifiedRoot: this.fcStore.justified.checkpoint.rootHex,
@@ -558,9 +634,18 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
   }
 
+  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot, head: ProtoBlock): {full: number; empty: number} {
+    return this.protoArray.getCanonicalPayloadCounts(fromSlot, toSlot, head.blockRoot, head.payloadStatus);
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
+  }
+
+  /** Returns exact Gwei weights for the compliance test. */
+  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] {
+    return this.protoArray.getViableHeads(this.fcStore.currentSlot);
   }
 
   /** This is for the debug API only */
@@ -601,11 +686,7 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    // The expected proposer index on the canonical chain we are following.
-    // Calculated by our head state. We use it as part of the proposer
-    // boost decision making. No boost will be set if this is null.
-    expectedProposerIndex: ValidatorIndex | null
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -671,30 +752,24 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(blockRoot);
 
-    // Assign proposer score boost if the block is timely
-    // before attesting interval = before 1st interval
+    // Decide whether this block should receive proposer boost, and whether the block is timely.
+    // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
+    // `protoArray.onBlock()` succeeds
     const isTimely = this.isBlockTimely(block, blockDelaySec);
-    if (
-      this.opts?.proposerBoost &&
+    const isProposerBoostBlock =
+      this.opts?.proposerBoost === true &&
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null &&
-      expectedProposerIndex !== null &&
-      block.proposerIndex === expectedProposerIndex
-    ) {
-      this.proposerBoostRoot = blockRootHex;
-    }
+      this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
+    // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
+    // store only after the insertion succeeds.
+    const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
 
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
-
-    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
-    // the justified checkpoint changes
-    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
-    );
 
     const blockEpoch = computeEpochAtSlot(slot);
 
@@ -737,19 +812,6 @@ export class ForkChoice implements IForkChoice {
     } else {
       unrealizedJustifiedCheckpoint = justifiedCheckpoint;
       unrealizedFinalizedCheckpoint = finalizedCheckpoint;
-    }
-
-    // Un-realized checkpoints
-    // Update best known unrealized justified & finalized checkpoints
-    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-    );
-
-    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
-    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
-      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-      );
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -822,7 +884,29 @@ export class ForkChoice implements IForkChoice {
       parentBlockHash: parentHashHex,
     };
 
-    this.protoArray.onBlock(protoBlock, currentSlot, this.proposerBoostRoot);
+    this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
+
+    if (isProposerBoostBlock) {
+      this.proposerBoostRoot = blockRootHex;
+    }
+
+    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on
+    // demand only if the justified checkpoint changes.
+    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
+    );
+
+    // Un-realized checkpoints. Update best known unrealized justified & finalized checkpoints
+    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+    );
+
+    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
+    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
+      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+      );
+    }
 
     return protoBlock;
   }
@@ -869,14 +953,15 @@ export class ForkChoice implements IForkChoice {
 
     this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
 
-    // Pre-gloas: payload is always present
+    // Determine which variant the attestation supports
+    //
+    // Pre-gloas: payload is always present, vote goes to FULL.
     // Post-gloas:
-    // - always add weight to PENDING
-    // - if message.slot > block.slot, it also add weights to FULL or EMPTY
+    //   - block.slot < message.slot: EMPTY if data.index is 0 and FULL if data.index is 1.
+    //   - else: PENDING
+    //
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_supported_node
     let payloadStatus: PayloadStatus;
-
-    // We need to retrieve block to check if it's Gloas and to compare slot
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
@@ -994,12 +1079,12 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       this.onTick(previousSlot + 1);
+      this.queuedAttestationsPreviousSlot = 0;
+      // Process any attestations that might now be eligible before running FCR for this slot.
+      this.processAttestationQueue();
+      this.runFastConfirmation();
+      this.validatedAttestationDatas = new Set();
     }
-
-    this.queuedAttestationsPreviousSlot = 0;
-    // Process any attestations that might now be eligible.
-    this.processAttestationQueue();
-    this.validatedAttestationDatas = new Set();
   }
 
   getTime(): Slot {
@@ -1066,6 +1151,30 @@ export class ForkChoice implements IForkChoice {
     const votes = this.protoArray.getPTCVotes(blockRootHex);
     if (votes === null) return null;
     return votes.toBoolArray().map((v) => v ?? null);
+  }
+
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadTimelinessVotes(blockRootHex);
+  }
+
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadDataAvailabilityVotes(blockRootHex);
+  }
+
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedJustified.checkpoint;
+  }
+
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedFinalizedCheckpoint;
   }
 
   /**
@@ -1441,6 +1550,120 @@ export class ForkChoice implements IForkChoice {
     }
 
     throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
+  }
+
+  /**
+   * Spec: phase0/fork-choice.md#update_proposer_boost_root (`is_same_dependent_root` condition, added in
+   * https://github.com/ethereum/consensus-specs/pull/5306). Proposer boost is only granted when the imported
+   * block shares the same proposer-shuffling dependent root for the current epoch as the canonical head
+   * computed before the block was imported. This withholds the boost from a block built on a different
+   * shuffling branch than the head.
+   *
+   * The block is not yet in the proto-array when this runs, so its dependent root is traced from
+   * its parent
+   */
+  private isProposerBoostSameDependentRoot(headRootHex: RootHex, blockParentRootHex: RootHex): boolean {
+    const epoch = computeEpochAtSlot(this.fcStore.currentSlot);
+    // Genesis block parent
+    if (epoch <= MIN_SEED_LOOKAHEAD) {
+      return true;
+    }
+
+    const dependentSlot = computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1;
+    const headDependentRoot = this.protoArray.getAncestorOrNull(headRootHex, dependentSlot)?.blockRoot;
+    const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
+    // On lookup failure, we lean on the conservative side and withold the boost
+    if (headDependentRoot === undefined || blockDependentRoot === undefined) {
+      return false;
+    }
+
+    return headDependentRoot === blockDependentRoot;
+  }
+
+  /**
+   * Return true if the block is "weak" ie. its weight is below REORG_HEAD_WEIGHT_THRESHOLD of the
+   * total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak
+   */
+  private isHeadWeak(blockRoot: RootHex): boolean {
+    // The default variant is PENDING for gloas, FULL pre-gloas. PENDING is the variant gloas measures
+    // support on, ie. support for the beacon block root regardless of its payload status.
+    // Only ever called on a block already in fork choice, so a miss is a broken invariant.
+    const node = this.protoArray.getNodeDefaultStatus(blockRoot);
+    if (node === undefined) {
+      // this is called for head so we should always have this in forkchoice, otherwise we have a serious error
+      throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
+    }
+
+    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
+    });
+
+    if (!isForkPostGloas(this.config.getForkName(node.slot))) {
+      return node.weight < reorgThreshold;
+    }
+
+    let headWeight = node.attestationScore;
+
+    const {equivocatingIndices} = this.fcStore;
+    // Equivocators are extremely rare (none in normal operation), and with none the added weight is
+    // always 0. Return before fetching the state and walking the block's committees.
+    if (equivocatingIndices.size > 0) {
+      const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
+      // Only ever called on the head, so the state is always cached.
+      // A miss is a broken invariant, not a recoverable state.
+      if (state === null) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.BEACON_STATE_ERROR,
+          error: new Error(`Missing state for isHeadWeak, blockRoot=${blockRoot} stateRoot=${node.stateRoot}`),
+        });
+      }
+
+      const epoch = computeEpochAtSlot(node.slot);
+      for (let index = 0; index < state.getBeaconCommitteeCountPerSlot(epoch); index++) {
+        for (const validatorIndex of state.getBeaconCommittee(node.slot, index)) {
+          if (equivocatingIndices.has(validatorIndex)) {
+            // the spec specifies to use effective_balance of the justified state
+            let balance = this.fcStore.justified.balances[validatorIndex];
+            if (!balance) {
+              // 0 (zeroed by getEffectiveBalanceIncrementsZeroInactive) or undefined (validator not in
+              // the justified state) - fall back to the head state's effective balance
+              balance = state.effectiveBalanceIncrements[validatorIndex];
+            }
+            headWeight += BigInt(balance) * EFFECTIVE_BALANCE_INCREMENT_BIGINT;
+          }
+        }
+      }
+    }
+
+    return headWeight < reorgThreshold;
+  }
+
+  /**
+   * Return true if the parent block is "strong" ie. its weight exceeds REORG_PARENT_WEIGHT_THRESHOLD
+   * of the total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_parent_strong
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-is_parent_strong
+   */
+  private isParentStrong(parentRoot: RootHex): boolean {
+    const node = this.protoArray.getNodeDefaultStatus(parentRoot);
+    // If parentNode is unavailable, give up reorg
+    if (node === undefined) {
+      return false;
+    }
+
+    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
+    });
+
+    // pre-gloas uses get_weight() (boost-inclusive), gloas uses get_attestation_score() (boost-excluded)
+    const parentWeight = isForkPostGloas(this.config.getForkName(node.slot)) ? node.attestationScore : node.weight;
+    return parentWeight > parentThreshold;
   }
 
   /**
@@ -1859,9 +2082,7 @@ export class ForkChoice implements IForkChoice {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
-    // No reorg if we are at epoch boundary where proposer shuffling could change
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
-    const isShufflingStable = slot % SLOTS_PER_EPOCH !== 0;
+    const isShufflingStable = isForkPostFulu(this.config.getForkName(slot)) || slot % SLOTS_PER_EPOCH !== 0;
     if (!isShufflingStable) {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotShufflingStable};
     }
@@ -1893,14 +2114,103 @@ export class ForkChoice implements IForkChoice {
 
     return {prelimProposerHead};
   }
+
+  private runFastConfirmation(): void {
+    const fastConfirmationRule = this.fastConfirmationRule;
+    const fastConfirmationContext = this.fastConfirmationContext;
+    if (!fastConfirmationRule || !fastConfirmationContext) return;
+
+    if (this.fastConfirmationPaused) {
+      // Keep consumers on a safe, available root while the rule is paused
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Runs outside the timed try/catch below; a throw would escape to the clock listener
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+      return;
+    }
+
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
+      try {
+        withObservedDuration(
+          this.metrics?.fastConfirmation.stepsDuration.startTimer({
+            step: FastConfirmationSteps.updateHead,
+          }),
+          () => this.updateHead()
+        );
+
+        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
+        this.fcStore.confirmedRoot = result.confirmedRoot;
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        this.logger?.debug(
+          "Fast confirmation failed",
+          {slot: this.fcStore.currentSlot, head: this.head.blockRoot, confirmedRoot: this.fcStore.confirmedRoot},
+          err as Error
+        );
+      }
+    });
+  }
+
+  private createFastConfirmationContext(): FastConfirmationContext {
+    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD;
+    if (!confirmationByzantineThreshold) {
+      throw new Error("CONFIRMATION_BYZANTINE_THRESHOLD must be set to use fast confirmation");
+    }
+
+    return {
+      config: {
+        CONFIRMATION_BYZANTINE_THRESHOLD: confirmationByzantineThreshold,
+        PROPOSER_SCORE_BOOST: this.config.PROPOSER_SCORE_BOOST,
+      },
+      getCurrentSlot: () => this.fcStore.currentSlot,
+      getHead: () => this.head,
+      getBlock: (root: RootHex) => this.getBlockHexDefaultStatus(root),
+      getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot).blockRoot,
+      isDescendant: (ancestor: RootHex, descendant: RootHex) => {
+        const ancestorStatus = this.protoArray.getDefaultVariant(ancestor);
+        const descendantStatus = this.protoArray.getDefaultVariant(descendant);
+        if (ancestorStatus === undefined || descendantStatus === undefined) return false;
+        return this.isDescendant(ancestor, ancestorStatus, descendant, descendantStatus);
+      },
+      getLatestMessage: (validatorIndex: ValidatorIndex) => {
+        const nextIndex = this.voteNextIndices[validatorIndex];
+        if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
+          return null;
+        }
+        const node = this.protoArray.nodes[nextIndex];
+        if (!node) return null;
+        return {root: node.blockRoot, epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex])};
+      },
+      getUnrealizedJustified: () => ({
+        checkpoint: this.fcStore.unrealizedJustified.checkpoint,
+        balances: this.fcStore.unrealizedJustified.balances,
+      }),
+      getFinalizedCheckpoint: () => this.fcStore.finalizedCheckpoint,
+      getEquivocatingIndices: () => this.fcStore.equivocatingIndices,
+      getTrackedVotesCount: () => {
+        let count = 0;
+        for (let i = 0; i < this.voteNextIndices.length; i++) {
+          if (this.voteNextIndices[i] !== NULL_VOTE_INDEX) {
+            count++;
+          }
+        }
+        return count;
+      },
+    };
+  }
 }
 
-// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
-export function getCommitteeFraction(
+function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
   config: {slotsPerEpoch: number; committeePercent: number}
-): number {
-  const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
-  return Math.floor((committeeWeight * config.committeePercent) / 100);
+): bigint {
+  const committeeWeightGwei =
+    (BigInt(justifiedTotalActiveBalanceByIncrement) * EFFECTIVE_BALANCE_INCREMENT_BIGINT) /
+    BigInt(config.slotsPerEpoch);
+  return (committeeWeightGwei * BigInt(config.committeePercent)) / 100n;
 }

@@ -102,8 +102,8 @@ describe("getCommonAncestor", () => {
   const lastSlot = blocks.reverse()[0].slot;
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    attestationDeltas: deltas,
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -114,8 +114,8 @@ describe("getCommonAncestor", () => {
 
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas: deltasNew,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    attestationDeltas: deltasNew,
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,

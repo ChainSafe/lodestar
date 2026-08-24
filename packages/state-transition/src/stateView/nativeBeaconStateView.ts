@@ -7,6 +7,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -34,6 +35,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 import {
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -123,10 +125,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getStateRootAtSlot = new Map<Slot, Root>();
   private readonly _getRandaoMix = new Map<Epoch, Bytes32>();
   private readonly _getShufflingAtEpoch = new Map<Epoch, EpochShuffling>();
+  private readonly _getBeaconCommittee = new Map<string, Uint32Array>();
+  private readonly _getBeaconCommitteeCountPerSlot = new Map<Epoch, number>();
   private readonly _getShufflingDecisionRoot = new Map<Epoch, RootHex>();
   private readonly _getBeaconProposer = new Map<Slot, ValidatorIndex>();
-  // getBeaconProposerOrNull can return null, so use .has() to distinguish "not cached" from "cached null"
-  private readonly _getBeaconProposerOrNull = new Map<Slot, ValidatorIndex | null>();
   private readonly _getValidator = new Map<ValidatorIndex, phase0.Validator>();
   private readonly _getBalance = new Map<number, number>();
   private readonly _getIndexedSyncCommitteeAtEpoch = new Map<Epoch, SyncCommitteeCache>();
@@ -141,6 +143,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _getNextShuffling: EpochShuffling | null = null;
   private _getEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   private _getAllValidators: phase0.Validator[] | null = null;
+  private _getBuildersLength: number | null = null;
   private _getAllBalances: number[] | null = null;
   private _getLatestWeakSubjectivityCheckpointEpoch: Epoch | null = null;
   private _getFinalizedRootProof: Uint8Array[] | null = null;
@@ -305,6 +308,25 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    const key = `${slot}:${index}`;
+    let cached = this._getBeaconCommittee.get(key);
+    if (cached === undefined) {
+      cached = this.binding.getBeaconCommittee(slot, index);
+      this._getBeaconCommittee.set(key, cached);
+    }
+    return cached;
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    let cached = this._getBeaconCommitteeCountPerSlot.get(epoch);
+    if (cached === undefined) {
+      cached = this.binding.getBeaconCommitteeCountPerSlot(epoch);
+      this._getBeaconCommitteeCountPerSlot.set(epoch, cached);
+    }
+    return cached;
+  }
+
   get previousDecisionRoot(): RootHex {
     if (this._previousDecisionRoot === null) {
       this._previousDecisionRoot = this.binding.previousDecisionRoot;
@@ -386,14 +408,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBeaconProposer.set(slot, cached);
     }
     return cached;
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    if (!this._getBeaconProposerOrNull.has(slot)) {
-      this._getBeaconProposerOrNull.set(slot, this.binding.getBeaconProposerOrNull(slot));
-    }
-    // biome-ignore lint/style/noNonNullAssertion: has() check guarantees a value
-    return this._getBeaconProposerOrNull.get(slot)!;
   }
 
   // Validators and balances
@@ -832,6 +846,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.binding.clearPreGloasBuilderDepositCache();
+  }
+
   // ─── gloas ───────────────────────────────────────────────────────────────
 
   get latestBlockHash(): Bytes32 {
@@ -866,6 +888,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
+  getBuildersLength(): number {
+    if (this._getBuildersLength === null) {
+      this._getBuildersLength = this.binding.getBuildersLength();
+    }
+    return this._getBuildersLength;
+  }
+
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     return this.binding.canBuilderCoverBid(builderIndex, bidAmount);
   }
@@ -883,7 +912,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     const view = new NativeBeaconStateView(this.binding.withParentPayloadApplied(executionRequests));
     if (!isStatePostGloas(view)) {
       throw new Error("Expected gloas state from withParentPayloadApplied");

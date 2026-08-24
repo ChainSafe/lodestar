@@ -92,6 +92,133 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
+  describe("getCanonicalPayloadCounts", () => {
+    it("excludes competing branches and keeps EMPTY after a late FULL arrives", () => {
+      const currentSlot = gloasForkSlot + 2;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      const parent = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(parent, currentSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // The canonical child extends FULL. Two competing children are excluded regardless of whether
+      // their own payload was revealed.
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02ff"), currentSlot, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x04", "0x02", "0x02"), currentSlot, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x06", "0x02", "0x02ff"), currentSlot, null);
+      protoArray.onExecutionPayload(
+        "0x04",
+        currentSlot,
+        "0x04ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // A later canonical block commits to EMPTY for 0x03.
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 2, "0x05", "0x03", "0x03"), currentSlot, null);
+
+      // The payload for 0x03 arrives after its EMPTY variant was extended.
+      protoArray.onExecutionPayload(
+        "0x03",
+        currentSlot,
+        "0x03ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // Only the chain selected by 0x05 is assessed. 0x02 resolved FULL and 0x03 resolved EMPTY.
+      expect(protoArray.getCanonicalPayloadCounts(gloasForkSlot, currentSlot, "0x05", PayloadStatus.PENDING)).toEqual({
+        full: 1,
+        empty: 1,
+      });
+
+      // Slot range bounds are inclusive.
+      expect(
+        protoArray.getCanonicalPayloadCounts(gloasForkSlot + 1, gloasForkSlot + 1, "0x05", PayloadStatus.PENDING)
+      ).toEqual({full: 0, empty: 1});
+    });
+
+    it("uses the supplied head branch", () => {
+      const currentSlot = gloasForkSlot + 1;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02"), currentSlot, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x04", "0x02", "0x02ff"), currentSlot, null);
+
+      protoArray.onExecutionPayload(
+        "0x04",
+        currentSlot,
+        "0x04ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(protoArray.getCanonicalPayloadCounts(gloasForkSlot, currentSlot, "0x04", PayloadStatus.FULL)).toEqual({
+        full: 2,
+        empty: 0,
+      });
+    });
+
+    it("does not assess a PENDING head before its payload status is selected", () => {
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), gloasForkSlot, null);
+
+      expect(protoArray.getCanonicalPayloadCounts(gloasForkSlot, gloasForkSlot, "0x02", PayloadStatus.PENDING)).toEqual(
+        {
+          full: 0,
+          empty: 0,
+        }
+      );
+    });
+
+    it("does not count the genesis block as EMPTY", () => {
+      const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00", "0x00"), 0);
+
+      expect(protoArray.getCanonicalPayloadCounts(0, 0, genesisRoot, PayloadStatus.EMPTY)).toEqual({
+        full: 0,
+        empty: 0,
+      });
+    });
+  });
+
   describe("Pre-Gloas (Fulu) behavior", () => {
     let protoArray: ProtoArray;
 
@@ -490,6 +617,37 @@ describe("Gloas Fork Choice", () => {
       expect(() => protoArray.notifyPtcMessages("0x99", gloasForkSlot, [0], true, true)).not.toThrow();
     });
 
+    it("getPTCVoteCounts() returns raw popcounts of attested / present / available votes", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // No votes yet
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 0,
+        payloadPresentCount: 0,
+        dataAvailableCount: 0,
+      });
+
+      // 3 validators vote present + available, 2 attest but vote against both
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1, 2], true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [3, 4], false, false);
+
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 5,
+        payloadPresentCount: 3,
+        dataAvailableCount: 3,
+      });
+    });
+
+    it("getPTCVoteCounts() returns null for pre-Gloas and unknown roots", () => {
+      // Pre-Gloas block (parentBlockHash === null) has no PTC vote maps
+      const preGloasBlock = createTestBlock(gloasForkSlot - 1, "0x03", genesisRoot);
+      protoArray.onBlock(preGloasBlock, gloasForkSlot - 1, null);
+      expect(protoArray.getPTCVoteCounts("0x03")).toBeNull();
+      // Unknown root
+      expect(protoArray.getPTCVoteCounts("0x99")).toBeNull();
+    });
+
     it("isPayloadTimely() returns false when payload not locally available", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
@@ -600,7 +758,7 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // notifyPtcMessages should be no-op
-      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot - 1, [0], true, true)).not.toThrow();
     });
   });
 
@@ -753,7 +911,7 @@ describe("Gloas Fork Choice", () => {
     it("DA NO votes do not pollute timeliness NO count (cross-dimension isolation)", () => {
       // Every PTC member votes (payloadPresent=true, blobDataAvailable=false).
       // Timeliness YES → no timeliness NO votes. DA NO → DA NO threshold tripped.
-      // isPayloadNotTimely must read only ptcVotes, not daVotes.
+      // isPayloadNotTimely must read only payloadTimelinessVotes, not payloadDataAvailabilityVotes.
       makeFullBlock();
       const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
@@ -926,7 +1084,7 @@ describe("Gloas Fork Choice", () => {
     it("timeliness NO votes do not pollute DA NO count (cross-dimension isolation)", () => {
       // Every PTC member votes (payloadPresent=false, blobDataAvailable=true).
       // Timeliness NO → timeliness NO threshold tripped. DA YES → no DA NO votes.
-      // isPayloadDataNotAvailable must read only daVotes, not ptcVotes.
+      // isPayloadDataNotAvailable must read only payloadDataAvailabilityVotes, not payloadTimelinessVotes.
       makeFullBlock();
       const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, true);
@@ -976,7 +1134,7 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
-  describe("shouldBuildOnFull() — Spec: should_build_on_full(store, head)", () => {
+  describe("shouldBuildOnFull() - Spec: should_build_on_full(store, head, slot)", () => {
     let protoArray: ProtoArray;
 
     beforeEach(() => {
@@ -1011,41 +1169,66 @@ describe("Gloas Fork Choice", () => {
 
     it("throws when head is PENDING", () => {
       const head = makeHead(PayloadStatus.PENDING);
-      expect(() => protoArray.shouldBuildOnFull(head)).toThrow(/PENDING/);
+      expect(() => protoArray.shouldBuildOnFull(head, head.slot + 1)).toThrow(/PENDING/);
     });
 
     it("returns false when head is EMPTY", () => {
       const head = makeHead(PayloadStatus.EMPTY);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
     });
 
     it("returns true when head is FULL and no DA NO votes", () => {
       const head = makeHead(PayloadStatus.FULL);
       // No votes at all — isPayloadDataNotAvailable returns false → build on full
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
     it("returns false when head is FULL and DA NO votes exceed threshold (reorg trigger)", () => {
       const head = makeHead(PayloadStatus.FULL);
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: overThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(false);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
     });
 
     it("returns true when head is FULL and DA NO votes exactly at threshold (>, not >=)", () => {
       const head = makeHead(PayloadStatus.FULL);
       const atThreshold = Math.floor(PTC_SIZE / 2);
       const indices = Array.from({length: atThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
     it("returns true when many PTC members did not vote and few NO votes are below threshold", () => {
       // Guards against None being miscounted as NO — would force a spurious reorg.
       const head = makeHead(PayloadStatus.FULL);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      protoArray.notifyPtcMessages("0x02", head.slot, [0], true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns false when head is FULL, data available but timeliness NO votes exceed threshold (late payload reorg)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      // payloadPresent=false (untimely), blobDataAvailable=true (data available)
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
+    });
+
+    it("returns true when head is FULL and timeliness NO votes exactly at threshold (>, not >=)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns true for a FULL head that is not from the previous slot, even with PTC voting against it", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 2)).toBe(true);
     });
   });
 
@@ -1149,7 +1332,7 @@ describe("Gloas Fork Choice", () => {
 
       // Apply at currentSlot = blockSlot + 1 (makes block from slot n-1)
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -1162,8 +1345,8 @@ describe("Gloas Fork Choice", () => {
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
 
       // Both nodes should have accumulated their weights
-      expect(emptyNode?.weight).toBe(200);
-      expect(fullNode?.weight).toBe(100);
+      expect(emptyNode?.weight).toBe(200_000_000_000n);
+      expect(fullNode?.weight).toBe(100_000_000_000n);
 
       // But when comparing for bestChild, the tiebreaker should be used
       // (this is implicitly tested by the comparison logic, weights are ignored)
@@ -1190,7 +1373,7 @@ describe("Gloas Fork Choice", () => {
       deltas[emptyBIndex] = 100;
 
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -1203,8 +1386,8 @@ describe("Gloas Fork Choice", () => {
       const emptyBNode = getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY);
 
       // Different blocks should use weight comparison, not tiebreaker
-      expect(emptyANode?.weight).toBe(200);
-      expect(emptyBNode?.weight).toBe(100);
+      expect(emptyANode?.weight).toBe(200_000_000_000n);
+      expect(emptyBNode?.weight).toBe(100_000_000_000n);
       // Block A should be preferred due to higher weight
     });
 
@@ -1234,7 +1417,7 @@ describe("Gloas Fork Choice", () => {
 
       // currentSlot = blockSlot + 2, so block is from slot n-2 (not n-1)
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -1247,8 +1430,8 @@ describe("Gloas Fork Choice", () => {
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
 
       // Older blocks use weight comparison, not tiebreaker
-      expect(emptyNode?.weight).toBe(100);
-      expect(fullNode?.weight).toBe(200);
+      expect(emptyNode?.weight).toBe(100_000_000_000n);
+      expect(fullNode?.weight).toBe(200_000_000_000n);
       // FULL should be preferred due to higher weight
     });
   });

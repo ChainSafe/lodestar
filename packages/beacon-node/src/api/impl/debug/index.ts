@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
@@ -12,10 +13,34 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {assertUniqueItems} from "../utils.js";
 
+function toForkChoiceValidity(status: ExecutionStatus): "valid" | "invalid" | "optimistic" {
+  switch (status) {
+    case ExecutionStatus.Valid:
+      return "valid";
+    case ExecutionStatus.Invalid:
+      return "invalid";
+    case ExecutionStatus.Syncing:
+    case ExecutionStatus.PreMerge:
+      return "optimistic";
+  }
+}
+
+function toPayloadStatusName(status: PayloadStatus): "pending" | "empty" | "full" {
+  switch (status) {
+    case PayloadStatus.PENDING:
+      return "pending";
+    case PayloadStatus.EMPTY:
+      return "empty";
+    case PayloadStatus.FULL:
+      return "full";
+  }
+}
+
 export function getDebugApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "db" | "sync">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
@@ -40,19 +65,56 @@ export function getDebugApi({
             justifiedEpoch: node.justifiedEpoch,
             finalizedEpoch: node.finalizedEpoch,
             weight: node.weight,
-            validity: (() => {
-              switch (node.executionStatus) {
-                case ExecutionStatus.Valid:
-                  return "valid";
-                case ExecutionStatus.Invalid:
-                  return "invalid";
-                case ExecutionStatus.Syncing:
-                case ExecutionStatus.PreMerge:
-                  return "optimistic";
-              }
-            })(),
+            validity: toForkChoiceValidity(node.executionStatus),
             executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
           })),
+        },
+      };
+    },
+
+    async getDebugForkChoiceV2() {
+      const {forkChoice} = chain;
+      return {
+        data: {
+          justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
+          finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
+          forkChoiceNodes: forkChoice.getAllNodes().map((node) => {
+            // Payload-specific fields apply only to a revealed Gloas payload = the FULL variant of a
+            // Gloas block
+            const ptc = node.payloadStatus === PayloadStatus.FULL ? forkChoice.getPTCVoteCounts(node.blockRoot) : null;
+            return {
+              payloadStatus: toPayloadStatusName(node.payloadStatus),
+              slot: node.slot,
+              blockRoot: node.blockRoot,
+              parentRoot: node.parentRoot,
+              weight: node.weight,
+              validity: toForkChoiceValidity(node.executionStatus),
+              executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+              extraData: {
+                executionOptimistic: isOptimisticBlock(node),
+                timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
+                target: node.targetRoot,
+                justifiedEpoch: node.justifiedEpoch,
+                finalizedEpoch: node.finalizedEpoch,
+                unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
+                unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
+                payloadAttesterCount: ptc?.attesterCount ?? null,
+                payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? null,
+                payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? null,
+                gasLimit:
+                  node.payloadStatus === PayloadStatus.FULL && "executionPayloadGasLimit" in node
+                    ? node.executionPayloadGasLimit
+                    : null,
+              },
+            };
+          }),
+          extraData: {
+            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
+            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
+            proposerBoostRoot: forkChoice.getProposerBoostRoot(),
+            previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
+            headRoot: forkChoice.getHeadRoot(),
+          },
         },
       };
     },
@@ -71,7 +133,7 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
       let slot: number, data: Uint8Array | BeaconState;
       if (state instanceof Uint8Array) {
         slot = getStateSlotFromBytes(state);

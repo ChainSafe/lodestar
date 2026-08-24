@@ -22,7 +22,7 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
@@ -44,7 +44,7 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
@@ -73,7 +73,7 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -94,14 +94,14 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -117,7 +117,7 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -134,7 +134,7 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -171,12 +171,12 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
       - name: Cache Playwright browsers
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -198,16 +198,18 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: packages/beacon-node/spec-tests
+          path: |
+            packages/beacon-node/spec-tests
+            packages/beacon-node/spec-tests-ssz
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
         run: pnpm download-spec-tests
