@@ -21,7 +21,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     forkChoice = {
-      getAllAncestorBlocks: vi.fn(),
+      isDescendant: vi.fn().mockReturnValue(false),
     } as unknown as IForkChoice;
     serializedCache = new SerializedCache();
 
@@ -50,10 +50,12 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
-  // Block with blob commitments + non-empty sampledColumns and no columns added, so the input
-  // reports hasComputedAllData() === false.
-  function addPayloadInputNotComputed(slot: number): string {
-    const {block, rootHex} = generateBlockWithColumnSidecars({forkName: ForkName.gloas, slot});
+  function addNotComputedPayloadInput(slot: number): string {
+    const {block, rootHex} = generateBlockWithColumnSidecars({
+      forkName: ForkName.gloas,
+      slot,
+    });
+
     cache.add({
       blockRootHex: rootHex,
       block,
@@ -62,10 +64,11 @@ describe("SeenPayloadEnvelopeInput", () => {
       custodyColumns: [0, 1],
       timeCreatedSec: Date.now() / 1000,
     });
+
     return rootHex;
   }
 
-  function protoBlock(blockRoot: RootHex, slot: number): ProtoBlock {
+  function protoBlock(blockRoot: RootHex, slot: number, payloadStatus: PayloadStatus = PayloadStatus.FULL): ProtoBlock {
     return {
       slot,
       blockRoot,
@@ -84,7 +87,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-      payloadStatus: PayloadStatus.FULL,
+      payloadStatus,
       parentBlockHash: null,
     };
   }
@@ -94,46 +97,72 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    // Only the older entries are ancestors
+    vi.mocked(forkChoice.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
   });
 
-  it("pruneBelowParent keeps ancestor payload inputs whose payload is not yet FULL", () => {
-    const oldRootHex = addPayloadInput(1);
-    const newRootHex = addPayloadInput(2);
-    const parentBlock = protoBlock(newRootHex, 2);
-    const emptyAncestor: ProtoBlock = {...protoBlock(oldRootHex, 1), payloadStatus: PayloadStatus.EMPTY};
-
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, emptyAncestor]);
-    cache.pruneBelowParent(parentBlock);
-
-    expect(cache.get(oldRootHex)).toBeDefined();
-  });
-
-  it("pruneBelowParent keeps ancestor payload inputs that have not computed all data", () => {
-    const oldRootHex = addPayloadInputNotComputed(1);
-    const newRootHex = addPayloadInput(2);
-    // precondition: the ancestor input is still gathering columns
-    expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
-
-    const parentBlock = protoBlock(newRootHex, 2);
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
-    cache.pruneBelowParent(parentBlock);
-
-    expect(cache.get(oldRootHex)).toBeDefined();
-  });
-
   it("pruneBelowParent keeps payload inputs at the parent slot", () => {
     const rootHex = addPayloadInput(1);
     const parentBlock = protoBlock(rootHex, 1);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent leaves non-ancestor entries on forks alone", () => {
+    const forkRootHex = addPayloadInput(1);
+    const headRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(headRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(false);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(forkRootHex)).toBeDefined();
+    expect(cache.get(headRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent checks FULL ancestry when payload envelope is not cached", () => {
+    const oldRootHex = addPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.FULL,
+      newRootHex,
+      PayloadStatus.FULL
+    );
+    expect(cache.get(oldRootHex)).toBeUndefined();
+    expect(cache.get(newRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent checks FULL ancestry when payload envelope is cached", () => {
+    const oldRootHex = addPayloadInput(1);
+    // biome-ignore lint/style/noNonNullAssertion: input was just added on the line above
+    vi.spyOn(cache.get(oldRootHex)!, "hasPayloadEnvelope").mockReturnValue(true);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.FULL,
+      newRootHex,
+      PayloadStatus.FULL
+    );
+    expect(cache.get(oldRootHex)).toBeUndefined();
+    expect(cache.get(newRootHex)).toBeDefined();
   });
 
   it("add returns the existing entry on duplicate root", () => {
@@ -171,5 +200,19 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
     expect(cache.get(rootHex)).toBeDefined();
     expect(cache.size()).toBe(1);
+  });
+
+  it("pruneBelowParent keeps payload inputs that have not computed all data", () => {
+    const oldRootHex = addNotComputedPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(oldRootHex)).toBeDefined();
+    expect(forkChoice.isDescendant).not.toHaveBeenCalled();
   });
 });
