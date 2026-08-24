@@ -233,7 +233,7 @@ export class SeenPayloadEnvelopeInput {
       forkName,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
-      seenTimestampSec: Math.floor(Date.now() / 1000),
+      seenTimestampSec: Date.now() / 1000,
       source: PayloadEnvelopeInputSource.reload,
       daOutOfRange,
     });

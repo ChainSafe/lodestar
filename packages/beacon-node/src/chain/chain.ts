@@ -470,7 +470,7 @@ export class BeaconChain implements IBeaconChain {
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
-        seenTimestampSec: Math.floor(Date.now() / 1000),
+        seenTimestampSec: Date.now() / 1000,
         source: PayloadEnvelopeInputSource.anchorState,
       });
     }
