@@ -502,8 +502,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         await this.prunePersistentTier(tier + 1);
       } else {
         // the oldest epoch is not aligned to the next tier
-        await this.deleteAllEpochItems(oldestEpoch);
-        this.logger.verbose("Pruned checkpoint states from disk", {epoch: oldestEpoch, tier, rootHexes});
+        await this.deleteAllEpochItems(oldestEpoch)
+          .then(() => this.logger.verbose("Pruned checkpoint states from disk", {epoch: oldestEpoch, tier, rootHexes}))
+          .catch((e) => this.logger.debug("Error delete all epoch items", {epoch: oldestEpoch, tier}, e as Error));
       }
     }
   }
