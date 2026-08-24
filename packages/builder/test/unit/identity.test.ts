@@ -101,6 +101,21 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
+  it("aborts while waiting for the beacon node to return the builder", async () => {
+    vi.useFakeTimers();
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockApiResponse({data: [], meta: {executionOptimistic: true, finalized: false}})
+    );
+
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
+    await vi.advanceTimersByTimeAsync(0);
+    abortController.abort();
+
+    await expect(promise).rejects.toThrow(ErrorAborted);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("waits for a pending builder to become active", async () => {
     vi.useFakeTimers();
     api.beacon.getStateBuilders.mockResolvedValueOnce(

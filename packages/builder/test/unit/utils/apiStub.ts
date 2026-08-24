@@ -10,6 +10,7 @@ export function getApiClientStub(): ApiClientStub {
     },
     node: {
       getSyncingStatus: vi.fn(),
+      getNodeVersionV2: vi.fn(),
     },
   } as unknown as ApiClientStub;
 }
