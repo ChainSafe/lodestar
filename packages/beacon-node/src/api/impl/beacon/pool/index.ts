@@ -25,6 +25,7 @@ import {validateApiPayloadAttestationMessage} from "../../../../chain/validation
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
@@ -99,7 +100,9 @@ export function getBeaconPoolApi({
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
-            if (network.shouldAggregate(subnet, slot)) {
+            try {
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.attestationPool.add(
                 committeeIndex,
                 attestation,
@@ -109,6 +112,10 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              // The pool is a local optimization, failing to insert must not stop us from publishing a
+              // validated attestation, which the route requires us to do. Same handling as the gossip path
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {
@@ -211,6 +218,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+      const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
 
       await Promise.all(
@@ -225,6 +233,9 @@ export function getBeaconPoolApi({
               slot,
               beaconBlockRoot
             );
+
+            const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+            metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
 
             const insertOutcome = chain.payloadAttestationPool.add(
               payloadAttestationMessage,

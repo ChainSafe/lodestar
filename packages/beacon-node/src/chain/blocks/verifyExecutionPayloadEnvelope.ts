@@ -1,7 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
   type IBeaconStateViewGloas,
-  type PubkeyCache,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
@@ -119,17 +118,10 @@ export function verifyExecutionPayloadEnvelope(
 export async function verifyExecutionPayloadEnvelopeSignature(
   config: BeaconConfig,
   state: IBeaconStateViewGloas,
-  pubkeyCache: PubkeyCache,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: number,
   bls: IBlsVerifier
 ): Promise<boolean> {
-  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-    config,
-    pubkeyCache,
-    state,
-    signedEnvelope,
-    proposerIndex
-  );
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(config, state, signedEnvelope, proposerIndex);
   return bls.verifySignatureSets([signatureSet]);
 }

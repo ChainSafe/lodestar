@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@chainsafe/lodestar-z':
+      specifier: ^1.0.0
+      version: 1.0.0
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -38,6 +41,9 @@ importers:
       '@chainsafe/lodestar':
         specifier: workspace:*
         version: link:packages/cli
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -142,11 +148,11 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^1.3.1
+        version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -182,11 +188,8 @@ importers:
   packages/beacon-node:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
-        version: 1.2.4
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/discv5':
         specifier: ^12.0.2
         version: 12.0.2
@@ -199,9 +202,12 @@ importers:
       '@chainsafe/libp2p-quic':
         specifier: ^2.1.3
         version: 2.1.3
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^1.3.1
+        version: 1.3.1
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -209,8 +215,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -383,12 +389,12 @@ importers:
 
   packages/builder:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -423,21 +429,21 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
       '@chainsafe/discv5':
         specifier: ^12.0.2
         version: 12.0.2
       '@chainsafe/enr':
         specifier: ^6.0.2
         version: 6.0.2
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^1.3.1
+        version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -518,8 +524,8 @@ importers:
         version: 17.7.2
     devDependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
-        version: 1.2.4
+        specifier: ^1.2.5
+        version: 1.2.5
       '@ethereumjs/rlp':
         specifier: ^4.0.1
         version: 4.0.1
@@ -566,11 +572,11 @@ importers:
   packages/config:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
-        version: 1.2.4
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -584,8 +590,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -602,9 +608,9 @@ importers:
 
   packages/era:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -624,8 +630,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -661,8 +667,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -719,8 +725,8 @@ importers:
         version: 2.4.8
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@libp2p/crypto':
         specifier: ^5.1.13
         version: 5.1.19
@@ -740,8 +746,8 @@ importers:
   packages/spec-test-util:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -761,20 +767,17 @@ importers:
   packages/state-transition:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
-        version: 1.2.4
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^1.2.5
+        version: 1.2.5
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.3.0
-        version: 1.3.0
-      '@chainsafe/pubkey-index-map':
-        specifier: ^3.0.0
-        version: 3.0.0
+        specifier: ^1.3.1
+        version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -803,9 +806,12 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
+      '@lodestar/api':
+        specifier: workspace:^
+        version: link:../api
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -832,8 +838,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -844,8 +850,8 @@ importers:
   packages/utils:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
-        version: 1.2.4
+        specifier: ^1.2.5
+        version: 1.2.5
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
@@ -871,12 +877,12 @@ importers:
 
   packages/validator:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: 1.0.0
       '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1091,8 +1097,8 @@ packages:
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
 
-  '@chainsafe/as-sha256@1.2.4':
-    resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
+  '@chainsafe/as-sha256@1.2.5':
+    resolution: {integrity: sha512-8LzmWxBC/2O5BgbP+aRom/FaDJMrM04VZMlVIivYTc6yNQKYrONmIv27m3q/1VBgxrfrNNqmibitb2hE2tQzIw==}
 
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
@@ -1111,56 +1117,6 @@ packages:
 
   '@chainsafe/bls-keystore@3.1.0':
     resolution: {integrity: sha512-OR9hV9N53woNc6R2d08O3Oi3Ykx7uZARMx51W+WFP1fDaFSA/QaMraPGGA8tSx7livkb/Scwe3Basj9Pib67HA==}
-
-  '@chainsafe/blst-darwin-arm64@2.2.0':
-    resolution: {integrity: sha512-BOOy2KHbV028cioPWaAMqHdLRKd6/3XyEmUEcQC2E/SpyYLdNcaKiBUYIU4pT9CrWBbJJxX68UI+3vZVg0M8/w==}
-    engines: {node: '>= 16'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/blst-darwin-x64@2.2.0':
-    resolution: {integrity: sha512-jG64cwIdPT7u/haRrW26tWCpfMfHBQCfGY169mFQifCwO4VEwvaiVBPOh5olFis6LjpcmD+O0jpM8GqrnsmUHQ==}
-    engines: {node: '>= 16'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/blst-linux-arm64-gnu@2.2.0':
-    resolution: {integrity: sha512-L8xV2uuLn8we76vdzfryS9ePdheuZrmY6yArGUFaF1Uzcwml6V1/VvyPl9/uooo/YfVRIrvF/D+lQfI2GFAnhw==}
-    engines: {node: '>= 16'}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/blst-linux-arm64-musl@2.2.0':
-    resolution: {integrity: sha512-0Vn0luxLYVgC3lvWT1MapFHSAoz99PldqjhilXTGv0AcAk/X5LXPH2RC9Dp2KJGqthyUkpbk1j47jUBfBI+BIg==}
-    engines: {node: '>= 16'}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/blst-linux-x64-gnu@2.2.0':
-    resolution: {integrity: sha512-gEY/z2SDBA7kXtFEI9VNhWTJAIjx16jdeAyCaS2k4ACGurWZaWk+Ee4KniTsr4WieSqeuNTUr7Pdja0Sr4EKNQ==}
-    engines: {node: '>= 16'}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/blst-linux-x64-musl@2.2.0':
-    resolution: {integrity: sha512-58GKtiUmtVSuerRzPEcMNQZpICPboBKFnL7+1Wo+PSuajkvbae7tEFrFTtWeMoKIPgOEsPMnk96LF+0yNgavUg==}
-    engines: {node: '>= 16'}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/blst-win32-x64-msvc@2.2.0':
-    resolution: {integrity: sha512-UFrZshl4dfX5Uh2zeKXAZtrkQ+otczHMON2tsrapQNICWmfHZrzE6pKuBL+9QeGAbgflwpbz7+D5nQRDpiuHxQ==}
-    engines: {node: '>= 16'}
-    cpu: [x64]
-    os: [win32]
-
-  '@chainsafe/blst@2.2.0':
-    resolution: {integrity: sha512-VBaQoNE2a9d9+skAjQKv3Suk0yGKqp3mZM0YWYJNPj/Ae/f6lAyeVSgKqo2LrsNQBzD/LqrJLKUY8rJT3vDKLA==}
-    engines: {node: '>= 16'}
 
   '@chainsafe/caxa@3.0.6':
     resolution: {integrity: sha512-Q8Z2JdvLmZizhQr+bzsJHgYk16VQR4thZw6Z56NEKoiHjVKkC3LKcMntaXs9TII2Bb/OiNtaPyZP9BinY3v8Bw==}
@@ -1275,11 +1231,48 @@ packages:
     resolution: {integrity: sha512-y+diflUZN1hEnGhPnTPk3DUjtPigiGNf6bfXPuRSDwoB2obat0BHW7J2ZncayYTE0TAlel1sr66lLaLEO4VAdQ==}
     engines: {node: '>= 22'}
 
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.0.0':
+    resolution: {integrity: sha512-JSnHWAWbzyOIuLb/YXRgk9ok8tlQllglDVXjSrdEYDEJTG6Z4ui7W4II0vxCLBEMA6I3OP2aGRswhcrb97wlpA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.0.0':
+    resolution: {integrity: sha512-8P1bd7XExwDbCg6AvzYqW80zRbQ1CNitX5WV4WXPoam+6Mokn2sHjk2PK3X/pw+akeDL6cxAKOLW1ncb5H0+sg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.0.0':
+    resolution: {integrity: sha512-AvK4dZdRlNwH5d7TvAt71ogat2ea+It5Hd9l4ayCAHi4opOdn9XFd8zJCbdLpQbyUV7IYQMdZ6tIg5d4zWeArg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.0.0':
+    resolution: {integrity: sha512-NL2iU2aKXO2saxco7VU86Xa5zQ7aJ4ViCOOUtZ4m83kYP0L8fkgGF6SCxOoZnz8sO6pa3FzbE5tsooiCOko1kg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.0.0':
+    resolution: {integrity: sha512-2ZfLGzOAXmQ2TKCarX3SOW+MEkHmFdGIpyeFfITVLuZgUX9FAuU4oRmiXMSvXpb/YEmHSXojPFXKj8A9QMT5Fg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.0.0':
+    resolution: {integrity: sha512-7dMTqdthJvk9CiI78SDpnIqfyi2pen5H/3WYcficAJ7vElIkUsHFDbEJr9iYopudZbzp25tkhlO8r/Ryn37mnw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@chainsafe/lodestar-z@1.0.0':
+    resolution: {integrity: sha512-eMh8raOCZN4/8K5O9AT/4Lr+/3yR5Dwk8NCxarQVwfchLCzWt2/Ae/un1klglEtFS8pl+GN+B9jO8zjKZw6ofg==}
+
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
-  '@chainsafe/persistent-merkle-tree@1.3.0':
-    resolution: {integrity: sha512-xGe95xNkYayC5BYQpo7ft5oHwyf52YtqBip+GJqZ9XgKSzraw93qUMNeqKrOVJbZM5HEOys8xxkt0h7VD1a9cw==}
+  '@chainsafe/persistent-merkle-tree@1.3.1':
+    resolution: {integrity: sha512-f8E1ftNhHK9zUEgb+Tdcx8TM57qeO4u9RU1kKDUDgCQyiMXrC+3rjAPAvum2HN7Du81myG7nz1WpIMZAPVWLTg==}
 
   '@chainsafe/prometheus-gc-stats@1.0.2':
     resolution: {integrity: sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==}
@@ -1287,67 +1280,11 @@ packages:
     peerDependencies:
       prom-client: '>= 10'
 
-  '@chainsafe/pubkey-index-map-darwin-arm64@3.0.0':
-    resolution: {integrity: sha512-gM/wwA6bpfeZm80aSoH2c3ddbPeZho73TUUprUFlHQNLldGzZ293yFQgj2Ontp1fMf9AI0w+F0uEN2qC6v7g9A==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/pubkey-index-map-darwin-x64@3.0.0':
-    resolution: {integrity: sha512-zy4dH//kLXfQHHFVp1Pcz4HQgSh/uUKWt219hlrb5Fi+xVESVmTnLPjHmL1KtGs/R5W0XcuBrTuBHiq+zMU7lQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/pubkey-index-map-linux-arm64-gnu@3.0.0':
-    resolution: {integrity: sha512-M/HODHZcKDuoRFlx+Ka4NgyFSQvOECyIg/2pCQcgfCozR7rRx7VuOJ0ZSgU+BEhuY+fpaRSTesOlDIIY0ornWQ==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/pubkey-index-map-linux-arm64-musl@3.0.0':
-    resolution: {integrity: sha512-Sdm15mFsKiz5ndFfhcTjEl4i8TK0+gM1SEmYzmGUgnflrcvPc+US3qsMKyCqorDkHqYAYFFutQXz9QxjOMkIwg==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/pubkey-index-map-linux-x64-gnu@3.0.0':
-    resolution: {integrity: sha512-+4h995h2xEBmYdr9Tw05uYvFmMSELyaJagJ2KsFohkRjqiUyB76l8zR8aUKx7lwLXXHxWjHMYyWKHF3tTKRFNQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/pubkey-index-map-linux-x64-musl@3.0.0':
-    resolution: {integrity: sha512-qwFuygeutP4o9J/8ylD+ZrqkqeyytMl9E38ucIWpbiPYXDiJxpRN148v4Ah+NWwz6PqCROVyTxEyZklzy0AxUA==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/pubkey-index-map-win32-arm64-msvc@3.0.0':
-    resolution: {integrity: sha512-2t01rQAdiM5KPM7XLsZDtMhWAXz/YKY20H1N4jvaWURjaLm+S0j9X/Mt0xOjJ5SC++1g64LXjV+wnXO5j1S8Nw==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@chainsafe/pubkey-index-map-win32-x64-msvc@3.0.0':
-    resolution: {integrity: sha512-QemArQbgsLJ4eaM9S0Kdr3ucJUpZXTDfh3wTNp9eh7G3o1Y9O2Hp7G7BlEkF0cWU9ZsWe9YSzmeX24Uo5DNo4g==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [win32]
-
-  '@chainsafe/pubkey-index-map@3.0.0':
-    resolution: {integrity: sha512-KvWmKOG8WiVePHQDGyz+xo+RpsrmPEeipF8boqmXNYCLOGyVpkEXQk0IDVpnxngZziY6d97F9sml2vliDoyYyQ==}
-    engines: {node: '>= 10'}
-
   '@chainsafe/snappy-wasm@0.5.0':
     resolution: {integrity: sha512-ydXvhr9p+JjvzSSEyi6XExq8pHugFnrk70mk17T6mhDsklPvaXc+8K90G7TJF+u51lxI/fpv7MahrA5ayjFcSA==}
 
-  '@chainsafe/ssz@1.6.2':
-    resolution: {integrity: sha512-XJELFJBHBstcvyRuXWPmNc/WRWmV5FVV03+iPTpgtCPQaImEHjKU4bc/5me35dRrXpehC04LD4ePYayOUjxFbw==}
+  '@chainsafe/ssz@1.6.3':
+    resolution: {integrity: sha512-1O6N3rc5Uu1nn82lUkYzdr7kskcQGHwSMa7voLq6uBzfp8LroS+pcypYtTH8o2Pb2Zx2k2MYlkDRMo4kx/ckJA==}
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
@@ -1407,6 +1344,10 @@ packages:
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
+
+  '@chainsafe/zapi@4.0.0':
+    resolution: {integrity: sha512-jcWUJT7bsS7F3H2aycUEs7sBTw+oL+MgKOC2CZ80n2asvCmAXjz6D0H2ZYuAbfmwG12myBDezGHs+JzIUQEs+A==}
+    hasBin: true
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -6775,7 +6716,7 @@ snapshots:
 
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
-  '@chainsafe/as-sha256@1.2.4': {}
+  '@chainsafe/as-sha256@1.2.5': {}
 
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
@@ -6815,37 +6756,6 @@ snapshots:
     dependencies:
       ethereum-cryptography: 2.2.1
       uuid: 9.0.1
-
-  '@chainsafe/blst-darwin-arm64@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-darwin-x64@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-linux-arm64-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-linux-arm64-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-linux-x64-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-linux-x64-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/blst-win32-x64-msvc@2.2.0':
-    optional: true
-
-  '@chainsafe/blst@2.2.0':
-    optionalDependencies:
-      '@chainsafe/blst-darwin-arm64': 2.2.0
-      '@chainsafe/blst-darwin-x64': 2.2.0
-      '@chainsafe/blst-linux-arm64-gnu': 2.2.0
-      '@chainsafe/blst-linux-arm64-musl': 2.2.0
-      '@chainsafe/blst-linux-x64-gnu': 2.2.0
-      '@chainsafe/blst-linux-x64-musl': 2.2.0
-      '@chainsafe/blst-win32-x64-msvc': 2.2.0
 
   '@chainsafe/caxa@3.0.6':
     dependencies:
@@ -6918,7 +6828,7 @@ snapshots:
   '@chainsafe/libp2p-noise@17.0.0':
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
-      '@chainsafe/as-sha256': 1.2.4
+      '@chainsafe/as-sha256': 1.2.5
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
       '@libp2p/peer-id': 6.0.10
@@ -6971,13 +6881,42 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.3
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.3
 
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.0.0':
+    optional: true
+
+  '@chainsafe/lodestar-z@1.0.0':
+    dependencies:
+      '@chainsafe/zapi': 4.0.0
+    optionalDependencies:
+      '@chainsafe/lodestar-z-aarch64-apple-darwin': 1.0.0
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 1.0.0
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 1.0.0
+      '@chainsafe/lodestar-z-x86_64-apple-darwin': 1.0.0
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 1.0.0
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 1.0.0
+
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@chainsafe/persistent-merkle-tree@1.3.0':
+  '@chainsafe/persistent-merkle-tree@1.3.1':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.4
+      '@chainsafe/as-sha256': 1.2.5
       '@chainsafe/hashtree': 1.0.2
       '@noble/hashes': 1.8.0
 
@@ -6985,47 +6924,12 @@ snapshots:
     dependencies:
       prom-client: 15.1.3
 
-  '@chainsafe/pubkey-index-map-darwin-arm64@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-darwin-x64@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-linux-arm64-gnu@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-linux-arm64-musl@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-linux-x64-gnu@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-linux-x64-musl@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-win32-arm64-msvc@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map-win32-x64-msvc@3.0.0':
-    optional: true
-
-  '@chainsafe/pubkey-index-map@3.0.0':
-    optionalDependencies:
-      '@chainsafe/pubkey-index-map-darwin-arm64': 3.0.0
-      '@chainsafe/pubkey-index-map-darwin-x64': 3.0.0
-      '@chainsafe/pubkey-index-map-linux-arm64-gnu': 3.0.0
-      '@chainsafe/pubkey-index-map-linux-arm64-musl': 3.0.0
-      '@chainsafe/pubkey-index-map-linux-x64-gnu': 3.0.0
-      '@chainsafe/pubkey-index-map-linux-x64-musl': 3.0.0
-      '@chainsafe/pubkey-index-map-win32-arm64-msvc': 3.0.0
-      '@chainsafe/pubkey-index-map-win32-x64-msvc': 3.0.0
-
   '@chainsafe/snappy-wasm@0.5.0': {}
 
-  '@chainsafe/ssz@1.6.2':
+  '@chainsafe/ssz@1.6.3':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.4
-      '@chainsafe/persistent-merkle-tree': 1.3.0
+      '@chainsafe/as-sha256': 1.2.5
+      '@chainsafe/persistent-merkle-tree': 1.3.1
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     optional: true
@@ -7072,6 +6976,8 @@ snapshots:
       tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
+
+  '@chainsafe/zapi@4.0.0': {}
 
   '@colors/colors@1.5.0': {}
 

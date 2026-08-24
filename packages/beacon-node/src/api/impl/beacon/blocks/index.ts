@@ -220,12 +220,6 @@ export function getBeaconBlockApi({
                   // Block has already been seen, e.g. via gossip racing the publish API. Benign.
                   chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
                   return;
-                case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. For a solo setup this is a
-                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
-                  // expected on every block where another node published first.
-                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-                  return;
               }
             }
 
@@ -407,7 +401,7 @@ export function getBeaconBlockApi({
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
         const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
-        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar()
+        // sent peers could be 0, data_column_sidecar opts out of the zero peers publish error, see gossipTopicAllowPublishToZeroPeers
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
         // A duplicate publish (alreadyPublished=true) means the column is already propagating on the network —
         // expected in self-build flows where peers gossip columns back to us before we publish the envelope.
@@ -1032,6 +1026,7 @@ export function getBeaconBlockApi({
     },
 
     async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const seenTimestampSec = Date.now() / 1000;
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
       const fork = config.getForkName(slot);
@@ -1041,6 +1036,9 @@ export function getBeaconBlockApi({
       }
 
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);

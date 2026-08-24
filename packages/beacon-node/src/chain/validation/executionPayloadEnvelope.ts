@@ -170,7 +170,6 @@ async function validateExecutionPayloadEnvelope(
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    chain.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     payloadInput.proposerIndex

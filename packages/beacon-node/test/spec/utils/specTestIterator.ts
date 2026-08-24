@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it} from "vitest";
+import {beforeEach, describe, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -88,7 +89,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
     /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
     // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
-    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // New test suite added by consensus-specs #5441; Lodestar still applies
     // the pre-gloas proposer boost, so the head weight differs by the boost amount.
     /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
     /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
@@ -138,7 +139,6 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
@@ -196,6 +196,7 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
+                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -214,7 +215,15 @@ export function specTestIterator(
                   );
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(
+                testId,
+                testSuiteDirpath,
+                (testCase, directoryName, testCaseName) => {
+                  pubkeyCache.reset();
+                  return testFunction(testCase, directoryName, testCaseName);
+                },
+                options
+              );
             }
           }
         }

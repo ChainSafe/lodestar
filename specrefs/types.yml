@@ -1,39 +1,3 @@
-- name: AggregationBits#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const AggregationBits =
-  spec: |
-    <spec custom_type="AggregationBits" fork="electra" hash="229bd765">
-    AggregationBits = BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
-    </spec>
-
-- name: AggregationBits#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const AggregationBits =
-  spec: |
-    <spec custom_type="AggregationBits" fork="gloas" hash="ba289449">
-    AggregationBits = ProgressiveBitList
-    </spec>
-
-- name: AttestingIndices#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const AttestingIndices =
-  spec: |
-    <spec custom_type="AttestingIndices" fork="electra" hash="5df7e7b5">
-    AttestingIndices = List[ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
-    </spec>
-
-- name: AttestingIndices#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const AttestingIndices =
-  spec: |
-    <spec custom_type="AttestingIndices" fork="gloas" hash="1494a972">
-    AttestingIndices = ProgressiveList[ValidatorIndex]
-    </spec>
-
 - name: BLSPubkey#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -52,15 +16,6 @@
     BLSSignature = Bytes96
     </spec>
 
-- name: Blob#deneb
-  sources:
-    - file: packages/types/src/deneb/sszTypes.ts
-      search: export const Blob =
-  spec: |
-    <spec custom_type="Blob" fork="deneb" hash="ad6dd66e">
-    Blob = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]
-    </spec>
-
 - name: BlobIndex#deneb
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -70,33 +25,6 @@
     BlobIndex = Uint64
     </spec>
 
-- name: BlockAccessList#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const BlockAccessList =
-  spec: |
-    <spec custom_type="BlockAccessList" fork="gloas" hash="350929e4">
-    BlockAccessList = ProgressiveByteList
-    </spec>
-
-- name: BuilderDepositRequests#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const BuilderDepositRequests =
-  spec: |
-    <spec custom_type="BuilderDepositRequests" fork="gloas" hash="2791bf22">
-    BuilderDepositRequests = ProgressiveList[BuilderDepositRequest]
-    </spec>
-
-- name: BuilderExitRequests#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const BuilderExitRequests =
-  spec: |
-    <spec custom_type="BuilderExitRequests" fork="gloas" hash="51f8ba69">
-    BuilderExitRequests = ProgressiveList[BuilderExitRequest]
-    </spec>
-
 - name: BuilderIndex#gloas
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -104,15 +32,6 @@
   spec: |
     <spec custom_type="BuilderIndex" fork="gloas" hash="e7ea6e8b">
     BuilderIndex = Uint64
-    </spec>
-
-- name: Cell#fulu
-  sources:
-    - file: packages/types/src/fulu/sszTypes.ts
-      search: export const Cell =
-  spec: |
-    <spec custom_type="Cell" fork="fulu" hash="d7af27c2">
-    Cell = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]
     </spec>
 
 - name: CellIndex#fulu
@@ -140,51 +59,6 @@
     CommitteeIndex = Uint64
     </spec>
 
-- name: ConsolidationRequests#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const ConsolidationRequests =
-  spec: |
-    <spec custom_type="ConsolidationRequests" fork="electra" hash="b793a4dc">
-    ConsolidationRequests = List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    </spec>
-
-- name: ConsolidationRequests#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const ConsolidationRequests =
-  spec: |
-    <spec custom_type="ConsolidationRequests" fork="gloas" hash="44563d58">
-    ConsolidationRequests = ProgressiveList[ConsolidationRequest]
-    </spec>
-
-- name: CurrentSyncCommitteeBranch#altair
-  sources:
-    - file: packages/types/src/altair/sszTypes.ts
-      search: export const CurrentSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="CurrentSyncCommitteeBranch" fork="altair" hash="f19e3670">
-    CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)]
-    </spec>
-
-- name: CurrentSyncCommitteeBranch#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const CurrentSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="CurrentSyncCommitteeBranch" fork="electra" hash="f530f78f">
-    CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
-    </spec>
-
-- name: CurrentSyncCommitteeBranch#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const CurrentSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="CurrentSyncCommitteeBranch" fork="gloas" hash="84e2f843">
-    CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS)]
-    </spec>
-
 - name: CustodyIndex#fulu
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -192,24 +66,6 @@
   spec: |
     <spec custom_type="CustodyIndex" fork="fulu" hash="519f8cbf">
     CustodyIndex = Uint64
-    </spec>
-
-- name: DepositRequests#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const DepositRequests =
-  spec: |
-    <spec custom_type="DepositRequests" fork="electra" hash="3f9b774d">
-    DepositRequests = List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
-    </spec>
-
-- name: DepositRequests#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const DepositRequests =
-  spec: |
-    <spec custom_type="DepositRequests" fork="gloas" hash="f4af5063">
-    DepositRequests = ProgressiveList[DepositRequest]
     </spec>
 
 - name: Domain#phase0
@@ -255,49 +111,6 @@
     ExecutionAddress = Bytes20
     </spec>
 
-- name: ExecutionBranch#capella
-  sources:
-    - file: packages/types/src/capella/sszTypes.ts
-      search: export const ExecutionBranch =
-  spec: |
-    <spec custom_type="ExecutionBranch" fork="capella" hash="c07ece0a">
-    ExecutionBranch = Vector[Bytes32, floorlog2(EXECUTION_PAYLOAD_GINDEX)]
-    </spec>
-
-- name: ExecutionBranch#gloas
-  sources: []
-  spec: |
-    <spec custom_type="ExecutionBranch" fork="gloas" hash="55dfec8c">
-    ExecutionBranch = Vector[Bytes32, floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)]
-    </spec>
-
-- name: FinalityBranch#altair
-  sources:
-    - file: packages/types/src/altair/sszTypes.ts
-      search: export const FinalityBranch =
-  spec: |
-    <spec custom_type="FinalityBranch" fork="altair" hash="b16f24b7">
-    FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX)]
-    </spec>
-
-- name: FinalityBranch#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const FinalityBranch =
-  spec: |
-    <spec custom_type="FinalityBranch" fork="electra" hash="3ec55c30">
-    FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)]
-    </spec>
-
-- name: FinalityBranch#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const FinalityBranch =
-  spec: |
-    <spec custom_type="FinalityBranch" fork="gloas" hash="9d9b31ea">
-    FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_GLOAS)]
-    </spec>
-
 - name: ForkDigest#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -339,33 +152,6 @@
   spec: |
     <spec custom_type="KZGProof" fork="deneb" hash="cd122a70">
     KZGProof = Bytes48
-    </spec>
-
-- name: NextSyncCommitteeBranch#altair
-  sources:
-    - file: packages/types/src/altair/sszTypes.ts
-      search: export const NextSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="NextSyncCommitteeBranch" fork="altair" hash="efe158e9">
-    NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)]
-    </spec>
-
-- name: NextSyncCommitteeBranch#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const NextSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="NextSyncCommitteeBranch" fork="electra" hash="7f5e5585">
-    NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
-    </spec>
-
-- name: NextSyncCommitteeBranch#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const NextSyncCommitteeBranch =
-  spec: |
-    <spec custom_type="NextSyncCommitteeBranch" fork="gloas" hash="314644a9">
-    NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS)]
     </spec>
 
 - name: NodeID#phase0
@@ -439,24 +225,6 @@
     SubnetID = Uint64
     </spec>
 
-- name: Transaction#bellatrix
-  sources:
-    - file: packages/types/src/bellatrix/sszTypes.ts
-      search: export const Transaction =
-  spec: |
-    <spec custom_type="Transaction" fork="bellatrix" hash="816d420e">
-    Transaction = ByteList[MAX_BYTES_PER_TRANSACTION]
-    </spec>
-
-- name: Transaction#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const Transaction =
-  spec: |
-    <spec custom_type="Transaction" fork="gloas" hash="dd671210">
-    Transaction = ProgressiveByteList
-    </spec>
-
 - name: ValidatorIndex#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -491,22 +259,4 @@
   spec: |
     <spec custom_type="WithdrawalIndex" fork="capella" hash="fe950522">
     WithdrawalIndex = Uint64
-    </spec>
-
-- name: WithdrawalRequests#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: export const WithdrawalRequests =
-  spec: |
-    <spec custom_type="WithdrawalRequests" fork="electra" hash="02a78460">
-    WithdrawalRequests = List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
-    </spec>
-
-- name: WithdrawalRequests#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: export const WithdrawalRequests =
-  spec: |
-    <spec custom_type="WithdrawalRequests" fork="gloas" hash="a26ff177">
-    WithdrawalRequests = ProgressiveList[WithdrawalRequest]
     </spec>

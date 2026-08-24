@@ -5,6 +5,7 @@ import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
 import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
+import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
@@ -27,6 +28,7 @@ export type BuilderOptions = {
   api: ApiClient;
   clock?: ClockOptions;
   executionFeeRecipient: ExecutionAddress;
+  metrics: Metrics | null;
 };
 
 /**
@@ -53,7 +55,7 @@ export class Builder {
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
-    this.clock.runEveryEpoch(() => this.builderStatusTracker.poll());
+    this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
     this.blockObserver.start(this.controller.signal);
 
@@ -80,11 +82,18 @@ export class Builder {
     await waitForNodeReady(api, logger, opts.abortController.signal);
     await logNodeVersion(api, logger);
 
-    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex(), opts.abortController.signal);
-
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    const builderStatusTracker = new BuilderStatusTracker(api, logger, index);
+    const index = await resolveBuilderIdentity(
+      api,
+      logger,
+      builderSigner.getPubkeyHex(),
+      opts.abortController.signal,
+      clock,
+      config
+    );
+
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
     const blockObserver = new BlockObserver(config, logger, api);
 
     return new Builder({opts, builderSigner, blockObserver, builderStatusTracker, clock, index});

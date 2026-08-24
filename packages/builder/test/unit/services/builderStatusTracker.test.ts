@@ -8,11 +8,13 @@ describe("BuilderStatusTracker", () => {
   const logger = getMockedLogger();
   const api = getApiClientStub();
   const builderIndex = 1;
+  const epoch = 1;
+  const metrics = null;
 
   let builderStatusTracker: BuilderStatusTracker;
 
   beforeEach(() => {
-    builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex);
+    builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex, metrics);
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex));
   });
 
@@ -27,7 +29,7 @@ describe("BuilderStatusTracker", () => {
   });
 
   it("status and balance should give real values after polling", async () => {
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status, balance} = builderStatusTracker.getStatus();
     expect(status).toEqual("active");
     expect(balance).toEqual(1);
@@ -36,7 +38,7 @@ describe("BuilderStatusTracker", () => {
   });
 
   it("updates balance across polls", async () => {
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status, balance} = builderStatusTracker.getStatus();
     expect(status).toEqual("active");
     expect(balance).toEqual(1);
@@ -45,7 +47,7 @@ describe("BuilderStatusTracker", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(builderIndex, {status: "active", balance: 2})
     );
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("active");
     expect(newBalance).toEqual(2);
@@ -54,7 +56,7 @@ describe("BuilderStatusTracker", () => {
   });
 
   it("logs on status change", async () => {
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status, balance} = builderStatusTracker.getStatus();
     expect(status).toEqual("active");
     expect(balance).toEqual(1);
@@ -63,16 +65,16 @@ describe("BuilderStatusTracker", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(builderIndex, {status: "exited", balance: 1})
     );
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("exited");
     expect(newBalance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
-    expect(logger.info).toHaveBeenCalledWith("Builder status changed", {from: "active", to: "exited"});
+    expect(logger.info).toHaveBeenCalledWith("Builder status changed", {from: "active", to: "exited", epoch: 1});
   });
 
   it("dismisses beacon api 500", async () => {
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status, balance} = builderStatusTracker.getStatus();
     expect(status).toEqual("active");
     expect(balance).toEqual(1);
@@ -80,7 +82,7 @@ describe("BuilderStatusTracker", () => {
 
     api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(500));
     // poll should resolve when beacon node throws 500
-    await builderStatusTracker.poll();
+    await builderStatusTracker.poll(epoch);
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("active");
     expect(newBalance).toEqual(1);
