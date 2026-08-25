@@ -219,7 +219,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       expect(db.block.get).not.toHaveBeenCalled();
     });
 
-    it("reconstructs the shell from the hot db when the gloas block is in fork choice", async () => {
+    it("reconstructs an EMPTY PayloadEnvelopeInput from the hot db when the gloas block is in fork choice", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
       vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(block);

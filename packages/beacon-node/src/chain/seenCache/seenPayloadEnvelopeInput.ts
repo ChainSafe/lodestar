@@ -280,12 +280,10 @@ export class SeenPayloadEnvelopeInput {
   }
 
   /**
-   * Backstop cap for entries pruneBelowParent/pruneFinalized can't reach (non-canonical forks,
-   * EMPTY/PENDING entries). Evicts by INSERTION ORDER — the Map iterates oldest-inserted first — so a
-   * just-reloaded old-slot entry (set at the back) survives while genuinely stale forks/shells are shed.
-   * Runs after every single insert, so it evicts ~1 per call. Safe because the shared cache is
-   * non-load-bearing: range sync reads its batch map, gossip/BlockInputSync recover via getOrReload,
-   * and any evicted heavy data is already in the db.
+   * Bound this cache to have at most MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE items.
+   * Evicts by insertion order so a just-reloaded old-slot entry is not evicted right after.
+   * On unstable network, we may need to query an evicted item, UnknownBlockInput will recover
+   * it from db via getOrReload() api. Runs after every single insert, so it evicts ~1 per call.
    */
   private pruneToMaxSize(): void {
     let evicted = 0;
