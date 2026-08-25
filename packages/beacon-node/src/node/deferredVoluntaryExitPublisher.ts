@@ -22,6 +22,10 @@ export function startDeferredVoluntaryExitPublisher({
 }): void {
   const onEpoch = async (): Promise<void> => {
     try {
+      // Use the cached head state directly rather than getHeadStateAtCurrentEpoch, which would regen
+      // the head forward to the current epoch. At init from a stale db-finalized state that regen can
+      // be many epoch transitions. The head state is fine here: this is a best-effort drain that
+      // re-runs every epoch, so a just-processable exit is republished next tick.
       const state = chain.getHeadState();
       const exits = chain.deferredVoluntaryExitPool.drainProcessableExits(state);
       for (const exit of exits) {
