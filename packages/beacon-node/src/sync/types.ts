@@ -36,6 +36,39 @@ export enum PendingBlockInputStatus {
   processing = "processing",
 }
 
+/**
+ * Why a pending item was dropped from BlockInputSync WITHOUT completing.
+ * The happy path — a successfully imported/processed block or payload — is removed by the import
+ * flow (onPayloadImported, processReadyBlock/processPayload success) and is deliberately NOT tracked
+ * here
+ */
+export enum DroppedItemReason {
+  /** prune: item's own slot is below the finalized slot (routine cleanup), or a downloaded block landed at/below finality */
+  belowFinalized = "below_finalized",
+  /** prune: slot-less, unresolvable payload evicted after PRUNE_UNRESOLVED_SLOT_EPOCHS */
+  agedOut = "aged_out",
+  /** pruneSetToMax evicted the oldest entry because the cache hit its capacity (DoS guard) */
+  capacity = "capacity",
+  /** descendant removed because an ancestor was invalid/removed */
+  invalidParent = "invalid_parent",
+  /** transient execution-engine error removal (EXECUTION_ENGINE_ERROR) */
+  elError = "el_error",
+  /** the execution engine declared the item invalid (EXECUTION_ENGINE_INVALID) */
+  elInvalid = "el_invalid",
+  /** a block failed our own checks (not correct w.r.t. our chain) */
+  invalidBlock = "invalid_block",
+  /** a block declares a parent payload hash that conflicts with the parent's actual payload (gloas) */
+  invalidParentPayload = "invalid_parent_payload",
+  /** a payload envelope failed gossip verification (ENVELOPE_VERIFICATION_ERROR) */
+  invalidEnvelope = "invalid_envelope",
+  /** a payload had an invalid signature (INVALID_SIGNATURE) */
+  invalidSignature = "invalid_signature",
+  /** a block root was given up on after exhausting download attempts (data could not be fetched) */
+  unavailable = "unavailable",
+  /** an unexpected / unhandled error code led to removal */
+  unknown = "unknown",
+}
+
 export enum PendingPayloadInputStatus {
   pending = "pending",
   fetching = "fetching",
