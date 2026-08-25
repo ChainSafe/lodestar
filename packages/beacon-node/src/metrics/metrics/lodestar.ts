@@ -4,7 +4,10 @@ import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInputPruneReason,
+  PayloadEnvelopeInputSource,
+} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -1643,9 +1646,15 @@ export function createLodestarMetrics(
           name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
           help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
         }),
-        created: register.counter({
+        created: register.counter<{source: PayloadEnvelopeInputSource}>({
           name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
-          help: "Number of PayloadEnvelopeInputs created",
+          help: "Number of PayloadEnvelopeInputs created by source",
+          labelNames: ["source"],
+        }),
+        pruned: register.counter<{reason: PayloadEnvelopeInputPruneReason}>({
+          name: "lodestar_seen_payload_envelope_input_cache_items_pruned_total",
+          help: "Number of PayloadEnvelopeInputs evicted by reason",
+          labelNames: ["reason"],
         }),
       },
     },
