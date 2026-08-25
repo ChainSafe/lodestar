@@ -62,7 +62,26 @@ export type PendingRootHex = {
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
 
-export type PendingPayloadInput = {
+export enum PrunedPendingPayloadReason {
+  /** Block is below the finalized slot, fork choice can never need its payload and peers no longer serve it. */
+  FINALIZED = "finalized",
+  /** Slot never resolved, so the finalized rule cannot apply. Bounded by age instead. */
+  STALE = "stale",
+}
+
+/**
+ * Retry bookkeeping shared by every payload sync cache shape. A root that cannot currently be
+ * served (no peer has it, or every peer is already at `MAX_CONCURRENT_REQUESTS`) is backed off
+ * instead of being retried on every scheduler pass.
+ */
+export type PayloadRetryMeta = {
+  /** Consecutive failed download attempts, reset on any successful download. */
+  failedDownloads?: number;
+  /** Epoch ms before which the scheduler must not retry this root. */
+  nextRetryAtMs?: number;
+};
+
+export type PendingPayloadInput = PayloadRetryMeta & {
   status:
     | PendingPayloadInputStatus.pending
     | PendingPayloadInputStatus.fetching
@@ -74,7 +93,7 @@ export type PendingPayloadInput = {
   peerIdStrings: Set<string>;
 };
 
-export type PendingPayloadRootHex = {
+export type PendingPayloadRootHex = PayloadRetryMeta & {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
   // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
@@ -86,7 +105,7 @@ export type PendingPayloadRootHex = {
   peerIdStrings: Set<string>;
 };
 
-export type PendingPayloadEnvelope = {
+export type PendingPayloadEnvelope = PayloadRetryMeta & {
   status: PendingPayloadInputStatus.waitingForBlock;
   envelope: SignedExecutionPayloadEnvelope;
   timeAddedSec: number;

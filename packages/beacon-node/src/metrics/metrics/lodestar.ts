@@ -24,7 +24,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/types.js";
+import {PendingBlockType, PrunedPendingPayloadReason} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -659,6 +659,15 @@ export function createLodestarMetrics(
       pendingPayloads: register.gauge({
         name: "lodestar_sync_unknown_block_pending_payloads_size",
         help: "Current size of UnknownBlockSync pending payloads cache",
+      }),
+      prunedPendingPayloads: register.counter<{reason: PrunedPendingPayloadReason}>({
+        name: "lodestar_sync_unknown_block_pruned_pending_payloads_total",
+        help: "Total number of unservable payload roots dropped from the UnknownBlockSync pending payloads cache",
+        labelNames: ["reason"],
+      }),
+      deferredPayloadDownloads: register.counter({
+        name: "lodestar_sync_unknown_block_deferred_payload_downloads_total",
+        help: "Total number of payload downloads skipped because the root is in retry backoff",
       }),
       knownBadBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",

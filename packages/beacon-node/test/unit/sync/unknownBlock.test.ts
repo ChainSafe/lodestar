@@ -24,6 +24,7 @@ import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validat
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
+import {PENDING_PAYLOAD_RETRY_BACKOFF_MS} from "../../../src/sync/constants.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {
   BlockInputSyncCacheItem,
@@ -1553,6 +1554,175 @@ describe("UnknownBlockSync", () => {
 
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    it("drops pending payload roots below the finalized slot instead of retrying them forever", async () => {
+      const peer = await getRandPeerIdStr();
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([]);
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 64} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      // Peers no longer serve envelopes for blocks this old, so this root can never resolve
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: toRootHex(Buffer.alloc(32, 0x51)),
+        slot: 8,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      // and it must not linger in the queue where it would occupy a slot and consume peer capacity
+      emitter.emit(routes.events.EventType.block, {} as never);
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+    });
+
+    it("services the newest payload root first so head-adjacent roots get peer capacity", async () => {
+      const peer = await getRandPeerIdStr();
+      let peersConnected = false;
+      const oldRootHex = toRootHex(Buffer.alloc(32, 0x61));
+      const newRootHex = toRootHex(Buffer.alloc(32, 0x62));
+      // the gossip slot is untrusted and not stored, fork choice is what resolvePayloadSlot trusts
+      const slotByRoot = new Map([
+        [oldRootHex, 1],
+        [newRootHex, 9],
+      ]);
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([]);
+      const {emitter, networkEvents} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus: vi.fn().mockImplementation((rootHex: string) => {
+              const slot = slotByRoot.get(rootHex);
+              return slot === undefined ? null : ({slot} as ProtoBlock);
+            }),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          getConnectedPeers: () => (peersConnected ? [peer] : []),
+        },
+        peers: [{peerId: peer}],
+      });
+
+      // Queue both roots while there is no peer to download from, so a single later scheduler pass
+      // sees both and the sweep order becomes observable. Insertion order is oldest-first, which is
+      // what the priority sort has to override.
+      for (const rootHex of [oldRootHex, newRootHex]) {
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex, slot: 0, peer, source: BlockInputSource.gossip});
+      }
+      await sleep(20);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      peersConnected = true;
+      networkEvents.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: {} as never,
+        custodyColumns: [],
+        clientAgent: "payload-test-client",
+      });
+      await sleep(20);
+
+      const requestedRoots = sendExecutionPayloadEnvelopesByRoot.mock.calls.map(([, roots]) => toRootHex(roots[0]));
+      expect(requestedRoots).toEqual([newRootHex, oldRootHex]);
+    });
+
+    it("falls back to arrival order for payload roots with no resolvable slot", async () => {
+      const peer = await getRandPeerIdStr();
+      let peersConnected = false;
+      const firstRootHex = toRootHex(Buffer.alloc(32, 0x63));
+      const secondRootHex = toRootHex(Buffer.alloc(32, 0x64));
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([]);
+      const {emitter, networkEvents} = setupPayloadSyncTest({
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          getConnectedPeers: () => (peersConnected ? [peer] : []),
+        },
+        peers: [{peerId: peer}],
+      });
+
+      // no trusted source can resolve a slot for either root, so arrival time is the only recency
+      // signal left, space them apart so timeAddedSec differs
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: firstRootHex,
+        slot: 9,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+      await sleep(10);
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: secondRootHex,
+        slot: 1,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+      await sleep(20);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      peersConnected = true;
+      networkEvents.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: {} as never,
+        custodyColumns: [],
+        clientAgent: "payload-test-client",
+      });
+      await sleep(20);
+
+      const requestedRoots = sendExecutionPayloadEnvelopesByRoot.mock.calls.map(([, roots]) => toRootHex(roots[0]));
+      expect(requestedRoots).toEqual([secondRootHex, firstRootHex]);
+    });
+
+    it("backs off a payload root after a failed download instead of retrying every scheduler pass", async () => {
+      const peer = await getRandPeerIdStr();
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockRejectedValue(new Error("no envelope"));
+      const {emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: toRootHex(Buffer.alloc(32, 0x71)),
+        slot: 4,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+      await sleep(20);
+
+      const callsAfterFirstPass = sendExecutionPayloadEnvelopesByRoot.mock.calls.length;
+      expect(callsAfterFirstPass).toBeGreaterThan(0);
+
+      // Further scheduler passes must not re-issue the request while the root is backing off,
+      // otherwise unservable roots hold every peer at MAX_CONCURRENT_REQUESTS
+      for (let i = 0; i < 3; i++) {
+        emitter.emit(routes.events.EventType.block, {} as never);
+      }
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(callsAfterFirstPass);
+
+      // Once the backoff elapses the root is retried again
+      await vi.advanceTimersByTimeAsync(PENDING_PAYLOAD_RETRY_BACKOFF_MS + 50);
+      emitter.emit(routes.events.EventType.block, {} as never);
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot.mock.calls.length).toBeGreaterThan(callsAfterFirstPass);
     });
 
     it("downloads parent payload for unknown parent block when parent block is already known", async () => {
