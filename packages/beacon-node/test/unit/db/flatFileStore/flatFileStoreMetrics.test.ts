@@ -23,10 +23,10 @@ describe("FlatFileStore metrics", () => {
     await fs.promises.rm(tmpDir, {recursive: true, force: true});
   });
 
-  it("should record filesystem operations, bytes, files, pruning, and failures", async () => {
+  it("should record filesystem operations, bytes, pruning, and failures", async () => {
     const metrics = createMetricsTest();
     const store = new FlatFileStore(tmpDir, config, logger, metrics.flatFileStore);
-    await store.init(Number.MAX_SAFE_INTEGER);
+    await store.init();
 
     await store.putDataColumnsBinary(100, ROOT, [{index: 0, data: new Uint8Array(50).fill(0xaa)}]);
     await store.getDataColumnsBinary(100, ROOT, [0]);
@@ -34,12 +34,12 @@ describe("FlatFileStore metrics", () => {
     const readError = Object.assign(new Error("read failed"), {code: "EIO"});
     const readSpy = vi.spyOn(fs.promises, "open").mockRejectedValueOnce(readError);
     try {
-      await expect(store.getDataColumnsBinary(100, ROOT, [0])).rejects.toBe(readError);
+      await expect(store.getDataColumnsBinary(100, ROOT, [0])).rejects.toMatchObject({cause: readError});
     } finally {
       readSpy.mockRestore();
     }
 
-    await store.pruneColumnsBeforeSlot(200);
+    await store.pruneBefore(200);
 
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_write_bytes_total")
@@ -47,9 +47,6 @@ describe("FlatFileStore metrics", () => {
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_read_bytes_total")
     ).resolves.toContain("lodestar_flat_file_store_read_bytes_total ");
-    await expect(metrics.register.getSingleMetricAsString("lodestar_flat_file_store_files")).resolves.toContain(
-      "lodestar_flat_file_store_files 0"
-    );
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_pruned_directories_total")
     ).resolves.toContain("lodestar_flat_file_store_pruned_directories_total 1");
@@ -67,7 +64,7 @@ describe("FlatFileStore metrics", () => {
     const mkdirSpy = vi.spyOn(fs.promises, "mkdir").mockRejectedValueOnce(startupError);
     try {
       const failedStore = new FlatFileStore(tmpDir, config, logger, metrics.flatFileStore);
-      await expect(failedStore.init(Number.MAX_SAFE_INTEGER)).rejects.toBe(startupError);
+      await expect(failedStore.init()).rejects.toMatchObject({cause: startupError});
     } finally {
       mkdirSpy.mockRestore();
     }

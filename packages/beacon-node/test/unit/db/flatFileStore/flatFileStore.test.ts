@@ -29,7 +29,7 @@ describe("FlatFileStore", () => {
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
     store = new FlatFileStore(tmpDir, config, testLogger());
-    await store.init(Number.MAX_SAFE_INTEGER);
+    await store.init();
   });
 
   afterEach(async () => {
@@ -105,7 +105,10 @@ describe("FlatFileStore", () => {
       try {
         await expect(
           store.putDataColumnsBinary(1000, ROOT_A, [{index: 1, data: new Uint8Array(40).fill(0x02)}])
-        ).rejects.toBe(readError);
+        ).rejects.toMatchObject({
+          type: {code: "DATA_COLUMN_STORE_OPERATION_FAILED", operation: "write"},
+          cause: readError,
+        });
       } finally {
         readSpy.mockRestore();
       }
@@ -128,8 +131,9 @@ describe("FlatFileStore", () => {
       });
 
       try {
-        await expect(store.deleteNonCanonical([{slot: 1000, blockRoot: ROOT_A}])).rejects.toMatchObject({
-          errors: [deleteError],
+        await expect(store.deleteMany([{slot: 1000, blockRoot: ROOT_A}])).rejects.toMatchObject({
+          type: {code: "DATA_COLUMN_STORE_BATCH_DELETE_FAILED", failures: 1},
+          cause: expect.objectContaining({errors: [expect.objectContaining({cause: deleteError})]}),
         });
       } finally {
         rmSpy.mockRestore();
@@ -142,18 +146,18 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       await store.putDataColumnsBinary(200, ROOT_B, [{index: 0, data: new Uint8Array(20)}]);
 
-      await store.pruneColumnsBeforeSlot(200);
+      await store.pruneBefore(200);
 
       expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
       expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).not.toEqual([undefined]);
     });
 
-    it("should prune empty column slot directories retained in the cache", async () => {
+    it("should prune empty column slot directories retained in the index", async () => {
       const slotDir = path.join(tmpDir, "data_columns", "000000000100");
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
-      await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_A}]);
+      await store.deleteMany([{slot: 100, blockRoot: ROOT_A}]);
 
-      await store.pruneColumnsBeforeSlot(200);
+      await store.pruneBefore(200);
 
       await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
     });
@@ -195,42 +199,43 @@ describe("FlatFileStore", () => {
       const sentinel = new Uint8Array([1, 2, 3]);
       await fs.promises.writeFile(columnSiblingPath, sentinel);
 
-      const error = await store.deleteNonCanonical([{slot: 100, blockRoot: "../escape"}]).catch((e: unknown) => e);
-      expect(error).toBeInstanceOf(AggregateError);
-      const causes = (error as AggregateError).errors;
-      expect(causes).toHaveLength(1);
-      expect(causes[0]).toMatchObject({message: expect.stringContaining("Invalid flat file root")});
+      const error = await store.deleteMany([{slot: 100, blockRoot: "../escape"}]).catch((e: unknown) => e);
+      expect(error).toMatchObject({type: {code: "DATA_COLUMN_STORE_BATCH_DELETE_FAILED", failures: 1}});
+      const causes = (error as {cause: AggregateError}).cause;
+      expect(causes.errors).toHaveLength(1);
+      expect(causes.errors[0]).toMatchObject({message: expect.stringContaining("Invalid flat file root")});
 
       expect(new Uint8Array(await fs.promises.readFile(columnSiblingPath))).toEqual(sentinel);
     });
   });
 
-  describe("deleteNonCanonical", () => {
+  describe("deleteMany", () => {
     it("should delete columns only for non-canonical blocks", async () => {
       await store.putDataColumnsBinary(100, ROOT_ORPHAN, [{index: 0, data: new Uint8Array(20)}]);
       await store.putDataColumnsBinary(100, ROOT_CANONICAL, [{index: 0, data: new Uint8Array(20)}]);
 
-      await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_ORPHAN}]);
+      await store.deleteMany([{slot: 100, blockRoot: ROOT_ORPHAN}]);
 
       expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
       expect(await store.getDataColumnsBinary(100, ROOT_CANONICAL, [0])).not.toEqual([undefined]);
     });
   });
 
-  describe("cache rebuild", () => {
-    it("should rebuild cache from disk after restart", async () => {
+  describe("slot index rebuild", () => {
+    it("should rebuild the slot index without opening slot directories", async () => {
       await store.putDataColumnsBinary(1000, ROOT_B, [
         {index: 0, data: new Uint8Array(20)},
         {index: 5, data: new Uint8Array(20)},
       ]);
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger());
-      const openSpy = vi.spyOn(fs.promises, "open");
+      const readdirSpy = vi.spyOn(fs.promises, "readdir");
       try {
-        await store2.init(Number.MAX_SAFE_INTEGER);
-        expect(openSpy).not.toHaveBeenCalled();
+        await store2.init();
+        expect(readdirSpy).toHaveBeenCalledOnce();
+        expect(readdirSpy).toHaveBeenCalledWith(path.join(tmpDir, "data_columns"), {withFileTypes: true});
       } finally {
-        openSpy.mockRestore();
+        readdirSpy.mockRestore();
       }
 
       const columns = await store2.getDataColumnsBinary(1000, ROOT_B, [0, 5, 1]);
@@ -246,16 +251,16 @@ describe("FlatFileStore", () => {
       await fs.promises.writeFile(columnPartPath, new Uint8Array([2]));
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger());
-      await store2.init(Number.MAX_SAFE_INTEGER);
+      await store2.init();
       expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
       await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
 
-      await store2.pruneColumnsBeforeSlot(200);
+      await store2.pruneBefore(200);
 
       await expect(fs.promises.access(columnSlotDir)).rejects.toMatchObject({code: "ENOENT"});
     });
 
-    it("should only cache canonical slot directories and root filenames", async () => {
+    it("should only index canonical top-level slot directories", async () => {
       const validData = new Uint8Array([1, 2, 3]);
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: validData}]);
 
@@ -272,7 +277,7 @@ describe("FlatFileStore", () => {
       const logger = testLogger();
       const warn = vi.spyOn(logger, LogLevel.warn);
       const store2 = new FlatFileStore(tmpDir, config, logger);
-      await store2.init(Number.MAX_SAFE_INTEGER);
+      await store2.init();
 
       const readdirSpy = vi.spyOn(fs.promises, "readdir");
       try {
@@ -283,7 +288,7 @@ describe("FlatFileStore", () => {
       }
       expect(warn).toHaveBeenCalledOnce();
       expect(warn).toHaveBeenCalledWith("Ignored non-canonical flat file store entries", {
-        columnEntries: 2,
+        entries: 1,
       });
 
       await expect(fs.promises.access(malformedColumnPath)).resolves.toBeUndefined();
@@ -295,14 +300,14 @@ describe("FlatFileStore", () => {
       const readdirSpy = vi.spyOn(fs.promises, "readdir");
 
       try {
-        await store.pruneColumnsBeforeSlot(200);
+        await store.pruneBefore(200);
         expect(readdirSpy).not.toHaveBeenCalled();
       } finally {
         readdirSpy.mockRestore();
       }
     });
 
-    it("should remove hot data after restart", async () => {
+    it("should retain unfinalized data after restart", async () => {
       const finalizedBlockSlot = 100;
       const skippedBoundarySlot = finalizedBlockSlot + 1;
       const hotSlot = finalizedBlockSlot + 2;
@@ -312,15 +317,15 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(hotSlot, ROOT_B, [{index: 0, data: new Uint8Array([4])}]);
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger());
-      await store2.init(finalizedBlockSlot);
+      await store2.init();
 
       expect(await store2.getDataColumnsBinary(finalizedBlockSlot, ROOT_A, [0])).toEqual([new Uint8Array([2])]);
-      expect(await store2.getDataColumnsBinary(skippedBoundarySlot, ROOT_B, [0])).toEqual([undefined]);
-      expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([undefined]);
+      expect(await store2.getDataColumnsBinary(skippedBoundarySlot, ROOT_B, [0])).toEqual([new Uint8Array([3])]);
+      expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([new Uint8Array([4])]);
       for (const slot of [skippedBoundarySlot, hotSlot]) {
         await expect(
           fs.promises.access(path.join(tmpDir, "data_columns", String(slot).padStart(12, "0")))
-        ).rejects.toMatchObject({code: "ENOENT"});
+        ).resolves.toBeUndefined();
       }
     });
   });

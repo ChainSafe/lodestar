@@ -170,8 +170,7 @@ export async function archiveBlocks(
       .map((summary) => ({slot: summary.slot, blockRoot: summary.blockRoot}));
     if (columnItems.length > 0) {
       // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
-      await db.flatFileStore.deleteNonCanonical(columnItems);
-      await db.dataColumnSidecar.deleteMany(columnItems.map(({blockRoot}) => fromHex(blockRoot)));
+      await db.dataColumns.deleteMany(columnItems);
       logger.verbose("Deleted non canonical dataColumnSidecars", {
         ...logCtx,
         count: columnItems.length,
@@ -225,28 +224,8 @@ export async function archiveBlocks(
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
-        await db.flatFileStore.pruneColumnsBeforeSlot(columnsPruneSlot);
-        logger.verbose(`dataColumnSidecars prune (flat file): pruned before slot ${columnsPruneSlot}`, logCtx);
-
-        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
-          // The `id` value `0` refers to the column index. Fetch all sidecars before the retention boundary.
-          lt: {prefix: columnsPruneSlot, id: 0},
-        });
-        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
-        if (slotsToDelete.length > 0) {
-          await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose("Legacy dataColumnSidecars prune", {
-            ...logCtx,
-            slotRange: prettyPrintIndices(slotsToDelete),
-            numOfSlots: slotsToDelete.length,
-            totalNumOfSidecars: prefixedKeys.length,
-          });
-        } else {
-          logger.verbose(
-            `Legacy dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`,
-            logCtx
-          );
-        }
+        await db.dataColumns.pruneBefore(columnsPruneSlot);
+        logger.verbose(`dataColumnSidecars prune: pruned before slot ${columnsPruneSlot}`, logCtx);
       } else {
         logger.verbose(
           `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`,

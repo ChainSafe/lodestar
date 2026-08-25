@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {uncompress} from "snappyjs";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu} from "@lodestar/params";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
@@ -17,10 +16,11 @@ import {
   readAllColumns,
   totalBits,
 } from "./dcolFormat.js";
-import {isFsNotFoundError} from "./errors.js";
-import {ExistenceCache} from "./existenceCache.js";
+import {DataColumnStoreError, DataColumnStoreErrorCode, isFsNotFoundError} from "./errors.js";
 import {type FlatFileStoreMetrics, FlatFileStoreOperation, observeFlatFileStoreOperation} from "./metrics.js";
 import {assertValidRootHex, padSlot} from "./path.js";
+import {SlotIndex} from "./slotIndex.js";
+import {uncompress} from "./snappy.js";
 
 /**
  * Filesystem data column store using `.dcol` format.
@@ -37,7 +37,7 @@ export class ColumnStore {
   constructor(
     baseDir: string,
     private readonly config: ChainForkConfig,
-    private readonly cache: ExistenceCache,
+    private readonly slotIndex: SlotIndex,
     private readonly metrics: FlatFileStoreMetrics | null
   ) {
     this.dir = path.join(baseDir, "data_columns");
@@ -154,7 +154,10 @@ export class ColumnStore {
           continue;
         }
         if (range.length < 0 || range.offset + range.length > fileSize) {
-          throw new Error(`Invalid dcol offset for slot=${slot} root=${rootHex} index=${idx}`);
+          throw new DataColumnStoreError(
+            {code: DataColumnStoreErrorCode.INVALID_OFFSET, slot, root: rootHex, index: idx},
+            `Invalid dcol offset for slot=${slot} root=${rootHex} index=${idx}`
+          );
         }
         const buf = new Uint8Array(range.length);
         await readExactly(fd, buf, range.offset);
@@ -197,8 +200,7 @@ export class ColumnStore {
 
         await atomicWrite(this.filePath(slot, rootHex), fileData);
         this.metrics?.writeBytes.inc(fileData.length);
-        this.cache.setColumnPresent(slot, rootHex);
-        this.metrics?.files.set(this.cache.getColumnFileCount());
+        this.slotIndex.add(slot);
       } finally {
         release();
       }
@@ -213,8 +215,6 @@ export class ColumnStore {
       const release = await this.acquireLock(slot, rootHex);
       try {
         await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
-        this.cache.removeColumns(slot, rootHex);
-        this.metrics?.files.set(this.cache.getColumnFileCount());
       } finally {
         release();
       }
@@ -226,11 +226,10 @@ export class ColumnStore {
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
     await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.prune, async () => {
-      for (const slot of this.cache.getColumnSlotsBefore(minSlot)) {
+      for (const slot of this.slotIndex.getBefore(minSlot)) {
         await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
-        this.cache.removeColumnSlot(slot);
+        this.slotIndex.remove(slot);
         this.metrics?.prunedDirectories.inc();
-        this.metrics?.files.set(this.cache.getColumnFileCount());
       }
     });
   }
@@ -238,11 +237,17 @@ export class ColumnStore {
 
 function validateDcolHeader(header: DcolHeader, slot: Slot, rootHex: RootHex): void {
   if (header.slot !== slot) {
-    throw new Error(`Dcol slot mismatch: header=${header.slot} path=${slot}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.SLOT_MISMATCH, headerSlot: header.slot, pathSlot: slot},
+      `Dcol slot mismatch: header=${header.slot} path=${slot}`
+    );
   }
   const headerRoot = toRootHex(header.blockRoot);
   if (headerRoot !== rootHex) {
-    throw new Error(`Dcol block root mismatch: header=${headerRoot} path=${rootHex}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.ROOT_MISMATCH, headerRoot, pathRoot: rootHex},
+      `Dcol block root mismatch: header=${headerRoot} path=${rootHex}`
+    );
   }
 }
 
@@ -251,7 +256,11 @@ async function readExactly(fd: fs.promises.FileHandle, buffer: Uint8Array, posit
   while (totalRead < buffer.length) {
     const {bytesRead} = await fd.read(buffer, totalRead, buffer.length - totalRead, position + totalRead);
     if (bytesRead === 0) {
-      throw new Error(`Unexpected end of dcol file at offset ${position + totalRead}`);
+      const offset = position + totalRead;
+      throw new DataColumnStoreError(
+        {code: DataColumnStoreErrorCode.UNEXPECTED_EOF, offset},
+        `Unexpected end of dcol file at offset ${offset}`
+      );
     }
     totalRead += bytesRead;
   }

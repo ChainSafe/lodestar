@@ -25,9 +25,9 @@
  *   column    = snappy.uncompress(file[colStart:colEnd])
  */
 
-import {compressSync} from "snappy";
-import {uncompress} from "snappyjs";
 import {getSlotFromOffset} from "../../util/sszBytes.js";
+import {DataColumnStoreError, DataColumnStoreErrorCode} from "./errors.js";
+import {compress, uncompress} from "./snappy.js";
 
 export const DCOL_VERSION = 0x01;
 export const DCOL_HEADER_SIZE = 149;
@@ -90,13 +90,22 @@ export function encodeDcolHeader(header: DcolHeader): Uint8Array {
   // Defensive checks at the persistence boundary. Normal sidecars are already validated, but silently truncating
   // malformed metadata here would turn an upstream regression into durable on-disk corruption.
   if (header.bitmap.length !== BITMAP_BYTES) {
-    throw new Error(`Invalid dcol bitmap length: ${header.bitmap.length}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.INVALID_BITMAP_LENGTH, length: header.bitmap.length},
+      `Invalid dcol bitmap length: ${header.bitmap.length}`
+    );
   }
   if (header.blockRoot.length !== BLOCK_ROOT_BYTES) {
-    throw new Error(`Invalid dcol block root length: ${header.blockRoot.length}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.INVALID_BLOCK_ROOT_LENGTH, length: header.blockRoot.length},
+      `Invalid dcol block root length: ${header.blockRoot.length}`
+    );
   }
   if (!Number.isInteger(header.slot) || header.slot < 0 || header.slot > MAX_SLOT) {
-    throw new Error(`Invalid dcol slot: ${header.slot}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.INVALID_SLOT, slot: header.slot},
+      `Invalid dcol slot: ${header.slot}`
+    );
   }
 
   const buf = new Uint8Array(DCOL_HEADER_SIZE);
@@ -118,12 +127,18 @@ export function encodeDcolHeader(header: DcolHeader): Uint8Array {
 
 export function parseDcolHeader(data: Uint8Array): DcolHeader {
   if (data.length < DCOL_HEADER_SIZE) {
-    throw new Error(`dcol file too small: ${data.length} < ${DCOL_HEADER_SIZE}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.FILE_TOO_SMALL, actual: data.length, minimum: DCOL_HEADER_SIZE},
+      `dcol file too small: ${data.length} < ${DCOL_HEADER_SIZE}`
+    );
   }
 
   const version = data[0];
   if (version !== DCOL_VERSION) {
-    throw new Error(`Unsupported dcol version: ${version}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.UNSUPPORTED_VERSION, version},
+      `Unsupported dcol version: ${version}`
+    );
   }
 
   const bitmap = Uint8Array.prototype.slice.call(data, BITMAP_OFFSET, BITMAP_OFFSET + BITMAP_BYTES) as Uint8Array;
@@ -131,7 +146,10 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
 
   const slot = getSlotFromOffset(data, SLOT_OFFSET);
   if (slot === null) {
-    throw new Error("dcol slot exceeds 4-byte range");
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.SLOT_OUT_OF_RANGE},
+      "dcol slot exceeds 4-byte range"
+    );
   }
 
   return {version, bitmap, blockRoot, slot};
@@ -237,17 +255,26 @@ export function encodeDcolFile(
   columns: {index: number; data: Uint8Array}[]
 ): Uint8Array {
   if (columns.length === 0) {
-    throw new Error("Cannot encode dcol file with zero columns");
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.EMPTY_COLUMNS},
+      "Cannot encode dcol file with zero columns"
+    );
   }
 
   // Defensive validation keeps bitmap membership and offset table entries in one-to-one correspondence.
   const seenIndices = new Set<number>();
   for (const {index} of columns) {
     if (!Number.isInteger(index) || index < 0 || index >= BITMAP_BITS) {
-      throw new Error(`Invalid dcol column index: ${index}`);
+      throw new DataColumnStoreError(
+        {code: DataColumnStoreErrorCode.INVALID_COLUMN_INDEX, index},
+        `Invalid dcol column index: ${index}`
+      );
     }
     if (seenIndices.has(index)) {
-      throw new Error(`Duplicate dcol column index: ${index}`);
+      throw new DataColumnStoreError(
+        {code: DataColumnStoreErrorCode.DUPLICATE_COLUMN_INDEX, index},
+        `Duplicate dcol column index: ${index}`
+      );
     }
     seenIndices.add(index);
   }
@@ -264,7 +291,7 @@ export function encodeDcolFile(
   // Compress each column
   const compressed: Uint8Array[] = [];
   for (const col of sorted) {
-    compressed.push(compressSync(Buffer.from(col.data.buffer, col.data.byteOffset, col.data.byteLength)));
+    compressed.push(compress(col.data));
   }
 
   // Build offset table
@@ -314,7 +341,10 @@ export function mergeDcolColumns(existing: Uint8Array, newColumns: {index: numbe
   const newIndices = new Set<number>();
   for (const col of newColumns) {
     if (newIndices.has(col.index)) {
-      throw new Error(`Duplicate dcol column index: ${col.index}`);
+      throw new DataColumnStoreError(
+        {code: DataColumnStoreErrorCode.DUPLICATE_COLUMN_INDEX, index: col.index},
+        `Duplicate dcol column index: ${col.index}`
+      );
     }
     newIndices.add(col.index);
     allColumns.set(col.index, col.data);

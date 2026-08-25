@@ -1,4 +1,5 @@
 import type {RootHex} from "@lodestar/types";
+import {DataColumnStoreError, DataColumnStoreErrorCode} from "./errors.js";
 
 const ROOT_HEX_PATTERN = /^0x[0-9a-f]{64}$/;
 
@@ -8,7 +9,10 @@ export function isValidRootHex(rootHex: string): rootHex is RootHex {
 
 export function assertValidRootHex(rootHex: string): asserts rootHex is RootHex {
   if (!isValidRootHex(rootHex)) {
-    throw new Error(`Invalid flat file root: ${rootHex}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.INVALID_ROOT, root: rootHex},
+      `Invalid flat file root: ${rootHex}`
+    );
   }
 }
 
@@ -18,7 +22,10 @@ export function assertValidRootHex(rootHex: string): asserts rootHex is RootHex 
  */
 export function padSlot(slot: number): string {
   if (!Number.isSafeInteger(slot) || slot < 0) {
-    throw new Error(`Invalid flat file slot: ${slot}`);
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.INVALID_SLOT, slot},
+      `Invalid flat file slot: ${slot}`
+    );
   }
 
   return String(slot).padStart(12, "0");

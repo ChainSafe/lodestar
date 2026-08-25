@@ -1,10 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
+import {DataColumnStore, type IDataColumnStore} from "./dataColumnStore.js";
+import {DataColumnStoreError, DataColumnStoreErrorCode} from "./flatFileStore/errors.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
-import type {IFlatFileStore} from "./flatFileStore/interface.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
@@ -62,7 +62,8 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  private flatFileStoreInstance: IFlatFileStore | null = null;
+  private flatFileStoreInstance: FlatFileStore | null = null;
+  private dataColumnStoreInstance: IDataColumnStore | null = null;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -96,22 +97,26 @@ export class BeaconDb implements IBeaconDb {
     this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  async initFlatFileStore(
-    dataDir: string,
-    finalizedBlockSlot: Slot,
-    logger: Logger,
-    metrics: FlatFileStoreMetrics | null
-  ): Promise<void> {
-    const store = new FlatFileStore(dataDir, this.config, logger, metrics);
-    await store.init(finalizedBlockSlot);
-    this.flatFileStoreInstance = store;
+  async initDataColumnStore(dataDir: string, logger: Logger, metrics: FlatFileStoreMetrics | null): Promise<void> {
+    const flatFiles = new FlatFileStore(dataDir, this.config, logger, metrics);
+    await flatFiles.init();
+    this.flatFileStoreInstance = flatFiles;
+    this.dataColumnStoreInstance = new DataColumnStore(
+      flatFiles,
+      this.dataColumnSidecar,
+      this.dataColumnSidecarArchive,
+      this.blockArchive
+    );
   }
 
-  get flatFileStore(): IFlatFileStore {
-    if (!this.flatFileStoreInstance) {
-      throw new Error("Flat file store is not initialized");
+  get dataColumns(): IDataColumnStore {
+    if (!this.dataColumnStoreInstance) {
+      throw new DataColumnStoreError(
+        {code: DataColumnStoreErrorCode.NOT_INITIALIZED},
+        "Data column store is not initialized"
+      );
     }
-    return this.flatFileStoreInstance;
+    return this.dataColumnStoreInstance;
   }
 
   async close(): Promise<void> {

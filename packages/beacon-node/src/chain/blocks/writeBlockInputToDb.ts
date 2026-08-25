@@ -98,7 +98,7 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
       data: serialized ?? dataColumnSidecarType.serialize(dataColumnSidecar),
     });
   }
-  await this.db.flatFileStore.putDataColumnsBinary(slot, blockRootHex, binaryColumns);
+  await this.db.dataColumns.putManyBinary({slot, blockRoot: blockRootHex}, binaryColumns);
 
   this.logger.debug("Persisted dataColumnSidecars", {
     slot,

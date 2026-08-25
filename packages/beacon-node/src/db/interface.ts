@@ -1,7 +1,6 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
 import type {Logger} from "@lodestar/utils";
-import type {IFlatFileStore} from "./flatFileStore/interface.js";
+import type {IDataColumnStore} from "./dataColumnStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -63,13 +62,8 @@ export interface IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  flatFileStore: IFlatFileStore;
-  initFlatFileStore(
-    dataDir: string,
-    finalizedBlockSlot: Slot,
-    logger: Logger,
-    metrics: FlatFileStoreMetrics | null
-  ): Promise<void>;
+  dataColumns: IDataColumnStore;
+  initDataColumnStore(dataDir: string, logger: Logger, metrics: FlatFileStoreMetrics | null): Promise<void>;
 
   pruneHotDb(): Promise<void>;
 

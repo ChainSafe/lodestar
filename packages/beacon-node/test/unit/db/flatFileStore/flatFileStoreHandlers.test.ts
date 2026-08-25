@@ -12,7 +12,9 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {DAType} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
+import {DataColumnStore} from "../../../../src/db/dataColumnStore.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
+import type {IFlatFileStore} from "../../../../src/db/flatFileStore/interface.js";
 import type {IBeaconDb} from "../../../../src/db/interface.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
 import {onDataColumnSidecarsByRoot} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRoot.js";
@@ -44,7 +46,7 @@ describe("FlatFileStore reqresp handler integration", () => {
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
     store = new FlatFileStore(tmpDir, defaultConfig, testLogger);
-    await store.init(Number.MAX_SAFE_INTEGER);
+    await store.init();
   });
 
   afterEach(async () => {
@@ -77,6 +79,31 @@ describe("FlatFileStore reqresp handler integration", () => {
       return toRootHex(fuluConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
     }
 
+    function makeDataColumnStore(opts: {
+      flatFiles?: IFlatFileStore;
+      getHot?: (root: Uint8Array, indices: number[]) => Promise<(Uint8Array | undefined)[]>;
+      getArchived?: (slot: number, indices: number[]) => Promise<(Uint8Array | undefined)[]>;
+      getArchivedSlot?: (root: Uint8Array) => Promise<number | null>;
+      hotValues?: () => Promise<ReturnType<typeof ssz.fulu.DataColumnSidecar.defaultValue>[]>;
+      archivedValues?: () => Promise<ReturnType<typeof ssz.fulu.DataColumnSidecar.defaultValue>[]>;
+    }): DataColumnStore {
+      return new DataColumnStore(
+        opts.flatFiles ?? store,
+        {
+          getManyBinary: opts.getHot ?? (async (_root, indices) => indices.map(() => undefined)),
+          values: opts.hotValues ?? (async () => []),
+          deleteMany: vi.fn().mockResolvedValue(undefined),
+        },
+        {
+          getManyBinary: opts.getArchived ?? (async (_slot, indices) => indices.map(() => undefined)),
+          values: opts.archivedValues ?? (async () => []),
+          keys: vi.fn().mockResolvedValue([]),
+          deleteMany: vi.fn().mockResolvedValue(undefined),
+        },
+        {getSlotByRoot: opts.getArchivedSlot ?? vi.fn().mockResolvedValue(null)}
+      );
+    }
+
     function makeMockChainAndDb(opts: {
       config?: ChainForkConfig;
       finalizedSlot: number;
@@ -107,23 +134,18 @@ describe("FlatFileStore reqresp handler integration", () => {
       }
 
       const archivedSlotsByRoot = new Map(opts.archivedBlockSlotsByRoot);
+      const blockArchive = {
+        getBinary: vi.fn().mockResolvedValue(opts.archivedBlockBytes ?? null),
+        getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
+      };
       const db = {
-        flatFileStore: store,
-        dataColumnSidecar: {
-          getManyBinary:
-            opts.getHotDataColumnSidecars ??
-            (async (_root: Uint8Array, indices: number[]) => indices.map(() => undefined)),
-        },
-        dataColumnSidecarArchive: {
-          getManyBinary:
-            opts.getArchivedDataColumnSidecars ??
-            (async (_slot: number, indices: number[]) => indices.map(() => undefined)),
-        },
+        dataColumns: makeDataColumnStore({
+          getHot: opts.getHotDataColumnSidecars,
+          getArchived: opts.getArchivedDataColumnSidecars,
+          getArchivedSlot: blockArchive.getSlotByRoot,
+        }),
         block: {getBinary: vi.fn().mockResolvedValue(opts.hotBlockBytes ?? null)},
-        blockArchive: {
-          getBinary: vi.fn().mockResolvedValue(opts.archivedBlockBytes ?? null),
-          getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
-        },
+        blockArchive,
         executionPayloadEnvelope: {
           getBinary: vi.fn().mockResolvedValue(opts.hotExecutionPayloadEnvelopeBytes ?? null),
         },
@@ -243,10 +265,11 @@ describe("FlatFileStore reqresp handler integration", () => {
         seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
         seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
         db: {
-          flatFileStore: store,
-          dataColumnSidecar: {getManyBinary: getHotDataColumnSidecars},
-          dataColumnSidecarArchive: {getManyBinary: getArchivedDataColumnSidecars},
-          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(10)},
+          dataColumns: makeDataColumnStore({
+            getHot: getHotDataColumnSidecars,
+            getArchived: getArchivedDataColumnSidecars,
+            getArchivedSlot: vi.fn().mockResolvedValue(10),
+          }),
         },
       } as unknown as BeaconChain;
 
@@ -284,10 +307,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
         serializedCache: new WeakMap<object, Uint8Array>(),
         db: {
-          flatFileStore: store,
-          dataColumnSidecar: {getManyBinary: getHotDataColumnSidecars},
-          dataColumnSidecarArchive: {getManyBinary: vi.fn()},
-          blockArchive: {getSlotByRoot: vi.fn()},
+          dataColumns: makeDataColumnStore({getHot: getHotDataColumnSidecars}),
         },
       } as unknown as BeaconChain;
 
@@ -309,12 +329,10 @@ describe("FlatFileStore reqresp handler integration", () => {
         seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
         seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
         db: {
-          flatFileStore: store,
-          dataColumnSidecar: {
-            getManyBinary: vi.fn(async (_root: Uint8Array, indices: number[]) => indices.map(() => undefined)),
-          },
-          dataColumnSidecarArchive: {getManyBinary: getArchivedDataColumnSidecars},
-          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(null)},
+          dataColumns: makeDataColumnStore({
+            getArchived: getArchivedDataColumnSidecars,
+            getArchivedSlot: vi.fn().mockResolvedValue(null),
+          }),
         },
       } as unknown as BeaconChain;
 
@@ -341,17 +359,27 @@ describe("FlatFileStore reqresp handler integration", () => {
       const archivedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
       archivedColumn.index = 2;
 
+      const flatFiles = {
+        getDataColumns: vi.fn().mockResolvedValue([flatColumn]),
+        getDataColumnsBinary: vi.fn(),
+        putDataColumnsBinary: vi.fn(),
+        deleteMany: vi.fn(),
+        pruneBefore: vi.fn(),
+        init: vi.fn(),
+        close: vi.fn(),
+      } satisfies IFlatFileStore;
+
       const chain = {
         config: fuluConfig,
         seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
         seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
         db: {
-          flatFileStore: {getDataColumns: vi.fn().mockResolvedValue([flatColumn])},
-          dataColumnSidecar: {values: vi.fn().mockResolvedValue([duplicateHotColumn, hotColumn])},
-          dataColumnSidecarArchive: {
-            values: vi.fn().mockResolvedValue([duplicateArchivedColumn, archivedColumn]),
-          },
-          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(10)},
+          dataColumns: makeDataColumnStore({
+            flatFiles,
+            hotValues: vi.fn().mockResolvedValue([duplicateHotColumn, hotColumn]),
+            archivedValues: vi.fn().mockResolvedValue([duplicateArchivedColumn, archivedColumn]),
+            getArchivedSlot: vi.fn().mockResolvedValue(10),
+          }),
         },
       } as unknown as BeaconChain;
 

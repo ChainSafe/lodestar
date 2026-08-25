@@ -329,6 +329,9 @@ importers:
       qs:
         specifier: ^6.14.2
         version: 6.15.2
+      snappy:
+        specifier: ^7.2.2
+        version: 7.2.2
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -375,9 +378,6 @@ importers:
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
-      snappy:
-        specifier: ^7.2.2
-        version: 7.2.2
       snappyjs:
         specifier: ^0.7.0
         version: 0.7.0

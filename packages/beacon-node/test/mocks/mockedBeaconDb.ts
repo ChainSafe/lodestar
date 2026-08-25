@@ -1,7 +1,6 @@
 import {Mocked, vi} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
-import type {IFlatFileStore} from "../../src/db/index.js";
-import {BeaconDb} from "../../src/db/index.js";
+import {BeaconDb, type IDataColumnStore} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -40,14 +39,12 @@ vi.mock("../../src/db/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/db/index.js")>();
 
   const mockedBeaconDb = vi.fn().mockImplementation(function MockedBeaconDb() {
-    const flatFileStore: IFlatFileStore = {
-      init: vi.fn().mockResolvedValue(undefined),
-      close: vi.fn().mockResolvedValue(undefined),
-      getDataColumns: vi.fn().mockResolvedValue([]),
-      getDataColumnsBinary: vi.fn().mockImplementation(async (_slot, _root, indices) => indices.map(() => undefined)),
-      putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
-      deleteNonCanonical: vi.fn().mockResolvedValue(undefined),
-      pruneColumnsBeforeSlot: vi.fn().mockResolvedValue(undefined),
+    const dataColumns: IDataColumnStore = {
+      getAll: vi.fn().mockResolvedValue([]),
+      getManyBinary: vi.fn().mockImplementation(async (_key, indices) => indices.map(() => undefined)),
+      putManyBinary: vi.fn().mockResolvedValue(undefined),
+      deleteMany: vi.fn().mockResolvedValue(undefined),
+      pruneBefore: vi.fn().mockResolvedValue(undefined),
     };
 
     return {
@@ -64,8 +61,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
 
-      flatFileStore,
-      initFlatFileStore: vi.fn().mockResolvedValue(undefined),
+      dataColumns,
+      initDataColumnStore: vi.fn().mockResolvedValue(undefined),
     };
   });
 

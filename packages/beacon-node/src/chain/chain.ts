@@ -986,27 +986,8 @@ export class BeaconChain implements IBeaconChain {
       }
     }
 
-    for (const sidecar of await this.db.flatFileStore.getDataColumns(blockSlot, blockRootHex)) {
-      if (!sidecarsByIndex.has(sidecar.index)) {
-        sidecarsByIndex.set(sidecar.index, sidecar);
-      }
-    }
-
-    const blockRoot = fromHex(blockRootHex);
-    for (const sidecar of await this.db.dataColumnSidecar.values(blockRoot)) {
-      if (!sidecarsByIndex.has(sidecar.index)) {
-        sidecarsByIndex.set(sidecar.index, sidecar);
-      }
-    }
-
-    // Archived columns are keyed by slot. Confirm that the requested root is the
-    // canonical archived block before using them as a fallback.
-    if ((await this.db.blockArchive.getSlotByRoot(blockRoot)) === blockSlot) {
-      for (const sidecar of await this.db.dataColumnSidecarArchive.values(blockSlot)) {
-        if (!sidecarsByIndex.has(sidecar.index)) {
-          sidecarsByIndex.set(sidecar.index, sidecar);
-        }
-      }
+    for (const sidecar of await this.db.dataColumns.getAll({slot: blockSlot, blockRoot: blockRootHex})) {
+      if (!sidecarsByIndex.has(sidecar.index)) sidecarsByIndex.set(sidecar.index, sidecar);
     }
 
     return [...sidecarsByIndex.values()].sort((a, b) => a.index - b.index);
@@ -1063,61 +1044,20 @@ export class BeaconChain implements IBeaconChain {
       }
     }
 
-    let missingPositions = dataColumnSidecars
+    const missingPositions = dataColumnSidecars
       .map((sidecar, position) => (sidecar === undefined ? position : -1))
       .filter((position) => position !== -1);
 
     if (missingPositions.length > 0) {
-      const flatFileSidecars = await this.db.flatFileStore.getDataColumnsBinary(
-        blockSlot,
-        blockRootHex,
+      const persistedSidecars = await this.db.dataColumns.getManyBinary(
+        {slot: blockSlot, blockRoot: blockRootHex},
         missingPositions.map((position) => indices[position])
       );
       for (let i = 0; i < missingPositions.length; i++) {
-        const sidecar = flatFileSidecars[i];
+        const sidecar = persistedSidecars[i];
         if (sidecar !== undefined) {
           dataColumnSidecars[missingPositions[i]] = sidecar;
         }
-      }
-    }
-
-    missingPositions = missingPositions.filter((position) => dataColumnSidecars[position] === undefined);
-
-    if (missingPositions.length === 0) {
-      return dataColumnSidecars;
-    }
-
-    const blockRoot = fromHex(blockRootHex);
-    const unfinalizedSidecars = await this.db.dataColumnSidecar.getManyBinary(
-      blockRoot,
-      missingPositions.map((position) => indices[position])
-    );
-    for (let i = 0; i < missingPositions.length; i++) {
-      const sidecar = unfinalizedSidecars[i];
-      if (sidecar !== undefined) {
-        dataColumnSidecars[missingPositions[i]] = sidecar;
-      }
-    }
-
-    missingPositions = missingPositions.filter((position) => dataColumnSidecars[position] === undefined);
-    if (missingPositions.length === 0) {
-      return dataColumnSidecars;
-    }
-
-    // Archived columns are keyed by slot. Confirm that the requested root is the
-    // canonical archived block before using them as a fallback.
-    if ((await this.db.blockArchive.getSlotByRoot(blockRoot)) !== blockSlot) {
-      return dataColumnSidecars;
-    }
-
-    const finalizedSidecars = await this.db.dataColumnSidecarArchive.getManyBinary(
-      blockSlot,
-      missingPositions.map((position) => indices[position])
-    );
-    for (let i = 0; i < missingPositions.length; i++) {
-      const sidecar = finalizedSidecars[i];
-      if (sidecar !== undefined) {
-        dataColumnSidecars[missingPositions[i]] = sidecar;
       }
     }
 

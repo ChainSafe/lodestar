@@ -2068,17 +2068,13 @@ export function createLodestarMetrics(
         name: "lodestar_flat_file_store_write_bytes_total",
         help: "Total bytes written to flat file storage",
       }),
-      files: register.gauge({
-        name: "lodestar_flat_file_store_files",
-        help: "Current number of complete files tracked in flat file storage",
-      }),
       prunedDirectories: register.counter({
         name: "lodestar_flat_file_store_pruned_directories_total",
         help: "Total count of slot directories pruned from flat file storage",
       }),
       startupDuration: register.histogram({
         name: "lodestar_flat_file_store_startup_duration_seconds",
-        help: "Duration of flat file store startup cleanup and cache reconstruction in seconds",
+        help: "Duration of flat file store slot index reconstruction in seconds",
         buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 300],
       }),
       startupErrors: register.counter({

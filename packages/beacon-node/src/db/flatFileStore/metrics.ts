@@ -1,4 +1,5 @@
-import type {Counter, Gauge, Histogram} from "@lodestar/utils";
+import type {Counter, Histogram} from "@lodestar/utils";
+import {DataColumnStoreError, DataColumnStoreErrorCode} from "./errors.js";
 
 export const FlatFileStoreOperation = {
   read: "read",
@@ -16,7 +17,6 @@ export type FlatFileStoreMetrics = {
   operationErrors: Counter<OperationLabels>;
   readBytes: Counter;
   writeBytes: Counter;
-  files: Gauge;
   prunedDirectories: Counter;
   startupDuration: Histogram;
   startupErrors: Counter;
@@ -33,7 +33,14 @@ export async function observeFlatFileStoreOperation<T>(
     return await fn();
   } catch (e) {
     metrics?.operationErrors.inc(labels);
-    throw e;
+    if (e instanceof DataColumnStoreError) {
+      throw e;
+    }
+    throw new DataColumnStoreError(
+      {code: DataColumnStoreErrorCode.OPERATION_FAILED, operation},
+      `Flat file store ${operation} operation failed`,
+      e
+    );
   } finally {
     endTimer?.();
   }

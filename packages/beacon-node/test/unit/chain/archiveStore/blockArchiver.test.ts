@@ -96,7 +96,7 @@ describe("block archiver task", () => {
     );
     // delete non canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
-    expect(dbStub.flatFileStore.deleteNonCanonical).not.toHaveBeenCalled();
+    expect(dbStub.dataColumns.deleteMany).not.toHaveBeenCalled();
   });
 
   it("should archive legacy data column sidecars for finalized blocks", async () => {
@@ -236,7 +236,7 @@ describe("block archiver task", () => {
       8
     );
 
-    expect(dbStub.flatFileStore.deleteNonCanonical).toHaveBeenCalledWith([
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
       {slot: nonCanonicalFull.slot, blockRoot: nonCanonicalFull.blockRoot},
     ]);
   });
@@ -277,7 +277,7 @@ describe("block archiver task", () => {
       nonAncestors: [block],
     });
     const deleteError = new Error("flat file cleanup failed");
-    vi.mocked(dbStub.flatFileStore.deleteNonCanonical).mockRejectedValueOnce(deleteError);
+    vi.mocked(dbStub.dataColumns.deleteMany).mockRejectedValueOnce(deleteError);
 
     await expect(
       archiveBlocks(
@@ -291,9 +291,7 @@ describe("block archiver task", () => {
       )
     ).rejects.toBe(deleteError);
 
-    expect(dbStub.flatFileStore.deleteNonCanonical).toHaveBeenCalledWith([
-      {slot: block.slot, blockRoot: block.blockRoot},
-    ]);
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([{slot: block.slot, blockRoot: block.blockRoot}]);
     expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
   });
 
@@ -341,6 +339,6 @@ describe("block archiver task", () => {
     const columnsPruneSlot = computeStartSlotAtEpoch(
       currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
     );
-    expect(dbStub.flatFileStore.pruneColumnsBeforeSlot).toHaveBeenCalledWith(columnsPruneSlot);
+    expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
   });
 });
