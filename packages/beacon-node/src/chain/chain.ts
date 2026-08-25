@@ -1,5 +1,6 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -25,7 +26,6 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
-  PubkeyCache,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -79,6 +79,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
@@ -94,6 +95,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -193,6 +195,7 @@ export class BeaconChain implements IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -307,8 +310,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -320,6 +323,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
+    this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -451,6 +455,9 @@ export class BeaconChain implements IBeaconChain {
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
+      db,
+      seenBlockInputCache: this.seenBlockInputCache,
+      custodyConfig: this.custodyConfig,
       metrics,
       logger,
     });
@@ -466,7 +473,8 @@ export class BeaconChain implements IBeaconChain {
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
-        timeCreatedSec: Math.floor(Date.now() / 1000),
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.anchorState,
       });
     }
 
@@ -579,7 +587,7 @@ export class BeaconChain implements IBeaconChain {
       //   seenAggregators = single aggregator index, not participants of the aggregate
       this.seenAggregators.isKnown(epoch, index) ||
       //   seenPayloadAttesters = single signer of payload attestation message
-      this.seenPayloadAttesters.isKnown(epoch, index) ||
+      this.seenPayloadAttesters.seenAtEpoch(epoch, index) ||
       //   seenBlockProposers = single block proposer
       this.seenBlockProposers.seenAtEpoch(epoch, index)
     );
@@ -1090,7 +1098,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+    const proposerPubKey = this.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -1569,6 +1577,7 @@ export class BeaconChain implements IBeaconChain {
     // aggregatedAttestationPool tracks metrics on its own
     metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+    metrics.opPool.deferredVoluntaryExitPool.size.set(this.deferredVoluntaryExitPool.size());
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
@@ -1577,6 +1586,8 @@ export class BeaconChain implements IBeaconChain {
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
+    metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
+    metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
 
     const headState = this.getHeadState();
     if (isStatePostElectra(headState)) {

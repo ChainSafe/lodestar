@@ -1,17 +1,31 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkPostGloas, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {Logger, fromHex} from "@lodestar/utils";
+import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {isDaOutOfRange} from "../blocks/blockInput/index.js";
-import {CreateFromBidProps, CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {
+  CreateFromBidProps,
+  CreateFromBlockProps,
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputPruneReason,
+  PayloadEnvelopeInputSource,
+} from "../blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {SeenBlockInput} from "./seenGossipBlockInput.js";
 
 export type {PayloadEnvelopeInputState} from "../blocks/payloadEnvelopeInput/index.js";
 export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+
+// Bound this cache by this max size, this is the same to SeenBlockInput
+const MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
 
 export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
@@ -20,6 +34,9 @@ export type SeenPayloadEnvelopeInputModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
+  db: IBeaconDb;
+  seenBlockInputCache: SeenBlockInput;
+  custodyConfig: CustodyConfig;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -40,9 +57,14 @@ export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
+  private readonly db: IBeaconDb;
+  private readonly seenBlockInputCache: SeenBlockInput;
+  private readonly custodyConfig: CustodyConfig;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
+  // Dedup concurrent DB reloads of the same root so callers share one reconstructed object.
+  private readonly reloading = new Map<RootHex, Promise<PayloadEnvelopeInput | undefined>>();
 
   constructor({
     config,
@@ -51,6 +73,9 @@ export class SeenPayloadEnvelopeInput {
     chainEvents,
     signal,
     serializedCache,
+    db,
+    seenBlockInputCache,
+    custodyConfig,
     metrics,
     logger,
   }: SeenPayloadEnvelopeInputModules) {
@@ -60,6 +85,9 @@ export class SeenPayloadEnvelopeInput {
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
+    this.db = db;
+    this.seenBlockInputCache = seenBlockInputCache;
+    this.custodyConfig = custodyConfig;
     this.metrics = metrics;
     this.logger = logger;
 
@@ -86,7 +114,7 @@ export class SeenPayloadEnvelopeInput {
     let deletedCount = 0;
     for (const [, input] of this.payloadInputs) {
       if (input.slot < finalizedSlot) {
-        this.evictPayloadInput(input);
+        this.evictPayloadInput(input, "finalized");
         deletedCount++;
       }
     }
@@ -110,12 +138,13 @@ export class SeenPayloadEnvelopeInput {
     const daOutOfRange = isDaOutOfRange(this.config, props.forkName, props.block.message.slot, this.clock.currentEpoch);
     const input = PayloadEnvelopeInput.createFromBlock({...props, daOutOfRange});
     this.payloadInputs.set(props.blockRootHex, input);
-    this.metrics?.seenCache.payloadEnvelopeInput.created.inc();
+    this.metrics?.seenCache.payloadEnvelopeInput.created.inc({source: props.source});
     this.logger?.verbose("SeenPayloadEnvelopeInput.add created new entry", {
       slot: input.slot,
       root: props.blockRootHex,
       daOutOfRange,
     });
+    this.pruneToMaxSize();
     return input;
   }
 
@@ -131,17 +160,92 @@ export class SeenPayloadEnvelopeInput {
     const daOutOfRange = isDaOutOfRange(this.config, props.forkName, props.slot, this.clock.currentEpoch);
     const input = PayloadEnvelopeInput.createFromBid({...props, daOutOfRange});
     this.payloadInputs.set(props.blockRootHex, input);
-    this.metrics?.seenCache.payloadEnvelopeInput.created.inc();
+    this.metrics?.seenCache.payloadEnvelopeInput.created.inc({source: props.source});
     this.logger?.verbose("SeenPayloadEnvelopeInput.addFromBid created new entry", {
       slot: input.slot,
       root: props.blockRootHex,
       daOutOfRange,
     });
+    this.pruneToMaxSize();
     return input;
   }
 
   get(blockRootHex: RootHex): PayloadEnvelopeInput | undefined {
     return this.payloadInputs.get(blockRootHex);
+  }
+
+  /**
+   * Like `get()`, but on a cache miss reconstruct the shell (bid + versionedHashes) from the block
+   * in `seenBlockInputCache` or the hot DB.
+   * This api is meant for BlockInputSync when a late/weird payloads for old blocks
+   *
+   * NOTE: the reconstructed entry is always EMPTY even when the block is actually FULL (its
+   * payload envelope + columns persisted in the DB). The consumer should consult fork choice if it needs to.
+   */
+  async getOrReload(blockRootHex: RootHex): Promise<PayloadEnvelopeInput | undefined> {
+    const existing = this.payloadInputs.get(blockRootHex);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    // Without this dedup, two concurrent misses each db.block.get + createFromBlock a DIFFERENT shell
+    // for the same root; processPayloadEnvelopeJob's WeakMap (keyed by object) can't dedup the import.
+    const inflight = this.reloading.get(blockRootHex);
+    if (inflight !== undefined) {
+      return inflight;
+    }
+    const promise = this.reloadFromDb(blockRootHex);
+    this.reloading.set(blockRootHex, promise);
+    try {
+      return await promise;
+    } finally {
+      this.reloading.delete(blockRootHex);
+    }
+  }
+
+  private async reloadFromDb(blockRootHex: RootHex): Promise<PayloadEnvelopeInput | undefined> {
+    // Only recover unfinalized, fork-choice-known blocks. Do not read the finalized archive. The gate
+    // also filters out un-imported blocks that may sit in seenBlockInputCache before validation.
+    if (!this.forkChoice.hasBlockHex(blockRootHex)) {
+      return undefined;
+    }
+
+    // In-memory first: persistBlockInput writes db.block THEN prunes seenBlockInputCache, so a
+    // just-imported block whose async write (unfinalizedBlockWrites) has not flushed yet is still here;
+    // older blocks (already pruned from the cache) fall through to the hot db.
+    const cachedBlockInput = this.seenBlockInputCache.get(blockRootHex);
+    const block = cachedBlockInput?.hasBlock()
+      ? cachedBlockInput.getBlock()
+      : await this.db.block.get(fromHex(blockRootHex));
+    if (block == null) {
+      return undefined;
+    }
+
+    const forkName = this.config.getForkName(block.message.slot);
+    if (!isForkPostGloas(forkName)) {
+      return undefined;
+    }
+
+    const daOutOfRange = isDaOutOfRange(this.config, forkName, block.message.slot, this.clock.currentEpoch);
+    const input = PayloadEnvelopeInput.createFromBlock({
+      blockRootHex,
+      block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName,
+      sampledColumns: this.custodyConfig.sampledColumns,
+      custodyColumns: this.custodyConfig.custodyColumns,
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.reload,
+      daOutOfRange,
+    });
+    this.payloadInputs.set(blockRootHex, input);
+    this.metrics?.seenCache.payloadEnvelopeInput.created.inc({source: PayloadEnvelopeInputSource.reload});
+    this.logger?.verbose("SeenPayloadEnvelopeInput.getOrReload reconstructed entry from db", {
+      slot: input.slot,
+      root: blockRootHex,
+    });
+    // Set above (entry is at the back of the insertion order), so the cap never evicts what we just reloaded.
+    this.pruneToMaxSize();
+    return input;
   }
 
   hasPayload(blockRootHex: RootHex): boolean {
@@ -155,8 +259,7 @@ export class SeenPayloadEnvelopeInput {
   prune(blockRootHex: RootHex): void {
     const input = this.payloadInputs.get(blockRootHex);
     if (input) {
-      this.evictPayloadInput(input);
-      this.logger?.verbose("SeenPayloadEnvelopeInput.prune deleted", {slot: input.slot, root: blockRootHex});
+      this.evictPayloadInput(input, "prune");
     }
   }
 
@@ -170,17 +273,43 @@ export class SeenPayloadEnvelopeInput {
         // ...and don't evict while columns are still being gathered: writeDataColumnsToDb awaits the
         // same hasComputedAllData() before persisting. Such entries are pruned by a later call.
         if (input?.hasComputedAllData()) {
-          this.evictPayloadInput(input);
-          this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
-            slot: block.slot,
-            root: block.blockRoot,
-          });
+          this.evictPayloadInput(input, "belowParent");
         }
       }
     }
   }
 
-  private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {
+  /**
+   * Bound this cache to have at most MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE items.
+   * Evicts by insertion order so a just-reloaded old-slot entry is not evicted right after.
+   * On unstable network, we may need to query an evicted item, UnknownBlockInput will recover
+   * it from db via getOrReload() api. Runs after every single insert, so it evicts ~1 per call.
+   */
+  private pruneToMaxSize(): void {
+    let evicted = 0;
+    for (const input of this.payloadInputs.values()) {
+      if (this.payloadInputs.size <= MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE) {
+        break;
+      }
+      this.evictPayloadInput(input, "cap");
+      evicted++;
+    }
+    if (evicted > 0) {
+      this.logger?.debug("SeenPayloadEnvelopeInput.pruneToMaxSize evicted", {
+        evicted,
+        size: this.payloadInputs.size,
+        max: MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE,
+      });
+    }
+  }
+
+  private evictPayloadInput(payloadInput: PayloadEnvelopeInput, reason: PayloadEnvelopeInputPruneReason): void {
+    this.metrics?.seenCache.payloadEnvelopeInput.pruned.inc({reason});
+    this.logger?.debug("SeenPayloadEnvelopeInput evicted", {
+      slot: payloadInput.slot,
+      root: payloadInput.blockRootHex,
+      reason,
+    });
     this.serializedCache.delete(payloadInput.getSerializedCacheKeys());
     this.payloadInputs.delete(payloadInput.blockRootHex);
   }

@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";

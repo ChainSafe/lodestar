@@ -1,7 +1,8 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {EpochShuffling, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -44,6 +45,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -127,6 +129,7 @@ export interface IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
