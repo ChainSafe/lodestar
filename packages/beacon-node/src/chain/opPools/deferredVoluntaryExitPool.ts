@@ -16,7 +16,7 @@ export class DeferredVoluntaryExitPool {
   constructor(
     private readonly logger: Logger,
     private readonly maxSize = 1024,
-    private readonly maxDeferEpochs = 256
+    private readonly maxDeferEpochs = 4096
   ) {}
 
   insert(exit: SignedVoluntaryExit, validity: VoluntaryExitValidity, currentEpoch: Epoch): boolean {
