@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
-import {RegenCaller} from "../chain/regen/index.js";
 import {INetwork} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 
@@ -23,7 +22,7 @@ export function startDeferredVoluntaryExitPublisher({
 }): void {
   const onEpoch = async (): Promise<void> => {
     try {
-      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.publishDeferredVoluntaryExits);
+      const state = chain.getHeadState();
       const exits = chain.deferredVoluntaryExitPool.drainProcessableExits(state);
       for (const exit of exits) {
         try {
