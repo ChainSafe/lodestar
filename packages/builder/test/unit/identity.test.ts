@@ -43,11 +43,34 @@ describe("Identity", () => {
     expect(res?.balance).toEqual(balance);
   });
 
-  it("fails to fetch the builder status", async () => {
+  it("returns an inert result and preserves API error detail when status lookup fails", async () => {
     api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(500));
     const res = await getBuilderStatus(api, logger, index);
     expect(res).toBeNull();
-    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Couldn't fetch the builder",
+      {},
+      expect.objectContaining({status: 500, message: expect.stringMatching(/status 500/)})
+    );
+  });
+
+  it("distinguishes an empty successful status response from a beacon node failure", async () => {
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockApiResponse({data: [], meta: {executionOptimistic: true, finalized: false}})
+    );
+
+    await expect(getBuilderStatus(api, logger, index)).resolves.toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith("Builder status not available in beacon node");
+    expect(logger.warn).not.toHaveBeenCalledWith("Couldn't fetch the builder", expect.anything(), expect.anything());
+  });
+
+  it("returns a non-active status without conflating it with a lookup failure", async () => {
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(index, {status: "pending", pubkey, balance, version})
+    );
+
+    await expect(getBuilderStatus(api, logger, index)).resolves.toEqual({status: "pending", balance});
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it("successfully resolves builder identity", async () => {
