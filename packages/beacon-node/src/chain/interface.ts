@@ -45,6 +45,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -128,6 +129,7 @@ export interface IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
