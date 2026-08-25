@@ -35,7 +35,10 @@ describe("Genesis", () => {
 
     await expect(promise).resolves.toEqual(genesis);
     expect(api.beacon.getGenesis).toHaveBeenCalledTimes(2);
-    expect(logger.info).toHaveBeenCalledWith("Waiting for genesis", expect.objectContaining({message: expect.any(String)}));
+    expect(logger.info).toHaveBeenCalledWith(
+      "Waiting for genesis",
+      expect.objectContaining({message: expect.any(String)})
+    );
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
