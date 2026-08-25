@@ -79,6 +79,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
@@ -454,6 +455,9 @@ export class BeaconChain implements IBeaconChain {
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
+      db,
+      seenBlockInputCache: this.seenBlockInputCache,
+      custodyConfig: this.custodyConfig,
       metrics,
       logger,
     });
@@ -469,7 +473,8 @@ export class BeaconChain implements IBeaconChain {
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
-        timeCreatedSec: Math.floor(Date.now() / 1000),
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.anchorState,
       });
     }
 

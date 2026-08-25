@@ -4,7 +4,10 @@ import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInputPruneReason,
+  PayloadEnvelopeInputSource,
+} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -21,7 +24,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/types.js";
+import {DroppedItemReason, PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -677,9 +680,15 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
         help: "Total number of downloaded blocks errors in UnknownBlockSync",
       }),
-      removedBlocks: register.gauge({
+      removedBlocks: register.gauge<{reason: DroppedItemReason}>({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
-        help: "Total number of removed bad blocks in UnknownBlockSync",
+        help: "Total pending blocks dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
+      }),
+      removedPayloads: register.gauge<{reason: DroppedItemReason}>({
+        name: "lodestar_sync_unknown_block_removed_payloads_total",
+        help: "Total pending payloads dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
       }),
       elapsedTimeTillReceived: register.histogram({
         name: "lodestar_sync_unknown_block_elapsed_time_till_received",
@@ -1649,9 +1658,15 @@ export function createLodestarMetrics(
           name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
           help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
         }),
-        created: register.counter({
+        created: register.counter<{source: PayloadEnvelopeInputSource}>({
           name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
-          help: "Number of PayloadEnvelopeInputs created",
+          help: "Number of PayloadEnvelopeInputs created by source",
+          labelNames: ["source"],
+        }),
+        pruned: register.counter<{reason: PayloadEnvelopeInputPruneReason}>({
+          name: "lodestar_seen_payload_envelope_input_cache_items_pruned_total",
+          help: "Number of PayloadEnvelopeInputs evicted by reason",
+          labelNames: ["reason"],
         }),
       },
     },

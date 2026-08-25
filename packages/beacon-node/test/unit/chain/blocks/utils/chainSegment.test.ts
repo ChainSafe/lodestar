@@ -51,7 +51,8 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
       forkName: ForkName.gloas,
       sampledColumns: [],
       custodyColumns: [],
-      timeCreatedSec: seenTimestampSec,
+      seenTimestampSec,
+      source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
     const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -203,7 +204,8 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
       forkName: ForkName.gloas,
       sampledColumns: [],
       custodyColumns: [],
-      timeCreatedSec: seenTimestampSec,
+      seenTimestampSec,
+      source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
     const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
