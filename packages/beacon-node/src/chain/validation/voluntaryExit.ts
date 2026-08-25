@@ -32,8 +32,6 @@ export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
     case VoluntaryExitValidity.invalidSignature:
       return false;
   }
-  const _exhaustive: never = v;
-  return _exhaustive;
 }
 
 // Comments for each call are present inside `validateVoluntaryExit`.
