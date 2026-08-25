@@ -196,7 +196,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         forkName: fork,
         sampledColumns: chain.custodyConfig.sampledColumns,
         custodyColumns: chain.custodyConfig.custodyColumns,
-        timeCreatedSec: seenTimestampSec,
+        seenTimestampSec,
+        source: PayloadEnvelopeInputSource.gossip,
       });
     }
 
@@ -640,6 +641,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
 
         if (isForkPostGloas(blockInput.forkName)) {
+          // we should have the payloadInput in the seen cache so no need getOrReload() here
           const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
           // This payloadInput should have been created just after gossip validation
           if (!payloadInput) {
@@ -1189,6 +1191,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+      // a gossip payload cannot be `MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE` slots after the block
+      // otherwise it'll get to UnknownBlockInput flow
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
       if (!payloadInput) {

@@ -172,6 +172,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenBlockInputCache: new SeenBlockInput(),
       seenPayloadEnvelopeInputCache: {
         get: vi.fn(),
+        getOrReload: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
       shufflingCache: new ShufflingCache(),

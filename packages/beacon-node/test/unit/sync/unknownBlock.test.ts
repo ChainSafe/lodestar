@@ -30,6 +30,7 @@ import {
   PayloadSyncCacheItem,
   PendingBlockInputStatus,
   PendingPayloadInputStatus,
+  PendingPayloadRootHex,
 } from "../../../src/sync/types.js";
 import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
@@ -85,7 +86,8 @@ function buildPayloadFixture({
     forkName: ForkName.gloas,
     sampledColumns,
     custodyColumns: sampledColumns,
-    timeCreatedSec: Date.now() / 1000,
+    seenTimestampSec: Date.now() / 1000,
+    source: PayloadEnvelopeInputSource.byRange,
     daOutOfRange: false,
   });
 
@@ -488,6 +490,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
@@ -735,6 +738,7 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(undefined),
+            getOrReload: vi.fn().mockResolvedValue(undefined),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         } as unknown as IBeaconChain;
@@ -821,6 +825,7 @@ describe("UnknownBlockSync", () => {
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
@@ -892,6 +897,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -956,6 +964,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -1027,6 +1038,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -1096,6 +1110,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
@@ -1200,6 +1217,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
@@ -1262,9 +1282,16 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
       expect(sendBeaconBlocksByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
       expect(processBlock).toHaveBeenCalledTimes(1);
+      // Validation runs exactly once: the first reconcile pass seeds the envelope into payloadInput, so any
+      // racing scheduler pass sees hasPayloadEnvelope() and skips revalidation.
       expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-      expect(processExecutionPayload).toHaveBeenCalledTimes(1);
-      expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      // Two racing scheduler passes may both reach processPayload, but every call carries the SAME payloadInput
+      // object; chain.processExecutionPayload (via processPayloadEnvelopeJob's WeakMap) dedups them into one
+      // real import. This mock bypasses that dedup, so assert on object identity rather than an exact count.
+      expect(processExecutionPayload).toHaveBeenCalled();
+      for (const [arg] of processExecutionPayload.mock.calls) {
+        expect(arg).toBe(payloadInput);
+      }
     });
 
     it("downloads the block and retries payload import when EL reports block not in fork choice", async () => {
@@ -1298,6 +1325,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
@@ -1396,6 +1426,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -1454,6 +1487,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         },
@@ -1492,6 +1528,7 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(payloadInput),
+            getOrReload: vi.fn().mockResolvedValue(payloadInput),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -1561,6 +1598,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -1758,16 +1798,25 @@ describe("UnknownBlockSync", () => {
         peerIdStrings: new Set(),
       });
 
-      // slot-less PendingPayloadRootHex with no trusted source -> unresolved, retained (logged)
-      const rootHexUnresolvable = toRootHex(Buffer.alloc(32, 0xa6));
-      pendingPayloads.set(rootHexUnresolvable, {
+      // slot-less PendingPayloadRootHex with no trusted source, recently added -> retained until aged out
+      const rootHexUnresolvableRecent = toRootHex(Buffer.alloc(32, 0xa6));
+      pendingPayloads.set(rootHexUnresolvableRecent, {
         status: PendingPayloadInputStatus.pending,
-        rootHex: rootHexUnresolvable,
+        rootHex: rootHexUnresolvableRecent,
+        timeAddedSec: Date.now() / 1000,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingPayloadRootHex with no trusted source, added long ago -> aged out and pruned
+      const rootHexUnresolvableStale = toRootHex(Buffer.alloc(32, 0xa8));
+      pendingPayloads.set(rootHexUnresolvableStale, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexUnresolvableStale,
         timeAddedSec: 0,
         peerIdStrings: new Set(),
       });
 
-      expect(pendingPayloads.size).toBe(7);
+      expect(pendingPayloads.size).toBe(8);
 
       // PendingBlockInput below finality -> pruned (slot resolved from blockInput.slot)
       const blockBelow = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -1823,15 +1872,43 @@ describe("UnknownBlockSync", () => {
       expect(pendingPayloads.has(inputRootHex)).toBe(false);
       expect(pendingPayloads.has(envelopeRootHex)).toBe(false);
       expect(pendingPayloads.has(rootHexResolvable)).toBe(false);
+      expect(pendingPayloads.has(rootHexUnresolvableStale)).toBe(false);
       expect(pendingPayloads.has(rootHexAtFinalized)).toBe(true);
       expect(pendingPayloads.has(rootHexBetween)).toBe(true);
-      expect(pendingPayloads.has(rootHexUnresolvable)).toBe(true);
+      expect(pendingPayloads.has(rootHexUnresolvableRecent)).toBe(true);
       expect(pendingPayloads.size).toBe(3);
 
       expect(pendingBlocks.has(blockBelowRootHex)).toBe(false);
       expect(pendingBlocks.has(blockAtFinalizedRootHex)).toBe(true);
       expect(pendingBlocks.has(rootOnlyHex)).toBe(true);
       expect(pendingBlocks.size).toBe(2);
+    });
+
+    it("upgrades a slot-less pending payload once a trusted slot becomes available", async () => {
+      const peerA = await getRandPeerIdStr();
+      const peerB = await getRandPeerIdStr();
+      setupPayloadSyncTest({});
+
+      const svc = service as unknown as {
+        addByPayloadRootHex: (rootHex: string, peerIdStr?: PeerIdStr, slot?: number) => boolean;
+        pendingPayloads: Map<string, PayloadSyncCacheItem>;
+      };
+      const rootHex = toRootHex(Buffer.alloc(32, 0xc1));
+
+      // first queued slot-less (e.g. via onUnknownEnvelopeBlockRoot when no trusted slot resolved yet)
+      expect(svc.addByPayloadRootHex(rootHex, peerA)).toBe(true);
+      expect((svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex).slot).toBeUndefined();
+
+      // re-queued with a trusted slot (e.g. via the parentPayload path) -> slot is filled in, peers merged
+      expect(svc.addByPayloadRootHex(rootHex, peerB, 42)).toBe(false);
+      const upgraded = svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex;
+      expect(upgraded.slot).toBe(42);
+      expect(upgraded.peerIdStrings.has(peerA)).toBe(true);
+      expect(upgraded.peerIdStrings.has(peerB)).toBe(true);
+
+      // a later, different slot must NOT overwrite an already-defined slot
+      svc.addByPayloadRootHex(rootHex, undefined, 99);
+      expect((svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex).slot).toBe(42);
     });
 
     it("drops a child block when its parent payload hash conflicts with the known parent block", async () => {
@@ -1849,7 +1926,8 @@ describe("UnknownBlockSync", () => {
         forkName: ForkName.gloas,
         sampledColumns: [],
         custodyColumns: [],
-        timeCreatedSec: Date.now() / 1000,
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.byRange,
         daOutOfRange: false,
       });
 
@@ -1882,7 +1960,9 @@ describe("UnknownBlockSync", () => {
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
           forkChoice: {
-            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            // Parent payload is revealed/imported (FULL) but no variant matches the child's parentBlockHash.
+            // getMissingBlockDependency defers the drop until the payload lands; only then is the conflict real.
+            hasPayloadHexUnsafe: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             getBlockHexDefaultStatus: vi
               .fn()
@@ -1952,6 +2032,9 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: seenPayloadPrune,
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
@@ -2055,6 +2138,7 @@ describe("UnknownBlockSync", () => {
       seenPayloadEnvelopeInputCache: {
         add: vi.fn(),
         get: vi.fn(),
+        getOrReload: vi.fn().mockResolvedValue(undefined),
         prune: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,

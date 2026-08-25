@@ -128,7 +128,8 @@ export function getBeaconBlockApi({
         forkName: fork,
         sampledColumns: chain.custodyConfig.sampledColumns,
         custodyColumns: chain.custodyConfig.custodyColumns,
-        timeCreatedSec: seenTimestampSec,
+        seenTimestampSec,
+        source: PayloadEnvelopeInputSource.api,
       });
     }
 
