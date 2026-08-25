@@ -24,7 +24,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/types.js";
+import {DroppedItemReason, PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -680,9 +680,15 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
         help: "Total number of downloaded blocks errors in UnknownBlockSync",
       }),
-      removedBlocks: register.gauge({
+      removedBlocks: register.gauge<{reason: DroppedItemReason}>({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
-        help: "Total number of removed bad blocks in UnknownBlockSync",
+        help: "Total pending blocks dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
+      }),
+      removedPayloads: register.gauge<{reason: DroppedItemReason}>({
+        name: "lodestar_sync_unknown_block_removed_payloads_total",
+        help: "Total pending payloads dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
       }),
       elapsedTimeTillReceived: register.histogram({
         name: "lodestar_sync_unknown_block_elapsed_time_till_received",
