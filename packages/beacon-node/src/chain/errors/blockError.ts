@@ -118,7 +118,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.GENESIS_BLOCK}
   | {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {code: BlockErrorCode.ALREADY_KNOWN; root: RootHex}
-  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex; root: RootHex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
@@ -136,7 +136,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
-  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
+  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; blockRoot: RootHex; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.BLACKLISTED_BLOCK}
@@ -184,10 +184,16 @@ export function isBlockErrorAborted(e: unknown): e is BlockError {
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
   switch (type.code) {
     case BlockErrorCode.PRESTATE_MISSING:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BEACON_CHAIN_ERROR:
       return {
         code: type.code,
+        error: type.error.message,
+      };
+
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+      return {
+        code: type.code,
+        blockRoot: type.blockRoot,
         error: type.error.message,
       };
 

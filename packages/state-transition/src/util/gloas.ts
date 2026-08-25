@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BUILDER_INDEX_FLAG,
@@ -23,6 +22,7 @@ import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {createSingleSignatureSetFromComponents, verifySignatureSet} from "./signatureSets.js";
 import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
@@ -87,15 +87,19 @@ export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): 
  * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
  */
 export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
-  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+  return Number(getExpectedGasLimitBigint(BigInt(parentGasLimit), BigInt(targetGasLimit)));
+}
+
+export function getExpectedGasLimitBigint(parentGasLimit: bigint, targetGasLimit: bigint): bigint {
+  const maxGasLimitDifference = (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
 
   if (targetGasLimit > parentGasLimit) {
     const gasDiff = targetGasLimit - parentGasLimit;
-    return parentGasLimit + Math.min(gasDiff, maxGasLimitDifference);
+    return parentGasLimit + (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
   }
 
   const gasDiff = parentGasLimit - targetGasLimit;
-  return parentGasLimit - Math.min(gasDiff, maxGasLimitDifference);
+  return parentGasLimit - (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
 }
 
 /**
@@ -104,8 +108,8 @@ export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: numb
  * adjustment step of the parent, otherwise it must hit the clamped boundary.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
  */
-export function isGasLimitTargetCompatible(parentGasLimit: number, gasLimit: number, targetGasLimit: number): boolean {
-  return gasLimit === getExpectedGasLimit(parentGasLimit, targetGasLimit);
+export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: bigint, targetGasLimit: bigint): boolean {
+  return gasLimit === getExpectedGasLimitBigint(parentGasLimit, targetGasLimit);
 }
 
 /**
@@ -269,7 +273,44 @@ export function addBuilderToRegistry(
     }
   }
 
-  const newBuilder = ssz.gloas.Builder.toViewDU({
+  const newBuilder = createBuilderView(pubkey, version, executionAddress, amount, depositEpoch);
+
+  if (builderIndex < state.builders.length) {
+    state.builders.set(builderIndex, newBuilder);
+  } else {
+    state.builders.push(newBuilder);
+  }
+}
+
+/**
+ * Append a new builder to the registry without scanning for a reusable slot.
+ *
+ * This is only safe to be used at the gloas fork transition.
+ */
+export function appendBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  slot: number
+): void {
+  const depositEpoch = computeEpochAtSlot(slot);
+  state.builders.push(createBuilderView(pubkey, version, executionAddress, amount, depositEpoch));
+}
+
+/**
+ * Build a Builder view for registry insertion. Shared by the scan-based {@link addBuilderToRegistry}
+ * and the append-only {@link appendBuilderToRegistry} so both paths produce an identical view.
+ */
+function createBuilderView(
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  depositEpoch: Epoch
+) {
+  return ssz.gloas.Builder.toViewDU({
     pubkey,
     version,
     executionAddress,
@@ -277,12 +318,6 @@ export function addBuilderToRegistry(
     depositEpoch,
     withdrawableEpoch: FAR_FUTURE_EPOCH,
   });
-
-  if (builderIndex < state.builders.length) {
-    state.builders.set(builderIndex, newBuilder);
-  } else {
-    state.builders.push(newBuilder);
-  }
 }
 
 /**
@@ -304,9 +339,7 @@ export function isValidBuilderDepositSignature(
   const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    const publicKey = PublicKey.fromBytes(pubkey, true);
-    const sig = Signature.fromBytes(signature, true);
-    return verify(signingRoot, publicKey, sig);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signature));
   } catch (_e) {
     return false;
   }

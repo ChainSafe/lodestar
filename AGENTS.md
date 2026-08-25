@@ -168,10 +168,23 @@ import {something} from "./utils.ts";
 
 ### Comments
 
-- Use `//` for implementation comments
-- Use `/** */` JSDoc format for documenting public APIs
-- Add comments when code behavior is non-obvious or deviates from standards
-- Whitespace helps readability in complex code
+**The default number of comments in new code is zero.**
+
+Add a comment only when the code cannot carry important information, such as:
+
+- A precondition not visible in the signature
+- A non-obvious consensus or protocol rule
+- Design, invariants, or non-obvious algorithms of a public or self-contained module
+- An ordering or workaround that looks unnecessary but is correctness-critical
+- Rationale needed to prevent a future regression
+
+Do not comment to restate what the code does. If the reason is clear from the surrounding names and
+structure, omit the comment. Do not narrate a change or record what the code used to do. That belongs
+in the commit message. Keep enduring correctness constraints and non-obvious rationale next to the
+code they govern.
+
+Prefer a clearer name, a smaller function, or a named constant over a comment explaining unclear
+code. Use `//` for implementation comments and `/** */` JSDoc for public API documentation.
 
 ### Metrics
 

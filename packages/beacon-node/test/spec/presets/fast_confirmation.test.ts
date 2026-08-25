@@ -1,10 +1,11 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
@@ -24,11 +25,9 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -50,6 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -71,7 +71,7 @@ import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
+import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -114,8 +114,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -291,7 +290,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -441,7 +441,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
@@ -556,26 +555,54 @@ const fastConfirmationTest =
                 );
               }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_epoch_observed_justified_checkpoint) {
-              // }
+              const fcrStore = chain.forkChoice.getFastConfirmationStore();
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_epoch_observed_justified_checkpoint) {
-              // }
+              if (step.checks.previous_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_observed_justified_checkpoint,
+                  `Invalid previous epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_slot_head) {
-              // }
+              if (step.checks.current_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.currentEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.current_epoch_observed_justified_checkpoint,
+                  `Invalid current epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_slot_head) {
-              // }
+              if (step.checks.previous_epoch_greatest_unrealized_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochGreatestUnrealizedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_greatest_unrealized_checkpoint,
+                  `Invalid previous epoch greatest unrealized checkpoint at step ${i}`
+                );
+              }
+
+              if (step.checks.previous_slot_head) {
+                expect(fcrStore.previousSlotHead).toEqualWithMessage(
+                  step.checks.previous_slot_head,
+                  `Invalid previous slot head at step ${i}`
+                );
+              }
+
+              if (step.checks.current_slot_head) {
+                expect(fcrStore.currentSlotHead).toEqualWithMessage(
+                  step.checks.current_slot_head,
+                  `Invalid current slot head at step ${i}`
+                );
+              }
 
               if (step.checks.confirmed_root) {
                 expect(confirmedRoot).toEqualWithMessage(
                   step.checks.confirmed_root,
                   `Invalid confirmed root at step: ${i}, time: ${step.checks.time}, head_slot: ${step.checks.head?.slot}`
+                );
+              }
+
+              if (step.checks.safe_execution_block_hash !== undefined) {
+                expect(getSafeExecutionBlockHash(chain.forkChoice)).toEqualWithMessage(
+                  step.checks.safe_execution_block_hash,
+                  `Invalid safe execution block hash at step ${i}`
                 );
               }
 
@@ -687,11 +714,12 @@ const fastConfirmationTest =
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
           name.includes("justified_update_not_realized_finality") ||
-          // TODO: lodestar's fast-confirmation rule (FCR) needs a broader overhaul. These two
-          // is_one_confirmed cases (new in v1.7.0-alpha.12, present in electra + fulu) currently
-          // fail. Unskip once the FCR is reworked.
-          name.includes("is_one_confirmed_fails_large_validator_slashed") ||
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot"),
+          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
+          // be applied. Passing them requires skipping deposit signature verification inside epoch
+          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
+          // real, or if full bls_setting=2 support is ever added.
+          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };
@@ -779,9 +807,12 @@ type Checks = {
 
     previous_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
     current_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
+    previous_epoch_greatest_unrealized_checkpoint?: SpecTestCheckpoint;
     previous_slot_head?: string;
     current_slot_head?: string;
     confirmed_root?: string;
+    /** Expected response of `get_safe_execution_block_hash()`. New in Bellatrix. */
+    safe_execution_block_hash?: string;
 
     // Custom attributes
     get_proposer_head?: string;
@@ -836,6 +867,10 @@ function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
-});
+specTestIterator(
+  path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
+  {
+    fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
+  },
+  defaultSkipOpts
+);

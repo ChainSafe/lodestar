@@ -14,7 +14,7 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {Attestation, Epoch, phase0} from "@lodestar/types";
+import {Attestation, Epoch, Slot, phase0} from "@lodestar/types";
 import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
@@ -37,6 +37,7 @@ export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair | CachedBeaconStateGloas,
   attestations: Attestation[],
+  parentSlot: Slot | null,
   verifySignature = true,
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
@@ -66,7 +67,7 @@ export function processAttestationsAltair(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
-      if (!verifySignatureSet(sigSet, state.epochCtx.pubkeyCache)) {
+      if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }
     }
@@ -82,7 +83,8 @@ export function processAttestationsAltair(
       stateSlot - data.slot,
       epochCtx.epoch,
       rootCache,
-      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability : null
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability : null,
+      parentSlot
     );
 
     // For each participant, update their participation
@@ -132,7 +134,7 @@ export function processAttestationsAltair(
         }
       }
 
-      if (isSameSlotAttestation && flagsNewSet !== 0) {
+      if (fork >= ForkSeq.gloas && isSameSlotAttestation && flags === 0 && flagsNewSet !== 0) {
         paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
       }
     }
@@ -179,7 +181,8 @@ export function getAttestationParticipationStatus(
   inclusionDelay: number,
   currentEpoch: Epoch,
   rootCache: RootCache,
-  executionPayloadAvailability: BitArray | null
+  executionPayloadAvailability: BitArray | null,
+  parentSlot: Slot | null
 ): {flags: number; isSameSlotAttestation: boolean} {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
@@ -221,13 +224,16 @@ export function getAttestationParticipationStatus(
       if (executionPayloadAvailability === null) {
         throw new Error("Must supply executionPayloadAvailability post-gloas");
       }
+      if (parentSlot === null) {
+        throw new Error("Must supply parentSlot post-gloas");
+      }
 
       if (data.index !== 0 && data.index !== 1) {
         throw new Error(`data index must be 0 or 1 index=${data.index}`);
       }
 
       isMatchingPayload =
-        Boolean(data.index) === executionPayloadAvailability.get(data.slot % SLOTS_PER_HISTORICAL_ROOT);
+        Boolean(data.index) === executionPayloadAvailability.get(parentSlot % SLOTS_PER_HISTORICAL_ROOT);
     }
 
     isMatchingHead = isMatchingHead && isMatchingPayload;

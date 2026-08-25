@@ -1,12 +1,20 @@
 {
   "ethereumConsensusSpecsTests": {
-    "specVersion": "v1.7.0-alpha.12",
+    "specVersion": "v1.7.0-alpha.14",
     "specTestsRepoUrl": "https://github.com/ethereum/consensus-specs",
     "outputDirBase": "spec-tests",
     "testsToDownload": [
       "general",
       "mainnet",
       "minimal"
+    ]
+  },
+  "sszSpecTests": {
+    "specVersion": "v0.0.1.dev2",
+    "specTestsRepoUrl": "https://github.com/ethereum/ssz-specs",
+    "outputDirBase": "spec-tests-ssz",
+    "testsToDownload": [
+      "ssz-test-vectors-v0.0.1.dev2"
     ]
   },
   "blsSpecTests": {

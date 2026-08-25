@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -31,7 +31,8 @@ const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
  * Proposer boost deltas, back-propagated to the boosted node's ancestors in applyScoreChanges().
  * Reuse the array to avoid memory reallocation and gc, as computeDeltas does for attestation deltas.
  */
-const boostDeltas = new Array<number>();
+const boostDeltas = new Array<bigint>();
+const EFFECTIVE_BALANCE_INCREMENT_BIGINT = BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
 /**
  * popcount(attended AND NOT yes) — explicit False-vote count.
@@ -52,7 +53,7 @@ export function countNoVotes(attended: BitArray, yes: BitArray): number {
 }
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
-type ProposerBoost = {root: RootHex; score: number};
+type ProposerBoost = {root: RootHex; score: bigint};
 
 const ZERO_HASH_HEX = toRootHex(Buffer.alloc(32, 0));
 
@@ -379,7 +380,7 @@ export class ProtoArray {
     }
 
     boostDeltas.length = this.nodes.length;
-    boostDeltas.fill(0);
+    boostDeltas.fill(0n);
 
     if (
       justifiedEpoch !== this.justifiedEpoch ||
@@ -416,17 +417,20 @@ export class ProtoArray {
       // the boost neutral with respect to EMPTY vs FULL selection.
       const isBoostVariant = isGloasBlock(node) ? node.payloadStatus === PayloadStatus.PENDING : true; // pre-Gloas has only FULL, always boost
       const currentBoost =
-        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0;
+        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0n;
       const previousBoost =
         this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot && isBoostVariant
           ? this.previousProposerBoost.score
-          : 0;
+          : 0n;
 
       // If this node's execution status has been marked invalid, then the weight of the node
       // needs to be taken out of consideration after which the node weight will become 0
       // for subsequent iterations of applyScoreChanges
       const isInvalid = node.executionStatus === ExecutionStatus.Invalid;
-      const attestationDelta = isInvalid ? -node.attestationScore : attestationDeltas[nodeIndex];
+      const attestationDelta = isInvalid
+        ? -Number(node.attestationScore / EFFECTIVE_BALANCE_INCREMENT_BIGINT)
+        : attestationDeltas[nodeIndex];
+      const attestationDeltaGwei = BigInt(attestationDelta) * EFFECTIVE_BALANCE_INCREMENT_BIGINT;
       const boostDelta = isInvalid
         ? // old boost = weight - attestationScore
           -(node.weight - node.attestationScore)
@@ -434,8 +438,8 @@ export class ProtoArray {
 
       // Apply the deltas to the node. Their sum is the node's total delta, so weight is unaffected
       // by tracking the two scores apart.
-      node.attestationScore += attestationDelta;
-      node.weight += attestationDelta + boostDelta;
+      node.attestationScore += attestationDeltaGwei;
+      node.weight += attestationDeltaGwei + boostDelta;
 
       // Update the parent deltas (if any)
       const parentIndex = node.parent;
@@ -527,8 +531,8 @@ export class ProtoArray {
         ...block,
         parent: parentIndex, // Points to parent's EMPTY/FULL or FULL (for transition)
         payloadStatus: PayloadStatus.PENDING,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -541,8 +545,8 @@ export class ProtoArray {
         ...block,
         parent: pendingIndex, // Points to own PENDING
         payloadStatus: PayloadStatus.EMPTY,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -577,8 +581,8 @@ export class ProtoArray {
         ...block,
         parent: this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL),
         payloadStatus: PayloadStatus.FULL,
-        weight: 0,
-        attestationScore: 0,
+        weight: 0n,
+        attestationScore: 0n,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -663,8 +667,8 @@ export class ProtoArray {
       ...pendingNode,
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
       payloadStatus: PayloadStatus.FULL,
-      weight: 0,
-      attestationScore: 0,
+      weight: 0n,
+      attestationScore: 0n,
       bestChild: undefined,
       bestDescendant: undefined,
       executionStatus,
@@ -690,26 +694,42 @@ export class ProtoArray {
     this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
   }
 
-  /**
-   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
-   * payload (FULL variant exists). Used by the builder circuit breaker.
-   */
-  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
-    let blocksPresent = 0;
-    let payloadsRevealed = 0;
-    // Full scan, nodes are in import order not slot order (an old block can be imported after newer
-    // ones during sync or reorg resolution), so we cannot stop early on an out-of-window slot
-    for (const node of this.nodes) {
-      // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
-      if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
-        continue;
+  /** Count blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */
+  getCanonicalPayloadCounts(
+    fromSlot: Slot,
+    toSlot: Slot,
+    headRoot: RootHex,
+    headPayloadStatus: PayloadStatus
+  ): {full: number; empty: number} {
+    let full = 0;
+    let empty = 0;
+
+    // Walk the canonical chain newest-first from the head, following ancestors via `getParentNodeIndex`.
+    // Ancestors are strictly slot-descending, so we stop as soon as a node falls below `fromSlot`
+    // instead of materializing the whole chain back to the anchor as `getAllAncestorNodes` does.
+    // This keeps the scan O(window) rather than O(chain-to-anchor), relevant under prolonged non-finality.
+    const headIndex = this.getNodeIndexByRootAndStatus(headRoot, headPayloadStatus);
+    let node = headIndex !== undefined ? this.nodes[headIndex] : undefined;
+
+    while (node !== undefined && node.slot >= fromSlot) {
+      if (
+        node.slot !== GENESIS_SLOT &&
+        node.slot <= toSlot &&
+        isGloasBlock(node) &&
+        node.payloadStatus !== PayloadStatus.PENDING
+      ) {
+        if (node.payloadStatus === PayloadStatus.FULL) {
+          full++;
+        } else {
+          empty++;
+        }
       }
-      blocksPresent++;
-      if (this.hasPayload(node.blockRoot)) {
-        payloadsRevealed++;
-      }
+
+      const parentIndex = this.getParentNodeIndex(node);
+      node = parentIndex === undefined ? undefined : this.nodes[parentIndex];
     }
-    return {blocksPresent, payloadsRevealed};
+
+    return {full, empty};
   }
 
   /**
@@ -855,7 +875,7 @@ export class ProtoArray {
   }
 
   /**
-   * Spec: should_build_on_full(store, head)
+   * Spec: should_build_on_full(store, head, slot)
    *
    * The proposer is forced to build on the EMPTY variant (effectively reorging)
    * when the PTC majority voted that the blob data is not available or that the
@@ -1480,13 +1500,13 @@ export class ProtoArray {
             childNode.payloadStatus === PayloadStatus.PENDING ||
             childNode.slot + 1 !== currentSlot
               ? childNode.weight
-              : 0;
+              : 0n;
           const bestChildEffectiveWeight =
             !isGloasBlock(bestChildNode) ||
             bestChildNode.payloadStatus === PayloadStatus.PENDING ||
             bestChildNode.slot + 1 !== currentSlot
               ? bestChildNode.weight
-              : 0;
+              : 0n;
 
           if (childEffectiveWeight !== bestChildEffectiveWeight) {
             // Different effective weights, choose the winner by weight
@@ -1581,8 +1601,8 @@ export class ProtoArray {
     return correctJustified && correctFinalized;
   }
 
-  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
-  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+  /** Returns exact Gwei weights for the compliance test boundary. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] {
     // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
     // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
     // that descends from the justified checkpoint block AND is itself viable for head. Iterating
@@ -1591,7 +1611,7 @@ export class ProtoArray {
     const justifiedVariant = this.getDefaultVariant(this.justifiedRoot);
     // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
     // tree, identified by (root, payload_status, weight) — emit one entry per variant.
-    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
+    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] = [];
     for (const node of this.nodes) {
       if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
         continue;
@@ -1608,7 +1628,11 @@ export class ProtoArray {
           continue;
         }
       }
-      heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
+      heads.push({
+        root: node.blockRoot,
+        payloadStatus: node.payloadStatus,
+        weight: node.weight,
+      });
     }
     return heads;
   }

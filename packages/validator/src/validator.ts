@@ -6,7 +6,7 @@ import {
   assertEqualParams,
   createBeaconConfig,
 } from "@lodestar/config";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {Clock, ClockOptions, IClock, computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
@@ -29,7 +29,6 @@ import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Clock, ClockOptions, IClock} from "./util/clock.js";
 import {getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
@@ -99,7 +98,7 @@ export class Validator {
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
-  private readonly clock: IClock;
+  readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
@@ -362,7 +361,7 @@ export class Validator {
 
     const res = await api.config.getSpec();
     assertEqualParams(config, res.value());
-    logger.info("Verified connected beacon node and validator have same the config");
+    logger.info("Verified connected beacon node and validator have the same config");
 
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");

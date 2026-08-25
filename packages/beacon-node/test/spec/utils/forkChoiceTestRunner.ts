@@ -1,12 +1,12 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice, getCommitteeFraction} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
-  EFFECTIVE_BALANCE_INCREMENT,
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
@@ -14,7 +14,6 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
-  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -24,14 +23,12 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
   getIndexedAttestation,
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -54,6 +51,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -117,8 +115,7 @@ export const forkChoiceTestRunner =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -300,12 +297,8 @@ export const forkChoiceTestRunner =
                   // bls_setting !== 1: compliance fixtures use placeholder signatures (bls_setting: 2), so the
                   // spec reference runner does not verify. Mirror the block-import accommodation (`validSignatures`).
                   if (testcase.meta?.bls_setting === BigInt(1)) {
-                    const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-                    if (!validatorPubkey) {
-                      throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
-                    }
-                    const signatureSet = createSingleSignatureSetFromComponents(
-                      validatorPubkey,
+                    const signatureSet = createIndexedSignatureSetFromComponents(
+                      payloadAttestationMessage.validatorIndex,
                       getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
                       payloadAttestationMessage.signature
                     );
@@ -405,7 +398,8 @@ export const forkChoiceTestRunner =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: Date.now() / 1000,
+                    seenTimestampSec: Date.now() / 1000,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -566,7 +560,6 @@ export const forkChoiceTestRunner =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
@@ -688,7 +681,7 @@ export const forkChoiceTestRunner =
                   .map(({root, payloadStatus, weight}) => ({
                     root,
                     payloadStatus: isGloas ? payloadStatusToSpec[payloadStatus] : undefined,
-                    weightGwei: BigInt(weight) * BigInt(EFFECTIVE_BALANCE_INCREMENT),
+                    weightGwei: weight,
                   }))
                   .sort(cmpViableHead);
 
@@ -700,62 +693,11 @@ export const forkChoiceTestRunner =
                   `Invalid viable head roots at step ${i}`
                 );
 
-                // Exact weight comparison with boost emulation. Lodestar tracks weights in
-                // EFFECTIVE_BALANCE_INCREMENT units: attestation weight is exact (effective
-                // balances are increment multiples) but the proposer-boost score is double-floored
-                // to whole ETH (getCommitteeFraction) while the spec keeps Gwei precision — a
-                // known production divergence, bounded by
-                // (100 - gcd(PROPOSER_SCORE_BOOST, 100) + PROPOSER_SCORE_BOOST) / 100 = 1.2 ETH.
-                // Rather than compare within a tolerance (which would mask sub-1.2-ETH weight
-                // bugs), normalize the expected weight of the boosted entry by
-                // `- spec_boost + lodestar_boost` and compare exactly.
-                //
-                // TODO: remove this normalization when https://github.com/ChainSafe/lodestar/issues/9694
-                // is resolved. It is a workaround for the root cause: `getCommitteeFraction`
-                // floors in increment units instead of the spec's Gwei-precision `get_proposer_score`
-                // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#get_proposer_score).
-                // Computing the boost in Gwei (bigint) and flooring once to increments would shrink
-                // the divergence to <1 ETH, but exact spec weights require Gwei-precision weight
-                // tracking in protoarray (increments exist because Gwei-scale totals overflow 2^53).
-                //
-                // Ordering rules (so normalization cannot mask a wrong boost root):
-                // - `checks.proposer_boost_root` was already asserted above, unadjusted.
-                // - Normalize using the VECTOR's expected boost root, never our actual one.
-                // - Zero boost root or absent field => no adjustment.
-                const expectedBoostRoot = step.checks.proposer_boost_root;
-                let specBoostGwei = BigInt(0);
-                let lodestarBoostGwei = BigInt(0);
-                if (expectedBoostRoot !== undefined && expectedBoostRoot !== ZERO_HASH_HEX) {
-                  const totalBalanceByIncrement = (
-                    chain.forkChoice as ForkChoice
-                  ).getJustifiedTotalActiveBalanceByIncrement();
-                  const totalBalanceGwei = BigInt(totalBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-                  // Spec: ((total_active_balance // SLOTS_PER_EPOCH) * PROPOSER_SCORE_BOOST) // 100, in Gwei
-                  specBoostGwei =
-                    ((totalBalanceGwei / BigInt(SLOTS_PER_EPOCH)) * BigInt(config.PROPOSER_SCORE_BOOST)) / BigInt(100);
-                  // Lodestar: same formula double-floored in increment units — use the production
-                  // function directly so the emulation cannot drift from the implementation.
-                  lodestarBoostGwei =
-                    BigInt(
-                      getCommitteeFraction(totalBalanceByIncrement, {
-                        slotsPerEpoch: SLOTS_PER_EPOCH,
-                        committeePercent: config.PROPOSER_SCORE_BOOST,
-                      })
-                    ) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-                }
                 for (const [k, act] of actual.entries()) {
                   const exp = expected[k];
-                  // TODO GLOAS: boost attribution across payload-status variants of the boosted
-                  // root should be handled when we set up gloas compliance test.
-                  // Pre-gloas each root has exactly one entry.
-                  const isBoosted = exp.root === expectedBoostRoot;
-                  const expectedAdjusted = isBoosted
-                    ? exp.weightGwei - specBoostGwei + lodestarBoostGwei
-                    : exp.weightGwei;
                   expect(act.weightGwei).toEqualWithMessage(
-                    expectedAdjusted,
-                    `Invalid viable head weight for ${act.root} at step ${i}` +
-                      (isBoosted ? ` (boost-normalized: spec=${specBoostGwei} lodestar=${lodestarBoostGwei})` : "")
+                    exp.weightGwei,
+                    `Invalid viable head weight for ${act.root} at step ${i}`
                   );
                 }
               }
@@ -888,7 +830,7 @@ export const forkChoiceTestRunner =
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          (name.includes("gloas") &&
+          ((name.includes("gloas") || name.includes("heze")) &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||

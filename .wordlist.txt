@@ -114,6 +114,7 @@ VM
 Vitalik
 Vitest
 Wagyu
+Zig
 addons
 api
 args
@@ -214,6 +215,7 @@ params
 performant
 pid
 plaintext
+plataberget
 pnpm
 pre
 premined

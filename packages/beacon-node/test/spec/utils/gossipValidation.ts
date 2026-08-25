@@ -5,6 +5,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
 import snappy from "snappy";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
@@ -19,9 +20,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
@@ -382,9 +381,7 @@ export async function runGossipValidationTest(
     signal: controller.signal,
     logger: testLogger("executionEngine"),
   });
-
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {config: beaconConfig, pubkeyCache},
@@ -608,7 +605,11 @@ async function validateMessageForTopic(
       }
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
+      chain.seenBlockProposers.add(
+        signedBlock.message.slot,
+        signedBlock.message.proposerIndex,
+        toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message))
+      );
       break;
     }
 

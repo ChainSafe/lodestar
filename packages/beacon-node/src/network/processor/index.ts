@@ -461,7 +461,8 @@ export class NetworkProcessor {
           break;
         }
         case GossipType.execution_payload_bid: {
-          // instead of searching for the message root, this searches for the parent root
+          // Search for the parent independently of current head compatibility. A bid may arrive
+          // before its parent block, so compatibility is checked later during gossip validation.
           const parentBlockRoot = getParentBlockRootFromSignedExecutionPayloadBidSerialized(message.msg.data);
           const parentBlockHash = getParentBlockHashFromSignedExecutionPayloadBidSerialized(message.msg.data);
           if (

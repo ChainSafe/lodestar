@@ -1,5 +1,5 @@
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
+import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";

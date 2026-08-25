@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
@@ -193,11 +193,11 @@ export function nextSyncCommitteeGindexAtFork(fork: ForkName): number {
   return NEXT_SYNC_COMMITTEE_GINDEX;
 }
 
-export function getGindexDepth(gindex: number): number {
+function getGindexDepth(gindex: number): number {
   return Math.floor(Math.log2(gindex));
 }
 
-export function getGindexIndex(gindex: number): number {
+function getGindexIndex(gindex: number): number {
   return gindex - 2 ** getGindexDepth(gindex);
 }
 
@@ -263,6 +263,7 @@ export function upgradeLightClientHeader(
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.gloas:
       if (isGloasLightClientHeader(upgradedHeader)) {
         break;
@@ -272,6 +273,12 @@ export function upgradeLightClientHeader(
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.gloas) break;
+
+    case ForkName.heze:
+      // No changes to LightClientHeader in Heze
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.heze) break;
   }
   return upgradedHeader;
 }

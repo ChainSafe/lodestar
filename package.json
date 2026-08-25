@@ -53,21 +53,21 @@
     "@lerna-lite/version": "^4.9.4",
     "@lodestar/params": "workspace:",
     "@types/node": "^24.10.1",
-    "@typescript/native-preview": "7.0.0-dev.20260303.1",
+    "@typescript/typescript6": "^6.0.1",
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "axios": "^1.13.2",
     "dotenv": "^16.4.5",
     "inquirer": "^9.1.5",
-    "libp2p": "3.1.6",
+    "libp2p": "3.3.9",
     "node-gyp": "^9.4.0",
     "playwright": "^1.60.0",
     "prettier": "^3.2.5",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",
     "tsx": "^4.23.0",
-    "typescript": "^6.0.1-rc",
+    "typescript": "7.0.2",
     "vite": "^6.0.11",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-top-level-await": "^1.6.0",
@@ -76,7 +76,8 @@
     "wait-port": "^1.1.0"
   },
   "dependencies": {
-    "@chainsafe/lodestar": "workspace:*"
+    "@chainsafe/lodestar": "workspace:*",
+    "@chainsafe/lodestar-z": "catalog:"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
