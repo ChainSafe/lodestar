@@ -22,6 +22,7 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
+import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -334,6 +335,8 @@ export class BeaconNode {
     }
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
+
+    startDeferredVoluntaryExitPublisher({chain, network, logger, signal});
 
     return new BeaconNode({
       opts,
