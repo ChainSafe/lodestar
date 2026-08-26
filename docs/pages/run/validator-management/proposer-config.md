@@ -26,6 +26,8 @@ proposer_config:
       gas_limit: "45000000"
       selection: "maxprofit"
       boost_factor: "100"
+      min_bid: "10000000"
+      max_execution_payment: "0"
 default_config:
   graffiti: "default graffiti"
   strict_fee_recipient_check: true
@@ -40,7 +42,7 @@ Starting with Gloas, the builder section additionally supports `min_bid` (floor 
 
 Post-Gloas, an explicitly configured per-validator `boost_factor` takes precedence over `selection`.
 
-The builder section also supports a `builders` list with the same per-builder entries as the keymanager builders API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
+The builder section also supports a `builders` list with the same per-builder entries as the keymanager builder config API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
 
 ```yaml
 builder:
