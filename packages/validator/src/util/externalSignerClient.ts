@@ -107,7 +107,6 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
   [SignableMessageType.PAYLOAD_ATTESTATION]: true,
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
-  // Signed with compute_domain(DOMAIN_BUILDER_REQUEST_AUTH) using genesis fork version and zero genesis validators root
   [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
 };
 

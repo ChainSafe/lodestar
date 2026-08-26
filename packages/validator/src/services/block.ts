@@ -218,7 +218,7 @@ export class BlockProposingService {
           try {
             const auth = await this.validatorStore.getBuilderRequestAuth(pubkey, entry.authData, slot, slot);
             return {
-              url: new Uint8Array(Buffer.from(entry.url, "utf8")),
+              url: new TextEncoder().encode(entry.url),
               auth,
               builderPubkeys: entry.builderPubkeys,
               maxExecutionPayment: entry.maxExecutionPayment,

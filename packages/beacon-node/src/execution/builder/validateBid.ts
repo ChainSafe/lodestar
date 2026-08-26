@@ -57,7 +57,10 @@ export async function validateBuilderApiExecutionPayloadBid(
 
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
-    throw Error(`Bid total payment=${totalPayment} is below minBid=${entry.minBid}`);
+    throw Error(
+      `Bid total payment=${totalPayment} (value=${bid.value} executionPayment=${bid.executionPayment}) ` +
+        `is below minBid=${entry.minBid}`
+    );
   }
 
   const state = await chain.regen
@@ -88,7 +91,10 @@ export async function validateBuilderApiExecutionPayloadBid(
     entry.builderPubkeys.length > 0 &&
     !entry.builderPubkeys.some((pubkey) => byteArrayEquals(pubkey, builder.pubkey))
   ) {
-    throw Error(`Bid builder pubkey=${toHex(builder.pubkey)} is not in the entry's builderPubkeys`);
+    throw Error(
+      `Bid builder pubkey=${toHex(builder.pubkey)} is not in the entry's ` +
+        `builderPubkeys=${entry.builderPubkeys.map(toHex).join(",")}`
+    );
   }
 
   const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;

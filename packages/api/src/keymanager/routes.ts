@@ -105,19 +105,25 @@ export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 
 /** One builder a validator public key may source blocks from */
 export type BuilderEntryConfig = {
+  /** URL the bid requests for this entry are sent to */
   url: string;
-  /** Opaque auth data hex string, defaults to the UTF-8 bytes of the builder url when omitted */
+  /** Auth data hex string as agreed with the builder, derived from the UTF-8 bytes of the builder url when omitted */
   authData?: string;
   /** Builder BLS pubkeys this entry accepts bids from, empty or omitted accepts any builder */
   builderPubkeys?: string[];
+  /** Cap in Gwei on the execution payment counted from this builder's bids */
   maxExecutionPayment?: bigint;
+  /** Floor in Gwei on the counted total payment accepted from this builder's bids */
   minBid?: bigint;
+  /** Percentage multiplier weighting this builder's bids during selection */
   builderBoostFactor?: bigint;
 };
 
 /** How a validator public key sources blocks from builders */
 export type BuilderConfigData = {
+  /** Default for entries that do not set their own `minBid`, also applies to p2p bids */
   minBid?: bigint;
+  /** Default for entries that do not set their own `builderBoostFactor`, also applies to p2p bids */
   builderBoostFactor?: bigint;
   /** Omitted means use the validator client's builders, empty means request bids from none */
   builders?: BuilderEntryConfig[];
@@ -530,6 +536,7 @@ export type Endpoints = {
   >;
   /** Remove the builder configuration for a validator public key, it then follows the validator client again */
   deleteBuilderConfig: Endpoint<
+    // ⏎
     "DELETE",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},

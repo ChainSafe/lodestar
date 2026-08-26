@@ -327,7 +327,7 @@ export class ValidatorStore {
     let selection = validatorBuilder?.selection ?? this.defaultProposerConfig.builder.selection ?? defaultSelection;
 
     // The standard per-key builder config directly controls the post-Gloas boost. It takes
-    // precedence over Lodestar's legacy selection aliases when explicitly configured.
+    // precedence over the legacy selection aliases when explicitly configured.
     if (isPostGloas && validatorBuilder?.boostFactor !== undefined) {
       return {selection: routes.validator.BuilderSelection.MaxProfit, boostFactor: validatorBuilder.boostFactor};
     }
@@ -484,7 +484,7 @@ export class ValidatorStore {
     const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
     return builders.map((entry) => ({
       url: entry.url,
-      authData: entry.authData !== undefined ? fromHex(entry.authData) : new Uint8Array(Buffer.from(entry.url)),
+      authData: entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(entry.url),
       builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
       maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
       minBid: entry.minBid ?? keyMinBid,
@@ -534,10 +534,11 @@ export class ValidatorStore {
       if (!isValidAsciiHttpUrl(entry.url)) {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
-      const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
+      const authData =
+        entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(new TextEncoder().encode(entry.url));
       const entryKey = `${entry.url}|${authData}`;
       if (seenEntries.has(entryKey)) {
-        throw Error(`Duplicate builder entry url=${entry.url}`);
+        throw Error(`Duplicate builder entry url=${entry.url} authData=${authData}`);
       }
       seenEntries.add(entryKey);
       for (const value of [entry.maxExecutionPayment, entry.minBid, entry.builderBoostFactor]) {

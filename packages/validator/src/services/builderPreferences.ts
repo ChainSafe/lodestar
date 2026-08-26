@@ -98,7 +98,7 @@ export class BuilderPreferencesService {
             const auth = await this.validatorStore.getBuilderRequestAuth(duty.pubkey, entry.authData, duty.slot, slot);
             dutyEntries.push({
               proposerPubkey: duty.pubkey,
-              url: new Uint8Array(Buffer.from(entry.url, "utf8")),
+              url: new TextEncoder().encode(entry.url),
               auth,
               maxExecutionPayment: entry.maxExecutionPayment,
             });

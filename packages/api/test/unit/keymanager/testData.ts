@@ -136,7 +136,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
       pubkey: pubkeyRand,
       builderConfig: {
         minBid: 0n,
-        builders: [{url: "https://builder.example.com", maxExecutionPayment: 0n}],
+        builders: [
+          {url: "https://builder.example.com", maxExecutionPayment: 0n},
+          {url: "https://builder.example.com", authData: "0x0123", builderBoostFactor: 200n},
+          {url: "https://builder-b.example.com", builderPubkeys: [pubkeyRand], minBid: 1n},
+          {url: "https://builder-c.example.com"},
+        ],
       },
     },
     res: undefined,

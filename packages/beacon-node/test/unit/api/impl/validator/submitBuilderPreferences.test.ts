@@ -47,6 +47,33 @@ describe("api/validator - submitBuilderPreferences", () => {
     );
   });
 
+  it("submits each entry to its builder and reports a failed submission by index", async () => {
+    const entryA = getEntry("https://builder-a.example.com");
+    const entryB = getEntry("https://builder-b.example.com");
+    modules.chain.builderApiClient.submitBuilderPreferences
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("builder unavailable"));
+
+    let error: unknown;
+    try {
+      await api.submitBuilderPreferences({builderPreferences: [entryA, entryB]});
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(IndexedError);
+    expect((error as IndexedError).failures).toEqual([{index: 1, message: "builder unavailable"}]);
+    expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("submits all entries without error when every builder accepts", async () => {
+    const entryA = getEntry("https://builder-a.example.com");
+    const entryB = getEntry("https://builder-b.example.com");
+
+    await expect(api.submitBuilderPreferences({builderPreferences: [entryA, entryB]})).resolves.toBeUndefined();
+    expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects preferences not signed by the slot proposer", async () => {
     const entry = getEntry("https://builder.example.com");
     entry.proposerPubkey[0] = 1;
