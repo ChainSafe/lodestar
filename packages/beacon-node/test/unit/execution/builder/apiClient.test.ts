@@ -150,6 +150,32 @@ describe("execution/builder/apiClient", () => {
     expect(verifySignatureSets).toHaveBeenCalledTimes(2);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
   });
+
+  it("returns bids in arrival order", async () => {
+    const slot = 1;
+    const entryA = getBuilderEntry("https://builder-a.example.com", slot);
+    const entryB = getBuilderEntry("https://builder-b.example.com", slot);
+    const slowBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    slowBid.message.builderIndex = 0;
+    const fastBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    fastBid.message.builderIndex = 1;
+
+    // The first entry responds after the second one
+    getExecutionPayloadBid
+      .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve({value: () => slowBid}), 20)))
+      .mockImplementationOnce(async () => ({value: () => fastBid}));
+
+    const client = new BuilderApiClient({}, config, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entryA, entryB],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48)
+    );
+
+    expect(bids.map((bid) => bid.signedBid.message.builderIndex)).toEqual([1, 0]);
+  });
 });
 
 function getBuilderEntry(url: string, slot: number): routes.validator.BuilderEntry {

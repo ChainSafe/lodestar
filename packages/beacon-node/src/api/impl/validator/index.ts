@@ -58,6 +58,7 @@ import {
   fromHex,
   prettyWeiToEth,
   resolveOrRacePromises,
+  sleep,
   toHex,
   toPrintableUrl,
   toRootHex,
@@ -82,9 +83,9 @@ import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
-import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
+import {BUILDER_BID_DEADLINE_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
+import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
@@ -118,6 +119,36 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
+
+type BidCandidate = {
+  signedBid: gloas.SignedExecutionPayloadBid;
+  /** Total payment in Gwei, counting the execution payment at most at the entry's cap */
+  totalGwei: bigint;
+  boostFactor: bigint;
+  url?: string;
+};
+
+/**
+ * Return the best bid by boosted total payment. A candidate with the max boost factor is
+ * preferred over any other regardless of value, ties keep the earlier candidate.
+ */
+function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
+  const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
+  let best: BidCandidate | null = null;
+  for (const candidate of candidates) {
+    const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+    const bestIsMaxBoost = best?.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+    // Preserve max boost preference before comparing bid values
+    if (
+      best === null ||
+      (candidateIsMaxBoost && !bestIsMaxBoost) ||
+      (candidateIsMaxBoost === bestIsMaxBoost && boostedValue(candidate) > boostedValue(best))
+    ) {
+      best = candidate;
+    }
+  }
+  return best;
+}
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents;
@@ -925,58 +956,58 @@ export function getValidatorApi(
         }
       }
 
-      // Keep a p2p builder bid as fallback unless the circuit breaker is active
-      let p2pBid = circuitBreakerActive
-        ? null
-        : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      const hasEarlyP2pBid =
+        !circuitBreakerActive &&
+        chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null;
 
-      // Reject a p2p bid below the proposer's configured floor on the total payment.
-      // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-      if (p2pBid !== null && BigInt(p2pBid.message.value) < builderConfig.minBid) {
-        logger.debug("Ignoring p2p bid below min bid", {
-          slot,
-          bidValue: p2pBid.message.value,
-          minBid: builderConfig.minBid,
-        });
-        p2pBid = null;
-      }
-
-      // Candidates are ranked by their boosted total payment, the p2p bid is governed by the
-      // top-level factors and each builder API bid by its own entry. Ties keep the earlier
-      // candidate with builder API bids ranked first, so when the same bid arrives over both
-      // channels the builder API copy wins and the signed block can be routed back directly.
-      type BidCandidate = {
-        signedBid: gloas.SignedExecutionPayloadBid;
-        totalGwei: bigint;
-        boostFactor: bigint;
-        url?: string;
-      };
-      const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-        const candidates: BidCandidate[] = [];
-
-        const builderApiBids = await builderApiBidsPromise;
-        await Promise.all(
-          builderApiBids.map(async ({url, entry, signedBid}) => {
-            try {
-              await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
+      // Select the p2p bid once builders had time to bid up, matching the deadline advertised
+      // on builder API bid requests, unless the circuit breaker is active
+      const p2pBidPromise: Promise<gloas.SignedExecutionPayloadBid | null> = circuitBreakerActive
+        ? Promise.resolve(null)
+        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
+            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+            // Discard p2p bids below the proposer's configured floor on the total payment.
+            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+            if (p2pBid !== null && BigInt(p2pBid.message.value) < builderConfig.minBid) {
+              logger.info("Ignoring p2p bid below min bid", {
                 slot,
-                parentBlock,
-                parentBlockHash: bidParentBlockHash,
-                parentBlockRoot: parentBlockRootHex,
-                entry,
+                bidValue: p2pBid.message.value,
+                minBid: builderConfig.minBid,
               });
-              candidates.push({
-                signedBid,
-                totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
-                boostFactor: entry.builderBoostFactor,
-                url,
-              });
-            } catch (e) {
-              metrics?.builderApi.bidsDiscarded.inc();
-              logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
+              return null;
             }
-          })
-        );
+            return p2pBid;
+          });
+
+      // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
+      // by the top-level factors and each builder API bid by its own entry. Ties keep the
+      // earlier candidate: builder API bids are ordered by arrival before the p2p bid, so the
+      // earliest received builder API bid wins a tie and the signed block can be routed back
+      // to its builder directly.
+      const bestBidPromise: Promise<BidCandidate | null> = (async () => {
+        const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+
+        const candidates: BidCandidate[] = [];
+        for (const {url, entry, signedBid} of builderApiBids) {
+          try {
+            await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
+              slot,
+              parentBlock,
+              parentBlockHash: bidParentBlockHash,
+              parentBlockRoot: parentBlockRootHex,
+              entry,
+            });
+            candidates.push({
+              signedBid,
+              totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
+              boostFactor: entry.builderBoostFactor,
+              url,
+            });
+          } catch (e) {
+            metrics?.builderApi.bidsDiscarded.inc();
+            logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
+          }
+        }
 
         if (p2pBid !== null) {
           candidates.push({
@@ -986,20 +1017,7 @@ export function getValidatorApi(
           });
         }
 
-        const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
-        let best: BidCandidate | null = null;
-        for (const candidate of candidates) {
-          const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-          const bestIsMaxBoost = best?.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-          // Preserve max boost preference before comparing bid values
-          if (
-            best === null ||
-            (candidateIsMaxBoost && !bestIsMaxBoost) ||
-            (candidateIsMaxBoost === bestIsMaxBoost && boostedValue(candidate) > boostedValue(best))
-          ) {
-            best = candidate;
-          }
-        }
+        const best = selectBestBid(candidates);
         if (candidates.length > 0) {
           logger.debug("Ranked builder bid candidates", {
             slot,
@@ -1032,7 +1050,7 @@ export function getValidatorApi(
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      if (p2pBid !== null || builderConfig.builders.length > 0) {
+      if (hasEarlyP2pBid || builderConfig.builders.length > 0) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
 
@@ -1051,9 +1069,9 @@ export function getValidatorApi(
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
-        // No need to wait for the bid block if the engine block will always be selected due to
-        // suspected builder censorship, or a boost factor of 0 while no builder API bid may
-        // still arrive with its own entry boost factor
+        // No need to wait for the bid block if the engine block will always be selected, either
+        // due to suspected builder censorship, or because no builders are configured and the
+        // boost factor of 0 always prefers the local block over p2p bids
         if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
           controller.abort();
         }
@@ -1095,6 +1113,7 @@ export function getValidatorApi(
               bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
               bidValue: bestBid.signedBid.message.value,
               bidExecutionPayment: bestBid.signedBid.message.executionPayment,
+              bidTotal: bestBid.totalGwei,
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
@@ -1106,7 +1125,7 @@ export function getValidatorApi(
       if (
         engineResult.status === "fulfilled" &&
         engineResult.value.shouldOverrideBuilder &&
-        (p2pBid !== null || builderConfig.builders.length > 0)
+        (hasEarlyP2pBid || builderConfig.builders.length > 0)
       ) {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;

@@ -5,6 +5,7 @@ import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
@@ -66,7 +67,8 @@ describe("api/validator - produceBlockV4", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
-    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
+    // Move past the bid deadline so the p2p bid is selected without waiting
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(BUILDER_BID_DEADLINE_MS);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
@@ -142,8 +144,7 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
     });
 
-    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalled();
     expect(block).toEqual(engineBlock);
   });
 
@@ -167,7 +168,7 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
     });
 
-    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
   });
@@ -474,7 +475,7 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: getBuilderConfig({minBid: 2n}),
     });
 
-    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
   });
@@ -577,4 +578,130 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).not.toHaveBeenCalled();
   });
+
+  type MatrixEntry = {value: number; executionPayment?: bigint; maxExecutionPayment?: bigint; boostFactor?: bigint};
+  const selectionTestCases: {
+    id: string;
+    entries: MatrixEntry[];
+    p2pValue: number | null;
+    minBid?: bigint;
+    builderBoostFactor?: bigint;
+    engineValueGwei: number;
+    /** Expected winner, the entry index of an api bid, the p2p bid or the local block */
+    expected: number | "p2p" | "engine";
+  }[] = [
+    {id: "api bid outbids the p2p bid", entries: [{value: 2}], p2pValue: 1, engineValueGwei: 0, expected: 0},
+    {id: "p2p bid outbids the api bid", entries: [{value: 2}], p2pValue: 3, engineValueGwei: 0, expected: "p2p"},
+    {id: "tie prefers the api bid", entries: [{value: 2}], p2pValue: 2, engineValueGwei: 0, expected: 0},
+    {
+      id: "execution payment is counted up to the entry cap",
+      entries: [{value: 1, executionPayment: 5n, maxExecutionPayment: 2n}],
+      p2pValue: 2,
+      engineValueGwei: 0,
+      expected: 0,
+    },
+    {
+      id: "execution payment above a zero cap is not counted",
+      entries: [{value: 1, executionPayment: 5n, maxExecutionPayment: 0n}],
+      p2pValue: 2,
+      engineValueGwei: 0,
+      expected: "p2p",
+    },
+    {
+      id: "zero entry boost factor loses against the p2p bid",
+      entries: [{value: 100, boostFactor: 0n}],
+      p2pValue: 1,
+      engineValueGwei: 0,
+      expected: "p2p",
+    },
+    {
+      id: "max entry boost factor wins regardless of value",
+      entries: [{value: 0, boostFactor: maxBuilderBoostFactor}],
+      p2pValue: 5,
+      engineValueGwei: 0,
+      expected: 0,
+    },
+    {
+      id: "higher boosted api bid wins between builders",
+      entries: [
+        {value: 10, boostFactor: 100n},
+        {value: 10, boostFactor: 200n},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      id: "p2p bid below min bid is discarded",
+      entries: [],
+      p2pValue: 1,
+      minBid: 2n,
+      engineValueGwei: 0,
+      expected: "engine",
+    },
+    {
+      id: "local block beats a dampened api bid",
+      entries: [{value: 100, boostFactor: 50n}],
+      p2pValue: null,
+      engineValueGwei: 100,
+      expected: "engine",
+    },
+  ];
+
+  for (const tc of selectionTestCases) {
+    it(`bid selection - ${tc.id}`, async () => {
+      const entries = tc.entries.map((_, i) => ({
+        url: new TextEncoder().encode(`https://builder-${i}.example.com`),
+        auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+        builderPubkeys: [],
+        maxExecutionPayment: tc.entries[i].maxExecutionPayment ?? 0n,
+        minBid: 0n,
+        builderBoostFactor: tc.entries[i].boostFactor ?? 100n,
+      }));
+      const apiBids = tc.entries.map((e, i) => {
+        const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+        signedBid.message.value = e.value;
+        signedBid.message.executionPayment = e.executionPayment ?? 0n;
+        signedBid.message.builderIndex = i;
+        return {url: `https://builder-${i}.example.com`, entry: entries[i], signedBid};
+      });
+      const p2pBid = tc.p2pValue !== null ? ssz.gloas.SignedExecutionPayloadBid.defaultValue() : null;
+      if (p2pBid !== null && tc.p2pValue !== null) {
+        p2pBid.message.value = tc.p2pValue;
+        p2pBid.message.builderIndex = 42;
+      }
+
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+      modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+      vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+      modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue(apiBids);
+      modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+        block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+        executionPayloadValue: BigInt(tc.engineValueGwei) * 10n ** 9n,
+        consensusBlockValue: 0n,
+      }));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: {
+          minBid: tc.minBid ?? 0n,
+          builderBoostFactor: tc.builderBoostFactor ?? 100n,
+          builders: entries,
+        },
+      });
+
+      if (tc.expected === "engine") {
+        expect(block).toEqual(engineBlock);
+      } else {
+        const expectedBid = tc.expected === "p2p" ? p2pBid : apiBids[tc.expected].signedBid;
+        expect(block).toEqual(bidBlock);
+        expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: expectedBid}));
+      }
+    });
+  }
 });

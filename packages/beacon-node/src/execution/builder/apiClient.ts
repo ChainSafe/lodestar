@@ -22,9 +22,13 @@ const EVENT_LOOP_LAG_BUFFER = 250;
 
 /**
  * Duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
- * is reached, only considering bids from the p2p network and the local build process.
+ * is reached, advertised on each bid request via the `X-Timeout-Ms` header. The p2p bid is
+ * selected after the same duration, only considering bids received up to that point.
  */
-export const BUILDER_BID_REQUEST_TIMEOUT_MS = 1000 + EVENT_LOOP_LAG_BUFFER;
+export const BUILDER_BID_DEADLINE_MS = 500;
+
+/** Local timeout for bid requests, event loop lag must not discard bids that arrived in time */
+export const BUILDER_BID_REQUEST_TIMEOUT_MS = BUILDER_BID_DEADLINE_MS + EVENT_LOOP_LAG_BUFFER;
 
 export type BuilderApiClientOpts = {
   /** Timeout for builder api requests, bid requests always use `BUILDER_BID_REQUEST_TIMEOUT_MS` */
@@ -116,8 +120,10 @@ export class BuilderApiClient {
       requests.push({url, entry});
     }
 
-    const bids = await Promise.all(
-      requests.map(async ({url, entry}): Promise<BuilderApiBid | null> => {
+    // Collected in arrival order so an earlier received bid wins ties during candidate ranking
+    const bids: BuilderApiBid[] = [];
+    await Promise.all(
+      requests.map(async ({url, entry}) => {
         this.metrics?.builderApi.bidRequests.inc();
         try {
           const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
@@ -129,26 +135,25 @@ export class BuilderApiClient {
               proposerPubkey,
               requestAuth: entry.auth,
               dateMilliseconds: Date.now(),
-              timeoutMs: BUILDER_BID_REQUEST_TIMEOUT_MS,
+              timeoutMs: BUILDER_BID_DEADLINE_MS,
             },
             {timeoutMs: BUILDER_BID_REQUEST_TIMEOUT_MS}
           );
           const signedBid = res.value();
           if (signedBid === undefined) {
             this.logger?.debug("No bid received from builder", {slot, builder: toPrintableUrl(url)});
-            return null;
+            return;
           }
           this.metrics?.builderApi.bidsReceived.inc();
-          return {url, entry, signedBid};
+          bids.push({url, entry, signedBid});
         } catch (e) {
           this.metrics?.builderApi.bidRequestErrors.inc();
           this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);
-          return null;
         }
       })
     );
 
-    return bids.filter((bid): bid is BuilderApiBid => bid !== null);
+    return bids;
   }
 
   /** Forward a proposer's builder preferences to the builder at the given url */
