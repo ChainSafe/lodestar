@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
@@ -86,7 +86,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("picks builder bid block when bid value is higher", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
     const {data: block, meta} = await api.produceBlockV4({
       slot,
@@ -109,7 +109,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("picks local block when local payload value is higher", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     // Local payload value (2 gwei) exceeds the bid value (1 gwei)
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
@@ -133,7 +133,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("prefers the local payload with a zero builder boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -150,7 +150,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("uses a builder bid as fallback when local production fails with a zero boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => {
       if (attrs.builderBid === undefined) {
         throw new Error("Local block production failed");
@@ -177,7 +177,7 @@ describe("api/validator - produceBlockV4", () => {
     const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     modules.chain.produceBlock.mockImplementation(
       async (attrs: {builderBid?: unknown; strictFeeRecipientCheck?: boolean}) => {
         if (attrs.builderBid === undefined && attrs.strictFeeRecipientCheck) {
@@ -218,7 +218,7 @@ describe("api/validator - produceBlockV4", () => {
     apiBid.message.builderIndex = 7;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -260,7 +260,7 @@ describe("api/validator - produceBlockV4", () => {
     p2pBid.message.builderIndex = 42;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -336,7 +336,7 @@ describe("api/validator - produceBlockV4", () => {
     apiBid.message.value = builderBid.message.value;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -372,7 +372,7 @@ describe("api/validator - produceBlockV4", () => {
     p2pBid.message.value = 1;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -407,7 +407,7 @@ describe("api/validator - produceBlockV4", () => {
     p2pBid.message.value = 1;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -440,7 +440,7 @@ describe("api/validator - produceBlockV4", () => {
     apiBid.message.value = 2;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
@@ -464,7 +464,7 @@ describe("api/validator - produceBlockV4", () => {
   it("ignores a p2p bid below the configured min bid", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     // Bid total payment is 1 gwei, below the configured floor of 2 gwei
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -499,7 +499,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -518,7 +518,7 @@ describe("api/validator - produceBlockV4", () => {
 
   it("prefers the builder bid with the maximum builder boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
     // Bid (1 gwei) is preferred over the higher local payload value (2 gwei)
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
@@ -544,7 +544,7 @@ describe("api/validator - produceBlockV4", () => {
     Object.defineProperty(modules.chain, "persistBlock", {value: persistBlock});
     modules.chain.opts.persistProducedBlocks = true;
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -693,7 +693,7 @@ describe("api/validator - produceBlockV4", () => {
       }
 
       modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
       modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
       vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
       modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue(apiBids);
@@ -726,3 +726,7 @@ describe("api/validator - produceBlockV4", () => {
     });
   }
 });
+
+function toPooledBid(signedBid: gloas.SignedExecutionPayloadBid | null) {
+  return signedBid === null ? null : {signedBid, receivedMs: 0};
+}

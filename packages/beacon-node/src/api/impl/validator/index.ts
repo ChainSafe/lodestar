@@ -75,6 +75,7 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
+import {PooledExecutionPayloadBid} from "../../../chain/opPools/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
@@ -126,8 +127,8 @@ type BidCandidate = {
   totalGwei: bigint;
   boostFactor: bigint;
   url?: string;
-  /** Time in milliseconds from the slot start when the bid was received, unset for the p2p bid */
-  receivedMs?: number;
+  /** Time in milliseconds from the slot start when the bid was received */
+  receivedMs: number;
 };
 
 /**
@@ -159,7 +160,7 @@ function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
     } else if (
       candidateValue === bestValue &&
       // A tie prefers a builder api bid over the p2p bid, and the earlier received bid otherwise
-      (best.receivedMs === undefined || (candidate.receivedMs !== undefined && candidate.receivedMs < best.receivedMs))
+      (best.url === undefined || (candidate.url !== undefined && candidate.receivedMs < best.receivedMs))
     ) {
       best = candidate;
     }
@@ -982,16 +983,16 @@ export function getValidatorApi(
 
       // Select the p2p bid once builders had time to bid up, matching the deadline advertised
       // on builder API bid requests, unless the circuit breaker is active
-      const p2pBidPromise: Promise<gloas.SignedExecutionPayloadBid | null> = circuitBreakerActive
+      const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
         ? Promise.resolve(null)
         : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
             const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
             // Discard p2p bids below the proposer's configured floor on the total payment.
             // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-            if (p2pBid !== null && BigInt(p2pBid.message.value) < builderConfig.minBid) {
+            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
               logger.info("Ignoring p2p bid below min bid", {
                 slot,
-                bidValue: p2pBid.message.value,
+                bidValue: p2pBid.signedBid.message.value,
                 minBid: builderConfig.minBid,
               });
               return null;
@@ -1035,9 +1036,10 @@ export function getValidatorApi(
 
         if (p2pBid !== null) {
           candidates.push({
-            signedBid: p2pBid,
-            totalGwei: BigInt(p2pBid.message.value),
+            signedBid: p2pBid.signedBid,
+            totalGwei: BigInt(p2pBid.signedBid.message.value),
             boostFactor: builderConfig.builderBoostFactor,
+            receivedMs: p2pBid.receivedMs,
           });
         }
 
@@ -1048,8 +1050,7 @@ export function getValidatorApi(
             candidates: candidates
               .map(
                 (candidate) =>
-                  `${candidate.url ?? "p2p"}:total=${candidate.totalGwei}:boost=${candidate.boostFactor}` +
-                  (candidate.receivedMs !== undefined ? `:received=${candidate.receivedMs}ms` : "")
+                  `${candidate.url ?? "p2p"}:total=${candidate.totalGwei}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
               )
               .join(","),
             bidSource: best?.url ?? "p2p",
@@ -1143,7 +1144,7 @@ export function getValidatorApi(
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
-              ...(bestBid.receivedMs !== undefined ? {bidReceivedMs: bestBid.receivedMs} : {}),
+              bidReceivedMs: bestBid.receivedMs,
             }
           : {}),
       };
