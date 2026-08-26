@@ -163,7 +163,7 @@ export const defaultOptions = {
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: 100n,
   builderMinBid: 0n,
-  // Only trustless payments via the builder's staked collateral are accepted by default
+  // Only trustless payments via the builder's staked collateral are counted by default
   builderMaxExecutionPayment: 0n,
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
