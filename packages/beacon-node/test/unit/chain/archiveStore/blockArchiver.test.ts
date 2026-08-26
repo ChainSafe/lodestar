@@ -147,8 +147,11 @@ describe("block archiver task", () => {
     expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith(
       canonicalBlocks.map((canonicalBlock) => fromHexString(canonicalBlock.blockRoot))
     );
-    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith(
-      nonCanonicalBlocks.map((nonCanonicalBlock) => fromHexString(nonCanonicalBlock.blockRoot))
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith(
+      nonCanonicalBlocks.map((nonCanonicalBlock) => ({
+        slot: nonCanonicalBlock.slot,
+        blockRoot: nonCanonicalBlock.blockRoot,
+      }))
     );
   });
 
