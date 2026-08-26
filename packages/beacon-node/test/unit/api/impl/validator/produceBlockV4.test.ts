@@ -5,12 +5,12 @@ import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/chain/validation/executionPayloadBid.js";
+import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
 
-vi.mock("../../../../../src/chain/validation/executionPayloadBid.js", async (importActual) => ({
+vi.mock("../../../../../src/execution/builder/validateBid.js", async (importActual) => ({
   ...(await importActual<object>()),
   validateBuilderApiExecutionPayloadBid: vi.fn().mockResolvedValue(undefined),
 }));

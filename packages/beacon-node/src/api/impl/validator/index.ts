@@ -78,15 +78,12 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {
-  getBuilderBidTotalGwei,
-  validateBuilderApiExecutionPayloadBid,
-} from "../../../chain/validation/executionPayloadBid.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BUILDER_BID_REQUEST_TIMEOUT_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
+import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
