@@ -13,6 +13,7 @@ import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas, ssz}
 import {isValidAsciiHttpUrl, toHex, toPrintableUrl} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../chain/bls/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
 
 /**
  * Additional duration to account for potential event loop lag which causes
@@ -57,6 +58,8 @@ export type BuilderApiBid = {
   url: BuilderUrl;
   entry: routes.validator.BuilderEntry;
   signedBid: gloas.SignedExecutionPayloadBid;
+  /** Time in milliseconds from the slot start when the bid was received */
+  receivedMs: number;
 };
 
 /**
@@ -71,6 +74,7 @@ export class BuilderApiClient {
   constructor(
     private readonly opts: BuilderApiClientOpts,
     private readonly config: ChainForkConfig,
+    private readonly clock: IClock,
     private readonly bls: IBlsVerifier,
     private readonly metrics: Metrics | null = null,
     private readonly logger?: Logger
@@ -145,7 +149,7 @@ export class BuilderApiClient {
             return;
           }
           this.metrics?.builderApi.bidsReceived.inc();
-          bids.push({url, entry, signedBid});
+          bids.push({url, entry, signedBid, receivedMs: this.clock.msFromSlot(slot)});
         } catch (e) {
           this.metrics?.builderApi.bidRequestErrors.inc();
           this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);

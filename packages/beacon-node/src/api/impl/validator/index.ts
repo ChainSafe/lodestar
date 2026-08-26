@@ -126,23 +126,40 @@ type BidCandidate = {
   totalGwei: bigint;
   boostFactor: bigint;
   url?: string;
+  /** Time in milliseconds from the slot start when the bid was received, unset for the p2p bid */
+  receivedMs?: number;
 };
 
 /**
  * Return the best bid by boosted total payment. A candidate with the max boost factor is
- * preferred over any other regardless of value, ties keep the earlier candidate.
+ * preferred over any other regardless of value, ties prefer a builder api bid over the
+ * p2p bid, and the earlier received bid between builder api bids.
  */
 function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
   const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
   let best: BidCandidate | null = null;
   for (const candidate of candidates) {
-    const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-    const bestIsMaxBoost = best?.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+    if (best === null) {
+      best = candidate;
+      continue;
+    }
     // Preserve max boost preference before comparing bid values
-    if (
-      best === null ||
-      (candidateIsMaxBoost && !bestIsMaxBoost) ||
-      (candidateIsMaxBoost === bestIsMaxBoost && boostedValue(candidate) > boostedValue(best))
+    const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+    const bestIsMaxBoost = best.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+    if (candidateIsMaxBoost !== bestIsMaxBoost) {
+      if (candidateIsMaxBoost) {
+        best = candidate;
+      }
+      continue;
+    }
+    const candidateValue = boostedValue(candidate);
+    const bestValue = boostedValue(best);
+    if (candidateValue > bestValue) {
+      best = candidate;
+    } else if (
+      candidateValue === bestValue &&
+      // A tie prefers a builder api bid over the p2p bid, and the earlier received bid otherwise
+      (best.receivedMs === undefined || (candidate.receivedMs !== undefined && candidate.receivedMs < best.receivedMs))
     ) {
       best = candidate;
     }
@@ -983,34 +1000,38 @@ export function getValidatorApi(
           });
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
-      // by the top-level factors and each builder API bid by its own entry. Ties keep the
-      // earlier candidate: builder API bids are ordered by arrival before the p2p bid, so the
-      // earliest received builder API bid wins a tie and the signed block can be routed back
-      // to its builder directly.
+      // by the top-level factors and each builder API bid by its own entry. Ties prefer the
+      // earliest received builder API bid, so the signed block can be routed back to its
+      // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
         const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
 
-        const candidates: BidCandidate[] = [];
-        for (const {url, entry, signedBid} of builderApiBids) {
-          try {
-            await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
-              slot,
-              parentBlock,
-              parentBlockHash: bidParentBlockHash,
-              parentBlockRoot: parentBlockRootHex,
-              entry,
-            });
-            candidates.push({
-              signedBid,
-              totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
-              boostFactor: entry.builderBoostFactor,
-              url,
-            });
-          } catch (e) {
-            metrics?.builderApi.bidsDiscarded.inc();
-            logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
-          }
-        }
+        const candidates = (
+          await Promise.all(
+            builderApiBids.map(async ({url, entry, signedBid, receivedMs}): Promise<BidCandidate | null> => {
+              try {
+                await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
+                  slot,
+                  parentBlock,
+                  parentBlockHash: bidParentBlockHash,
+                  parentBlockRoot: parentBlockRootHex,
+                  entry,
+                });
+                return {
+                  signedBid,
+                  totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
+                  boostFactor: entry.builderBoostFactor,
+                  url,
+                  receivedMs,
+                };
+              } catch (e) {
+                metrics?.builderApi.bidsDiscarded.inc();
+                logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
+                return null;
+              }
+            })
+          )
+        ).filter((candidate): candidate is BidCandidate => candidate !== null);
 
         if (p2pBid !== null) {
           candidates.push({
@@ -1026,7 +1047,9 @@ export function getValidatorApi(
             slot,
             candidates: candidates
               .map(
-                (candidate) => `${candidate.url ?? "p2p"}:total=${candidate.totalGwei}:boost=${candidate.boostFactor}`
+                (candidate) =>
+                  `${candidate.url ?? "p2p"}:total=${candidate.totalGwei}:boost=${candidate.boostFactor}` +
+                  (candidate.receivedMs !== undefined ? `:received=${candidate.receivedMs}ms` : "")
               )
               .join(","),
             bidSource: best?.url ?? "p2p",
@@ -1120,6 +1143,7 @@ export function getValidatorApi(
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
+              ...(bestBid.receivedMs !== undefined ? {bidReceivedMs: bestBid.receivedMs} : {}),
             }
           : {}),
       };

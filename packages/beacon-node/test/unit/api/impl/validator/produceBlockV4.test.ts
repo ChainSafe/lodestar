@@ -222,7 +222,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
 
     const {data: block} = await api.produceBlockV4({
@@ -264,7 +264,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
 
     const {data: block} = await api.produceBlockV4({
@@ -304,8 +304,8 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: firstUrl, entry: firstEntry, signedBid: firstBid},
-      {url: secondUrl, entry: secondEntry, signedBid: secondBid},
+      {url: firstUrl, entry: firstEntry, signedBid: firstBid, receivedMs: 0},
+      {url: secondUrl, entry: secondEntry, signedBid: secondBid, receivedMs: 0},
     ]);
 
     await api.produceBlockV4({
@@ -340,7 +340,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
 
     const {data: block} = await api.produceBlockV4({
@@ -376,7 +376,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
 
     await api.produceBlockV4({
@@ -411,7 +411,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
 
     await api.produceBlockV4({
@@ -444,7 +444,7 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
     modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
-      {url: builderUrl, entry, signedBid: apiBid},
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
     ]);
     vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid bid"));
 
@@ -579,7 +579,13 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.produceBlock).not.toHaveBeenCalled();
   });
 
-  type MatrixEntry = {value: number; executionPayment?: bigint; maxExecutionPayment?: bigint; boostFactor?: bigint};
+  type MatrixEntry = {
+    value: number;
+    executionPayment?: bigint;
+    maxExecutionPayment?: bigint;
+    boostFactor?: bigint;
+    receivedMs?: number;
+  };
   const selectionTestCases: {
     id: string;
     entries: MatrixEntry[];
@@ -593,6 +599,16 @@ describe("api/validator - produceBlockV4", () => {
     {id: "api bid outbids the p2p bid", entries: [{value: 2}], p2pValue: 1, engineValueGwei: 0, expected: 0},
     {id: "p2p bid outbids the api bid", entries: [{value: 2}], p2pValue: 3, engineValueGwei: 0, expected: "p2p"},
     {id: "tie prefers the api bid", entries: [{value: 2}], p2pValue: 2, engineValueGwei: 0, expected: 0},
+    {
+      id: "tie prefers the earlier received api bid",
+      entries: [
+        {value: 2, receivedMs: 2000},
+        {value: 2, receivedMs: 1500},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
     {
       id: "execution payment is counted up to the entry cap",
       entries: [{value: 1, executionPayment: 5n, maxExecutionPayment: 2n}],
@@ -663,7 +679,12 @@ describe("api/validator - produceBlockV4", () => {
         signedBid.message.value = e.value;
         signedBid.message.executionPayment = e.executionPayment ?? 0n;
         signedBid.message.builderIndex = i;
-        return {url: `https://builder-${i}.example.com`, entry: entries[i], signedBid};
+        return {
+          url: `https://builder-${i}.example.com`,
+          entry: entries[i],
+          signedBid,
+          receivedMs: e.receivedMs ?? 1000 + i,
+        };
       });
       const p2pBid = tc.p2pValue !== null ? ssz.gloas.SignedExecutionPayloadBid.defaultValue() : null;
       if (p2pBid !== null && tc.p2pValue !== null) {

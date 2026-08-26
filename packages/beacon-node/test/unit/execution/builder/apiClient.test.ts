@@ -4,6 +4,7 @@ import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import type {IBlsVerifier} from "../../../../src/chain/bls/index.js";
 import {BuilderApiClient} from "../../../../src/execution/builder/apiClient.js";
+import {IClock} from "../../../../src/util/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 const {getExecutionPayloadBid, submitBuilderPreferences, submitSignedBeaconBlock, verifySignatureSets} = vi.hoisted(
@@ -25,6 +26,7 @@ const bls = {
   close: vi.fn(),
   canAcceptWork: vi.fn(),
 } satisfies IBlsVerifier;
+const clock = {msFromSlot: () => 250} as unknown as IClock;
 
 describe("execution/builder/apiClient", () => {
   afterEach(() => {
@@ -39,7 +41,7 @@ describe("execution/builder/apiClient", () => {
     getExecutionPayloadBid.mockResolvedValue({value: () => signedBid});
 
     const logger = getMockedLogger();
-    const client = new BuilderApiClient({}, config, bls, null, logger);
+    const client = new BuilderApiClient({}, config, clock, bls, null, logger);
     const bids = await client.getExecutionPayloadBids(
       [getBuilderEntry(invalidUrl, slot), validEntry],
       slot,
@@ -48,7 +50,9 @@ describe("execution/builder/apiClient", () => {
       new Uint8Array(48)
     );
 
-    expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
+    expect(bids).toEqual([
+      {url: "https://builder.example.com", entry: validEntry, signedBid, receivedMs: expect.any(Number)},
+    ]);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
     expect(logger.warn).toHaveBeenCalledWith("Ignoring builder entry with invalid url", {slot, url: invalidUrl});
   });
@@ -62,7 +66,7 @@ describe("execution/builder/apiClient", () => {
     const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     getExecutionPayloadBid.mockResolvedValue({value: () => signedBid});
 
-    const client = new BuilderApiClient({}, config, bls);
+    const client = new BuilderApiClient({}, config, clock, bls);
     const bids = await client.getExecutionPayloadBids(
       [invalidUtf8Entry, nonAsciiEntry, validEntry],
       slot,
@@ -71,7 +75,9 @@ describe("execution/builder/apiClient", () => {
       new Uint8Array(48)
     );
 
-    expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
+    expect(bids).toEqual([
+      {url: "https://builder.example.com", entry: validEntry, signedBid, receivedMs: expect.any(Number)},
+    ]);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
   });
 
@@ -79,7 +85,7 @@ describe("execution/builder/apiClient", () => {
     const url = "https://builder.example.com";
     const signedBlock = {data: ssz.gloas.SignedBeaconBlock.defaultValue()};
     const logger = getMockedLogger();
-    const client = new BuilderApiClient({}, config, bls, null, logger);
+    const client = new BuilderApiClient({}, config, clock, bls, null, logger);
 
     await client.submitSignedBeaconBlock(url, signedBlock);
 
@@ -96,7 +102,7 @@ describe("execution/builder/apiClient", () => {
     submitBuilderPreferences.mockResolvedValue({assertOk: vi.fn()});
     submitSignedBeaconBlock.mockResolvedValue({assertOk: vi.fn()});
 
-    const client = new BuilderApiClient({}, config, bls);
+    const client = new BuilderApiClient({}, config, clock, bls);
     await client.submitBuilderPreferences(url, proposerPubkey, preferences);
     await client.submitSignedBeaconBlock(url, signedBlock);
 
@@ -116,7 +122,7 @@ describe("execution/builder/apiClient", () => {
     const entry = getBuilderEntry(url, slot);
     entry.auth.message.data = new Uint8Array();
 
-    const client = new BuilderApiClient({}, config, bls);
+    const client = new BuilderApiClient({}, config, clock, bls);
     await client.submitBuilderPreferences(url, proposerPubkey, preferences);
     const bids = await client.getExecutionPayloadBids(
       [entry],
@@ -139,13 +145,13 @@ describe("execution/builder/apiClient", () => {
     verifySignatureSets.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     getExecutionPayloadBid.mockResolvedValue({value: () => signedBid});
 
-    const client = new BuilderApiClient({}, config, bls);
+    const client = new BuilderApiClient({}, config, clock, bls);
     expect(
       await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey)
     ).toEqual([]);
     expect(
       await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey)
-    ).toEqual([{url: "https://builder.example.com", entry, signedBid}]);
+    ).toEqual([{url: "https://builder.example.com", entry, signedBid, receivedMs: expect.any(Number)}]);
 
     expect(verifySignatureSets).toHaveBeenCalledTimes(2);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
@@ -165,7 +171,7 @@ describe("execution/builder/apiClient", () => {
       .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve({value: () => slowBid}), 20)))
       .mockImplementationOnce(async () => ({value: () => fastBid}));
 
-    const client = new BuilderApiClient({}, config, bls);
+    const client = new BuilderApiClient({}, config, clock, bls);
     const bids = await client.getExecutionPayloadBids(
       [entryA, entryB],
       slot,
