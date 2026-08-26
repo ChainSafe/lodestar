@@ -27,6 +27,14 @@ export type EpochTransitionCacheOpts = {
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
+  /**
+   * Treat every pending deposit signature as valid instead of verifying it.
+   *
+   * SPEC TESTS ONLY. Mirrors pyspec's `bls_setting: 2`, where `bls.Verify` is stubbed to return true
+   * so vectors can carry placeholder deposit signatures. Enabling this on a real node applies
+   * deposits with invalid proofs of possession, which is a consensus fault.
+   */
+  dangerouslyAssumeValidDepositSignatures?: boolean;
 };
 
 /**
@@ -194,6 +202,9 @@ export interface EpochTransitionCache {
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
   isActiveNextEpoch: boolean[];
+
+  /** {@see} {@link EpochTransitionCacheOpts.dangerouslyAssumeValidDepositSignatures} */
+  dangerouslyAssumeValidDepositSignatures: boolean;
 }
 
 // reuse arrays to avoid memory reallocation and gc
@@ -518,6 +529,7 @@ export function beforeProcessEpoch(
     inclusionDelays,
     flags,
     isCompoundingValidatorArr,
+    dangerouslyAssumeValidDepositSignatures: opts?.dangerouslyAssumeValidDepositSignatures ?? false,
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,
   };
