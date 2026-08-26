@@ -252,6 +252,7 @@ todo
 trustless
 typesafe
 udp
+uint
 unpkg
 util
 utils
