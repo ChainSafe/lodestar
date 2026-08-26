@@ -260,6 +260,7 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      builderUserAgent: opts.executionBuilder.userAgent,
     });
 
     // Load persisted data from disk to in-memory caches

@@ -14,12 +14,6 @@ import {isValidAsciiHttpUrl, toHex, toPrintableUrl} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../chain/bls/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 
-export type BuilderApiClientOpts = {
-  timeout?: number;
-  // Add User-Agent header to all requests
-  userAgent?: string;
-};
-
 /**
  * Additional duration to account for potential event loop lag which causes
  * builder bids to be rejected even though the response was sent in time.
@@ -31,6 +25,11 @@ const EVENT_LOOP_LAG_BUFFER = 250;
  * is reached, only considering bids from the p2p network and the local build process.
  */
 export const BUILDER_BID_REQUEST_TIMEOUT_MS = 1000 + EVENT_LOOP_LAG_BUFFER;
+
+export type BuilderApiClientOpts = {
+  // Add User-Agent header to all requests
+  userAgent?: string;
+};
 
 type BuilderUrl = string;
 
@@ -55,7 +54,7 @@ export type BuilderApiBid = {
 };
 
 /**
- * External builder integration post-gloas (ePBS).
+ * External builder integration post-gloas
  *
  * The builder set is driven by the resolved `BuilderConfig` the validator client supplies on
  * each block production request, clients are dialed on demand based on the entry `url`.
@@ -81,8 +80,7 @@ export class BuilderApiClient {
     slot: Slot,
     parentHash: Root,
     parentRoot: Root,
-    proposerPubkey: BLSPubkey,
-    timeoutMs: number
+    proposerPubkey: BLSPubkey
   ): Promise<BuilderApiBid[]> {
     const seenRequests = new Set<string>();
     const requests: {url: BuilderUrl; entry: routes.validator.BuilderEntry}[] = [];
@@ -129,9 +127,9 @@ export class BuilderApiClient {
               proposerPubkey,
               requestAuth: entry.auth,
               dateMilliseconds: Date.now(),
-              timeoutMs,
+              timeoutMs: BUILDER_BID_REQUEST_TIMEOUT_MS,
             },
-            {timeoutMs}
+            {timeoutMs: BUILDER_BID_REQUEST_TIMEOUT_MS}
           );
           const signedBid = res.value();
           if (signedBid === undefined) {
@@ -220,10 +218,7 @@ export class BuilderApiClient {
       client = getClient(
         {
           baseUrl: url,
-          globalInit: {
-            timeoutMs: this.opts.timeout,
-            headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined,
-          },
+          globalInit: {headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined},
         },
         {config: this.config, metrics: this.metrics?.builderHttpClient, logger: this.logger}
       );

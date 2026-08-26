@@ -45,8 +45,7 @@ describe("execution/builder/apiClient", () => {
       slot,
       new Uint8Array(32),
       new Uint8Array(32),
-      new Uint8Array(48),
-      1_000
+      new Uint8Array(48)
     );
 
     expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
@@ -69,8 +68,7 @@ describe("execution/builder/apiClient", () => {
       slot,
       new Uint8Array(32),
       new Uint8Array(32),
-      new Uint8Array(48),
-      1_000
+      new Uint8Array(48)
     );
 
     expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
@@ -125,8 +123,7 @@ describe("execution/builder/apiClient", () => {
       slot,
       new Uint8Array(32),
       new Uint8Array(32),
-      proposerPubkey,
-      1_000
+      proposerPubkey
     );
 
     expect(bids).toEqual([]);
@@ -144,10 +141,10 @@ describe("execution/builder/apiClient", () => {
 
     const client = new BuilderApiClient({}, config, bls);
     expect(
-      await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey, 1_000)
+      await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey)
     ).toEqual([]);
     expect(
-      await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey, 1_000)
+      await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), proposerPubkey)
     ).toEqual([{url: "https://builder.example.com", entry, signedBid}]);
 
     expect(verifySignatureSets).toHaveBeenCalledTimes(2);

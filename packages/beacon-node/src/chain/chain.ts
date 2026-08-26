@@ -277,6 +277,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
+      builderUserAgent,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -294,6 +295,8 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      /** Sent with all builder api requests, unless the node runs in private mode */
+      builderUserAgent?: string;
     }
   ) {
     this.opts = opts;
@@ -450,7 +453,7 @@ export class BeaconChain implements IBeaconChain {
       {forkChoice, logger, metrics}
     );
 
-    this.builderApiClient = new BuilderApiClient({}, config, bls, metrics, logger);
+    this.builderApiClient = new BuilderApiClient({userAgent: builderUserAgent}, config, bls, metrics, logger);
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
