@@ -99,6 +99,15 @@ jobs:
         with:
           node: ${{ matrix.node }}
 
+      - name: Restore interop pubkey cache
+        id: interop-pubkey-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/state-transition/test-cache/interop-pubkeys.pkix
+          key: interop-pubkeys-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'packages/state-transition/src/testUtils/interopPubkeyCache.ts', 'packages/state-transition/src/testUtils/util.ts', 'packages/state-transition/src/util/interop.ts') }}
+          restore-keys: |
+            interop-pubkeys-${{ runner.os }}-
+
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -111,6 +120,13 @@ jobs:
         # Rever to "pnpm test:unit" when finished debugging core dumps
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which pnpm) test:unit"
         run: pnpm vitest run --project unit --project unit-minimal --coverage
+
+      - name: Save interop pubkey cache
+        if: ${{ always() && steps.interop-pubkey-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/state-transition/test-cache/interop-pubkeys.pkix
+          key: ${{ steps.interop-pubkey-cache.outputs.cache-primary-key }}
 
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'

@@ -80,6 +80,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
@@ -95,6 +96,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -195,6 +197,7 @@ export class BeaconChain implements IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -322,6 +325,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
+    this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -455,6 +459,9 @@ export class BeaconChain implements IBeaconChain {
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
+      db,
+      seenBlockInputCache: this.seenBlockInputCache,
+      custodyConfig: this.custodyConfig,
       metrics,
       logger,
     });
@@ -470,7 +477,8 @@ export class BeaconChain implements IBeaconChain {
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
-        timeCreatedSec: Math.floor(Date.now() / 1000),
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.anchorState,
       });
     }
 
@@ -1573,6 +1581,7 @@ export class BeaconChain implements IBeaconChain {
     // aggregatedAttestationPool tracks metrics on its own
     metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+    metrics.opPool.deferredVoluntaryExitPool.size.set(this.deferredVoluntaryExitPool.size());
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
