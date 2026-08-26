@@ -9,6 +9,7 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
@@ -44,6 +45,8 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToFulu(preState as CachedBeaconStateElectra);
         case ForkName.gloas:
           return slotFns.upgradeStateToGloas(preState as CachedBeaconStateFulu);
+        case ForkName.heze:
+          return slotFns.upgradeStateToHeze(preState as CachedBeaconStateGloas);
       }
     },
     options: {

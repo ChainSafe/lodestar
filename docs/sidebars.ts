@@ -30,13 +30,7 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
-          ],
-        },
-        {
-          type: "category",
-          label: "Builder Client",
-          items: [
-            "run/builder-management/builder-cli",
+            "run/beacon-management/historical-fork-support",
           ],
         },
         {

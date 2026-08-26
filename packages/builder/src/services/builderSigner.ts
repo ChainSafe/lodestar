@@ -1,4 +1,4 @@
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
@@ -24,7 +24,7 @@ export class BuilderSigner {
   }
 
   signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid): gloas.SignedExecutionPayloadBid {
-    const signingRoot = getExecutionPayloadBidSigningRoot(this.config, bid.slot, bid);
+    const signingRoot = getExecutionPayloadBidSigningRoot(this.config, bid);
 
     return {
       message: bid,

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/db",
-  "version": "1.45.0",
+  "version": "1.46.0",
   "description": "DB modules of Lodestar",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -30,11 +30,11 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
@@ -43,7 +43,7 @@
     "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^1.6.2",
+    "@chainsafe/ssz": "^1.6.3",
     "@lodestar/config": "workspace:^",
     "@lodestar/utils": "workspace:^",
     "classic-level": "^1.4.1"

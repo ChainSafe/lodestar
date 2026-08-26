@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.13
+version: v1.7.0-alpha.14
 style: full
 
 specrefs:
@@ -41,31 +41,28 @@ exceptions:
     - PAYLOAD_STATUS_PENDING#gloas
     - PTC_TIMELINESS_INDEX#gloas
 
-    # heze (not implemented)
-    - DOMAIN_INCLUSION_LIST_COMMITTEE#heze
-
     # phase0 fast confirmation / not implemented
     - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
 
   containers:
     # gloas
+    - CellsBitList#gloas
     - LightClientHeader#gloas
     - PartialDataColumnGroupID#gloas
     - PartialDataColumnHeader#gloas
+    - PartialDataColumnPartsMetadata#gloas
     - PartialDataColumnSidecar#gloas
 
+    # heze (not implemented)
+    - SignedInclusionLists#heze
+
     # fulu (not implemented yet)
+    - CellsBitList#fulu
+    - OptionalPartialDataColumnHeader#fulu
     - PartialDataColumnGroupID#fulu
     - PartialDataColumnHeader#fulu
     - PartialDataColumnPartsMetadata#fulu
     - PartialDataColumnSidecar#fulu
-
-    # heze (not implemented)
-    - BeaconState#heze
-    - ExecutionPayloadBid#heze
-    - InclusionList#heze
-    - SignedExecutionPayloadBid#heze
-    - SignedInclusionList#heze
 
   dataclasses:
     # phase0
@@ -109,15 +106,12 @@ exceptions:
 
     # heze (not implemented)
     - GetInclusionListResponse#heze
+    - InclusionListEntry#heze
     - InclusionListStore#heze
     - PayloadAttributes#heze
     - Store#heze
 
-  presets:
-    # heze (not implemented)
-    - INCLUSION_LIST_COMMITTEE_SIZE#heze
-    - MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE#heze
-    - MAX_SIGNED_INCLUSION_LIST_SIZE#heze
+  presets: []
 
   functions:
     # phase0
@@ -125,7 +119,6 @@ exceptions:
     - compute_merkle_branch_root#phase0
     - compute_time_at_slot_ms#phase0
     - is_non_strict_superset#phase0
-    - is_not_from_future_slot#phase0
     - is_within_slot_range#phase0
     - validate_attester_slashing_gossip#phase0
     - validate_beacon_aggregate_and_proof_gossip#phase0
@@ -308,7 +301,6 @@ exceptions:
     - is_ancestor#gloas
     - is_head_late#gloas
     - is_previous_slot_payload_decision#gloas
-    - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
     - on_payload_attestation_message#gloas
@@ -328,11 +320,11 @@ exceptions:
     - update_next_withdrawal_builder_index#gloas
     - update_payload_expected_withdrawals#gloas
     - update_proposer_boost_root#gloas
+    - validate_partial_data_column_sidecar_gossip#gloas
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
 
     # gloas (new in alpha.3, not yet implemented)
-    - compute_weak_subjectivity_period#gloas
     - block_to_light_client_header#gloas
     - get_lc_execution_root#gloas
     - is_valid_light_client_header#gloas
@@ -370,6 +362,7 @@ exceptions:
     - get_inclusion_list_signature#heze
     - get_inclusion_list_store#heze
     - get_inclusion_list_transactions#heze
+    - get_signed_inclusion_list#heze
     - is_inclusion_list_bits_inclusive#heze
     - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
@@ -378,7 +371,6 @@ exceptions:
     - process_inclusion_list#heze
     - record_payload_inclusion_list_satisfaction#heze
     - should_extend_payload#heze
-    - upgrade_to_heze#heze
 
     # phase0 fast confirmation / not implemented
     - adjust_committee_weight_estimate_to_ensure_safety#phase0
@@ -425,14 +417,6 @@ exceptions:
     # phase0 fast confirmation / not implemented
     - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
 
-    # heze (not implemented)
-    - HEZE_FORK_EPOCH#heze
-    - HEZE_FORK_VERSION#heze
-    - INCLUSION_LIST_DUE_BPS#heze
-    - MAX_BYTES_PER_INCLUSION_LIST#heze
-    - MAX_REQUEST_INCLUSION_LIST#heze
-    - MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
-
   custom_types:
     # phase0
     - Ether#phase0
@@ -448,5 +432,4 @@ exceptions:
     - CellIndex#fulu
 
     # gloas
-    - ExecutionBranch#gloas
     - PayloadStatus#gloas

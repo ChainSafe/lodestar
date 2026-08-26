@@ -18,8 +18,8 @@ import {
 
 /** See isHeadWeak.test.ts: floor(floor((32 * 150) / 32) * 20 / 100) = 30 */
 const REORG_THRESHOLD = 30;
-/** PROPOSER_SCORE_BOOST is 40%: floor(floor((32 * 150) / 32) * 40 / 100) = 60 */
-const BOOST_SCORE = 60;
+/** PROPOSER_SCORE_BOOST is 40%, in gwei: floor(floor((32 * 150) / 32) * 40 / 100) increments = 60 */
+const BOOST_SCORE = BigInt(60) * 1_000_000_000n;
 
 const PARENT_PROPOSER = 7;
 const SIBLING_ROOT = "0xsibling";
@@ -43,7 +43,7 @@ function setPendingVote(forkChoice: ForkChoice, validatorIndex: ValidatorIndex, 
 }
 
 /** The boost currently held by a block = the gap between its total weight and its attestation score */
-function appliedBoost(protoArray: ProtoArray, root: RootHex): number {
+function appliedBoost(protoArray: ProtoArray, root: RootHex): bigint {
   const node = protoArray.getNode(root, PayloadStatus.PENDING);
   if (node === undefined) throw Error(`missing PENDING node for ${root}`);
   return node.weight - node.attestationScore;
@@ -125,7 +125,7 @@ describe("Forkchoice / shouldApplyProposerBoost", () => {
 
     forkChoice.updateHead();
 
-    expect(appliedBoost(protoArray, childRoot)).toBe(0);
+    expect(appliedBoost(protoArray, childRoot)).toBe(0n);
   });
 
   it("applies boost when the equivocating sibling is not PTC-timely", () => {
@@ -197,6 +197,6 @@ describe("Forkchoice / shouldApplyProposerBoost", () => {
     equivocatingIndices.add(0);
     forkChoice.updateHead();
 
-    expect(appliedBoost(protoArray, childRoot)).toBe(0);
+    expect(appliedBoost(protoArray, childRoot)).toBe(0n);
   });
 });

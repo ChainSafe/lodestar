@@ -341,6 +341,16 @@
     FULU_FORK_VERSION: Version = '0x06000000'
     </spec>
 
+- name: GAS_LIMIT_SCHEDULE#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "GAS_LIMIT_SCHEDULE:"
+  spec: |
+    <spec config_var="GAS_LIMIT_SCHEDULE" fork="gloas" hash="28e945d9">
+    GAS_LIMIT_SCHEDULE: tuple[frozendict[str, Any], ...] = (
+    )
+    </spec>
+
 - name: GENESIS_DELAY#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
@@ -378,14 +388,18 @@
     </spec>
 
 - name: HEZE_FORK_EPOCH#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_EPOCH:"
   spec: |
     <spec config_var="HEZE_FORK_EPOCH" fork="heze" hash="f4539c03">
     HEZE_FORK_EPOCH: Epoch = 18446744073709551615
     </spec>
 
 - name: HEZE_FORK_VERSION#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_VERSION:"
   spec: |
     <spec config_var="HEZE_FORK_VERSION" fork="heze" hash="29986fed">
     HEZE_FORK_VERSION: Version = '0x08000000'
@@ -410,7 +424,9 @@
     </spec>
 
 - name: INCLUSION_LIST_DUE_BPS#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "INCLUSION_LIST_DUE_BPS:"
   spec: |
     <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="2b6a4401">
     INCLUSION_LIST_DUE_BPS: Uint64 = 6667
@@ -441,13 +457,6 @@
   spec: |
     <spec config_var="MAX_BLOBS_PER_BLOCK_ELECTRA" fork="electra" hash="a03f0ed9">
     MAX_BLOBS_PER_BLOCK_ELECTRA: Uint64 = 9
-    </spec>
-
-- name: MAX_BYTES_PER_INCLUSION_LIST#heze
-  sources: []
-  spec: |
-    <spec config_var="MAX_BYTES_PER_INCLUSION_LIST" fork="heze" hash="1d503ddc">
-    MAX_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
     </spec>
 
 - name: MAX_PAYLOAD_SIZE#phase0
@@ -505,7 +514,9 @@
     </spec>
 
 - name: MAX_REQUEST_INCLUSION_LIST#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_REQUEST_INCLUSION_LIST:"
   spec: |
     <spec config_var="MAX_REQUEST_INCLUSION_LIST" fork="heze" hash="b64ddfd1">
     MAX_REQUEST_INCLUSION_LIST: Uint64 = 16
@@ -518,6 +529,15 @@
   spec: |
     <spec config_var="MAX_REQUEST_PAYLOADS" fork="gloas" hash="cb92d98e">
     MAX_REQUEST_PAYLOADS: Uint64 = 128
+    </spec>
+
+- name: MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST:"
+  spec: |
+    <spec config_var="MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" fork="heze" hash="5e36c7cc">
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
     </spec>
 
 - name: MESSAGE_DOMAIN_INVALID_SNAPPY#phase0
@@ -602,7 +622,9 @@
     </spec>
 
 - name: MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS:"
   spec: |
     <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
     MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1

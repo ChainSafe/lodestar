@@ -9,6 +9,7 @@ import {
   MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   ZERO_HASH,
 } from "@lodestar/params";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
@@ -19,6 +20,7 @@ import {
   getCoreTopicsAtFork,
   getGossipSSZMaxSize,
   getGossipSSZType,
+  gossipTopicAllowPublishToZeroPeers,
   parseGossipTopic,
   stringifyGossipTopic,
 } from "../../../../src/network/gossip/topic.js";
@@ -281,6 +283,14 @@ describe("network / gossip / topic", () => {
     });
   });
 
+  it("should use the Heze bid size limit post-Heze", () => {
+    const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
+
+    expect(
+      getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config.MAX_PAYLOAD_SIZE)
+    ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
+  });
+
   it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
@@ -395,6 +405,28 @@ describe("network / gossip / topic", () => {
       expect(allowedTopics.has("/eth2/ffffffff/beacon_attestation_5/ssz_snappy")).toBe(false);
       // Garbage
       expect(allowedTopics.has("/attacker/garbage/topic")).toBe(false);
+    });
+  });
+
+  describe("gossipTopicAllowPublishToZeroPeers", () => {
+    it("has an entry for every gossip type", () => {
+      for (const gossipType of Object.values(GossipType)) {
+        expect(gossipTopicAllowPublishToZeroPeers[gossipType]).toBeTypeOf("boolean");
+      }
+    });
+
+    it("only opts out for topics that tolerate reaching no peer", () => {
+      const allowed = Object.values(GossipType).filter((type) => gossipTopicAllowPublishToZeroPeers[type]);
+
+      // A publish that reached no peer is a failed broadcast and must surface to the caller. Adding a
+      // topic here silently turns that failure into a success, so it should be a deliberate change.
+      expect(allowed.sort()).toEqual(
+        [
+          GossipType.data_column_sidecar,
+          GossipType.light_client_finality_update,
+          GossipType.light_client_optimistic_update,
+        ].sort()
+      );
     });
   });
 });

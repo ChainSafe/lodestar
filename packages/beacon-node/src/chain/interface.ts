@@ -1,7 +1,8 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {EpochShuffling, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -44,6 +45,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -127,6 +129,7 @@ export interface IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
@@ -261,6 +264,9 @@ export interface IBeaconChain {
 
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
+
+  /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void;
 
   getStatus(): Status;
 
