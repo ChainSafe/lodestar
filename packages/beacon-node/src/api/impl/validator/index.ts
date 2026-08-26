@@ -956,9 +956,12 @@ export function getValidatorApi(
         }
       }
 
-      const hasEarlyP2pBid =
-        !circuitBreakerActive &&
-        chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null;
+      // A builder bid is expected if builders are configured or a p2p bid was already received.
+      // Used by metrics and the censorship override which cannot wait until the bid deadline
+      const builderBidExpected =
+        builderConfig.builders.length > 0 ||
+        (!circuitBreakerActive &&
+          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
       // Select the p2p bid once builders had time to bid up, matching the deadline advertised
       // on builder API bid requests, unless the circuit breaker is active
@@ -1050,7 +1053,7 @@ export function getValidatorApi(
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      if (hasEarlyP2pBid || builderConfig.builders.length > 0) {
+      if (builderBidExpected) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
 
@@ -1122,11 +1125,7 @@ export function getValidatorApi(
       };
 
       // handle shouldOverrideBuilder separately
-      if (
-        engineResult.status === "fulfilled" &&
-        engineResult.value.shouldOverrideBuilder &&
-        (hasEarlyP2pBid || builderConfig.builders.length > 0)
-      ) {
+      if (engineResult.status === "fulfilled" && engineResult.value.shouldOverrideBuilder && builderBidExpected) {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         metrics?.blockProductionSelectionResults.inc({
