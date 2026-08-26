@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.45.0",
+  "version": "1.46.0",
   "type": "module",
   "exports": {
     ".": {
@@ -46,7 +46,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.2.4",
+    "@chainsafe/as-sha256": "^1.2.5",
     "@vekexasia/bigint-buffer2": "^1.1.1",
     "any-signal": "^4.1.1",
     "case": "^1.6.3",

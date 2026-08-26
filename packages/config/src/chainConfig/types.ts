@@ -10,6 +10,7 @@ export type ChainConfig = {
    * canonical network names include:
    * * 'mainnet' - there can be only one
    * * 'hoodi' - testnet
+   * * 'plataberget' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;
@@ -138,10 +139,13 @@ export type ChainConfig = {
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
 
+  // Gas Limit Scheduling
+  GAS_LIMIT_SCHEDULE: GasLimitSchedule;
+
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: number;
   MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: number;
-  MAX_BYTES_PER_INCLUSION_LIST: number;
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: number;
 
   // Fast Confirmation Rule
   CONFIRMATION_BYZANTINE_THRESHOLD: number;
@@ -268,13 +272,16 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: "number",
   MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: "number",
-  MAX_BYTES_PER_INCLUSION_LIST: "number",
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: "number",
 
   // Gloas
   MAX_REQUEST_PAYLOADS: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
+
+  // Gas Limit Scheduling
+  GAS_LIMIT_SCHEDULE: "gas_limit_schedule",
 
   // Fast Confirmation Rule
   CONFIRMATION_BYZANTINE_THRESHOLD: "number",
@@ -300,8 +307,28 @@ export function isBlobSchedule(value: unknown): value is BlobSchedule {
   );
 }
 
+export type GasLimitScheduleEntry = {
+  EPOCH: number;
+  GAS_LIMIT: number;
+};
+
+export type GasLimitSchedule = GasLimitScheduleEntry[];
+
+export function isGasLimitSchedule(value: unknown): value is GasLimitSchedule {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.EPOCH === "number" &&
+        typeof entry.GAS_LIMIT === "number"
+    )
+  );
+}
+
 /** Allows values in a Spec file */
-export type SpecValue = number | bigint | Uint8Array | string | BlobSchedule;
+export type SpecValue = number | bigint | Uint8Array | string | BlobSchedule | GasLimitSchedule;
 
 /** Type value name of each spec field. Numbers are ignored since they are the most common */
 export type SpecValueType<V extends SpecValue> = V extends number
@@ -314,7 +341,9 @@ export type SpecValueType<V extends SpecValue> = V extends number
         ? "string"
         : V extends BlobSchedule
           ? "blob_schedule"
-          : never;
+          : V extends GasLimitSchedule
+            ? "gas_limit_schedule"
+            : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;

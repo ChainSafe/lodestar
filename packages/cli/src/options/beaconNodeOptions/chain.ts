@@ -26,6 +26,7 @@ export type ChainArgs = {
   "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
+  "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -67,6 +68,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -242,6 +244,15 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.disableProposerSlashings": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
+    defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
+    group: "chain",
+  },
+
   "chain.assertCorrectProgressiveBalances": {
     hidden: true,
     description: "Enable asserting the progressive balances",
@@ -332,7 +343,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
-    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    description:
+      "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",

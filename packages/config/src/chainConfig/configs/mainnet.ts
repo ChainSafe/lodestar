@@ -203,7 +203,7 @@ export const chainConfig: ChainConfig = {
   // 1 slots
   MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
   // 2**13 (=8192)
-  MAX_BYTES_PER_INCLUSION_LIST: 8192,
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: 8192,
 
   // Gloas
   // 2**7 (= 128) payloads
@@ -221,6 +221,10 @@ export const chainConfig: ChainConfig = {
       MAX_BLOBS_PER_BLOCK: 21,
     },
   ],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
 
   // Fast Confirmation Rule
   // ---------------------------------------------------------------

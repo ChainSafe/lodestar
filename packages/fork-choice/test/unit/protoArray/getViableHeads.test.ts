@@ -46,7 +46,7 @@ function initProtoArray(): ProtoArray {
 }
 
 describe("ProtoArray.getViableHeads", () => {
-  it("returns every viable leaf with increment-unit weight", () => {
+  it("returns every viable leaf with exact Gwei weight", () => {
     const fc = initProtoArray();
     // 1 <- 2 <- 3 and 1 <- 4 (two competing leaves)
     fc.onBlock(blockFields({slot: 1, blockRoot: "2", parentRoot: "1"}), 1, null);
@@ -66,8 +66,8 @@ describe("ProtoArray.getViableHeads", () => {
 
     const heads = fc.getViableHeads(2).sort((a, b) => a.root.localeCompare(b.root));
     expect(heads).toEqual([
-      {root: "3", payloadStatus: PayloadStatus.FULL, weight: 30},
-      {root: "4", payloadStatus: PayloadStatus.FULL, weight: 12},
+      {root: "3", payloadStatus: PayloadStatus.FULL, weight: 30_000_000_000n},
+      {root: "4", payloadStatus: PayloadStatus.FULL, weight: 12_000_000_000n},
     ]);
   });
 
@@ -92,7 +92,7 @@ describe("ProtoArray.getViableHeads", () => {
 
     // Before the envelope arrives only the EMPTY variant is a leaf (PENDING's bestChild
     // points at it, so PENDING itself is not a leaf)
-    expect(fc.getViableHeads(1)).toEqual([{root: "2", payloadStatus: PayloadStatus.EMPTY, weight: 0}]);
+    expect(fc.getViableHeads(1)).toEqual([{root: "2", payloadStatus: PayloadStatus.EMPTY, weight: 0n}]);
 
     // Revealing the payload creates the FULL variant as a sibling leaf of EMPTY
     fc.onExecutionPayload("2", 1, "0xeb", 1, 30_000_000, null, ExecutionStatus.Valid, DataAvailabilityStatus.Available);

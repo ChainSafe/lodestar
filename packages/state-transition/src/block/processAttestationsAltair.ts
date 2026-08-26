@@ -67,7 +67,7 @@ export function processAttestationsAltair(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
-      if (!verifySignatureSet(sigSet, state.epochCtx.pubkeyCache)) {
+      if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }
     }
@@ -134,7 +134,7 @@ export function processAttestationsAltair(
         }
       }
 
-      if (isSameSlotAttestation && flagsNewSet !== 0) {
+      if (fork >= ForkSeq.gloas && isSameSlotAttestation && flags === 0 && flagsNewSet !== 0) {
         paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
       }
     }

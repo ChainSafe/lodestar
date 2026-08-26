@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
@@ -113,7 +113,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.pubkeyCache, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 
@@ -278,7 +278,12 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
-        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+        // Timed, unlike the other fork upgrades: this one does unbounded work.
+        // onboardBuildersFromPendingDeposits walks the entire pending deposit queue, so its
+        // cost is set by whatever is sitting in that queue when the fork lands.
+        const timer = metrics?.forkUpgradeTime.startTimer({fork: ForkName.gloas});
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu, metrics) as CachedBeaconStateAllForks;
+        timer?.();
       }
       if (stateEpoch === config.HEZE_FORK_EPOCH) {
         postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;

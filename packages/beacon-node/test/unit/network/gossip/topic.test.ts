@@ -20,6 +20,7 @@ import {
   getCoreTopicsAtFork,
   getGossipSSZMaxSize,
   getGossipSSZType,
+  gossipTopicAllowPublishToZeroPeers,
   parseGossipTopic,
   stringifyGossipTopic,
 } from "../../../../src/network/gossip/topic.js";
@@ -404,6 +405,28 @@ describe("network / gossip / topic", () => {
       expect(allowedTopics.has("/eth2/ffffffff/beacon_attestation_5/ssz_snappy")).toBe(false);
       // Garbage
       expect(allowedTopics.has("/attacker/garbage/topic")).toBe(false);
+    });
+  });
+
+  describe("gossipTopicAllowPublishToZeroPeers", () => {
+    it("has an entry for every gossip type", () => {
+      for (const gossipType of Object.values(GossipType)) {
+        expect(gossipTopicAllowPublishToZeroPeers[gossipType]).toBeTypeOf("boolean");
+      }
+    });
+
+    it("only opts out for topics that tolerate reaching no peer", () => {
+      const allowed = Object.values(GossipType).filter((type) => gossipTopicAllowPublishToZeroPeers[type]);
+
+      // A publish that reached no peer is a failed broadcast and must surface to the caller. Adding a
+      // topic here silently turns that failure into a success, so it should be a deliberate change.
+      expect(allowed.sort()).toEqual(
+        [
+          GossipType.data_column_sidecar,
+          GossipType.light_client_finality_update,
+          GossipType.light_client_optimistic_update,
+        ].sort()
+      );
     });
   });
 });
