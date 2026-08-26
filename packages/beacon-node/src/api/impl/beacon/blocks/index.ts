@@ -105,7 +105,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation, builderUrl},
-    _context,
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -364,14 +364,16 @@ export function getBeaconBlockApi({
     chain.logger.info("Publishing block", valLogMeta);
 
     // Forward the signed block to the winning builder echoed by the validator client so it can
-    // release the payload without waiting for block gossip. Failures are non-fatal, the builder
-    // also sees the block on gossip.
-    if (builderUrl !== undefined && isForkPostGloas(fork)) {
+    // help disseminate the block and learns timely that its bid won without waiting for block
+    // gossip. Failures are non-fatal, the builder also sees the block on gossip.
+    if (isForkPostGloas(fork) && builderUrl !== undefined) {
       const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
       if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
-        chain.builderApiClient.submitSignedBeaconBlock(builderUrl, {data: gloasBlock}).catch((e) => {
-          chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
-        });
+        chain.builderApiClient
+          .submitSignedBeaconBlock(builderUrl, {data: gloasBlock, bytes: context?.sszBytes ?? undefined})
+          .catch((e) => {
+            chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
+          });
       }
     }
 

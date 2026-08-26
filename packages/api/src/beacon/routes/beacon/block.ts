@@ -165,7 +165,8 @@ export type Endpoints = {
       broadcastValidation?: BroadcastValidation;
       /**
        * The url of the winning builder as returned by `produceBlockV4`. The beacon node forwards
-       * the signed block to this builder so it can release the payload without waiting for gossip.
+       * the signed block to this builder so it can help disseminate the block and learns timely
+       * that its bid won without waiting for gossip.
        */
       builderUrl?: string;
     },
