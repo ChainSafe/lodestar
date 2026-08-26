@@ -1,13 +1,9 @@
 import {describe, expect, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {
-  BeaconStateView,
-  computeStartSlotAtEpoch,
-  createCachedBeaconState,
-  createPubkeyCache,
-} from "@lodestar/state-transition";
+import {BeaconStateView, computeStartSlotAtEpoch, createCachedBeaconState} from "@lodestar/state-transition";
 import {Root, Slot} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getCheckpointFromState} from "../../../../../src/chain/blocks/utils/checkpoint.js";
@@ -29,7 +25,7 @@ describe("getCheckpointFromState", () => {
       new BeaconStateView(
         createCachedBeaconState(state, {
           config: createBeaconConfig(config, state.genesisValidatorsRoot),
-          pubkeyCache: createPubkeyCache(),
+          pubkeyCache,
         })
       )
     );
