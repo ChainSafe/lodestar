@@ -985,7 +985,11 @@ export function getValidatorApi(
           source: ProducedBlockSource.engine,
           reason: EngineBlockSelectionReason.BuilderCensorship,
         });
-        logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
+        logger.warn("Selected local block: censorship suspected in builder bid", {
+          ...logCtx,
+          durationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value),
+        });
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
         const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor,
@@ -995,7 +999,14 @@ export function getValidatorApi(
         });
         source = result.source;
         metrics?.blockProductionSelectionResults.inc(result);
-        logger.info(`Selected ${source} block`, {reason: result.reason, ...logCtx});
+        logger.info(`Selected ${source} block`, {
+          reason: result.reason,
+          ...logCtx,
+          engineDurationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
+          builderDurationMs: bidResult.durationMs,
+          ...getBlockValueLogInfo(bidResult.value, ProducedBlockSource.builder),
+        });
         bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
       } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
@@ -1008,6 +1019,8 @@ export function getValidatorApi(
         logger.info("Selected builder bid block: no local block produced", {
           reason,
           ...logCtx,
+          durationMs: bidResult.durationMs,
+          ...getBlockValueLogInfo(bidResult.value),
           error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
         });
       } else if (engineResult.status === "fulfilled") {
@@ -1023,6 +1036,8 @@ export function getValidatorApi(
         logger.info("Selected local block: no builder bid block produced", {
           reason,
           ...logCtx,
+          durationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value),
           error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
         });
       }
