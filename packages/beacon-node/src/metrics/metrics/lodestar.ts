@@ -1786,6 +1786,10 @@ export function createLodestarMetrics(
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
       }),
+      predictedReorg: register.counter({
+        name: "lodestar_precompute_next_epoch_transition_predicted_reorg_total",
+        help: "Predicted epoch-boundary reorgs where the strong parent was dialed instead of the weak head",
+      }),
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
         help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
