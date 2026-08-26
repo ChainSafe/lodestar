@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {Keypair} from "@lodestar/builder";
+import {Logger} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 import {readPassphraseFile} from "../../util/passphrase.js";
 
 export async function loadBuilderKeypair(
+  logger: Logger,
   keystorePath: string,
   passwordPath: string,
   expectedPubkey?: string
@@ -27,6 +29,8 @@ export async function loadBuilderKeypair(
   if (expectedPubkey && publicKeyHex !== ensure0xPrefix(expectedPubkey.toLowerCase())) {
     throw Error(`Pubkey mismatch: keystore ${publicKeyHex}, expected ${expectedPubkey}`);
   }
+
+  logger.info("Loaded builder keystore", {pubkey: publicKeyHex});
 
   return {secretKey, publicKey};
 }

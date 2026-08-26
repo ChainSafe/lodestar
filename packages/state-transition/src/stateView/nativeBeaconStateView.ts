@@ -35,6 +35,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 import {
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -843,6 +844,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._proposerLookahead = this.binding.proposerLookahead;
     }
     return this._proposerLookahead;
+  }
+
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.binding.clearPreGloasBuilderDepositCache();
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -53,9 +54,9 @@ import {
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -112,6 +113,13 @@ export class EpochCache {
    * Couples both index→pubkey and pubkey→index lookups, keeping them in sync atomically.
    */
   pubkeyCache: PubkeyCache;
+  /**
+   * Shared across all clones of the same chain head. Holds builder deposit signature validity
+   * pre-verified by the prepareForNextSlot scheduler in the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs
+   * leading up to GLOAS_FORK_EPOCH, so `onboardBuildersFromPendingDeposits()` at the fork transition
+   * can skip the bulk verification cost. There should only exist one for the entire application.
+   */
+  builderDepositSignatureCache: BuilderDepositSignatureCache;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -245,6 +253,7 @@ export class EpochCache {
   constructor(data: {
     config: BeaconConfig;
     pubkeyCache: PubkeyCache;
+    builderDepositSignatureCache: BuilderDepositSignatureCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -277,6 +286,7 @@ export class EpochCache {
   }) {
     this.config = data.config;
     this.pubkeyCache = data.pubkeyCache;
+    this.builderDepositSignatureCache = data.builderDepositSignatureCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -331,10 +341,10 @@ export class EpochCache {
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(pubkeyCache, validators);
+      pubkeyCache.syncPubkeys(validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -514,6 +524,8 @@ export class EpochCache {
     return new EpochCache({
       config,
       pubkeyCache,
+      // Created once per application (shared by-reference through clone()).
+      builderDepositSignatureCache: new BuilderDepositSignatureCache(),
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -558,6 +570,8 @@ export class EpochCache {
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
       pubkeyCache: this.pubkeyCache,
+      // Singleton per application, shared by-reference across clones
+      builderDepositSignatureCache: this.builderDepositSignatureCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -894,7 +908,7 @@ export class EpochCache {
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.set(index, pubkey);
+    this.pubkeyCache.append(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1109,7 +1123,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: defaultPubkeyCache,
   };
 }

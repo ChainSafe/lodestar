@@ -1,5 +1,5 @@
+import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
-import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
@@ -40,17 +40,6 @@ export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconSta
 
 // ---- createBeaconStateViewForHistoricalRegen (regen path) ----
 
-// Reused across all historical state regen calls in the worker thread
-const pubkeyCacheRegen = createPubkeyCache();
-
-function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
-  const newCount = state.validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    const pubkey = state.validators.getReadonly(i).pubkey;
-    pubkeyCache.set(i, pubkey);
-  }
-}
-
 type RegenNodeJSOpts = {
   useNative: false;
   config: BeaconConfig;
@@ -74,7 +63,6 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  syncPubkeyCache(state, pubkeyCacheRegen);
-  const cachedState = createCachedBeaconState(state, {config, pubkeyCache: pubkeyCacheRegen}, {skipSyncPubkeys: true});
+  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
   return new BeaconStateView(cachedState);
 }

@@ -1,4 +1,4 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
@@ -433,7 +433,7 @@ export class AggregatedAttestationPool {
       );
     } else {
       const attestationGroupsByIndex = this.attestationGroupByIndexByDataHexBySlot.get(bySlot);
-      if (!attestationGroupsByIndex) throw Error(`No attestations for slot ${bySlot}`);
+      if (!attestationGroupsByIndex) return [];
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 

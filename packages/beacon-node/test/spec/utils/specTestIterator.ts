@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it} from "vitest";
+import {beforeEach, describe, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -63,8 +64,8 @@ function gloasComptestCases(testCases: string[]): RegExp {
 // block kept in the tree because one of its descendant branches is viable still contributes its
 // EMPTY/FULL variants as leaves. Lodestar instead applies `nodeIsViableForHead` to every candidate
 // leaf and drops those variants.
-// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/phase0/fork-choice.md#filter_block_tree
-// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/fork-choice.md#modified-get_node_children
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#filter_block_tree
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-get_node_children
 const gloasComptestViableHeadLeaves = [
   "attester_slashing_test_0_229394564_1",
   "attester_slashing_test_2_199531672_1",
@@ -196,24 +197,6 @@ const gloasComptestViableHeadLeaves = [
   "shuffling_test_3_773362316_31",
 ];
 
-// TODO-GLOAS: re-enable after https://github.com/ChainSafe/lodestar/issues/9694 is resolved.
-// Proposer boost weight is quantized to EFFECTIVE_BALANCE_INCREMENT units twice, losing 0.4 ETH.
-const gloasComptestProposerBoostWeight = [
-  "block_cover_test_10_395149528_0",
-  "block_cover_test_10_547208812_0",
-  "block_cover_test_11_761180942_0",
-  "block_cover_test_11_975049978_0",
-  "block_cover_test_1_534680541_0",
-  "block_cover_test_1_559550878_0",
-  "block_cover_test_2_501232078_0",
-  "block_cover_test_2_92546029_0",
-  "block_cover_test_3_389327390_0",
-  "block_cover_test_3_761896693_0",
-  "block_cover_test_9_380835889_0",
-  "block_cover_test_9_478088650_0",
-  "block_tree_test_102_400635768_0",
-];
-
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
 // to an issue marking it as pending to re-enable and an aproximate timeline of when it will
 // be fixed.
@@ -226,7 +209,7 @@ const gloasComptestProposerBoostWeight = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  skippedForks: ["eip8148"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -243,33 +226,36 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
     /^gloas\/light_client\/sync\/.*/,
+    /^heze\/light_client\/sync\/.*/,
     // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
     // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
-    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // New test suite added by consensus-specs #5441; Lodestar still applies
     // the pre-gloas proposer boost, so the head weight differs by the boost amount.
     /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    // TODO-HEZE: enable this after heze fork choice is ready
+    /^heze\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
+    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
-    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
-    // boost wrongly denied. Fails identically on every pre-gloas fork.
-    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
-    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
-    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
-    // Same issue (https://github.com/ChainSafe/lodestar/issues/9666), gloas copy: the block arrives
-    // at an epoch-boundary slot start; the spec computes `head = get_head(store)` fresh inside
-    // `on_block` after the tick's checkpoint updates, while Lodestar's dependent-root gate reads the
-    // stale cached head, so `is_same_dependent_root` differs and the boost is wrongly denied.
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/fork-choice.md#modified-update_proposer_boost_root
-    gloasComptestCases(["block_tree_test_13_352029666_1"]),
+    /\/heze_fork$/,
+    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
+    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
+    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
+    // so skip rather than raise the timeout and hide the regression.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
+    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
     gloasComptestCases(gloasComptestViableHeadLeaves),
-    gloasComptestCases(gloasComptestProposerBoostWeight),
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
@@ -295,7 +281,6 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
@@ -353,6 +338,7 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
+                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -371,7 +357,15 @@ export function specTestIterator(
                   );
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(
+                testId,
+                testSuiteDirpath,
+                (testCase, directoryName, testCaseName) => {
+                  pubkeyCache.reset();
+                  return testFunction(testCase, directoryName, testCaseName);
+                },
+                options
+              );
             }
           }
         }

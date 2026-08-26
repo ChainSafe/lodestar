@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {SecretKey, Signature, verify} from "@chainsafe/blst";
+import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
@@ -39,7 +39,7 @@ describe("BuilderSigner", () => {
 
     expect(
       verify(
-        getExecutionPayloadBidSigningRoot(beaconConfig, bid.slot, bid),
+        getExecutionPayloadBidSigningRoot(beaconConfig, bid),
         publicKey,
         Signature.fromBytes(signedBid.signature, true)
       )
@@ -72,7 +72,7 @@ describe("BuilderSigner", () => {
 
       expect(
         verify(
-          getExecutionPayloadBidSigningRoot(beaconConfigOtherNetwork, bid.slot, bid),
+          getExecutionPayloadBidSigningRoot(beaconConfigOtherNetwork, bid),
           publicKey,
           Signature.fromBytes(signedBid.signature, true)
         )
@@ -106,7 +106,7 @@ describe("BuilderSigner", () => {
 
       expect(
         verify(
-          getExecutionPayloadBidSigningRoot(beaconConfigOtherFork, bid.slot, bid),
+          getExecutionPayloadBidSigningRoot(beaconConfigOtherFork, bid),
           publicKey,
           Signature.fromBytes(signedBid.signature, true)
         )
