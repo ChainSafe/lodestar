@@ -1050,7 +1050,7 @@ export function getValidatorApi(
             candidates: candidates
               .map(
                 (candidate) =>
-                  `${candidate.url ?? "p2p"}:total=${candidate.totalGwei}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
+                  `${candidate.url ?? "p2p"}:total=${prettyWeiToEth(candidate.totalGwei * GWEI_TO_WEI)}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
               )
               .join(","),
             bidSource: best?.url ?? "p2p",
@@ -1138,9 +1138,9 @@ export function getValidatorApi(
         ...(bestBid !== null
           ? {
               bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
-              bidValue: bestBid.signedBid.message.value,
-              bidExecutionPayment: bestBid.signedBid.message.executionPayment,
-              bidTotal: bestBid.totalGwei,
+              bidValue: prettyWeiToEth(BigInt(bestBid.signedBid.message.value) * GWEI_TO_WEI),
+              bidExecutionPayment: prettyWeiToEth(bestBid.signedBid.message.executionPayment * GWEI_TO_WEI),
+              bidTotal: prettyWeiToEth(bestBid.totalGwei * GWEI_TO_WEI),
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
@@ -1157,7 +1157,11 @@ export function getValidatorApi(
           source: ProducedBlockSource.engine,
           reason: EngineBlockSelectionReason.BuilderCensorship,
         });
-        logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
+        logger.warn("Selected local block: censorship suspected in builder bid", {
+          ...logCtx,
+          durationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value),
+        });
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
         const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
@@ -1167,7 +1171,22 @@ export function getValidatorApi(
         });
         source = result.source;
         metrics?.blockProductionSelectionResults.inc(result);
-        logger.info(`Selected ${source} block`, {reason: result.reason, ...logCtx});
+        logger.info(`Selected ${source} block`, {
+          reason: result.reason,
+          ...logCtx,
+          engineDurationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
+          builderDurationMs: bidResult.durationMs,
+          // Log the counted total used in the comparison, the raw value and execution payment
+          // are already part of the log context
+          ...getBlockValueLogInfo(
+            {
+              executionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
+              consensusBlockValue: bidResult.value.consensusBlockValue,
+            },
+            ProducedBlockSource.builder
+          ),
+        });
         bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
       } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
@@ -1180,6 +1199,8 @@ export function getValidatorApi(
         logger.info("Selected builder bid block: no local block produced", {
           reason,
           ...logCtx,
+          durationMs: bidResult.durationMs,
+          ...getBlockValueLogInfo(bidResult.value),
           error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
         });
       } else if (engineResult.status === "fulfilled") {
@@ -1195,6 +1216,8 @@ export function getValidatorApi(
         logger.info("Selected local block: no builder bid block produced", {
           reason,
           ...logCtx,
+          durationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value),
           error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
         });
       }
