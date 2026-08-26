@@ -371,6 +371,9 @@ export function getBeaconBlockApi({
       if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
         chain.builderApiClient
           .submitSignedBeaconBlock(builderUrl, {data: gloasBlock, bytes: context?.sszBytes ?? undefined})
+          .then(() => {
+            chain.logger.debug("Submitted signed block to builder", {slot, builderUrl});
+          })
           .catch((e) => {
             chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
           });
