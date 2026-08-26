@@ -283,7 +283,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.minBid": {
     type: "string",
     description:
-      "Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to --builder.maxExecutionPayment, capped at max uint64. Only used post-Gloas",
+      "Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to the configured cap, capped at max uint64. Only used post-Gloas",
     defaultDescription: `${defaultOptions.builderMinBid}`,
     group: "builder",
   },
