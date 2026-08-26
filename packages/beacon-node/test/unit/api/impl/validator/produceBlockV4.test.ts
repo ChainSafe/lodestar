@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
@@ -278,6 +278,46 @@ describe("api/validator - produceBlockV4", () => {
     // The builder API bid counts as 1 + min(5, 1) = 2, so the p2p bid (3) wins
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
     expect(block).toEqual(bidBlock);
+  });
+
+  it("saturates builder API bid totals before ranking", async () => {
+    const firstUrl = "https://first-builder.example.com";
+    const secondUrl = "https://second-builder.example.com";
+    const firstEntry = {
+      url: new TextEncoder().encode(firstUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: MAX_EXECUTION_PAYMENT,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const secondEntry = {...firstEntry, url: new TextEncoder().encode(secondUrl)};
+    const firstBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    firstBid.message.executionPayment = MAX_EXECUTION_PAYMENT;
+    const secondBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    secondBid.message.value = 1;
+    secondBid.message.executionPayment = MAX_EXECUTION_PAYMENT;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
+      {url: firstUrl, entry: firstEntry, signedBid: firstBid},
+      {url: secondUrl, entry: secondEntry, signedBid: secondBid},
+    ]);
+
+    await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [firstEntry, secondEntry]},
+    });
+
+    // Both totals saturate at uint64 max, so the earlier bid wins the tie
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: firstBid}));
   });
 
   it("prefers the builder API bid over an equally boosted p2p bid", async () => {

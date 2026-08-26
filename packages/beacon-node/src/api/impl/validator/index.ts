@@ -52,7 +52,6 @@ import {
 import {
   GWEI_TO_WEI,
   TimeoutError,
-  bigIntMin,
   byteArrayEquals,
   defer,
   formatWeiToEth,
@@ -79,7 +78,10 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {validateBuilderApiExecutionPayloadBid} from "../../../chain/validation/executionPayloadBid.js";
+import {
+  getBuilderBidTotalGwei,
+  validateBuilderApiExecutionPayloadBid,
+} from "../../../chain/validation/executionPayloadBid.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -969,10 +971,7 @@ export function getValidatorApi(
               });
               candidates.push({
                 signedBid,
-                // Execution payment above the entry's cap adds nothing to the bid
-                totalGwei:
-                  BigInt(signedBid.message.value) +
-                  bigIntMin(signedBid.message.executionPayment, entry.maxExecutionPayment),
+                totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
                 boostFactor: entry.builderBoostFactor,
                 url,
               });

@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -33,6 +33,11 @@ const BID_INCREMENT_FLOOR_GWEI = 100_000;
  * high value blocks where the relative increment would suppress closely competing bids.
  */
 const BID_INCREMENT_CAP_GWEI = 10_000_000;
+
+/** Return the counted bid payment in Gwei, saturated at uint64 max. */
+export function getBuilderBidTotalGwei(bid: gloas.ExecutionPayloadBid, maxExecutionPayment: bigint): bigint {
+  return bigIntMin(MAX_EXECUTION_PAYMENT, BigInt(bid.value) + bigIntMin(bid.executionPayment, maxExecutionPayment));
+}
 
 /**
  * Return the minimum value a new bid must have to be forwarded given the current highest bid.
@@ -121,8 +126,7 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
-  // Execution payment above the entry's cap adds nothing to the bid
-  const totalPayment = BigInt(bid.value) + bigIntMin(bid.executionPayment, entry.maxExecutionPayment);
+  const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(`Bid total payment=${totalPayment} is below minBid=${entry.minBid}`);
   }
