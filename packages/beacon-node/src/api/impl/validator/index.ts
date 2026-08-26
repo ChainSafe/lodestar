@@ -975,7 +975,7 @@ export function getValidatorApi(
       }
 
       // A builder bid is expected if builders are configured or a p2p bid was already received.
-      // Used by metrics and the censorship override which cannot wait until the bid deadline
+      // Used by the censorship override which cannot wait until the bid deadline
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
@@ -1077,9 +1077,6 @@ export function getValidatorApi(
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      if (builderBidExpected) {
-        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
-      }
 
       const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
         const t = metrics?.blockProductionTime.startTimer();
@@ -1108,6 +1105,7 @@ export function getValidatorApi(
         if (candidate === null) {
           throw new Error(NO_BID_AVAILABLE);
         }
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
         return timed(ProducedBlockSource.builder, () =>
           chain.produceBlock({...baseAttrs, builderBid: candidate.signedBid})
         );
@@ -1150,7 +1148,11 @@ export function getValidatorApi(
       };
 
       // handle shouldOverrideBuilder separately
-      if (engineResult.status === "fulfilled" && engineResult.value.shouldOverrideBuilder && builderBidExpected) {
+      if (
+        engineResult.status === "fulfilled" &&
+        engineResult.value.shouldOverrideBuilder &&
+        (builderBidExpected || bidResult.status === "fulfilled")
+      ) {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         metrics?.blockProductionSelectionResults.inc({

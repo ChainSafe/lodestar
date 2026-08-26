@@ -3,6 +3,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
+import {defer} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
@@ -201,6 +202,45 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({strictFeeRecipientCheck: true}));
     expect(block).toEqual(builderBlock);
+  });
+
+  it("honors the censorship override for a p2p bid received after the initial pool read", async () => {
+    const engineResult = {
+      block: engineBlock,
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
+      shouldOverrideBuilder: true,
+    };
+    const bidResult = {block: bidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
+    const engineDeferred = defer<typeof engineResult>();
+    const bidDeferred = defer<typeof bidResult>();
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce(toPooledBid(builderBid));
+    modules.chain.produceBlock.mockImplementation((attrs: {builderBid?: unknown}) =>
+      attrs.builderBid !== undefined ? bidDeferred.promise : engineDeferred.promise
+    );
+
+    const blockPromise = api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: getBuilderConfig(),
+    });
+
+    await vi.waitFor(() => expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2));
+    bidDeferred.resolve(bidResult);
+    await Promise.resolve();
+    engineDeferred.resolve(engineResult);
+
+    const {data: block} = await blockPromise;
+
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(engineBlock);
   });
 
   it("picks a builder API bid over a lower p2p bid and records the bid source", async () => {
