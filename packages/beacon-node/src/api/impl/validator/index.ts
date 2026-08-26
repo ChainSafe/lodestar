@@ -1138,7 +1138,11 @@ export function getValidatorApi(
               bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
               bidValue: prettyWeiToEth(BigInt(bestBid.signedBid.message.value) * GWEI_TO_WEI),
               bidExecutionPayment: prettyWeiToEth(bestBid.signedBid.message.executionPayment * GWEI_TO_WEI),
-              bidTotal: prettyWeiToEth(bestBid.totalGwei * GWEI_TO_WEI),
+              // The full bid total and the counted total used during bid selection
+              bidTotal: prettyWeiToEth(
+                (BigInt(bestBid.signedBid.message.value) + bestBid.signedBid.message.executionPayment) * GWEI_TO_WEI
+              ),
+              bidCountedTotal: prettyWeiToEth(bestBid.totalGwei * GWEI_TO_WEI),
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
@@ -1179,15 +1183,6 @@ export function getValidatorApi(
           engineDurationMs: engineResult.durationMs,
           ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
           builderDurationMs: bidResult.durationMs,
-          // Log the counted total used in the comparison, the raw value and execution payment
-          // are already part of the log context
-          ...getBlockValueLogInfo(
-            {
-              executionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
-              consensusBlockValue: bidResult.value.consensusBlockValue,
-            },
-            ProducedBlockSource.builder
-          ),
         });
         bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
       } else if (bidResult.status === "fulfilled") {
