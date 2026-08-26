@@ -27,6 +27,8 @@ const EVENT_LOOP_LAG_BUFFER = 250;
 export const BUILDER_BID_REQUEST_TIMEOUT_MS = 1000 + EVENT_LOOP_LAG_BUFFER;
 
 export type BuilderApiClientOpts = {
+  /** Timeout for builder api requests, bid requests always use `BUILDER_BID_REQUEST_TIMEOUT_MS` */
+  timeout?: number;
   // Add User-Agent header to all requests
   userAgent?: string;
 };
@@ -218,7 +220,10 @@ export class BuilderApiClient {
       client = getClient(
         {
           baseUrl: url,
-          globalInit: {headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined},
+          globalInit: {
+            timeoutMs: this.opts.timeout,
+            headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined,
+          },
         },
         {config: this.config, metrics: this.metrics?.builderHttpClient, logger: this.logger}
       );
