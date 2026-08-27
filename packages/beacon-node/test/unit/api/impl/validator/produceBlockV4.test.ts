@@ -540,6 +540,8 @@ describe("api/validator - produceBlockV4", () => {
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -547,10 +549,23 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: getBuilderConfig(),
+      builderConfig: {
+        ...getBuilderConfig(),
+        builders: [
+          {
+            url: new TextEncoder().encode("https://builder.example.com"),
+            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
     });
 
     expect(modules.chain.builderCircuitBreaker.isActive).toHaveBeenCalledWith(slot, parentBlock);
+    expect(modules.chain.builderApiClient.getExecutionPayloadBids).not.toHaveBeenCalled();
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
@@ -636,10 +651,32 @@ describe("api/validator - produceBlockV4", () => {
     /** Expected winner, the entry index of an api bid, the p2p bid or the local block */
     expected: number | "p2p" | "engine";
   }[] = [
-    {id: "api bid outbids the p2p bid", entries: [{value: 2}], p2pValue: 1, engineValueGwei: 0, expected: 0},
-    {id: "p2p bid outbids the api bid", entries: [{value: 2}], p2pValue: 3, engineValueGwei: 0, expected: "p2p"},
-    {id: "tie prefers the api bid", entries: [{value: 2}], p2pValue: 2, engineValueGwei: 0, expected: 0},
     {
+      // ⏎
+      id: "api bid outbids the p2p bid",
+      entries: [{value: 2}],
+      p2pValue: 1,
+      engineValueGwei: 0,
+      expected: 0,
+    },
+    {
+      // ⏎
+      id: "p2p bid outbids the api bid",
+      entries: [{value: 2}],
+      p2pValue: 3,
+      engineValueGwei: 0,
+      expected: "p2p",
+    },
+    {
+      // ⏎
+      id: "tie prefers the api bid",
+      entries: [{value: 2}],
+      p2pValue: 2,
+      engineValueGwei: 0,
+      expected: 0,
+    },
+    {
+      // ⏎
       id: "tie prefers the earlier received api bid",
       entries: [
         {value: 2, receivedMs: 2000},
@@ -650,6 +687,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: 1,
     },
     {
+      // ⏎
       id: "execution payment is counted up to the entry cap",
       entries: [{value: 1, executionPayment: 5n, maxExecutionPayment: 2n}],
       p2pValue: 2,
@@ -657,6 +695,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: 0,
     },
     {
+      // ⏎
       id: "execution payment above a zero cap is not counted",
       entries: [{value: 1, executionPayment: 5n, maxExecutionPayment: 0n}],
       p2pValue: 2,
@@ -664,6 +703,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: "p2p",
     },
     {
+      // ⏎
       id: "zero entry boost factor loses against the p2p bid",
       entries: [{value: 100, boostFactor: 0n}],
       p2pValue: 1,
@@ -671,6 +711,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: "p2p",
     },
     {
+      // ⏎
       id: "max entry boost factor wins regardless of value",
       entries: [{value: 0, boostFactor: maxBuilderBoostFactor}],
       p2pValue: 5,
@@ -678,6 +719,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: 0,
     },
     {
+      // ⏎
       id: "higher boosted api bid wins between builders",
       entries: [
         {value: 10, boostFactor: 100n},
@@ -688,6 +730,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: 1,
     },
     {
+      // ⏎
       id: "p2p bid below min bid is discarded",
       entries: [],
       p2pValue: 1,
@@ -696,6 +739,7 @@ describe("api/validator - produceBlockV4", () => {
       expected: "engine",
     },
     {
+      // ⏎
       id: "local block beats a dampened api bid",
       entries: [{value: 100, boostFactor: 50n}],
       p2pValue: null,
