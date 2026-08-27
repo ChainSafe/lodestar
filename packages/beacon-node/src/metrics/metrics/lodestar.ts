@@ -1444,6 +1444,16 @@ export function createLodestarMetrics(
         help: "Checkpoint state cache size",
         labelNames: ["type"],
       }),
+      persistentTierEpochs: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_epochs",
+        help: "Number of epoch keys retained in each on-disk checkpoint state retention tier",
+        labelNames: ["tier"],
+      }),
+      persistentTierStates: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_states",
+        help: "Number of persisted checkpoint states retained in each on-disk retention tier",
+        labelNames: ["tier"],
+      }),
       reads: register.avgMinMax({
         name: "lodestar_cp_state_epoch_reads",
         help: "Avg min max of all state cache items total read count",
@@ -1775,6 +1785,10 @@ export function createLodestarMetrics(
       waste: register.counter({
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
+      }),
+      predictedReorg: register.counter({
+        name: "lodestar_precompute_next_epoch_transition_predicted_reorg_total",
+        help: "Predicted epoch-boundary reorgs where the strong parent was dialed instead of the weak head",
       }),
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",

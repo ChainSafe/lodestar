@@ -42,14 +42,14 @@ export type StateRegenerationOpts = {
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
-  dropCache(): void;
+  dropCache(): Promise<void>;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): IBeaconStateView | null;
   getPreStateSync(block: BeaconBlock): IBeaconStateView | null;
   getCheckpointStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null;
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
+  onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
