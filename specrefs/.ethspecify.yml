@@ -158,7 +158,6 @@ exceptions:
     - get_weight#phase0
     - is_candidate_block#phase0
     - is_proposer#phase0
-    - is_proposer_equivocation#phase0
     - max_compressed_len#phase0
     - max_message_size#phase0
     - record_block_timeliness#phase0
@@ -313,8 +312,6 @@ exceptions:
     - process_proposer_slashing#gloas
     - process_slot#gloas
     - process_withdrawals#gloas
-    - record_block_timeliness#gloas
-    - should_apply_proposer_boost#gloas
     - update_builder_pending_withdrawals#gloas
     - update_latest_messages#gloas
     - update_next_withdrawal_builder_index#gloas

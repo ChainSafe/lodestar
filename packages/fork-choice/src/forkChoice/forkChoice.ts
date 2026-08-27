@@ -462,7 +462,8 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg
    * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
    *
-   * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#get_proposer_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-get_proposer_head
    */
   getProposerHead(
     headBlock: ProtoBlock,
@@ -493,6 +494,29 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
+    const currentTimeOk = headBlock.slot + 1 === slot;
+    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
+
+    // Re-org more aggressively if there is a proposer equivocation in the previous slot, skipping the
+    // regular reorg conditions. Any known equivocation counts here, timely or not.
+    if (
+      currentTimeOk &&
+      isProposerBoostWornOff &&
+      this.isProposerEquivocation(headBlock) &&
+      this.isHeadWeak(headBlock.blockRoot)
+    ) {
+      this.logger?.verbose("Performing single-slot reorg to remove weak head of equivocating proposer", {
+        slot,
+        proposerHead: parentBlock.blockRoot,
+        weakHead: headBlock.blockRoot,
+        proposerIndex: headBlock.proposerIndex,
+      });
+      proposerHead = parentBlock;
+
+      return {proposerHead, isHeadTimely};
+    }
+
     const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
 
     if (prelimProposerHead === headBlock && prelimNotReorgedReason !== undefined) {
@@ -505,14 +529,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if attempted reorg is more than a single slot
-    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
-    const currentTimeOk = headBlock.slot + 1 === slot;
     if (!currentTimeOk) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
     // No reorg if proposer boost is still in effect
-    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
     if (!isProposerBoostWornOff) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostNotWornOff};
     }
@@ -1756,7 +1777,21 @@ export class ForkChoice implements IForkChoice {
 
     // Parent is weak and from the previous slot: apply boost only if there are no early
     // equivocations, ie. no other PTC-timely block at the parent's slot from the same proposer.
-    return !this.protoArray.hasEquivocatingBlock(parentBlock.proposerIndex, parentBlock.slot, parentBlock.blockRoot);
+    return !this.protoArray.hasEquivocatingBlock(
+      parentBlock.proposerIndex,
+      parentBlock.slot,
+      parentBlock.blockRoot,
+      true
+    );
+  }
+
+  /**
+   * Return true if another block at the same slot from the same proposer is known to fork choice.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#is_proposer_equivocation
+   */
+  private isProposerEquivocation(block: ProtoBlock): boolean {
+    return this.protoArray.hasEquivocatingBlock(block.proposerIndex, block.slot, block.blockRoot, false);
   }
 
   /**

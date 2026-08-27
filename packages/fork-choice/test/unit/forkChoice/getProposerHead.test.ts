@@ -195,11 +195,22 @@ describe("Forkchoice / GetProposerHead", () => {
     stateGetter: () => null,
   };
 
+  /** Another block at the head slot from the same proposer, ie. a proposer equivocation */
+  const equivocatingHeadBlock: ProtoBlockWithWeight = {
+    ...baseHeadBlock,
+    stateRoot: getStateRoot(headSlot + 100),
+    blockRoot: getBlockRoot(headSlot + 100),
+    targetRoot: getBlockRoot(headSlot + 100),
+    weight: 0,
+  };
+
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong
   const testCases: {
     id: string;
     parentBlock: ProtoBlockWithWeight;
     headBlock: ProtoBlockWithWeight;
+    /** Imported alongside the head, to simulate an equivocation */
+    siblingBlock?: ProtoBlockWithWeight;
     expectReorg: boolean;
     currentSlot?: Slot;
     secFromSlot?: number;
@@ -294,6 +305,60 @@ describe("Forkchoice / GetProposerHead", () => {
       secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
     },
+    {
+      id: "Reorg weak equivocating head even if head is timely",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: true,
+    },
+    {
+      id: "Reorg weak equivocating head even if parent is weak",
+      parentBlock: {...baseParentHeadBlock, weight: 211},
+      headBlock: {...baseHeadBlock},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: true,
+    },
+    {
+      id: "Reorg weak equivocating head even if not proposing on time",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: true,
+      secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
+    },
+    {
+      id: "Reorg weak equivocating head regardless of the equivocating block's PTC timeliness",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: {...equivocatingHeadBlock, ptcTimeliness: true},
+      expectReorg: true,
+    },
+    {
+      id: "No equivocation reorg if head is strong",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true, weight: 30},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
+    },
+    {
+      id: "No equivocation reorg if current slot is more than one slot from head block",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: false,
+      currentSlot: headSlot + 2,
+      expectedNotReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot,
+    },
+    {
+      id: "No equivocation reorg if the other block at the head slot is from a different proposer",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: {...equivocatingHeadBlock, proposerIndex: 1},
+      expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
+    },
   ];
 
   beforeEach(() => {
@@ -304,6 +369,7 @@ describe("Forkchoice / GetProposerHead", () => {
     id,
     parentBlock,
     headBlock,
+    siblingBlock,
     expectReorg,
     currentSlot: proposalSlot,
     secFromSlot,
@@ -313,11 +379,14 @@ describe("Forkchoice / GetProposerHead", () => {
     it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
       protoArr.onBlock(headBlock, headBlock.slot, null);
+      if (siblingBlock) {
+        protoArr.onBlock(siblingBlock, siblingBlock.slot, null);
+      }
 
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;
       protoArr.applyScoreChanges({
-        attestationDeltas: [0, parentBlock.weight, headBlock.weight],
+        attestationDeltas: [0, parentBlock.weight, headBlock.weight, ...(siblingBlock ? [siblingBlock.weight] : [])],
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,

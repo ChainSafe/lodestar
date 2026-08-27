@@ -5251,7 +5251,7 @@
 - name: get_proposer_head#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "* Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#get_proposer_head"
   spec: |
     <spec fn="get_proposer_head" fork="phase0" hash="d6a7508e">
     def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
@@ -5372,7 +5372,7 @@
 - name: get_proposer_head#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "* Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-get_proposer_head"
   spec: |
     <spec fn="get_proposer_head" fork="gloas" hash="b67ab6f8">
     def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
@@ -7555,7 +7555,9 @@
     </spec>
 
 - name: is_proposer_equivocation#phase0
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#is_proposer_equivocation"
   spec: |
     <spec fn="is_proposer_equivocation" fork="phase0" hash="8e90bb33">
     def is_proposer_equivocation(store: Store, root: Root) -> bool:
@@ -12140,7 +12142,9 @@
     </spec>
 
 - name: record_block_timeliness#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-record_block_timeliness"
   spec: |
     <spec fn="record_block_timeliness" fork="gloas" hash="84a253c3">
     def record_block_timeliness(store: Store, root: Root) -> None:
@@ -12253,7 +12257,9 @@
     </spec>
 
 - name: should_apply_proposer_boost#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost"
   spec: |
     <spec fn="should_apply_proposer_boost" fork="gloas" hash="a18e5701">
     def should_apply_proposer_boost(store: Store) -> bool:
