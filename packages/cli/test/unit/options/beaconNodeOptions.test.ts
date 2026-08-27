@@ -32,6 +32,7 @@ describe("options / beaconNodeOptions", () => {
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
+      "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
@@ -42,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
+      graffitiAppend: false,
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -132,16 +134,21 @@ describe("options / beaconNodeOptions", () => {
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        disableProposerSlashings: true,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
+        graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
+        nativeStateView: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
+        faultInspectionWindow: 32,
+        allowedFaults: 8,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -180,7 +187,7 @@ describe("options / beaconNodeOptions", () => {
         },
         maxPeers: 30,
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
         disablePeerScoring: true,
@@ -193,7 +200,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
         mdns: false,
-        quic: false,
+        quic: true,
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
@@ -217,13 +224,13 @@ describe("options / beaconNodeOptions", () => {
 });
 
 describe("options / network / tcp and quic flags", () => {
-  it("should include only tcp multiaddrs by default", () => {
+  it("should include both tcp and quic multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
-    expect(result.localMultiaddrs).not.toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
   });
 
-  it("should include both tcp and quic multiaddrs when quic is true", () => {
+  it("should include both tcp and quic multiaddrs when quic is explicitly true", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: true} as NetworkArgs);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");

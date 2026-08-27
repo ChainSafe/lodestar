@@ -10,18 +10,20 @@ import {createNodeJsLibp2p} from "../../src/network/libp2p/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {PeerIdStr} from "../../src/util/peerId.js";
 
-export async function createNode(multiaddr: string, privateKey?: PrivateKey): Promise<Libp2p> {
-  return createNodeJsLibp2p(privateKey ?? (await generateKeyPair("secp256k1")), {localMultiaddrs: [multiaddr]});
+export async function createNode(multiaddrs: string[], privateKey?: PrivateKey): Promise<Libp2p> {
+  return createNodeJsLibp2p(privateKey ?? (await generateKeyPair("secp256k1")), {
+    localMultiaddrs: multiaddrs,
+  });
 }
 
 export async function createNetworkModules(
-  multiaddr: string,
+  multiaddrs: string[],
   privateKey?: PrivateKey,
   opts?: Partial<NetworkOptions>
 ): Promise<{opts: NetworkOptions; privateKey: PrivateKey}> {
   return {
     privateKey: privateKey ?? (await generateKeyPair("secp256k1")),
-    opts: {...defaultNetworkOptions, ...opts, localMultiaddrs: [multiaddr]},
+    opts: {...defaultNetworkOptions, ...opts, localMultiaddrs: opts?.localMultiaddrs ?? multiaddrs},
   };
 }
 

@@ -57,6 +57,10 @@ export enum InvalidAttestationCode {
    * The attestation data index is invalid for a Gloas block (must be 0 or 1).
    */
   INVALID_DATA_INDEX = "INVALID_DATA_INDEX",
+  /**
+   * The attestation votes for a full payload (index=1) but the payload status is not known.
+   */
+  UNKNOWN_PAYLOAD_STATUS = "UNKNOWN_PAYLOAD_STATUS",
 }
 
 export type InvalidAttestation =
@@ -69,7 +73,8 @@ export type InvalidAttestation =
   | {code: InvalidAttestationCode.INVALID_TARGET; attestation: RootHex; local: RootHex}
   | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
-  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number};
+  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number}
+  | {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS; beaconBlockRoot: RootHex};
 
 export enum ForkChoiceErrorCode {
   INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",
@@ -84,6 +89,7 @@ export enum ForkChoiceErrorCode {
   FORK_CHOICE_STORE_ERROR = "FORKCHOICE_ERROR_FORK_CHOICE_STORE_ERROR",
   UNABLE_TO_SET_JUSTIFIED_CHECKPOINT = "FORKCHOICE_ERROR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT",
   AFTER_BLOCK_FAILED = "FORKCHOICE_ERROR_AFTER_BLOCK_FAILED",
+  MISSING_EXECUTION_PAYLOAD_BLOCK_HASH = "FORKCHOICE_ERROR_MISSING_EXECUTION_PAYLOAD_BLOCK_HASH",
 }
 
 export type ForkChoiceErrorType =
@@ -98,6 +104,7 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION; store: Slot; state: Slot}
   | {code: ForkChoiceErrorCode.FORK_CHOICE_STORE_ERROR; error: Error}
   | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
-  | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error};
+  | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error}
+  | {code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH; root: RootHex; slot: Slot};
 
 export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {}

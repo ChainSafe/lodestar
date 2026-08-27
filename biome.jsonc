@@ -18,8 +18,6 @@
             "identifierOrder": "lexicographic",
             "groups": [
               [
-                // Bun modules
-                ":BUN:",
                 // Node.js modules
                 ":NODE:"
               ],
@@ -62,9 +60,6 @@
       "!packages/**/*/spec-tests",
       "!packages/**/*/node_modules/"
     ]
-  },
-  "javascript": {
-    "globals": ["Bun"]
   },
   "linter": {
     "rules": {
@@ -239,7 +234,7 @@
     },
     // Code using console output
     {
-      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**", "**/packages/flare/src/**"],
+      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -274,9 +269,6 @@
         "**/packages/beacon-node/src/execution/engine/mock.ts",
         "**/packages/beacon-node/src/execution/engine/types.ts",
         "**/packages/validator/src/buckets.ts",
-        "**/packages/prover/src/types.ts",
-        "**/prover/src/utils/process.ts",
-        "**/prover/src/verified_requests/**/*.ts",
         "**/packages/types/src/utils/**/*.ts",
         "**/packages/beacon-node/test/spec/bls/bls.ts"
       ],

@@ -56,12 +56,15 @@ export type ForkConfig = {
   getMaxBlobsPerBlock(epoch: Epoch): number;
   /** Get blob parameters at a given epoch */
   getBlobParameters(epoch: Epoch): BlobParameters;
+  /** Get the scheduled gas limit at a post-Gloas epoch, if an entry is active */
+  getScheduledGasLimit(epoch: Epoch): number | undefined;
 
   getAttestationDueMs(fork: ForkName): number;
   getAggregateDueMs(fork: ForkName): number;
   getSyncMessageDueMs(fork: ForkName): number;
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
+  getPayloadDueMs(): number;
 
   /** Convert basis points to milliseconds into the slot */
   getSlotComponentDurationMs(basisPoints: number): number;

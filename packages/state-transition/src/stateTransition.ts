@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
@@ -16,6 +16,7 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
   upgradeStateToGloas,
+  upgradeStateToHeze,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
@@ -26,6 +27,7 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -76,7 +78,6 @@ export enum StateHashTreeRootSource {
   prepareNextEpoch = "prepare_next_epoch",
   regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
-  computeEnvelopeStateRoot = "compute_envelope_state_root",
 }
 
 /**
@@ -112,7 +113,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.pubkeyCache, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 
@@ -277,13 +278,21 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
-        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+        // Timed, unlike the other fork upgrades: this one does unbounded work.
+        // onboardBuildersFromPendingDeposits walks the entire pending deposit queue, so its
+        // cost is set by whatever is sitting in that queue when the fork lands.
+        const timer = metrics?.forkUpgradeTime.startTimer({fork: ForkName.gloas});
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu, metrics) as CachedBeaconStateAllForks;
+        timer?.();
+      }
+      if (stateEpoch === config.HEZE_FORK_EPOCH) {
+        postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
 
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
         // last step to prepare epoch data that depends on the upgraded state, for example proposerLookahead of BeaconStateFulu
-        postState.epochCtx.finalProcessEpoch(postState);
+        postState.epochCtx.finalProcessEpoch(postState, epochTransitionCache);
         timer?.();
       }
 

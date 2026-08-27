@@ -149,8 +149,8 @@ export class SeenBlockInput {
     });
   }
 
-  has(rootHex: RootHex): boolean {
-    return this.blockInputs.has(rootHex);
+  hasBlock(rootHex: RootHex): boolean {
+    return this.blockInputs.get(rootHex)?.hasBlock() ?? false;
   }
 
   get(rootHex: RootHex): IBlockInput | undefined {

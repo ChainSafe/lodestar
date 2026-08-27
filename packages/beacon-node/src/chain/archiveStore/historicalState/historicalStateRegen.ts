@@ -20,7 +20,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   private readonly api: ModuleThread<HistoricalStateWorkerApi>;
   private readonly logger: LoggerNode;
 
-  constructor(modules: HistoricalStateRegenModules) {
+  private constructor(modules: HistoricalStateRegenModules) {
     this.api = modules.api;
     this.logger = modules.logger;
     modules.signal?.addEventListener("abort", () => this.close(), {once: true});
@@ -35,10 +35,10 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       dbLocation: modules.opts.dbLocation,
       metricsEnabled: Boolean(modules.metrics),
       loggerOpts: modules.logger.toOpts(),
+      nativeStateView: modules.opts.nativeStateView,
     };
 
     const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
-      suppressTranspileTS: Boolean(globalThis.Bun),
       workerData,
     } as ConstructorParameters<typeof Worker>[1]);
 

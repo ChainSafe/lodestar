@@ -3,7 +3,6 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
-  type PubkeyCache,
   createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
@@ -18,7 +17,7 @@ export async function getNearestState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  pubkeyCache: PubkeyCache
+  nativeStateView: boolean
 ): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
@@ -26,7 +25,9 @@ export async function getNearestState(
   }
 
   const stateBytes = stateBytesArr[0];
-  return createBeaconStateViewForHistoricalRegen(config, stateBytes, pubkeyCache);
+  return nativeStateView
+    ? createBeaconStateViewForHistoricalRegen({useNative: true, stateBytes})
+    : createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes});
 }
 
 /**
@@ -36,13 +37,13 @@ export async function getHistoricalState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  pubkeyCache: PubkeyCache,
+  nativeStateView: boolean,
   metrics?: HistoricalStateRegenMetrics
 ): Promise<Uint8Array> {
   const regenTimer = metrics?.regenTime.startTimer();
 
   const loadStateTimer = metrics?.loadStateTime.startTimer();
-  let state = await getNearestState(slot, config, db, pubkeyCache).catch((e) => {
+  let state = await getNearestState(slot, config, db, nativeStateView).catch((e) => {
     metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
     throw e;
   });

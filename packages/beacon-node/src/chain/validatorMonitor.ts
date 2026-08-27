@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -7,6 +7,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -65,6 +66,7 @@ export type ValidatorMonitor = {
     delaySec: Seconds,
     envelope: gloas.SignedExecutionPayloadEnvelope
   ): void;
+  registerExecutionPayloadBid(src: OpSource, proposerIndex: ValidatorIndex, bid: gloas.ExecutionPayloadBid): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -458,6 +460,23 @@ export function createValidatorMonitor(
       // TODO GLOAS: implement execution payload envelope monitoring
     },
 
+    registerExecutionPayloadBid(src, proposerIndex, bid) {
+      if (!validators.has(proposerIndex)) {
+        return;
+      }
+      log("Received an execution payload bid for monitored proposer", {
+        slot: bid.slot,
+        proposerIndex,
+        src,
+        builderIndex: bid.builderIndex,
+        gasLimit: Number(bid.gasLimit),
+        value: bid.value.toString(),
+        parentBlockRoot: toRootHex(bid.parentBlockRoot),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        blockHash: toRootHex(bid.blockHash),
+      });
+    },
+
     registerImportedBlock(block, {proposerBalanceDelta}) {
       const validator = validators.get(block.proposerIndex);
       if (validator) {
@@ -740,7 +759,7 @@ export function createValidatorMonitor(
 
       const rootCache = new RootHexCache(headState);
 
-      if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
+      if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
         const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 

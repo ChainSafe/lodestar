@@ -1,24 +1,47 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {
+  ForkName,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_PAYLOAD_ATTESTATIONS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  isForkPostBellatrix,
+  isForkPostDeneb,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
+  isStatePostBellatrix,
+  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
+
+export type GossipBlockValidationResult = {
+  /** Number of skipped slots between the block and its parent (blockSlot - parentSlot - 1) */
+  skippedSlots: number;
+};
 
 export async function validateGossipBlock(
   config: ChainForkConfig,
   chain: IBeaconChain,
   signedBlock: SignedBeaconBlock,
   fork: ForkName
-): Promise<void> {
+): Promise<GossipBlockValidationResult> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
   const blockEpoch = computeEpochAtSlot(blockSlot);
@@ -53,7 +76,10 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  // A block's hash tree root is identical to its header's, so the root is derived from the header
+  // which is also used as potential equivocation evidence
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
   if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
@@ -64,18 +90,25 @@ export async function validateGossipBlock(
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
+      if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
+        await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
+        chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+      }
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = isGloasBeaconBlock(block)
-    ? chain.forkChoice.getBlockHexAndBlockHash(
-        parentRoot,
-        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-      )
-    : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -86,23 +119,30 @@ export async function validateGossipBlock(
     // 2. The parent is unknown to us, we probably want to download it since it might actually
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
-    // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
-  // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.
-  // This is deemed a DoS risk because we need to get the proposerShuffling. To get the shuffling we have
-  // to do a bunch of epoch transitions, the longer the distance between the parent and block,
-  // the more we have to do. epochTransitions are expensive ~750ms, so we must limit how many a
-  // single bad block can trigger
-  // Note: Ensure this check is done before calling chain.regen.getBlockSlotStat as this is the function that does various epoch transitions.
-  // Note: This validation check is not part of the spec.
-  if (chain.opts.maxSkipSlots != null && parentBlock.slot + chain.opts.maxSkipSlots < blockSlot) {
+  // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
+  // (including execution node verification of the `block.body.execution_payload`)
+  if (isForkPostBellatrix(fork) && parentBlock.executionStatus === ExecutionStatus.Invalid) {
     throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.TOO_MANY_SKIPPED_SLOTS,
-      parentSlot: parentBlock.slot,
-      blockSlot,
+      code: BlockErrorCode.PARENT_EXECUTION_INVALID,
+      parentRoot,
     });
+  }
+
+  // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
+  // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
+  if (isGloasBeaconBlock(block)) {
+    const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentRoot,
+        parentBlockHash: parentBlockHashHex,
+      });
+    }
   }
 
   // [REJECT] The block is from a higher slot than its parent.
@@ -113,6 +153,10 @@ export async function validateGossipBlock(
       slot: blockSlot,
     });
   }
+
+  // Number of skipped slots between block and parent (non-spec). Previously this gated blocks via
+  // maxSkipSlots; now the caller only observes it so legitimate post-skip blocks are no longer ignored.
+  const skippedSlots = blockSlot - parentBlock.slot - 1;
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
   if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
@@ -151,6 +195,56 @@ export async function validateGossipBlock(
       });
     }
 
+    // [REJECT] The counts of `block.body.parent_execution_requests` are within
+    //   their respective limits -- i.e. validate that
+    //   `len(block.body.parent_execution_requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`,
+    //   `len(block.body.parent_execution_requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD`,
+    //   `len(block.body.parent_execution_requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD`,
+    //   and
+    //   `len(block.body.parent_execution_requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`.
+    // [REJECT] The counts of the block body operations are within their respective
+    //   limits -- i.e. validate that
+    //   `len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS`,
+    //   `len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA`,
+    //   `len(block.body.attestations) <= MAX_ATTESTATIONS_ELECTRA`,
+    //   `len(block.body.deposits) == 0`,
+    //   `len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS`,
+    //   `len(block.body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES`,
+    //   and `len(block.body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS`.
+    const body = (block as gloas.BeaconBlock).body;
+    const requests = body.parentExecutionRequests;
+    const countLimits: [string, number, number][] = [
+      ["parentExecutionRequests.withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
+      [
+        "parentExecutionRequests.consolidations",
+        requests.consolidations.length,
+        MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+      ],
+      [
+        "parentExecutionRequests.builderDeposits",
+        requests.builderDeposits.length,
+        MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+      ],
+      ["parentExecutionRequests.builderExits", requests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
+      ["proposerSlashings", body.proposerSlashings.length, MAX_PROPOSER_SLASHINGS],
+      ["attesterSlashings", body.attesterSlashings.length, MAX_ATTESTER_SLASHINGS_ELECTRA],
+      ["attestations", body.attestations.length, MAX_ATTESTATIONS_ELECTRA],
+      ["deposits", body.deposits.length, 0],
+      ["voluntaryExits", body.voluntaryExits.length, MAX_VOLUNTARY_EXITS],
+      ["blsToExecutionChanges", body.blsToExecutionChanges.length, MAX_BLS_TO_EXECUTION_CHANGES],
+      ["payloadAttestations", body.payloadAttestations.length, MAX_PAYLOAD_ATTESTATIONS],
+    ];
+    for (const [name, count, limit] of countLimits) {
+      if (count > limit) {
+        throw new BlockGossipError(GossipAction.REJECT, {
+          code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS,
+          name,
+          count,
+          limit,
+        });
+      }
+    }
+
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
     // This requires execution engine integration to verify the parent block hash
   }
@@ -163,7 +257,7 @@ export async function validateGossipBlock(
   const blockState = await chain.regen
     .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
     });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
@@ -174,7 +268,7 @@ export async function validateGossipBlock(
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
+    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -186,19 +280,14 @@ export async function validateGossipBlock(
     }
   }
 
-  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
-    // Don't batch so verification is not delayed
-    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-        blockSlot,
-      });
-    }
-
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
+  // [REJECT] The proposer index is a valid validator index
+  if (proposerIndex >= blockState.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
   }
+
+  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
@@ -206,11 +295,6 @@ export async function validateGossipBlock(
   // in such a case do not REJECT, instead IGNORE this message.
   if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
-  }
-
-  // Check again in case there two blocks are processed concurrently
-  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -222,5 +306,42 @@ export async function validateGossipBlock(
     await sleep(msToBlockSlot);
   }
 
-  chain.seenBlockProposers.add(blockSlot, proposerIndex);
+  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
+  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+  }
+
+  chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
+
+  return {skippedSlots};
+}
+
+export async function verifyBlockProposerSignature(
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  blockRoot: RootHex,
+  opts: {verifyOnMainThread?: boolean} = {}
+): Promise<void> {
+  const blockSlot = signedBlock.message.slot;
+  if (chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
+    return;
+  }
+
+  const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
+  // Don't batch so verification is not delayed
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockSlot,
+    });
+  }
+
+  chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
 }

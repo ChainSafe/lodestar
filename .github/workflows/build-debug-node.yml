@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build Debug version of Node.js
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
     steps:
@@ -18,7 +18,7 @@ jobs:
         run: apt-get install python3 g++ make python3-pip
 
       - name: Download Node.js source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: "nodejs/node"
           ref: "v${{ github.event.inputs.version }}"
@@ -44,7 +44,7 @@ jobs:
         working-directory: "nodejs"
 
       - name: Upload build to artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nodejs-debug-build-${{ github.event.inputs.version }}
           path: nodejs-debug-build-${{ github.event.inputs.version }}

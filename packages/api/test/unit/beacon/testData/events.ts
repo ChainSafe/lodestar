@@ -5,7 +5,7 @@ import {
   EventData,
   EventType,
   blobSidecarSSE,
-  dataColumnSidecarSSE,
+  fuluDataColumnSidecarSSE,
 } from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -29,6 +29,19 @@ export const eventTestData: EventData = {
     previousDutyDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
     currentDutyDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
     executionOptimistic: false,
+  },
+  [EventType.headV2]: {
+    version: ForkName.gloas,
+    data: {
+      slot: 10,
+      block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      state: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
+      payloadStatus: "empty",
+      epochTransition: false,
+      currentEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      nextEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      executionOptimistic: false,
+    },
   },
   [EventType.block]: {
     slot: 10,
@@ -266,7 +279,7 @@ export const eventTestData: EventData = {
     slot: "1",
     versioned_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
   }),
-  [EventType.dataColumnSidecar]: dataColumnSidecarSSE.fromJson({
+  [EventType.dataColumnSidecar]: fuluDataColumnSidecarSSE.fromJson({
     block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
     index: "1",
     slot: "1",
@@ -274,8 +287,77 @@ export const eventTestData: EventData = {
       "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
     ],
   }),
+  [EventType.executionPayload]: {
+    slot: 10,
+    builderIndex: 42,
+    blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+    executionOptimistic: false,
+  },
+  [EventType.executionPayloadGossip]: {
+    slot: 10,
+    builderIndex: 42,
+    blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
   [EventType.executionPayloadAvailable]: {
     slot: 10,
     blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
+  [EventType.proposerPreferences]: {
+    version: ForkName.gloas,
+    data: ssz.gloas.SignedProposerPreferences.fromJson({
+      message: {
+        dependent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        proposal_slot: "32",
+        validator_index: "123",
+        fee_recipient: "0x0000000000000000000000000000000000000000",
+        target_gas_limit: "60000000",
+      },
+      signature:
+        "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    }),
+  },
+  [EventType.executionPayloadBid]: {
+    version: ForkName.gloas,
+    data: ssz.gloas.SignedExecutionPayloadBid.fromJson({
+      message: {
+        parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+        parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        block_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        prev_randao: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        fee_recipient: "0x0000000000000000000000000000000000000000",
+        gas_limit: "30000000",
+        builder_index: "42",
+        slot: "10",
+        value: "1000000000",
+        execution_payment: "0",
+        blob_kzg_commitments: [
+          "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2",
+        ],
+        execution_requests_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      },
+      signature:
+        "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    }),
+  },
+  [EventType.payloadAttestationMessage]: {
+    version: ForkName.gloas,
+    data: ssz.gloas.PayloadAttestationMessage.fromJson({
+      validator_index: "123",
+      data: {
+        beacon_block_root: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+        slot: "10",
+        payload_present: true,
+        blob_data_available: true,
+      },
+      signature:
+        "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    }),
+  },
+  [EventType.fastConfirmation]: {
+    block: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    slot: 1,
+    currentSlot: 2,
   },
 };

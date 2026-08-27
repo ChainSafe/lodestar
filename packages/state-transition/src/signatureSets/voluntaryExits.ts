@@ -1,9 +1,7 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
-import {IBeaconStateView} from "../stateView/interface.js";
+import {IBeaconStateView, IBeaconStateViewGloas, isStatePostGloas} from "../stateView/interface.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -16,11 +14,10 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
 }
 
 /**
@@ -34,6 +31,9 @@ export function getVoluntaryExitSignatureSet(
   const fork = config.getForkSeq(state.slot);
 
   if (fork >= ForkSeq.gloas && isBuilderVoluntaryExit(signedVoluntaryExit)) {
+    if (!isStatePostGloas(state)) {
+      throw new Error(`Expected gloas+ state for builder voluntary exit signature, got fork=${state.forkName}`);
+    }
     return getBuilderVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
   }
 
@@ -68,7 +68,7 @@ export function getValidatorVoluntaryExitSignatureSet(
 
 export function getBuilderVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: IBeaconStateView,
+  state: IBeaconStateViewGloas,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
@@ -78,7 +78,7 @@ export function getBuilderVoluntaryExitSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: PublicKey.fromBytes(builder.pubkey),
+    pubkey: builder.pubkey,
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };

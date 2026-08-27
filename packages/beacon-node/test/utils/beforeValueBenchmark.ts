@@ -1,4 +1,4 @@
-import {beforeAll} from "@chainsafe/benchmark";
+import {afterAll, beforeAll} from "@chainsafe/benchmark";
 
 export type LazyValue<T> = {value: T};
 
@@ -17,6 +17,10 @@ export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): Lazy
   beforeAll(async () => {
     value = await fn();
   }, timeout ?? 300_000);
+
+  afterAll(() => {
+    value = null as unknown as T;
+  });
 
   return new Proxy<{value: T}>(
     {value},

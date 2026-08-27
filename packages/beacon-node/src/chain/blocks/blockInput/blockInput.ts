@@ -617,7 +617,7 @@ type BlockInputColumnsState =
  * - The block is not yet seen and all required sampled columns are seen
  * - The block is not yet seen and all required sampled columns are not yet seen
  */
-export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecars> {
+export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecar[]> {
   type = DAType.Columns as const;
 
   state: BlockInputColumnsState;
@@ -630,7 +630,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
    *
    * This is different from `dataPromise` which resolves when all data is available or could become available (e.g. through reconstruction)
    */
-  protected computedDataPromise = createPromise<fulu.DataColumnSidecars>();
+  protected computedDataPromise = createPromise<fulu.DataColumnSidecar[]>();
 
   private constructor(
     init: BlockInputInit,
@@ -854,8 +854,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.state.versionedHashes;
   }
 
-  getCustodyColumns(): fulu.DataColumnSidecars {
-    const columns: fulu.DataColumnSidecars = [];
+  getCustodyColumns(): fulu.DataColumnSidecar[] {
+    const columns: fulu.DataColumnSidecar[] = [];
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -876,8 +876,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return columns;
   }
 
-  getSampledColumns(): fulu.DataColumnSidecars {
-    const columns: fulu.DataColumnSidecars = [];
+  getSampledColumns(): fulu.DataColumnSidecar[] {
+    const columns: fulu.DataColumnSidecar[] = [];
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -891,12 +891,15 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return [...this.columnsCache.values()];
   }
 
-  getAllColumns(): fulu.DataColumnSidecars {
+  getAllColumns(): fulu.DataColumnSidecar[] {
     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
   }
 
+  /**
+   * Strictly checks missing sampled columns. Does NOT short-circuit on `state.hasAllData`.
+   */
   getMissingSampledColumnMeta(): MissingColumnMeta {
-    if (this.state.hasAllData) {
+    if (this.state.hasComputedAllData) {
       return {
         missing: [],
         versionedHashes: this.state.versionedHashes,
@@ -919,7 +922,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.state.hasComputedAllData;
   }
 
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecars> {
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecar[]> {
     if (!this.state.hasComputedAllData) {
       return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
     }

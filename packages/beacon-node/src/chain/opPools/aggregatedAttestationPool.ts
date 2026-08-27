@@ -1,4 +1,4 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
@@ -26,6 +26,8 @@ import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttestationParticipationStatus,
+  isStatePostAltair,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {MapDef, assert, toRootHex} from "@lodestar/utils";
@@ -232,6 +234,7 @@ export class AggregatedAttestationPool {
     const stateEpoch = state.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const rootCache = new RootCache(state);
+    const gloasState = isStatePostGloas(state) ? state : null;
 
     const notSeenValidatorsFn = getNotSeenValidatorsFn(this.config, shufflingCache, state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
@@ -353,13 +356,14 @@ export class AggregatedAttestationPool {
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
           // Score attestations by profitability to maximize proposer reward
-          const flags = getAttestationParticipationStatus(
+          const {flags} = getAttestationParticipationStatus(
             ForkSeq[fork],
             consolidation.attData,
             inclusionDistance,
             stateEpoch,
             rootCache,
-            ForkSeq[fork] >= ForkSeq.gloas ? state.executionPayloadAvailability : null
+            gloasState?.executionPayloadAvailability ?? null,
+            gloasState?.latestExecutionPayloadBid.slot ?? null
           );
 
           const weight =
@@ -429,7 +433,7 @@ export class AggregatedAttestationPool {
       );
     } else {
       const attestationGroupsByIndex = this.attestationGroupByIndexByDataHexBySlot.get(bySlot);
-      if (!attestationGroupsByIndex) throw Error(`No attestations for slot ${bySlot}`);
+      if (!attestationGroupsByIndex) return [];
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
@@ -741,6 +745,9 @@ export function getNotSeenValidatorsFn(
   const stateSlot = state.slot;
   if (config.getForkName(stateSlot) === ForkName.phase0) {
     throw new Error("getNotSeenValidatorsFn is not supported phase0 state");
+  }
+  if (!isStatePostAltair(state)) {
+    throw new Error("Expected Altair state for participation tracking");
   }
 
   // altair and future forks

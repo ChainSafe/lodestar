@@ -20,11 +20,6 @@ export type FIFOBlockStateCacheOpts = {
  *                                                                                             clock slot
  */
 export const DEFAULT_MAX_BLOCK_STATES = 64;
-/**
- * For Gloas (ePBS), each block can have two states: block state and payload state.
- * Double the cache size to maintain the same effective block depth.
- */
-export const DEFAULT_MAX_BLOCK_STATES_GLOAS = 128;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
@@ -46,7 +41,7 @@ export const DEFAULT_MAX_BLOCK_STATES_GLOAS = 128;
  * The maintained key order would be: 11 -> 13 -> 12 -> 10, and state 10 will be pruned first.
  */
 export class FIFOBlockStateCache implements BlockStateCache {
-  private maxStates: number;
+  readonly maxStates: number;
 
   private readonly cache: MapTracker<string, IBeaconStateView>;
   /**
@@ -150,12 +145,19 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
+   * On a checkpoint event, prune the cache while keeping the head state.
+   */
+  onCheckpoint(headStateRootHex: string): void {
+    this.prune(headStateRootHex);
+  }
+
+  /**
    * Prune the cache from tail to keep the most recent n states consistently.
    * The tail of the list is the oldest state, in case regen adds back the same state,
    * it should stay next to head so that it won't be pruned right away.
    * The FIFO cache helps with this.
    */
-  prune(lastAddedKey: string): void {
+  private prune(lastAddedKey: string): void {
     while (this.keyOrder.length > this.maxStates) {
       const key = this.keyOrder.last();
       // it does not make sense to prune the last added state
@@ -171,16 +173,6 @@ export class FIFOBlockStateCache implements BlockStateCache {
       this.cache.delete(key);
     }
   }
-
-  upgradeToGloas(): void {
-    this.maxStates = DEFAULT_MAX_BLOCK_STATES_GLOAS;
-  }
-
-  /**
-   * No need for this implementation
-   * This is only to conform to the old api
-   */
-  deleteAllBeforeEpoch(): void {}
 
   /**
    * ONLY FOR DEBUGGING PURPOSES. For lodestar debug API.

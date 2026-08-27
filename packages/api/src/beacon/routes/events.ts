@@ -1,9 +1,10 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
+  BuilderIndex,
   Epoch,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -15,12 +16,13 @@ import {
   altair,
   capella,
   electra,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
@@ -37,7 +39,7 @@ export const blobSidecarSSE = new ContainerType(
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
 
-export const dataColumnSidecarSSE = new ContainerType(
+export const fuluDataColumnSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
     index: ssz.ColumnIndex,
@@ -46,7 +48,31 @@ export const dataColumnSidecarSSE = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
-type DataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSE>;
+const gloasDataColumnSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.ColumnIndex,
+    slot: ssz.Slot,
+  },
+  {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
+);
+const headV2 = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    state: stringType,
+    payloadStatus: new StringType<"empty" | "full">(),
+    epochTransition: ssz.Boolean,
+    currentEpochDependentRoot: stringType,
+    nextEpochDependentRoot: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "HeadV2", jsonCase: "eth2"}
+);
+type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
+type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
+type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
+type HeadV2 = ValueOf<typeof headV2>;
 
 export enum EventType {
   /**
@@ -56,6 +82,16 @@ export enum EventType {
    * Both dependent roots use the genesis block root in the case of underflow.
    */
   head = "head",
+  /**
+   * The node's fork choice has selected a new head consisting of a beacon block and its `payload_status`.
+   * The node should emit a second head event for the same beacon block and slot when there is an update
+   * in the `payload_status` from empty to full. Emission on other payload_status transitions (e.g. full to empty)
+   * is optional and implementation-defined. `slot` is the slot of the head block. `current_epoch_dependent_root`
+   * is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and `next_epoch_dependent_root`
+   * is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)`, where `epoch` is obtained by
+   * `compute_epoch_at_slot(slot)`. All dependent roots use the genesis block root in the case of underflow.
+   */
+  headV2 = "head_v2",
   /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
   /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
@@ -88,12 +124,25 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has verified that the execution payload and blobs for a block are available */
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
+  executionPayload = "execution_payload",
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that passes validation rules of the `execution_payload` topic */
+  executionPayloadGossip = "execution_payload_gossip",
+  /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
+  /** The node has received a `SignedExecutionPayloadBid` (from P2P or API) that passes gossip validation on the `execution_payload_bid` topic */
+  executionPayloadBid = "execution_payload_bid",
+  /** The node has received a `SignedProposerPreferences` (from P2P or API) that passes gossip validation on the `proposer_preferences` topic */
+  proposerPreferences = "proposer_preferences",
+  /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
+  payloadAttestationMessage = "payload_attestation_message",
+  /** The node has executed the Fast Confirmation Rule and produced a confirmed beacon block */
+  fastConfirmation = "fast_confirmation",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
   [EventType.head]: EventType.head,
+  [EventType.headV2]: EventType.headV2,
   [EventType.block]: EventType.block,
   [EventType.blockGossip]: EventType.blockGossip,
   [EventType.attestation]: EventType.attestation,
@@ -110,7 +159,13 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
   [EventType.dataColumnSidecar]: EventType.dataColumnSidecar,
+  [EventType.executionPayload]: EventType.executionPayload,
+  [EventType.executionPayloadGossip]: EventType.executionPayloadGossip,
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
+  [EventType.executionPayloadBid]: EventType.executionPayloadBid,
+  [EventType.proposerPreferences]: EventType.proposerPreferences,
+  [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
+  [EventType.fastConfirmation]: EventType.fastConfirmation,
 };
 
 export type EventData = {
@@ -122,6 +177,10 @@ export type EventData = {
     previousDutyDependentRoot: RootHex;
     currentDutyDependentRoot: RootHex;
     executionOptimistic: boolean;
+  };
+  [EventType.headV2]: {
+    version: ForkName;
+    data: HeadV2;
   };
   [EventType.block]: {
     slot: Slot;
@@ -160,9 +219,30 @@ export type EventData = {
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
+  [EventType.executionPayload]: {
+    slot: Slot;
+    builderIndex: BuilderIndex;
+    blockHash: RootHex;
+    blockRoot: RootHex;
+    executionOptimistic: boolean;
+  };
+  [EventType.executionPayloadGossip]: {
+    slot: Slot;
+    builderIndex: BuilderIndex;
+    blockHash: RootHex;
+    blockRoot: RootHex;
+  };
   [EventType.executionPayloadAvailable]: {
     slot: Slot;
     blockRoot: RootHex;
+  };
+  [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
+  [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
+  [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
+  [EventType.fastConfirmation]: {
+    block: RootHex;
+    slot: Slot;
+    currentSlot: Slot;
   };
 };
 
@@ -248,6 +328,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.headV2]: WithVersion(() => headV2),
 
     [EventType.block]: new ContainerType(
       {
@@ -317,11 +398,56 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
     [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
-    [EventType.dataColumnSidecar]: dataColumnSidecarSSE,
+    [EventType.dataColumnSidecar]: {
+      toJson: (data) => {
+        const fork = config.getForkName(data.slot);
+        if (isForkPostGloas(fork)) {
+          return gloasDataColumnSidecarSSE.toJson(data);
+        }
+        return fuluDataColumnSidecarSSE.toJson(data as FuluDataColumnSidecarSSE);
+      },
+      fromJson: (data) => {
+        const fork = config.getForkName(Number((data as DataColumnSidecarSSE).slot));
+        if (isForkPostGloas(fork)) {
+          return gloasDataColumnSidecarSSE.fromJson(data);
+        }
+        return fuluDataColumnSidecarSSE.fromJson(data);
+      },
+    },
+    [EventType.executionPayload]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        builderIndex: ssz.BuilderIndex,
+        blockHash: stringType,
+        blockRoot: stringType,
+        executionOptimistic: ssz.Boolean,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.executionPayloadGossip]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        builderIndex: ssz.BuilderIndex,
+        blockHash: stringType,
+        blockRoot: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
     [EventType.executionPayloadAvailable]: new ContainerType(
       {
         slot: ssz.Slot,
         blockRoot: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
+    [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
+    [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
+    [EventType.fastConfirmation]: new ContainerType(
+      {
+        block: stringType,
+        slot: ssz.Slot,
+        currentSlot: ssz.Slot,
       },
       {jsonCase: "eth2"}
     ),

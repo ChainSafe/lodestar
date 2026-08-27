@@ -1,18 +1,31 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {isForkPostGloas} from "@lodestar/params";
+import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc, differenceHex} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
-/** This polls block duties 1s before the next epoch */
+/**
+ * Pre-Gloas: poll next-epoch proposer duties ~1s before the boundary. The deterministic 1-epoch
+ * lookahead (EIP-7917) is available post-Fulu, but consuming it requires `getProposerDutiesV2`,
+ * which was added to beacon-APIs only after Fulu shipped. To avoid depending on an endpoint not
+ * all clients implement yet, the VC keeps using v1 + this boundary poll until Gloas; only then
+ * does it switch to the lookahead-based pre-fetch in `runEveryEpoch`.
+ *
+ * Historical context: starting Jul 2023 we poll 1s before the next epoch because
+ * `PrepareNextSlotScheduler` (BN-side) usually finishes the upcoming-epoch transition in ~3s,
+ * so the proposer-duties query at ~1s pre-boundary lands on a hot cache. See:
+ *  - https://github.com/ChainSafe/lodestar/issues/5792
+ */
 // TODO: change to 8333 (5/6 of slot) to do it 2s before the next epoch
 // once we have some improvement on epoch transition time
 // see https://github.com/ChainSafe/lodestar/issues/5792#issuecomment-1647457442
-// TODO GLOAS: re-evaluate timing
+// TODO GLOAS: re-evaluate timing — Gloas may want the offset *after* the boundary
 const BLOCK_DUTIES_LOOKAHEAD_BPS = 9167;
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -20,15 +33,29 @@ const HISTORICAL_DUTIES_EPOCHS = 2;
 const GENESIS_EPOCH = 0;
 export const GENESIS_SLOT = 0;
 
-type BlockDutyAtEpoch = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
+export type BlockDutyAtEpoch = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
   /** Notify the block service if it should produce a block. */
-  private readonly notifyBlockProductionFn: NotifyBlockProductionFn;
+  private notifyBlockProductionFn: NotifyBlockProductionFn = () => {};
   /** Maps an epoch to all *local* proposers in this epoch. Notably, this does not contain
       proposals for any validators which are not registered locally. */
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
+
+  /**
+   * Tracks which proposer pubkeys we have already notified for the active slot so that
+   * a late-arriving cache update (SSE-driven refetch, slow initial poll) only fires
+   * `notifyBlockProductionFn` for *newly discovered* proposers, never duplicates.
+   */
+  private notifiedSlot: Slot = -1;
+  private readonly notifiedProposers = new Set<PubkeyHex>();
+  /**
+   * True once `notifyProposersForSlot` has been invoked for `notifiedSlot`, regardless of
+   * whether anything was notified. Any subsequent invocation that finds *new* proposers is
+   * therefore a late detection — the signal tracked by `newProposalDutiesDetected`.
+   */
+  private notifiedSlotInitialPass = false;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -36,21 +63,26 @@ export class BlockDutiesService {
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
-    notifyBlockProductionFn: NotifyBlockProductionFn
+    chainHeaderTracker: ChainHeaderTracker,
+    private readonly metrics: Metrics | null
   ) {
-    this.notifyBlockProductionFn = notifyBlockProductionFn;
-
-    // TODO: Instead of polling every CLOCK_SLOT, poll every CLOCK_EPOCH and track re-org events
-    //       only then re-fetch the block duties. Make sure most clients (including Lodestar)
-    //       properly emit the re-org event
-    clock.runEverySlot(this.runBlockDutiesTask);
+    clock.runEveryEpoch(this.runEveryEpochTask);
+    clock.runEverySlot(this.runEverySlotTask);
+    chainHeaderTracker.runOnNewHead(this.onNewHead);
 
     if (metrics) {
       metrics.proposerDutiesEpochCount.addCollect(() => {
         metrics.proposerDutiesEpochCount.set(this.proposers.size);
       });
     }
+  }
+
+  /**
+   * Late-bind the production callback. Allows the duties service to be constructed
+   * before the consumer that handles proposal production.
+   */
+  setNotifyBlockProductionFn(notifyBlockProductionFn: NotifyBlockProductionFn): void {
+    this.notifyBlockProductionFn = notifyBlockProductionFn;
   }
 
   /**
@@ -75,6 +107,16 @@ export class BlockDutiesService {
     return Array.from(publicKeys.values());
   }
 
+  /**
+   * Returns the cached `{dependentRoot, data}` entry for `epoch`, or `undefined` if duties
+   * for that epoch are not yet known. Consumers can detect a proposer-shuffling change
+   * (e.g. after a reorg) by observing a different `dependentRoot` than the one they last
+   * read for the same epoch.
+   */
+  getProposersAtEpoch(epoch: Epoch): BlockDutyAtEpoch | undefined {
+    return this.proposers.get(epoch);
+  }
+
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const blockDutyAtEpoch of this.proposers.values()) {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
@@ -83,99 +125,181 @@ export class BlockDutiesService {
     }
   }
 
-  private runBlockDutiesTask = async (slot: Slot, signal: AbortSignal): Promise<void> => {
+  /**
+   * Baseline per-epoch fetch. Fires at epoch boundaries (and once at startup). Post-Gloas the
+   * deterministic 1-epoch lookahead (consumed via v2) lets us also pre-fetch `epoch + 1`;
+   * pre-Gloas the next epoch's dep_root only stabilizes at the boundary and is handled by
+   * `runEverySlotTask`.
+   *
+   * Mid-epoch refreshes (e.g. reorgs) are driven by `onNewHead` instead of polling every slot.
+   */
+  private runEveryEpochTask = async (epoch: Epoch): Promise<void> => {
     try {
-      if (slot < 0) {
-        // Before genesis, fetch the genesis duties but don't notify block production
-        // Only fetch duties once since there is not possible to re-org. TODO: Review
+      if (epoch < GENESIS_EPOCH) {
+        // Pre-genesis: prime the genesis-epoch duties exactly once so the slot-0 proposer
+        // doesn't have to wait on a cold cache. Only fetch once since a pre-genesis re-org
+        // is not possible. TODO: Review.
         if (!this.proposers.has(GENESIS_EPOCH)) {
           await this.pollBeaconProposers(GENESIS_EPOCH);
         }
-      } else {
-        await this.pollBeaconProposersAndNotify(slot, signal);
+        return;
+      }
+
+      await this.pollBeaconProposers(epoch);
+
+      const nextEpoch = epoch + 1;
+      if (isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(nextEpoch)))) {
+        await this.pollBeaconProposers(nextEpoch);
       }
     } catch (e) {
-      this.logger.error("Error on pollBeaconProposers", {}, e as Error);
+      this.logger.error("Error on runEveryEpochTask", {epoch}, e as Error);
     } finally {
-      this.pruneOldDuties(computeEpochAtSlot(slot));
+      this.pruneOldDuties(Math.max(epoch, GENESIS_EPOCH));
     }
   };
 
   /**
-   * Download the proposer duties for the current epoch and store them in `this.proposers`.
-   * If there are any proposer for this slot, send out a notification to the block proposers.
-   *
-   * ## Note
-   *
-   * This function will potentially send *two* notifications to the `BlockService`; it will send a
-   * notification initially, then it will download the latest duties and send a *second* notification
-   * if those duties have changed. This behaviour simultaneously achieves the following:
-   *
-   * 1. Block production can happen immediately and does not have to wait for the proposer duties to
-   *    download.
-   * 2. We won't miss a block if the duties for the current slot happen to change with this poll.
-   *
-   * This sounds great, but is it safe? Firstly, the additional notification will only contain block
-   * producers that were not included in the first notification. This should be safety enough.
-   * However, we also have the slashing protection as a second line of defense. These two factors
-   * provide an acceptable level of safety.
-   *
-   * It's important to note that since there is a 0-epoch look-ahead (i.e., no look-ahead) for block
-   * proposers then it's very likely that a proposal for the first slot of the epoch will need go
-   * through the slow path every time. I.e., the proposal will only happen after we've been able to
-   * download and process the duties from the BN. This means it is very important to ensure this
-   * function is as fast as possible.
-   *   - Starting from Jul 2023, we poll proposers 1s before the next epoch thanks to PrepareNextSlotScheduler
-   * usually finishes in 3s.
+   * Slot-tick handler. Notifies block production for cached proposers in this slot, and on
+   * the last slot of a pre-Gloas epoch schedules the boundary fetch for `nextEpoch` duties.
+   * Reorg detection is handled by `onNewHead`, so this task does not re-poll on every slot.
    */
-  private async pollBeaconProposersAndNotify(currentSlot: Slot, signal: AbortSignal): Promise<void> {
-    const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
-    const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
-    if (isLastSlotEpoch) {
-      // no need to await for other steps, just poll proposers for next epoch
-      this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal).catch((e) => {
-        this.logger.error("Error on pollBeaconProposersNextEpoch", {}, e);
-      });
+  private runEverySlotTask = async (slot: Slot, signal: AbortSignal): Promise<void> => {
+    try {
+      if (slot < GENESIS_SLOT) {
+        return;
+      }
+
+      this.notifyProposersForSlot(slot);
+
+      const nextEpoch = computeEpochAtSlot(slot) + 1;
+      const isLastSlotOfEpoch = computeStartSlotAtEpoch(nextEpoch) === slot + 1;
+      if (isLastSlotOfEpoch && !isForkPostGloas(this.config.getForkName(slot + 1))) {
+        // Pre-Gloas the VC uses v1 and does not pre-fetch the next epoch on the epoch tick, so
+        // fetch it ~1s before the boundary instead. Pre-Fulu this is required (0-epoch lookahead);
+        // for Fulu the lookahead exists but the v2 path is deferred to Gloas (see top of file).
+        this.pollBeaconProposersBeforeBoundary(slot, nextEpoch, signal).catch((e) => {
+          this.logger.error("Error on pollBeaconProposersBeforeBoundary", {nextEpoch}, e);
+        });
+      }
+    } catch (e) {
+      this.logger.error("Error on runEverySlotTask", {slot}, e as Error);
+    }
+  };
+
+  /**
+   * SSE head-event handler. The beacon-API `head` event carries attester-duty dep_roots,
+   * which coincide with the proposer dep_roots the VC caches. The offset depends on the
+   * proposer-duties endpoint the VC uses, which is gated on Gloas (v1 before, v2 after):
+   *
+   *   Pre-Gloas  (v1 proposer dep_root(E) = block@startSlot(E) - 1):
+   *     currentDutyDependentRoot  ≡ proposer_dep_root(currentEpoch)
+   *     (next-epoch proposer dep_root is not exposed; pre-Gloas falls back to the
+   *      `runEverySlotTask` boundary poll.)
+   *
+   *   Post-Gloas (v2 proposer dep_root(E) = block@startSlot(E - 1) - 1, EIP-7917):
+   *     previousDutyDependentRoot ≡ proposer_dep_root(currentEpoch)
+   *     currentDutyDependentRoot  ≡ proposer_dep_root(nextEpoch)
+   *
+   * On a dep_root mismatch (reorg, or initial sync delivering a fresher head) we refetch
+   * just the affected epoch, mirroring `AttestationDutiesService.onNewHead`.
+   */
+  private onNewHead = async ({
+    slot,
+    previousDutyDependentRoot,
+    currentDutyDependentRoot,
+  }: HeadEventData): Promise<void> => {
+    const currentEpoch = computeEpochAtSlot(slot);
+    const isPostGloas = isForkPostGloas(this.config.getForkName(slot));
+
+    if (isPostGloas) {
+      await this.refetchIfDepRootChanged(currentEpoch, previousDutyDependentRoot);
+      await this.refetchIfDepRootChanged(currentEpoch + 1, currentDutyDependentRoot);
+    } else {
+      await this.refetchIfDepRootChanged(currentEpoch, currentDutyDependentRoot);
+    }
+  };
+
+  private async refetchIfDepRootChanged(epoch: Epoch, expectedDepRoot: RootHex): Promise<void> {
+    const cached = this.proposers.get(epoch);
+    if (!cached || cached.dependentRoot === expectedDepRoot) {
+      return;
     }
 
-    // Notify the block proposal service for any proposals that we have in our cache.
-    const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
-    if (initialBlockProposers.length > 0) {
-      this.notifyBlockProductionFn(currentSlot, initialBlockProposers);
-    }
-
-    // Poll proposers again for the same slot
-    await this.pollBeaconProposers(computeEpochAtSlot(currentSlot));
-
-    // Compute the block proposers for this slot again, now that we've received an update from the BN.
-    //
-    // Then, compute the difference between these two sets to obtain a set of block proposers
-    // which were not included in the initial notification to the `BlockService`.
-    const newBlockProducers = this.getblockProposersAtSlot(currentSlot);
-    const additionalBlockProducers = differenceHex(initialBlockProposers, newBlockProducers);
-
-    // If there are any new proposers for this slot, send a notification so they produce a block.
-    //
-    // See the function-level documentation for more reasoning about this behaviour.
-    if (additionalBlockProducers.length > 0) {
-      this.notifyBlockProductionFn(currentSlot, additionalBlockProducers);
-      this.logger.debug("Detected new block proposer", {currentSlot});
-      this.metrics?.newProposalDutiesDetected.inc();
-    }
+    this.logger.debug("Proposer duties dep_root changed, refetching", {
+      epoch,
+      priorDependentRoot: cached.dependentRoot,
+      newDependentRoot: expectedDepRoot,
+    });
+    await this.pollBeaconProposers(epoch);
   }
 
   /**
-   * This is to avoid some delay on the first slot of the epoch when validators have proposal duties.
-   * See https://github.com/ChainSafe/lodestar/issues/5792
+   * Pre-Gloas boundary fetch. Without a pre-fetched next epoch, a proposal for the first slot
+   * of the new epoch otherwise goes through the slow path every time: the proposal can only
+   * happen *after* we download and process the new duties from the BN. Polling ~1s before the
+   * boundary, while `PrepareNextSlotScheduler` is finishing the upcoming-epoch transition, lets
+   * us land on a hot BN cache and avoid the miss.
+   *
+   * See https://github.com/ChainSafe/lodestar/issues/5792.
    */
-  private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
+  private async pollBeaconProposersBeforeBoundary(
+    currentSlot: Slot,
+    nextEpoch: Epoch,
+    signal: AbortSignal
+  ): Promise<void> {
     const nextSlot = currentSlot + 1;
     const lookAheadMs =
       this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
-    this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
-    // Poll proposers for the next epoch
+    this.logger.debug("Polling proposers for the next epoch", {nextEpoch, currentSlot});
     await this.pollBeaconProposers(nextEpoch);
+  }
+
+  /**
+   * Notify block production for *newly discovered* proposers in this slot. Notifications are
+   * deduplicated per-slot so that a late SSE refetch can extend the proposer set without
+   * triggering a duplicate `createAndPublishBlock` for already-notified validators.
+   *
+   * ## Multi-notification safety
+   *
+   * Within a single slot the cache can be updated from several sources (cold-cache backfill at
+   * startup, SSE-driven reorg refetch). Each update may fire this function again. The contract
+   * we keep is: each pubkey is notified *at most once per slot*. The additional notifications
+   * only carry proposers that were not part of an earlier notification.
+   *
+   * Is this safe? Firstly, the dedup above guarantees we never ask the same validator to
+   * propose twice for the same slot. Secondly, slashing protection in `ValidatorStore` acts as
+   * a second line of defense should the dedup ever fail. Together they provide an acceptable
+   * level of safety for the "notify-from-cache, refine-after-refetch" pattern.
+   */
+  private notifyProposersForSlot(slot: Slot): void {
+    if (slot !== this.notifiedSlot) {
+      this.notifiedSlot = slot;
+      this.notifiedSlotInitialPass = false;
+      this.notifiedProposers.clear();
+    }
+
+    const isLateDetection = this.notifiedSlotInitialPass;
+    this.notifiedSlotInitialPass = true;
+
+    const newProposers: BLSPubkey[] = [];
+    for (const pubkey of this.getblockProposersAtSlot(slot)) {
+      const pubkeyHex = toPubkeyHex(pubkey);
+      if (!this.notifiedProposers.has(pubkeyHex)) {
+        this.notifiedProposers.add(pubkeyHex);
+        newProposers.push(pubkey);
+      }
+    }
+
+    if (newProposers.length === 0) {
+      return;
+    }
+
+    if (isLateDetection) {
+      this.metrics?.newProposalDutiesDetected.inc();
+      this.logger.debug("Detected new block proposer", {slot});
+    }
+    this.notifyBlockProductionFn(slot, newProposers);
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
@@ -184,7 +308,11 @@ export class BlockDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getProposerDuties({epoch});
+    // Use v2 only post-Gloas: it exposes the post-Fulu deterministic proposer dependent root,
+    // but was added to beacon-APIs after Fulu shipped, so we defer to it until Gloas (see top).
+    const res = isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(epoch)))
+      ? await this.api.validator.getProposerDutiesV2({epoch})
+      : await this.api.validator.getProposerDuties({epoch});
     const proposerDuties = res.value();
     const {dependentRoot} = res.meta();
     const relevantDuties = proposerDuties.filter((duty) => {
@@ -195,6 +323,11 @@ export class BlockDutiesService {
     this.logger.debug("Downloaded proposer duties", {epoch, dependentRoot, count: relevantDuties.length});
 
     const prior = this.proposers.get(epoch);
+    // Concurrent polls for the same epoch (e.g. `onNewHead` and `runEveryEpochTask` racing)
+    // both write here last-write-wins. The pre-refactor per-slot poll healed any stale write
+    // on the next slot; in the event-driven model staleness can persist until the next
+    // dep_root change. In practice the same BN serves both calls so they return identical
+    // payloads — accept the rare race rather than serialising fetches.
     this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
 
     if (prior && prior.dependentRoot !== dependentRoot) {
@@ -203,6 +336,12 @@ export class BlockDutiesService {
         priorDependentRoot: prior.dependentRoot,
         dependentRoot,
       });
+    }
+
+    // If this fetch revealed proposer(s) for the active slot that the last `runEverySlotTask`
+    // missed (cold cache at startup, or duties shifted by a reorg), notify now.
+    if (this.notifiedSlot >= GENESIS_SLOT && computeEpochAtSlot(this.notifiedSlot) === epoch) {
+      this.notifyProposersForSlot(this.notifiedSlot);
     }
   }
 

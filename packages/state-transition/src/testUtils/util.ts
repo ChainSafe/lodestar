@@ -1,38 +1,46 @@
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {
+  BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_DEPOSIT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
   ForkSeq,
+  GENESIS_SLOT,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
+import {BeaconState, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {getEffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
-  interopSecretKey,
   newFilledArray,
   processSlots,
 } from "../index.js";
 import {
   BeaconStateAltair,
+  BeaconStateElectra,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
 } from "../types.js";
+import {computeDomain} from "../util/domain.js";
+import {interopSecretKey} from "../util/interop.js";
+import {computeSigningRoot} from "../util/signingRoot.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getActiveValidatorIndices} from "../util/validator.js";
-import {interopPubkeysCached} from "./interop.js";
+import {ensureInteropPubkeyCache} from "./interopPubkeyCache.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -41,6 +49,9 @@ let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
+let electraState: BeaconStateElectra | null = null;
+let electraCachedState23637: CachedBeaconStateElectra | null = null;
+let electraCachedState23638: CachedBeaconStateElectra | null = null;
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -58,47 +69,45 @@ export const perfStateId = `${numValidators} vs - 7PWei`;
 
 /** Cache interop secret keys */
 const secretKeyByModIndex = new Map<number, SecretKey>();
+const pubkeysByCount = new Map<number, Uint8Array[]>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
 export function getPubkeys(vc = numValidators) {
-  const pubkeysMod = interopPubkeysCached(keypairsMod);
-  const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
-  const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
+  ensureInteropPubkeyCache(vc);
+  let pubkeys = pubkeysByCount.get(vc);
+  if (!pubkeys) {
+    for (const [count, cached] of pubkeysByCount) {
+      if (count >= vc) {
+        pubkeys = cached.slice(0, vc);
+        break;
+      }
+    }
+    pubkeys ??= Array.from({length: vc}, (_, i) => pubkeyCache.getPubkeyBytesOrThrow(i));
+    pubkeysByCount.set(vc, pubkeys);
+  }
+  const pubkeysMod = pubkeys;
+  const pubkeysModObj = pubkeys.slice(0, keypairsMod).map((pk) => PublicKey.fromBytes(pk));
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }
 
 /** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
 export function getSecretKeyFromIndex(validatorIndex: number): SecretKey {
-  return interopSecretKey(validatorIndex % keypairsMod);
+  return interopSecretKey(validatorIndex);
 }
 
 /** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
 export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
-  const keyIndex = validatorIndex % keypairsMod;
-  let sk = secretKeyByModIndex.get(keyIndex);
+  let sk = secretKeyByModIndex.get(validatorIndex);
   if (!sk) {
-    sk = interopSecretKey(keyIndex);
-    secretKeyByModIndex.set(keyIndex, sk);
+    sk = interopSecretKey(validatorIndex);
+    secretKeyByModIndex.set(validatorIndex, sk);
   }
   return sk;
 }
 
-function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
-  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < numValidators; i++) {
-    const pubkey = pubkeysMod[i % keypairsMod];
-    pubkeyCache.set(i, pubkey);
-  }
-
-  return {pubkeyCache};
-}
-
 export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): CachedBeaconStatePhase0 {
-  // Generate only some publicKeys
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {pubkeys} = getPubkeys();
 
   if (!phase0State) {
     const state = buildPerformanceStatePhase0();
@@ -206,29 +215,78 @@ export function generatePerfTestCachedStateAltair(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
 }): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys} = getPubkeys(vc);
 
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
-  if (!altairCachedState23637) {
+  // For non-default vc, generate fresh without caching to avoid accumulating large states in memory
+  const isDefaultVc = vc === numValidators;
+  let cachedState23637 = isDefaultVc ? altairCachedState23637 : null;
+  if (!cachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    altairCachedState23637 = createCachedBeaconState(state, {
+    cachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkeyCache,
     });
+    if (isDefaultVc) altairCachedState23637 = cachedState23637;
   }
-  if (!altairCachedState23638) {
-    altairCachedState23638 = processSlots(
-      altairCachedState23637,
-      altairCachedState23637.slot + 1
-    ) as CachedBeaconStateAltair;
-    altairCachedState23638.slot += 1;
+
+  let cachedState23638 = isDefaultVc ? altairCachedState23638 : null;
+  if (!cachedState23638) {
+    cachedState23638 = processSlots(cachedState23637, cachedState23637.slot + 1) as CachedBeaconStateAltair;
+    cachedState23638.slot += 1;
+    if (isDefaultVc) altairCachedState23638 = cachedState23638;
   }
-  const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
+
+  const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
+
+  return resultingState.clone();
+}
+
+/**
+ * Warning: This function has side effects on the cached state
+ * The order in which the caches are populated is important and can cause stable tests to fail.
+ */
+export function generatePerfTestCachedStateElectra(opts?: {
+  goBackOneSlot: boolean;
+  vc?: number;
+}): CachedBeaconStateElectra {
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys} = getPubkeys(vc);
+
+  const electraConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+  });
+
+  const origState = generatePerformanceStateElectra(pubkeys);
+
+  // For non-default vc, generate fresh without caching to avoid accumulating large states in memory
+  const isDefaultVc = vc === numValidators;
+  let cachedState23637 = isDefaultVc ? electraCachedState23637 : null;
+  if (!cachedState23637) {
+    const state = origState.clone();
+    state.slot -= 1;
+    cachedState23637 = createCachedBeaconState(state, {
+      config: createBeaconConfig(electraConfig, state.genesisValidatorsRoot),
+      pubkeyCache,
+    });
+    if (isDefaultVc) electraCachedState23637 = cachedState23637;
+  }
+  let cachedState23638 = isDefaultVc ? electraCachedState23638 : null;
+  if (!cachedState23638) {
+    cachedState23638 = processSlots(cachedState23637, cachedState23637.slot + 1) as CachedBeaconStateElectra;
+    cachedState23638.slot += 1;
+    if (isDefaultVc) electraCachedState23638 = cachedState23638;
+  }
+  const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
 
   return resultingState.clone();
 }
@@ -237,8 +295,12 @@ export function generatePerfTestCachedStateAltair(opts?: {
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
-  if (!altairState) {
-    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  const isDefaultVc = vc === numValidators;
+  // Only use cached state for default vc to avoid accumulating large states in memory
+  let cached = isDefaultVc ? altairState : null;
+  if (!cached) {
     const statePhase0 = buildPerformanceStatePhase0(pubkeys);
     const state = statePhase0 as BeaconState as BeaconState<ForkName.altair>;
 
@@ -251,27 +313,81 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     state.nextSyncCommittee = state.currentSyncCommittee;
 
     // Now the state is fully populated to convert to ViewDU
-    altairState = ssz.altair.BeaconState.toViewDU(state);
+    cached = ssz.altair.BeaconState.toViewDU(state);
 
     // Now set correct syncCommittees
     const epoch = computeEpochAtSlot(state.slot);
-    const activeValidatorIndices = getActiveValidatorIndices(altairState, epoch);
+    const activeValidatorIndices = getActiveValidatorIndices(cached, epoch);
 
-    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(altairState);
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(cached);
     const {syncCommittee} = getNextSyncCommittee(
       ForkSeq.altair,
-      altairState,
+      cached,
       activeValidatorIndices,
       effectiveBalanceIncrements
     );
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
 
-    altairState = ssz.altair.BeaconState.toViewDU(state);
+    cached = ssz.altair.BeaconState.toViewDU(state);
     // cache roots
-    altairState.hashTreeRoot();
+    cached.hashTreeRoot();
+    if (isDefaultVc) altairState = cached;
   }
-  return altairState.clone();
+  return cached.clone();
+}
+
+/**
+ * This is generated from the same performance state as Altair, upgraded to Electra fields.
+ */
+export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): BeaconStateElectra {
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  const isDefaultVc = vc === numValidators;
+  // Only use cached state for default vc to avoid accumulating large states in memory
+  let cached = isDefaultVc ? electraState : null;
+  if (!cached) {
+    const electraConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const state = ssz.electra.BeaconState.defaultValue();
+
+    Object.assign(state, buildPerformanceStatePhase0(pubkeys));
+
+    state.fork.previousVersion = electraConfig.DENEB_FORK_VERSION;
+    state.fork.currentVersion = electraConfig.ELECTRA_FORK_VERSION;
+    state.fork.epoch = electraConfig.ELECTRA_FORK_EPOCH;
+    state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
+    state.currentEpochParticipation = state.previousEpochParticipation;
+    state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
+    state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
+    state.nextSyncCommittee = state.currentSyncCommittee;
+    state.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+    state.depositRequestsStartIndex = 2023n;
+
+    cached = ssz.electra.BeaconState.toViewDU(state);
+
+    const epoch = computeEpochAtSlot(state.slot);
+    const activeValidatorIndices = getActiveValidatorIndices(cached, epoch);
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(cached);
+    const {syncCommittee} = getNextSyncCommittee(
+      ForkSeq.electra,
+      cached,
+      activeValidatorIndices,
+      effectiveBalanceIncrements
+    );
+    state.currentSyncCommittee = syncCommittee;
+    state.nextSyncCommittee = syncCommittee;
+
+    cached = ssz.electra.BeaconState.toViewDU(state);
+    cached.hashTreeRoot();
+    if (isDefaultVc) electraState = cached;
+  }
+  return cached.clone();
 }
 
 /**
@@ -323,13 +439,13 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
     historicalRoots: [],
     // Eth1
     eth1Data: {
-      depositCount: pubkeys.length,
+      depositCount: BigInt(pubkeys.length),
       depositRoot: fromHexString("0xcb1f89a924cfd31224823db5a41b1643f10faa7aedf231f1e28887f6ee98c047"),
       blockHash: fromHexString("0x701fb2869ce16d0f1d14f6705725adb0dec6799da29006dfc6fff83960298f21"),
     },
     // minus one so that inserting 1 from block works
     eth1DataVotes: newFilledArray(EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1, {
-      depositCount: 1,
+      depositCount: 1n,
       depositRoot: Buffer.alloc(32, 1),
       blockHash: Buffer.alloc(32, 1),
     }),
@@ -375,15 +491,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   vc: number;
   slot: Slot;
 }): CachedBeaconStateAllForks {
-  // Generate only some publicKeys
-  const {pubkeys, pubkeysMod} = getPubkeys(vc);
-
-  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < vc; i++) {
-    const pubkey = pubkeysMod[i % keypairsMod];
-    pubkeyCache.set(i, pubkey);
-  }
+  const {pubkeys} = getPubkeys(vc);
 
   const state = ssz.phase0.BeaconState.defaultViewDU();
   state.slot = slot;
@@ -426,4 +534,68 @@ export function generateTestCachedBeaconStateOnlyValidators({
     },
     {skipSyncPubkeys: true}
   );
+}
+
+/**
+ * Generate `count` validly-signed builder pending deposits with distinct interop pubkeys
+ * [startIndex, startIndex + count). Withdrawal credentials carry the BUILDER_WITHDRAWAL_PREFIX so
+ * `isBuilderWithdrawalCredential` recognizes them. Used to exercise the pre-Gloas builder-deposit
+ * pre-verify scanner and the fork-transition onboarding path.
+ */
+export function generateBuilderPendingDeposits(
+  config: BeaconConfig,
+  count: number,
+  startIndex: number
+): electra.PendingDeposit[] {
+  // Deposits use a fork-agnostic domain, see `isValidDepositSignature`
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const amount = 1_000_000_000; // 1 ETH in Gwei
+  const deposits: electra.PendingDeposit[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const sk = interopSecretKey(startIndex + i);
+    const pubkey = sk.toPublicKey().toBytes();
+
+    const withdrawalCredentials = Buffer.alloc(32, 0);
+    withdrawalCredentials[0] = BUILDER_WITHDRAWAL_PREFIX;
+    // bytes [12, 32) hold the 20-byte builder execution address
+    withdrawalCredentials.fill((startIndex + i) & 0xff, 12, 32);
+
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+
+    deposits.push({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature: sk.sign(signingRoot).toBytes(),
+      slot: GENESIS_SLOT,
+    });
+  }
+
+  return deposits;
+}
+
+/**
+ * Generate a validly-signed *validator* (0x00-prefix) pending deposit for interop key `keyIndex`.
+ * Shares its pubkey with `generateBuilderPendingDeposits(config, 1, keyIndex)`, so it stands in for a
+ * validator deposit competing with a builder deposit for the same pubkey (the `hasPendingValidator`
+ * path). `amount` lets callers build otherwise-identical-but-distinct deposit value objects.
+ */
+export function generateValidatorPendingDeposit(
+  config: BeaconConfig,
+  keyIndex: number,
+  amount = 32_000_000_000
+): electra.PendingDeposit {
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const sk = interopSecretKey(keyIndex);
+  const pubkey = sk.toPublicKey().toBytes();
+  const withdrawalCredentials = Buffer.alloc(32, 0); // 0x00 prefix → validator, not a builder
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+  return {
+    pubkey,
+    withdrawalCredentials,
+    amount,
+    signature: sk.sign(signingRoot).toBytes(),
+    slot: GENESIS_SLOT,
+  };
 }

@@ -1,9 +1,21 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {
+  ArrayOf,
+  AttesterSlashing,
+  BeaconState,
+  Epoch,
+  RootHex,
+  SignedBeaconBlock,
+  Slot,
+  ValidatorIndex,
+  ssz,
+} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -11,10 +23,13 @@ import {
   JsonOnlyResponseCodec,
   WithVersion,
 } from "../../utils/codecs.js";
+import {toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
 } from "../../utils/metadata.js";
@@ -121,6 +136,26 @@ export type CustodyInfo = {
   /** List of column indices the node is custodying */
   custodyColumns: number[];
 };
+
+const BlockInfoType = new ContainerType({root: ssz.Root, slot: ssz.Slot});
+
+export const FastConfirmationInfoType = new ContainerType(
+  {
+    confirmed: BlockInfoType,
+    head: BlockInfoType,
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
+    previousEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    currentEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    previousEpochGreatestUnrealizedCheckpoint: ssz.phase0.Checkpoint,
+    previousSlotHead: ssz.Root,
+    currentSlotHead: ssz.Root,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type FastConfirmationInfo = ValueOf<typeof FastConfirmationInfoType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -382,9 +417,29 @@ export type Endpoints = {
     CustodyInfo,
     EmptyMeta
   >;
+
+  getFastConfirmationInfo: Endpoint<"GET", EmptyArgs, EmptyRequest, FastConfirmationInfo, EmptyMeta>;
+
+  /** Craft attester slashings from the attestations in the provided blocks */
+  getAttesterSlashingsFromBlocks: Endpoint<
+    "POST",
+    {signedBlocks: SignedBeaconBlock[]},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    AttesterSlashing[],
+    VersionMeta
+  >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  function assertBlocksMatchFork(signedBlocks: SignedBeaconBlock[], expectedFork: ForkName): void {
+    for (const block of signedBlocks) {
+      const blockFork = config.getForkName(block.message.slot);
+      if (blockFork !== expectedFork) {
+        throw new Error(`Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`);
+      }
+    }
+  }
+
   return {
     writeHeapdump: {
       url: "/eth/v1/lodestar/write_heapdump",
@@ -547,8 +602,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
-    // TODO GLOAS: this endpoint needs to be updated because post-gloas there could be two variants of the persisted checkpoint state (empty or full).
-    // Either add a an additional parameter `payloadPresent`, or return one or both variants of state.
     getPersistedCheckpointState: {
       url: "/eth/v1/lodestar/persisted_checkpoint_state",
       method: "GET",
@@ -601,6 +654,57 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
+    },
+    getFastConfirmationInfo: {
+      url: "/eth/v1/lodestar/fast_confirmation",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: FastConfirmationInfoType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getAttesterSlashingsFromBlocks: {
+      url: "/eth/v1/lodestar/blocks/attester_slashings",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        writeReqSsz: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
+        meta: VersionCodec,
+      },
     },
   };
 }

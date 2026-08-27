@@ -1,9 +1,10 @@
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
@@ -30,7 +31,6 @@ export enum ArchiveStoreTask {
   PruneHistory = "prune_history",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
-  RegenPruneOnFinalized = "regen_prune_on_finalized",
   ForkchoicePrune = "forkchoice_prune",
   UpdateBackfillRange = "update_backfill_range",
 }
@@ -41,7 +41,7 @@ export enum ArchiveStoreTask {
  */
 export class ArchiveStore {
   private archiveMode: ArchiveMode;
-  private jobQueue: JobItemQueue<[CheckpointWithPayloadStatus], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private archiveDataEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
@@ -64,7 +64,7 @@ export class ArchiveStore {
     this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
-    this.jobQueue = new JobItemQueue<[CheckpointWithPayloadStatus], void>(this.processFinalizedCheckpoint, {
+    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
       signal,
     });
@@ -120,6 +120,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,
         metrics: this.metrics,
@@ -165,17 +166,33 @@ export class ArchiveStore {
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = (finalized: CheckpointWithPayloadStatus): void => {
-    this.jobQueue.push(finalized).catch((e) => {
-      if (!isQueueErrorAborted(e)) {
-        this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
+    // Decouple finalized-checkpoint processing from block import. This handler runs synchronously
+    // inside the `ChainEvent.forkChoiceFinalized` emit from `forkChoice.onBlock()` during
+    // `importBlock()`; deferring the work to the next event-loop tick keeps any failure here off the
+    // import call stack, so it can't abort `importBlock()` before `regen.processState()` caches the
+    // head post-state — the deep-sync wedge this PR fixes (#9716).
+    //
+    // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
+    // awaiting it inside the deferred callback funnels both failure modes into the one catch.
+    callInNextEventLoop(async () => {
+      try {
+        await this.jobQueue.push(finalized);
+      } catch (e) {
+        if (!isQueueErrorAborted(e)) {
+          this.logger.error(
+            "Error queuing finalized checkpoint",
+            {epoch: finalized.epoch, rootHex: finalized.rootHex},
+            e as Error
+          );
+        }
       }
     });
   };
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
+    this.chain.regen.onCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot
@@ -186,7 +203,7 @@ export class ArchiveStore {
     });
   };
 
-  private processFinalizedCheckpoint = async (finalized: CheckpointWithPayloadStatus): Promise<void> => {
+  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
@@ -227,10 +244,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
       timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-      timer?.({source: ArchiveStoreTask.RegenPruneOnFinalized});
 
       // tasks rely on extended fork choice
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

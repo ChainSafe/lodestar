@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -10,12 +9,16 @@ import {IClock} from "../../util/clock.js";
 import {serializeState} from "../serializeState.js";
 import {CPStateDatastore, DatastoreKey} from "./datastore/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {BlockStateCache, CacheItemType, CheckpointHexPayload, CheckpointStateCache} from "./types.js";
+import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n state epochs in memory, persist the rest to disk */
   maxCPStateEpochsInMemory?: number;
-  /** Keep max n state epochs on disk */
+  /**
+   * On-disk retention of persisted checkpoint states. Selects one of two modes:
+   * - `Infinity` (default) -> tiered retention mode
+   * - any finite `n` (>= 0) -> legacy flat retention (keep the last n dense epochs)
+   */
   maxCPStateEpochsOnDisk?: number;
 };
 
@@ -50,22 +53,6 @@ type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 
 type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
-/** Bitmask for tracking which payload variants exist per root in the epochIndex */
-enum PayloadAvailability {
-  NOT_PRESENT = 1,
-  PRESENT = 2,
-}
-
-const PAYLOAD_AVAILABILITY_ALL = [PayloadAvailability.NOT_PRESENT, PayloadAvailability.PRESENT] as const;
-
-function toPayloadAvailability(payloadPresent: boolean): PayloadAvailability {
-  return payloadPresent ? PayloadAvailability.PRESENT : PayloadAvailability.NOT_PRESENT;
-}
-
-function fromPayloadAvailability(flag: PayloadAvailability): boolean {
-  return flag === PayloadAvailability.PRESENT;
-}
-
 /**
  * Before n-historical states, lodestar keeps all checkpoint states since finalized
  * Since Sep 2024, lodestar stores 3 most recent checkpoint states in memory and the rest on disk. The finalized state
@@ -80,6 +67,18 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
  * and instead require a resync from last finalized checkpoint state which could be very far in the past.
  */
 export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
+
+// CP_STATE_TIER_BASE = spacing multiplier per tier AND per-tier capacity. Deciding capacity == base
+// so that a full tier[n] always holds exactly ONE epoch aligned to tier[n+1]
+// given tier[n] has span = 16 ^ n and tier[n+1] has span = 16 ^ (n+1)
+// why 16?
+//   - tier 0 is the dense hot-regen window; it must exceed regen's MAX_EPOCH_TO_PROCESS (=5).
+//   - with a full 4 tiers = 64 epochs, we can cover ~ a year of continuous non-finality, and it'll grow very slowly after that
+//     - tier0 spans 16 epochs ≈ 1.7h, this is more than enough to handle reorg
+//     - tier1 spans 256 epochs ≈ 1.1d, ie we store 16 epochs of the previous day
+//     - tier2 spans 4096 epochs ≈ 18d, ie we store 16 epochs of the last ~2.5 weeks
+//     - tier3 spans 65536ep ≈ 291d, ie we store 16 epochs of the last 0.8 year
+export const CP_STATE_TIER_BASE = 16;
 
 // TODO GLOAS: re-evaluate this timing
 const PROCESS_CHECKPOINT_STATES_BPS = 6667;
@@ -118,8 +117,8 @@ const PROCESS_CHECKPOINT_STATES_BPS = 6667;
  */
 export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<CacheKey, CacheItem>;
-  /** Epoch -> Map<blockRoot, PayloadAvailability bitmask> */
-  private readonly epochIndex = new MapDef<Epoch, Map<RootHex, number>>(() => new Map());
+  /** Epoch -> Set<blockRoot> */
+  private readonly epochIndex = new MapDef<Epoch, Set<RootHex>>(() => new Set<string>());
   private readonly config: BeaconConfig;
   private readonly metrics: Metrics | null | undefined;
   private readonly logger: Logger;
@@ -129,6 +128,19 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
   private readonly maxEpochsOnDisk: number;
+  /**
+   * Persist checkpoint states (epoch + root) by tiers
+   *
+   *                   ╔═════════ tier 2 ══════════╦═══════ tier 1 ═══════╦═══ tier 0 (dense) ══╗
+   * finalizedEpoch -> ║  keep 1 epoch per 256     ║  keep 1 epoch per 16 ║  keep every epoch   ║ -> head
+   *                   ║  x·······x·······x······  ║  x···x···x···x···    ║  xxxxxxxxxxxxxxxxx  ║
+   *                   ╚═══════════════════════════╩══════════════════════╩═════════════════════╝
+   *
+   * starting from tier 1, all epochs must be aligned to the finalized epoch
+   */
+  private persistentTiers: Map<Epoch, Set<RootHex>>[] = [new Map()];
+  private finalizedEpoch: Epoch = 0;
+  private justifiedEpoch: Epoch = 0;
   private readonly datastore: CPStateDatastore;
   private readonly blockStateCache: BlockStateCache;
   private readonly bufferPool?: BufferPool;
@@ -169,6 +181,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         metrics.cpStateCache.size.set({type: CacheItemType.inMemory}, inMemoryCount);
         metrics.cpStateCache.epochSize.set({type: CacheItemType.persisted}, persistentEpochs.size);
         metrics.cpStateCache.epochSize.set({type: CacheItemType.inMemory}, memoryEpochs.size);
+
+        for (let tier = 0; tier < this.persistentTiers.length; tier++) {
+          let states = 0;
+          for (const roots of this.persistentTiers[tier].values()) states += roots.size;
+          metrics.cpStateCache.persistentTierEpochs.set({tier}, this.persistentTiers[tier].size);
+          metrics.cpStateCache.persistentTierStates.set({tier}, states);
+        }
       });
     }
     this.logger = logger;
@@ -215,18 +234,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Get block for processing
    * - Regen head state
    */
-  async getOrReload(cp: CheckpointHexPayload): Promise<IBeaconStateView | null> {
+  async getOrReload(cp: CheckpointHex): Promise<IBeaconStateView | null> {
     const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
     if (stateOrStateBytesData === null || isBeaconStateView(stateOrStateBytesData)) {
       return stateOrStateBytesData ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
-    const logMeta = {
-      epoch: cp.epoch,
-      rootHex: cp.rootHex,
-      payloadPresent: cp.payloadPresent,
-      persistedKey: toHex(persistedKey),
-    };
+    const logMeta = {persistedKey: toHex(persistedKey)};
     this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.cpStateCache.stateReloadSecFromSlot.observe(
       this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
@@ -248,7 +262,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
-      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes);
+      // preload validators and balances for faster state transition
+      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes, {
+        preloadValidatorsAndBalances: true,
+      });
       // hashTreeRoot() calls the commit() inside
       // there is no modification inside the state, it's just that we want to compute and cache all roots
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
@@ -264,7 +281,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       // only remove persisted state once we reload successfully
       const cpKey = toCacheKey(cp);
       this.cache.set(cpKey, {type: CacheItemType.inMemory, state: newCachedState, persistedKey});
-      this.addToEpochIndex(cp.epoch, cp.rootHex, cp.payloadPresent);
+      this.epochIndex.getOrDefault(cp.epoch).add(cp.rootHex);
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
       return newCachedState;
     } catch (e) {
@@ -276,7 +293,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Return either state or state bytes loaded from db.
    */
-  async getStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
+  async getStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null> {
     const stateOrLoadedState = await this.getStateOrLoadDb(cp);
     if (stateOrLoadedState === null || isBeaconStateView(stateOrLoadedState)) {
       return stateOrLoadedState;
@@ -287,7 +304,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Return either state or state bytes with persisted key loaded from db.
    */
-  async getStateOrLoadDb(cp: CheckpointHexPayload): Promise<IBeaconStateView | LoadedStateBytesData | null> {
+  async getStateOrLoadDb(cp: CheckpointHex): Promise<IBeaconStateView | LoadedStateBytesData | null> {
     const cpKey = toCacheKey(cp);
     const inMemoryState = this.get(cpKey);
     if (inMemoryState) {
@@ -318,7 +335,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Similar to get() api without reloading from disk
    */
-  get(cpOrKey: CheckpointHexPayload | CacheKey): IBeaconStateView | null {
+  get(cpOrKey: CheckpointHex | CacheKey): IBeaconStateView | null {
     this.metrics?.cpStateCache.lookups.inc();
     const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCacheKey(cpOrKey);
     const cacheItem = this.cache.get(cpKey);
@@ -344,47 +361,41 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
   /**
    * Add a state of a checkpoint to this cache, prune from memory if necessary.
-   * @param payloadPresent - For Gloas: true if this is payload state, false if block state.
-   *                         Always true for pre-Gloas.
    */
-  add(cp: phase0.Checkpoint, state: IBeaconStateView, payloadPresent: boolean): void {
-    const cpHex = toCheckpointHexPayload(cp, payloadPresent);
+  add(cp: phase0.Checkpoint, state: IBeaconStateView): void {
+    const cpHex = toCheckpointHex(cp);
     const key = toCacheKey(cpHex);
     const cacheItem = this.cache.get(key);
     this.metrics?.cpStateCache.adds.inc();
-    if (cacheItem !== undefined && isPersistedCacheItem(cacheItem)) {
-      const persistedKey = cacheItem.value;
+    // keep an existing persistedKey (persisted or reloaded-in-memory); dropping it orphans the on-disk file
+    const persistedKey = cacheItem && (isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey);
+    if (persistedKey !== undefined) {
       // was persisted to disk, set back to memory
       this.cache.set(key, {type: CacheItemType.inMemory, state, persistedKey});
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
         epoch: cp.epoch,
         rootHex: cpHex.rootHex,
-        payloadPresent,
         persistedKey: toHex(persistedKey),
       });
     } else {
       this.cache.set(key, {type: CacheItemType.inMemory, state});
-      this.logger.verbose("Added checkpoint state to memory", {
-        epoch: cp.epoch,
-        rootHex: cpHex.rootHex,
-        payloadPresent,
-      });
+      this.logger.verbose("Added checkpoint state to memory", {epoch: cp.epoch, rootHex: cpHex.rootHex});
     }
-    this.addToEpochIndex(cp.epoch, cpHex.rootHex, cpHex.payloadPresent);
+    this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
     this.prunePersistedStates();
   }
 
   /**
    * Searches in-memory state for the latest cached state with a `root` without reload, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, payloadPresent: boolean): IBeaconStateView | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): IBeaconStateView | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
-      if (this.hasPayloadVariant(epoch, rootHex, payloadPresent)) {
-        const inMemoryClonedState = this.get({rootHex, epoch, payloadPresent});
+      if (this.epochIndex.get(epoch)?.has(rootHex)) {
+        const inMemoryClonedState = this.get({rootHex, epoch});
         if (inMemoryClonedState) {
           return inMemoryClonedState;
         }
@@ -400,24 +411,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Get block for processing
    * - Regen head state
    */
-  async getOrReloadLatest(
-    rootHex: RootHex,
-    maxEpoch: Epoch,
-    payloadPresent: boolean
-  ): Promise<IBeaconStateView | null> {
+  async getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<IBeaconStateView | null> {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
-      if (this.hasPayloadVariant(epoch, rootHex, payloadPresent)) {
+      if (this.epochIndex.get(epoch)?.has(rootHex)) {
         try {
-          const state = await this.getOrReload({rootHex, epoch, payloadPresent});
+          const state = await this.getOrReload({rootHex, epoch});
           if (state) {
             return state;
           }
         } catch (e) {
-          this.logger.debug("Error get or reload state", {epoch, rootHex, payloadPresent}, e as Error);
+          this.logger.debug("Error get or reload state", {epoch, rootHex}, e as Error);
         }
       }
     }
@@ -427,30 +434,96 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Update the precomputed checkpoint and return the number of hits for the
    * previous one (if any).
-   * @param payloadPresent - For Gloas: true if head block has FULL payload, false if EMPTY.
-   *                         Always true for pre-Gloas.
    */
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null {
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
     const previousHits = this.preComputedCheckpointHits;
-    this.preComputedCheckpoint = toCacheKey({rootHex, epoch, payloadPresent});
+    this.preComputedCheckpoint = toCacheKey({rootHex, epoch});
     this.preComputedCheckpointHits = 0;
     return previousHits;
   }
 
   /**
-   * This is just to conform to the old implementation
+   * This is called on every checkpoint event to refresh the pinned finalized/justified epochs.
    */
-  prune(): void {
-    // do nothing
+  onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
+    this.finalizedEpoch = finalizedEpoch;
+    this.justifiedEpoch = justifiedEpoch;
+  }
+
+  /**
+   * This is called right after we persist a checkpoint state.
+   */
+  private async onPersist(epoch: Epoch, rootHex: RootHex): Promise<void> {
+    let roots = this.persistentTiers[0].get(epoch);
+    if (roots === undefined) {
+      roots = new Set<RootHex>();
+      this.persistentTiers[0].set(epoch, roots);
+    }
+    roots.add(rootHex);
+    await this.prunePersistentTier(0);
+  }
+
+  /**
+   * When tier `n` overflows (> CP_STATE_TIER_BASE epochs), evict its oldest epoch and either promote it to tier `n + 1` (if aligned there) or delete it.
+   *
+   *   before:  persistentTiers[n]   = { ..., e_old }
+   *            persistentTiers[n+1] = { ... }
+   *
+   *   after, if e_old aligns to n+1:           |  after, if e_old does NOT align to n+1:
+   *     persistentTiers[n]   = { ... }         |    persistentTiers[n]   = { ... }
+   *     persistentTiers[n+1] = { ..., e_old }  |    e_old and all its roots deleted from disk
+   *
+   * Since pruning a tier[n] may push an item at tier[n+1], we must call the function recursively.
+   */
+  private async prunePersistentTier(tier: number): Promise<void> {
+    const tierMap = this.persistentTiers[tier];
+    while (tierMap.size > CP_STATE_TIER_BASE) {
+      // Evict the oldest epoch, but never the pinned justified epoch
+      const oldestEpoch = Math.min(...Array.from(tierMap.keys()).filter((epoch) => epoch !== this.justifiedEpoch));
+      const roots = tierMap.get(oldestEpoch) as Set<RootHex>;
+      tierMap.delete(oldestEpoch);
+
+      const rootHexes = Array.from(roots).join(",");
+      // `>= finalizedEpoch` guards the transient window where an epoch below the (fork-choice)
+      // finalized epoch has not yet been removed by pruneFinalized: its offset would be negative
+      // and JS `%` could spuriously report it as aligned. Such epochs are stale -> delete.
+      if (oldestEpoch >= this.finalizedEpoch && this.alignedForTier(oldestEpoch, tier + 1)) {
+        if (this.persistentTiers[tier + 1] === undefined) {
+          this.persistentTiers[tier + 1] = new Map<Epoch, Set<RootHex>>();
+        }
+        this.persistentTiers[tier + 1].set(oldestEpoch, roots);
+        this.logger.verbose("Migrated persistent checkpoint states to lower tier", {
+          epoch: oldestEpoch,
+          fromTier: tier,
+          toTier: tier + 1,
+          rootHexes,
+        });
+        await this.prunePersistentTier(tier + 1);
+      } else {
+        // the oldest epoch is not aligned to the next tier
+        await this.deleteAllEpochItems(oldestEpoch)
+          .then(() => this.logger.verbose("Pruned checkpoint states from disk", {epoch: oldestEpoch, tier, rootHexes}))
+          .catch((e) => this.logger.debug("Error delete all epoch items", {epoch: oldestEpoch, tier}, e as Error));
+      }
+    }
+  }
+
+  /**
+   * Starting from tier[1], it must be aligned to the finalized epoch
+   * ie given finalized epoch F, tier[n] only epochs of F + n*16, n = 1,2,3...
+   */
+  private alignedForTier(epoch: Epoch, tier: number): boolean {
+    return (epoch - this.finalizedEpoch) % CP_STATE_TIER_BASE ** tier === 0;
   }
 
   /**
    * Prune all checkpoint states before the provided finalized epoch.
+   * Driven sequentially from processState() so it never interleaves with persist.
    */
-  pruneFinalized(finalizedEpoch: Epoch): void {
+  private async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        this.deleteAllEpochItems(epoch).catch((e) =>
+        await this.deleteAllEpochItems(epoch).catch((e) =>
           this.logger.debug("Error delete all epoch items", {epoch, finalizedEpoch}, e as Error)
         );
       }
@@ -506,11 +579,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - 2 then we'll persist {root: b2, epoch n-2} checkpoint state to disk, there are also 2 checkpoint states in memory at epoch n, same to the above (maxEpochsInMemory=1)
    *
    * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
-   *
-   * For Gloas: Processes both block state and payload state variants together. The decision of which roots to persist/prune
-   * is based on root canonicality (from state's view), not payload presence. Both variants are managed as a unit.
    */
   async processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number> {
+    // prune finalized in the same flow so a finalized cp state is pruned, never persisted
+    await this.pruneFinalized(state.finalizedCheckpoint.epoch);
+
     let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
@@ -579,7 +652,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *
    * Use seed state from the block cache if cannot find any seed states within this cache.
    */
-  findSeedStateToReload(reloadedCp: CheckpointHexPayload): IBeaconStateView {
+  findSeedStateToReload(reloadedCp: CheckpointHex): IBeaconStateView {
     const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
     const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
     let firstState: IBeaconStateView | null = null;
@@ -592,35 +665,31 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         return firstState;
       }
 
-      for (const [rootHex, bitmask] of this.epochIndex.get(epoch) || []) {
-        for (const flag of PAYLOAD_AVAILABILITY_ALL) {
-          if (!(bitmask & flag)) continue;
-          const payloadPresent = fromPayloadAvailability(flag);
-          const cpKey = toCacheKey({rootHex, epoch, payloadPresent});
-          const cacheItem = this.cache.get(cpKey);
-          if (cacheItem === undefined) {
-            continue;
+      for (const rootHex of this.epochIndex.get(epoch) || []) {
+        const cpKey = toCacheKey({rootHex, epoch});
+        const cacheItem = this.cache.get(cpKey);
+        if (cacheItem === undefined) {
+          continue;
+        }
+        if (isInMemoryCacheItem(cacheItem)) {
+          const {state} = cacheItem;
+          if (firstState === null) {
+            firstState = state;
           }
-          if (isInMemoryCacheItem(cacheItem)) {
-            const {state} = cacheItem;
-            if (firstState === null) {
-              firstState = state;
-            }
-            const cpLog = {cpEpoch: epoch, cpRoot: rootHex, payloadPresent};
+          const cpLog = {cpEpoch: epoch, cpRoot: rootHex};
 
-            try {
-              // amongst states of the same epoch, choose the one with the same view of reloadedCp
-              if (
-                reloadedCpSlot < state.slot &&
-                toRootHex(state.getBlockRootAtSlot(reloadedCpSlot)) === reloadedCp.rootHex
-              ) {
-                this.logger.verbose("Reload: use checkpoint state as seed state", {...cpLog, ...logCtx});
-                return state;
-              }
-            } catch (e) {
-              // getBlockRootAtSlot may throw error
-              this.logger.debug("Error finding checkpoint state to reload", {...cpLog, ...logCtx}, e as Error);
+          try {
+            // amongst states of the same epoch, choose the one with the same view of reloadedCp
+            if (
+              reloadedCpSlot < state.slot &&
+              toRootHex(state.getBlockRootAtSlot(reloadedCpSlot)) === reloadedCp.rootHex
+            ) {
+              this.logger.verbose("Reload: use checkpoint state as seed state", {...cpLog, ...logCtx});
+              return state;
             }
+          } catch (e) {
+            // getBlockRootAtSlot may throw error
+            this.logger.debug("Error finding checkpoint state to reload", {...cpLog, ...logCtx}, e as Error);
           }
         }
       }
@@ -632,34 +701,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     return seedBlockState;
   }
 
-  clear(): void {
-    this.cache.clear();
-    this.epochIndex.clear();
-  }
-
-  private addToEpochIndex(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): void {
-    const rootMap = this.epochIndex.getOrDefault(epoch);
-    rootMap.set(rootHex, (rootMap.get(rootHex) ?? 0) | toPayloadAvailability(payloadPresent));
-  }
-
-  private removeFromEpochIndex(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): void {
-    const rootMap = this.epochIndex.get(epoch);
-    if (rootMap === undefined) return;
-    const existing = rootMap.get(rootHex);
-    if (existing === undefined) return;
-    const updated = existing & ~toPayloadAvailability(payloadPresent);
-    if (updated === 0) {
-      rootMap.delete(rootHex);
-      if (rootMap.size === 0) {
-        this.epochIndex.delete(epoch);
-      }
-    } else {
-      rootMap.set(rootHex, updated);
-    }
-  }
-
-  private hasPayloadVariant(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): boolean {
-    return Boolean((this.epochIndex.get(epoch)?.get(rootHex) ?? 0) & toPayloadAvailability(payloadPresent));
+  async clear(): Promise<void> {
+    // deleteAllEpochItems removes every root of an epoch from disk and clears the cache
+    await Promise.all(
+      Array.from(this.epochIndex.keys()).map((epoch) =>
+        this.deleteAllEpochItems(epoch).catch((e) =>
+          this.logger.debug("Error delete all epoch items on clear", {epoch}, e as Error)
+        )
+      )
+    );
+    this.persistentTiers = [new Map()];
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
@@ -736,7 +787,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const prevEpochRoot = toRootHex(state.getBlockRootAtSlot(epochBoundarySlot - 1));
 
     // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
-    const cpRootHexMap = this.epochIndex.get(epoch) ?? new Map<RootHex, number>();
+    const cpRootHexes = this.epochIndex.get(epoch) ?? [];
     const persistedRootHexes = new Set<RootHex>();
 
     // 1) if there is no CRCS, persist PRCS (block 0 of epoch is skipped). In this case prevEpochRoot === epochBoundaryHex
@@ -745,81 +796,88 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     persistedRootHexes.add(epochBoundaryHex);
 
     // 3) persist any states with unknown roots to this state
-    for (const rootHex of cpRootHexMap.keys()) {
+    for (const rootHex of cpRootHexes) {
       if (rootHex !== epochBoundaryHex && rootHex !== prevEpochRoot) {
         persistedRootHexes.add(rootHex);
       }
     }
 
-    for (const [rootHex, bitmask] of cpRootHexMap) {
-      for (const flag of PAYLOAD_AVAILABILITY_ALL) {
-        if (!(bitmask & flag)) continue;
-        const payloadPresent = fromPayloadAvailability(flag);
-        const cpKey = toCacheKey({epoch: epoch, rootHex, payloadPresent});
-        const cacheItem = this.cache.get(cpKey);
+    for (const rootHex of cpRootHexes) {
+      const cpKey = toCacheKey({epoch: epoch, rootHex});
+      const cacheItem = this.cache.get(cpKey);
 
-        if (cacheItem !== undefined && isInMemoryCacheItem(cacheItem)) {
-          let {persistedKey} = cacheItem;
-          const {state} = cacheItem;
-          const logMeta = {
-            stateSlot: state.slot,
-            rootHex,
-            payloadPresent,
-            epochBoundaryHex,
-            persistedKey: persistedKey ? toHex(persistedKey) : "",
-          };
+      if (cacheItem !== undefined && isInMemoryCacheItem(cacheItem)) {
+        let {persistedKey} = cacheItem;
+        const {state} = cacheItem;
+        const logMeta = {
+          stateSlot: state.slot,
+          rootHex,
+          epochBoundaryHex,
+          persistedKey: persistedKey ? toHex(persistedKey) : "",
+        };
 
-          if (persistedRootHexes.has(rootHex)) {
-            if (persistedKey) {
-              // we don't care if the checkpoint state is already persisted
-              this.logger.verbose("Pruned checkpoint state from memory but no need to persist", logMeta);
-            } else {
-              // persist and do not update epochIndex
-              this.metrics?.cpStateCache.statePersistSecFromSlot.observe(
-                this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
-              );
-              const cpPersist = {epoch: epoch, root: fromHex(rootHex)};
-              // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
-              // As monitored on holesky as of Jan 2024:
-              //   - This does not increase heap allocation while gc time is the same
-              //   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
-              //   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
-              //   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
-              const timer = this.metrics?.stateSerializeDuration.startTimer({
-                source: AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
-              });
-              persistedKey = await serializeState(
-                state,
-                AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
-                (stateBytes) => {
-                  timer?.();
-                  return this.datastore.write(cpPersist, stateBytes, payloadPresent);
-                },
-                this.bufferPool
-              );
-
-              persistCount++;
-              this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
-                ...logMeta,
-                persistedKey: toHex(persistedKey),
-              });
-            }
-            // overwrite cpKey, this means the state is deleted from memory
-            this.cache.set(cpKey, {type: CacheItemType.persisted, value: persistedKey});
+        if (persistedRootHexes.has(rootHex)) {
+          if (persistedKey) {
+            // we don't care if the checkpoint state is already persisted
+            this.logger.verbose("Pruned checkpoint state from memory but no need to persist", logMeta);
           } else {
-            if (persistedKey) {
-              // persisted file will be eventually deleted by the archive task
-              // this also means the state is deleted from memory
-              this.cache.set(cpKey, {type: CacheItemType.persisted, value: persistedKey});
-              // do not update epochIndex
-            } else {
-              // delete the state from memory
-              this.cache.delete(cpKey);
-              this.removeFromEpochIndex(epoch, rootHex, payloadPresent);
-            }
-            this.metrics?.cpStateCache.statePruneFromMemoryCount.inc();
-            this.logger.verbose("Pruned checkpoint state from memory", logMeta);
+            // persist and do not update epochIndex
+            this.metrics?.cpStateCache.statePersistSecFromSlot.observe(
+              this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
+            );
+            const cpPersist = {epoch: epoch, root: fromHex(rootHex)};
+            // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
+            // As monitored on holesky as of Jan 2024:
+            //   - This does not increase heap allocation while gc time is the same
+            //   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
+            //   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
+            //   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
+            const timer = this.metrics?.stateSerializeDuration.startTimer({
+              source: AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
+            });
+            persistedKey = await serializeState(
+              state,
+              AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
+              (stateBytes) => {
+                timer?.();
+                return this.datastore.write(cpPersist, stateBytes);
+              },
+              this.bufferPool
+            );
+
+            persistCount++;
+            this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
+              ...logMeta,
+              persistedKey: toHex(persistedKey),
+            });
           }
+          // overwrite cpKey, this means the state is deleted from memory
+          this.cache.set(cpKey, {type: CacheItemType.persisted, value: persistedKey});
+          if (this.isTieredMode) {
+            await this.onPersist(epoch, rootHex);
+          }
+        } else {
+          if (persistedKey) {
+            // persisted file will be eventually deleted by the archive task
+            // this also means the state is deleted from memory
+            this.cache.set(cpKey, {type: CacheItemType.persisted, value: persistedKey});
+            // do not update epochIndex
+            if (this.isTieredMode) {
+              await this.onPersist(epoch, rootHex);
+            }
+          } else {
+            // delete the state from memory
+            this.cache.delete(cpKey);
+            const rootSet = this.epochIndex.get(epoch);
+            if (rootSet) {
+              rootSet.delete(rootHex);
+              if (rootSet.size === 0) {
+                this.epochIndex.delete(epoch);
+              }
+            }
+          }
+          this.metrics?.cpStateCache.statePruneFromMemoryCount.inc();
+          this.logger.verbose("Pruned checkpoint state from memory", logMeta);
         }
       }
     }
@@ -832,45 +890,35 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    */
   private async deleteAllEpochItems(epoch: Epoch): Promise<void> {
     let persistCount = 0;
-    const rootHexMap = this.epochIndex.get(epoch) || new Map<RootHex, number>();
-    for (const [rootHex, bitmask] of rootHexMap) {
-      for (const flag of PAYLOAD_AVAILABILITY_ALL) {
-        if (!(bitmask & flag)) continue;
-        const payloadPresent = fromPayloadAvailability(flag);
-        const key = toCacheKey({rootHex, epoch, payloadPresent});
-        const cacheItem = this.cache.get(key);
+    const rootHexes = this.epochIndex.get(epoch) || [];
+    for (const rootHex of rootHexes) {
+      const key = toCacheKey({rootHex, epoch});
+      const cacheItem = this.cache.get(key);
 
-        if (cacheItem) {
-          const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
-          if (persistedKey) {
-            await this.datastore.remove(persistedKey);
-            persistCount++;
-            this.metrics?.cpStateCache.persistedStateRemoveCount.inc();
-          }
+      if (cacheItem) {
+        const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
+        if (persistedKey) {
+          await this.datastore.remove(persistedKey);
+          persistCount++;
+          this.metrics?.cpStateCache.persistedStateRemoveCount.inc();
         }
-        this.cache.delete(key);
-        this.logger.verbose("Pruned checkpoint state", {
-          epoch,
-          rootHex,
-          payloadPresent,
-          type: cacheItem ? (isPersistedCacheItem(cacheItem) ? "persisted" : "in-memory") : "missing",
-        });
       }
+      this.cache.delete(key);
     }
     this.epochIndex.delete(epoch);
-    this.logger.verbose("Pruned all checkpoint states for epoch", {
+    // keep the on-disk retention tiers in sync so they never drift from epochIndex
+    for (const tierMap of this.persistentTiers) {
+      tierMap.delete(epoch);
+    }
+    this.logger.verbose("Pruned checkpoint states for epoch", {
       epoch,
       persistCount,
-      items: Array.from(rootHexMap.entries())
-        .flatMap(([rootHex, bitmask]) =>
-          PAYLOAD_AVAILABILITY_ALL.filter((f) => bitmask & f).map((f) => `${rootHex}:${fromPayloadAvailability(f)}`)
-        )
-        .join(","),
+      rootHexes: Array.from(rootHexes).join(","),
     });
   }
 
   /**
-   * Prune persisted checkpoint states from disk.
+   * Legacy flat-window on-disk pruning, used only when a `maxEpochsOnDisk` is configured.
    * Note that this should handle all possible errors and not throw.
    */
   private prunePersistedStates(): void {
@@ -914,59 +962,33 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     return null;
   }
+
+  /** Tiered pruning is active with the default `Infinity` on-disk cap; a finite cap uses the flat path */
+  private get isTieredMode(): boolean {
+    return this.maxEpochsOnDisk === Infinity;
+  }
 }
 
-export function toCheckpointHexPayload(checkpoint: phase0.Checkpoint, payloadPresent: boolean): CheckpointHexPayload {
+export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   return {
     epoch: checkpoint.epoch,
     rootHex: toRootHex(checkpoint.root),
-    payloadPresent,
   };
 }
 
-/**
- * Convert fork-choice CheckpointWithPayloadStatus to beacon-node CheckpointHexPayload.
- * Maps PayloadStatus enum to boolean payloadPresent.
- * @throws Error if checkpoint has PENDING payload status (ambiguous which variant to use)
- */
-export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayloadStatus): CheckpointHexPayload {
-  const PayloadStatus = {PENDING: 0, EMPTY: 1, FULL: 2} as const;
-
-  if (checkpoint.payloadStatus === PayloadStatus.PENDING) {
-    throw Error(
-      `Cannot convert checkpoint with PENDING payload status at epoch ${checkpoint.epoch} root ${checkpoint.rootHex}`
-    );
-  }
-
-  return {
-    epoch: checkpoint.epoch,
-    rootHex: checkpoint.rootHex,
-    payloadPresent: checkpoint.payloadStatus === PayloadStatus.FULL,
-  };
+export function toCheckpointKey(cp: CheckpointHex): string {
+  return `${cp.rootHex}:${cp.epoch}`;
 }
 
-export function toCheckpointKey(cp: CheckpointHexPayload): string {
-  return `${cp.rootHex}:${cp.epoch}:${cp.payloadPresent}`;
+function toCacheKey(cp: CheckpointHex): CacheKey {
+  return `${cp.rootHex}_${cp.epoch}`;
 }
 
-/**
- * Convert checkpoint to cache key string.
- * Format: `{rootHex}_{epoch}_{payloadPresent}`
- */
-function toCacheKey(cp: CheckpointHexPayload): CacheKey {
-  return `${cp.rootHex}_${cp.epoch}_${cp.payloadPresent}`;
-}
-
-function fromCacheKey(key: CacheKey): CheckpointHexPayload {
-  const parts = key.split("_");
-  const rootHex = parts[0];
-  const epoch = Number(parts[1]);
-  // For backward compatibility with old format (rootHex_epoch), default to true
-  const payloadPresent = parts.length > 2 ? parts[2] === "true" : true;
+function fromCacheKey(key: CacheKey): CheckpointHex {
+  const [rootHex, epoch] = key.split("_");
   return {
     rootHex,
-    epoch,
-    payloadPresent,
+    epoch: Number(epoch),
   };
 }
 

@@ -1,19 +1,24 @@
-import {afterEach, describe, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
+import type {Metrics} from "../../../../src/metrics/metrics.js";
+import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {validPeerIdStr} from "../../../utils/peer.js";
+import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -117,7 +122,7 @@ describe("sync / range / chain", () => {
             })
           );
         }
-        return {result: blocks, warnings: null};
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -138,7 +143,8 @@ describe("sync / range / chain", () => {
             pruneBlockInputs,
             onEnd,
           }),
-          {config, logger, clock, custodyConfig, metrics: null}
+          {config, logger, clock, custodyConfig, metrics: null},
+          undefined
         );
 
         const peers = [peer];
@@ -148,6 +154,48 @@ describe("sync / range / chain", () => {
       });
     });
   }
+
+  it("does not self-register a metrics collect fn per SyncChain (leak regression)", () => {
+    const headSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
+    const finalizedSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
+    const metrics = {syncRange: {headSyncPeers, finalizedSyncPeers}} as unknown as Metrics;
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
+    const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+    const fns = logSyncChainFns(logger, {
+      processChainSegment: async () => {},
+      // never resolves; sync is never started in this test, so it is never called
+      downloadByRange: () => new Promise(() => {}),
+      getConnectedPeerSyncMeta,
+      reportPeer,
+      pruneBlockInputs,
+      onEnd: () => {},
+    });
+
+    const chains: SyncChain[] = [];
+    for (let i = 0; i < 5; i++) {
+      chains.push(
+        new SyncChain(
+          0,
+          target,
+          RangeSyncType.Finalized,
+          fns,
+          {config, logger, clock, custodyConfig, metrics},
+          undefined
+        )
+      );
+    }
+
+    // Constructing many SyncChains must not register any collect fn (the leak).
+    expect(headSyncPeers.addCollect).not.toHaveBeenCalled();
+    expect(finalizedSyncPeers.addCollect).not.toHaveBeenCalled();
+
+    // The collection logic still works when driven explicitly, as RangeSync's single collector does.
+    chains[0].scrapeMetrics(metrics);
+    expect(finalizedSyncPeers.set).toHaveBeenCalled();
+
+    for (const chain of chains) chain.remove();
+  });
 
   it("Should start with no peers, then sync to target", async () => {
     const startEpoch = 0;
@@ -172,7 +220,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -193,7 +241,8 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           onEnd,
         }),
-        {config, logger, clock, custodyConfig, metrics: null}
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
       );
 
       // Add peers after some time
@@ -202,6 +251,302 @@ describe("sync / range / chain", () => {
       }, 20);
 
       initialSync.startSyncing(startEpoch);
+    });
+  });
+
+  it("Should handle rate-limited peer without counting as a failed download attempt", async () => {
+    const startEpoch = 0;
+    const targetEpoch = 4;
+    const peer1 = peer;
+    const peer2 = "16Uiu2HAmRateLimitTestPeer2";
+    let peer1Downloads = 0;
+    let peer2Downloads = 0;
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (peerMeta, request, _partialDownload) => {
+      if (peerMeta.peerId === peer1) {
+        peer1Downloads++;
+        throw new RequestError({
+          code: RequestErrorCode.RESP_RATE_LIMITED,
+          rateLimitedUntilMs: Date.now() + 50,
+        });
+      }
+
+      // peer2 returns blocks normally
+      peer2Downloads++;
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
+    const syncType = RangeSyncType.Finalized;
+
+    await new Promise<void>((resolve, reject) => {
+      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const initialSync = new SyncChain(
+        startEpoch,
+        target,
+        syncType,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
+      );
+
+      // Add peer1 first — it will get rate-limited
+      initialSync.addPeer(peer1, target);
+
+      // Add peer2 after a short delay — it will complete the sync.
+      // Without rate-limit handling, the chain would die from MAX_BATCH_DOWNLOAD_ATTEMPTS
+      // before peer2 is ever used, because rate-limit errors would rapidly exhaust the retry counter.
+      setTimeout(() => initialSync.addPeer(peer2, target), 50);
+
+      initialSync.startSyncing(startEpoch);
+    });
+
+    // peer1 should have been attempted at least once (rate-limited)
+    expect(peer1Downloads).toBeGreaterThanOrEqual(1);
+    // peer2 should have handled the actual downloads
+    expect(peer2Downloads).toBeGreaterThanOrEqual(1);
+  });
+
+  it("Should retry a rate-limited peer after metadata backoff expires", async () => {
+    const startEpoch = 0;
+    const targetEpoch = 2;
+    let downloads = 0;
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
+      downloads++;
+      if (downloads === 1) {
+        throw new RequestError({
+          code: RequestErrorCode.RESP_RATE_LIMITED,
+          rateLimitedUntilMs: Date.now() + 50,
+        });
+      }
+
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
+    const syncType = RangeSyncType.Finalized;
+
+    await new Promise<void>((resolve, reject) => {
+      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const initialSync = new SyncChain(
+        startEpoch,
+        target,
+        syncType,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
+      );
+
+      initialSync.addPeer(peer, target);
+      initialSync.startSyncing(startEpoch);
+    });
+
+    expect(downloads).toBeGreaterThanOrEqual(2);
+  });
+
+  describe("batch teardown peer reporting", () => {
+    async function runToTeardown(
+      syncType: RangeSyncType,
+      // Default: a peer-attributable processing failure (the batch's own blocks are bad), so teardown
+      // trips MAX_PROCESSING_ATTEMPTS and reports the offending peers.
+      processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.NON_LINEAR_SLOTS});
+      }
+    ): Promise<{reportPeerSpy: ReturnType<typeof vi.fn>; err: Error | null}> {
+      const reportPeerSpy = vi.fn();
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const peers = await Promise.all(Array.from({length: 6}, () => getRandPeerIdStr()));
+
+      let timer: NodeJS.Timeout | undefined;
+      const ended = new Promise<Error | null>((resolve) => {
+        const onEnd: SyncChainFns["onEnd"] = (err) => resolve(err ?? null);
+        const chain = new SyncChain(
+          0,
+          target,
+          syncType,
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer: reportPeerSpy,
+            pruneBlockInputs,
+            onEnd,
+          }),
+          {config, logger, clock, custodyConfig, metrics: null},
+          undefined
+        );
+        for (const p of peers) chain.addPeer(p, target);
+        chain.startSyncing(0);
+      });
+
+      const err = await Promise.race([
+        ended,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(Error("SyncChain stalled: onEnd never called")), 5000);
+        }),
+      ]).finally(() => clearTimeout(timer));
+
+      return {reportPeerSpy, err};
+    }
+
+    it("finalized sync reports peers on teardown", async () => {
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Finalized);
+      expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    it("head sync also reports peers on teardown", async () => {
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Head);
+      expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    it("first batch failing PARENT_BLOCK_UNKNOWN at startSlot tears down instead of stalling", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        const signedBlock = blocks[0].getBlock();
+        throw new BlockError(signedBlock, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: "0x00"});
+      };
+
+      const {err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect(err).toBeInstanceOf(BatchError);
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+    });
+
+    it("does not report peers when teardown is caused by execution engine errors", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: ExecutionPayloadStatus.ELERROR,
+          errorMessage: "el is down",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      // our EL malfunctioning is not evidence against any peer
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+    });
+
+    it("reports only the offending peers when teardown is caused by INVALID payloads", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      expect(reportPeerSpy).toHaveBeenCalled();
+
+      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
+      // only the peers that actually served an INVALID attempt, each reported once
+      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
+      expect(reportedPeers.length).toBeLessThan(6);
+      for (const call of reportPeerSpy.mock.calls) {
+        expect(call[2]).toBe("SyncChainMaxExecutionEngineErrorAttempts");
+      }
+    });
+
+    it("reports only the offending peers when teardown trips MAX_PROCESSING_ATTEMPTS", async () => {
+      // default processChainSegment throws a peer-attributable NON_LINEAR_SLOTS
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+      expect(reportPeerSpy).toHaveBeenCalled();
+
+      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
+      // only the peers that served a bad attempt, each reported once — not the whole peerset
+      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
+      expect(reportedPeers.length).toBeLessThan(6);
+      for (const call of reportPeerSpy.mock.calls) {
+        expect(call[2]).toBe("SyncChainMaxProcessingAttempts");
+      }
+    });
+
+    it("does not report peers when teardown is caused by our own internal error", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("boom")});
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+      // repeated internal errors tear the chain down, but blaming a peer for our own bug would risk self-isolation
+      expect(reportPeerSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -218,9 +563,9 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    processChainSegment(blocks, syncType) {
+    processChainSegment(blocks, payloadEnvelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
-      return fns.processChainSegment(blocks, syncType);
+      return fns.processChainSegment(blocks, payloadEnvelopes, syncType);
     },
     downloadByRange(peer, request, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request.state.status);

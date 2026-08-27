@@ -12,6 +12,13 @@ export async function* onBlobSidecarsByRoot(
 ): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
+  const currentEpoch = chain.clock.currentEpoch;
+  const minimumRequestEpoch = Math.max(
+    currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,
+    chain.config.DENEB_FORK_EPOCH
+  );
+
   // In sidecars by root request, it can be expected that sidecar requests will be come
   // clustured by blockroots, and this helps us save db lookups once we load sidecars
   // for a root
@@ -26,6 +33,10 @@ export async function* onBlobSidecarsByRoot(
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.
     // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
     if (!block || block.slot <= finalizedSlot) {
+      continue;
+    }
+
+    if (computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
       continue;
     }
 

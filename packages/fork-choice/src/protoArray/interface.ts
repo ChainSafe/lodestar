@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
+import {Epoch, RootHex, Slot, UintNum64, ValidatorIndex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -24,16 +24,15 @@ export type VoteIndex = number;
  * - Syncing: EL is syncing, payload validity unknown (optimistic sync)
  * - PreMerge: Block is from before The Merge, no execution payload exists
  * - Invalid: Execution payload was invalidated by the EL (post-import status)
- * - PayloadSeparated: Gloas beacon block without embedded execution payload.
- *         The execution payload arrives separately via SignedExecutionPayloadEnvelope.
- *         Gloas blocks WITH execution payload (FULL variant) use Valid/Invalid/Syncing.
+ *
+ * For gloas blocks the PENDING/EMPTY variants inherit `executionStatus` from the parent's chain
+ * (Valid/Syncing/PreMerge); the FULL variant carries the EL response for this block's own payload.
  */
 export enum ExecutionStatus {
   Valid = "Valid",
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
-  PayloadSeparated = "PayloadSeparated",
 }
 
 /**
@@ -49,7 +48,7 @@ export enum PayloadStatus {
 /**
  * Check if a block is in the Gloas fork (ePBS enabled)
  */
-export function isGloasBlock(block: ProtoBlock): boolean {
+export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBlockHash: RootHex} {
   return block.parentBlockHash !== null;
 }
 
@@ -61,10 +60,23 @@ export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
   invalidateFromParentBlockRoot: RootHex;
+  // EL block hash from invalid block's bid (gloas) or payload's parentHash (pre-gloas).
+  // Disambiguates which variant of the parent (FULL vs EMPTY) to invalidate from.
+  invalidateFromParentBlockHash: RootHex;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
-export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+/**
+ * Any execution status that is not definitively invalid.
+ * Valid | Syncing | PreMerge
+ */
+export type BlockExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+
+/**
+ * Execution status for a block whose execution payload is present and has been submitted to the EL.
+ * Used post-Gloas when transitioning a PENDING block to FULL via onExecutionPayload().
+ */
+export type PayloadExecutionStatus = ExecutionStatus.Valid | ExecutionStatus.Syncing;
 
 export type BlockExtraMeta =
   | {
@@ -75,6 +87,14 @@ export type BlockExtraMeta =
       //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
+      // Gas limit of the executed payload identified by executionPayloadBlockHash. Set on
+      // pre-Gloas blocks (from block.body.executionPayload.gasLimit) and on Gloas variants:
+      //   - PENDING/EMPTY: inherited from the parent payload that the bid commits to extend
+      //     (matches executionPayloadBlockHash, which also points to that parent payload)
+      //   - FULL: the actual delivered payload's gasLimit (set in onExecutionPayload)
+      // Consumers (e.g. Gloas bid gas-limit validation) can read this without re-deriving from
+      // state.
+      executionPayloadGasLimit: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
       dataAvailabilityStatus: DataAvailabilityStatus;
     }
@@ -124,6 +144,13 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
+  // Indicate whether block arrives before the PTC deadline
+  // Spec: gloas/fork-choice.md#modified-record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
+  ptcTimeliness: boolean;
+
+  // The index of the block proposer. Used by should_apply_proposer_boost to detect proposer equivocations
+  proposerIndex: ValidatorIndex;
+
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
@@ -140,7 +167,13 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  weight: number;
+  /** Total weight in Gwei, ie. attestationScore plus the proposer boost credited to this node */
+  weight: bigint;
+  /**
+   * Weight in Gwei from attester votes only, excluding proposer boost.
+   * Spec: get_attestation_score
+   */
+  attestationScore: bigint;
   bestChild?: number;
   bestDescendant?: number;
 };

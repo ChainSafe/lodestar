@@ -3,13 +3,15 @@
 ## Critical rules
 
 - **Target branch:** `unstable` (never `stable`)
-- **Pre-push:** run `pnpm lint`, `pnpm check-types`, `pnpm test:unit` before every push
+- **Pre-push:** run only checks relevant to the change; prefer targeted tests and do not run the full
+  `pnpm test:unit` suite by default
 - **Relative imports:** use `.js` extension in TypeScript ESM imports
 - **No `any`:** avoid `any` / `as any`; use proper types or justified `biome-ignore`
 - **No `lib/` edits:** never edit `packages/*/lib/` — these are build outputs
 - **Follow existing patterns** before introducing new abstractions
 - **Structured logging** with specific error codes (not generic `Error`)
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
+- **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
 ## Project overview
 
@@ -32,12 +34,9 @@ and serves as:
   config/           # Network configuration (mainnet, sepolia, etc.)
   db/               # Database abstraction (LevelDB)
   era/              # Era file handling for historical data
-  flare/            # CLI debugging/testing tool
   fork-choice/      # Fork choice implementation (proto-array)
-  light-client/     # Light client implementation
   logger/           # Logging utilities
   params/           # Consensus parameters and presets
-  prover/           # Execution API prover
   reqresp/          # libp2p request/response protocol
   spec-test-util/   # Test harness for consensus spec tests
   state-transition/ # State transition functions
@@ -92,6 +91,28 @@ pnpm vitest run --project unit -t "pattern"
 pnpm download-spec-tests
 pnpm test:spec
 
+# Run a single spec test file (located in packages/beacon-node) from the repository root — use spec-mainnet
+# for the mainnet preset
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts
+
+# Filter spec tests within a file by pyspec test name pattern
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts \
+  -t "transition_with_voluntary_exit_right_after_fork"
+
+# Download nightly artifacts from ethereum/consensus-specs CI instead of a
+# stable release. Useful when testing against unreleased spec changes.
+# Requires GITHUB_TOKEN in the env or a repo-root .env file.
+pnpm download-spec-tests latest                                # latest scheduled master run
+pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
+pnpm download-spec-tests latest <owner>/consensus-specs        # fork
+pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+
+# Fork-choice compliance tests (model-generated vectors, standalone flow;
+# runs nightly in CI, not per-PR). Same version pin as the spec tests.
+pnpm download-comptests
+pnpm test:comptest
+SPEC_FILTER_FORK=deneb pnpm test:comptest   # single fork (from packages/beacon-node)
+
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start
 pnpm test:e2e
@@ -127,7 +148,7 @@ Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
 
 Imports are auto-sorted by Biome in this order:
 
-1. Node.js/Bun built-ins
+1. Node.js built-ins
 2. External packages
 3. `@chainsafe/*` and `@lodestar/*` packages
 4. Relative paths
@@ -147,10 +168,23 @@ import {something} from "./utils.ts";
 
 ### Comments
 
-- Use `//` for implementation comments
-- Use `/** */` JSDoc format for documenting public APIs
-- Add comments when code behavior is non-obvious or deviates from standards
-- Whitespace helps readability in complex code
+**The default number of comments in new code is zero.**
+
+Add a comment only when the code cannot carry important information, such as:
+
+- A precondition not visible in the signature
+- A non-obvious consensus or protocol rule
+- Design, invariants, or non-obvious algorithms of a public or self-contained module
+- An ordering or workaround that looks unnecessary but is correctness-critical
+- Rationale needed to prevent a future regression
+
+Do not comment to restate what the code does. If the reason is clear from the surrounding names and
+structure, omit the comment. Do not narrate a change or record what the code used to do. That belongs
+in the commit message. Keep enduring correctness constraints and non-obvious rationale next to the
+code they govern.
+
+Prefer a clearer name, a smaller function, or a named constant over a comment explaining unclear
+code. Use `//` for implementation comments and `/** */` JSDoc for public API documentation.
 
 ### Metrics
 
@@ -333,12 +367,15 @@ refactor(reqresp)!: support byte based handlers
 
 ## Pre-push checklist
 
-Before pushing any commit, verify:
+Before pushing any commit, run only the checks relevant to the changed files and behavior:
 
-1. `pnpm lint` — Biome enforces formatting; CI catches failures but wastes a round-trip
-2. `pnpm check-types` — catch type errors before CI
-3. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
-4. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
+1. `pnpm lint` — when changing files covered by Biome
+2. `pnpm check-types` — when changing TypeScript, public APIs, or types
+3. Targeted tests for the changed behavior, when applicable. Do not run the full `pnpm test:unit` suite
+   by default; reserve it for broad changes that cannot be covered adequately by targeted tests or when
+   explicitly requested
+4. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
+5. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
 
 ## Common tasks
 
@@ -346,8 +383,8 @@ Before pushing any commit, verify:
 
 1. Create a feature branch from `unstable`
 2. Implement the feature with tests
-3. Run `pnpm lint` and `pnpm check-types`
-4. Run `pnpm test:unit` to verify tests pass
+3. Run `pnpm lint` and `pnpm check-types` when applicable
+4. Run the targeted tests for the feature
 5. Open PR with clear description and any AI disclosure
 
 ### Fixing a bug
@@ -355,7 +392,7 @@ Before pushing any commit, verify:
 1. Write a failing test that reproduces the bug
 2. Fix the bug
 3. Verify the test passes
-4. Run checks: `pnpm lint`, `pnpm check-types`, `pnpm test:unit`
+4. Run targeted tests for the affected area, plus `pnpm lint` and `pnpm check-types` when applicable
 
 ### Adding a new SSZ type
 

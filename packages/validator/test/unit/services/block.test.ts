@@ -1,5 +1,5 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
@@ -8,6 +8,8 @@ import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -15,6 +17,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
+vi.mock("../../../src/services/chainHeaderTracker.js");
 
 describe("BlockDutiesService", () => {
   const api = getApiClientStub();
@@ -23,6 +26,8 @@ describe("BlockDutiesService", () => {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig(mainnetConfig);
+  // @ts-expect-error - Mocked class don't need parameters
+  const chainHeaderTracker = new ChainHeaderTracker() as Mocked<ChainHeaderTracker>;
 
   let controller: AbortController; // To stop clock
   beforeEach(() => {
@@ -30,11 +35,12 @@ describe("BlockDutiesService", () => {
     const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
-    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
     vi.spyOn(validatorStore, "getBuilderSelectionParams");
+    vi.spyOn(validatorStore, "getBuilderMinBid");
+    vi.spyOn(validatorStore, "getResolvedBuilderEntries");
     vi.spyOn(validatorStore, "getGraffiti");
     vi.spyOn(validatorStore, "getFeeRecipient");
     vi.spyOn(validatorStore, "strictFeeRecipientCheck");
@@ -54,9 +60,19 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -127,9 +143,19 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
@@ -164,5 +190,86 @@ describe("BlockDutiesService", () => {
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
       {signedBlindedBlock: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
+  });
+
+  it("Should pass strict fee recipient check when producing a Gloas block", async () => {
+    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+    const slot = 0;
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [{slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      dutiesService,
+      null,
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        blindedLocal: false,
+        payloadLocal: false,
+      }
+    );
+
+    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_, block) => ({
+      message: block,
+      signature: signedBlock.signature,
+    }));
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.ExecutionAlways,
+      boostFactor: BigInt(0),
+    });
+    validatorStore.getBuilderMinBid.mockReturnValue(0n);
+    validatorStore.getResolvedBuilderEntries.mockReturnValue([]);
+    validatorStore.getGraffiti.mockReturnValue("aaaa");
+    validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
+    validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+
+    api.validator.produceBlockV4.mockResolvedValue(
+      mockApiResponse({
+        data: signedBlock.message,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(1),
+          executionPayloadIncluded: false,
+        },
+      })
+    );
+    api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+
+    const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+    notifyBlockProductionFn(1, [pubkeys[0]]);
+    await sleep(20, controller.signal);
+
+    expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
+      slot: 1,
+      randaoReveal: signedBlock.message.body.randaoReveal,
+      graffiti: "aaaa",
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
+    });
   });
 });

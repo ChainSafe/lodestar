@@ -11,7 +11,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -50,7 +49,12 @@ import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
-import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
+import {
+  getGossipSSZType,
+  gossipTopicAllowPublishToZeroPeers,
+  gossipTopicIgnoreDuplicatePublishError,
+  stringifyGossipTopic,
+} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
@@ -66,7 +70,7 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
+import {isPublishDuplicateError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -148,6 +152,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
+    this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
@@ -245,6 +250,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
+    this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
 
@@ -284,6 +290,10 @@ export class Network implements INetwork {
 
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     this.networkProcessor.searchUnknownBlock(slotRoot, source, peer);
+  }
+
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownEnvelope(slotRoot, source, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
@@ -347,9 +357,7 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(signedBlock.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock, {
-      ignoreDuplicatePublishError: true,
-    });
+    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock);
   }
 
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
@@ -358,12 +366,12 @@ export class Network implements INetwork {
 
     const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar, {
-      ignoreDuplicatePublishError: true,
-    });
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar);
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+  async publishDataColumnSidecar(
+    dataColumnSidecar: DataColumnSidecar
+  ): Promise<{sentPeers: number; alreadyPublished: boolean}> {
     const slot = isGloasDataColumnSidecar(dataColumnSidecar)
       ? dataColumnSidecar.slot
       : dataColumnSidecar.signedBlockHeader.message.slot;
@@ -371,18 +379,18 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
-    return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, boundary, subnet},
-      dataColumnSidecar,
-      {
-        ignoreDuplicatePublishError: true,
-        // we ensure having all topic peers via prioritizePeers() function
-        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
-        // because supernode will rebuild and publish missing data column sidecars for us
-        // hence we want to track sent peers as 0 instead of an error
-        allowPublishToZeroTopicPeers: true,
+    try {
+      const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
+        {type: GossipType.data_column_sidecar, boundary, subnet},
+        dataColumnSidecar
+      );
+      return {sentPeers, alreadyPublished: false};
+    } catch (e) {
+      if (isPublishDuplicateError(e as Error)) {
+        return {sentPeers: 0, alreadyPublished: true};
       }
-    );
+      throw e;
+    }
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
@@ -391,8 +399,7 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, boundary},
-      aggregateAndProof,
-      {ignoreDuplicatePublishError: true}
+      aggregateAndProof
     );
   }
 
@@ -402,8 +409,7 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, boundary, subnet},
-      attestation,
-      {ignoreDuplicatePublishError: true}
+      attestation
     );
   }
 
@@ -411,9 +417,7 @@ export class Network implements INetwork {
     const epoch = voluntaryExit.message.epoch;
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
-      ignoreDuplicatePublishError: true,
-    });
+    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit);
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
@@ -424,8 +428,7 @@ export class Network implements INetwork {
       if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
           {type: GossipType.bls_to_execution_change, boundary},
-          blsToExecutionChange,
-          {ignoreDuplicatePublishError: true}
+          blsToExecutionChange
         );
         publishChanges.push(publishPromise);
       }
@@ -463,10 +466,7 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.sync_committee>(
       {type: GossipType.sync_committee, boundary, subnet},
-      signature,
-      {
-        ignoreDuplicatePublishError: true,
-      }
+      signature
     );
   }
 
@@ -476,8 +476,7 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.sync_committee_contribution_and_proof>(
       {type: GossipType.sync_committee_contribution_and_proof, boundary},
-      contributionAndProof,
-      {ignoreDuplicatePublishError: true}
+      contributionAndProof
     );
   }
 
@@ -502,27 +501,56 @@ export class Network implements INetwork {
   }
 
   async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_payload>(
       {type: GossipType.execution_payload, boundary},
-      signedEnvelope,
-      {ignoreDuplicatePublishError: true}
+      signedEnvelope
+    );
+  }
+
+  async publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number> {
+    const epoch = computeEpochAtSlot(signedBid.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_payload_bid>(
+      {type: GossipType.execution_payload_bid, boundary},
+      signedBid
+    );
+  }
+
+  async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {
+    const epoch = computeEpochAtSlot(payloadAttestationMessage.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.payload_attestation_message>(
+      {type: GossipType.payload_attestation_message, boundary},
+      payloadAttestationMessage
+    );
+  }
+
+  async publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number> {
+    const epoch = computeEpochAtSlot(signedProposerPreferences.message.proposalSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.proposer_preferences>(
+      {type: GossipType.proposer_preferences, boundary},
+      signedProposerPreferences
     );
   }
 
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
-    object: GossipTypeMap[K],
-    opts?: PublishOpts | undefined
+    object: GossipTypeMap[K]
   ): Promise<number> {
     const topicStr = stringifyGossipTopic(this.config, topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    opts = {
-      ...opts,
+    const opts: PublishOpts = {
       ignoreDuplicatePublishError: gossipTopicIgnoreDuplicatePublishError[topic.type],
+      // Leave undefined unless the topic opts out, so `--network.allowPublishToZeroPeers` still applies
+      allowPublishToZeroTopicPeers: gossipTopicAllowPublishToZeroPeers[topic.type] ? true : undefined,
     };
     const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
@@ -560,6 +588,18 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendBeaconBlocksByHead(
+    peerId: PeerIdStr,
+    request: fulu.BeaconBlocksByHeadRequest
+  ): Promise<SignedBeaconBlock[]> {
+    return collectMaxResponseTypedWithBytes(
+      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
+      Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache
     );
   }
@@ -621,7 +661,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
@@ -632,7 +672,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
@@ -753,11 +793,7 @@ export class Network implements INetwork {
       await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
-      // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
-      // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
-      if (!isPublishToZeroPeersError(e as Error)) {
-        this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
-      }
+      this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
     }
   };
 
@@ -770,11 +806,7 @@ export class Network implements INetwork {
       await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
-      // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
-      // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
-      if (!isPublishToZeroPeersError(e as Error)) {
-        this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
-      }
+      this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
     }
   };
 
@@ -812,12 +844,24 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
+    await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
+  };
+
+  private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
+    try {
+      await this.publishProposerSlashing(proposerSlashing);
+    } catch (e) {
+      this.logger.debug(
+        "Error publishing proposer slashing",
+        {proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex},
+        e as Error
+      );
+    }
   };
 
   private onUpdateStatus = async (): Promise<void> => {

@@ -26,9 +26,11 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
+            "run/beacon-management/fast-confirmation",
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
+            "run/beacon-management/historical-fork-support",
           ],
         },
         {
@@ -67,18 +69,26 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Light Client",
           items: [
-            {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"},
-            "libraries/lightclient-prover/lightclient-cli",
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/light-client",
+            },
           ],
         },
         {
           type: "category",
           label: "Prover",
-          items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"}],
+          items: [
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/prover",
+            },
+          ],
         },
       ],
     },
-
     "supporting-libraries/index",
     {
       type: "category",
@@ -93,7 +103,9 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Advanced Topics",
-          items: ["contribution/advanced-topics/setting-up-a-testnet"],
+          items: [
+            "contribution/advanced-topics/setting-up-a-testnet",
+          ],
         },
         "contribution/depgraph",
         {

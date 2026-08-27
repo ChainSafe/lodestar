@@ -3,8 +3,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "AGGREGATE_DUE_BPS:"
   spec: |
-    <spec config_var="AGGREGATE_DUE_BPS" fork="phase0" hash="7eaa811a">
-    AGGREGATE_DUE_BPS: uint64 = 6667
+    <spec config_var="AGGREGATE_DUE_BPS" fork="phase0" hash="84cdd00d">
+    AGGREGATE_DUE_BPS: Uint64 = 6667
     </spec>
 
 - name: AGGREGATE_DUE_BPS_GLOAS#gloas
@@ -12,8 +12,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "AGGREGATE_DUE_BPS_GLOAS:"
   spec: |
-    <spec config_var="AGGREGATE_DUE_BPS_GLOAS" fork="gloas" hash="34aa3164">
-    AGGREGATE_DUE_BPS_GLOAS: uint64 = 5000
+    <spec config_var="AGGREGATE_DUE_BPS_GLOAS" fork="gloas" hash="fd72ee55">
+    AGGREGATE_DUE_BPS_GLOAS: Uint64 = 5000
     </spec>
 
 - name: ALTAIR_FORK_EPOCH#altair
@@ -40,8 +40,8 @@
       search: '^\s+ATTESTATION_DUE_BPS:'
       regex: true
   spec: |
-    <spec config_var="ATTESTATION_DUE_BPS" fork="phase0" hash="929dd1c9">
-    ATTESTATION_DUE_BPS: uint64 = 3333
+    <spec config_var="ATTESTATION_DUE_BPS" fork="phase0" hash="8d6a7c50">
+    ATTESTATION_DUE_BPS: Uint64 = 3333
     </spec>
 
 - name: ATTESTATION_DUE_BPS_GLOAS#gloas
@@ -49,8 +49,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "ATTESTATION_DUE_BPS_GLOAS:"
   spec: |
-    <spec config_var="ATTESTATION_DUE_BPS_GLOAS" fork="gloas" hash="3863c1ef">
-    ATTESTATION_DUE_BPS_GLOAS: uint64 = 2500
+    <spec config_var="ATTESTATION_DUE_BPS_GLOAS" fork="gloas" hash="c1414076">
+    ATTESTATION_DUE_BPS_GLOAS: Uint64 = 2500
     </spec>
 
 - name: ATTESTATION_PROPAGATION_SLOT_RANGE#phase0
@@ -58,8 +58,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "ATTESTATION_PROPAGATION_SLOT_RANGE:"
   spec: |
-    <spec config_var="ATTESTATION_PROPAGATION_SLOT_RANGE" fork="phase0" hash="40bcdb02">
-    ATTESTATION_PROPAGATION_SLOT_RANGE = 32
+    <spec config_var="ATTESTATION_PROPAGATION_SLOT_RANGE" fork="phase0" hash="3b24805b">
+    ATTESTATION_PROPAGATION_SLOT_RANGE: Slot = 32
     </spec>
 
 - name: ATTESTATION_SUBNET_COUNT#phase0
@@ -67,8 +67,8 @@
     - file: packages/params/src/index.ts
       search: export const ATTESTATION_SUBNET_COUNT =
   spec: |
-    <spec config_var="ATTESTATION_SUBNET_COUNT" fork="phase0" hash="1c8c0a1b">
-    ATTESTATION_SUBNET_COUNT = 64
+    <spec config_var="ATTESTATION_SUBNET_COUNT" fork="phase0" hash="0bf2c282">
+    ATTESTATION_SUBNET_COUNT: Uint64 = 64
     </spec>
 
 - name: ATTESTATION_SUBNET_EXTRA_BITS#phase0
@@ -76,17 +76,8 @@
     - file: packages/params/src/index.ts
       search: export const ATTESTATION_SUBNET_EXTRA_BITS =
   spec: |
-    <spec config_var="ATTESTATION_SUBNET_EXTRA_BITS" fork="phase0" hash="e233b5ba">
-    ATTESTATION_SUBNET_EXTRA_BITS = 0
-    </spec>
-
-- name: ATTESTATION_SUBNET_PREFIX_BITS#phase0
-  sources:
-    - file: packages/params/src/index.ts
-      search: export const ATTESTATION_SUBNET_PREFIX_BITS =
-  spec: |
-    <spec config_var="ATTESTATION_SUBNET_PREFIX_BITS" fork="phase0" hash="d6f5ea62">
-    ATTESTATION_SUBNET_PREFIX_BITS: int = 6
+    <spec config_var="ATTESTATION_SUBNET_EXTRA_BITS" fork="phase0" hash="c6453717">
+    ATTESTATION_SUBNET_EXTRA_BITS: Uint64 = 0
     </spec>
 
 - name: BALANCE_PER_ADDITIONAL_CUSTODY_GROUP#fulu
@@ -139,8 +130,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "BLOB_SIDECAR_SUBNET_COUNT:"
   spec: |
-    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT" fork="deneb" hash="03cc9976">
-    BLOB_SIDECAR_SUBNET_COUNT = 6
+    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT" fork="deneb" hash="b0065991">
+    BLOB_SIDECAR_SUBNET_COUNT: Uint64 = 6
     </spec>
 
 - name: BLOB_SIDECAR_SUBNET_COUNT_ELECTRA#electra
@@ -148,8 +139,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "BLOB_SIDECAR_SUBNET_COUNT_ELECTRA:"
   spec: |
-    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT_ELECTRA" fork="electra" hash="37ca2860">
-    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA = 9
+    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT_ELECTRA" fork="electra" hash="28e0f7b4">
+    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: Uint64 = 9
     </spec>
 
 - name: CAPELLA_FORK_EPOCH#capella
@@ -173,10 +164,36 @@
 - name: CHURN_LIMIT_QUOTIENT#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "CHURN_LIMIT_QUOTIENT:"
+      search: '^\s+CHURN_LIMIT_QUOTIENT:'
+      regex: true
   spec: |
-    <spec config_var="CHURN_LIMIT_QUOTIENT" fork="phase0" hash="a43a1d33">
-    CHURN_LIMIT_QUOTIENT: uint64 = 65536
+    <spec config_var="CHURN_LIMIT_QUOTIENT" fork="phase0" hash="72355a28">
+    CHURN_LIMIT_QUOTIENT: Uint64 = 65536
+    </spec>
+
+- name: CHURN_LIMIT_QUOTIENT_GLOAS#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "CHURN_LIMIT_QUOTIENT_GLOAS:"
+  spec: |
+    <spec config_var="CHURN_LIMIT_QUOTIENT_GLOAS" fork="gloas" hash="8251a638">
+    CHURN_LIMIT_QUOTIENT_GLOAS: Uint64 = 32768
+    </spec>
+
+- name: CONFIRMATION_BYZANTINE_THRESHOLD#phase0
+  sources: []
+  spec: |
+    <spec config_var="CONFIRMATION_BYZANTINE_THRESHOLD" fork="phase0" hash="340aaaea">
+    CONFIRMATION_BYZANTINE_THRESHOLD: Uint64 = 25
+    </spec>
+
+- name: CONSOLIDATION_CHURN_LIMIT_QUOTIENT#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "CONSOLIDATION_CHURN_LIMIT_QUOTIENT:"
+  spec: |
+    <spec config_var="CONSOLIDATION_CHURN_LIMIT_QUOTIENT" fork="gloas" hash="4e807e2c">
+    CONSOLIDATION_CHURN_LIMIT_QUOTIENT: Uint64 = 65536
     </spec>
 
 - name: CONTRIBUTION_DUE_BPS#altair
@@ -184,8 +201,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "CONTRIBUTION_DUE_BPS:"
   spec: |
-    <spec config_var="CONTRIBUTION_DUE_BPS" fork="altair" hash="a3808203">
-    CONTRIBUTION_DUE_BPS: uint64 = 6667
+    <spec config_var="CONTRIBUTION_DUE_BPS" fork="altair" hash="cfa5c39f">
+    CONTRIBUTION_DUE_BPS: Uint64 = 6667
     </spec>
 
 - name: CONTRIBUTION_DUE_BPS_GLOAS#gloas
@@ -193,8 +210,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "CONTRIBUTION_DUE_BPS_GLOAS:"
   spec: |
-    <spec config_var="CONTRIBUTION_DUE_BPS_GLOAS" fork="gloas" hash="0ead2ac1">
-    CONTRIBUTION_DUE_BPS_GLOAS: uint64 = 5000
+    <spec config_var="CONTRIBUTION_DUE_BPS_GLOAS" fork="gloas" hash="d21d5478">
+    CONTRIBUTION_DUE_BPS_GLOAS: Uint64 = 5000
     </spec>
 
 - name: CUSTODY_REQUIREMENT#fulu
@@ -203,8 +220,8 @@
       search: '^\s+CUSTODY_REQUIREMENT:'
       regex: true
   spec: |
-    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="b7340203">
-    CUSTODY_REQUIREMENT = 4
+    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="380eb77b">
+    CUSTODY_REQUIREMENT: Uint64 = 4
     </spec>
 
 - name: DATA_COLUMN_SIDECAR_SUBNET_COUNT#fulu
@@ -212,8 +229,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "DATA_COLUMN_SIDECAR_SUBNET_COUNT:"
   spec: |
-    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="626172a6">
-    DATA_COLUMN_SIDECAR_SUBNET_COUNT = 128
+    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="1344504d">
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: Uint64 = 128
     </spec>
 
 - name: DENEB_FORK_EPOCH#deneb
@@ -232,6 +249,33 @@
   spec: |
     <spec config_var="DENEB_FORK_VERSION" fork="deneb" hash="da95e3b9">
     DENEB_FORK_VERSION: Version = '0x04000000'
+    </spec>
+
+- name: DEPOSIT_CHAIN_ID#phase0
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "DEPOSIT_CHAIN_ID:"
+  spec: |
+    <spec config_var="DEPOSIT_CHAIN_ID" fork="phase0" hash="59033cad">
+    DEPOSIT_CHAIN_ID: Uint64 = 1
+    </spec>
+
+- name: DEPOSIT_CONTRACT_ADDRESS#phase0
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "DEPOSIT_CONTRACT_ADDRESS:"
+  spec: |
+    <spec config_var="DEPOSIT_CONTRACT_ADDRESS" fork="phase0" hash="552d8348">
+    DEPOSIT_CONTRACT_ADDRESS: ExecutionAddress = '0x00000000219ab540356cBB839Cbe05303d7705Fa'
+    </spec>
+
+- name: DEPOSIT_NETWORK_ID#phase0
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "DEPOSIT_NETWORK_ID:"
+  spec: |
+    <spec config_var="DEPOSIT_NETWORK_ID" fork="phase0" hash="02da2a1a">
+    DEPOSIT_NETWORK_ID: Uint64 = 1
     </spec>
 
 - name: EJECTION_BALANCE#phase0
@@ -266,8 +310,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "EPOCHS_PER_SUBNET_SUBSCRIPTION:"
   spec: |
-    <spec config_var="EPOCHS_PER_SUBNET_SUBSCRIPTION" fork="phase0" hash="1b832329">
-    EPOCHS_PER_SUBNET_SUBSCRIPTION = 256
+    <spec config_var="EPOCHS_PER_SUBNET_SUBSCRIPTION" fork="phase0" hash="6ab5401b">
+    EPOCHS_PER_SUBNET_SUBSCRIPTION: Epoch = 256
     </spec>
 
 - name: ETH1_FOLLOW_DISTANCE#phase0
@@ -275,8 +319,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "ETH1_FOLLOW_DISTANCE:"
   spec: |
-    <spec config_var="ETH1_FOLLOW_DISTANCE" fork="phase0" hash="2f5ba1a0">
-    ETH1_FOLLOW_DISTANCE: uint64 = 2048
+    <spec config_var="ETH1_FOLLOW_DISTANCE" fork="phase0" hash="e4685f37">
+    ETH1_FOLLOW_DISTANCE: Uint64 = 2048
     </spec>
 
 - name: FULU_FORK_EPOCH#fulu
@@ -297,13 +341,23 @@
     FULU_FORK_VERSION: Version = '0x06000000'
     </spec>
 
+- name: GAS_LIMIT_SCHEDULE#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "GAS_LIMIT_SCHEDULE:"
+  spec: |
+    <spec config_var="GAS_LIMIT_SCHEDULE" fork="gloas" hash="28e945d9">
+    GAS_LIMIT_SCHEDULE: tuple[frozendict[str, Any], ...] = (
+    )
+    </spec>
+
 - name: GENESIS_DELAY#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "GENESIS_DELAY:"
   spec: |
-    <spec config_var="GENESIS_DELAY" fork="phase0" hash="c50c75f1">
-    GENESIS_DELAY: uint64 = 604800
+    <spec config_var="GENESIS_DELAY" fork="phase0" hash="15d020f0">
+    GENESIS_DELAY: Uint64 = 604800
     </spec>
 
 - name: GENESIS_FORK_VERSION#phase0
@@ -333,13 +387,31 @@
     GLOAS_FORK_VERSION: Version = '0x07000000'
     </spec>
 
+- name: HEZE_FORK_EPOCH#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_EPOCH:"
+  spec: |
+    <spec config_var="HEZE_FORK_EPOCH" fork="heze" hash="f4539c03">
+    HEZE_FORK_EPOCH: Epoch = 18446744073709551615
+    </spec>
+
+- name: HEZE_FORK_VERSION#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_VERSION:"
+  spec: |
+    <spec config_var="HEZE_FORK_VERSION" fork="heze" hash="29986fed">
+    HEZE_FORK_VERSION: Version = '0x08000000'
+    </spec>
+
 - name: INACTIVITY_SCORE_BIAS#altair
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "INACTIVITY_SCORE_BIAS:"
   spec: |
-    <spec config_var="INACTIVITY_SCORE_BIAS" fork="altair" hash="c84c24a9">
-    INACTIVITY_SCORE_BIAS: uint64 = 4
+    <spec config_var="INACTIVITY_SCORE_BIAS" fork="altair" hash="27a17e68">
+    INACTIVITY_SCORE_BIAS: Uint64 = 4
     </spec>
 
 - name: INACTIVITY_SCORE_RECOVERY_RATE#altair
@@ -347,8 +419,17 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "INACTIVITY_SCORE_RECOVERY_RATE:"
   spec: |
-    <spec config_var="INACTIVITY_SCORE_RECOVERY_RATE" fork="altair" hash="d7876320">
-    INACTIVITY_SCORE_RECOVERY_RATE: uint64 = 16
+    <spec config_var="INACTIVITY_SCORE_RECOVERY_RATE" fork="altair" hash="e1b07db3">
+    INACTIVITY_SCORE_RECOVERY_RATE: Uint64 = 16
+    </spec>
+
+- name: INCLUSION_LIST_DUE_BPS#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "INCLUSION_LIST_DUE_BPS:"
+  spec: |
+    <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="2b6a4401">
+    INCLUSION_LIST_DUE_BPS: Uint64 = 6667
     </spec>
 
 - name: MAXIMUM_GOSSIP_CLOCK_DISPARITY#phase0
@@ -356,8 +437,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAXIMUM_GOSSIP_CLOCK_DISPARITY:"
   spec: |
-    <spec config_var="MAXIMUM_GOSSIP_CLOCK_DISPARITY" fork="phase0" hash="12990b53">
-    MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500
+    <spec config_var="MAXIMUM_GOSSIP_CLOCK_DISPARITY" fork="phase0" hash="4455f907">
+    MAXIMUM_GOSSIP_CLOCK_DISPARITY: Uint64 = 500
     </spec>
 
 - name: MAX_BLOBS_PER_BLOCK#deneb
@@ -365,8 +446,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_BLOBS_PER_BLOCK: 6"
   spec: |
-    <spec config_var="MAX_BLOBS_PER_BLOCK" fork="deneb" hash="3e0b5383">
-    MAX_BLOBS_PER_BLOCK: uint64 = 6
+    <spec config_var="MAX_BLOBS_PER_BLOCK" fork="deneb" hash="da6a82cc">
+    MAX_BLOBS_PER_BLOCK: Uint64 = 6
     </spec>
 
 - name: MAX_BLOBS_PER_BLOCK_ELECTRA#electra
@@ -374,8 +455,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_BLOBS_PER_BLOCK_ELECTRA:"
   spec: |
-    <spec config_var="MAX_BLOBS_PER_BLOCK_ELECTRA" fork="electra" hash="0d8ea1c9">
-    MAX_BLOBS_PER_BLOCK_ELECTRA: uint64 = 9
+    <spec config_var="MAX_BLOBS_PER_BLOCK_ELECTRA" fork="electra" hash="a03f0ed9">
+    MAX_BLOBS_PER_BLOCK_ELECTRA: Uint64 = 9
     </spec>
 
 - name: MAX_PAYLOAD_SIZE#phase0
@@ -383,8 +464,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_PAYLOAD_SIZE:"
   spec: |
-    <spec config_var="MAX_PAYLOAD_SIZE" fork="phase0" hash="7f1566fb">
-    MAX_PAYLOAD_SIZE = 10485760
+    <spec config_var="MAX_PAYLOAD_SIZE" fork="phase0" hash="51a340f4">
+    MAX_PAYLOAD_SIZE: Uint64 = 10485760
     </spec>
 
 - name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT#deneb
@@ -392,8 +473,17 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT:"
   spec: |
-    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" fork="deneb" hash="c4d9b0bb">
-    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: uint64 = 8
+    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" fork="deneb" hash="3d7eeec7">
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: Uint64 = 8
+    </spec>
+
+- name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS:"
+  spec: |
+    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" fork="gloas" hash="5a9fd595">
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: Gwei = 256000000000
     </spec>
 
 - name: MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT#electra
@@ -405,31 +495,13 @@
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: Gwei = 256000000000
     </spec>
 
-- name: MAX_REQUEST_BLOB_SIDECARS#deneb
-  sources:
-    - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MAX_REQUEST_BLOB_SIDECARS:"
-  spec: |
-    <spec config_var="MAX_REQUEST_BLOB_SIDECARS" fork="deneb" hash="9b8ad30b">
-    MAX_REQUEST_BLOB_SIDECARS = 768
-    </spec>
-
-- name: MAX_REQUEST_BLOB_SIDECARS_ELECTRA#electra
-  sources:
-    - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MAX_REQUEST_BLOB_SIDECARS_ELECTRA:"
-  spec: |
-    <spec config_var="MAX_REQUEST_BLOB_SIDECARS_ELECTRA" fork="electra" hash="decc80ab">
-    MAX_REQUEST_BLOB_SIDECARS_ELECTRA = 1152
-    </spec>
-
 - name: MAX_REQUEST_BLOCKS#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_REQUEST_BLOCKS:"
   spec: |
-    <spec config_var="MAX_REQUEST_BLOCKS" fork="phase0" hash="a9ae6c77">
-    MAX_REQUEST_BLOCKS = 1024
+    <spec config_var="MAX_REQUEST_BLOCKS" fork="phase0" hash="300478e3">
+    MAX_REQUEST_BLOCKS: Uint64 = 1024
     </spec>
 
 - name: MAX_REQUEST_BLOCKS_DENEB#deneb
@@ -437,17 +509,17 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_REQUEST_BLOCKS_DENEB:"
   spec: |
-    <spec config_var="MAX_REQUEST_BLOCKS_DENEB" fork="deneb" hash="8318964a">
-    MAX_REQUEST_BLOCKS_DENEB = 128
+    <spec config_var="MAX_REQUEST_BLOCKS_DENEB" fork="deneb" hash="0a5779c5">
+    MAX_REQUEST_BLOCKS_DENEB: Uint64 = 128
     </spec>
 
-- name: MAX_REQUEST_DATA_COLUMN_SIDECARS#fulu
+- name: MAX_REQUEST_INCLUSION_LIST#heze
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MAX_REQUEST_DATA_COLUMN_SIDECARS:"
+      search: "MAX_REQUEST_INCLUSION_LIST:"
   spec: |
-    <spec config_var="MAX_REQUEST_DATA_COLUMN_SIDECARS" fork="fulu" hash="bbe5c650">
-    MAX_REQUEST_DATA_COLUMN_SIDECARS = 16384
+    <spec config_var="MAX_REQUEST_INCLUSION_LIST" fork="heze" hash="b64ddfd1">
+    MAX_REQUEST_INCLUSION_LIST: Uint64 = 16
     </spec>
 
 - name: MAX_REQUEST_PAYLOADS#gloas
@@ -455,8 +527,17 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MAX_REQUEST_PAYLOADS:"
   spec: |
-    <spec config_var="MAX_REQUEST_PAYLOADS" fork="gloas" hash="23399ee5">
-    MAX_REQUEST_PAYLOADS = 128
+    <spec config_var="MAX_REQUEST_PAYLOADS" fork="gloas" hash="cb92d98e">
+    MAX_REQUEST_PAYLOADS: Uint64 = 128
+    </spec>
+
+- name: MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST:"
+  spec: |
+    <spec config_var="MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" fork="heze" hash="5e36c7cc">
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
     </spec>
 
 - name: MESSAGE_DOMAIN_INVALID_SNAPPY#phase0
@@ -482,8 +563,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_BUILDER_WITHDRAWABILITY_DELAY:"
   spec: |
-    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="be7f8473">
-    MIN_BUILDER_WITHDRAWABILITY_DELAY: uint64 = 64
+    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="1ad08a7c">
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: Epoch = 64
     </spec>
 
 - name: MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS#deneb
@@ -491,17 +572,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS:"
   spec: |
-    <spec config_var="MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS" fork="deneb" hash="3df9114c">
-    MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS = 4096
-    </spec>
-
-- name: MIN_EPOCHS_FOR_BLOCK_REQUESTS#phase0
-  sources:
-    - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MIN_EPOCHS_FOR_BLOCK_REQUESTS:"
-  spec: |
-    <spec config_var="MIN_EPOCHS_FOR_BLOCK_REQUESTS" fork="phase0" hash="8ab131c4">
-    MIN_EPOCHS_FOR_BLOCK_REQUESTS = 33024
+    <spec config_var="MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS" fork="deneb" hash="1832eb33">
+    MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: Epoch = 4096
     </spec>
 
 - name: MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS#fulu
@@ -509,8 +581,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS:"
   spec: |
-    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="910e49bb">
-    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS = 4096
+    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="1ca47aad">
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: Epoch = 4096
     </spec>
 
 - name: MIN_GENESIS_ACTIVE_VALIDATOR_COUNT#phase0
@@ -518,8 +590,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:"
   spec: |
-    <spec config_var="MIN_GENESIS_ACTIVE_VALIDATOR_COUNT" fork="phase0" hash="7715513b">
-    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: uint64 = 16384
+    <spec config_var="MIN_GENESIS_ACTIVE_VALIDATOR_COUNT" fork="phase0" hash="d86e0ccc">
+    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: Uint64 = 16384
     </spec>
 
 - name: MIN_GENESIS_TIME#phase0
@@ -527,8 +599,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_GENESIS_TIME:"
   spec: |
-    <spec config_var="MIN_GENESIS_TIME" fork="phase0" hash="75c06876">
-    MIN_GENESIS_TIME: uint64 = 1606824000
+    <spec config_var="MIN_GENESIS_TIME" fork="phase0" hash="3abe635d">
+    MIN_GENESIS_TIME: Uint64 = 1606824000
     </spec>
 
 - name: MIN_PER_EPOCH_CHURN_LIMIT#phase0
@@ -536,8 +608,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_PER_EPOCH_CHURN_LIMIT:"
   spec: |
-    <spec config_var="MIN_PER_EPOCH_CHURN_LIMIT" fork="phase0" hash="ff24b223">
-    MIN_PER_EPOCH_CHURN_LIMIT: uint64 = 4
+    <spec config_var="MIN_PER_EPOCH_CHURN_LIMIT" fork="phase0" hash="33e3586b">
+    MIN_PER_EPOCH_CHURN_LIMIT: Uint64 = 4
     </spec>
 
 - name: MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA#electra
@@ -549,13 +621,22 @@
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: Gwei = 128000000000
     </spec>
 
+- name: MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS:"
+  spec: |
+    <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
+    MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1
+    </spec>
+
 - name: MIN_VALIDATOR_WITHDRAWABILITY_DELAY#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_VALIDATOR_WITHDRAWABILITY_DELAY:"
   spec: |
-    <spec config_var="MIN_VALIDATOR_WITHDRAWABILITY_DELAY" fork="phase0" hash="5c4eeded">
-    MIN_VALIDATOR_WITHDRAWABILITY_DELAY: uint64 = 256
+    <spec config_var="MIN_VALIDATOR_WITHDRAWABILITY_DELAY" fork="phase0" hash="5c286670">
+    MIN_VALIDATOR_WITHDRAWABILITY_DELAY: Epoch = 256
     </spec>
 
 - name: NUMBER_OF_CUSTODY_GROUPS#fulu
@@ -563,8 +644,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "NUMBER_OF_CUSTODY_GROUPS:"
   spec: |
-    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="05e3016e">
-    NUMBER_OF_CUSTODY_GROUPS = 128
+    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="3b8dd1d5">
+    NUMBER_OF_CUSTODY_GROUPS: Uint64 = 128
     </spec>
 
 - name: PAYLOAD_ATTESTATION_DUE_BPS#gloas
@@ -572,8 +653,17 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "PAYLOAD_ATTESTATION_DUE_BPS:"
   spec: |
-    <spec config_var="PAYLOAD_ATTESTATION_DUE_BPS" fork="gloas" hash="17307d0e">
-    PAYLOAD_ATTESTATION_DUE_BPS: uint64 = 7500
+    <spec config_var="PAYLOAD_ATTESTATION_DUE_BPS" fork="gloas" hash="d5ffbe84">
+    PAYLOAD_ATTESTATION_DUE_BPS: Uint64 = 7500
+    </spec>
+
+- name: PAYLOAD_DUE_BPS#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "PAYLOAD_DUE_BPS:"
+  spec: |
+    <spec config_var="PAYLOAD_DUE_BPS" fork="gloas" hash="8f8ebf70">
+    PAYLOAD_DUE_BPS: Uint64 = 5000
     </spec>
 
 - name: PROPOSER_REORG_CUTOFF_BPS#phase0
@@ -581,8 +671,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "PROPOSER_REORG_CUTOFF_BPS:"
   spec: |
-    <spec config_var="PROPOSER_REORG_CUTOFF_BPS" fork="phase0" hash="a487cc43">
-    PROPOSER_REORG_CUTOFF_BPS: uint64 = 1667
+    <spec config_var="PROPOSER_REORG_CUTOFF_BPS" fork="phase0" hash="c554bd23">
+    PROPOSER_REORG_CUTOFF_BPS: Uint64 = 1667
     </spec>
 
 - name: PROPOSER_SCORE_BOOST#phase0
@@ -590,8 +680,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "PROPOSER_SCORE_BOOST:"
   spec: |
-    <spec config_var="PROPOSER_SCORE_BOOST" fork="phase0" hash="fbc878c6">
-    PROPOSER_SCORE_BOOST: uint64 = 40
+    <spec config_var="PROPOSER_SCORE_BOOST" fork="phase0" hash="5ac38798">
+    PROPOSER_SCORE_BOOST: Uint64 = 40
     </spec>
 
 - name: REORG_HEAD_WEIGHT_THRESHOLD#phase0
@@ -599,8 +689,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "REORG_HEAD_WEIGHT_THRESHOLD:"
   spec: |
-    <spec config_var="REORG_HEAD_WEIGHT_THRESHOLD" fork="phase0" hash="d4ecaa84">
-    REORG_HEAD_WEIGHT_THRESHOLD: uint64 = 20
+    <spec config_var="REORG_HEAD_WEIGHT_THRESHOLD" fork="phase0" hash="402a5acb">
+    REORG_HEAD_WEIGHT_THRESHOLD: Uint64 = 20
     </spec>
 
 - name: REORG_MAX_EPOCHS_SINCE_FINALIZATION#phase0
@@ -617,8 +707,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "REORG_PARENT_WEIGHT_THRESHOLD:"
   spec: |
-    <spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" fork="phase0" hash="cb81e3da">
-    REORG_PARENT_WEIGHT_THRESHOLD: uint64 = 160
+    <spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" fork="phase0" hash="3f4de3d8">
+    REORG_PARENT_WEIGHT_THRESHOLD: Uint64 = 160
     </spec>
 
 - name: SAMPLES_PER_SLOT#fulu
@@ -626,8 +716,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SAMPLES_PER_SLOT:"
   spec: |
-    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="158798b8">
-    SAMPLES_PER_SLOT = 8
+    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="ecb8eaf2">
+    SAMPLES_PER_SLOT: Uint64 = 8
     </spec>
 
 - name: SECONDS_PER_ETH1_BLOCK#phase0
@@ -635,17 +725,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SECONDS_PER_ETH1_BLOCK:"
   spec: |
-    <spec config_var="SECONDS_PER_ETH1_BLOCK" fork="phase0" hash="90c9f3d1">
-    SECONDS_PER_ETH1_BLOCK: uint64 = 14
-    </spec>
-
-- name: SECONDS_PER_SLOT#phase0
-  sources:
-    - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "SECONDS_PER_SLOT:"
-  spec: |
-    <spec config_var="SECONDS_PER_SLOT" fork="phase0" hash="a9118f10">
-    SECONDS_PER_SLOT: uint64 = 12
+    <spec config_var="SECONDS_PER_ETH1_BLOCK" fork="phase0" hash="0c643d31">
+    SECONDS_PER_ETH1_BLOCK: Uint64 = 14
     </spec>
 
 - name: SHARD_COMMITTEE_PERIOD#phase0
@@ -653,8 +734,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SHARD_COMMITTEE_PERIOD:"
   spec: |
-    <spec config_var="SHARD_COMMITTEE_PERIOD" fork="phase0" hash="5d0e85a4">
-    SHARD_COMMITTEE_PERIOD: uint64 = 256
+    <spec config_var="SHARD_COMMITTEE_PERIOD" fork="phase0" hash="87d0ca70">
+    SHARD_COMMITTEE_PERIOD: Epoch = 256
     </spec>
 
 - name: SLOT_DURATION_MS#phase0
@@ -662,8 +743,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SLOT_DURATION_MS:"
   spec: |
-    <spec config_var="SLOT_DURATION_MS" fork="phase0" hash="b6d4ba6d">
-    SLOT_DURATION_MS: uint64 = 12000
+    <spec config_var="SLOT_DURATION_MS" fork="phase0" hash="6c1935e7">
+    SLOT_DURATION_MS: Uint64 = 12000
     </spec>
 
 - name: SUBNETS_PER_NODE#phase0
@@ -671,8 +752,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SUBNETS_PER_NODE:"
   spec: |
-    <spec config_var="SUBNETS_PER_NODE" fork="phase0" hash="4799f8f3">
-    SUBNETS_PER_NODE = 2
+    <spec config_var="SUBNETS_PER_NODE" fork="phase0" hash="d8a1cb61">
+    SUBNETS_PER_NODE: Uint64 = 2
     </spec>
 
 - name: SYNC_MESSAGE_DUE_BPS#altair
@@ -680,8 +761,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SYNC_MESSAGE_DUE_BPS:"
   spec: |
-    <spec config_var="SYNC_MESSAGE_DUE_BPS" fork="altair" hash="791b29d8">
-    SYNC_MESSAGE_DUE_BPS: uint64 = 3333
+    <spec config_var="SYNC_MESSAGE_DUE_BPS" fork="altair" hash="21b16e07">
+    SYNC_MESSAGE_DUE_BPS: Uint64 = 3333
     </spec>
 
 - name: SYNC_MESSAGE_DUE_BPS_GLOAS#gloas
@@ -689,8 +770,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SYNC_MESSAGE_DUE_BPS_GLOAS:"
   spec: |
-    <spec config_var="SYNC_MESSAGE_DUE_BPS_GLOAS" fork="gloas" hash="47f14d95">
-    SYNC_MESSAGE_DUE_BPS_GLOAS: uint64 = 2500
+    <spec config_var="SYNC_MESSAGE_DUE_BPS_GLOAS" fork="gloas" hash="b70fe65b">
+    SYNC_MESSAGE_DUE_BPS_GLOAS: Uint64 = 2500
     </spec>
 
 - name: TERMINAL_BLOCK_HASH#bellatrix
@@ -707,8 +788,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH:"
   spec: |
-    <spec config_var="TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" fork="bellatrix" hash="81928369">
-    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH = 18446744073709551615
+    <spec config_var="TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" fork="bellatrix" hash="331e75a1">
+    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Epoch = 18446744073709551615
     </spec>
 
 - name: TERMINAL_TOTAL_DIFFICULTY#bellatrix
@@ -716,8 +797,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "TERMINAL_TOTAL_DIFFICULTY:"
   spec: |
-    <spec config_var="TERMINAL_TOTAL_DIFFICULTY" fork="bellatrix" hash="e0f3a816">
-    TERMINAL_TOTAL_DIFFICULTY = 58750000000000000000000
+    <spec config_var="TERMINAL_TOTAL_DIFFICULTY" fork="bellatrix" hash="7fb79a4e">
+    TERMINAL_TOTAL_DIFFICULTY: Uint256 = 58750000000000000000000
     </spec>
 
 - name: VALIDATOR_CUSTODY_REQUIREMENT#fulu
@@ -725,6 +806,6 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "VALIDATOR_CUSTODY_REQUIREMENT:"
   spec: |
-    <spec config_var="VALIDATOR_CUSTODY_REQUIREMENT" fork="fulu" hash="4dfc4457">
-    VALIDATOR_CUSTODY_REQUIREMENT = 8
+    <spec config_var="VALIDATOR_CUSTODY_REQUIREMENT" fork="fulu" hash="87f04d3e">
+    VALIDATOR_CUSTODY_REQUIREMENT: Uint64 = 8
     </spec>

@@ -21,7 +21,7 @@
 ## BLS
 
 - [`@chainsafe/bls`](https://github.com/ChainSafe/bls) - Isomorphic Ethereum Consensus BLS sign / verify / aggregate
-- [`@chainsafe/blst-ts`](https://github.com/ChainSafe/blst-ts) - Node specific Ethereum Consensus BLS sign / verify / aggregate
+- [`@chainsafe/lodestar-z`](https://github.com/ChainSafe/lodestar-z) - Zig implementations for Lodestar, including BLS sign / verify / aggregate
 - [`@chainsafe/bls-keystore`](https://github.com/ChainSafe/bls-keystore) - store / retrieve a BLS secret key from an [EIP-2335](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md) JSON keystore
 - [`@chainsafe/bls-keygen`](https://github.com/ChainSafe/bls-keygen) - utility functions to generate BLS secret keys, following [EIP-2333](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2333.md) and [EIP-2334](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2334.md)
 - [`@chainsafe/bls-hd-key`](https://github.com/ChainSafe/bls-hd-key) - low level [EIP-2333](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2333.md) and [EIP-2334](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2334.md) functionality

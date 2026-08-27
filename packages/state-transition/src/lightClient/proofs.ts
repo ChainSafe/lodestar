@@ -1,11 +1,15 @@
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
+  CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
   FINALIZED_ROOT_GINDEX,
   FINALIZED_ROOT_GINDEX_ELECTRA,
+  FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
   ForkPostBellatrix,
+  NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
@@ -16,6 +20,24 @@ export function getSyncCommitteesWitness(fork: ForkName, state: BeaconStateAllFo
   let witness: Uint8Array[];
   let currentSyncCommitteeRoot: Uint8Array;
   let nextSyncCommitteeRoot: Uint8Array;
+
+  if (isForkPostGloas(fork)) {
+    const tree = new Tree(state.node);
+    const currentSyncCommitteeGindex = BigInt(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS);
+    const nextSyncCommitteeGindex = BigInt(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS);
+
+    currentSyncCommitteeRoot = tree.getRoot(currentSyncCommitteeGindex);
+    nextSyncCommitteeRoot = tree.getRoot(nextSyncCommitteeGindex);
+    witness = [];
+
+    return {
+      witness,
+      currentSyncCommitteeRoot,
+      nextSyncCommitteeRoot,
+      currentSyncCommitteeBranch: tree.getSingleProof(currentSyncCommitteeGindex),
+      nextSyncCommitteeBranch: tree.getSingleProof(nextSyncCommitteeGindex),
+    };
+  }
 
   if (isForkPostElectra(fork)) {
     const n2 = n1.left;
@@ -60,17 +82,30 @@ export function getSyncCommitteesWitness(fork: ForkName, state: BeaconStateAllFo
 }
 
 export function getNextSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeWitness): Uint8Array[] {
+  if (syncCommitteesWitness.nextSyncCommitteeBranch) {
+    return syncCommitteesWitness.nextSyncCommitteeBranch;
+  }
+
   // Witness branch is sorted by descending gindex
   return [syncCommitteesWitness.currentSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
 export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeWitness): Uint8Array[] {
+  if (syncCommitteesWitness.currentSyncCommitteeBranch) {
+    return syncCommitteesWitness.currentSyncCommitteeBranch;
+  }
+
   // Witness branch is sorted by descending gindex
   return [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
 export function getFinalizedRootProof(state: CachedBeaconStateAllForks): Uint8Array[] {
-  const finalizedRootGindex = state.epochCtx.isPostElectra() ? FINALIZED_ROOT_GINDEX_ELECTRA : FINALIZED_ROOT_GINDEX;
+  const fork = state.config.getForkName(state.slot);
+  const finalizedRootGindex = isForkPostGloas(fork)
+    ? FINALIZED_ROOT_GINDEX_GLOAS
+    : state.epochCtx.isPostElectra()
+      ? FINALIZED_ROOT_GINDEX_ELECTRA
+      : FINALIZED_ROOT_GINDEX;
   return new Tree(state.node).getSingleProof(BigInt(finalizedRootGindex));
 }
 

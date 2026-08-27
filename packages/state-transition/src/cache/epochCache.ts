@@ -1,4 +1,5 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -32,15 +33,15 @@ import {
   calculateShufflingDecisionRoot,
   computeEpochShuffling,
 } from "../util/epochShuffling.js";
+import {getPtcWindowEpochCacheData} from "../util/gloas.js";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computePayloadTimelinessCommitteesForEpoch,
   computeProposers,
   computeSyncPeriodAtEpoch,
-  getActivationChurnLimit,
   getChurnLimit,
   getSeed,
+  getValidatorActivationChurnLimit,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
 } from "../util/index.js";
@@ -53,10 +54,10 @@ import {
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateFulu} from "./stateCache.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
@@ -112,6 +113,13 @@ export class EpochCache {
    * Couples both index→pubkey and pubkey→index lookups, keeping them in sync atomically.
    */
   pubkeyCache: PubkeyCache;
+  /**
+   * Shared across all clones of the same chain head. Holds builder deposit signature validity
+   * pre-verified by the prepareForNextSlot scheduler in the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs
+   * leading up to GLOAS_FORK_EPOCH, so `onboardBuildersFromPendingDeposits()` at the fork transition
+   * can skip the bulk verification cost. There should only exist one for the entire application.
+   */
+  builderDepositSignatureCache: BuilderDepositSignatureCache;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -226,11 +234,12 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
-  // TODO GLOAS: See if we need to cache PTC for next epoch
   // PTC for previous epoch, required for slot N block validating slot N-1 attestations
   previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
   payloadTimelinessCommittees: Uint32Array[];
+  // PTC for next epoch, precomputed from the ptc window for future duty serving
+  nextPayloadTimelinessCommittees: Uint32Array[];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -244,6 +253,7 @@ export class EpochCache {
   constructor(data: {
     config: BeaconConfig;
     pubkeyCache: PubkeyCache;
+    builderDepositSignatureCache: BuilderDepositSignatureCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -270,11 +280,13 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
+    nextPayloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
     this.pubkeyCache = data.pubkeyCache;
+    this.builderDepositSignatureCache = data.builderDepositSignatureCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -301,6 +313,7 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
+    this.nextPayloadTimelinessCommittees = data.nextPayloadTimelinessCommittees;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -328,10 +341,10 @@ export class EpochCache {
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(pubkeyCache, validators);
+      pubkeyCache.syncPubkeys(validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -405,12 +418,17 @@ export class EpochCache {
 
     const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
-    const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
-
-    let proposers: number[];
+    let proposers: ValidatorIndex[];
+    let proposersNextEpoch: ProposersDeferred;
     if (currentEpoch >= config.FULU_FORK_EPOCH) {
-      // Overwrite proposers with state.proposerLookahead
-      proposers = (state as CachedBeaconStateFulu).proposerLookahead.getAll().slice(0, SLOTS_PER_EPOCH);
+      // After fulu, use state.proposerLookahead for current and next epoch proposers.
+      // Computing from the unfiltered active shuffling would include slashed validators in gloas.
+      const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
+      proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
+      proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // We need to calculate Pre-fulu
       // Allow to create CachedBeaconState for empty states, or no active validators
@@ -418,17 +436,16 @@ export class EpochCache {
         currentShuffling.activeIndices.length > 0
           ? computeProposers(
               config.getForkSeqAtEpoch(currentEpoch),
-              currentProposerSeed,
+              getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER),
               currentShuffling,
               effectiveBalanceIncrements
             )
           : [];
+      proposersNextEpoch = {
+        computed: false,
+        seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
+      };
     }
-
-    const proposersNextEpoch: ProposersDeferred = {
-      computed: false,
-      seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
-    };
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
@@ -451,25 +468,13 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // Compute PTC for all slots in the prev/current epoch
+    // Copy previous/current epoch PTC slices from state.ptcWindow once, then serve hot-path lookups from epochCtx.
     let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
+    let nextPayloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-        state,
-        currentEpoch,
-        currentShuffling.committees,
-        effectiveBalanceIncrements
-      );
-
-      if (!isGenesis && previousEpoch >= config.GLOAS_FORK_EPOCH) {
-        previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-          state,
-          previousEpoch,
-          previousShuffling.committees,
-          effectiveBalanceIncrements
-        );
-      }
+      ({previousPayloadTimelinessCommittees, payloadTimelinessCommittees, nextPayloadTimelinessCommittees} =
+        getPtcWindowEpochCacheData(state as CachedBeaconStateGloas));
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -487,7 +492,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
-    const activationChurnLimit = getActivationChurnLimit(
+    const activationChurnLimit = getValidatorActivationChurnLimit(
       config,
       config.getForkSeq(state.slot),
       currentShuffling.activeIndices.length
@@ -519,6 +524,8 @@ export class EpochCache {
     return new EpochCache({
       config,
       pubkeyCache,
+      // Created once per application (shared by-reference through clone()).
+      builderDepositSignatureCache: new BuilderDepositSignatureCache(),
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -546,6 +553,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
+      nextPayloadTimelinessCommittees,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -562,6 +570,8 @@ export class EpochCache {
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
       pubkeyCache: this.pubkeyCache,
+      // Singleton per application, shared by-reference across clones
+      builderDepositSignatureCache: this.builderDepositSignatureCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -592,6 +602,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
+      nextPayloadTimelinessCommittees: this.nextPayloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -659,7 +670,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
-    this.activationChurnLimit = getActivationChurnLimit(
+    this.activationChurnLimit = getValidatorActivationChurnLimit(
       this.config,
       this.config.getForkSeq(state.slot),
       this.currentShuffling.activeIndices.length
@@ -695,37 +706,35 @@ export class EpochCache {
   /**
    * At fork boundary, this runs post-fork logic and it happens after `upgradeState*` is called.
    */
-  finalProcessEpoch(state: CachedBeaconStateAllForks): void {
+  finalProcessEpoch(state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache): void {
     // this.epoch was updated at the end of afterProcessEpoch()
     const upcomingEpoch = this.epoch;
     const epochAfterUpcoming = upcomingEpoch + 1;
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      // Shift and compute current epoch PTC eagerly for all slots
-      this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
-      this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-        state,
-        upcomingEpoch,
-        this.currentShuffling.committees,
-        this.effectiveBalanceIncrements
-      );
+      if (epochTransitionCache.nextEpochPayloadTimelinessCommittees) {
+        // shift arrays from transition cache
+        this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
+        this.payloadTimelinessCommittees = this.nextPayloadTimelinessCommittees;
+        this.nextPayloadTimelinessCommittees = epochTransitionCache.nextEpochPayloadTimelinessCommittees;
+      } else {
+        // Fork boundary: processPtcWindow didn't run, read from freshly initialized state.ptcWindow
+        ({
+          previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
+          payloadTimelinessCommittees: this.payloadTimelinessCommittees,
+          nextPayloadTimelinessCommittees: this.nextPayloadTimelinessCommittees,
+        } = getPtcWindowEpochCacheData(state as CachedBeaconStateGloas));
+      }
     }
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
-
-      if (proposerLookahead.length >= SLOTS_PER_EPOCH * 2) {
-        this.proposersNextEpoch = {
-          computed: true,
-          indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
-        };
-      } else {
-        // This should not happen unless MIN_SEED_LOOKAHEAD is set to 0
-        // this ensures things don't break if the proposer lookahead is not long enough
-        this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterUpcoming, DOMAIN_BEACON_PROPOSER)};
-      }
+      this.proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // Need to calculate proposers pre-fulu
       const upcomingProposerSeed = getSeed(state, upcomingEpoch, DOMAIN_BEACON_PROPOSER);
@@ -784,14 +793,17 @@ export class EpochCache {
    */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
-    if (epoch !== this.currentShuffling.epoch) {
-      throw new EpochCacheError({
-        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
-        currentEpoch: this.currentShuffling.epoch,
-        requestedEpoch: epoch,
-      });
+    if (epoch === this.currentShuffling.epoch) {
+      return this.proposers[slot % SLOTS_PER_EPOCH];
     }
-    return this.proposers[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.nextEpoch) {
+      return this.getBeaconProposersNextEpoch()[slot % SLOTS_PER_EPOCH];
+    }
+    throw new EpochCacheError({
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+      currentEpoch: this.currentShuffling.epoch,
+      requestedEpoch: epoch,
+    });
   }
 
   getBeaconProposers(): ValidatorIndex[] {
@@ -896,7 +908,7 @@ export class EpochCache {
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.set(index, pubkey);
+    this.pubkeyCache.append(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1034,12 +1046,16 @@ export class EpochCache {
       throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
+    if (epoch === this.epoch - 1) {
+      return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    }
+
     if (epoch === this.epoch) {
       return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
-    if (epoch === this.epoch - 1 && this.previousPayloadTimelinessCommittees.length > 0) {
-      return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.epoch + 1) {
+      return this.nextPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
     throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
@@ -1107,7 +1123,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: defaultPubkeyCache,
   };
 }

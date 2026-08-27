@@ -1,7 +1,7 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {MAX_COMMITTEES_PER_SLOT, PTC_SIZE} from "@lodestar/params";
+import {MAX_COMMITTEES_PER_SLOT, MAX_PAYLOAD_ATTESTATIONS, PTC_SIZE} from "@lodestar/params";
 import {RootHex, Slot, gloas} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -57,7 +57,7 @@ export class PayloadAttestationPool {
   add(
     message: gloas.PayloadAttestationMessage,
     payloadAttDataRootHex: RootHex,
-    validatorCommitteeIndex: number
+    validatorCommitteeIndices: number[]
   ): InsertOutcome {
     const slot = message.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -85,23 +85,19 @@ export class PayloadAttestationPool {
     const aggregate = aggregateByDataRoot.get(payloadAttDataRootHex);
     if (aggregate) {
       // Aggregate msg into aggregate
-      return aggregateMessageInto(message, validatorCommitteeIndex, aggregate);
+      return aggregateMessageInto(message, validatorCommitteeIndices, aggregate);
     }
     // Create a new aggregate with data
-    aggregateByDataRoot.set(payloadAttDataRootHex, messageToAggregate(message, validatorCommitteeIndex));
+    aggregateByDataRoot.set(payloadAttDataRootHex, messageToAggregate(message, validatorCommitteeIndices));
 
     return InsertOutcome.NewData;
   }
 
   /**
    * Get payload attestations to be included in a block.
-   * Pick the top `maxAttestation` number of attestations with the most votes
+   * Pick the top `MAX_PAYLOAD_ATTESTATIONS` aggregates with the most votes.
    */
-  getPayloadAttestationsForBlock(
-    beaconBlockRoot: BlockRootHex,
-    slot: Slot,
-    maxAttestation: number
-  ): gloas.PayloadAttestation[] {
+  getPayloadAttestationsForBlock(beaconBlockRoot: BlockRootHex, slot: Slot): gloas.PayloadAttestation[] {
     const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
 
     if (!aggregateByDataRootByBlockRoot) {
@@ -119,7 +115,32 @@ export class PayloadAttestationPool {
     return Array.from(aggregateByDataRoot.values())
       .slice()
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .slice(0, maxAttestation)
+      .slice(0, MAX_PAYLOAD_ATTESTATIONS)
+      .map(fastToPayloadAttestation);
+  }
+
+  getAll(slot?: Slot): gloas.PayloadAttestation[] {
+    const aggregates: AggregateFast[] = [];
+
+    const addAggregates = (aggregateByDataRootByBlockRoot: Map<BlockRootHex, Map<DataRootHex, AggregateFast>>) => {
+      for (const aggregateByDataRoot of aggregateByDataRootByBlockRoot.values()) {
+        aggregates.push(...aggregateByDataRoot.values());
+      }
+    };
+
+    if (slot !== undefined) {
+      const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
+      if (aggregateByDataRootByBlockRoot) {
+        addAggregates(aggregateByDataRootByBlockRoot);
+      }
+    } else {
+      for (const aggregateByDataRootByBlockRoot of this.aggregateByDataRootByBlockRootBySlot.values()) {
+        addAggregates(aggregateByDataRootByBlockRoot);
+      }
+    }
+
+    return aggregates
+      .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
       .map(fastToPayloadAttestation);
   }
 
@@ -129,25 +150,49 @@ export class PayloadAttestationPool {
   }
 }
 
-function messageToAggregate(message: gloas.PayloadAttestationMessage, validatorCommitteeIndex: number): AggregateFast {
+function messageToAggregate(
+  message: gloas.PayloadAttestationMessage,
+  validatorCommitteeIndices: number[]
+): AggregateFast {
+  const aggregationBits = BitArray.fromBitLen(PTC_SIZE);
+  for (const index of validatorCommitteeIndices) {
+    aggregationBits.set(index, true);
+  }
+  const sig = signatureFromBytesNoCheck(message.signature);
+  // The validator signed once but occupies `validatorCommitteeIndices.length` PTC positions.
+  // Verification aggregates the pubkey once per set bit, so the signature must be aggregated
+  // the same number of times for the BLS check to balance — same pattern as sync committee.
+  const signature =
+    validatorCommitteeIndices.length === 1
+      ? sig
+      : aggregateSignatures(new Array(validatorCommitteeIndices.length).fill(sig));
   return {
-    aggregationBits: BitArray.fromSingleBit(PTC_SIZE, validatorCommitteeIndex),
+    aggregationBits,
     data: message.data,
-    signature: signatureFromBytesNoCheck(message.signature),
+    signature,
   };
 }
 
 function aggregateMessageInto(
   message: gloas.PayloadAttestationMessage,
-  validatorCommitteeIndex: number,
+  validatorCommitteeIndices: number[],
   aggregate: AggregateFast
 ): InsertOutcome {
-  if (aggregate.aggregationBits.get(validatorCommitteeIndex) === true) {
+  // Gossip dedup via `seenPayloadAttesters` is keyed by (slot, validatorIndex), so the same
+  // validator's message is never processed twice for this aggregate's slot. All of its bits are set together or none.
+  // Checking the first index is sufficient.
+  if (aggregate.aggregationBits.get(validatorCommitteeIndices[0]) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
-  aggregate.aggregationBits.set(validatorCommitteeIndex, true);
-  aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(message.signature)]);
+  for (const index of validatorCommitteeIndices) {
+    aggregate.aggregationBits.set(index, true);
+  }
+  const sig = signatureFromBytesNoCheck(message.signature);
+  aggregate.signature = aggregateSignatures([
+    aggregate.signature,
+    ...new Array(validatorCommitteeIndices.length).fill(sig),
+  ]);
 
   return InsertOutcome.Aggregated;
 }
