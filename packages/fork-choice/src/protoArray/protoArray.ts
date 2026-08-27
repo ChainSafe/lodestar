@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
@@ -2005,6 +2005,32 @@ export class ProtoArray {
       return undefined;
     }
     return this.getNodeByIndex(nodeIndex);
+  }
+
+  /**
+   * Return true if a block other than `excludeRoot` at `slot` was proposed by `proposerIndex` and
+   * is PTC-timely. Used by `should_apply_proposer_boost` to detect proposer equivocations.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+   *
+   * Iterates unique block roots (via the canonical variant) since `slot`, `proposerIndex` and
+   * `ptcTimeliness` are block-level properties identical across payload-status variants.
+   */
+  hasEquivocatingBlock(proposerIndex: ValidatorIndex, slot: Slot, excludeRoot: RootHex): boolean {
+    for (const root of this.indices.keys()) {
+      if (root === excludeRoot) {
+        continue;
+      }
+      const nodeIndex = this.getDefaultNodeIndex(root);
+      if (nodeIndex === undefined) {
+        continue;
+      }
+      const node = this.nodes[nodeIndex];
+      if (node !== undefined && node.slot === slot && node.proposerIndex === proposerIndex && node.ptcTimeliness) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
