@@ -10,7 +10,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
-import {bigIntMin, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, bigIntMin, byteArrayEquals, prettyWeiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -58,8 +58,10 @@ export async function validateBuilderApiExecutionPayloadBid(
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(
-      `Bid total payment=${totalPayment} (value=${bid.value} executionPayment=${bid.executionPayment}) ` +
-        `is below minBid=${entry.minBid}`
+      `Bid total payment=${prettyWeiToEth(totalPayment * GWEI_TO_WEI)} ` +
+        `(value=${prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI)} ` +
+        `executionPayment=${prettyWeiToEth(bid.executionPayment * GWEI_TO_WEI)}) ` +
+        `is below minBid=${prettyWeiToEth(entry.minBid * GWEI_TO_WEI)}`
     );
   }
 
@@ -106,7 +108,10 @@ export async function validateBuilderApiExecutionPayloadBid(
   // The coverage check only applies to the staked collateral payment, a pure execution
   // layer payment bid has nothing to cover on-chain
   if (bid.value > 0 && !state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
-    throw Error(`Builder cannot cover bid value=${bid.value} balance=${builder.balance}`);
+    throw Error(
+      `Builder cannot cover bid value=${prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI)} ` +
+        `balance=${prettyWeiToEth(BigInt(builder.balance) * GWEI_TO_WEI)}`
+    );
   }
 
   const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));

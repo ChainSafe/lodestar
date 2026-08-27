@@ -975,7 +975,7 @@ export function getValidatorApi(
       }
 
       // A builder bid is expected if builders are configured or a p2p bid was already received.
-      // Used by the censorship override which cannot wait until the bid deadline
+      // Used by the censorship override which may run before the bid deadline
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
@@ -990,10 +990,10 @@ export function getValidatorApi(
             // Discard p2p bids below the proposer's configured floor on the total payment.
             // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
             if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-              logger.info("Ignoring p2p bid below min bid", {
+              logger.info("Best p2p bid below configured minimum", {
                 slot,
-                bidValue: p2pBid.signedBid.message.value,
-                minBid: builderConfig.minBid,
+                bidValue: prettyWeiToEth(BigInt(p2pBid.signedBid.message.value) * GWEI_TO_WEI),
+                minBid: prettyWeiToEth(builderConfig.minBid * GWEI_TO_WEI),
               });
               return null;
             }
