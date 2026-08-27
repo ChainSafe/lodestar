@@ -56,6 +56,7 @@ import {
   defer,
   formatWeiToEth,
   fromHex,
+  prettyGweiToEth,
   prettyWeiToEth,
   resolveOrRacePromises,
   sleep,
@@ -992,8 +993,8 @@ export function getValidatorApi(
             if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
               logger.info("Best p2p bid below configured minimum", {
                 slot,
-                bidValue: prettyWeiToEth(BigInt(p2pBid.signedBid.message.value) * GWEI_TO_WEI),
-                minBid: prettyWeiToEth(builderConfig.minBid * GWEI_TO_WEI),
+                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+                minBid: prettyGweiToEth(builderConfig.minBid),
               });
               return null;
             }
@@ -1050,7 +1051,7 @@ export function getValidatorApi(
             candidates: candidates
               .map(
                 (candidate) =>
-                  `${candidate.url ?? "p2p"}:total=${prettyWeiToEth(candidate.totalGwei * GWEI_TO_WEI)}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
+                  `${candidate.url ?? "p2p"}:total=${prettyGweiToEth(candidate.totalGwei)}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
               )
               .join(","),
             bidSource: best?.url ?? "p2p",
@@ -1136,13 +1137,13 @@ export function getValidatorApi(
         ...(bestBid !== null
           ? {
               bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
-              bidValue: prettyWeiToEth(BigInt(bestBid.signedBid.message.value) * GWEI_TO_WEI),
-              bidExecutionPayment: prettyWeiToEth(bestBid.signedBid.message.executionPayment * GWEI_TO_WEI),
+              bidValue: prettyGweiToEth(bestBid.signedBid.message.value),
+              bidExecutionPayment: prettyGweiToEth(bestBid.signedBid.message.executionPayment),
               // The full bid total and the counted total used during bid selection
-              bidTotal: prettyWeiToEth(
-                (BigInt(bestBid.signedBid.message.value) + bestBid.signedBid.message.executionPayment) * GWEI_TO_WEI
+              bidTotal: prettyGweiToEth(
+                BigInt(bestBid.signedBid.message.value) + bestBid.signedBid.message.executionPayment
               ),
-              bidCountedTotal: prettyWeiToEth(bestBid.totalGwei * GWEI_TO_WEI),
+              bidCountedTotal: prettyGweiToEth(bestBid.totalGwei),
               bidBoostFactor: bestBid.boostFactor,
               builderIndex: bestBid.signedBid.message.builderIndex,
               bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),

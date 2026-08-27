@@ -10,7 +10,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
-import {GWEI_TO_WEI, bigIntMin, byteArrayEquals, prettyWeiToEth, toHex, toRootHex} from "@lodestar/utils";
+import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -58,10 +58,10 @@ export async function validateBuilderApiExecutionPayloadBid(
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(
-      `Bid total payment=${prettyWeiToEth(totalPayment * GWEI_TO_WEI)} ` +
-        `(value=${prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI)} ` +
-        `executionPayment=${prettyWeiToEth(bid.executionPayment * GWEI_TO_WEI)}) ` +
-        `is below minBid=${prettyWeiToEth(entry.minBid * GWEI_TO_WEI)}`
+      `Bid total payment=${prettyGweiToEth(totalPayment)} ` +
+        `(value=${prettyGweiToEth(bid.value)} ` +
+        `executionPayment=${prettyGweiToEth(bid.executionPayment)}) ` +
+        `is below minBid=${prettyGweiToEth(entry.minBid)}`
     );
   }
 
@@ -109,8 +109,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   // layer payment bid has nothing to cover on-chain
   if (bid.value > 0 && !state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
     throw Error(
-      `Builder cannot cover bid value=${prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI)} ` +
-        `balance=${prettyWeiToEth(BigInt(builder.balance) * GWEI_TO_WEI)}`
+      `Builder cannot cover bid value=${prettyGweiToEth(bid.value)} ` + `balance=${prettyGweiToEth(builder.balance)}`
     );
   }
 
