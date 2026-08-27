@@ -465,8 +465,8 @@ export class ValidatorStore {
 
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
-   * builders, an omitted entry value takes this key's default and then the validator client's
-   * own configuration. An omitted auth data is derived from the entry url.
+   * builders. A value omitted on an entry takes this key's default, then the validator
+   * client's configuration, while omitted auth data is derived from the entry url instead.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -556,7 +556,7 @@ export class ValidatorStore {
     };
   }
 
-  /** Remove the builder configuration for this key, it then follows the validator client again */
+  /** Remove the builder configuration for this key, and revert to the validator client configuration */
   deleteBuilderConfig(pubkeyHex: PubkeyHex): void {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {

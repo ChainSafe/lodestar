@@ -128,8 +128,9 @@ export class BuilderPreferencesService {
 
     try {
       (await this.api.validator.submitBuilderPreferences({builderPreferences: entries})).assertOk();
-      // Only mark as submitted after the API call succeeds; a thrown error leaves the
-      // slot eligible for retry on the next tick.
+      // Only mark as submitted after the API call succeeds; a thrown error, including per-entry
+      // failures reported by index, leaves all slots eligible for retry on the next tick.
+      // Re-submitting preferences a builder already accepted is harmless.
       for (const {submission, slot: submittedSlot} of pending) {
         submission.slots.add(submittedSlot);
       }
