@@ -1072,7 +1072,7 @@ export function getBeaconBlockApi({
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(
           signedExecutionPayloadBid,
-          Math.round(elapsedSec * 1000)
+          Math.floor(elapsedSec * 1000)
         );
         metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
       } catch (e) {
