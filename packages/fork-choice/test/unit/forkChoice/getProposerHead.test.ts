@@ -57,6 +57,8 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
@@ -83,6 +85,8 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -111,6 +115,8 @@ describe("Forkchoice / GetProposerHead", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
