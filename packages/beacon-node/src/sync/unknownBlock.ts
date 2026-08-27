@@ -165,6 +165,16 @@ export class BlockInputSync {
       this.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayloadImported);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+
+      // Seed the balancer with peers that connected before we subscribed
+      for (const peerId of this.network.getConnectedPeers()) {
+        try {
+          this.peerBalancer.onPeerConnected(peerId, this.network.getConnectedPeerSyncMeta(peerId));
+        } catch (e) {
+          this.logger.debug("Failed to seed connected peer into BlockInputSync balancer", {peerId}, e as Error);
+        }
+      }
+
       this.subscribedToNetworkEvents = true;
     }
   }
@@ -182,6 +192,7 @@ export class BlockInputSync {
     this.chain.emitter.off(routes.events.EventType.executionPayload, this.onPayloadImported);
     this.network.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.network.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.peerBalancer.clear();
     this.subscribedToNetworkEvents = false;
   }
 
@@ -1718,6 +1729,13 @@ export class UnknownBlockPeerBalancer {
     this.peersMeta.delete(peerId);
     this.activeRequests.delete(peerId);
     this.rateLimitedUntilByPeer.delete(peerId);
+  }
+
+  /** Reset all tracked peer state, e.g. when BlockInputSync unsubscribes from the network. */
+  clear(): void {
+    this.peersMeta.clear();
+    this.activeRequests.clear();
+    this.rateLimitedUntilByPeer.clear();
   }
 
   onRateLimited(peerId: PeerIdStr, rateLimitedUntilMs: number): void {
