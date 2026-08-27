@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
@@ -84,20 +84,20 @@ describe("NativeBeaconStateView", () => {
     expect(view.getBalance(2)).toBe(32_000_000_002);
   });
 
-  it("derives forkSeq from the binding's forkName", () => {
-    let forkNameAccessCount = 0;
+  it("reads forkSeq directly from the binding", () => {
+    let forkSeqAccessCount = 0;
     const binding = {
-      get forkName() {
-        forkNameAccessCount++;
-        return ForkName.electra;
+      get forkSeq() {
+        forkSeqAccessCount++;
+        return ForkSeq.electra;
       },
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding);
     expect(view.forkSeq).toBe(ForkSeq.electra);
 
-    // Derived from the cached forkName: a second access doesn't re-hit the binding
+    // Cached: a second access doesn't re-hit the binding
     expect(view.forkSeq).toBe(ForkSeq.electra);
-    expect(forkNameAccessCount).toBe(1);
+    expect(forkSeqAccessCount).toBe(1);
   });
 });

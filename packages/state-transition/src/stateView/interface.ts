@@ -302,12 +302,10 @@ export type IBeaconStateViewLatestFork = Omit<
 /**
  * Contract a BeaconStateView backing implementation must satisfy.
  *
- * Differs from `IBeaconStateViewLatestFork` in three ways:
+ * Differs from `IBeaconStateViewLatestFork` in two ways:
  * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
  *   native (`.node`) binding cannot construct a `BitArray` across FFI.
  *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
- * - `forkSeq` is derived by `NativeBeaconStateView` from the binding's `forkName`
- *   (`ForkSeq[forkName]`), so the binding does not need to expose it.
  * - Methods that produce another view (`stateTransition`, `processSlots`,
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
  *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
@@ -318,12 +316,7 @@ export type IBeaconStateViewLatestFork = Omit<
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  | "executionPayloadAvailability"
-  | "forkSeq"
-  | "loadOtherState"
-  | "stateTransition"
-  | "processSlots"
-  | "withParentPayloadApplied"
+  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
 > & {
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;

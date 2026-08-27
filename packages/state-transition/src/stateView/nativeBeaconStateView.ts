@@ -63,6 +63,7 @@ import {
 export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private _forkName: ForkName | null = null;
+  private _forkSeq: ForkSeq | null = null;
   private _slot: Slot | null = null;
   private _fork: Fork | null = null;
   private _epoch: Epoch | null = null;
@@ -192,7 +193,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get forkSeq(): ForkSeq {
-    return ForkSeq[this.forkName];
+    if (this._forkSeq === null) {
+      this._forkSeq = this.binding.forkSeq;
+    }
+    return this._forkSeq;
   }
 
   get slot(): Slot {
