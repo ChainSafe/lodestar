@@ -103,6 +103,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const eip8198ForkRelevant = localConfig.EIP8198_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
   const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
 
@@ -143,6 +144,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // eip8198
+    EIP8198_FORK_VERSION: eip8198ForkRelevant,
+    EIP8198_FORK_EPOCH: eip8198ForkRelevant,
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
@@ -319,6 +323,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // EIP-8198
+    SLOT_DURATION_MS_EIP8198: eip8198ForkRelevant,
 
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,

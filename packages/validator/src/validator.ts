@@ -195,7 +195,7 @@ export class Validator {
           globalInit: {
             signal: controller.signal,
             ...globalInit,
-            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+            timeoutMs: globalInit?.timeoutMs ?? Math.min(config.SLOT_DURATION_MS, config.SLOT_DURATION_MS_EIP8198),
           },
         },
         {config, logger, metrics: metrics?.restApiClient}
@@ -350,7 +350,7 @@ export class Validator {
         urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
-        requestTimeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+        requestTimeoutMs: globalInit?.timeoutMs ?? Math.min(config.SLOT_DURATION_MS, config.SLOT_DURATION_MS_EIP8198),
       });
     } else {
       api = clientOrUrls;

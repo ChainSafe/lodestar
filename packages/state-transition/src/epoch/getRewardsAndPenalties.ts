@@ -18,6 +18,7 @@ import {
   hasMarkers,
 } from "../util/attesterStatus.js";
 import {isInInactivityLeak} from "../util/index.js";
+import {getSlotDurationMsAtEpoch} from "../util/slot.js";
 
 type RewardPenaltyItem = {
   baseReward: number;
@@ -67,7 +68,14 @@ export function getRewardsAndPenaltiesAltair(
 
   const inactivityPenalityMultiplier =
     fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
-  const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
+  let penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
+  // EIP-8198: the penalty scales with the square of the slot duration ratio, folded into the denominator
+  const slotDurationMs = getSlotDurationMsAtEpoch(config, epochCtx.epoch);
+  if (slotDurationMs !== config.SLOT_DURATION_MS) {
+    penaltyDenominator = Number(
+      (BigInt(penaltyDenominator) * BigInt(config.SLOT_DURATION_MS) ** 2n) / BigInt(slotDurationMs) ** 2n
+    );
+  }
 
   const {flags} = cache;
   for (let i = 0; i < flags.length; i++) {

@@ -14,6 +14,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToEip8198,
   upgradeStateToElectra,
   upgradeStateToGloas,
   upgradeStateToHeze,
@@ -284,6 +285,9 @@ function processSlotsWithTransientCache(
         const timer = metrics?.forkUpgradeTime.startTimer({fork: ForkName.gloas});
         postState = upgradeStateToGloas(postState as CachedBeaconStateFulu, metrics) as CachedBeaconStateAllForks;
         timer?.();
+      }
+      if (stateEpoch === config.EIP8198_FORK_EPOCH) {
+        postState = upgradeStateToEip8198(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.HEZE_FORK_EPOCH) {
         postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;

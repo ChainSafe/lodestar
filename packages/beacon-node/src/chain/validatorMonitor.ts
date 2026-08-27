@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -293,7 +293,7 @@ export function createValidatorMonitor(
     logger[logLevel](message, context);
   };
 
-  // Calculate retain time dynamically based on slot duration (2 epochs)
+  // Calculate retain time dynamically based on slot duration (2 epochs).
   const retainRegisteredValidatorsMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * RETAIN_REGISTERED_VALIDATORS_EPOCHS;
 
   /** The validators that require additional monitoring. */
@@ -1017,7 +1017,8 @@ function renderAttestationSummary(
   }
 
   const submittedLate =
-    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
+    summary.poolSubmitDelayMinSec >
+    config.getSlotComponentDurationMs(ForkName.phase0, LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
 
   const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
 
@@ -1144,7 +1145,7 @@ function renderBlockProposalSummary(
 
   if (
     proposal.poolSubmitDelaySec !== null &&
-    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(LATE_BLOCK_SUBMISSION_BPS) / 1000
+    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(ForkName.phase0, LATE_BLOCK_SUBMISSION_BPS) / 1000
   ) {
     out += "_late";
   }

@@ -127,6 +127,17 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: forkEpoch,
       };
+    case ForkName.eip8198:
+      return {
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        EIP8198_FORK_EPOCH: forkEpoch,
+      };
     case ForkName.heze:
       return {
         ALTAIR_FORK_EPOCH: 0,
@@ -136,6 +147,8 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: 0,
+        EIP8198_FORK_EPOCH: 0,
+        SLOT_DURATION_MS_EIP8198: config.SLOT_DURATION_MS,
         HEZE_FORK_EPOCH: forkEpoch,
       };
   }

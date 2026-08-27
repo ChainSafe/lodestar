@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {Logger, sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {DataColumnReconstructionCode, recoverDataColumnSidecars} from "../util/dataColumns.js";
@@ -50,8 +51,8 @@ export class ColumnReconstructionTracker {
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
-    this.minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
-    this.maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
+    this.minDelayMs = this.config.getSlotComponentDurationMs(ForkName.fulu, RECONSTRUCTION_DELAY_MIN_BPS);
+    this.maxDelayMs = this.config.getSlotComponentDurationMs(ForkName.fulu, RECONSTRUCTION_DELAY_MAX_BPS);
   }
 
   triggerColumnReconstruction(input: BlockInputColumns | PayloadEnvelopeInput): void {

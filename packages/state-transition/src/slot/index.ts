@@ -7,6 +7,7 @@ export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
+export {upgradeStateToEip8198} from "./upgradeStateToEip8198.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
 export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
 export {upgradeStateToGloas} from "./upgradeStateToGloas.js";

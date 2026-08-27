@@ -5086,7 +5086,7 @@
 - name: get_payload_due_ms#gloas
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getPayloadDueMs(): number {"
+      search: "getPayloadDueMs(fork: ForkName): number {"
   spec: |
     <spec fn="get_payload_due_ms" fork="gloas" hash="492ee49c">
     def get_payload_due_ms() -> Uint64:
@@ -5430,7 +5430,7 @@
 - name: get_proposer_reorg_cutoff_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getProposerReorgCutoffMs(_fork: ForkName): number {"
+      search: "getProposerReorgCutoffMs(fork: ForkName): number {"
   spec: |
     <spec fn="get_proposer_reorg_cutoff_ms" fork="phase0" hash="3dae8607">
     def get_proposer_reorg_cutoff_ms() -> Uint64:
@@ -5710,7 +5710,7 @@
 - name: get_slot_component_duration_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getSlotComponentDurationMs(basisPoints: number): number {"
+      search: "getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {"
   spec: |
     <spec fn="get_slot_component_duration_ms" fork="phase0" hash="9decf51d">
     def get_slot_component_duration_ms(basis_points: Uint64) -> Uint64:

@@ -36,7 +36,8 @@ export const DENEB_FORK_EPOCH = 10;
 export const ELECTRA_FORK_EPOCH = 20;
 export const FULU_FORK_EPOCH = 30;
 export const GLOAS_FORK_EPOCH = 40;
-export const HEZE_FORK_EPOCH = 50;
+export const EIP8198_FORK_EPOCH = 50;
+export const HEZE_FORK_EPOCH = 60;
 export const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
@@ -44,6 +45,7 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
+  EIP8198_FORK_EPOCH,
   HEZE_FORK_EPOCH,
 });
 export const clock = new Clock({
@@ -62,6 +64,7 @@ export const slots: Record<ForkPostCapella, number> = {
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
+  eip8198: computeStartSlotAtEpoch(EIP8198_FORK_EPOCH),
   heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 

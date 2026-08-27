@@ -51,6 +51,9 @@ export type ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
+  // EIP-8198
+  EIP8198_FORK_VERSION: Uint8Array;
+  EIP8198_FORK_EPOCH: number;
   // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
@@ -59,6 +62,7 @@ export type ChainConfig = {
   /** @deprecated Use `SLOT_DURATION_MS` instead. */
   SECONDS_PER_SLOT: number;
   SLOT_DURATION_MS: number;
+  SLOT_DURATION_MS_EIP8198: number;
   SECONDS_PER_ETH1_BLOCK: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   MIN_BUILDER_WITHDRAWABILITY_DELAY: number;
@@ -188,6 +192,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",
+  // EIP-8198
+  EIP8198_FORK_VERSION: "bytes",
+  EIP8198_FORK_EPOCH: "number",
   // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",
@@ -195,6 +202,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // Time parameters
   SECONDS_PER_SLOT: "number",
   SLOT_DURATION_MS: "number",
+  SLOT_DURATION_MS_EIP8198: "number",
   SECONDS_PER_ETH1_BLOCK: "number",
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
   MIN_BUILDER_WITHDRAWABILITY_DELAY: "number",

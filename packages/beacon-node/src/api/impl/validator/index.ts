@@ -110,9 +110,6 @@ import {
  * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
-
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents;
   version: ForkName;
@@ -247,8 +244,8 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
+    const nextEpochSlot = computeStartSlotAtEpoch(nextEpoch);
+    const nextEpochStartSec = computeTimeAtSlot(config, nextEpochSlot, chain.genesisTime);
     return nextEpochStartSec * 1000 - Date.now();
   }
 
@@ -627,16 +624,17 @@ export function getValidatorApi(
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+    const blockProductionTimeoutMs = config.getSlotDurationMs(fork);
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
       cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      timeoutMs: blockProductionTimeoutMs,
     });
 
     const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
       resolveTimeoutMs: cutoffMs,
-      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      raceTimeoutMs: blockProductionTimeoutMs,
       signal: controller.signal,
     });
 
@@ -970,7 +968,7 @@ export function getValidatorApi(
 
       const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {
         resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
 
@@ -1192,7 +1190,7 @@ export function getValidatorApi(
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
-      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadDueSec = config.getPayloadDueMs(fork) / 1000;
       const payloadSeenSec =
         payloadInput?.hasPayloadEnvelope() === true
           ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
@@ -1269,8 +1267,9 @@ export function getValidatorApi(
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const startFork = config.getForkName(startSlot);
       const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+        config.getSlotDurationMs(startFork) - config.getSlotComponentDurationMs(startFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
       // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so

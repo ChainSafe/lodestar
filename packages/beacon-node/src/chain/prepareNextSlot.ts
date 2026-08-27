@@ -92,8 +92,8 @@ export class PrepareNextSlotScheduler {
 
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
-      // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      // or precompute epoch transition.
+      await sleep(this.config.getSlotComponentDurationMs(fork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
@@ -341,7 +341,7 @@ export class PrepareNextSlotScheduler {
             // skip when we're the next-slot proposer — don't compete with block-production prep.
             feeRecipient === undefined
           ) {
-            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+            const maxDurationMs = this.config.getSlotComponentDurationMs(fork, BUILDER_PREVERIFY_LIMIT_BPS);
             const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
             const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
             preVerifyTimer?.();

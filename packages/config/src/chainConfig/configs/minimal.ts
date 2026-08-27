@@ -53,6 +53,9 @@ export const chainConfig: ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
+  // EIP-8198
+  EIP8198_FORK_VERSION: b("0xe8198001"),
+  EIP8198_FORK_EPOCH: Infinity,
   // HEZE
   HEZE_FORK_VERSION: b("0x08000001"),
   HEZE_FORK_EPOCH: Infinity,
@@ -63,6 +66,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 6,
   // [customized] 6000 milliseconds, 6 seconds
   SLOT_DURATION_MS: 6000,
+  // [customized] 5000 milliseconds, 5 seconds
+  SLOT_DURATION_MS_EIP8198: 5000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs

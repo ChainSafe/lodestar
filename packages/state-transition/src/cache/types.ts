@@ -11,6 +11,7 @@ export type BeaconStateDeneb = CompositeViewDU<SSZTypesFor<ForkName.deneb, "Beac
 export type BeaconStateElectra = CompositeViewDU<SSZTypesFor<ForkName.electra, "BeaconState">>;
 export type BeaconStateFulu = CompositeViewDU<SSZTypesFor<ForkName.fulu, "BeaconState">>;
 export type BeaconStateGloas = CompositeViewDU<SSZTypesFor<ForkName.gloas, "BeaconState">>;
+export type BeaconStateEip8198 = CompositeViewDU<SSZTypesFor<ForkName.eip8198, "BeaconState">>;
 export type BeaconStateHeze = CompositeViewDU<SSZTypesFor<ForkName.heze, "BeaconState">>;
 
 export type BeaconStateAllForks = CompositeViewDU<SSZTypesFor<ForkAll, "BeaconState">>;
