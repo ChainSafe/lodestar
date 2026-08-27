@@ -38,6 +38,7 @@ describe("NativeBeaconStateView", () => {
   it("caches forwarded properties so the binding is hit once", () => {
     let forkAccessCount = 0;
     let latestBlockHeaderAccessCount = 0;
+    let forkSeqAccessCount = 0;
     const fakeFork = {previousVersion: new Uint8Array(4), currentVersion: new Uint8Array(4), epoch: 0};
     const fakeHeader = {
       slot: 0,
@@ -56,6 +57,10 @@ describe("NativeBeaconStateView", () => {
         latestBlockHeaderAccessCount++;
         return fakeHeader;
       },
+      get forkSeq() {
+        forkSeqAccessCount++;
+        return ForkSeq.electra;
+      },
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding);
@@ -63,8 +68,11 @@ describe("NativeBeaconStateView", () => {
     expect(view.fork).toBe(fakeFork);
     expect(view.latestBlockHeader).toBe(fakeHeader);
     expect(view.latestBlockHeader).toBe(fakeHeader);
+    expect(view.forkSeq).toBe(ForkSeq.electra);
+    expect(view.forkSeq).toBe(ForkSeq.electra);
     expect(forkAccessCount).toBe(1);
     expect(latestBlockHeaderAccessCount).toBe(1);
+    expect(forkSeqAccessCount).toBe(1);
   });
 
   it("delegates pass-through getters and methods to the binding", () => {
@@ -82,22 +90,5 @@ describe("NativeBeaconStateView", () => {
     expect(view.validatorCount).toBe(17);
     expect(view.getBlockRootAtSlot(7)).toEqual(new Uint8Array([7]));
     expect(view.getBalance(2)).toBe(32_000_000_002);
-  });
-
-  it("reads forkSeq directly from the binding", () => {
-    let forkSeqAccessCount = 0;
-    const binding = {
-      get forkSeq() {
-        forkSeqAccessCount++;
-        return ForkSeq.electra;
-      },
-    } as unknown as IBeaconStateViewNative;
-
-    const view = new NativeBeaconStateView(binding);
-    expect(view.forkSeq).toBe(ForkSeq.electra);
-
-    // Cached: a second access doesn't re-hit the binding
-    expect(view.forkSeq).toBe(ForkSeq.electra);
-    expect(forkSeqAccessCount).toBe(1);
   });
 });
