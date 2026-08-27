@@ -103,7 +103,7 @@ export type GraffitiData = ValueOf<typeof GraffitiDataType>;
 export type GasLimitData = ValueOf<typeof GasLimitDataType>;
 export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 
-/** One builder a validator public key may source blocks from */
+/** Configuration for a single builder to request bids from */
 export type BuilderEntryConfig = {
   /** URL the bid requests for this entry are sent to */
   url: string;
@@ -119,7 +119,7 @@ export type BuilderEntryConfig = {
   builderBoostFactor?: bigint;
 };
 
-/** How a validator public key sources blocks from builders */
+/** Per-key builder configuration for requesting and selecting bids */
 export type BuilderConfigData = {
   /** Default for entries that do not set their own `minBid`, also applies to p2p bids */
   minBid?: bigint;
