@@ -43,7 +43,6 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {verifyExecutionPayloadEnvelope} from "../../../../chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {ExecutionPayloadBidError} from "../../../../chain/errors/executionPayloadBid.js";
 import {
   BlockError,
   BlockErrorCode,
@@ -60,10 +59,7 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
-import {
-  validateApiExecutionPayloadBid,
-  validateGossipExecutionPayloadBid,
-} from "../../../../chain/validation/executionPayloadBid.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -1040,6 +1036,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
+      // TODO: skip validation for timely publishing once the builder is proven reliable
       const validated = await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
       if (!validated) {
         chain.logger.warn(
@@ -1058,24 +1055,6 @@ export function getBeaconBlockApi({
       // Publish before anything else, the bid is time critical. Own bids are published regardless of
       // the gossip IGNORE rules, peers apply those on their own view.
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
-
-      // Only add the bid to the local pool if it passes full gossip validation, a local proposer must
-      // never commit to a bid that peers would not accept
-      try {
-        await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
-        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        if (e instanceof ExecutionPayloadBidError) {
-          chain.logger.debug("Published execution payload bid not added to local pool", {
-            slot,
-            builderIndex: bid.builderIndex,
-            code: e.type.code,
-          });
-        } else {
-          chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-        }
-      }
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
         version: fork,
