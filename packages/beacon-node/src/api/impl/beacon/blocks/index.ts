@@ -104,8 +104,8 @@ export function getBeaconBlockApi({
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
-    {signedBlockContents, broadcastValidation},
-    _context,
+    {signedBlockContents, broadcastValidation, builderUrl},
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -208,6 +208,12 @@ export function getBeaconBlockApi({
     const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
+
+    if (chain.forkChoice.hasBlockHex(blockRoot)) {
+      // Block was already imported, e.g. published again by the validator client or received via gossip
+      chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+      return;
+    }
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
@@ -356,6 +362,24 @@ export function getBeaconBlockApi({
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);
+
+    // Forward the signed block to the winning builder echoed by the validator client so it can
+    // help disseminate the block and learn that its bid won without waiting for block gossip.
+    // Failures are non-fatal, the builder also sees the block on gossip.
+    if (isForkPostGloas(fork) && builderUrl !== undefined) {
+      const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
+      if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+        chain.builderApiClient
+          .submitSignedBeaconBlock(builderUrl, {data: gloasBlock, bytes: context?.sszBytes ?? undefined})
+          .then(() => {
+            chain.logger.debug("Submitted signed block to builder", {slot, builderUrl});
+          })
+          .catch((e) => {
+            chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
+          });
+      }
+    }
+
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behavior.
@@ -374,16 +398,20 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (
-              e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
-            ) {
-              chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                blockInput: blockForImport,
-                peer: IDENTITY_PEER_ID,
-                source: BlockInputSource.api,
-              });
+            if (e instanceof BlockError) {
+              switch (e.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block was imported while publishing, e.g. received via gossip
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                    blockInput: blockForImport,
+                    peer: IDENTITY_PEER_ID,
+                    source: BlockInputSource.api,
+                  });
+              }
             }
             throw e;
           }),
@@ -1042,7 +1070,10 @@ export function getBeaconBlockApi({
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        const insertOutcome = chain.executionPayloadBidPool.add(
+          signedExecutionPayloadBid,
+          Math.floor(elapsedSec * 1000)
+        );
         metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
       } catch (e) {
         chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);

@@ -36,6 +36,7 @@ export enum SignableMessageType {
   EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
   PAYLOAD_ATTESTATION = "PAYLOAD_ATTESTATION",
   PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
+  BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -87,7 +88,8 @@ export type SignableMessage =
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
   | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
   | {type: SignableMessageType.PAYLOAD_ATTESTATION; data: gloas.PayloadAttestationData}
-  | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences};
+  | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
+  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -105,6 +107,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
   [SignableMessageType.PAYLOAD_ATTESTATION]: true,
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
+  [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
 };
 
 type Web3SignerSerializedRequest = {
@@ -285,6 +288,9 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.PROPOSER_PREFERENCES:
       return {proposer_preferences: ssz.gloas.ProposerPreferences.toJson(payload.data)};
+
+    case SignableMessageType.BUILDER_REQUEST_AUTH:
+      return {builder_request_auth: ssz.gloas.BuilderRequestAuth.toJson(payload.data)};
   }
 }
 
