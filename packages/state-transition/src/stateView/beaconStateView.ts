@@ -108,6 +108,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.config.getForkName(this.cachedState.slot);
   }
 
+  get forkSeq(): ForkSeq {
+    return this.config.getForkSeq(this.cachedState.slot);
+  }
+
   get slot(): number {
     return this.cachedState.slot;
   }

@@ -1,6 +1,6 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -189,6 +189,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._forkName = this.binding.forkName;
     }
     return this._forkName;
+  }
+
+  get forkSeq(): ForkSeq {
+    return ForkSeq[this.forkName];
   }
 
   get slot(): Slot {
