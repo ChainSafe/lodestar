@@ -17,6 +17,7 @@ import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/execut
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
+import {MAX_PEERS_PER_ROOT} from "../network/processor/constants.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -198,10 +199,12 @@ export class BlockInputSync {
    */
   private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
-      this.addByRootHex(data.rootHex, data.peer);
-      this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
+      const isNewRoot = this.addByRootHex(data.rootHex, data.peer);
+      if (isNewRoot) {
+        this.triggerUnknownBlockSearch();
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
+        this.metrics?.blockInputSync.source.inc({source: data.source});
+      }
     } catch (e) {
       this.logger.debug("Error handling unknownBlockRoot event", {}, e as Error);
     }
@@ -223,10 +226,12 @@ export class BlockInputSync {
 
   private onUnknownEnvelopeBlockRoot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]): void => {
     try {
-      this.addByPayloadRootHex(data.rootHex, data.peer, this.resolvePayloadSlot(data.rootHex));
-      this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
-      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      const isNewRoot = this.addByPayloadRootHex(data.rootHex, data.peer, this.resolvePayloadSlot(data.rootHex));
+      if (isNewRoot) {
+        this.triggerUnknownBlockSearch();
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
+        this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      }
     } catch (e) {
       this.logger.debug("Error handling unknownEnvelopeBlockRoot event", {}, e as Error);
     }
@@ -385,7 +390,9 @@ export class BlockInputSync {
       });
     }
 
-    if (peerIdStr) {
+    // bound peers tracked per root: propagationSource is recorded pre-validation, so cap the set (#9923).
+    // Once at the cap, ignore further peers rather than evicting already-tracked ones.
+    if (peerIdStr && pendingBlock.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
@@ -420,7 +427,9 @@ export class BlockInputSync {
       });
     }
 
-    if (peerIdStr) {
+    // bound peers tracked per root: propagationSource is recorded pre-validation, so cap the set (#9923).
+    // Once at the cap, ignore further peers rather than evicting already-tracked ones.
+    if (peerIdStr && pendingBlock.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
@@ -462,8 +471,7 @@ export class BlockInputSync {
     ) {
       pendingPayload.slot = slot;
     }
-
-    if (peerIdStr) {
+    if (peerIdStr && pendingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingPayload.peerIdStrings.add(peerIdStr);
     }
 
@@ -509,7 +517,7 @@ export class BlockInputSync {
       envelope
     );
 
-    if (peerIdStr) {
+    if (peerIdStr && pendingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingPayload.peerIdStrings.add(peerIdStr);
     }
 
@@ -1235,7 +1243,12 @@ export class BlockInputSync {
       const pendingColumns = payloadInput?.hasAllData()
         ? new Set<number>()
         : new Set(payloadInput?.getMissingSampledColumnMeta().missing ?? []);
-      const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
+      // prefer peers that gossiped this payload root to us (#9923)
+      const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
+        pendingColumns,
+        excludedPeers,
+        cacheItem.peerIdStrings
+      );
       if (peerMeta === null) {
         if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
           throw new UnknownBlockRateLimitedError(
@@ -1444,7 +1457,12 @@ export class BlockInputSync {
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
-      const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
+      // prefer peers that gossiped this block root to us (#9923)
+      const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
+        pendingColumns,
+        excludedPeers,
+        cacheItem.peerIdStrings
+      );
       if (peerMeta === null) {
         if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
           throw new UnknownBlockRateLimitedError(
@@ -1755,11 +1773,17 @@ export class UnknownBlockPeerBalancer {
   }
 
   /**
-   * called from fetchBlockInput() where we only have block root and nothing else
+   * called from fetchBlockInput()/fetchPayloadInput() with a block/payload root.
    * excludedPeers are the peers that we requested already so we don't want to try again
    * pendingColumns is empty for prefulu, or the 1st time we we download a block by root
+   * preferredPeers are the peers NetworkProcessor told us gossiped this root (from
+   *   pendingBlock/cacheItem.peerIdStrings). They are preferred but not required.
    */
-  bestPeerForPendingColumns(pendingColumns: Set<number>, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
+  bestPeerForPendingColumns(
+    pendingColumns: Set<number>,
+    excludedPeers: Set<PeerIdStr>,
+    preferredPeers?: Set<PeerIdStr>
+  ): PeerSyncMeta | null {
     const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers);
     if (eligiblePeers.length === 0) {
       return null;
@@ -1767,7 +1791,9 @@ export class UnknownBlockPeerBalancer {
 
     const sortedEligiblePeers = sortBy(
       shuffle(eligiblePeers),
-      // prefer peers with least active req
+      // 1st key: prefer peers we heard about this root from
+      (peerId) => (preferredPeers?.has(peerId) ? 0 : 1),
+      // 2nd key (tiebreak): prefer peers with least active req
       (peerId) => this.activeRequests.get(peerId) ?? 0
     );
 
