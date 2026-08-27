@@ -365,6 +365,21 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    const currentTimeOk =
+      headBlock.slot === currentSlot ||
+      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
+
+    // Mirror the proposer equivocation branch of getProposerHead(). The head slot's attestations are
+    // still queued at this point so the head is assumed weak, same as for the regular branch below.
+    if (currentTimeOk && this.isProposerEquivocation(headBlock)) {
+      this.logger?.verbose("Head proposer equivocated. Should override forkchoice update", {
+        blockRoot: headBlock.blockRoot,
+        slot: currentSlot,
+        proposerIndex: headBlock.proposerIndex,
+      });
+      return {shouldOverrideFcu: true, parentBlock};
+    }
+
     const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
       headBlock,
       parentBlock,
@@ -375,9 +390,6 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
     }
 
-    const currentTimeOk =
-      headBlock.slot === currentSlot ||
-      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
     if (!currentTimeOk) {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
