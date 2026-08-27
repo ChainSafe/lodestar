@@ -1101,7 +1101,7 @@ export function getValidatorApi(
         }
         return engineBlock;
       });
-      const bidPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
+      const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
         if (candidate === null) {
           throw new Error(NO_BID_AVAILABLE);
         }
@@ -1111,7 +1111,7 @@ export function getValidatorApi(
         );
       });
 
-      const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {
+      const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
         signal: controller.signal,
@@ -1121,7 +1121,7 @@ export function getValidatorApi(
       let source: ProducedBlockSource = ProducedBlockSource.engine;
 
       // Resolved instantly whenever the bid branch produced a block
-      const bestBid = bidResult.status === "fulfilled" ? await bestBidPromise : null;
+      const bestBid = bidBlockResult.status === "fulfilled" ? await bestBidPromise : null;
 
       const logCtx = {
         slot,
@@ -1155,7 +1155,7 @@ export function getValidatorApi(
       if (
         engineResult.status === "fulfilled" &&
         engineResult.value.shouldOverrideBuilder &&
-        (builderBidExpected || bidResult.status === "fulfilled")
+        (builderBidExpected || bidBlockResult.status === "fulfilled")
       ) {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
@@ -1168,7 +1168,7 @@ export function getValidatorApi(
           durationMs: engineResult.durationMs,
           ...getBlockValueLogInfo(engineResult.value),
         });
-      } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
+      } else if (engineResult.status === "fulfilled" && bidBlockResult.status === "fulfilled") {
         const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
@@ -1182,12 +1182,12 @@ export function getValidatorApi(
           ...logCtx,
           engineDurationMs: engineResult.durationMs,
           ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
-          builderDurationMs: bidResult.durationMs,
+          builderDurationMs: bidBlockResult.durationMs,
         });
-        bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
-      } else if (bidResult.status === "fulfilled") {
+        bestResult = source === ProducedBlockSource.builder ? bidBlockResult : engineResult;
+      } else if (bidBlockResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
-        bestResult = bidResult;
+        bestResult = bidBlockResult;
         const reason =
           engineResult.status === "pending"
             ? BuilderBlockSelectionReason.EnginePending
@@ -1196,17 +1196,17 @@ export function getValidatorApi(
         logger.info("Selected builder bid block: no local block produced", {
           reason,
           ...logCtx,
-          durationMs: bidResult.durationMs,
-          ...getBlockValueLogInfo(bidResult.value),
+          durationMs: bidBlockResult.durationMs,
+          ...getBlockValueLogInfo(bidBlockResult.value),
           error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
         });
       } else if (engineResult.status === "fulfilled") {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         const reason =
-          bidResult.status === "rejected" && (bidResult.reason as Error).message === NO_BID_AVAILABLE
+          bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
             ? EngineBlockSelectionReason.BuilderNoBid
-            : bidResult.status === "pending"
+            : bidBlockResult.status === "pending"
               ? EngineBlockSelectionReason.BuilderPending
               : EngineBlockSelectionReason.BuilderError;
         metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
@@ -1215,13 +1215,13 @@ export function getValidatorApi(
           ...logCtx,
           durationMs: engineResult.durationMs,
           ...getBlockValueLogInfo(engineResult.value),
-          error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
+          error: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : undefined,
         });
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
-        const bidReason = bidResult.status === "rejected" ? bidResult.reason : bidResult.status;
+        const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
         logger.error("Block production failed", {
           ...logCtx,
           engineReason: String(engineReason),
