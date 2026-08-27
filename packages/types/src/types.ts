@@ -4,6 +4,7 @@ import {
   ForkPostAltair,
   ForkPostBellatrix,
   ForkPostDeneb,
+  // ForkPostEip8198,
   ForkPostElectra,
   ForkPostFulu,
   ForkPostGloas,
@@ -23,6 +24,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as eip8198} from "./eip8198/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
@@ -288,6 +290,47 @@ type TypesByFork = {
     DataColumnSidecars: fulu.DataColumnSidecars;
   };
   [ForkName.gloas]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: gloas.BeaconBlock;
+    BeaconBlockBody: gloas.BeaconBlockBody;
+    BeaconState: gloas.BeaconState;
+    SignedBeaconBlock: gloas.SignedBeaconBlock;
+    Metadata: fulu.Metadata;
+    Status: fulu.Status;
+    LightClientHeader: gloas.LightClientHeader;
+    LightClientBootstrap: gloas.LightClientBootstrap;
+    LightClientUpdate: gloas.LightClientUpdate;
+    LightClientFinalityUpdate: gloas.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: gloas.LightClientOptimisticUpdate;
+    LightClientStore: gloas.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: gloas.ExecutionPayload;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: gloas.SSEPayloadAttributes;
+    BlockContents: gloas.BlockContents;
+    SignedBlockContents: fulu.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: fulu.BlobsBundle;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
+    Attestation: gloas.Attestation;
+    IndexedAttestation: gloas.IndexedAttestation;
+    IndexedAttestationBigint: gloas.IndexedAttestationBigint;
+    AttesterSlashing: gloas.AttesterSlashing;
+    AggregateAndProof: gloas.AggregateAndProof;
+    SignedAggregateAndProof: gloas.SignedAggregateAndProof;
+    ExecutionRequests: gloas.ExecutionRequests;
+    ExecutionPayloadBid: gloas.ExecutionPayloadBid;
+    DataColumnSidecar: gloas.DataColumnSidecar;
+    DataColumnSidecars: gloas.DataColumnSidecars;
+  };
+  [ForkName.eip8198]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: gloas.BeaconBlock;

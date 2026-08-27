@@ -45,6 +45,8 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToFulu(preState as CachedBeaconStateElectra);
         case ForkName.gloas:
           return slotFns.upgradeStateToGloas(preState as CachedBeaconStateFulu);
+        case ForkName.eip8198:
+          return slotFns.upgradeStateToEip8198(preState as CachedBeaconStateGloas);
         case ForkName.heze:
           return slotFns.upgradeStateToHeze(preState as CachedBeaconStateGloas);
       }

@@ -5,8 +5,9 @@ import {Metrics} from "../metrics/index.js";
 /**
  * To prevent our node from having to reprocess while struggling to sync,
  * we only want to reprocess attestations if block reaches our node before this time.
+ * Expressed in basis points of slot duration (1667 BPS ≈ 1/6 of slot = 2s for 12s slots, 1s for 6s slots).
  */
-export const REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC = 2;
+export const REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS = 1667;
 
 /**
  * Reprocess status for metrics

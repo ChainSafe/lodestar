@@ -94,7 +94,7 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
     totalActiveBalanceIncrements = 1;
   }
 
-  const churnLimitsGloas = getGloasChurnLimits(config, totalActiveBalanceIncrements);
+  const churnLimitsGloas = getGloasChurnLimits(config, getCurrentEpoch(state), totalActiveBalanceIncrements);
 
   return isForkPostGloas(fork)
     ? computeWeakSubjectivityPeriodFromConstituentsGloas(

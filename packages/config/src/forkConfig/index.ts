@@ -11,6 +11,7 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostEip8198,
   isForkPostGloas,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
@@ -85,18 +86,26 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.FULU_FORK_VERSION,
     prevForkName: ForkName.fulu,
   };
+  const eip8198: ForkInfo = {
+    name: ForkName.eip8198,
+    seq: ForkSeq.eip8198,
+    epoch: config.EIP8198_FORK_EPOCH,
+    version: config.EIP8198_FORK_VERSION,
+    prevVersion: config.GLOAS_FORK_VERSION,
+    prevForkName: ForkName.gloas,
+  };
   const heze: ForkInfo = {
     name: ForkName.heze,
     seq: ForkSeq.heze,
     epoch: config.HEZE_FORK_EPOCH,
     version: config.HEZE_FORK_VERSION,
-    prevVersion: config.GLOAS_FORK_VERSION,
-    prevForkName: ForkName.gloas,
+    prevVersion: config.EIP8198_FORK_VERSION,
+    prevForkName: ForkName.eip8198,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, eip8198, heze};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -226,37 +235,43 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS);
     },
     getAggregateDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS);
     },
     getSyncMessageDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS);
     },
     getSyncContributionDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS);
     },
-    getProposerReorgCutoffMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
+    getProposerReorgCutoffMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PROPOSER_REORG_CUTOFF_BPS);
     },
-    getPayloadDueMs(): number {
-      return this.getSlotComponentDurationMs(config.PAYLOAD_DUE_BPS);
+    getPayloadDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PAYLOAD_DUE_BPS);
     },
 
-    getSlotComponentDurationMs(basisPoints: number): number {
-      return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+    /** Get slot duration in ms for a given fork */
+    getSlotDurationMs(fork: ForkName): number {
+      return isForkPostEip8198(fork) ? config.SLOT_DURATION_MS_EIP8198 : config.SLOT_DURATION_MS;
+    },
+
+    getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
+      const slotDurationMs = isForkPostEip8198(fork) ? config.SLOT_DURATION_MS_EIP8198 : config.SLOT_DURATION_MS;
+      return Math.round((basisPoints * slotDurationMs) / BASIS_POINTS);
     },
   };
 }

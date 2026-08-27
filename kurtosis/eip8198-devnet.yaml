@@ -1,0 +1,55 @@
+# EIP-8198 quick slots devnet: gloas from genesis, eip8198 fork at epoch 3 (minimal: 8 slots/epoch).
+# Slot duration 6000ms -> 4000ms at the fork. Fork params are injected via Lodestar's hidden
+# --params.* overrides so the upstream ethereum-package + genesis generator can be used unchanged.
+participants:
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: lodestar:eip8198
+    vc_image: lodestar:eip8198
+    cl_log_level: debug
+    vc_log_level: info
+    cl_extra_params:
+      - --params.EIP8198_FORK_EPOCH=3
+      - --params.EIP8198_FORK_VERSION=0xe8198038
+      - --params.SLOT_DURATION_MS_EIP8198=4000
+    vc_extra_params:
+      - --params.EIP8198_FORK_EPOCH=3
+      - --params.EIP8198_FORK_VERSION=0xe8198038
+      - --params.SLOT_DURATION_MS_EIP8198=4000
+      - --graffiti=eip8198-1
+    supernode: true
+    validator_count: 64
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: lodestar:eip8198
+    vc_image: lodestar:eip8198
+    cl_log_level: debug
+    vc_log_level: info
+    cl_extra_params:
+      - --params.EIP8198_FORK_EPOCH=3
+      - --params.EIP8198_FORK_VERSION=0xe8198038
+      - --params.SLOT_DURATION_MS_EIP8198=4000
+    vc_extra_params:
+      - --params.EIP8198_FORK_EPOCH=3
+      - --params.EIP8198_FORK_VERSION=0xe8198038
+      - --params.SLOT_DURATION_MS_EIP8198=4000
+      - --graffiti=eip8198-2
+    supernode: true
+    validator_count: 64
+network_params:
+  preset: minimal
+  seconds_per_slot: 6
+  gloas_fork_epoch: 0
+  withdrawal_type: "0x01"
+  validator_balance: 32
+  deploy_eip8282_contracts: true
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 39000
+  el:
+    enabled: true
+    public_port_start: 40000
+global_log_level: info

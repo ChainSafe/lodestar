@@ -1715,7 +1715,10 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+    const ptcThresholdMs = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(block.slot),
+      this.config.PAYLOAD_ATTESTATION_DUE_BPS
+    );
     return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
   }
 

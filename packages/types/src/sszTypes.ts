@@ -4,6 +4,7 @@ import {ssz as altairSsz} from "./altair/index.js";
 import {ssz as bellatrixSsz} from "./bellatrix/index.js";
 import {ssz as capellaSsz} from "./capella/index.js";
 import {ssz as denebSsz} from "./deneb/index.js";
+import {ssz as eip8198Ssz} from "./eip8198/index.js";
 import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
 import {ssz as gloasSsz} from "./gloas/index.js";
@@ -34,6 +35,17 @@ const typesByFork = {
     ...fuluSsz,
     ...gloasSsz,
   },
+  [ForkName.eip8198]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...fuluSsz,
+    ...gloasSsz,
+    ...eip8198Ssz,
+  },
   [ForkName.heze]: {
     ...phase0Ssz,
     ...altairSsz,
@@ -43,6 +55,7 @@ const typesByFork = {
     ...electraSsz,
     ...fuluSsz,
     ...gloasSsz,
+    ...eip8198Ssz,
     ...hezeSsz,
   },
 };
@@ -58,6 +71,7 @@ export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
 export const fulu = typesByFork[ForkName.fulu];
 export const gloas = typesByFork[ForkName.gloas];
+export const eip8198 = typesByFork[ForkName.eip8198];
 export const heze = typesByFork[ForkName.heze];
 
 /**

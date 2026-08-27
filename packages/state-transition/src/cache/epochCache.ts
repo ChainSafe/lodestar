@@ -452,9 +452,9 @@ export class EpochCache {
 
     // Values syncParticipantReward, syncProposerReward, baseRewardPerIncrement are only used after altair.
     // However, since they are very cheap to compute they are computed always to simplify upgradeState function.
-    const syncParticipantReward = computeSyncParticipantReward(totalActiveBalanceIncrements);
+    const syncParticipantReward = computeSyncParticipantReward(config, currentEpoch, totalActiveBalanceIncrements);
     const syncProposerReward = Math.floor(syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-    const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceIncrements);
+    const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, currentEpoch, totalActiveBalanceIncrements);
 
     let currentSyncCommitteeIndexed: SyncCommitteeCache;
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
@@ -685,9 +685,17 @@ export class EpochCache {
 
     this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;
     if (upcomingEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
+      this.syncParticipantReward = computeSyncParticipantReward(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
+      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
     }
 
     this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;

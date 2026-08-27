@@ -390,7 +390,7 @@ export function beforeProcessEpoch(
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStakeByIncrement);
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, currentEpoch, totalActiveStakeByIncrement);
 
   // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
