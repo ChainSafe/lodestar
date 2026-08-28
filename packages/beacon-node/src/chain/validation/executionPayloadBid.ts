@@ -1,6 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -9,11 +9,10 @@ import {
   isGasLimitTargetCompatible,
   isStartSlotOfEpoch,
   isStatePostGloas,
-  isStatePostHeze,
 } from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
-import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -373,11 +372,20 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] [New in Heze:EIP7805] bid.inclusionListBits covers our view of the inclusion lists
   // for the slot preceding the bid, restricted to the ones that arrived before the deadline. A
-  // builder that saw fewer lists than we did cannot have built a payload satisfying ours.
-  const headState = chain.getHeadState();
-  if (isStatePostHeze(headState)) {
+  // builder that saw fewer lists than we did cannot have built a payload satisfying ours. Our view
+  // is keyed by `(bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))`.
+  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
-    if (!chain.inclusionListStore.isInclusionListBitsInclusive(headState, bid.slot - 1, inclusionListBits, true)) {
+    const inclusionListSlot = bid.slot - 1;
+    const inclusionListDependentRoot = getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot);
+    if (
+      !chain.inclusionListStore.isInclusionListBitsInclusive(
+        inclusionListSlot,
+        inclusionListDependentRoot,
+        inclusionListBits,
+        true
+      )
+    ) {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
         code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
         builderIndex: bid.builderIndex,

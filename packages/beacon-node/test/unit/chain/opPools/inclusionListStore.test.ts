@@ -2,31 +2,29 @@ import {beforeEach, describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import type {IBeaconStateViewHeze} from "@lodestar/state-transition";
-import {ValidatorIndex, heze, ssz} from "@lodestar/types";
+import {ValidatorIndex, heze} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {InclusionListInsertOutcome, InclusionListStore} from "../../../../src/chain/opPools/inclusionListStore.js";
 
 describe("chain / opPools / InclusionListStore", () => {
   const slot = 100;
-  // Distinct validator indices, one per committee position
+  const dependentRoot = Buffer.alloc(32, 0xaa);
+  const dependentRootHex = toRootHex(dependentRoot);
+  // Distinct validator indices, one per committee position: validator i + 1 sits at position i
   const committee = Uint32Array.from(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i + 1));
-  const committeeRoot = ssz.heze.InclusionListCommittee.hashTreeRoot(Array.from(committee));
-
-  const state = {
-    getInclusionListCommittee: () => committee,
-  } as unknown as IBeaconStateViewHeze;
+  const committeeIndexOf = (validatorIndex: ValidatorIndex): number => committee.indexOf(validatorIndex);
 
   const config = {MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1} as BeaconConfig;
 
   const makeInclusionList = (
     validatorIndex: ValidatorIndex,
     transactions: Uint8Array[],
-    opts?: {slot?: number; committeeRoot?: Uint8Array}
+    opts?: {slot?: number; dependentRoot?: Uint8Array}
   ): heze.SignedInclusionList => ({
     message: {
       slot: opts?.slot ?? slot,
       validatorIndex,
-      inclusionListCommitteeRoot: opts?.committeeRoot ?? committeeRoot,
+      dependentRoot: opts?.dependentRoot ?? dependentRoot,
       transactions,
     },
     signature: Buffer.alloc(96, 0),
@@ -36,77 +34,102 @@ describe("chain / opPools / InclusionListStore", () => {
   const txB = Uint8Array.from([4, 5]);
 
   let store: InclusionListStore;
+  const process = (signedInclusionList: heze.SignedInclusionList, timely: boolean): InclusionListInsertOutcome =>
+    store.process(signedInclusionList, committeeIndexOf(signedInclusionList.message.validatorIndex), timely);
+
   beforeEach(() => {
     store = new InclusionListStore(config);
   });
 
   it("stores a new inclusion list", () => {
-    expect(store.process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.New);
+    expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.New);
     expect(store.size).toBe(1);
   });
 
   it("returns Seen for an identical re-submission without marking an equivocation", () => {
-    store.process(makeInclusionList(1, [txA]), true);
+    process(makeInclusionList(1, [txA]), true);
 
-    expect(store.process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Seen);
+    expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Seen);
     expect(store.size).toBe(1);
-    expect(store.getInclusionListTransactions(state, slot)).toHaveLength(1);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toHaveLength(1);
   });
 
   it("marks an equivocation on a conflicting inclusion list and stops counting the validator", () => {
-    store.process(makeInclusionList(1, [txA]), true);
-    store.process(makeInclusionList(2, [txB]), true);
+    process(makeInclusionList(1, [txA]), true);
+    process(makeInclusionList(2, [txB]), true);
 
-    expect(store.process(makeInclusionList(1, [txB]), true)).toBe(InclusionListInsertOutcome.Equivocating);
-    // The conflicting list is not stored, and the already-stored one stops counting
-    expect(store.getInclusionListTransactions(state, slot)).toEqual([txB]);
-    expect(store.getInclusionListBits(state, slot).getTrueBitIndexes()).toEqual([1]);
+    expect(process(makeInclusionList(1, [txB]), true)).toBe(InclusionListInsertOutcome.Equivocating);
+    // The first list stays stored but no longer counts
+    expect(store.size).toBe(2);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txB]);
+    expect(store.getInclusionListBits(slot, dependentRootHex).getTrueBitIndexes()).toEqual([1]);
 
-    expect(store.process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.SubsequentEquivocation);
+    expect(process(makeInclusionList(1, [txB]), true)).toBe(InclusionListInsertOutcome.SubsequentEquivocation);
+    // The stored list is already processed, resubmitting it is not new evidence
+    expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Seen);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txB]);
   });
 
   it("deduplicates transactions across inclusion lists", () => {
-    store.process(makeInclusionList(1, [txA, txB]), true);
-    store.process(makeInclusionList(2, [txA]), true);
+    process(makeInclusionList(1, [txA, txB]), true);
+    process(makeInclusionList(2, [txA]), true);
 
-    expect(store.getInclusionListTransactions(state, slot)).toEqual([txA, txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txA, txB]);
   });
 
   it("excludes untimely inclusion lists unless onlyTimely is false", () => {
-    store.process(makeInclusionList(1, [txA]), true);
-    store.process(makeInclusionList(2, [txB]), false);
+    process(makeInclusionList(1, [txA]), true);
+    process(makeInclusionList(2, [txB]), false);
 
-    expect(store.getInclusionListTransactions(state, slot)).toEqual([txA]);
-    expect(store.getInclusionListBits(state, slot).getTrueBitIndexes()).toEqual([0]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txA]);
+    expect(store.getInclusionListBits(slot, dependentRootHex).getTrueBitIndexes()).toEqual([0]);
 
-    expect(store.getInclusionListTransactions(state, slot, false)).toEqual([txA, txB]);
-    expect(store.getInclusionListBits(state, slot, false).getTrueBitIndexes()).toEqual([0, 1]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex, false)).toEqual([txA, txB]);
+    expect(store.getInclusionListBits(slot, dependentRootHex, false).getTrueBitIndexes()).toEqual([0, 1]);
   });
 
-  it("ignores inclusion lists stored under a different committee root", () => {
+  it("keys inclusion lists by slot and dependent root", () => {
     const otherRoot = Buffer.alloc(32, 0xff);
-    store.process(makeInclusionList(1, [txA], {committeeRoot: otherRoot}), true);
+    process(makeInclusionList(1, [txA], {dependentRoot: otherRoot}), true);
+    process(makeInclusionList(2, [txB], {slot: slot + 1}), true);
 
-    expect(store.size).toBe(1);
-    expect(store.getInclusionListTransactions(state, slot)).toEqual([]);
+    expect(store.size).toBe(2);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([]);
+    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot))).toEqual([txA]);
+    expect(store.getInclusionListTransactions(slot + 1, dependentRootHex)).toEqual([txB]);
+  });
+
+  it("tracks equivocations per slot and dependent root", () => {
+    const otherRoot = Buffer.alloc(32, 0xff);
+    process(makeInclusionList(1, [txA]), true);
+    process(makeInclusionList(1, [txB]), true);
+
+    expect(process(makeInclusionList(1, [txA], {dependentRoot: otherRoot}), true)).toBe(InclusionListInsertOutcome.New);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([]);
+    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot))).toEqual([txA]);
   });
 
   describe("isInclusionListBitsInclusive", () => {
     beforeEach(() => {
-      store.process(makeInclusionList(1, [txA]), true);
-      store.process(makeInclusionList(3, [txB]), true);
+      process(makeInclusionList(1, [txA]), true);
+      process(makeInclusionList(3, [txB]), true);
     });
 
     it("accepts bits that cover the local view", () => {
       const bits = BitArray.fromBoolArray(
         Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 0 || i === 2 || i === 5)
       );
-      expect(store.isInclusionListBitsInclusive(state, slot, bits)).toBe(true);
+      expect(store.isInclusionListBitsInclusive(slot, dependentRootHex, bits)).toBe(true);
     });
 
     it("rejects bits missing a locally observed inclusion list", () => {
       const bits = BitArray.fromBoolArray(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 0));
-      expect(store.isInclusionListBitsInclusive(state, slot, bits)).toBe(false);
+      expect(store.isInclusionListBitsInclusive(slot, dependentRootHex, bits)).toBe(false);
+    });
+
+    it("accepts any bits for an unknown dependent root", () => {
+      const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+      expect(store.isInclusionListBitsInclusive(slot, toRootHex(Buffer.alloc(32, 0xff)), bits)).toBe(true);
     });
   });
 
@@ -114,29 +137,29 @@ describe("chain / opPools / InclusionListStore", () => {
     it("returns only the requested committee positions", () => {
       const first = makeInclusionList(1, [txA]);
       const third = makeInclusionList(3, [txB]);
-      store.process(first, true);
-      store.process(third, true);
+      process(first, true);
+      process(third, true);
 
       const indices = BitArray.fromBoolArray(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 2));
-      expect(store.getByIndices(state, slot, committeeRootHex(), indices)).toEqual([third]);
+      expect(store.getByIndices(slot, dependentRootHex, indices)).toEqual([third]);
     });
 
     it("serves untimely inclusion lists but never equivocators", () => {
       const untimely = makeInclusionList(1, [txA]);
-      store.process(untimely, false);
-      store.process(makeInclusionList(3, [txA]), true);
-      store.process(makeInclusionList(3, [txB]), true);
+      process(untimely, false);
+      process(makeInclusionList(3, [txA]), true);
+      process(makeInclusionList(3, [txB]), true);
 
       const indices = BitArray.fromBoolArray(
         Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 0 || i === 2)
       );
-      expect(store.getByIndices(state, slot, committeeRootHex(), indices)).toEqual([untimely]);
+      expect(store.getByIndices(slot, dependentRootHex, indices)).toEqual([untimely]);
     });
   });
 
   describe("prune", () => {
     it("retains MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots beyond the inclusion list slot", () => {
-      store.process(makeInclusionList(1, [txA]), true);
+      process(makeInclusionList(1, [txA]), true);
 
       store.prune(slot + 1);
       expect(store.size).toBe(1);
@@ -148,24 +171,17 @@ describe("chain / opPools / InclusionListStore", () => {
     it("rejects inclusion lists below the prune horizon", () => {
       store.prune(slot + 2);
 
-      expect(store.process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Old);
+      expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Old);
+      expect(store.size).toBe(0);
     });
-  });
 
-  describe("seenTwice", () => {
-    it("tracks the p2p first-or-second message rule per validator and slot", () => {
-      expect(store.seenTwice(slot, 1)).toBe(false);
-
-      store.process(makeInclusionList(1, [txA]), true);
-      expect(store.seenTwice(slot, 1)).toBe(false);
-
-      store.process(makeInclusionList(1, [txB]), true);
+    it("forgets the first-or-second rule counters of pruned slots", () => {
+      process(makeInclusionList(1, [txA]), true);
+      process(makeInclusionList(1, [txB]), true);
       expect(store.seenTwice(slot, 1)).toBe(true);
-      expect(store.seenTwice(slot, 2)).toBe(false);
+
+      store.prune(slot + 2);
+      expect(store.seenTwice(slot, 1)).toBe(false);
     });
   });
-
-  function committeeRootHex(): string {
-    return `0x${Buffer.from(committeeRoot).toString("hex")}`;
-  }
 });

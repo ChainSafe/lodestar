@@ -8,6 +8,7 @@ import {
 import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {getInclusionListDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -170,10 +171,16 @@ export async function importExecutionPayload(
   }
 
   // [New in Heze:EIP7805] The payload is checked against the inclusion lists observed for the
-  // slot preceding the block, restricted to those that arrived before the inclusion list
-  // deadline. The engine reports the outcome on the newPayload response.
+  // slot preceding the block, keyed by that slot's shuffling dependent root on the block's branch
+  // and restricted to those that arrived before the inclusion list deadline. The engine reports
+  // the outcome on the newPayload response.
+  const inclusionListSlot = protoBlock.slot - 1;
   const inclusionListTransactions = isStatePostHeze(blockState)
-    ? this.inclusionListStore.getInclusionListTransactions(blockState, blockState.slot - 1, true)
+    ? this.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getInclusionListDependentRoot(this.forkChoice, protoBlock, inclusionListSlot),
+        true
+      )
     : undefined;
 
   // 4a. Run EL and signature verification in parallel

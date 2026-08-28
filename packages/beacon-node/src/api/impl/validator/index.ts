@@ -30,7 +30,6 @@ import {
   getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
-  isStatePostHeze,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -88,6 +87,7 @@ import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
+import {getInclusionListDependentRoot} from "../../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
@@ -911,16 +911,26 @@ export function getValidatorApi(
       // view including untimely lists (only_timely=False), so a bid accepted here also satisfies
       // the timely-only view every other validator enforces.
       if (builderBid !== null && isForkPostHeze(fork)) {
-        const headState = chain.getHeadState();
-        if (isStatePostHeze(headState)) {
-          const {inclusionListBits} = builderBid.message as heze.ExecutionPayloadBid;
-          if (!chain.inclusionListStore.isInclusionListBitsInclusive(headState, slot - 1, inclusionListBits, false)) {
-            logger.verbose("Discarding builder bid with non-inclusive inclusion list bits", {
-              slot,
-              builderIndex: builderBid.message.builderIndex,
-            });
-            builderBid = null;
-          }
+        const {inclusionListBits} = builderBid.message as heze.ExecutionPayloadBid;
+        const inclusionListSlot = slot - 1;
+        const inclusionListDependentRoot = getInclusionListDependentRoot(
+          chain.forkChoice,
+          parentBlock,
+          inclusionListSlot
+        );
+        if (
+          !chain.inclusionListStore.isInclusionListBitsInclusive(
+            inclusionListSlot,
+            inclusionListDependentRoot,
+            inclusionListBits,
+            false
+          )
+        ) {
+          logger.verbose("Discarding builder bid with non-inclusive inclusion list bits", {
+            slot,
+            builderIndex: builderBid.message.builderIndex,
+          });
+          builderBid = null;
         }
       }
 
@@ -1945,17 +1955,19 @@ export function getValidatorApi(
       const epochStartSlot = computeStartSlotAtEpoch(epoch);
       const shuffling = state.getShufflingAtEpoch(epoch);
 
+      // The shuffling dependent root of `epoch`, which the validator sets as `dependent_root` on its
+      // inclusion lists (spec `get_signed_inclusion_list`) and the `dependent_root` the duties are
+      // reported against.
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+
       // A validator can sit on several slots' committees within an epoch; the duty for the
       // earliest such slot is the one reported, matching how attester duties are served.
-      const dutyByValidator = new Map<ValidatorIndex, {slot: Slot; committeeRoot: Uint8Array}>();
+      const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         const slot = epochStartSlot + i;
-        const committee = getInclusionListCommittee(shuffling, slot);
-        let committeeRoot: Uint8Array | null = null;
-        for (const validatorIndex of committee) {
-          if (requestedIndices.has(validatorIndex) && !dutyByValidator.has(validatorIndex)) {
-            committeeRoot ??= ssz.heze.InclusionListCommittee.hashTreeRoot(Array.from(committee));
-            dutyByValidator.set(validatorIndex, {slot, committeeRoot});
+        for (const validatorIndex of getInclusionListCommittee(shuffling, slot)) {
+          if (requestedIndices.has(validatorIndex) && !dutySlotByValidator.has(validatorIndex)) {
+            dutySlotByValidator.set(validatorIndex, slot);
           }
         }
       }
@@ -1963,18 +1975,11 @@ export function getValidatorApi(
       const duties: routes.validator.InclusionListDuty[] = [];
       for (let i = 0; i < indices.length; i++) {
         const validatorIndex = indices[i];
-        const duty = dutyByValidator.get(validatorIndex);
-        if (duty) {
-          duties.push({
-            pubkey: pubkeys[i],
-            validatorIndex,
-            slot: duty.slot,
-            inclusionListCommitteeRoot: duty.committeeRoot,
-          });
+        const slot = dutySlotByValidator.get(validatorIndex);
+        if (slot !== undefined) {
+          duties.push({pubkey: pubkeys[i], validatorIndex, slot, dependentRoot});
         }
       }
-
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -1994,15 +1999,16 @@ export function getValidatorApi(
       }
 
       const timer = metrics?.inclusionListsValidationTime.startTimer();
+      let committeeIndex: number;
       try {
-        await validateApiInclusionList(chain, signedInclusionList);
+        ({committeeIndex} = await validateApiInclusionList(chain, signedInclusionList));
       } finally {
         timer?.({source: InclusionListSource.api});
       }
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs();
-      chain.inclusionListStore.process(signedInclusionList, isTimely);
+      chain.inclusionListStore.process(signedInclusionList, committeeIndex, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: chain.config.getForkName(slot),

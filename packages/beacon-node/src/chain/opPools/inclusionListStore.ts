@@ -1,60 +1,55 @@
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import type {IBeaconStateViewHeze} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
 import {MapDef, toHex, toRootHex} from "@lodestar/utils";
-
-/**
- * Maximum number of distinct inclusion lists retained per committee root.
- *
- * process() stores at most one inclusion list per validator, so the natural bound is
- * INCLUSION_LIST_COMMITTEE_SIZE. Gossip validation already rejects inclusion lists from
- * validators outside the committee, but on_inclusion_list has no such check yet, so keep a
- * headroom bound here as a DoS guard rather than trusting the caller.
- */
-const MAX_INCLUSION_LISTS_PER_COMMITTEE = INCLUSION_LIST_COMMITTEE_SIZE * 2;
 
 export enum InclusionListInsertOutcome {
   /** Stored as a new entry. */
   New = "New",
   /** Slot is older than the prune horizon. */
   Old = "Old",
-  /** Committee root is at capacity. */
+  /** `(slot, dependent_root)` is at capacity. */
   ReachLimit = "ReachLimit",
   /** Identical inclusion list already stored. */
   Seen = "Seen",
   /** New equivocation evidence: this validator already has a different inclusion list stored. */
   Equivocating = "Equivocating",
-  /** Validator was already marked as an equivocator for this committee root. */
+  /** Validator was already marked as an equivocator for this `(slot, dependent_root)`. */
   SubsequentEquivocation = "SubsequentEquivocation",
 }
 
+type InclusionListEntry = {
+  signedInclusionList: heze.SignedInclusionList;
+  /** Position of the validator in `get_inclusion_list_committee(state, slot)` for this `(slot, dependent_root)`. */
+  committeeIndex: number;
+  /** Received before the inclusion list deadline of its slot. */
+  timely: boolean;
+};
+
 /**
- * Pool of inclusion lists, keyed by `inclusion_list_committee_root`.
+ * Pool of inclusion lists, keyed by `(slot, dependent_root)` with one entry per validator index
+ * (spec `InclusionListStore`).
  *
- * The committee root is the spec key and already pins down the slot, so slot is not part of it.
- * `committeeRootsBySlot` exists only so prune() can find the roots belonging to a passed slot.
+ * The committee of a `(slot, dependent_root)` is fixed, so the validator's committee position is
+ * recorded at insert time (gossip validation already resolves the committee) and the bit-oriented
+ * read paths need no shuffling lookup.
  *
  * Signed inclusion lists are retained rather than unwrapped messages so InclusionListsByIndices
  * can serve them back to peers.
  *
- * Equivocators are tracked per committee root instead of being removed from `inclusionLists`,
- * because the read paths filter by validator index: once a validator equivocates, every
- * inclusion list it sent for that committee root stops counting, including the one already
- * stored.
+ * The first inclusion list of a validator stays stored; an equivocation marks the validator so the
+ * read paths skip it, as in spec `process_inclusion_list`.
  */
 export class InclusionListStore {
-  /** committee_root -> inclusion_list_root -> SignedInclusionList */
-  private readonly inclusionLists = new MapDef<RootHex, Map<RootHex, heze.SignedInclusionList>>(
-    () => new Map<RootHex, heze.SignedInclusionList>()
+  /** slot -> dependent_root -> validator index -> entry */
+  private readonly inclusionLists = new MapDef<Slot, MapDef<RootHex, Map<ValidatorIndex, InclusionListEntry>>>(
+    () => new MapDef<RootHex, Map<ValidatorIndex, InclusionListEntry>>(() => new Map())
   );
-  /** inclusion_list_root -> was received before the gossip deadline */
-  private readonly inclusionListTimeliness = new Map<RootHex, boolean>();
-  /** committee_root -> equivocating validator indices */
-  private readonly equivocators = new MapDef<RootHex, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
-  /** slot -> committee roots seen at that slot, for pruning */
-  private readonly committeeRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set<RootHex>());
+  /** slot -> dependent_root -> equivocating validator indices */
+  private readonly equivocators = new MapDef<Slot, MapDef<RootHex, Set<ValidatorIndex>>>(
+    () => new MapDef<RootHex, Set<ValidatorIndex>>(() => new Set())
+  );
   /** slot -> validator index -> count, for the p2p "first or second message" rule */
   private readonly validatorIlCountBySlot = new MapDef<Slot, Map<ValidatorIndex, number>>(
     () => new Map<ValidatorIndex, number>()
@@ -66,8 +61,10 @@ export class InclusionListStore {
 
   get size(): number {
     let count = 0;
-    for (const inclusionLists of this.inclusionLists.values()) {
-      count += inclusionLists.size;
+    for (const byDependentRoot of this.inclusionLists.values()) {
+      for (const entries of byDependentRoot.values()) {
+        count += entries.size;
+      }
     }
     return count;
   }
@@ -75,12 +72,16 @@ export class InclusionListStore {
   /**
    * Store a signed inclusion list along with the locally observed timeliness.
    *
-   * Late inclusion lists are stored with `isTimely=false` rather than dropped: they still count
+   * Late inclusion lists are stored with `timely=false` rather than dropped: they still count
    * toward the non-timely view used when validating another node's `inclusion_list_bits`.
    */
-  process(signedInclusionList: heze.SignedInclusionList, isTimely: boolean): InclusionListInsertOutcome {
+  process(
+    signedInclusionList: heze.SignedInclusionList,
+    committeeIndex: number,
+    timely: boolean
+  ): InclusionListInsertOutcome {
     const inclusionList = signedInclusionList.message;
-    const {slot, validatorIndex, inclusionListCommitteeRoot} = inclusionList;
+    const {slot, validatorIndex} = inclusionList;
 
     if (slot < this.lowestPermissibleSlot) {
       return InclusionListInsertOutcome.Old;
@@ -89,35 +90,27 @@ export class InclusionListStore {
     const counts = this.validatorIlCountBySlot.getOrDefault(slot);
     counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
 
-    const committeeRoot = toRootHex(inclusionListCommitteeRoot);
+    const dependentRoot = toRootHex(inclusionList.dependentRoot);
+    const stored = this.inclusionLists.getOrDefault(slot).getOrDefault(dependentRoot);
 
-    const equivocators = this.equivocators.getOrDefault(committeeRoot);
-    if (equivocators.has(validatorIndex)) {
-      return InclusionListInsertOutcome.SubsequentEquivocation;
-    }
-
-    const stored = this.inclusionLists.getOrDefault(committeeRoot);
-    const inclusionListRoot = toRootHex(ssz.heze.InclusionList.hashTreeRoot(inclusionList));
-
-    for (const [storedRoot, storedInclusionList] of stored) {
-      if (storedInclusionList.message.validatorIndex !== validatorIndex) {
-        continue;
-      }
-      if (storedRoot === inclusionListRoot) {
+    const entry = stored.get(validatorIndex);
+    if (entry !== undefined) {
+      if (ssz.heze.InclusionList.equals(entry.signedInclusionList.message, inclusionList)) {
         return InclusionListInsertOutcome.Seen;
+      }
+      const equivocators = this.equivocators.getOrDefault(slot).getOrDefault(dependentRoot);
+      if (equivocators.has(validatorIndex)) {
+        return InclusionListInsertOutcome.SubsequentEquivocation;
       }
       equivocators.add(validatorIndex);
       return InclusionListInsertOutcome.Equivocating;
     }
 
-    if (stored.size >= MAX_INCLUSION_LISTS_PER_COMMITTEE) {
+    if (stored.size >= INCLUSION_LIST_COMMITTEE_SIZE) {
       return InclusionListInsertOutcome.ReachLimit;
     }
 
-    stored.set(inclusionListRoot, signedInclusionList);
-    this.inclusionListTimeliness.set(inclusionListRoot, isTimely);
-    this.committeeRootsBySlot.getOrDefault(slot).add(committeeRoot);
-
+    stored.set(validatorIndex, {signedInclusionList, committeeIndex, timely});
     return InclusionListInsertOutcome.New;
   }
 
@@ -129,12 +122,12 @@ export class InclusionListStore {
     return (this.validatorIlCountBySlot.get(slot)?.get(validatorIndex) ?? 0) >= 2;
   }
 
-  /** Deduplicated transactions from valid, non-equivocating inclusion lists at `slot`. */
-  getInclusionListTransactions(state: IBeaconStateViewHeze, slot: Slot, onlyTimely = true): bellatrix.Transactions {
+  /** Deduplicated transactions from valid, non-equivocating inclusion lists at `(slot, dependentRoot)`. */
+  getInclusionListTransactions(slot: Slot, dependentRoot: RootHex, onlyTimely = true): bellatrix.Transactions {
     const transactions: bellatrix.Transactions = [];
     const seen = new Set<string>();
 
-    for (const signedInclusionList of this.getEligible(state, slot, onlyTimely)) {
+    for (const {signedInclusionList} of this.getEligible(slot, dependentRoot, onlyTimely)) {
       for (const transaction of signedInclusionList.message.transactions) {
         const key = toHex(transaction);
         if (!seen.has(key)) {
@@ -148,61 +141,31 @@ export class InclusionListStore {
   }
 
   /** Bit `i` is set iff committee member `i` submitted a valid, non-equivocating inclusion list. */
-  getInclusionListBits(state: IBeaconStateViewHeze, slot: Slot, onlyTimely = true): BitArray {
-    const submitted = new Set<ValidatorIndex>();
-    for (const signedInclusionList of this.getEligible(state, slot, onlyTimely)) {
-      submitted.add(signedInclusionList.message.validatorIndex);
-    }
-
-    const committee = state.getInclusionListCommittee(slot);
+  getInclusionListBits(slot: Slot, dependentRoot: RootHex, onlyTimely = true): BitArray {
     const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
-    for (let i = 0; i < committee.length; i++) {
-      if (submitted.has(committee[i])) {
-        bits.set(i, true);
-      }
+    for (const {committeeIndex} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+      bits.set(committeeIndex, true);
     }
     return bits;
   }
 
   /** True iff `bits` has a bit set for every bit set in the local inclusion list bits. */
-  isInclusionListBitsInclusive(state: IBeaconStateViewHeze, slot: Slot, bits: BitArray, onlyTimely = true): boolean {
-    const local = this.getInclusionListBits(state, slot, onlyTimely);
-    for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
-      if (local.get(i) && !bits.get(i)) {
+  isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {
+    for (const {committeeIndex} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+      if (!bits.get(committeeIndex)) {
         return false;
       }
     }
     return true;
   }
 
-  /** Inclusion lists for the given committee indices, to serve InclusionListsByIndices. */
-  getByIndices(
-    state: IBeaconStateViewHeze,
-    slot: Slot,
-    committeeRoot: RootHex,
-    indices: BitArray
-  ): heze.SignedInclusionList[] {
-    const stored = this.inclusionLists.get(committeeRoot);
-    if (!stored || stored.size === 0) {
-      return [];
-    }
-
-    const committee = state.getInclusionListCommittee(slot);
-    const requested = new Set<ValidatorIndex>();
-    for (const i of indices.getTrueBitIndexes()) {
-      if (i < committee.length) {
-        requested.add(committee[i]);
-      }
-    }
-
-    const equivocators = this.equivocators.get(committeeRoot);
+  /** Inclusion lists for the given committee positions, to serve InclusionListsByIndices. */
+  getByIndices(slot: Slot, dependentRoot: RootHex, indices: BitArray): heze.SignedInclusionList[] {
     const out: heze.SignedInclusionList[] = [];
-    for (const signedInclusionList of stored.values()) {
-      const {validatorIndex} = signedInclusionList.message;
-      if (equivocators?.has(validatorIndex) || !requested.has(validatorIndex)) {
-        continue;
+    for (const {signedInclusionList, committeeIndex} of this.getEligible(slot, dependentRoot, false)) {
+      if (indices.get(committeeIndex)) {
+        out.push(signedInclusionList);
       }
-      out.push(signedInclusionList);
     }
     return out;
   }
@@ -214,53 +177,41 @@ export class InclusionListStore {
   prune(clockSlot: Slot): void {
     const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS;
 
-    for (const [slot, committeeRoots] of this.committeeRootsBySlot) {
-      if (slot >= horizon) {
-        continue;
+    for (const slot of this.inclusionLists.keys()) {
+      if (slot < horizon) {
+        this.inclusionLists.delete(slot);
       }
-      for (const committeeRoot of committeeRoots) {
-        const stored = this.inclusionLists.get(committeeRoot);
-        if (stored) {
-          for (const inclusionListRoot of stored.keys()) {
-            this.inclusionListTimeliness.delete(inclusionListRoot);
-          }
-          this.inclusionLists.delete(committeeRoot);
-        }
-        this.equivocators.delete(committeeRoot);
+    }
+    for (const slot of this.equivocators.keys()) {
+      if (slot < horizon) {
+        this.equivocators.delete(slot);
       }
-      this.committeeRootsBySlot.delete(slot);
-      this.validatorIlCountBySlot.delete(slot);
+    }
+    for (const slot of this.validatorIlCountBySlot.keys()) {
+      if (slot < horizon) {
+        this.validatorIlCountBySlot.delete(slot);
+      }
     }
 
     this.lowestPermissibleSlot = Math.max(horizon, 0);
   }
 
-  /**
-   * Inclusion lists at `slot` that count toward the local view: stored under the committee root
-   * implied by the local state, from a non-equivocating validator, and timely when required.
-   */
-  private *getEligible(
-    state: IBeaconStateViewHeze,
-    slot: Slot,
-    onlyTimely: boolean
-  ): Generator<heze.SignedInclusionList> {
-    const committee = state.getInclusionListCommittee(slot);
-    const committeeRoot = toRootHex(ssz.heze.InclusionListCommittee.hashTreeRoot(Array.from(committee)));
-
-    const stored = this.inclusionLists.get(committeeRoot);
+  /** Entries at `(slot, dependentRoot)` from non-equivocating validators, timely when required. */
+  private *getEligible(slot: Slot, dependentRoot: RootHex, onlyTimely: boolean): Generator<InclusionListEntry> {
+    const stored = this.inclusionLists.get(slot)?.get(dependentRoot);
     if (!stored || stored.size === 0) {
       return;
     }
-    const equivocators = this.equivocators.get(committeeRoot);
+    const equivocators = this.equivocators.get(slot)?.get(dependentRoot);
 
-    for (const [inclusionListRoot, signedInclusionList] of stored) {
-      if (equivocators?.has(signedInclusionList.message.validatorIndex)) {
+    for (const [validatorIndex, entry] of stored) {
+      if (equivocators?.has(validatorIndex)) {
         continue;
       }
-      if (onlyTimely && !this.inclusionListTimeliness.get(inclusionListRoot)) {
+      if (onlyTimely && !entry.timely) {
         continue;
       }
-      yield signedInclusionList;
+      yield entry;
     }
   }
 }

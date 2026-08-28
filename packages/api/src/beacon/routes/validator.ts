@@ -273,8 +273,8 @@ export const InclusionListDutyType = new ContainerType(
     validatorIndex: ssz.ValidatorIndex,
     /** The slot at which the validator must produce the inclusion list */
     slot: ssz.Slot,
-    /** Root of the inclusion list committee the duty was derived from */
-    inclusionListCommitteeRoot: ssz.Root,
+    /** Shuffling dependent root of the duty's epoch, to set as `dependent_root` on the inclusion list */
+    dependentRoot: ssz.Root,
   },
   {jsonCase: "eth2"}
 );

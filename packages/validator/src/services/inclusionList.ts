@@ -112,7 +112,7 @@ export class InclusionListService {
         const inclusionList: heze.InclusionList = {
           slot: duty.slot,
           validatorIndex: duty.validatorIndex,
-          inclusionListCommitteeRoot: duty.inclusionListCommitteeRoot,
+          dependentRoot: duty.dependentRoot,
           transactions: inclusionListTransactions,
         };
         try {
