@@ -143,17 +143,18 @@ export async function processBlocks(
         await importBlock.call(this, fullyVerifiedBlock, opts);
       }
 
-      const payloadInput = payloadEnvelopes?.get(slot);
-      if (payloadInput?.hasPayloadEnvelope()) {
+      // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
+      const payloadDA = payloadDAStatuses.get(slot);
+      if (payloadDA !== undefined) {
+        const payloadInput = payloadEnvelopes?.get(slot);
+        if (payloadInput === undefined) {
+          throw new Error(`Missing payload input for slot ${slot} after DA verification`);
+        }
         if (!payloadInput.isComplete()) {
           // we validated DA before reaching this
           throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
         }
         // we already awaited DA in verifyBlocksInEpoch for this segment
-        const payloadDA = payloadDAStatuses.get(slot);
-        if (payloadDA === undefined) {
-          throw new Error(`Missing payload DA status for slot ${slot}`);
-        }
         await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
       }
 

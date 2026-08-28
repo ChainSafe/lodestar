@@ -7,7 +7,11 @@ import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transiti
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
-import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
+import {
+  PayloadError,
+  PayloadErrorCode,
+  importExecutionPayload,
+} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
@@ -21,6 +25,10 @@ import {MockBlockInput} from "../../../utils/blockInput.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/importBlock.js");
+vi.mock("../../../../src/chain/blocks/importExecutionPayload.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../../../src/chain/blocks/importExecutionPayload.js")>();
+  return {...mod, importExecutionPayload: vi.fn()};
+});
 vi.mock("../../../../src/chain/blocks/utils/chainSegment.js");
 vi.mock("../../../../src/chain/blocks/verifyBlock.js");
 vi.mock("../../../../src/chain/blocks/verifyBlocksSanityChecks.js");
@@ -119,6 +127,37 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+  });
+
+  it("does not import an envelope received after the DA verification snapshot", async () => {
+    let hasPayloadEnvelope = false;
+    const payloadInput = {
+      slot,
+      hasPayloadEnvelope: () => hasPayloadEnvelope,
+      isComplete: () => true,
+    } as unknown as PayloadEnvelopeInput;
+
+    vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
+      hasPayloadEnvelope = true;
+      return {
+        postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
+        proposerBalanceDeltas: [0],
+        segmentExecStatus: {
+          execAborted: null,
+          executionStatuses: [ExecutionStatus.Valid],
+          executionTime: 0,
+        },
+        blockDAStatuses: [DataAvailabilityStatus.Available],
+        payloadDAStatuses: new Map(),
+        indexedAttestationsByBlock: [[]],
+      };
+    });
+
+    await processBlocks.call(chain, [blockInput], new Map([[slot, payloadInput]]), {});
+
+    expect(hasPayloadEnvelope).toBe(true);
+    expect(importBlock).toHaveBeenCalledOnce();
+    expect(importExecutionPayload).not.toHaveBeenCalled();
   });
 
   // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
