@@ -80,6 +80,11 @@ export enum MetaHeader {
   ExecutionPayloadIncluded = "Eth-Execution-Payload-Included",
   ExecutionPayloadValue = "Eth-Execution-Payload-Value",
 
+  /* Builder API headers */
+  BuilderUrl = "Eth-Builder-Url",
+  DateMilliseconds = "Date-Milliseconds",
+  TimeoutMs = "X-Timeout-Ms",
+
   /* Lodestar-specific (non-standardized) headers */
   Finalized = "Eth-Consensus-Finalized",
   DependentRoot = "Eth-Consensus-Dependent-Root",

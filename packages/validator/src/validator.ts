@@ -16,6 +16,7 @@ import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {AttestationService} from "./services/attestation.js";
 import {BlockProposingService} from "./services/block.js";
 import {BlockDutiesService} from "./services/blockDuties.js";
+import {BuilderPreferencesService} from "./services/builderPreferences.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
@@ -329,6 +330,7 @@ export class Validator {
     );
 
     new ProposerPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
+    new BuilderPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
 
     return new Validator({
       opts,

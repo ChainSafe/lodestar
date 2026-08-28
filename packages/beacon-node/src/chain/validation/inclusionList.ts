@@ -76,12 +76,12 @@ async function validateInclusionList(
     });
   }
 
-  // [REJECT] The size of message.transactions is within upperbound MAX_BYTES_PER_INCLUSION_LIST
-  if (inclusionListSize > chain.config.MAX_BYTES_PER_INCLUSION_LIST) {
+  // [REJECT] The size of message.transactions is within upperbound MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST
+  if (inclusionListSize > chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST) {
     reject(InvalidInclusionListReason.maxSizeExceeded, {
       code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED,
       inclusionListSize,
-      sizeLimit: chain.config.MAX_BYTES_PER_INCLUSION_LIST,
+      sizeLimit: chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST,
     });
   }
 

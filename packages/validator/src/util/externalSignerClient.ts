@@ -37,6 +37,7 @@ export enum SignableMessageType {
   EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
   PAYLOAD_ATTESTATION = "PAYLOAD_ATTESTATION",
   PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
+  BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
   INCLUSION_LIST = "INCLUSION_LIST",
 }
 
@@ -90,6 +91,7 @@ export type SignableMessage =
   | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
   | {type: SignableMessageType.PAYLOAD_ATTESTATION; data: gloas.PayloadAttestationData}
   | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
+  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
   | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
@@ -108,6 +110,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
   [SignableMessageType.PAYLOAD_ATTESTATION]: true,
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
+  [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
   [SignableMessageType.INCLUSION_LIST]: true,
 };
 
@@ -289,6 +292,9 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.PROPOSER_PREFERENCES:
       return {proposer_preferences: ssz.gloas.ProposerPreferences.toJson(payload.data)};
+
+    case SignableMessageType.BUILDER_REQUEST_AUTH:
+      return {builder_request_auth: ssz.gloas.BuilderRequestAuth.toJson(payload.data)};
 
     case SignableMessageType.INCLUSION_LIST:
       return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};

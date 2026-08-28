@@ -12,6 +12,7 @@ import {
   ProtoBlock,
 } from "../../../src/index.js";
 import {makeState} from "../../unit/forkChoice/fastConfirmationTestUtils.js";
+import {gloasConfig} from "../../unit/forkChoice/proposerHeadTestUtils.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -26,6 +27,8 @@ export type Opts = {
   initialValidatorCount: number;
   initialEquivocatedCount: number;
   fastConfirmation?: boolean;
+  /** Build a gloas chain (PENDING/EMPTY variants) and give the last block proposer boost */
+  gloasBoosted?: boolean;
 };
 
 export function initializeForkChoice(opts: Opts): ForkChoice {
@@ -118,13 +121,23 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     stateGetter: () => stubState,
   };
 
-  const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null, {
-    fastConfirmation: opts.fastConfirmation,
-  });
+  const gloasBoosted = opts.gloasBoosted === true;
+  const forkchoice = new ForkChoice(
+    gloasBoosted ? gloasConfig : config,
+    fcStore,
+    protoArr,
+    opts.initialValidatorCount,
+    null,
+    {
+      fastConfirmation: opts.fastConfirmation,
+      proposerBoost: gloasBoosted,
+    }
+  );
   let parentBlockRoot = genesisRoot;
+  let blockRoot = genesisRoot;
 
   for (let slot = 1; slot < opts.initialBlockCount; slot++) {
-    const blockRoot = slotRoot(slot);
+    blockRoot = slotRoot(slot);
     // Set unrealizedJustifiedEpoch to 1 for blocks in epoch 1+
     // so that headJustification.epoch + 1 >= currentEpoch passes in loop 2
     const blockEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
@@ -146,19 +159,33 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
 
-      executionPayloadBlockHash: null,
-      executionStatus: ExecutionStatus.PreMerge,
+      executionPayloadBlockHash: gloasBoosted ? payloadHash(slot) : null,
+      executionStatus: gloasBoosted ? ExecutionStatus.Valid : ExecutionStatus.PreMerge,
 
       timeliness: false,
-      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+      ptcTimeliness: false,
+      proposerIndex: 0,
+      dataAvailabilityStatus: gloasBoosted ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData,
 
-      parentBlockHash: null,
+      // The parent's own payload hash links this block to the parent's PENDING/EMPTY variant (the
+      // FULL variant only exists once the envelope is revealed, which this harness does not simulate)
+      parentBlockHash: gloasBoosted ? payloadHash(slot - 1) : null,
       payloadStatus: PayloadStatus.FULL,
-    };
+      // ProtoBlock is a union over the execution fields; the conditionals lose the narrowing
+    } as ProtoBlock;
 
     protoArr.onBlock(block, block.slot, null);
     parentBlockRoot = blockRoot;
   }
 
+  if (gloasBoosted) {
+    // Boost the tip so every updateHead() takes the gloas two-pass applyScoreChanges path
+    forkchoice["proposerBoostRoot"] = blockRoot;
+  }
+
   return forkchoice;
+}
+
+function payloadHash(slot: number): string {
+  return `0xpayload${slot}`;
 }

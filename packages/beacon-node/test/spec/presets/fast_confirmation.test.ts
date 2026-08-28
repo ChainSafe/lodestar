@@ -1,6 +1,7 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -24,11 +25,9 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -50,6 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -114,8 +114,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -291,7 +290,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -441,7 +441,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
@@ -725,15 +724,7 @@ const fastConfirmationTest =
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
           // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
-          // These vectors run `on_fast_confirmation` twice in one slot (stale GU test) or skip an
-          // epoch-boundary run (consecutive slots test), so a client running the handler once per
-          // slot cannot reproduce the expected FCR-store variables. Fixed upstream, unskip when
-          // the next spec-tests release (> v1.7.0-alpha.13) is picked up:
-          // - https://github.com/ethereum/consensus-specs/pull/5499
-          // - https://github.com/ethereum/consensus-specs/pull/5498
-          name.includes("fcr_no_restart_if_head_gu_is_stale") ||
-          name.includes("is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_2"),
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };

@@ -59,11 +59,12 @@ export type PayloadErrorType =
     };
 
 export class PayloadError extends Error {
-  type: PayloadErrorType;
-
-  constructor(type: PayloadErrorType, message?: string) {
+  constructor(
+    readonly payloadInput: PayloadEnvelopeInput,
+    readonly type: PayloadErrorType,
+    message?: string
+  ) {
     super(message ?? type.code);
-    this.type = type;
   }
 }
 
@@ -126,7 +127,7 @@ export async function importExecutionPayload(
   // 2. Get ProtoBlock for parent root lookup
   const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!protoBlock) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
       blockRootHex,
     });
@@ -141,13 +142,13 @@ export async function importExecutionPayload(
     );
 
   if (blockState == null) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.MISS_BLOCK_STATE,
       blockRootHex: protoBlock.blockRoot,
     });
   }
   if (!isStatePostGloas(blockState)) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
       message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
     });
@@ -162,6 +163,7 @@ export async function importExecutionPayload(
     });
   } catch (e) {
     throw new PayloadError(
+      payloadInput,
       {
         code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
         message: (e as Error).message,
@@ -199,7 +201,6 @@ export async function importExecutionPayload(
       : verifyExecutionPayloadEnvelopeSignature(
           this.config,
           blockState,
-          this.pubkeyCache,
           signedEnvelope,
           payloadInput.proposerIndex,
           this.bls
@@ -208,7 +209,7 @@ export async function importExecutionPayload(
 
   // 4b. Check signature verification result
   if (!signatureValid) {
-    throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
+    throw new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
   // 4c. Handle EL response
@@ -217,7 +218,7 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
-      throw new PayloadError({
+      throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
@@ -230,7 +231,7 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
     case ExecutionPayloadStatus.UNAVAILABLE:
-      throw new PayloadError({
+      throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",

@@ -142,13 +142,7 @@ export async function validateGossipAttestationsSameAttData(
   const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => {
-        const publicKey = chain.pubkeyCache.getOrThrow(set.index);
-        return {publicKey, signature: set.signature};
-      }),
-      signatureSets[0].signingRoot
-    );
+    signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(

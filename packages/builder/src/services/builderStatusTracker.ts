@@ -2,6 +2,7 @@ import {ApiClient} from "@lodestar/api";
 import {BuilderIndex, BuilderStatus, Epoch} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {getBuilderStatus} from "../identity.js";
+import {Metrics, builderStatusValue} from "../metrics.js";
 
 /**
  * Service for tracking builder status.
@@ -11,14 +12,16 @@ export class BuilderStatusTracker {
   private readonly api: ApiClient;
   private readonly logger: Logger;
   private readonly index: BuilderIndex;
+  private readonly metrics: Metrics | null;
 
   private status?: BuilderStatus;
   private balanceGwei?: number;
 
-  constructor(api: ApiClient, logger: Logger, index: BuilderIndex) {
+  constructor(api: ApiClient, logger: Logger, index: BuilderIndex, metrics: Metrics | null) {
     this.api = api;
     this.logger = logger;
     this.index = index;
+    this.metrics = metrics;
   }
 
   async poll(currentEpoch: Epoch) {
@@ -34,6 +37,8 @@ export class BuilderStatusTracker {
         balance: builderStatus.balance,
         epoch: currentEpoch,
       });
+      this.metrics?.builderStatus.set(builderStatusValue[builderStatus.status]);
+      this.metrics?.builderBalance.set(builderStatus.balance);
     }
   }
 

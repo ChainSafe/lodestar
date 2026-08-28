@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
+import {Epoch, RootHex, Slot, UintNum64, ValidatorIndex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -144,6 +144,13 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
+  // Indicate whether block arrives before the PTC deadline
+  // Spec: gloas/fork-choice.md#modified-record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
+  ptcTimeliness: boolean;
+
+  // The index of the block proposer. Used by should_apply_proposer_boost to detect proposer equivocations
+  proposerIndex: ValidatorIndex;
+
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
@@ -160,13 +167,13 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  /** Total weight, ie. attestationScore plus the proposer boost credited to this node */
-  weight: number;
+  /** Total weight in Gwei, ie. attestationScore plus the proposer boost credited to this node */
+  weight: bigint;
   /**
-   * Weight from attester votes only, excluding proposer boost.
+   * Weight in Gwei from attester votes only, excluding proposer boost.
    * Spec: get_attestation_score
    */
-  attestationScore: number;
+  attestationScore: bigint;
   bestChild?: number;
   bestDescendant?: number;
 };

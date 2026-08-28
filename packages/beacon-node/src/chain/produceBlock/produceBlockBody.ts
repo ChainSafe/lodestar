@@ -241,7 +241,7 @@ export async function produceBlockBody<T extends BlockType>(
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.gloas.ExecutionRequests.defaultValue();
-    executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
+    executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;

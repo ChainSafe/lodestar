@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkSeq,
@@ -12,7 +11,13 @@ import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
-import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.js";
+import {
+  createSingleSignatureSetFromComponents,
+  getBlockRootAtSlot,
+  getCurrentEpoch,
+  getRandaoMix,
+  verifySignatureSet,
+} from "../util/index.js";
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
@@ -123,10 +128,7 @@ function verifyExecutionPayloadBidSignature(
   const signingRoot = getExecutionPayloadBidSigningRoot(state.config, signedBid.message);
 
   try {
-    const publicKey = PublicKey.fromBytes(pubkey);
-    const signature = Signature.fromBytes(signedBid.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signedBid.signature));
   } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
