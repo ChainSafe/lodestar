@@ -171,7 +171,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
           pubkey: new Uint8Array(48).fill(1),
           validatorIndex: 2,
           slot: 7,
-          inclusionListCommitteeRoot: new Uint8Array(32).fill(3),
+          dependentRoot: new Uint8Array(32).fill(3),
         },
       ],
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},

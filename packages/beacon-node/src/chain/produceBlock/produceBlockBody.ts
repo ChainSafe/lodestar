@@ -31,7 +31,6 @@ import {
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
-  isStatePostHeze,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -64,7 +63,7 @@ import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
-import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
@@ -957,15 +956,25 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    if (!isStatePostHeze(prepareState)) {
-      throw new Error("Expected Heze state for Heze payload attributes");
-    }
     // The payload built for prepareSlot must satisfy the inclusion lists observed for the
-    // preceding slot. Unlike validation, the proposer builds against its full view including
-    // untimely lists (only_timely=False in prepare_execution_payload), so the payload also
-    // satisfies the timely-only subset every validator enforces.
+    // preceding slot, keyed by the shuffling dependent root of that slot on the parent's branch.
+    // Unlike validation, the proposer builds against its full view including untimely lists
+    // (only_timely=False in prepare_execution_payload), so the payload also satisfies the
+    // timely-only subset every validator enforces.
+    const parentBlockRootHex = toRootHex(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+    if (parentBlock === null) {
+      throw new Error(
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex}`
+      );
+    }
+    const inclusionListSlot = prepareSlot - 1;
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
-      chain.inclusionListStore.getInclusionListTransactions(prepareState, prepareSlot - 1, false);
+      chain.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot),
+        false
+      );
   }
 
   return payloadAttributes;

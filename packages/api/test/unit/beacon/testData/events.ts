@@ -361,7 +361,7 @@ export const eventTestData: EventData = {
       message: {
         slot: "10",
         validator_index: "123",
-        inclusion_list_committee_root: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+        dependent_root: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
         transactions: ["0x02f8", "0x03a1"],
       },
       signature:

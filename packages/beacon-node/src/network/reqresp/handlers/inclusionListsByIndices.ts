@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, isStatePostHeze} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {heze, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -20,7 +20,7 @@ export async function* onInclusionListsByIndices(
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  const {slot, inclusionListCommitteeRoot, indices} = requestBody;
+  const {slot, dependentRoot, indices} = requestBody;
 
   const minimumRequestSlot = Math.max(
     chain.clock.currentSlot - chain.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS,
@@ -36,17 +36,7 @@ export async function* onInclusionListsByIndices(
     return;
   }
 
-  const headState = chain.getHeadState();
-  if (!isStatePostHeze(headState)) {
-    return;
-  }
-
-  const signedInclusionLists = chain.inclusionListStore.getByIndices(
-    headState,
-    slot,
-    toRootHex(inclusionListCommitteeRoot),
-    indices
-  );
+  const signedInclusionLists = chain.inclusionListStore.getByIndices(slot, toRootHex(dependentRoot), indices);
 
   const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot));
   for (const signedInclusionList of signedInclusionLists.slice(0, chain.config.MAX_REQUEST_INCLUSION_LIST)) {

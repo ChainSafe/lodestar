@@ -25,7 +25,7 @@ export const InclusionList = new ContainerType(
   {
     slot: Slot,
     validatorIndex: ValidatorIndex,
-    inclusionListCommitteeRoot: Root,
+    dependentRoot: Root,
     transactions: InclusionListTransactions,
   },
   {typeName: "InclusionList", jsonCase: "eth2"}
@@ -42,7 +42,7 @@ export const SignedInclusionList = new ContainerType(
 export const InclusionListsByIndicesRequest = new ContainerType(
   {
     slot: Slot,
-    inclusionListCommitteeRoot: Root,
+    dependentRoot: Root,
     indices: new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE),
   },
   {typeName: "InclusionListsByIndicesRequest", jsonCase: "eth2"}
