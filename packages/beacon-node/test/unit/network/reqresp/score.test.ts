@@ -90,4 +90,15 @@ describe("beacon-node / network / reqresp / score / onOutgoingReqRespError", () 
       expect(onOutgoingReqRespError(error, method)).toBe(expected);
     });
   }
+
+  // Under Bun an aborted dial rejects with an abort `Event` instead of an `AbortError`, so the
+  // inner error had no `message` and `e.type.error.message.includes(...)` threw a secondary
+  // `TypeError` that escaped as an uncaught exception. `RequestError` now normalizes the inner
+  // value, so scoring sees a real `Error` and returns a verdict instead of throwing. See #9900.
+  it("scores a DIAL_ERROR whose inner value is not an Error", () => {
+    const bunAbortEvent = {type: "abort", isTrusted: false, local: true} as unknown as Error;
+    const error = new RequestError({code: RequestErrorCode.DIAL_ERROR, error: bunAbortEvent});
+
+    expect(onOutgoingReqRespError(error, ReqRespMethod.Ping)).toBe(PeerAction.HighToleranceError);
+  });
 });
