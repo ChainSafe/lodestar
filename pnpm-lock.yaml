@@ -240,8 +240,8 @@ importers:
         specifier: ^5.1.23
         version: 5.1.23
       '@libp2p/gossipsub':
-        specifier: ^16.1.1
-        version: 16.1.1
+        specifier: ^17.1.0
+        version: 17.1.0
       '@libp2p/identify':
         specifier: ^4.1.13
         version: 4.1.13
@@ -2041,8 +2041,8 @@ packages:
   '@libp2p/crypto@5.1.23':
     resolution: {integrity: sha512-u6XVMD1YpUJgjS5MAayrxlzi+hQcj3FHY0wS6/M/T93ntyCW13BmmRzFb2ESamk65PEuSCAChmQeSzRV2sh2rQ==}
 
-  '@libp2p/gossipsub@16.1.1':
-    resolution: {integrity: sha512-GX2eDwn11eiRzfxGZ/c0KcndnQLBAVdnBR3/bQvrd5rFrZhc9wEMJmAwPzzjs1XSNE7xgqMnM5Ky3nM7lCxqbg==}
+  '@libp2p/gossipsub@17.1.0':
+    resolution: {integrity: sha512-azTGmO3ZaF51k+zamIiXfT/LsZiWCKapuhBnDgFbJEGaBY7LwwtR1BL3Kb6BMK+Li1wSXhfZahhxdlH9CHPVcA==}
     engines: {npm: '>=8.7.0'}
 
   '@libp2p/identify@4.1.13':
@@ -7767,7 +7767,7 @@ snapshots:
       uint8arraylist: 3.0.2
       uint8arrays: 6.1.1
 
-  '@libp2p/gossipsub@16.1.1':
+  '@libp2p/gossipsub@17.1.0':
     dependencies:
       '@libp2p/crypto': 5.1.23
       '@libp2p/interface': 3.3.0
