@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
@@ -16,7 +15,6 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
-  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -375,8 +373,19 @@ export async function produceBlockBody<T extends BlockType>(
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
-      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+      // [New in Heze:EIP7805] Advertise the inclusion lists we actually observed for the preceding
+      // slot. Left empty, peers applying the `is_inclusion_list_bits_inclusive` bid gossip rule
+      // would ignore this bid as soon as they had seen any timely inclusion list.
+      //
+      // Built from the full view (only_timely=false) rather than the timely-only one: the bits are
+      // a claim about what this node saw, and a superset can only help the receiver's
+      // timely-only check pass.
+      const inclusionListSlot = blockSlot - 1;
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
+        inclusionListSlot,
+        getInclusionListDependentRoot(this.forkChoice, parentBlock, inclusionListSlot),
+        false
+      );
     }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
