@@ -421,11 +421,11 @@ async function validateExecutionPayloadBid(
   // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
   // from builders submitting numerous bids with minimal value increments.
   const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
-  if (bestBid !== null && bid.value < getMinBidValue(bestBid.message.value)) {
+  if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
       bidValue: bid.value,
-      currentHighestBid: bestBid.message.value,
+      currentHighestBid: bestBid.signedBid.message.value,
     });
   }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
