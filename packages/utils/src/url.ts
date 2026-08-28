@@ -19,6 +19,18 @@ export function isValidHttpUrl(urlStr: string): boolean {
   return url.protocol === "http:" || url.protocol === "https:";
 }
 
+/** Return whether a URL is HTTP(S) and contains only visible ASCII characters. */
+export function isValidAsciiHttpUrl(urlStr: string): boolean {
+  for (let i = 0; i < urlStr.length; i++) {
+    const charCode = urlStr.charCodeAt(i);
+    if (charCode < 0x21 || charCode > 0x7e) {
+      return false;
+    }
+  }
+
+  return isValidHttpUrl(urlStr);
+}
+
 /**
  * Sanitize URL to prevent leaking user credentials in logs or metrics
  *
