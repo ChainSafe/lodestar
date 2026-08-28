@@ -26,9 +26,7 @@ validators
 **/.nyc_output
 .tmp
 .npmrc
-.vscode/launch.json
 !.vscode/settings.json
-.vscode/tasks.json
 # Claude Code — ignore local/personal config, keep shared project config
 .claude/settings.local.json
 .claude/plans/
@@ -73,7 +71,6 @@ docker/grafana_dev/dashboards
 .pass
 
 # docker-compose .env file
-.env
 
 # Grafana secret
 .secrets.env
@@ -90,3 +87,4 @@ temp/
 # Local development artifacts
 .venv/
 checkpoint_states/
+config.bat
