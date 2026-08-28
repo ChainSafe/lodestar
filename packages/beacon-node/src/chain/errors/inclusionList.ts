@@ -3,6 +3,7 @@ import {GossipActionError} from "./gossipValidation.js";
 
 export enum InclusionListErrorCode {
   MAXIMUM_SIZE_EXCEEDED = "INCLUSION_LIST_ERROR_MAXIMUM_SIZE_EXCEEDED",
+  EMPTY_TRANSACTION = "INCLUSION_LIST_ERROR_EMPTY_TRANSACTION",
   INVALID_SLOT = "INCLUSION_LIST_ERROR_INVALID_SLOT",
   MORE_THAN_TWO = "INCLUSION_LIST_ERROR_MORE_THAN_TWO",
   VALIDATOR_NOT_IN_COMMITTEE = "INCLUSION_LIST_ERROR_VALIDATOR_NOT_IN_COMMITTEE",
@@ -16,6 +17,7 @@ export enum InclusionListErrorCode {
 
 export type InclusionListErrorType =
   | {code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED; inclusionListSize: number; sizeLimit: number}
+  | {code: InclusionListErrorCode.EMPTY_TRANSACTION}
   | {code: InclusionListErrorCode.INVALID_SLOT; inclusionListSlot: Slot; currentSlot: Slot}
   | {code: InclusionListErrorCode.MORE_THAN_TWO; validatorIndex: ValidatorIndex}
   | {code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE; validatorIndex: ValidatorIndex}

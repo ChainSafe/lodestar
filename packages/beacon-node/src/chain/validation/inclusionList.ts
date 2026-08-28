@@ -18,6 +18,7 @@ import {isValidDependentRoot} from "./proposerPreferences.js";
 
 export enum InvalidInclusionListReason {
   maxSizeExceeded = "max_size_exceeded",
+  emptyTransaction = "empty_transaction",
   slotOutOfRange = "slot_out_of_range",
   seenTwice = "seen_twice",
   unknownDependentRoot = "unknown_dependent_root",
@@ -83,6 +84,11 @@ async function validateInclusionList(
       inclusionListSize,
       sizeLimit: chain.config.MAX_BYTES_PER_INCLUSION_LIST,
     });
+  }
+
+  // [REJECT] Every transaction in message.transactions is non-empty
+  if (transactions.some((transaction) => transaction.byteLength === 0)) {
+    reject(InvalidInclusionListReason.emptyTransaction, {code: InclusionListErrorCode.EMPTY_TRANSACTION});
   }
 
   // [IGNORE] message.slot is equal to the current slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
