@@ -260,6 +260,11 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      builderApiClientOpts: {
+        timeout: opts.executionBuilder.timeout,
+        // Sent with all builder api requests, unless the node runs in private mode
+        userAgent: opts.executionBuilder.userAgent,
+      },
     });
 
     // Load persisted data from disk to in-memory caches

@@ -21,6 +21,7 @@ ajv.addKeyword({
 });
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]*$/);
+ajv.addFormat("uri", {type: "string", validate: (value) => URL.canParse(value)});
 
 /**
  * A set of properties that will be ignored during tests execution.
