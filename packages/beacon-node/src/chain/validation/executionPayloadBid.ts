@@ -88,8 +88,7 @@ function isBidCompatibleWithHead(
  * messages and the builder may legitimately bid on a branch this node does not consider head.
  *
  * Throws on any failed REJECT check. Also throws IGNORE if the bid's parent block is unknown or its
- * state is unavailable, since the validity checks cannot be evaluated against the parent branch; the
- * bid is not published in that case.
+ * state is unavailable, since the validity checks cannot be evaluated against the parent branch.
  */
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
@@ -97,6 +96,18 @@ export async function validateApiExecutionPayloadBid(
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
+
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
 
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
   if (parentBlock === null) {
