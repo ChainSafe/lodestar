@@ -35,7 +35,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     vi.clearAllMocks();
     modules = getApiTestModules({config});
     modules.network.publishSignedExecutionPayloadBid = vi.fn().mockResolvedValue(5);
-    vi.mocked(validateApiExecutionPayloadBid).mockResolvedValue(true);
+    vi.mocked(validateApiExecutionPayloadBid).mockResolvedValue(undefined);
   });
 
   it("publishes the bid", async () => {
@@ -43,18 +43,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
     expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
-  });
-
-  it("publishes the bid if the parent block is unknown", async () => {
-    vi.mocked(validateApiExecutionPayloadBid).mockResolvedValue(false);
-    const api = getBeaconBlockApi(modules);
-    await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
-
-    expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
-    expect(modules.chain.logger.warn).toHaveBeenCalledWith(
-      "Publishing execution payload bid on unknown parent block or state unavailable, skipped validation",
-      expect.anything()
-    );
+    expect(modules.chain.executionPayloadBidPool.add).toHaveBeenCalled();
   });
 
   it("does not publish a bid that fails the reject checks", async () => {
@@ -71,5 +60,6 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     );
 
     expect(modules.network.publishSignedExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(modules.chain.executionPayloadBidPool.add).not.toHaveBeenCalled();
   });
 });

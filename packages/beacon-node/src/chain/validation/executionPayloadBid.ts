@@ -81,24 +81,29 @@ function isBidCompatibleWithHead(
 /**
  * Validation for bids submitted via the API by the operator's own builder.
  *
- * The bid is published regardless of the gossip IGNORE rules (head compatibility, first bid per
- * tuple, value increment, known proposer preferences, balance coverage). Those only limit
- * forwarding of peers' messages, the builder may bid on a branch this node does not consider head.
- * Only REJECT-class checks are applied, evaluated against the bid's own parent branch, since this
- * node is the origin of the message and would be penalized by every peer for an invalid bid.
+ * Only REJECT-class (validity) checks are applied: slot later than parent, zero execution payment,
+ * blob commitment count, builder eligibility and version, prev_randao, and signature. The transient
+ * IGNORE-class gossip rules (head compatibility, first bid per tuple, value increment, proposer
+ * preferences, balance coverage) are not applied, since those only limit forwarding of peers'
+ * messages and the builder may legitimately bid on a branch this node does not consider head.
  *
- * Returns false if the parent block is unknown or state is unavailable and no checks could be run.
+ * Throws on any failed REJECT check. Also throws IGNORE if the bid's parent block is unknown or its
+ * state is unavailable, since the validity checks cannot be evaluated against the parent branch; the
+ * bid is not published in that case.
  */
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<boolean> {
+): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
 
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
   if (parentBlock === null) {
-    return false;
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+      parentBlockRoot: bidParentBlockRoot,
+    });
   }
 
   if (bid.slot <= parentBlock.slot) {
@@ -127,17 +132,14 @@ export async function validateApiExecutionPayloadBid(
     });
   }
 
-  let state: Awaited<ReturnType<IBeaconChain["regen"]["getBlockSlotState"]>>;
-  try {
-    state = await chain.regen.getBlockSlotState(
-      parentBlock,
-      bid.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateApiExecutionPayloadBid
-    );
-  } catch {
-    return false;
-  }
+  const state = await chain.regen
+    .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateApiExecutionPayloadBid)
+    .catch(() => {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+        parentBlockRoot: bidParentBlockRoot,
+      });
+    });
 
   if (!isStatePostGloas(state)) {
     throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
@@ -189,8 +191,6 @@ export async function validateApiExecutionPayloadBid(
       slot: bid.slot,
     });
   }
-
-  return true;
 }
 
 export async function validateGossipExecutionPayloadBid(

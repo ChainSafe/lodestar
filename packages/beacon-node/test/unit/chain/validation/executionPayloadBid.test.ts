@@ -52,19 +52,26 @@ describe("validateApiExecutionPayloadBid", () => {
   });
 
   it("accepts a valid bid", async () => {
-    await expect(validateApiExecutionPayloadBid(chain, signedBid)).resolves.toBe(true);
+    expect(await validateApiExecutionPayloadBid(chain, signedBid)).toBeUndefined();
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
   });
 
-  it("returns false if the parent block is unknown", async () => {
+  it("rejects if the parent block is unknown", async () => {
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-    await expect(validateApiExecutionPayloadBid(chain, signedBid)).resolves.toBe(false);
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT},
+    });
+
     expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
   });
 
-  it("returns false if the parent state cannot be regenerated", async () => {
+  it("rejects if the parent state cannot be regenerated", async () => {
     chain.regen.getBlockSlotState.mockRejectedValue(Error("no state"));
-    await expect(validateApiExecutionPayloadBid(chain, signedBid)).resolves.toBe(false);
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT},
+    });
+
+    expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
   });
 
   it("rejects a bid not later than its parent", async () => {

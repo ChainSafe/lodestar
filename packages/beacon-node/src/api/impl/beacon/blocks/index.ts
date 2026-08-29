@@ -1065,17 +1065,7 @@ export function getBeaconBlockApi({
       }
 
       // TODO: skip validation for timely publishing once the builder is proven reliable
-      const validated = await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
-      if (!validated) {
-        chain.logger.warn(
-          "Publishing execution payload bid on unknown parent block or state unavailable, skipped validation",
-          {
-            slot,
-            builderIndex: bid.builderIndex,
-            parentBlockRoot: toRootHex(bid.parentBlockRoot),
-          }
-        );
-      }
+      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
