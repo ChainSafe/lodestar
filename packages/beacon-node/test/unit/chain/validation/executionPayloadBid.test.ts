@@ -57,7 +57,7 @@ describe("validateApiExecutionPayloadBid", () => {
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
   });
 
-  it("rejects if the parent block is unknown", async () => {
+  it("rejects a bid outside the slot window", async () => {
     vi.mocked(chain.clock.isCurrentSlotGivenGossipDisparity).mockReturnValue(false);
     await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_SLOT},
