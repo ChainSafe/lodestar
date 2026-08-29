@@ -49,6 +49,7 @@ describe("validateApiExecutionPayloadBid", () => {
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
     signedBid.message.prevRandao = randaoMix;
+    chain.clock.isCurrentSlotGivenGossipDisparity.mockReturnValue(true);
   });
 
   it("accepts a valid bid", async () => {
