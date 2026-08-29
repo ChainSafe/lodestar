@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ExecutionPayloadBidErrorCode} from "../../../../src/chain/errors/index.js";
@@ -106,6 +106,36 @@ describe("validateApiExecutionPayloadBid", () => {
     vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
     await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE},
+    });
+  });
+
+  it("rejects a bid with too many blob KZG commitments", async () => {
+    const commitmentLimit = config.getMaxBlobsPerBlock(0);
+    signedBid.message.blobKzgCommitments = Array.from({length: commitmentLimit + 1}, () => new Uint8Array(48));
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS},
+    });
+
+    expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+  });
+
+  it("rejects a builder index out of bounds", async () => {
+    // Exercises the explicit length guard (bid.builderIndex >= state.getBuildersLength()), which is a
+    // separate branch from the "rejects an inactive builder" isActiveBuilder path. mockState() has one builder.
+    signedBid.message.builderIndex = 1;
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE},
+    });
+  });
+
+  it("rejects an invalid builder version", async () => {
+    const builder = ssz.gloas.Builder.defaultValue();
+    builder.depositEpoch = 0;
+    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
+    builder.version = PAYLOAD_BUILDER_VERSION + 1;
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION},
     });
   });
 });
