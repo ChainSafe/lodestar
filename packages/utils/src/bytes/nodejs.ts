@@ -57,6 +57,15 @@ export function fromHex(hex: string): Uint8Array {
   }
 
   const b = Buffer.from(hex, "hex");
+
+  // Buffer.from stops at the first character it cannot decode and returns what it read so far,
+  // so an invalid string yields a short array instead of an error. The browser implementation
+  // throws on such input, and a silently truncated result is worse than a rejected one for a
+  // caller that only checks the value it got back. A length mismatch is exactly the invalid case.
+  if (b.length !== hex.length / 2) {
+    throw new Error(`hex string contains invalid characters: ${hex}`);
+  }
+
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
 
