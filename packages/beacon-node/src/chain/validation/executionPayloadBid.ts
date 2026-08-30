@@ -9,7 +9,7 @@ import {
   isStartSlotOfEpoch,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ExecutionPayloadBid, RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -78,20 +78,6 @@ function isBidCompatibleWithHead(
   return buildsOnParentPayload;
 }
 
-function isBidWithinSlotRange(chain: IBeaconChain, bid: ExecutionPayloadBid): void {
-  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  if (
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
-  ) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-    });
-  }
-}
-
 /**
  * Validation for bids submitted via the API by the operator's own builder.
  *
@@ -111,7 +97,17 @@ export async function validateApiExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
 
-  isBidWithinSlotRange(chain, bid);
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
 
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
@@ -254,7 +250,17 @@ async function validateExecutionPayloadBid(
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
   const bidParentBlockHash = toRootHex(bid.parentBlockHash);
 
-  isBidWithinSlotRange(chain, bid);
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
