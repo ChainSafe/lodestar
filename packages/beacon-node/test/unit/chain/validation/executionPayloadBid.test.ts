@@ -149,4 +149,16 @@ describe("validateApiExecutionPayloadBid", () => {
       type: {code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION},
     });
   });
+
+  it("rejects on insufficient builder balance", async () => {
+    const builder = ssz.gloas.Builder.defaultValue();
+    builder.depositEpoch = 0;
+    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
+    const mockedState = mockState({builder});
+    (mockedState as any).canBuilderCoverBid = () => false;
+    chain.regen.getBlockSlotState.mockResolvedValue(mockedState);
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH},
+    });
+  });
 });
