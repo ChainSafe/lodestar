@@ -12,7 +12,7 @@ function toItem(key: string): Item {
 }
 
 function toIndexedItem(key: string): Item {
-  return {key, indexed: key.substring(0, 1), queueAddedMs: 0};
+  return {key, indexed: key.substring(0, 1)};
 }
 
 describe("IndexedGossipQueueMinSize", () => {

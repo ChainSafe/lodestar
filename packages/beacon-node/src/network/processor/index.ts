@@ -537,6 +537,7 @@ export class NetworkProcessor {
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
+    message.queueAddedMs = Date.now();
     const droppedCount = this.gossipQueues[topicType].add(message);
     if (droppedCount) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
@@ -723,12 +724,20 @@ export class NetworkProcessor {
       for (const msg of messageOrArray) {
         msg.startProcessUnixSec = nowSec;
         if (msg.queueAddedMs !== undefined) {
-          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+          this.metrics?.gossipValidationQueue.queueTime.observe(
+            {topic: msg.topic.type},
+            nowSec - msg.queueAddedMs / 1000
+          );
         }
       }
     } else {
-      // indexed queue is not used here
       messageOrArray.startProcessUnixSec = nowSec;
+      if (messageOrArray.queueAddedMs !== undefined) {
+        this.metrics?.gossipValidationQueue.queueTime.observe(
+          {topic: messageOrArray.topic.type},
+          nowSec - messageOrArray.queueAddedMs / 1000
+        );
+      }
     }
 
     const acceptanceArr = Array.isArray(messageOrArray)
