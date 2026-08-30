@@ -2,7 +2,7 @@ import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
-import {Logger, isErrorAborted, pruneSetToMax, retry, toRootHex} from "@lodestar/utils";
+import {Logger, TimeoutError, isErrorAborted, isFetchError, pruneSetToMax, retry, toRootHex} from "@lodestar/utils";
 
 const {EventType} = routes.events;
 
@@ -130,15 +130,13 @@ export class BlockObserver {
           },
         }
       ).catch((error: unknown) => {
-        if (isErrorAborted(error)) {
-          return null;
+        if (!isErrorAborted(error)) {
+          this.logger.error(
+            "Failed to retrieve block referenced by block event",
+            {slot, blockRoot},
+            error instanceof Error ? error : Error(String(error))
+          );
         }
-
-        this.logger.error(
-          "Failed to retrieve block referenced by block event",
-          {slot, blockRoot},
-          error instanceof Error ? error : Error(String(error))
-        );
         return null;
       });
 
@@ -224,5 +222,5 @@ export function isRetryableBlockRetrievalError(error: Error): boolean {
     return error.status === 404 || error.status >= 500;
   }
 
-  return !isErrorAborted(error);
+  return error instanceof TimeoutError || (isFetchError(error) && error.type !== "input");
 }

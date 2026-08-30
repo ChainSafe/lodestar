@@ -1,13 +1,13 @@
-import {Mock, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {testLogger} from "@lodestar/logger/test-utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
-import {ErrorAborted, LogLevel, Logger, TimeoutError, defer, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, FetchError, TimeoutError, defer, toRootHex} from "@lodestar/utils";
 import {BlockObserver, ObservedBlock, isRetryableBlockRetrievalError} from "../../../src/services/blockObserver.js";
 import {ApiClientStub, getApiClientStub} from "../utils/apiStub.js";
+import {getMockedLogger} from "../utils/logger.js";
 
 const {EventType} = routes.events;
 
@@ -26,26 +26,19 @@ type ApiStub = {
 describe("BlockObserver", () => {
   let controller: AbortController;
   let config: ChainForkConfig;
-  const logger: Logger = testLogger("BlockObserver", {level: LogLevel.error});
-  let debugLog: Mock<Logger[LogLevel.debug]>;
-  let errorLog: Mock<Logger[LogLevel.error]>;
-  let infoLog: Mock<Logger[LogLevel.info]>;
-  let warnLog: Mock<Logger[LogLevel.warn]>;
+  const logger = getMockedLogger();
+  const {debug: debugLog, error: errorLog, info: infoLog, warn: warnLog} = logger;
   let apiStub: ApiStub;
 
   beforeEach(() => {
     controller = new AbortController();
     config = getConfig(ForkName.gloas);
-    debugLog = vi.spyOn(logger, LogLevel.debug).mockImplementation(() => {});
-    errorLog = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
-    infoLog = vi.spyOn(logger, LogLevel.info).mockImplementation(() => {});
-    warnLog = vi.spyOn(logger, LogLevel.warn).mockImplementation(() => {});
     apiStub = getApiStub();
   });
 
   afterEach(() => {
     controller.abort();
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
   });
 
   it("subscribes only to block events with the supplied abort signal", () => {
@@ -207,12 +200,47 @@ describe("BlockObserver", () => {
   });
 
   it("classifies retryable retrieval errors", () => {
+    const fetchFailure = new FetchError(
+      "http://127.0.0.1:9596",
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9596"), {code: "ECONNREFUSED"}),
+      })
+    );
+    const inputError = new FetchError(
+      "invalid-url",
+      new TypeError("Failed to parse URL from invalid-url", {
+        cause: Object.assign(new Error("Invalid URL"), {input: "invalid-url", code: "ERR_INVALID_URL"}),
+      })
+    );
+
     expect(isRetryableBlockRetrievalError(new ApiError("not found", 404, "getBlockV2"))).toBe(true);
     expect(isRetryableBlockRetrievalError(new ApiError("unavailable", 503, "getBlockV2"))).toBe(true);
     expect(isRetryableBlockRetrievalError(new TimeoutError("request"))).toBe(true);
-    expect(isRetryableBlockRetrievalError(Error("transport"))).toBe(true);
+    expect(isRetryableBlockRetrievalError(fetchFailure)).toBe(true);
     expect(isRetryableBlockRetrievalError(new ApiError("bad request", 400, "getBlockV2"))).toBe(false);
+    expect(isRetryableBlockRetrievalError(inputError)).toBe(false);
+    expect(isRetryableBlockRetrievalError(Error("decode failed"))).toBe(false);
     expect(isRetryableBlockRetrievalError(new ErrorAborted("request"))).toBe(false);
+  });
+
+  it("does not retry a request decoding failure", async () => {
+    const decodeError = Error("response decode failed");
+    apiStub.getBlockV2.mockRejectedValue(decodeError);
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api, {retries: 2, retryDelay: 0});
+    observer.runOnBlock(onBlock);
+    const event = blockEvent(rootHex(1));
+
+    await observer.processBlockEvent(event, controller.signal);
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      "Failed to retrieve block referenced by block event",
+      {slot: event.slot, blockRoot: event.block},
+      decodeError
+    );
   });
 
   it("stops silently when aborted during a retry delay", async () => {
