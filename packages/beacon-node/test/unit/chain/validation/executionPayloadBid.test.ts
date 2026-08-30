@@ -36,6 +36,7 @@ describe("validateApiExecutionPayloadBid", () => {
       getBuildersLength: () => 1,
       getBuilder: () => builder,
       getRandaoMix: () => randaoMix,
+      canBuilderCoverBid: () => true,
     } as unknown as IBeaconStateView;
   }
 
