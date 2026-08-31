@@ -178,7 +178,7 @@ describe("PrepareNextSlot scheduler", () => {
     );
   });
 
-  it("gloas - should update builder circuit breaker instead of builder status", async () => {
+  it("gloas - should update builder circuit breaker and check builder api status ahead of the slot", async () => {
     getForkStub.mockReturnValue(ForkName.gloas);
     const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
     const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
@@ -199,6 +199,12 @@ describe("PrepareNextSlot scheduler", () => {
     ]);
 
     expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
+    // The legacy pre-gloas builder status path stays untouched
     expect(updateBuilderStatus).not.toHaveBeenCalled();
+    // Scheduled close to the slot boundary, not now, so the connection is still warm at bid time
+    expect(chainStub.builderApiClient.checkStatus).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 3);
+    expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
   });
 });

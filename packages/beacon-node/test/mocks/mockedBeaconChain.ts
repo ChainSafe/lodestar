@@ -165,6 +165,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
+        checkStatus: vi.fn().mockResolvedValue(undefined),
       },
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),

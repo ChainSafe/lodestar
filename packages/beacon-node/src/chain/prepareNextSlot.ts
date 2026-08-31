@@ -45,6 +45,11 @@ const PREPARE_EPOCH_LIMIT = 1;
  * Expressed in bps so it scales with slot duration (mainnet vs minimal/devnet). */
 const BUILDER_PREVERIFY_LIMIT_BPS = 2000;
 
+/* How far before the next slot builder connections are pre-established, see
+ * `checkBuilderStatusBeforeSlot`. 1667 = 16.67% of slot (2s on mainnet). Must stay under the few
+ * seconds an idle connection survives, while leaving room for a round trip to a distant builder. */
+const BUILDER_STATUS_CHECK_LEAD_BPS = 1667;
+
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
  * 4s before the start of next slot at PREPARE_NEXT_SLOT_BPS of the current slot.
@@ -185,6 +190,7 @@ export class PrepareNextSlotScheduler {
         if (feeRecipient) {
           if (isForkPostGloas(fork)) {
             this.chain.builderCircuitBreaker.update(clockSlot, updatedHead);
+            this.checkBuilderStatusBeforeSlot(prepareSlot);
           } else {
             // Update the builder status, if enabled shoot an api call to check status
             this.chain.updateBuilderStatus(clockSlot);
@@ -389,6 +395,24 @@ export class PrepareNextSlotScheduler {
       }
     }
   };
+
+  /**
+   * Pre-establish the builder connections so the handshake lands outside the bid deadline, the
+   * post-Gloas counterpart to the legacy builder `checkStatus` below. Scheduled later in the slot
+   * rather than now: this runs at PREPARE_NEXT_SLOT_BPS and idle connections are dropped within
+   * seconds, so connecting here would go cold again before bids are requested.
+   */
+  private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
+    const leadMs = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_LEAD_BPS);
+    const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - leadMs;
+    sleep(Math.max(0, msUntilCheck), this.signal)
+      .then(() => this.chain.builderApiClient.checkStatus())
+      .catch((e) => {
+        if (!isErrorAborted(e)) {
+          this.logger.debug("Failed to check builder status", {prepareSlot}, e as Error);
+        }
+      });
+  }
 
   computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch

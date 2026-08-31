@@ -2036,6 +2036,11 @@ export function createLodestarMetrics(
     },
 
     builderApi: {
+      statusChecks: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_status_checks_total",
+        help: "Total count of status checks sent to external builders ahead of a proposal",
+        labelNames: ["status"],
+      }),
       bidRequests: register.counter({
         name: "lodestar_builder_api_bid_requests_total",
         help: "Total count of execution payload bid requests sent to external builders",

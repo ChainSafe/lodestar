@@ -201,6 +201,27 @@ export class BuilderApiClient {
     }
   }
 
+  /**
+   * Establish the connection to every known builder outside the bid deadline: a cold TCP/TLS
+   * handshake to a distant builder can exhaust `BUILDER_BID_DEADLINE_MS` on its own, and a long
+   * idle connection may be half-open, failing only once written to. Doubles as a liveness check,
+   * failures never propagate.
+   */
+  async checkStatus(): Promise<void> {
+    await Promise.all(
+      Array.from(this.clients.entries()).map(async ([url, client]) => {
+        try {
+          (await client.status()).assertOk();
+          this.metrics?.builderApi.statusChecks.inc({status: "success"});
+          this.logger?.debug("Builder is ready", {builder: toPrintableUrl(url)});
+        } catch (e) {
+          this.metrics?.builderApi.statusChecks.inc({status: "error"});
+          this.logger?.warn("Builder status check failed", {builder: toPrintableUrl(url)}, e as Error);
+        }
+      })
+    );
+  }
+
   private async getOrCreateClient(
     url: BuilderUrl,
     proposerPubkey: BLSPubkey,
