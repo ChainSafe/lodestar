@@ -171,12 +171,33 @@ export const defaultOptions = {
   blindedLocal: false,
 };
 
+export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
+
 /** Pre-Gloas there is no in-protocol builder so the default is local-only, post-Gloas bids are used */
 export function getDefaultBuilderSelection(isPostGloas: boolean): routes.validator.BuilderSelection {
   return isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
 }
 
-export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
+/** Boost factor implied by a builder selection, `configuredBoostFactor` only applies to `maxprofit` */
+export function getBuilderBoostFactor(
+  selection: routes.validator.BuilderSelection,
+  configuredBoostFactor: bigint
+): bigint {
+  switch (selection) {
+    case routes.validator.BuilderSelection.Default:
+      // Default value slightly favors local block to improve censorship resistance of Ethereum
+      // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
+      return BigInt(90);
+    case routes.validator.BuilderSelection.MaxProfit:
+      return configuredBoostFactor;
+    case routes.validator.BuilderSelection.BuilderAlways:
+    case routes.validator.BuilderSelection.BuilderOnly:
+      return MAX_BUILDER_BOOST_FACTOR;
+    case routes.validator.BuilderSelection.ExecutionAlways:
+    case routes.validator.BuilderSelection.ExecutionOnly:
+      return BigInt(0);
+  }
+}
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -348,27 +369,10 @@ export class ValidatorStore {
       }
     }
 
-    let boostFactor: bigint;
-    switch (selection) {
-      case routes.validator.BuilderSelection.Default:
-        // Default value slightly favors local block to improve censorship resistance of Ethereum
-        // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
-        boostFactor = BigInt(90);
-        break;
-
-      case routes.validator.BuilderSelection.MaxProfit:
-        boostFactor = validatorBuilder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
-        break;
-
-      case routes.validator.BuilderSelection.BuilderAlways:
-      case routes.validator.BuilderSelection.BuilderOnly:
-        boostFactor = MAX_BUILDER_BOOST_FACTOR;
-        break;
-
-      case routes.validator.BuilderSelection.ExecutionAlways:
-      case routes.validator.BuilderSelection.ExecutionOnly:
-        boostFactor = BigInt(0);
-    }
+    const boostFactor = getBuilderBoostFactor(
+      selection,
+      validatorBuilder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor
+    );
 
     return {selection, boostFactor};
   }

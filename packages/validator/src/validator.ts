@@ -32,6 +32,7 @@ import {
   ValidatorProposerConfig,
   ValidatorStore,
   defaultOptions,
+  getBuilderBoostFactor,
   getDefaultBuilderSelection,
 } from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
@@ -401,6 +402,10 @@ export class Validator {
         logger.info("Builder API configured", {
           builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none by default",
           validatorsWithCustomBuilders,
+          boostFactor: getBuilderBoostFactor(
+            defaultBuilderSelection,
+            defaultBuilderConfig?.boostFactor ?? defaultOptions.builderBoostFactor
+          ),
           minBid: prettyGweiToEth(defaultBuilderConfig?.minBid ?? defaultOptions.builderMinBid),
           maxExecutionPayment: prettyGweiToEth(
             defaultBuilderConfig?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
