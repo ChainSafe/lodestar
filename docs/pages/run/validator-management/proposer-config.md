@@ -42,6 +42,8 @@ Starting with Gloas, the builder section additionally supports `min_bid` (floor 
 
 Post-Gloas, an explicitly configured per-validator `boost_factor` takes precedence over `selection`.
 
+Post-Gloas the boost is applied on both sides of the bid comparison: the per-validator `boost_factor` boosts the p2p bid, while each builder's own `builder_boost_factor` boosts that builder's API bid. Setting only `boost_factor` leaves every entry inheriting it, so both sides are boosted equally and the ranking is unchanged. To favour builder API bids over p2p bids, raise `builder_boost_factor` on the entries above the validator's `boost_factor`.
+
 The builder section also supports a `builders` list with the same per-builder entries as the keymanager builder config API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
 
 ```yaml
