@@ -50,7 +50,7 @@ function getMinBidValue(currentHighestBid: number): number {
  * boundaries when the head is weak enough that a reorg onto the strong parent is predicted.
  * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
-export function isBidCompatibleWithHead(
+function isBidCompatibleWithHead(
   chain: IBeaconChain,
   head: ProtoBlock,
   bidSlot: Slot,
