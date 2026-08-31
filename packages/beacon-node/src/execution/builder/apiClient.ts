@@ -237,7 +237,7 @@ export class BuilderApiClient {
         {config: this.config, metrics: this.metrics?.builderHttpClient, logger: this.logger}
       );
       this.clients.set(url, client);
-      this.logger?.info("External builder registered", {url: toPrintableUrl(url)});
+      this.logger?.debug("External builder registered", {url: toPrintableUrl(url)});
     }
     return client;
   }
