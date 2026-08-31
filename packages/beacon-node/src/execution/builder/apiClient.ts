@@ -203,7 +203,7 @@ export class BuilderApiClient {
 
   /**
    * Establish the connection to every known builder outside the bid deadline, a cold TCP/TLS handshake
-   * to a distant builder can exhaust `BUILDER_BID_DEADLINE_MS` on its own. Failures never propagate.
+   * to a distant builder can exhaust `BUILDER_BID_DEADLINE_MS` on its own.
    */
   async checkStatus(): Promise<void> {
     await Promise.all(
