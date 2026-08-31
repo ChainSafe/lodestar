@@ -36,7 +36,10 @@ import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
+  ComputeNewStateRootInput,
+  ComputeNewStateRootResult,
   IBeaconStateView,
   IBeaconStateViewGloas,
   IBeaconStateViewLatestFork,
@@ -636,6 +639,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   // State transition
+
+  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = new NativeBeaconStateView(
+      this.binding.stateTransition(input.block, computeNewStateRootStateTransitionOpts, modules)
+    );
+    return getComputeNewStateRootResult(postState, modules);
+  }
 
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
