@@ -1,4 +1,4 @@
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -46,11 +46,12 @@ function getMinBidValue(currentHighestBid: number): number {
 /**
  * Check whether a bid builds on one of the paths compatible with the local head branch.
  *
- * Building directly on the parent is allowed for proposer-boost reorgs outside epoch boundaries.
+ * Building directly on the parent is allowed for proposer-boost reorgs, including at epoch
+ * boundaries when the head is weak enough that a reorg onto the strong parent is predicted.
  * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
-function isBidCompatibleWithHead(
-  forkChoice: IForkChoice,
+export function isBidCompatibleWithHead(
+  chain: IBeaconChain,
   head: ProtoBlock,
   bidSlot: Slot,
   bidParentBlockRoot: RootHex,
@@ -60,9 +61,13 @@ function isBidCompatibleWithHead(
   const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
-    // The spec allows this at epoch boundaries, but Lodestar does not propagate these bids because validating
-    // them requires an epoch transition for a parent state that cannot be used for proposer-boost reorgs.
-    return !isStartSlotOfEpoch(bidSlot);
+    if (!isStartSlotOfEpoch(bidSlot)) {
+      return true;
+    }
+    // Epoch-boundary reorgs are allowed, but only propagate the bid if its parent matches the block
+    // we predict a proposer would reorg onto — predictProposerHead returns the strong parent only
+    // when the head is weak.
+    return chain.predictProposerHead().blockRoot === bidParentBlockRoot;
   }
 
   if (bidParentBlockRoot !== head.blockRoot) {
@@ -71,7 +76,7 @@ function isBidCompatibleWithHead(
 
   const buildsOnHeadPayload = bidParentBlockHash === head.executionPayloadBlockHash;
 
-  if (forkChoice.shouldBuildOnFull(head, bidSlot)) {
+  if (chain.forkChoice.shouldBuildOnFull(head, bidSlot)) {
     return buildsOnHeadPayload;
   }
 
@@ -114,7 +119,7 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
-  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
+  if (!isBidCompatibleWithHead(chain, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
       slot: bid.slot,
