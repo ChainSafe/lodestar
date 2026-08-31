@@ -299,6 +299,7 @@ exceptions:
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas
     - is_ancestor#gloas
+    - is_current_or_next_slot#gloas
     - is_head_late#gloas
     - is_previous_slot_payload_decision#gloas
     - notify_ptc_messages#gloas

@@ -78,11 +78,161 @@ function isBidCompatibleWithHead(
   return buildsOnParentPayload;
 }
 
+/**
+ * Validation for bids submitted via the API by the operator's own builder.
+ *
+ * Only non-transient checks are applied: slot later than parent, zero execution payment, blob
+ * commitment count, builder eligibility, version and balance coverage, prev_randao, and signature.
+ * Transient gossip rules (head compatibility, first bid per tuple, value increment, proposer
+ * preferences) are not applied, since those only limit forwarding of peers' messages and the
+ * builder may legitimately bid on a branch this node does not consider head.
+ *
+ * Throws on any failed check. Also throws if the bid's parent block is unknown or its state is
+ * unavailable, since the checks cannot be evaluated against the parent branch.
+ */
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<{proposerIndex: ValidatorIndex}> {
-  return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
+): Promise<void> {
+  const bid = signedExecutionPayloadBid.message;
+  const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
+
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
+  // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
+  // proposer-preferences lookup below from a known fork-choice block.
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
+  if (parentBlock === null) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+      parentBlockRoot: bidParentBlockRoot,
+    });
+  }
+
+  // [REJECT] The bid is for a higher slot than its parent block -- i.e.
+  // validate that `bid.slot` is greater than the slot of the block with root
+  // `bid.parent_block_root`.
+  if (bid.slot <= parentBlock.slot) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT,
+      parentSlot: parentBlock.slot,
+      slot: bid.slot,
+    });
+  }
+
+  // [REJECT] `bid.execution_payment` is zero.
+  if (bid.executionPayment !== 0n) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
+      builderIndex: bid.builderIndex,
+      executionPayment: bid.executionPayment,
+    });
+  }
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
+  // consensus layer -- i.e. validate that
+  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      blobKzgCommitmentsLen,
+      commitmentLimit: maxBlobsPerBlock,
+    });
+  }
+
+  const state = await chain.regen
+    .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateApiExecutionPayloadBid)
+    .catch(() => {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+        parentBlockRoot: bidParentBlockRoot,
+      });
+    });
+
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
+  }
+
+  // [REJECT] `bid.builder_index` is within bounds -- i.e. `bid.builder_index < len(state.builders)`.
+  // `state.getBuilder` returns a lazy SSZ `getReadonly` view that is not bounds-checked eagerly; an
+  // out-of-range index only throws (`LeafNode has no right node`) on deferred field access (e.g. inside
+  // `isActiveBuilder`), escaping a try/catch around `getBuilder`. Check the length explicitly instead.
+  if (bid.builderIndex >= state.getBuildersLength()) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
+      builderIndex: bid.builderIndex,
+    });
+  }
+
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
+  // `is_active_builder(state, bid.builder_index)` returns `True`.
+  const builder = state.getBuilder(bid.builderIndex);
+  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
+      builderIndex: bid.builderIndex,
+    });
+  }
+
+  // [REJECT] The builder version is `PAYLOAD_BUILDER_VERSION` -- i.e.
+  // `state.builders[bid.builder_index].version == PAYLOAD_BUILDER_VERSION`.
+  if (builder.version !== PAYLOAD_BUILDER_VERSION) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION,
+      builderIndex: bid.builderIndex,
+      version: builder.version,
+      expectedVersion: PAYLOAD_BUILDER_VERSION,
+    });
+  }
+
+  // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
+  // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
+  if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
+      bidValue: bid.value,
+      builderBalance: builder.balance,
+    });
+  }
+
+  // [REJECT] `bid.prev_randao` is the correct RANDAO mix -- i.e. validate that
+  // `bid.prev_randao == get_randao_mix(parent_state, get_current_epoch(parent_state))`.
+  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
+  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO,
+      builderIndex: bid.builderIndex,
+      bidPrevRandao: toHex(bid.prevRandao),
+      expectedPrevRandao: toHex(randaoMix),
+    });
+  }
+
+  // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
+  const signatureSet = createSingleSignatureSetFromComponents(
+    builder.pubkey,
+    getExecutionPayloadBidSigningRoot(chain.config, bid),
+    signedExecutionPayloadBid.signature
+  );
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
 }
 
 export async function validateGossipExecutionPayloadBid(

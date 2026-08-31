@@ -6863,9 +6863,7 @@
     </spec>
 
 - name: is_current_or_next_slot#gloas
-  sources:
-    - file: packages/beacon-node/src/chain/validation/executionPayloadBid.ts
-      search: "!chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&"
+  sources: []
   spec: |
     <spec fn="is_current_or_next_slot" fork="gloas" hash="f9531452">
     def is_current_or_next_slot(
