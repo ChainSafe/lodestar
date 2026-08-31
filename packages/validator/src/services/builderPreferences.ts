@@ -136,7 +136,8 @@ export class BuilderPreferencesService {
       }
       this.logger.debug("Submitted builder preferences", {count: entries.length});
     } catch (e) {
-      this.logger.error("Error submitting builder preferences", {count: entries.length}, e as Error);
+      // Best-effort, a builder that rejects preferences does not fail the proposal
+      this.logger.warn("Error submitting builder preferences", {count: entries.length}, e as Error);
     }
   };
 }
