@@ -33,6 +33,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 import {
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -126,8 +127,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getBeaconCommitteeCountPerSlot = new Map<Epoch, number>();
   private readonly _getShufflingDecisionRoot = new Map<Epoch, RootHex>();
   private readonly _getBeaconProposer = new Map<Slot, ValidatorIndex>();
-  // getBeaconProposerOrNull can return null, so use .has() to distinguish "not cached" from "cached null"
-  private readonly _getBeaconProposerOrNull = new Map<Slot, ValidatorIndex | null>();
   private readonly _getValidator = new Map<ValidatorIndex, phase0.Validator>();
   private readonly _getBalance = new Map<number, number>();
   private readonly _getIndexedSyncCommitteeAtEpoch = new Map<Epoch, SyncCommitteeCache>();
@@ -407,14 +406,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBeaconProposer.set(slot, cached);
     }
     return cached;
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    if (!this._getBeaconProposerOrNull.has(slot)) {
-      this._getBeaconProposerOrNull.set(slot, this.binding.getBeaconProposerOrNull(slot));
-    }
-    // biome-ignore lint/style/noNonNullAssertion: has() check guarantees a value
-    return this._getBeaconProposerOrNull.get(slot)!;
   }
 
   // Validators and balances
@@ -852,6 +843,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._proposerLookahead = this.binding.proposerLookahead;
     }
     return this._proposerLookahead;
+  }
+
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.binding.clearPreGloasBuilderDepositCache();
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────

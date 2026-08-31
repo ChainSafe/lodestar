@@ -1,4 +1,4 @@
-import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
+import {aggregateSerializedPublicKeys} from "@chainsafe/lodestar-z/blst";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,

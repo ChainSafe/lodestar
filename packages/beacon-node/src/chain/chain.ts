@@ -1,8 +1,18 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  EpochDifference,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -17,7 +27,6 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
-  PubkeyCache,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -54,6 +63,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -72,11 +82,13 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -86,6 +98,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
+  DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
@@ -122,6 +135,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {validateApiProposerSlashing} from "./validation/proposerSlashing.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -153,6 +167,8 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -183,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -191,6 +208,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
+  /** Proposer indexes with an in-flight proposer slashing production */
+  private readonly producingProposerSlashing = new Set<ValidatorIndex>();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
@@ -260,6 +279,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
+      builderApiClientOpts,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -277,6 +297,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      builderApiClientOpts?: BuilderApiClientOpts;
     }
   ) {
     this.opts = opts;
@@ -295,8 +316,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -308,6 +329,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
+    this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -428,6 +450,13 @@ export class BeaconChain implements IBeaconChain {
 
     this.forkChoice = forkChoice;
 
+    this.builderCircuitBreaker = new BuilderCircuitBreaker(
+      {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
+      {forkChoice, logger, metrics}
+    );
+
+    this.builderApiClient = new BuilderApiClient(builderApiClientOpts ?? {}, config, clock, bls, metrics, logger);
+
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
@@ -435,6 +464,9 @@ export class BeaconChain implements IBeaconChain {
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
+      db,
+      seenBlockInputCache: this.seenBlockInputCache,
+      custodyConfig: this.custodyConfig,
       metrics,
       logger,
     });
@@ -450,7 +482,8 @@ export class BeaconChain implements IBeaconChain {
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
-        timeCreatedSec: Math.floor(Date.now() / 1000),
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.anchorState,
       });
     }
 
@@ -563,7 +596,7 @@ export class BeaconChain implements IBeaconChain {
       //   seenAggregators = single aggregator index, not participants of the aggregate
       this.seenAggregators.isKnown(epoch, index) ||
       //   seenPayloadAttesters = single signer of payload attestation message
-      this.seenPayloadAttesters.isKnown(epoch, index) ||
+      this.seenPayloadAttesters.seenAtEpoch(epoch, index) ||
       //   seenBlockProposers = single block proposer
       this.seenBlockProposers.seenAtEpoch(epoch, index)
     );
@@ -1056,6 +1089,7 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
+      strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
       builderBid,
@@ -1073,7 +1107,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+    const proposerPubKey = this.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -1084,6 +1118,7 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
+        strictFeeRecipientCheck,
         parentBlock,
         proposerIndex,
         proposerPubKey,
@@ -1163,6 +1198,68 @@ export class BeaconChain implements IBeaconChain {
     return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
   }
 
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
+    this.produceProposerSlashing(blockSlot, proposerIndex).catch((e) => {
+      this.logger.debug("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
+    });
+  }
+
+  /** Produce a proposer slashing from two conflicting signed block headers observed for the same slot and proposer */
+  private async produceProposerSlashing(blockSlot: Slot, proposerIndex: ValidatorIndex): Promise<void> {
+    if (this.opts.disableProposerSlashings === true || this.producingProposerSlashing.has(proposerIndex)) {
+      return;
+    }
+
+    if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
+      this.logger.debug("Not producing proposer slashing, already in the op pool", {
+        slot: blockSlot,
+        proposerIndex,
+      });
+      return;
+    }
+
+    const headers = this.seenBlockProposers.getEquivocationHeaders(blockSlot, proposerIndex);
+    if (headers === null) {
+      return;
+    }
+
+    this.producingProposerSlashing.add(proposerIndex);
+    try {
+      const [header1, header2] = headers;
+      // ProposerSlashing uses the bigint variant of the signed block header, see types package for details
+      const proposerSlashing: phase0.ProposerSlashing = {
+        signedHeader1: {
+          message: {...header1.message, slot: BigInt(header1.message.slot)},
+          signature: header1.signature,
+        },
+        signedHeader2: {
+          message: {...header2.message, slot: BigInt(header2.message.slot)},
+          signature: header2.signature,
+        },
+      };
+
+      try {
+        await validateApiProposerSlashing(this, proposerSlashing);
+      } catch (e) {
+        this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
+        return;
+      }
+
+      this.opPool.insertProposerSlashing(proposerSlashing);
+      this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
+      this.metrics?.opPool.proposerSlashingsProduced.inc();
+      this.logger.info("Produced proposer slashing from observed equivocation", {
+        slot: blockSlot,
+        proposerIndex,
+        header1Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header1.message)),
+        header2Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header2.message)),
+      });
+    } finally {
+      this.producingProposerSlashing.delete(proposerIndex);
+    }
+  }
+
   getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
@@ -1188,7 +1285,56 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      const prevHead = this.forkChoice.getHead();
+      const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+
+      const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+
+      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+        return head;
+      }
+
+      try {
+        const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+        const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+        const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+        const executionOptimistic = isOptimisticBlock(head);
+
+        if (headRootChanged) {
+          this.emitter.emit(routes.events.EventType.head, {
+            block: head.blockRoot,
+            epochTransition,
+            slot: head.slot,
+            state: head.stateRoot,
+            previousDutyDependentRoot,
+            currentDutyDependentRoot,
+            executionOptimistic,
+          });
+        }
+
+        this.emitter.emit(routes.events.EventType.headV2, {
+          version: this.config.getForkName(head.slot),
+          data: {
+            slot: head.slot,
+            block: head.blockRoot,
+            state: head.stateRoot,
+            payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+            epochTransition,
+            currentEpochDependentRoot: previousDutyDependentRoot,
+            nextEpochDependentRoot: currentDutyDependentRoot,
+            executionOptimistic,
+          },
+        });
+      } catch (e) {
+        // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+        this.logger.debug(
+          "Error emitting head/head_v2 event",
+          {slot: head.slot, root: head.blockRoot, headRootChanged},
+          e as Error
+        );
+      }
+
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1218,6 +1364,7 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
+      // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,
@@ -1452,6 +1599,7 @@ export class BeaconChain implements IBeaconChain {
     // aggregatedAttestationPool tracks metrics on its own
     metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+    metrics.opPool.deferredVoluntaryExitPool.size.set(this.deferredVoluntaryExitPool.size());
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
@@ -1460,6 +1608,8 @@ export class BeaconChain implements IBeaconChain {
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
+    metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
+    metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
 
     const headState = this.getHeadState();
     if (isStatePostElectra(headState)) {

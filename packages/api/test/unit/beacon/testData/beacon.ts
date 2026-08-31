@@ -69,6 +69,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {
       signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
+      builderUrl: "https://builder.example.com",
     },
     res: undefined,
   },
@@ -80,7 +81,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   publishExecutionPayloadEnvelope: {
-    args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
+    args: {
+      signedEnvelopeOrContents: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
+      broadcastValidation: BroadcastValidation.gossip,
+    },
     res: undefined,
   },
   publishExecutionPayloadBid: {
@@ -117,7 +121,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getPoolPayloadAttestations: {
     args: {slot: 1},
-    res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
+    res: {
+      data: Array.from({length: 5}, () => ssz.gloas.PayloadAttestation.defaultValue()),
+      meta: {version: ForkName.gloas},
+    },
   },
   getPoolAttesterSlashingsV2: {
     args: undefined,

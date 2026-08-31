@@ -7,6 +7,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {INTEROP_BLOCK_HASH} from "../../../src/node/utils/interop/state.js";
@@ -187,7 +188,8 @@ describe("sync / unknown block sync thru gloas", () => {
           forkName: headInput.forkName,
           sampledColumns: bn2.chain.custodyConfig.sampledColumns,
           custodyColumns: bn2.chain.custodyConfig.custodyColumns,
-          timeCreatedSec: headInput.getTimeComplete(),
+          seenTimestampSec: headInput.getTimeComplete(),
+          source: PayloadEnvelopeInputSource.gossip,
         });
       }
       const waitForPayloadImported = expectsPayloadImport
@@ -205,7 +207,8 @@ describe("sync / unknown block sync thru gloas", () => {
             loggerNodeB.info("Error processing block", {slot: headInput.slot, code: e.type.code});
             if (
               e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
             ) {
               // Expected
               bn2.chain.emitter.emit(ChainEvent.blockUnknownParent, {

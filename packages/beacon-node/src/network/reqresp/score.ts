@@ -33,9 +33,22 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
 
     case RequestErrorCode.DIAL_TIMEOUT:
     case RequestErrorCode.DIAL_ERROR:
-      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === ReqRespMethod.Ping
-        ? PeerAction.Fatal
-        : PeerAction.LowToleranceError;
+      // `RequestError` renders `e.message` as just the error code (see `renderErrorMessage`), so the
+      // multistream "protocol selection failed" text is only on the wrapped inner error, which is
+      // available on `DIAL_ERROR` via `e.type.error` (`DIAL_TIMEOUT` carries no inner error).
+      if (
+        e.type.code === RequestErrorCode.DIAL_ERROR &&
+        e.type.error.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed)
+      ) {
+        // Peer does not support the protocol, a real incompatibility rather than a transient
+        // failure, so keep the stronger penalty (Fatal for Ping, as before).
+        return method === ReqRespMethod.Ping ? PeerAction.Fatal : PeerAction.LowToleranceError;
+      }
+      // A dial failure means we could not open a stream. That is evidence about the transport, not
+      // about the peer's behavior, and it is dominated by transient congestion on our side, so
+      // penalize leniently for every method to avoid self-inflicted peer starvation (#9562). A
+      // genuinely dead peer still accumulates penalty and is eventually evicted, freeing the slot.
+      return PeerAction.HighToleranceError;
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
     case RequestErrorCode.RESP_TIMEOUT:

@@ -1,10 +1,11 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
@@ -20,12 +21,13 @@ import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   BeaconStateView,
+  DataAvailabilityStatus,
+  IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
+  isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -35,6 +37,7 @@ import {
   SignedBeaconBlock,
   deneb,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -45,23 +48,31 @@ import {
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
-} from "../../../src/chain/blocks/blockInput/index.ts";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.ts";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.ts";
-import {defaultChainOptions} from "../../../src/chain/options.ts";
-import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.ts";
-import {ZERO_HASH_HEX} from "../../../src/constants/constants.ts";
-import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.ts";
-import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.ts";
-import {getExecutionEngineFromBackend} from "../../../src/execution/index.ts";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.ts";
-import {ClockEvent} from "../../../src/util/clock.ts";
-import {ClockStopped} from "../../mocks/clock.ts";
-import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
-import {assertCorrectProgressiveBalances} from "../config.ts";
-import {ethereumConsensusSpecsTests} from "../specTestVersioning.ts";
-import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.ts";
-import {RunnerType, TestRunnerFn} from "../utils/types.ts";
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
+import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
+import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
+import {ClockEvent} from "../../../src/util/clock.js";
+import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
+import {ClockStopped} from "../../mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -70,6 +81,7 @@ const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
 const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
+const EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME = "^(execution_payload_envelope)_([0-9a-zA-Z]+)$";
 
 const logger = testLogger("spec-test");
 
@@ -88,9 +100,11 @@ const fastConfirmationTest =
         const clock = new ClockStopped(currentSlot);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
-          genesisBlockHash: isExecutionStateType(anchorState)
-            ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
-            : ZERO_HASH_HEX,
+          genesisBlockHash: isGloasStateType(anchorState)
+            ? toHexString(anchorState.latestBlockHash)
+            : isExecutionStateType(anchorState)
+              ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+              : ZERO_HASH_HEX,
         });
 
         const controller = new AbortController();
@@ -100,8 +114,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -172,10 +185,25 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
-              const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
+              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              if (attHeadBlock === null) {
+                throw Error(`No attested block ${toHexString(attestation.data.beaconBlockRoot)}`);
+              }
+              const attHeadBlockEpoch = computeEpochAtSlot(attHeadBlock.slot);
+              const decisionRoot = getShufflingDependentRoot(
+                chain.forkChoice,
+                attEpoch,
+                attHeadBlockEpoch,
+                attHeadBlock
+              );
+              await getShufflingForAttestationVerification(
+                chain,
+                attEpoch,
+                attHeadBlock,
+                RegenCaller.validateGossipAttestation
+              );
               chain.forkChoice.onAttestation(
                 chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex
@@ -262,7 +290,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -379,6 +408,67 @@ const fastConfirmationTest =
               }
             }
 
+            // execution_payload step for Gloas (ePBS) tests
+            else if (isExecutionPayload(step)) {
+              const isValid = Boolean(step.valid ?? true);
+              logger.debug(`Step ${i}/${stepsLen} execution_payload`, {
+                envelope: step.execution_payload,
+                valid: isValid,
+              });
+              const envelope = testcase.executionPayloadEnvelopes.get(step.execution_payload);
+              if (!envelope) throw Error(`No execution payload envelope ${step.execution_payload}`);
+
+              try {
+                const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
+                const blockHash = toHex(envelope.message.payload.blockHash);
+                const blockNumber = envelope.message.payload.blockNumber;
+                const gasLimit = envelope.message.payload.gasLimit;
+
+                // Verify envelope against the state
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
+                const blockState = await chain.regen.getBlockSlotState(
+                  protoBlock,
+                  protoBlock.slot,
+                  {dontTransferCache: true},
+                  RegenCaller.processBlock
+                );
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
+
+                // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
+                // required to be valid), so only verify signatures when bls_setting=1.
+                if (testcase.meta?.bls_setting === BigInt(1)) {
+                  const sigValid = await verifyExecutionPayloadEnvelopeSignature(
+                    beaconConfig,
+                    blockState as IBeaconStateViewGloas,
+                    envelope,
+                    blockState.latestBlockHeader.proposerIndex,
+                    chain.bls
+                  );
+                  if (!sigValid) throw Error("Invalid execution payload envelope signature");
+                }
+
+                // Add predefined VALID status for the payload's block hash so the EL mock accepts it
+                executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
+                  status: ExecutionPayloadStatus.VALID,
+                  latestValidHash: null,
+                  validationError: null,
+                });
+
+                (chain.forkChoice as ForkChoice).onExecutionPayload(
+                  beaconBlockRoot,
+                  blockHash,
+                  blockNumber,
+                  gasLimit,
+                  ExecutionStatus.Valid,
+                  DataAvailabilityStatus.Available
+                );
+                if (!isValid) throw Error("Expect error since this is a negative test");
+              } catch (e) {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+              }
+            }
+
             // Optional step for optimistic sync tests.
             else if (isOnPayloadInfoStep(step)) {
               logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
@@ -409,6 +499,16 @@ const fastConfirmationTest =
                   {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
                   `Invalid head at step ${i}`
                 );
+                if (step.checks.head.payload_status !== undefined) {
+                  // Map our PayloadStatus enum to spec's numbering:
+                  // Spec: EMPTY=0, FULL=1, PENDING=2
+                  // Ours: PENDING=0, EMPTY=1, FULL=2
+                  const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
+                  expect(payloadStatusToSpec[head.payloadStatus]).toEqualWithMessage(
+                    bnToNum(step.checks.head.payload_status),
+                    `Invalid head payload status at step ${i}`
+                  );
+                }
               }
 
               if (step.checks.proposer_boost_root) {
@@ -455,26 +555,54 @@ const fastConfirmationTest =
                 );
               }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_epoch_observed_justified_checkpoint) {
-              // }
+              const fcrStore = chain.forkChoice.getFastConfirmationStore();
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_epoch_observed_justified_checkpoint) {
-              // }
+              if (step.checks.previous_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_observed_justified_checkpoint,
+                  `Invalid previous epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.previous_slot_head) {
-              // }
+              if (step.checks.current_epoch_observed_justified_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.currentEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
+                  step.checks.current_epoch_observed_justified_checkpoint,
+                  `Invalid current epoch observed justified checkpoint at step ${i}`
+                );
+              }
 
-              // TODO: Expose this value to to spec tests
-              // if (step.checks.current_slot_head) {
-              // }
+              if (step.checks.previous_epoch_greatest_unrealized_checkpoint) {
+                expect(toSpecTestCheckpoint(fcrStore.previousEpochGreatestUnrealizedCheckpoint)).toEqualWithMessage(
+                  step.checks.previous_epoch_greatest_unrealized_checkpoint,
+                  `Invalid previous epoch greatest unrealized checkpoint at step ${i}`
+                );
+              }
+
+              if (step.checks.previous_slot_head) {
+                expect(fcrStore.previousSlotHead).toEqualWithMessage(
+                  step.checks.previous_slot_head,
+                  `Invalid previous slot head at step ${i}`
+                );
+              }
+
+              if (step.checks.current_slot_head) {
+                expect(fcrStore.currentSlotHead).toEqualWithMessage(
+                  step.checks.current_slot_head,
+                  `Invalid current slot head at step ${i}`
+                );
+              }
 
               if (step.checks.confirmed_root) {
                 expect(confirmedRoot).toEqualWithMessage(
                   step.checks.confirmed_root,
                   `Invalid confirmed root at step: ${i}, time: ${step.checks.time}, head_slot: ${step.checks.head?.slot}`
+                );
+              }
+
+              if (step.checks.safe_execution_block_hash !== undefined) {
+                expect(getSafeExecutionBlockHash(chain.forkChoice)).toEqualWithMessage(
+                  step.checks.safe_execution_block_hash,
+                  `Invalid safe execution block hash at step ${i}`
                 );
               }
 
@@ -518,12 +646,14 @@ const fastConfirmationTest =
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
+          const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
@@ -540,6 +670,10 @@ const fastConfirmationTest =
             const columnMatch = key.match(COLUMN_FILE_NAME);
             if (columnMatch) {
               columns.set(key, t[key]);
+            }
+            const envelopeMatch = key.match(EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME);
+            if (envelopeMatch) {
+              executionPayloadEnvelopes.set(key, t[key]);
             }
             const attMatch = key.match(ATTESTATION_FILE_NAME);
             if (attMatch) {
@@ -558,6 +692,7 @@ const fastConfirmationTest =
             blocks,
             blobs,
             columns,
+            executionPayloadEnvelopes,
             attestations,
             attesterSlashings,
           };
@@ -578,7 +713,13 @@ const fastConfirmationTest =
           // and these tests are failing until we update our implementation.
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality"),
+          name.includes("justified_update_not_realized_finality") ||
+          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
+          // be applied. Passing them requires skipping deposit signature verification inside epoch
+          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
+          // real, or if full bls_setting=2 support is ever added.
+          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };
@@ -590,7 +731,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPayloadInfo | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnExecutionPayloadEnvelope | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -631,6 +772,13 @@ type OnBlock = {
   valid?: number;
 };
 
+type OnExecutionPayloadEnvelope = {
+  /** the name of the `execution_payload_envelope_<32-byte-root>.ssz_snappy` file. To execute `on_execution_payload(store, signed_envelope)` */
+  execution_payload: string;
+  /** optional, default to `true`. */
+  valid?: number;
+};
+
 type OnPayloadInfo = {
   /** Encoded 32-byte value of payload's block hash. */
   block_hash: string;
@@ -649,6 +797,8 @@ type Checks = {
     head?: {
       slot: bigint;
       root: string;
+      /** Spec numbering: EMPTY=0, FULL=1, PENDING=2. Only present post-Gloas. */
+      payload_status?: bigint;
     };
     time: bigint;
     justified_checkpoint?: SpecTestCheckpoint;
@@ -657,9 +807,12 @@ type Checks = {
 
     previous_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
     current_epoch_observed_justified_checkpoint?: SpecTestCheckpoint;
+    previous_epoch_greatest_unrealized_checkpoint?: SpecTestCheckpoint;
     previous_slot_head?: string;
     current_slot_head?: string;
     confirmed_root?: string;
+    /** Expected response of `get_safe_execution_block_hash()`. New in Bellatrix. */
+    safe_execution_block_hash?: string;
 
     // Custom attributes
     get_proposer_head?: string;
@@ -681,6 +834,7 @@ type FastConfirmationTestCase = {
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
+  executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
@@ -701,6 +855,10 @@ function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
 }
 
+function isExecutionPayload(step: Step): step is OnExecutionPayloadEnvelope {
+  return typeof (step as OnExecutionPayloadEnvelope).execution_payload === "string";
+}
+
 function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
   return typeof (step as OnPayloadInfo).block_hash === "string";
 }
@@ -714,8 +872,5 @@ specTestIterator(
   {
     fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
   },
-  {
-    ...defaultSkipOpts,
-    skippedRunners: [],
-  }
+  defaultSkipOpts
 );

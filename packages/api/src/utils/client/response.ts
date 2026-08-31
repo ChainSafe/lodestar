@@ -5,10 +5,6 @@ import {WireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
 import {RouteDefinitionExtra} from "./request.js";
 
-// TODO: Workaround for tsgo import-elision bug: ensure this is treated as a runtime value.
-// https://github.com/microsoft/typescript-go/issues/2212
-void HttpStatusCode;
-
 export type RawBody =
   | {type: WireFormat.json; value: unknown}
   | {type: WireFormat.ssz; value: Uint8Array}
@@ -94,7 +90,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           const metaJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
-          this._meta = this.definition.resp.meta.fromJson(metaJson);
+          this._meta = this.definition.resp.meta.fromJson(metaJson, new HeadersExtra(this.headers));
           break;
         }
         case WireFormat.ssz:

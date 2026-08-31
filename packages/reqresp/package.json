@@ -11,16 +11,16 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.46.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
-      "bun": "./src/utils/index.ts",
+      "typescript": "./src/utils/index.ts",
       "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
@@ -32,39 +32,39 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
-    "@libp2p/interface": "^3.1.0",
-    "@libp2p/utils": "^7.0.13",
+    "@libp2p/interface": "^3.3.0",
+    "@libp2p/utils": "^7.4.0",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
     "snappy": "^7.2.2",
     "snappyjs": "^0.7.0",
     "uint8-varint": "^2.0.2",
-    "uint8arraylist": "^2.4.7"
+    "uint8arraylist": "^3.0.2"
   },
   "devDependencies": {
-    "@chainsafe/ssz": "^1.4.0",
-    "@libp2p/crypto": "^5.1.13",
-    "@libp2p/peer-id": "^6.0.4",
+    "@chainsafe/ssz": "^1.6.3",
+    "@libp2p/crypto": "^5.1.23",
+    "@libp2p/peer-id": "^6.0.15",
     "@lodestar/logger": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "libp2p": "3.1.6"
+    "libp2p": "3.3.9"
   },
   "peerDependencies": {
-    "libp2p": "^3.1.4"
+    "libp2p": "^3.3.9"
   },
   "keywords": [
     "ethereum",
