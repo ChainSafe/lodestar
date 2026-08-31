@@ -179,6 +179,9 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("gloas - should update builder circuit breaker and check builder api status ahead of the slot", async () => {
+    // Anchor the fake clock to the start of clockSlot, else msFromSlot resolves against wall time
+    // and the scheduled check collapses to a zero delay
+    vi.setSystemTime((SLOTS_PER_EPOCH - 2) * config.SLOT_DURATION_MS);
     getForkStub.mockReturnValue(ForkName.gloas);
     const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
     const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
@@ -201,10 +204,13 @@ describe("PrepareNextSlot scheduler", () => {
     expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
     // The legacy pre-gloas builder status path stays untouched
     expect(updateBuilderStatus).not.toHaveBeenCalled();
-    // Scheduled close to the slot boundary, not now, so the connection is still warm at bid time
+
+    // Past PREPARE_NEXT_SLOT_BPS but before the check is due, an undelayed check would have run
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 12);
     expect(chainStub.builderApiClient.checkStatus).not.toHaveBeenCalled();
 
-    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 3);
+    // Past BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS, connections are warmed before bids are requested
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 4);
     expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
   });
 });
