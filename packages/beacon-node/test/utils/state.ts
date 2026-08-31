@@ -169,6 +169,8 @@ export const zeroProtoBlock: ProtoBlock = {
   unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
   timeliness: false,
+  ptcTimeliness: false,
+  proposerIndex: 0,
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,

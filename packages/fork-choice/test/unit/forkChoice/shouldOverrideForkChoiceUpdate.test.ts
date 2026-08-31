@@ -57,6 +57,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
@@ -83,6 +85,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -111,6 +115,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
@@ -189,10 +195,21 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     stateGetter: () => null,
   };
 
+  /** Another block at the head slot from the same proposer, ie. a proposer equivocation */
+  const equivocatingHeadBlock: ProtoBlockWithWeight = {
+    ...baseHeadBlock,
+    stateRoot: getStateRoot(headSlot + 100),
+    blockRoot: getBlockRoot(headSlot + 100),
+    targetRoot: getBlockRoot(headSlot + 100),
+    weight: 0,
+  };
+
   const testCases: {
     id: string;
     parentBlock: ProtoBlockWithWeight;
     headBlock: ProtoBlockWithWeight;
+    /** Imported alongside the head, to simulate an equivocation */
+    siblingBlock?: ProtoBlockWithWeight;
     expectReorg: boolean;
     currentSlot?: Slot;
     expectedNotReorgedReason?: NotReorgedReason;
@@ -254,6 +271,37 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       expectReorg: false,
       expectedNotReorgedReason: NotReorgedReason.ParentBlockDistanceMoreThanOneSlot,
     },
+    {
+      id: "Reorg equivocating head even if head is timely",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: true,
+    },
+    {
+      id: "Reorg equivocating head even if reorg spans more than a single slot",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, slot: headSlot + 1},
+      siblingBlock: {...equivocatingHeadBlock, slot: headSlot + 1},
+      expectReorg: true,
+    },
+    {
+      id: "No equivocation reorg if current slot is more than one slot from head block",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      siblingBlock: equivocatingHeadBlock,
+      expectReorg: false,
+      currentSlot: headSlot + 2,
+      expectedNotReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot,
+    },
+    {
+      id: "No equivocation reorg if the other block at the head slot is from a different proposer",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: {...equivocatingHeadBlock, proposerIndex: 1},
+      expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
+    },
   ];
 
   beforeEach(() => {
@@ -264,6 +312,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     id,
     parentBlock,
     headBlock,
+    siblingBlock,
     expectReorg,
     currentSlot: blockSeenSlot,
     expectedNotReorgedReason,
@@ -272,6 +321,9 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     it(id, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
       protoArr.onBlock(headBlock, headBlock.slot, null);
+      if (siblingBlock) {
+        protoArr.onBlock(siblingBlock, siblingBlock.slot, null);
+      }
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;

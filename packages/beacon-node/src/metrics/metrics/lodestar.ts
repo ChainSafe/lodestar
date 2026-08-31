@@ -104,9 +104,10 @@ export function createLodestarMetrics(
         help: "Age of the first item of each key in the indexed queues in seconds",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
-      queueTime: register.histogram({
+      queueTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_time_seconds",
         help: "Total time an item stays in queue until it is processed in seconds",
+        labelNames: ["topic"],
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
     },
@@ -1350,6 +1351,11 @@ export function createLodestarMetrics(
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
         }),
+        apiValidationTime: register.histogram({
+          name: "lodestar_api_execution_payload_bid_validation_time_seconds",
+          help: "Time elapsed for signed execution payload bid validation - api path",
+          buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
+        }),
       },
     },
 
@@ -1443,6 +1449,16 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
         labelNames: ["type"],
+      }),
+      persistentTierEpochs: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_epochs",
+        help: "Number of epoch keys retained in each on-disk checkpoint state retention tier",
+        labelNames: ["tier"],
+      }),
+      persistentTierStates: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_states",
+        help: "Number of persisted checkpoint states retained in each on-disk retention tier",
+        labelNames: ["tier"],
       }),
       reads: register.avgMinMax({
         name: "lodestar_cp_state_epoch_reads",
@@ -1776,6 +1792,10 @@ export function createLodestarMetrics(
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
       }),
+      predictedReorg: register.counter({
+        name: "lodestar_precompute_next_epoch_transition_predicted_reorg_total",
+        help: "Predicted epoch-boundary reorgs where the strong parent was dialed instead of the weak head",
+      }),
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
         help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
@@ -2012,6 +2032,35 @@ export function createLodestarMetrics(
         name: "lodestar_builder_http_client_urls_score",
         help: "Current score of builder http URLs by url index",
         labelNames: ["urlIndex", "baseUrl"],
+      }),
+    },
+
+    builderApi: {
+      bidRequests: register.counter({
+        name: "lodestar_builder_api_bid_requests_total",
+        help: "Total count of execution payload bid requests sent to external builders",
+      }),
+      bidRequestErrors: register.counter({
+        name: "lodestar_builder_api_bid_request_errors_total",
+        help: "Total count of failed execution payload bid requests to external builders",
+      }),
+      bidsReceived: register.counter({
+        name: "lodestar_builder_api_bids_received_total",
+        help: "Total count of execution payload bids received from external builders",
+      }),
+      bidsDiscarded: register.counter({
+        name: "lodestar_builder_api_bids_discarded_total",
+        help: "Total count of execution payload bids from external builders discarded due to failed validation",
+      }),
+      blockSubmissions: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_block_submissions_total",
+        help: "Total count of signed beacon blocks submitted to external builders",
+        labelNames: ["status"],
+      }),
+      preferencesForwarded: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_preferences_forwarded_total",
+        help: "Total count of builder preferences forwarded to external builders",
+        labelNames: ["status"],
       }),
     },
 

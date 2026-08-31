@@ -365,6 +365,21 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    const currentTimeOk =
+      headBlock.slot === currentSlot ||
+      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
+
+    // Mirror the proposer equivocation branch of getProposerHead(). The head slot's attestations are
+    // still queued at this point so the head is assumed weak, same as for the regular branch below.
+    if (currentTimeOk && this.isProposerEquivocation(headBlock)) {
+      this.logger?.verbose("Head proposer equivocated. Should override forkchoice update", {
+        blockRoot: headBlock.blockRoot,
+        slot: currentSlot,
+        proposerIndex: headBlock.proposerIndex,
+      });
+      return {shouldOverrideFcu: true, parentBlock};
+    }
+
     const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
       headBlock,
       parentBlock,
@@ -375,9 +390,6 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
     }
 
-    const currentTimeOk =
-      headBlock.slot === currentSlot ||
-      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
     if (!currentTimeOk) {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
@@ -462,7 +474,8 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg
    * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
    *
-   * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#get_proposer_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-get_proposer_head
    */
   getProposerHead(
     headBlock: ProtoBlock,
@@ -493,6 +506,29 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
+    const currentTimeOk = headBlock.slot + 1 === slot;
+    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
+
+    // Re-org more aggressively if there is a proposer equivocation in the previous slot, skipping the
+    // regular reorg conditions. Any known equivocation counts here, timely or not.
+    if (
+      currentTimeOk &&
+      isProposerBoostWornOff &&
+      this.isProposerEquivocation(headBlock) &&
+      this.isHeadWeak(headBlock.blockRoot)
+    ) {
+      this.logger?.verbose("Performing single-slot reorg to remove weak head of equivocating proposer", {
+        slot,
+        proposerHead: parentBlock.blockRoot,
+        weakHead: headBlock.blockRoot,
+        proposerIndex: headBlock.proposerIndex,
+      });
+      proposerHead = parentBlock;
+
+      return {proposerHead, isHeadTimely};
+    }
+
     const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
 
     if (prelimProposerHead === headBlock && prelimNotReorgedReason !== undefined) {
@@ -505,14 +541,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if attempted reorg is more than a single slot
-    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
-    const currentTimeOk = headBlock.slot + 1 === slot;
     if (!currentTimeOk) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
     // No reorg if proposer boost is still in effect
-    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
     if (!isProposerBoostWornOff) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostNotWornOff};
     }
@@ -591,32 +624,48 @@ export class ForkChoice implements IForkChoice {
     computeDeltasMetrics?.newVoteValidators.set(newVoteValidators);
 
     this.balances = newBalances;
-    /**
-     * The structure in line with deltas to propagate boost up the branch
-     * starting from the proposerIndex
-     */
-    let proposerBoost: {root: RootHex; score: bigint} | null = null;
-    if (this.opts?.proposerBoost && this.proposerBoostRoot) {
-      const proposerBoostScore =
-        this.justifiedProposerBoostScore ??
-        getCommitteeFraction(this.fcStore.justified.totalBalance, {
-          slotsPerEpoch: SLOTS_PER_EPOCH,
-          committeePercent: this.config.PROPOSER_SCORE_BOOST,
-        });
-      proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
-      this.justifiedProposerBoostScore = proposerBoostScore;
-    }
 
     const currentSlot = this.fcStore.currentSlot;
-    this.protoArray.applyScoreChanges({
-      attestationDeltas,
-      proposerBoost,
+    const checkpoints = {
       justifiedEpoch: this.fcStore.justified.checkpoint.epoch,
       justifiedRoot: this.fcStore.justified.checkpoint.rootHex,
       finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
       finalizedRoot: this.fcStore.finalizedCheckpoint.rootHex,
       currentSlot,
-    });
+    };
+
+    const boostedBlock =
+      this.opts?.proposerBoost && this.proposerBoostRoot ? this.getBlockHexDefaultStatus(this.proposerBoostRoot) : null;
+
+    if (boostedBlock && isGloasBlock(boostedBlock)) {
+      // should_apply_proposer_boost judges the parent against the attestations known to the store,
+      // via is_head_weak (which also assumes equivocators' votes were already discounted before
+      // their balance is added back). Apply the attestation deltas first so the decision reads
+      // post-delta scores, then apply the boost in a second pass.
+      // TODO GLOAS: applyScoreChanges() updates weights and best child/descendant in one call;
+      // splitting them would let the two passes update weights and recompute best child/descendant
+      // once at the end.
+      // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+      this.protoArray.applyScoreChanges({attestationDeltas, proposerBoost: null, ...checkpoints});
+      const proposerBoost = this.shouldApplyProposerBoost() ? this.getProposerBoost() : null;
+      // The first pass already rolled back the previous boost and left a coherent tree, so a
+      // withheld boost needs no second pass
+      if (proposerBoost !== null) {
+        this.protoArray.applyScoreChanges({
+          attestationDeltas: new Array<number>(this.protoArray.nodes.length).fill(0),
+          proposerBoost,
+          ...checkpoints,
+        });
+      }
+    } else {
+      // Pre-gloas the boost is unconditional, so attestation deltas and boost deltas can propagate
+      // up the branch in a single pass
+      this.protoArray.applyScoreChanges({
+        attestationDeltas,
+        proposerBoost: boostedBlock ? this.getProposerBoost() : null,
+        ...checkpoints,
+      });
+    }
 
     // findHead returns the ProtoNode representing the head
     const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
@@ -826,6 +875,8 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
+      ptcTimeliness: this.isBlockPtcTimely(block, blockDelaySec),
+      proposerIndex: block.proposerIndex,
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toRootHex(state.currentJustifiedCheckpoint.root),
@@ -1602,7 +1653,8 @@ export class ForkChoice implements IForkChoice {
     // Only ever called on a block already in fork choice, so a miss is a broken invariant.
     const node = this.protoArray.getNodeDefaultStatus(blockRoot);
     if (node === undefined) {
-      // this is called for head so we should always have this in forkchoice, otherwise we have a serious error
+      // this is called for head or the boosted block's parent, both of which should always be
+      // in forkchoice, otherwise we have a serious error
       throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
     }
 
@@ -1622,7 +1674,7 @@ export class ForkChoice implements IForkChoice {
     // always 0. Return before fetching the state and walking the block's committees.
     if (equivocatingIndices.size > 0) {
       const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
-      // Only ever called on the head, so the state is always cached.
+      // Only ever called on the head or the boosted block's parent, so the state is always cached.
       // A miss is a broken invariant, not a recoverable state.
       if (state === null) {
         throw new ForkChoiceError({
@@ -1683,6 +1735,99 @@ export class ForkChoice implements IForkChoice {
     const fork = this.config.getForkName(block.slot);
     const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(fork);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
+  }
+
+  /**
+   * Return true if the block arrived before the PTC (payload-timeliness committee) deadline,
+   * ie. block_timeliness[PTC_TIMELINESS_INDEX]. should_apply_proposer_boost uses this as the
+   * definition of an "early" proposer equivocation: only a sibling seen by the PTC deadline
+   * proves the proposer equivocated soon enough that honest nodes could have withheld the boost.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#modified-record_block_timeliness
+   *
+   * Child class can overwrite this for testing purpose.
+   */
+  protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
+    const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+    return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
+  }
+
+  /**
+   * Determine whether proposer boost should be applied to `proposerBoostRoot`.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+   *
+   * Pre-gloas blocks always receive the boost (unconditional, backward compatible). For gloas
+   * blocks the boost is withheld when the parent is a weak block from the previous slot and the
+   * proposer of that parent equivocated (published another PTC-timely block at the same slot).
+   */
+  private shouldApplyProposerBoost(): boolean {
+    if (!this.proposerBoostRoot) {
+      return false;
+    }
+
+    const boostedBlock = this.getBlockHexDefaultStatus(this.proposerBoostRoot);
+    // Pre-gloas blocks always get boost
+    if (!boostedBlock || !isGloasBlock(boostedBlock)) {
+      return true;
+    }
+
+    const parentBlock = this.getBlockHexDefaultStatus(boostedBlock.parentRoot);
+    if (!parentBlock) {
+      return true;
+    }
+
+    // Apply proposer boost if parent is not from the previous slot
+    if (parentBlock.slot + 1 < boostedBlock.slot) {
+      return true;
+    }
+
+    // Apply proposer boost if parent is not weak
+    if (!this.isHeadWeak(parentBlock.blockRoot)) {
+      return true;
+    }
+
+    // Parent is weak and from the previous slot: apply boost only if there are no early
+    // equivocations, ie. no other PTC-timely block at the parent's slot from the same proposer.
+    return !this.protoArray.hasEquivocatingBlock(
+      parentBlock.proposerIndex,
+      parentBlock.slot,
+      parentBlock.blockRoot,
+      // Only a sibling seen before the PTC deadline counts. A late released one might not have been
+      // seen by the proposer, so it cannot be expected to reorg it and is not denied the boost for it.
+      true
+    );
+  }
+
+  /**
+   * Return true if another block at the same slot from the same proposer is known to fork choice.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#is_proposer_equivocation
+   */
+  private isProposerEquivocation(block: ProtoBlock): boolean {
+    // Any known sibling counts, timely or not. Timeliness only matters for withholding the boost from
+    // the next proposer, the reorg itself is safe to attempt whenever the equivocation is visible.
+    return this.protoArray.hasEquivocatingBlock(block.proposerIndex, block.slot, block.blockRoot, false);
+  }
+
+  /**
+   * The proposer boost to apply to `proposerBoostRoot`, propagated up the branch by
+   * applyScoreChanges() together with the deltas.
+   */
+  private getProposerBoost(): {root: RootHex; score: bigint} | null {
+    if (!this.proposerBoostRoot) {
+      return null;
+    }
+
+    const proposerBoostScore =
+      this.justifiedProposerBoostScore ??
+      getCommitteeFraction(this.fcStore.justified.totalBalance, {
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        committeePercent: this.config.PROPOSER_SCORE_BOOST,
+      });
+    this.justifiedProposerBoostScore = proposerBoostScore;
+
+    return {root: this.proposerBoostRoot, score: proposerBoostScore};
   }
 
   /**
