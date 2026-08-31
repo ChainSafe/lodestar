@@ -40,7 +40,7 @@ default_config:
 
 ### Builder settings from Gloas
 
-`min_bid` is a floor in Gwei on the counted total payment, applied to p2p and builder API bids alike. `max_execution_payment` caps the execution layer payment in Gwei counted toward a builder API bid, values above `0` require `--allowDangerousTrustedPayments`. It has no effect without builder entries, p2p bids never carry an execution payment.
+`min_bid` is a floor in Gwei on the counted total payment, applied to p2p and builder API bids alike. `max_execution_payment` caps the execution layer payment in Gwei counted toward a builder API bid, values above `0` require `--allowDangerousTrustedPayments`. `max_execution_payment` has no effect without builder entries, p2p bids never carry an execution payment.
 
 `boost_factor` applies to the p2p bid, while each builder's own `builder_boost_factor` applies to that builder's API bid. An explicitly configured per-validator `boost_factor` takes precedence over `selection`.
 
