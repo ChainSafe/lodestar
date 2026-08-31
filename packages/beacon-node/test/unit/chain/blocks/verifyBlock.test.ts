@@ -4,8 +4,10 @@ import {config as configDef} from "@lodestar/config/default";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
@@ -14,7 +16,6 @@ import {verifyBlocksSignatures} from "../../../../src/chain/blocks/verifyBlocksS
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {MockBlockInput} from "../../../utils/blockInput.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js");
@@ -55,16 +56,18 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     );
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
-    const blockInput = new MockBlockInput({
-      forkName: ForkName.gloas,
-      slot: block.message.slot,
+    const blockInput = BlockInputNoData.createFromBlock({
+      block,
       blockRootHex,
+      forkName: ForkName.gloas,
+      daOutOfRange: false,
+      source: BlockInputSource.byRange,
+      seenTimestampSec: 0,
     });
-    blockInput._block = block;
 
     const payloadInput = PayloadEnvelopeInput.createFromBlock({
       blockRootHex,
-      block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+      block,
       forkName: ForkName.gloas,
       sampledColumns: [0],
       custodyColumns: [0],

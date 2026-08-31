@@ -132,7 +132,10 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).toHaveBeenCalledOnce();
   });
 
-  it("imports a DA-verified payload inline after its block", async () => {
+  it.each([
+    {name: "imports a DA-verified payload inline after its block", envelopeBeforeDa: true},
+    {name: "does not import an envelope received after the DA verification snapshot", envelopeBeforeDa: false},
+  ])("$name", async ({envelopeBeforeDa}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     chain = getMockedBeaconChain({config: gloasConfig});
     Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
@@ -160,7 +163,9 @@ describe("chain / blocks / processBlocks", () => {
     });
     const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     envelope.message.beaconBlockRoot = blockRoot;
-    payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+    if (envelopeBeforeDa) {
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+    }
 
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
       relevantBlocks: [gloasBlockInput],
@@ -176,51 +181,31 @@ describe("chain / blocks / processBlocks", () => {
         executionTime: 0,
       },
       blockDAStatuses: [DataAvailabilityStatus.NotRequired],
-      payloadDAStatuses: new Map([[slot, DataAvailabilityStatus.NotRequired]]),
+      payloadDAStatuses: new Map(envelopeBeforeDa ? [[slot, DataAvailabilityStatus.NotRequired]] : []),
       indexedAttestationsByBlock: [[]],
+    });
+    vi.mocked(importBlock).mockImplementationOnce(async () => {
+      expect(payloadInput.hasPayloadEnvelope()).toBe(envelopeBeforeDa);
+      if (!envelopeBeforeDa) {
+        payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 2});
+      }
     });
     vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
 
     await processBlocks.call(chain, [gloasBlockInput], new Map([[slot, payloadInput]]), {});
 
+    expect(payloadInput.isComplete()).toBe(true);
     expect(importBlock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({blockInput: gloasBlockInput}), {});
-    expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
-      validSignature: false,
-    });
-    expect(vi.mocked(importBlock).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(importExecutionPayload).mock.invocationCallOrder[0]
-    );
-  });
-
-  it("does not import an envelope received after the DA verification snapshot", async () => {
-    let hasPayloadEnvelope = false;
-    const payloadInput = {
-      slot,
-      hasPayloadEnvelope: () => hasPayloadEnvelope,
-      isComplete: () => true,
-    } as unknown as PayloadEnvelopeInput;
-
-    vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
-      hasPayloadEnvelope = true;
-      return {
-        postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
-        proposerBalanceDeltas: [0],
-        segmentExecStatus: {
-          execAborted: null,
-          executionStatuses: [ExecutionStatus.Valid],
-          executionTime: 0,
-        },
-        blockDAStatuses: [DataAvailabilityStatus.Available],
-        payloadDAStatuses: new Map(),
-        indexedAttestationsByBlock: [[]],
-      };
-    });
-
-    await processBlocks.call(chain, [blockInput], new Map([[slot, payloadInput]]), {});
-
-    expect(hasPayloadEnvelope).toBe(true);
-    expect(importBlock).toHaveBeenCalledOnce();
-    expect(importExecutionPayload).not.toHaveBeenCalled();
+    if (envelopeBeforeDa) {
+      expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
+        validSignature: false,
+      });
+      expect(vi.mocked(importBlock).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(importExecutionPayload).mock.invocationCallOrder[0]
+      );
+    } else {
+      expect(importExecutionPayload).not.toHaveBeenCalled();
+    }
   });
 
   // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
