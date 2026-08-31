@@ -6,7 +6,6 @@ import {
   assertEqualParams,
   createBeaconConfig,
 } from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
 import {Clock, ClockOptions, IClock, computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
@@ -376,10 +375,9 @@ export class Validator {
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
     const {broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
-    // Resolve against the current fork, else this always reports the pre-Gloas default
-    const isPostGloas = config.getForkSeq(getCurrentSlot(config, Number(genesis.genesisTime))) >= ForkSeq.gloas;
+    const gloasScheduled = config.GLOAS_FORK_EPOCH !== Infinity;
     const defaultBuilderSelection =
-      valProposerConfig?.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(isPostGloas);
+      valProposerConfig?.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(gloasScheduled);
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
 
@@ -392,23 +390,23 @@ export class Validator {
 
     metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
 
-    // A misconfigured builder would otherwise only surface at the first proposal, hours away
-    const defaultBuilder = valProposerConfig?.defaultConfig.builder;
-    const defaultBuilders = defaultBuilder?.builders ?? [];
-    const validatorsWithBuilderOverrides = Object.values(valProposerConfig?.proposerConfig ?? {}).filter(
-      (proposerConfig) => proposerConfig.builder?.builders !== undefined
-    ).length;
+    if (gloasScheduled) {
+      const defaultBuilderConfig = valProposerConfig?.defaultConfig.builder;
+      const defaultBuilders = defaultBuilderConfig?.builders ?? [];
+      const validatorsWithCustomBuilders = Object.values(valProposerConfig?.proposerConfig ?? {}).filter(
+        (proposerConfig) => proposerConfig.builder?.builders !== undefined
+      ).length;
 
-    if (defaultBuilders.length > 0 || validatorsWithBuilderOverrides > 0) {
-      logger.info("Builder API configured", {
-        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none by default",
-        validatorsWithBuilderOverrides,
-        minBid: prettyGweiToEth(defaultBuilder?.minBid ?? defaultOptions.builderMinBid),
-        maxExecutionPayment: prettyGweiToEth(
-          defaultBuilder?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
-        ),
-        active: isPostGloas,
-      });
+      if (defaultBuilders.length > 0 || validatorsWithCustomBuilders > 0) {
+        logger.info("Builder API configured", {
+          builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none by default",
+          validatorsWithCustomBuilders,
+          minBid: prettyGweiToEth(defaultBuilderConfig?.minBid ?? defaultOptions.builderMinBid),
+          maxExecutionPayment: prettyGweiToEth(
+            defaultBuilderConfig?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
+          ),
+        });
+      }
     }
 
     // Instantiates block and attestation services and runs them once the chain has been started.
