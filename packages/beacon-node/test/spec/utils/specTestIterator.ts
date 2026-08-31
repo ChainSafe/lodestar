@@ -104,6 +104,12 @@ export const defaultSkipOpts: SkipOpts = {
     // so skip rather than raise the timeout and hide the regression.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
     /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
+    // We implement consensus-specs #5554 (merged after v1.7.0-alpha.14) which reads the parent
+    // slot from latest_block_header.slot instead of latest_execution_payload_bid.slot. These
+    // alpha.14 vectors craft bid.slot without updating the header slot, so their post-states
+    // encode the old behavior. Remove on the next spec test bump.
+    // https://github.com/ethereum/consensus-specs/pull/5554
+    /^(gloas|heze)\/operations\/parent_execution_payload\/pyspec_tests\/process_parent_execution_payload__(settle_previous_epoch|older_than_previous_epoch)$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],

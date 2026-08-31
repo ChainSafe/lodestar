@@ -5,7 +5,7 @@ import {
   PAYLOAD_BUILDER_VERSION,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {Slot, gloas, heze, ssz} from "@lodestar/types";
+import {gloas, heze, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
@@ -22,7 +22,7 @@ import {
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   signedBid: gloas.SignedExecutionPayloadBid
-): Slot {
+): void {
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
 
@@ -110,14 +110,11 @@ export function processExecutionPayloadBid(
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
   }
 
-  const parentSlot = state.latestExecutionPayloadBid.slot;
   if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
     state.latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(bid as heze.ExecutionPayloadBid);
   } else {
     state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
   }
-
-  return parentSlot;
 }
 
 function verifyExecutionPayloadBidSignature(
