@@ -1,4 +1,4 @@
-import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle";
+import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
@@ -95,24 +95,6 @@ export function computeEpochShuffling(
 ): EpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildCommitteesFromShuffling(shuffling);
-  return {
-    epoch,
-    activeIndices,
-    shuffling,
-    committees,
-    committeesPerSlot: committees[0].length,
-  };
-}
-
-export async function computeEpochShufflingAsync(
-  // TODO: (@matthewkeil) remove state/epoch and pass in seed to clean this up
-  state: BeaconStateAllForks,
-  activeIndices: Uint32Array,
-  epoch: Epoch
-): Promise<EpochShuffling> {
-  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-  const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
   const committees = buildCommitteesFromShuffling(shuffling);
   return {
     epoch,
