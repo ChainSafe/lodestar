@@ -398,20 +398,18 @@ export class Validator {
         (proposerConfig) => proposerConfig.builder?.builders !== undefined
       ).length;
 
-      if (defaultBuilders.length > 0 || validatorsWithCustomBuilders > 0) {
-        logger.info("Builder API configured", {
-          builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none by default",
-          validatorsWithCustomBuilders,
-          boostFactor: getBuilderBoostFactor(
-            defaultBuilderSelection,
-            defaultBuilderConfig?.boostFactor ?? defaultOptions.builderBoostFactor
-          ),
-          minBid: prettyGweiToEth(defaultBuilderConfig?.minBid ?? defaultOptions.builderMinBid),
-          maxExecutionPayment: prettyGweiToEth(
-            defaultBuilderConfig?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
-          ),
-        });
-      }
+      logger.info("Builder configuration", {
+        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none",
+        validatorsWithCustomBuilders,
+        boostFactor: getBuilderBoostFactor(
+          defaultBuilderSelection,
+          defaultBuilderConfig?.boostFactor ?? defaultOptions.builderBoostFactor
+        ),
+        minBid: prettyGweiToEth(defaultBuilderConfig?.minBid ?? defaultOptions.builderMinBid),
+        maxExecutionPayment: prettyGweiToEth(
+          defaultBuilderConfig?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
+        ),
+      });
     }
 
     // Instantiates block and attestation services and runs them once the chain has been started.
