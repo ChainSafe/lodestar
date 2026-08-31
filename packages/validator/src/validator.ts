@@ -394,13 +394,9 @@ export class Validator {
     if (gloasScheduled) {
       const defaultBuilderConfig = valProposerConfig?.defaultConfig.builder;
       const defaultBuilders = defaultBuilderConfig?.builders ?? [];
-      const validatorsWithCustomBuilders = Object.values(valProposerConfig?.proposerConfig ?? {}).filter(
-        (proposerConfig) => proposerConfig.builder?.builders !== undefined
-      ).length;
 
-      logger.info("Builder configuration", {
+      logger.info("Default builder config", {
         builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "p2p only",
-        validatorsWithCustomBuilders,
         boostFactor: getBuilderBoostFactor(
           defaultBuilderSelection,
           defaultBuilderConfig?.boostFactor ?? defaultOptions.builderBoostFactor
