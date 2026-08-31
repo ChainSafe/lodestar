@@ -41,7 +41,7 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   "builder.url": {
     alias: ["builder.urls"],
     description:
-      "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client with its own `--builder.urls`, which takes a list rather than this single url",
+      "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     defaultDescription: defaultExecutionBuilderHttpOpts.url,
     type: "string",
     group: "builder",
