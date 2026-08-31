@@ -171,6 +171,11 @@ export const defaultOptions = {
   blindedLocal: false,
 };
 
+/** Pre-Gloas there is no in-protocol builder so the default is local-only, post-Gloas bids are used */
+export function getDefaultBuilderSelection(isPostGloas: boolean): routes.validator.BuilderSelection {
+  return isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+}
+
 export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
 
 /**
@@ -323,7 +328,7 @@ export class ValidatorStore {
     isPostGloas: boolean
   ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
     const validatorBuilder = this.validators.get(pubkeyHex)?.builder;
-    const defaultSelection = isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+    const defaultSelection = getDefaultBuilderSelection(isPostGloas);
     let selection = validatorBuilder?.selection ?? this.defaultProposerConfig.builder.selection ?? defaultSelection;
 
     // The standard per-key builder config directly controls the post-Gloas boost. It takes

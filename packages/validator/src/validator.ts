@@ -6,10 +6,11 @@ import {
   assertEqualParams,
   createBeaconConfig,
 } from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {Clock, ClockOptions, IClock, computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
+import {Logger, prettyGweiToEth, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
@@ -27,7 +28,13 @@ import {ProposerPreferencesService} from "./services/proposerPreferences.js";
 import {PtcService} from "./services/ptc.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
-import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+import {
+  Signer,
+  ValidatorProposerConfig,
+  ValidatorStore,
+  defaultOptions,
+  getDefaultBuilderSelection,
+} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {getLoggerVc} from "./util/index.js";
@@ -369,8 +376,10 @@ export class Validator {
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
     const {broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
+    // Resolve against the current fork, else this always reports the pre-Gloas default
+    const isPostGloas = config.getForkSeq(getCurrentSlot(config, Number(genesis.genesisTime))) >= ForkSeq.gloas;
     const defaultBuilderSelection =
-      valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
+      valProposerConfig?.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(isPostGloas);
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
 
@@ -382,6 +391,25 @@ export class Validator {
     });
 
     metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
+
+    // A misconfigured builder would otherwise only surface at the first proposal, hours away
+    const defaultBuilder = valProposerConfig?.defaultConfig.builder;
+    const defaultBuilders = defaultBuilder?.builders ?? [];
+    const validatorsWithBuilderOverrides = Object.values(valProposerConfig?.proposerConfig ?? {}).filter(
+      (proposerConfig) => proposerConfig.builder?.builders !== undefined
+    ).length;
+
+    if (defaultBuilders.length > 0 || validatorsWithBuilderOverrides > 0) {
+      logger.info("Builder API configured", {
+        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none by default",
+        validatorsWithBuilderOverrides,
+        minBid: prettyGweiToEth(defaultBuilder?.minBid ?? defaultOptions.builderMinBid),
+        maxExecutionPayment: prettyGweiToEth(
+          defaultBuilder?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
+        ),
+        active: isPostGloas,
+      });
+    }
 
     // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);
