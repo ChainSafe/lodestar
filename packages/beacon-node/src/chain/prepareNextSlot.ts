@@ -45,10 +45,13 @@ const PREPARE_EPOCH_LIMIT = 1;
  * Expressed in bps so it scales with slot duration (mainnet vs minimal/devnet). */
 const BUILDER_PREVERIFY_LIMIT_BPS = 2000;
 
-/* How far before the next slot builder connections are pre-established, see
- * `checkBuilderStatusBeforeSlot`. 1667 = 16.67% of slot (2s on mainnet). Must stay under the few
- * seconds an idle connection survives, while leaving room for a round trip to a distant builder. */
-const BUILDER_STATUS_CHECK_LEAD_BPS = 1667;
+/**
+ * How far before the next slot builder connections are pre-established, see `checkBuilderStatusBeforeSlot`.
+ *
+ * 1667 = 16.67% of slot (2s on mainnet). Must stay under the few seconds an idle connection survives,
+ * while leaving room for a round trip to a distant builder to complete before the slot begins.
+ */
+const BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS = 1667;
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -403,8 +406,8 @@ export class PrepareNextSlotScheduler {
    * seconds, so connecting here would go cold again before bids are requested.
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
-    const leadMs = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_LEAD_BPS);
-    const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - leadMs;
+    const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+    const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
     sleep(Math.max(0, msUntilCheck), this.signal)
       .then(() => this.chain.builderApiClient.checkStatus())
       .catch((e) => {
