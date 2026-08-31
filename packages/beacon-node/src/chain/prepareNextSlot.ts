@@ -400,10 +400,8 @@ export class PrepareNextSlotScheduler {
   };
 
   /**
-   * Pre-establish the builder connections so the handshake lands outside the bid deadline, the
-   * post-Gloas counterpart to the legacy builder `checkStatus` below. Scheduled later in the slot
-   * rather than now: this runs at PREPARE_NEXT_SLOT_BPS and idle connections are dropped within
-   * seconds, so connecting here would go cold again before bids are requested.
+   * Pre-establish the builder connections so the handshake lands outside the bid deadline. Scheduled
+   * later in the slot, connecting at PREPARE_NEXT_SLOT_BPS would go cold before bids are requested.
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
     const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
