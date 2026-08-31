@@ -309,12 +309,12 @@ export class ValidatorStore {
 
   getBuilderSelectionParams(
     pubkeyHex: PubkeyHex,
-    slot?: Slot
+    slot: Slot
   ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
     // Builder bids post-gloas are in-protocol, so the default strategy uses them regardless of
     // whether they are received over p2p or through a builder API. Pre-gloas there is no
     // in-protocol builder, so the default remains local-only (executiononly).
-    const isPostGloas = slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas;
+    const isPostGloas = this.config.getForkSeq(slot) >= ForkSeq.gloas;
     return this.resolveBuilderSelectionParams(pubkeyHex, isPostGloas);
   }
 

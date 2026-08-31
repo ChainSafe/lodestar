@@ -106,7 +106,7 @@ export class BlockProposingService {
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const {selection: builderSelection, boostFactor: builderBoostFactor} =
-        this.validatorStore.getBuilderSelectionParams(pubkeyHex);
+        this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
 
