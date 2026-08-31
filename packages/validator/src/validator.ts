@@ -395,7 +395,7 @@ export class Validator {
       const defaultBuilderConfig = valProposerConfig?.defaultConfig.builder;
       const defaultBuilders = defaultBuilderConfig?.builders ?? [];
 
-      logger.info("Default builder config", {
+      logger.info("Builder config", {
         builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "p2p only",
         boostFactor: getBuilderBoostFactor(
           defaultBuilderSelection,
