@@ -3,7 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -26,12 +26,35 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     vi.clearAllMocks();
   });
 
-  it("does not verify DA for an empty Gloas payload slot", async () => {
+  it.each([
+    {
+      name: "does not verify DA for an empty Gloas payload slot",
+      hasEnvelope: false,
+      blobCount: 0,
+      expectedPayloadDA: undefined,
+    },
+    {
+      name: "verifies DA for a received Gloas payload envelope without blobs",
+      hasEnvelope: true,
+      blobCount: 0,
+      expectedPayloadDA: DataAvailabilityStatus.NotRequired,
+    },
+    {
+      name: "verifies DA for a received Gloas payload envelope with sampled columns",
+      hasEnvelope: true,
+      blobCount: 1,
+      expectedPayloadDA: DataAvailabilityStatus.Available,
+    },
+  ])("$name", async ({hasEnvelope, blobCount, expectedPayloadDA}) => {
     const config = createChainForkConfig({...configDef, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config});
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
-    const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+    block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
+      Buffer.alloc(48, 0x77)
+    );
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const blockRootHex = toRootHex(blockRoot);
     const blockInput = new MockBlockInput({
       forkName: ForkName.gloas,
       slot: block.message.slot,
@@ -49,7 +72,23 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
-    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+    if (hasEnvelope) {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = blockRoot;
+      payloadInput.addPayloadEnvelope({
+        envelope,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 1,
+      });
+    }
+    if (blobCount > 0) {
+      payloadInput.addColumn({
+        columnSidecar: ssz.gloas.DataColumnSidecar.defaultValue(),
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 2,
+      });
+    }
+    expect(payloadInput.hasPayloadEnvelope()).toBe(hasEnvelope);
     expect(payloadInput.hasAllData()).toBe(true);
 
     const preState = {
@@ -78,6 +117,9 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       {verifyOnly: true}
     );
 
-    expect(result.payloadDAStatuses.size).toBe(0);
+    expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
+    expect(result.payloadDAStatuses).toEqual(
+      new Map(expectedPayloadDA === undefined ? [] : [[block.message.slot, expectedPayloadDA]])
+    );
   });
 });
