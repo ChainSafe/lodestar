@@ -36,7 +36,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -64,7 +64,6 @@ import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
-  getBlobSidecars,
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
@@ -133,12 +132,11 @@ export function getBeaconBlockApi({
       });
     }
 
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
+    let dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
       if (isForkPostGloas(fork)) {
         // After gloas, data columns are not published with the block but when publishing the execution payload envelope
-        blobSidecars = [];
         dataColumnSidecars = [];
       } else if (isForkPostFulu(fork)) {
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
@@ -157,15 +155,10 @@ export function getBeaconBlockApi({
           cellsAndProofs
         ) as fulu.DataColumnSidecar[];
         timer?.();
-        blobSidecars = [];
-      } else if (isForkPostDeneb(fork)) {
-        blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
-        dataColumnSidecars = [];
       } else {
         throw Error(`Invalid data fork=${fork} for publish`);
       }
     } else {
-      blobSidecars = [];
       dataColumnSidecars = [];
     }
 
@@ -181,19 +174,6 @@ export function getBeaconBlockApi({
           // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
           // Data columns may arrive via gossip from another node before the API publish completes,
           // so we allow duplicates here instead of throwing an error.
-          {throwOnDuplicateAdd: false}
-        );
-      }
-    } else if (isBlockInputBlobs(blockForImport)) {
-      for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob(
-          {
-            blockRootHex: blockRoot,
-            blobSidecar,
-            source: BlockInputSource.api,
-            seenTimestampSec,
-          },
-          // Same as above for columns
           {throwOnDuplicateAdd: false}
         );
       }
@@ -392,7 +372,6 @@ export function getBeaconBlockApi({
       //
       () => network.publishBeaconBlock(signedBlock),
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
@@ -463,20 +442,6 @@ export function getBeaconBlockApi({
             kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
-      }
-    } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-      const blobSidecars = blockForImport.getBlobs();
-      const versionedHashes = blockForImport.getVersionedHashes();
-
-      for (const blobSidecar of blobSidecars) {
-        const {index, kzgCommitment} = blobSidecar;
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot,
-          slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(versionedHashes[index]),
-        });
       }
     }
   };

@@ -50,7 +50,7 @@ import {
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
@@ -396,7 +396,6 @@ const fastConfirmationTest =
 
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
                   // required to be valid), so only verify signatures when bls_setting=1.

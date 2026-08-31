@@ -1,15 +1,7 @@
-import type {ChainForkConfig} from "@lodestar/config";
 import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
-import {ForkSeq} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
-
-export enum GossipedInputType {
-  block = "block",
-  blob = "blob",
-  dataColumn = "data_column",
-}
 
 type DataColumnData = {
   dataColumn: fulu.DataColumnSidecar;
@@ -17,28 +9,9 @@ type DataColumnData = {
 };
 export type DataColumnsCacheMap = Map<number, DataColumnData>;
 
-export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
-  return (
-    config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
-    // Only request blobs if they are recent enough
-    computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-  );
-}
-
 export enum AttestationImportOpt {
   Skip,
   Force,
-}
-
-export enum BlobSidecarValidation {
-  /** When recieved in gossip the blobs are individually verified before import */
-  Individual,
-  /**
-   * Blobs when recieved in req/resp can be fully verified before import
-   * but currently used in spec tests where blobs come without proofs and assumed
-   * to be valid
-   */
-  Full,
 }
 
 export type ImportPayloadOpts = {
@@ -83,8 +56,6 @@ export type ImportBlockOpts = {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures?: boolean;
-  /** Set to true if already run `validateBlobSidecars()` sucessfully on the blobs */
-  validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
 };

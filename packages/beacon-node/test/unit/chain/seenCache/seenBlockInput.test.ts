@@ -2,7 +2,6 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputPreData,
@@ -18,12 +17,7 @@ import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
-import {
-  config,
-  generateBlock,
-  generateBlockWithBlobSidecars,
-  generateChainOfBlocks,
-} from "../../../utils/blocksAndData.js";
+import {config, generateBlock, generateChainOfBlocks} from "../../../utils/blocksAndData.js";
 
 describe("SeenBlockInputCache", async () => {
   let cache: SeenBlockInput;
@@ -379,25 +373,6 @@ describe("SeenBlockInputCache", async () => {
       ).not.toThrow();
     });
 
-    it("should return the correct BlockInput for a BlockInput created by blob", () => {
-      const {block, blobSidecars, rootHex} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-
-      const blockInput1 = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      const blockInput2 = cache.getByBlock({
-        block,
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-
-      expect(blockInput1).toBe(blockInput2);
-    });
-
     it("should return the correct BlockInput for a BlockInput created by column", () => {
       // const {block, columnSidecar} = buildBlockAndBlobTestSet(ForkName.fulu);
       // const blockInput1 = cache.getByColumn({
@@ -411,137 +386,6 @@ describe("SeenBlockInputCache", async () => {
       //   seenTimestampSec: Date.now() / 1000,
       // });
       // expect(blockInput1).toBe(blockInput2);
-    });
-  });
-
-  describe("getByBlob()", () => {
-    it("should return a new BlockInput for a new block root", () => {
-      const {rootHex, blobSidecars} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-      expect(cache.get(rootHex)).toBeUndefined();
-      const blockInput = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      expect(cache.get(rootHex)).toBe(blockInput);
-    });
-
-    it("should return the same BlockInput for an existing block root", () => {
-      const {rootHex, blobSidecars} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-
-      const blockInput1 = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      expect(cache.get(rootHex)).toBe(blockInput1);
-      const blockInput2 = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      expect(blockInput1).toBe(blockInput2);
-    });
-
-    it("should throw if attempting to add a blob to wrong type of BlockInput", () => {
-      const {block, rootHex} = generateBlock({forkName: ForkName.capella});
-      const blockInput = cache.getByBlock({
-        block,
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
-
-      const {blobSidecars} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-      blobSidecars[0].signedBlockHeader = signedBlockToSignedHeader(config, block);
-      expect(() =>
-        cache.getByBlob({
-          blobSidecar: blobSidecars[0],
-          blockRootHex: rootHex,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
-        })
-      ).toThrow();
-    });
-
-    it("should add blob to an existing BlockInput", () => {
-      const {block, blobSidecars, rootHex} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-
-      const blockInput1 = cache.getByBlock({
-        block,
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      const blockInput2 = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-
-      expect(blockInput1).toBe(blockInput2);
-      expect(blockInput2.getBlobs()[0]).toBe(blobSidecars[0]);
-    });
-
-    it("should not throw for a BlockInput with an existing blob", () => {
-      const {rootHex, blobSidecars} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-
-      expect(cache.get(rootHex)).toBeUndefined();
-      const blockInput = cache.getByBlob({
-        blobSidecar: blobSidecars[0],
-        blockRootHex: rootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-      });
-      expect(cache.get(rootHex)).toBe(blockInput);
-      expect(() =>
-        blockInput.addBlob({
-          blobSidecar: blobSidecars[0],
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
-          blockRootHex: rootHex,
-        })
-      ).toThrow();
-      expect(() =>
-        cache.getByBlob({
-          blobSidecar: blobSidecars[0],
-          blockRootHex: rootHex,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
-        })
-      ).not.toThrow();
-    });
-
-    it("should throw for an existing blob with opts.throwGossipErrorIfAlreadyKnown", () => {
-      const {rootHex, blobSidecars} = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 1});
-
-      expect(cache.get(rootHex)).toBeUndefined();
-      const blockInput = cache.getByBlob(
-        {
-          blobSidecar: blobSidecars[0],
-          blockRootHex: rootHex,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
-        },
-        {throwErrorIfAlreadyKnown: true}
-      );
-      expect(cache.get(rootHex)).toBe(blockInput);
-      expect(() =>
-        cache.getByBlob(
-          {
-            blobSidecar: blobSidecars[0],
-            blockRootHex: rootHex,
-            source: BlockInputSource.gossip,
-            seenTimestampSec: Date.now() / 1000,
-          },
-          {throwErrorIfAlreadyKnown: true}
-        )
-      ).toThrow();
     });
   });
 

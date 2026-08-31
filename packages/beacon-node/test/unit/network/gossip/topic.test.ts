@@ -41,17 +41,6 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/f5a5fd42/beacon_block/ssz_snappy",
       },
     ],
-    [GossipType.blob_sidecar]: [
-      {
-        topic: {
-          type: GossipType.blob_sidecar,
-          subnet: 1,
-          boundary: {fork: ForkName.deneb, epoch: config.DENEB_FORK_EPOCH},
-          encoding,
-        },
-        topicStr: "/eth2/d6e497b8/blob_sidecar_1/ssz_snappy",
-      },
-    ],
     [GossipType.data_column_sidecar]: [
       {
         topic: {

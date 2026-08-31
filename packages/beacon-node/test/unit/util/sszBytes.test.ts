@@ -48,7 +48,6 @@ import {
   getSignatureFromSingleAttestationSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromBeaconStateSerialized,
-  getSlotFromBlobSidecarSerialized,
   getSlotFromDataColumnSidecarSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
   getSlotFromPayloadAttestationMessageSerialized,
@@ -389,24 +388,6 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
   });
 });
 
-describe("BlobSidecar SSZ serialized picking", () => {
-  const testCases = [ssz.deneb.BlobSidecar.defaultValue(), blobSidecarFromValues(1_000_000)];
-
-  for (const [i, blobSidecar] of testCases.entries()) {
-    const bytes = ssz.deneb.BlobSidecar.serialize(blobSidecar);
-    it(`blobSidecar ${i}`, () => {
-      expect(getSlotFromBlobSidecarSerialized(bytes)).toBe(blobSidecar.signedBlockHeader.message.slot);
-    });
-  }
-
-  it("blobSidecar - invalid data", () => {
-    const invalidSlotDataSizes = [0, 20, 38];
-    for (const size of invalidSlotDataSizes) {
-      expect(getSlotFromBlobSidecarSerialized(Buffer.alloc(size))).toBeNull();
-    }
-  });
-});
-
 describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
   const config = createChainForkConfig({
     ALTAIR_FORK_EPOCH: 0,
@@ -553,12 +534,6 @@ function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
   const signedBeaconBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
   signedBeaconBlock.message.slot = slot;
   return signedBeaconBlock;
-}
-
-function blobSidecarFromValues(slot: Slot): deneb.BlobSidecar {
-  const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
-  blobSidecar.signedBlockHeader.message.slot = slot;
-  return blobSidecar;
 }
 
 describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {

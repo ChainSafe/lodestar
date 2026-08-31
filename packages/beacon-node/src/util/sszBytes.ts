@@ -1,8 +1,6 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  BYTES_PER_FIELD_ELEMENT,
-  FIELD_ELEMENTS_PER_BLOB,
   ForkName,
   ForkPostDeneb,
   ForkSeq,
@@ -480,26 +478,6 @@ export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(data: Uin
 
   blockRootBuf.set(data.subarray(parentBlockHashStart, parentBlockHashStart + ROOT_SIZE));
   return `0x${blockRootBuf.toString("hex")}`;
-}
-
-/**
- * class BlobSidecar(Container):
- *  index: BlobIndex [fixed - 8 bytes ],
- *  blob: Blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
- *  kzgCommitment: Bytes48,
- *  kzgProof: Bytes48,
- *  signedBlockHeader:
- *    slot: 8 bytes
- */
-
-const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 8 + BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB + 48 + 48;
-
-export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR + SLOT_SIZE) {
-    return null;
-  }
-
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
 }
 
 /**

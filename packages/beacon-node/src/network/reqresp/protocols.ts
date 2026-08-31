@@ -76,18 +76,6 @@ export const BeaconBlocksByHead = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
-export const BlobSidecarsByRange = toProtocol({
-  method: ReqRespMethod.BlobSidecarsByRange,
-  version: Version.V1,
-  contextBytesType: ContextBytesType.ForkDigest,
-});
-
-export const BlobSidecarsByRoot = toProtocol({
-  method: ReqRespMethod.BlobSidecarsByRoot,
-  version: Version.V1,
-  contextBytesType: ContextBytesType.ForkDigest,
-});
-
 export const DataColumnSidecarsByRange = toProtocol({
   method: ReqRespMethod.DataColumnSidecarsByRange,
   version: Version.V1,
