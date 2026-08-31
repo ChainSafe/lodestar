@@ -104,9 +104,10 @@ export function createLodestarMetrics(
         help: "Age of the first item of each key in the indexed queues in seconds",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
-      queueTime: register.histogram({
+      queueTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_time_seconds",
         help: "Total time an item stays in queue until it is processed in seconds",
+        labelNames: ["topic"],
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
     },
@@ -1349,6 +1350,11 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
+        }),
+        apiValidationTime: register.histogram({
+          name: "lodestar_api_execution_payload_bid_validation_time_seconds",
+          help: "Time elapsed for signed execution payload bid validation - api path",
+          buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
         }),
       },
     },
