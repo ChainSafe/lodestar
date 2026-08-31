@@ -14,7 +14,7 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyGweiToEth, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {LoggerVc} from "../util/index.js";
@@ -106,7 +106,7 @@ export class BlockProposingService {
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const {selection: builderSelection, boostFactor: builderBoostFactor} =
-        this.validatorStore.getBuilderSelectionParams(pubkeyHex);
+        this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
 
@@ -204,7 +204,7 @@ export class BlockProposingService {
       payloadLocal,
       builderSelection,
       builderBoostFactor,
-      builderMinBid,
+      builderMinBid: prettyGweiToEth(builderMinBid),
       builderUrls: builderEntries.map((entry) => entry.url).join(","),
     });
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
