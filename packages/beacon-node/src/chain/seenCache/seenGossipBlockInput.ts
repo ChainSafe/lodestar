@@ -6,7 +6,6 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   SLOTS_PER_EPOCH,
-  isForkPostDeneb,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -20,13 +19,11 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlockInput,
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
-  ForkBlobsDA,
   IBlockInput,
   LogMetaBasic,
   LogMetaColumns,
@@ -212,17 +209,6 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-      } else if (!isForkPostDeneb(forkName)) {
-        // Pre-deneb
-        blockInput = BlockInputPreData.createFromBlock({
-          block,
-          blockRootHex,
-          daOutOfRange,
-          forkName,
-          source,
-          seenTimestampSec,
-          peerIdStr,
-        });
       } else if (isForkPostFulu(forkName)) {
         // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
@@ -237,9 +223,10 @@ export class SeenBlockInput {
           peerIdStr,
         });
       } else {
-        // Deneb and Electra
-        blockInput = BlockInputBlobs.createFromBlock({
-          block: block as SignedBeaconBlock<ForkBlobsDA>,
+        // Pre-fulu: block-only. Deneb..electra blob data is no longer tracked, the blob
+        // retention window has expired on all networks (see BlockInputPreData).
+        blockInput = BlockInputPreData.createFromBlock({
+          block,
           blockRootHex,
           daOutOfRange,
           forkName,

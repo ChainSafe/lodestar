@@ -7,9 +7,8 @@ import {
   BlockInputPreData,
   BlockInputSource,
   IBlockInput,
-  isBlockInputBlobs,
   isBlockInputColumns,
-  isBlockInputPreDeneb,
+  isBlockInputPreData,
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -302,10 +301,10 @@ describe("SeenBlockInputCache", async () => {
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now() / 1000,
         });
-        expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
+        expect(isBlockInputPreData(blockInput)).toBeTruthy();
       });
 
-      it("should return a BlockInputBlobs", () => {
+      it("should return a BlockInputPreData for deneb (blob data no longer tracked)", () => {
         const {block, rootHex} = generateBlock({forkName: ForkName.deneb});
         const blockInput = cache.getByBlock({
           block,
@@ -313,7 +312,7 @@ describe("SeenBlockInputCache", async () => {
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now() / 1000,
         });
-        expect(isBlockInputBlobs(blockInput)).toBeTruthy();
+        expect(isBlockInputPreData(blockInput)).toBeTruthy();
       });
 
       it("should return a BlockInputColumns", () => {
@@ -354,7 +353,7 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
+      expect(isBlockInputPreData(blockInput)).toBeTruthy();
       expect(() =>
         (blockInput as BlockInputPreData).addBlock({
           block,
@@ -423,7 +422,7 @@ describe("SeenBlockInputCache", async () => {
   //       source: BlockInputSource.gossip,
   //       seenTimestampSec: Date.now() / 1000,
   //     });
-  //     expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
+  //     expect(isBlockInputPreData(blockInput)).toBeTruthy();
 
   //     const {blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
   //     blobSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
