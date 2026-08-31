@@ -157,7 +157,7 @@ export class PrepareNextSlotScheduler {
         //    last-block-of-epoch and build slot 0 on the strong parent (epoch-boundary reorg),
         //    so we should dial the strong parent through the boundary instead of the weak head.
         if (feeRecipient || isEpochTransition) {
-          const proposerHead = this.chain.predictProposerHead(clockSlot);
+          const proposerHead = this.chain.predictProposerHead();
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
           // If we predict a reorg, we build the epoch transition on the proposer head (parent) instead
