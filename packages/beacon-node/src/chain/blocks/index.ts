@@ -154,7 +154,6 @@ export async function processBlocks(
           // we validated DA before reaching this
           throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
         }
-        // we already awaited DA in verifyBlocksInEpoch for this segment
         await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
       }
 
