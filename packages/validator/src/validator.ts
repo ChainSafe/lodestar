@@ -399,7 +399,7 @@ export class Validator {
       ).length;
 
       logger.info("Builder configuration", {
-        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "none",
+        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "p2p only",
         validatorsWithCustomBuilders,
         boostFactor: getBuilderBoostFactor(
           defaultBuilderSelection,
