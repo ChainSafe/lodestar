@@ -12,6 +12,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  MIN_SEED_LOOKAHEAD,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
@@ -249,26 +250,58 @@ export async function validateGossipBlock(
     // This requires execution engine integration to verify the parent block hash
   }
 
-  // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
+  // For gossip forwarding we only need the state to check the block's proposer index.
+  // If the state cannot be regenerated we throw an IGNORE (whereas the spec says we should REJECT for the
+  // finalized-ancestor scenario, which is already guarded by the parentBlock lookup above).
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  const blockState = await chain.regen
-    .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
-    .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  const canUseParentState = blockEpoch - computeEpochAtSlot(parentBlock.slot) <= MIN_SEED_LOOKAHEAD;
+
+  const getValidationState = async () => {
+    const getPreState = () =>
+      chain.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock);
+    if (canUseParentState) {
+      try {
+        const parentState = await chain.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipBlock);
+        chain.metrics?.gossipBlock.preStateSource.inc({source: "parentState"});
+        return parentState;
+      } catch {
+        // parent state not in memory → fall back to disk reload / dial-forward
+        chain.metrics?.gossipBlock.preStateSource.inc({source: "fallbackPreState"});
+        chain.logger.debug("Parent state not in memory, falling back to getPreState for gossip block validation", {
+          slot: blockSlot,
+          root: blockRoot,
+          parentSlot: parentBlock.slot,
+          parentRoot,
+        });
+        return getPreState();
+      }
+    }
+    // parent is >1 epoch behind (deep skip) → beyond proposer-lookahead range, must dial forward
+    chain.metrics?.gossipBlock.preStateSource.inc({source: "preState"});
+    chain.logger.debug("Cannot use parent state for gossip block validation, dialing forward via getPreState", {
+      slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
+      parentRoot,
     });
+    return getPreState();
+  };
+
+  const state = await getValidationState().catch(() => {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
-  chain.shufflingCache.processState(blockState);
+  chain.shufflingCache.processState(state);
 
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
+    if (isStatePostBellatrix(state) && state.isExecutionStateType && state.isExecutionEnabled(block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -281,7 +314,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer index is a valid validator index
-  if (proposerIndex >= blockState.validatorCount) {
+  if (proposerIndex >= state.validatorCount) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
   }
 
@@ -293,7 +326,7 @@ export async function validateGossipBlock(
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
+  if (state.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
   }
 

@@ -921,6 +921,12 @@ export function createLodestarMetrics(
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
       }),
+
+      preStateSource: register.counter<{source: "parentState" | "fallbackPreState" | "preState"}>({
+        name: "lodestar_gossip_block_validation_pre_state_source_total",
+        help: "Source of the pre-state used for gossip block validation",
+        labelNames: ["source"],
+      }),
     },
     gossipBlob: {
       recvToValidation: register.histogram({
