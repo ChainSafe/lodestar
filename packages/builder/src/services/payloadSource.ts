@@ -1,5 +1,5 @@
 import type {ForkPostGloas} from "@lodestar/params";
-import type {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, gloas} from "@lodestar/types";
+import type {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, SSEPayloadAttributes} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
 export type PayloadId = string;
@@ -10,51 +10,53 @@ export type ForkchoiceState = {
   finalizedBlockHash: RootHex;
 };
 
-export type BuildRequest = {
-  fork: ForkPostGloas;
+export type PayloadAttributes<F extends ForkPostGloas = ForkPostGloas> = SSEPayloadAttributes<F>["payloadAttributes"];
+
+export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = {
+  fork: F;
   forkchoiceState: ForkchoiceState;
-  payloadAttributes: gloas.PayloadAttributes;
+  payloadAttributes: PayloadAttributes<F>;
 };
 
-export type BuildHandle = {
+export type BuildHandle<F extends ForkPostGloas = ForkPostGloas> = {
   sourceId: string;
-  fork: ForkPostGloas;
+  fork: F;
   payloadId: PayloadId;
 };
 
-export type BuiltPayload = {
+export type BuiltPayload<F extends ForkPostGloas = ForkPostGloas> = {
   sourceId: string;
-  fork: ForkPostGloas;
-  executionPayload: ExecutionPayload<ForkPostGloas>;
-  executionRequests: ExecutionRequests<ForkPostGloas>;
-  blobsBundle: BlobsBundle<ForkPostGloas>;
+  fork: F;
+  executionPayload: ExecutionPayload<F>;
+  executionRequests: ExecutionRequests<F>;
+  blobsBundle: BlobsBundle<F>;
   executionPayloadValue: bigint;
 };
 
 export type EnginePayloadResult = {
-  executionPayload: ExecutionPayload;
+  executionPayload: ExecutionPayload<ForkPostGloas>;
   executionPayloadValue: bigint;
-  blobsBundle?: BlobsBundle;
-  executionRequests?: ExecutionRequests;
+  blobsBundle?: BlobsBundle<ForkPostGloas>;
+  executionRequests?: ExecutionRequests<ForkPostGloas>;
 };
 
-/** Narrow Engine API boundary required by an Engine-backed payload source. */
+/** Narrow Engine API boundary whose transport owns request retries, timeouts, and Builder-lifetime cancellation. */
 export interface PayloadSourceEngine {
   notifyForkchoiceUpdate(
     fork: ForkPostGloas,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes: gloas.PayloadAttributes
+    payloadAttributes: PayloadAttributes
   ): Promise<PayloadId | null>;
   getPayload(fork: ForkPostGloas, payloadId: PayloadId): Promise<EnginePayloadResult>;
 }
 
-/** Source that prepares and retrieves complete execution payloads. */
+/** Source that prepares and retrieves complete execution payloads without owning build scheduling policy. */
 export interface PayloadSource {
   readonly id: string;
-  prepare(request: BuildRequest): Promise<BuildHandle>;
-  getPayload(handle: BuildHandle): Promise<BuiltPayload>;
+  prepare<F extends ForkPostGloas>(request: BuildRequest<F>): Promise<BuildHandle<F>>;
+  getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>): Promise<BuiltPayload<F>>;
 }
 
 export enum PayloadSourceErrorCode {
@@ -86,7 +88,7 @@ export class EnginePayloadSource implements PayloadSource {
     private readonly engine: PayloadSourceEngine
   ) {}
 
-  async prepare(request: BuildRequest): Promise<BuildHandle> {
+  async prepare<F extends ForkPostGloas>(request: BuildRequest<F>): Promise<BuildHandle<F>> {
     const {headBlockHash, safeBlockHash, finalizedBlockHash} = request.forkchoiceState;
     const payloadId = await this.engine.notifyForkchoiceUpdate(
       request.fork,
@@ -106,7 +108,7 @@ export class EnginePayloadSource implements PayloadSource {
     return {sourceId: this.id, fork: request.fork, payloadId};
   }
 
-  async getPayload(handle: BuildHandle): Promise<BuiltPayload> {
+  async getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>): Promise<BuiltPayload<F>> {
     if (handle.sourceId !== this.id) {
       throw new PayloadSourceError(
         {
@@ -148,9 +150,9 @@ export class EnginePayloadSource implements PayloadSource {
     return {
       sourceId: this.id,
       fork: handle.fork,
-      executionPayload: executionPayload as ExecutionPayload<ForkPostGloas>,
-      executionRequests: executionRequests as ExecutionRequests<ForkPostGloas>,
-      blobsBundle: blobsBundle as BlobsBundle<ForkPostGloas>,
+      executionPayload: executionPayload as ExecutionPayload<F>,
+      executionRequests: executionRequests as ExecutionRequests<F>,
+      blobsBundle: blobsBundle as BlobsBundle<F>,
       executionPayloadValue,
     };
   }

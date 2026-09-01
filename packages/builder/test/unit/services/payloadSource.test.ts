@@ -21,8 +21,8 @@ describe("EnginePayloadSource", () => {
     finalizedBlockHash: toRootHex(Uint8Array.from({length: 32}, () => 3)),
   };
   const payloadAttributes = ssz.gloas.PayloadAttributes.defaultValue();
-  const request: BuildRequest = {fork: ForkName.gloas, forkchoiceState, payloadAttributes};
-  const handle: BuildHandle = {sourceId, fork: ForkName.gloas, payloadId};
+  const request: BuildRequest<ForkName.gloas> = {fork: ForkName.gloas, forkchoiceState, payloadAttributes};
+  const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
 
   let engine: Mocked<PayloadSourceEngine>;
   let source: EnginePayloadSource;
@@ -51,10 +51,21 @@ describe("EnginePayloadSource", () => {
   });
 
   it("supports post-Gloas forks without narrowing the fork", async () => {
+    const hezePayloadAttributes = ssz.heze.PayloadAttributes.defaultValue();
+    hezePayloadAttributes.inclusionListTransactions = [Uint8Array.from([1, 2, 3])];
     engine.notifyForkchoiceUpdate.mockResolvedValue(payloadId);
-    engine.getPayload.mockResolvedValue(getEnginePayloadResult());
+    engine.getPayload.mockResolvedValue({
+      executionPayload: ssz.heze.ExecutionPayload.defaultValue(),
+      blobsBundle: ssz.heze.BlobsBundle.defaultValue(),
+      executionRequests: ssz.heze.ExecutionRequests.defaultValue(),
+      executionPayloadValue: 12_345_678_901_234_567_890n,
+    });
 
-    const result = await source.prepare({...request, fork: ForkName.heze});
+    const result = await source.prepare({
+      fork: ForkName.heze,
+      forkchoiceState,
+      payloadAttributes: hezePayloadAttributes,
+    });
     const builtPayload = await source.getPayload(result);
 
     expect(result.fork).toBe(ForkName.heze);
@@ -63,10 +74,11 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.headBlockHash,
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
-      payloadAttributes
+      hezePayloadAttributes
     );
     expect(engine.getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId);
     expect(builtPayload.fork).toBe(ForkName.heze);
+    expect(hezePayloadAttributes.inclusionListTransactions).toHaveLength(1);
   });
 
   it("rejects a missing payload ID with a structured error", async () => {
