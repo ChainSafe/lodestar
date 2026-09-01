@@ -91,6 +91,8 @@ function isBidCompatibleWithHead(
  * Transient gossip rules (head compatibility, first bid per tuple, value increment, proposer
  * preferences) are not applied, since those only limit forwarding of peers' messages and the
  * builder may legitimately bid on a branch this node does not consider head.
+ * The parent-payload builder-exit rule is omitted because this endpoint only accepts bids from
+ * the operator's own builder.
  *
  * Throws on any failed check. Also throws if the bid's parent block is unknown or its state is
  * unavailable, since the checks cannot be evaluated against the parent branch.
@@ -495,6 +497,29 @@ async function validateExecutionPayloadBid(
       bidPrevRandao: toHex(bid.prevRandao),
       expectedPrevRandao: toHex(randaoMix),
     });
+  }
+
+  // [IGNORE] The parent's payload does not try to exit the builder
+  if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
+    const requests = await chain.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot).catch(() => {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
+        parentBlockHash: bidParentBlockHash,
+      });
+    });
+    if (
+      requests.builderExits.some(
+        (request) =>
+          byteArrayEquals(request.pubkey, builder.pubkey) &&
+          byteArrayEquals(request.sourceAddress, builder.executionAddress)
+      )
+    ) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.BUILDER_MAY_EXIT,
+        builderIndex: bid.builderIndex,
+        parentBlockRoot: bidParentBlockRoot,
+      });
+    }
   }
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
