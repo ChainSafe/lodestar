@@ -178,17 +178,6 @@ function formatBidCandidate(candidate: BidCandidate): string {
   ].join(":");
 }
 
-/** Return the best bid, see `compareBidCandidates` for the ordering */
-function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
-  let best: BidCandidate | null = null;
-  for (const candidate of candidates) {
-    if (best === null || compareBidCandidates(candidate, best) < 0) {
-      best = candidate;
-    }
-  }
-  return best;
-}
-
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents;
   version: ForkName;
@@ -1069,11 +1058,12 @@ export function getValidatorApi(
           });
         }
 
-        const best = selectBestBid(candidates);
+        candidates.sort(compareBidCandidates);
+        const best = candidates[0] ?? null;
         if (candidates.length > 0) {
           logger.debug("Ranked builder bid candidates", {
             slot,
-            candidates: [...candidates].sort(compareBidCandidates).map(formatBidCandidate).join(","),
+            candidates: candidates.map(formatBidCandidate).join(","),
             bidSource: best?.url ?? "p2p",
           });
         }
