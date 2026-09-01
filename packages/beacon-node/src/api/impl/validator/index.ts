@@ -1060,7 +1060,7 @@ export function getValidatorApi(
 
         candidates.sort(compareBidCandidates);
         const best = candidates[0] ?? null;
-        if (candidates.length > 0) {
+        if (best !== null) {
           logger.debug("Ranked builder bid candidates", {
             slot,
             candidates: candidates.map(formatBidCandidate).join(","),
