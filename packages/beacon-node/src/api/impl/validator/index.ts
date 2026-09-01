@@ -1058,15 +1058,17 @@ export function getValidatorApi(
           });
         }
 
-        candidates.sort(compareBidCandidates);
-        const best = candidates[0] ?? null;
-        if (best !== null) {
-          logger.debug("Ranked builder bid candidates", {
-            slot,
-            candidates: candidates.map(formatBidCandidate).join(","),
-            bidSource: best?.url ?? "p2p",
-          });
+        if (candidates.length === 0) {
+          return null;
         }
+
+        candidates.sort(compareBidCandidates);
+        const best = candidates[0];
+        logger.debug("Ranked builder bid candidates", {
+          slot,
+          candidates: candidates.map(formatBidCandidate).join(","),
+          bidSource: best.url ?? "p2p",
+        });
         return best;
       })();
 
