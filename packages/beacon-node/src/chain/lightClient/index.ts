@@ -66,6 +66,7 @@ export type LightClientServerOpts = {
 
 type DependentRootHex = RootHex;
 type BlockRooHex = RootHex;
+type LightClientZeroFinality = Pick<LightClientUpdate, "finalityBranch" | "finalizedHeader">;
 
 export type SyncAttestedData = {
   attestedHeader: LightClientHeader;
@@ -204,6 +205,7 @@ export class LightClientServer {
   private readonly clock: IClock;
   private readonly signal: AbortSignal;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependentRootHex>>(() => new Set());
+  private readonly zeroFinalityByFork = new Map<ForkName, LightClientZeroFinality>();
   private storedCurrentSyncCommittee = false;
 
   /**
@@ -680,11 +682,16 @@ export class LightClientServer {
       }
     } else {
       isFinalized = false;
-      const zeroUpdate = this.config
-        .getPostAltairForkTypes(attestedHeader.beacon.slot)
-        .LightClientUpdate.defaultValue();
-      finalityBranch = zeroUpdate.finalityBranch;
-      finalizedHeader = zeroUpdate.finalizedHeader;
+      let zeroFinality = this.zeroFinalityByFork.get(attestedFork);
+      if (!zeroFinality) {
+        const {finalityBranch, finalizedHeader} = this.config
+          .getPostAltairForkTypes(attestedHeader.beacon.slot)
+          .LightClientUpdate.defaultValue();
+        zeroFinality = {finalityBranch, finalizedHeader};
+        this.zeroFinalityByFork.set(attestedFork, zeroFinality);
+      }
+      finalityBranch = zeroFinality.finalityBranch;
+      finalizedHeader = zeroFinality.finalizedHeader;
     }
 
     const newUpdate = {

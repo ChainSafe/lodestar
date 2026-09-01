@@ -88,12 +88,16 @@ describe("Gloas light client server", () => {
     };
 
     await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
 
-    expect(putBestUpdate).toHaveBeenCalledOnce();
+    expect(putBestUpdate).toHaveBeenCalledTimes(2);
     const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
+    const nextUpdate = putBestUpdate.mock.calls[1][1] as gloas.LightClientUpdate;
     const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
     expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
     expect(update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
+    expect(nextUpdate.finalizedHeader).toBe(update.finalizedHeader);
+    expect(nextUpdate.finalityBranch).toBe(update.finalityBranch);
     expect(() => ssz.gloas.LightClientUpdate.serialize(update)).not.toThrow();
   });
 });
