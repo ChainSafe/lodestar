@@ -23,7 +23,8 @@ export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = {
   fork: F;
   forkchoiceState: ForkchoiceState;
   payloadAttributes: PayloadAttributes<F>;
-  custodyColumns: ColumnIndex[];
+  /** Logical custody set. The transport serializes it for Engine API; null means no custody service. */
+  custodyColumns: ColumnIndex[] | null;
 };
 
 export type BuildHandle<F extends ForkPostGloas = ForkPostGloas> = {
@@ -48,7 +49,7 @@ export type EnginePayloadResult<F extends ForkPostGloas = ForkPostGloas> = {
   executionRequests?: ExecutionRequests<F>;
 };
 
-/** Narrow Engine API boundary whose transport owns request retries, timeouts, and Builder-lifetime cancellation. */
+/** Narrow Engine boundary whose transport owns serialization, retries, timeouts, and Builder-lifetime cancellation. */
 export interface PayloadSourceEngine {
   notifyForkchoiceUpdate<F extends ForkPostGloas>(
     fork: F,
@@ -56,7 +57,7 @@ export interface PayloadSourceEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes: PayloadAttributes<F>,
-    custodyColumns: ColumnIndex[]
+    custodyColumns: ColumnIndex[] | null
   ): Promise<PayloadId | null>;
   getPayload<F extends ForkPostGloas>(fork: F, payloadId: PayloadId): Promise<EnginePayloadResult<F>>;
 }
@@ -90,7 +91,7 @@ export type PayloadSourceErrorType =
 
 export class PayloadSourceError extends LodestarError<PayloadSourceErrorType> {}
 
-/** Payload source backed by an execution client's Engine API. */
+/** Payload source backed by an injected Engine boundary. Engine ownership and lifecycle remain caller policy. */
 export class EnginePayloadSource implements PayloadSource {
   constructor(
     readonly id: string,

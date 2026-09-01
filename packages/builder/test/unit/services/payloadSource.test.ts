@@ -59,6 +59,21 @@ describe("EnginePayloadSource", () => {
     expect(result).toEqual(handle);
   });
 
+  it("preserves a null custody set", async () => {
+    notifyForkchoiceUpdate.mockResolvedValue(payloadId);
+
+    await source.prepare({...request, custodyColumns: null});
+
+    expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.gloas,
+      forkchoiceState.headBlockHash,
+      forkchoiceState.safeBlockHash,
+      forkchoiceState.finalizedBlockHash,
+      payloadAttributes,
+      null
+    );
+  });
+
   it("supports post-Gloas forks without narrowing the fork", async () => {
     const hezePayloadAttributes = ssz.heze.PayloadAttributes.defaultValue();
     hezePayloadAttributes.inclusionListTransactions = [Uint8Array.from([1, 2, 3])];
@@ -176,7 +191,7 @@ type NotifyForkchoiceUpdate = (
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   payloadAttributes: PayloadAttributes,
-  custodyColumns: ColumnIndex[]
+  custodyColumns: ColumnIndex[] | null
 ) => Promise<PayloadId | null>;
 
 type GetPayload = (fork: ForkPostGloas, payloadId: PayloadId) => Promise<EnginePayloadResult>;
