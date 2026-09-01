@@ -1,0 +1,133 @@
+import {LodestarError, TimeoutError, sleep, withTimeout} from "@lodestar/utils";
+import type {BuildHandle, BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
+
+export type PayloadBuildJob = {
+  id: string;
+  request: BuildRequest;
+  /** Unix timestamp in milliseconds at which the prepared payload should be retrieved. */
+  getPayloadAt: number;
+};
+
+export type PayloadOrchestratorOptions = {
+  /** Maximum number of distinct jobs that may be active at once. */
+  maxActiveJobs: number;
+  /** Maximum time in milliseconds to wait for payload retrieval. */
+  getPayloadTimeout: number;
+};
+
+export enum PayloadOrchestratorErrorCode {
+  ACTIVE_JOB_LIMIT = "PAYLOAD_ORCHESTRATOR_ERROR_ACTIVE_JOB_LIMIT",
+  PREPARE_DEADLINE_REACHED = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_DEADLINE_REACHED",
+  PREPARE_TIMEOUT = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_TIMEOUT",
+  GET_PAYLOAD_TIMEOUT = "PAYLOAD_ORCHESTRATOR_ERROR_GET_PAYLOAD_TIMEOUT",
+}
+
+export type PayloadOrchestratorErrorType =
+  | {
+      code: PayloadOrchestratorErrorCode.ACTIVE_JOB_LIMIT;
+      jobId: string;
+      maxActiveJobs: number;
+    }
+  | {
+      code: PayloadOrchestratorErrorCode.PREPARE_DEADLINE_REACHED;
+      jobId: string;
+      getPayloadAt: number;
+    }
+  | {
+      code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT | PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT;
+      jobId: string;
+    };
+
+export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorErrorType> {}
+
+/**
+ * Coordinates bounded payload preparation and retrieval without owning Engine connections or chain inputs.
+ * Duplicate job IDs share one result. Aborting a job stops waiting for its source but does not replace the
+ * source transport's Builder-lifetime cancellation. Each phase calls the source once; request-level retries
+ * remain owned by that transport, and the orchestrator does not retry a failed job.
+ */
+export class PayloadOrchestrator {
+  private readonly activeJobs = new Map<string, Promise<BuiltPayload>>();
+
+  constructor(
+    private readonly source: PayloadSource,
+    private readonly options: PayloadOrchestratorOptions
+  ) {}
+
+  get activeJobCount(): number {
+    return this.activeJobs.size;
+  }
+
+  run(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
+    const existing = this.activeJobs.get(job.id);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    if (this.activeJobs.size >= this.options.maxActiveJobs) {
+      return Promise.reject(
+        new PayloadOrchestratorError(
+          {
+            code: PayloadOrchestratorErrorCode.ACTIVE_JOB_LIMIT,
+            jobId: job.id,
+            maxActiveJobs: this.options.maxActiveJobs,
+          },
+          `Payload build job limit reached jobId=${job.id} maxActiveJobs=${this.options.maxActiveJobs}`
+        )
+      );
+    }
+
+    const promise = this.runJob(job, signal).finally(() => {
+      if (this.activeJobs.get(job.id) === promise) {
+        this.activeJobs.delete(job.id);
+      }
+    });
+
+    this.activeJobs.set(job.id, promise);
+    return promise;
+  }
+
+  private async runJob(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
+    const prepareTimeout = job.getPayloadAt - Date.now();
+    if (prepareTimeout <= 0) {
+      throw new PayloadOrchestratorError(
+        {
+          code: PayloadOrchestratorErrorCode.PREPARE_DEADLINE_REACHED,
+          jobId: job.id,
+          getPayloadAt: job.getPayloadAt,
+        },
+        `Payload preparation deadline reached jobId=${job.id} getPayloadAt=${job.getPayloadAt}`
+      );
+    }
+
+    let handle: BuildHandle;
+    try {
+      handle = await withTimeout(() => this.source.prepare(job.request), prepareTimeout, signal);
+    } catch (error) {
+      if (error instanceof TimeoutError) {
+        throw new PayloadOrchestratorError(
+          {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: job.id},
+          `Payload preparation timed out jobId=${job.id}`
+        );
+      }
+      throw error;
+    }
+
+    const waitTime = job.getPayloadAt - Date.now();
+    if (waitTime > 0) {
+      await sleep(waitTime, signal);
+    }
+
+    try {
+      return await withTimeout(() => this.source.getPayload(handle), this.options.getPayloadTimeout, signal);
+    } catch (error) {
+      if (error instanceof TimeoutError) {
+        throw new PayloadOrchestratorError(
+          {code: PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT, jobId: job.id},
+          `Payload retrieval timed out jobId=${job.id}`
+        );
+      }
+      throw error;
+    }
+  }
+}
