@@ -168,14 +168,14 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
 
 /** Render a bid candidate for the ranking log */
 function formatBidCandidate(candidate: BidCandidate): string {
-  return [
-    candidate.url ?? "p2p",
+  return `[${[
+    `source=${candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p"}`,
     `builder=${candidate.signedBid.message.builderIndex}`,
     `total=${prettyGweiToEth(candidate.totalGwei)}`,
     `boost=${candidate.boostFactor}`,
     `boosted=${prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n)}`,
     `received=${candidate.receivedMs}ms`,
-  ].join(":");
+  ].join(", ")}]`;
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
@@ -1065,7 +1065,7 @@ export function getValidatorApi(
         const rankedCandidates = candidates.toSorted(compareBidCandidates);
         logger.debug("Ranked builder bid candidates", {
           slot,
-          candidates: rankedCandidates.map(formatBidCandidate).join(","),
+          candidates: rankedCandidates.map(formatBidCandidate).join(", "),
         });
         return rankedCandidates[0];
       })();

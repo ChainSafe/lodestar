@@ -472,7 +472,7 @@ describe("api/validator - produceBlockV4", () => {
     // The ranking log must agree with the selection, ranking by boosted value alone would put the
     // zero value max boost bid last even though it wins
     const ranked = modules.chain.logger.debug.mock.calls.find(([msg]) => msg === "Ranked builder bid candidates");
-    expect((ranked?.[1] as {candidates: string}).candidates.split(",")[0]).toContain(builderUrl);
+    expect((ranked?.[1] as {candidates: string}).candidates.split("], [")[0]).toContain(builderUrl);
   });
 
   it("falls back to the p2p bid when the builder API bid fails validation", async () => {
