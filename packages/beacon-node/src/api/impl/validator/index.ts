@@ -137,25 +137,29 @@ function getBoostedTotalGwei({totalGwei, boostFactor}: BidCandidate): bigint {
   return (boostFactor * totalGwei) / 100n;
 }
 
-/**
- * Order bid candidates by preference, best first. A candidate with the max boost factor is
- * preferred over any other regardless of value, ties prefer a builder api bid over the
- * p2p bid, and the earlier received bid between builder api bids.
- */
+/** Order bid candidates by preference, best first, used to select a bid and to log the ranking */
 function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
+  // Preserve max boost preference before comparing bid values
   const aIsMaxBoost = a.boostFactor === MAX_BUILDER_BOOST_FACTOR;
   const bIsMaxBoost = b.boostFactor === MAX_BUILDER_BOOST_FACTOR;
   if (aIsMaxBoost !== bIsMaxBoost) {
     return aIsMaxBoost ? -1 : 1;
   }
-  const aValue = getBoostedTotalGwei(a);
-  const bValue = getBoostedTotalGwei(b);
-  if (aValue !== bValue) {
-    return aValue > bValue ? -1 : 1;
+
+  const aBoostedTotal = getBoostedTotalGwei(a);
+  const bBoostedTotal = getBoostedTotalGwei(b);
+  if (aBoostedTotal !== bBoostedTotal) {
+    return aBoostedTotal > bBoostedTotal ? -1 : 1;
   }
-  if ((a.url !== undefined) !== (b.url !== undefined)) {
-    return a.url !== undefined ? -1 : 1;
+
+  // A tie prefers a builder api bid over the p2p bid
+  const aIsBuilderApi = a.url !== undefined;
+  const bIsBuilderApi = b.url !== undefined;
+  if (aIsBuilderApi !== bIsBuilderApi) {
+    return aIsBuilderApi ? -1 : 1;
   }
+
+  // and the earlier received bid between builder api bids
   return a.receivedMs - b.receivedMs;
 }
 
@@ -173,10 +177,13 @@ function formatBidCandidate(candidate: BidCandidate): string {
 
 /** Return the best bid, see `compareBidCandidates` for the ordering */
 function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
-  return candidates.reduce<BidCandidate | null>(
-    (best, candidate) => (best === null || compareBidCandidates(candidate, best) < 0 ? candidate : best),
-    null
-  );
+  let best: BidCandidate | null = null;
+  for (const candidate of candidates) {
+    if (best === null || compareBidCandidates(candidate, best) < 0) {
+      best = candidate;
+    }
+  }
+  return best;
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
