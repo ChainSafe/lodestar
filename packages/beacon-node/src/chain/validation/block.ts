@@ -267,7 +267,7 @@ export async function validateGossipBlock(
         chain.metrics?.gossipBlock.preStateSource.inc({source: "parentState"});
         return parentState;
       } catch {
-        // parent state not in memory → fall back to disk reload / dial-forward
+        // if parent state is not in memory, we fall back to disk reload / dial-forward
         chain.metrics?.gossipBlock.preStateSource.inc({source: "fallbackPreState"});
         chain.logger.debug("Parent state not in memory, falling back to getPreState for gossip block validation", {
           slot: blockSlot,
