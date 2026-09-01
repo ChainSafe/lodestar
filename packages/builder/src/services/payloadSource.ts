@@ -41,24 +41,24 @@ export type BuiltPayload<F extends ForkPostGloas = ForkPostGloas> = {
   executionPayloadValue: bigint;
 };
 
-export type EnginePayloadResult = {
-  executionPayload: ExecutionPayload<ForkPostGloas>;
+export type EnginePayloadResult<F extends ForkPostGloas = ForkPostGloas> = {
+  executionPayload: ExecutionPayload<F>;
   executionPayloadValue: bigint;
-  blobsBundle?: BlobsBundle<ForkPostGloas>;
-  executionRequests?: ExecutionRequests<ForkPostGloas>;
+  blobsBundle?: BlobsBundle<F>;
+  executionRequests?: ExecutionRequests<F>;
 };
 
 /** Narrow Engine API boundary whose transport owns request retries, timeouts, and Builder-lifetime cancellation. */
 export interface PayloadSourceEngine {
-  notifyForkchoiceUpdate(
-    fork: ForkPostGloas,
+  notifyForkchoiceUpdate<F extends ForkPostGloas>(
+    fork: F,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes: PayloadAttributes,
+    payloadAttributes: PayloadAttributes<F>,
     custodyColumns: ColumnIndex[]
   ): Promise<PayloadId | null>;
-  getPayload(fork: ForkPostGloas, payloadId: PayloadId): Promise<EnginePayloadResult>;
+  getPayload<F extends ForkPostGloas>(fork: F, payloadId: PayloadId): Promise<EnginePayloadResult<F>>;
 }
 
 /** Source that prepares and retrieves complete execution payloads without owning build scheduling policy. */
@@ -160,9 +160,9 @@ export class EnginePayloadSource implements PayloadSource {
     return {
       sourceId: this.id,
       fork: handle.fork,
-      executionPayload: executionPayload as ExecutionPayload<F>,
-      executionRequests: executionRequests as ExecutionRequests<F>,
-      blobsBundle: blobsBundle as BlobsBundle<F>,
+      executionPayload,
+      executionRequests,
+      blobsBundle,
       executionPayloadValue,
     };
   }

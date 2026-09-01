@@ -1,12 +1,14 @@
-import {Mocked, beforeEach, describe, expect, it, vi} from "vitest";
-import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {type Mock, beforeEach, describe, expect, it, vi} from "vitest";
+import {ForkName, type ForkPostGloas} from "@lodestar/params";
+import {type ColumnIndex, type RootHex, ssz} from "@lodestar/types";
 import {ErrorAborted, TimeoutError, toRootHex} from "@lodestar/utils";
 import {
   BuildHandle,
   BuildRequest,
   EnginePayloadResult,
   EnginePayloadSource,
+  PayloadAttributes,
+  PayloadId,
   PayloadSourceEngine,
   PayloadSourceError,
   PayloadSourceErrorCode,
@@ -30,23 +32,23 @@ describe("EnginePayloadSource", () => {
   };
   const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
 
-  let engine: Mocked<PayloadSourceEngine>;
+  let notifyForkchoiceUpdate: Mock<NotifyForkchoiceUpdate>;
+  let getPayload: Mock<GetPayload>;
   let source: EnginePayloadSource;
 
   beforeEach(() => {
-    engine = {
-      notifyForkchoiceUpdate: vi.fn(),
-      getPayload: vi.fn(),
-    };
+    notifyForkchoiceUpdate = vi.fn();
+    getPayload = vi.fn();
+    const engine = {notifyForkchoiceUpdate, getPayload} as unknown as PayloadSourceEngine;
     source = new EnginePayloadSource(sourceId, engine);
   });
 
   it("prepares a payload and returns a source-bound handle", async () => {
-    engine.notifyForkchoiceUpdate.mockResolvedValue(payloadId);
+    notifyForkchoiceUpdate.mockResolvedValue(payloadId);
 
     const result = await source.prepare(request);
 
-    expect(engine.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+    expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
       forkchoiceState.headBlockHash,
       forkchoiceState.safeBlockHash,
@@ -60,8 +62,8 @@ describe("EnginePayloadSource", () => {
   it("supports post-Gloas forks without narrowing the fork", async () => {
     const hezePayloadAttributes = ssz.heze.PayloadAttributes.defaultValue();
     hezePayloadAttributes.inclusionListTransactions = [Uint8Array.from([1, 2, 3])];
-    engine.notifyForkchoiceUpdate.mockResolvedValue(payloadId);
-    engine.getPayload.mockResolvedValue({
+    notifyForkchoiceUpdate.mockResolvedValue(payloadId);
+    getPayload.mockResolvedValue({
       executionPayload: ssz.heze.ExecutionPayload.defaultValue(),
       blobsBundle: ssz.heze.BlobsBundle.defaultValue(),
       executionRequests: ssz.heze.ExecutionRequests.defaultValue(),
@@ -77,7 +79,7 @@ describe("EnginePayloadSource", () => {
     const builtPayload = await source.getPayload(result);
 
     expect(result.fork).toBe(ForkName.heze);
-    expect(engine.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+    expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.heze,
       forkchoiceState.headBlockHash,
       forkchoiceState.safeBlockHash,
@@ -85,13 +87,13 @@ describe("EnginePayloadSource", () => {
       hezePayloadAttributes,
       custodyColumns
     );
-    expect(engine.getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId);
+    expect(getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId);
     expect(builtPayload.fork).toBe(ForkName.heze);
     expect(hezePayloadAttributes.inclusionListTransactions).toHaveLength(1);
   });
 
   it("rejects a missing payload ID with a structured error", async () => {
-    engine.notifyForkchoiceUpdate.mockResolvedValue(null);
+    notifyForkchoiceUpdate.mockResolvedValue(null);
 
     const error = await getPayloadSourceError(source.prepare(request));
 
@@ -104,18 +106,18 @@ describe("EnginePayloadSource", () => {
     ["timeout", new TimeoutError("engine_forkchoiceUpdatedV4")],
     ["cancellation", new ErrorAborted("engine_forkchoiceUpdatedV4")],
   ])("propagates %s errors from payload preparation", async (_name, error) => {
-    engine.notifyForkchoiceUpdate.mockRejectedValue(error);
+    notifyForkchoiceUpdate.mockRejectedValue(error);
 
     await expect(source.prepare(request)).rejects.toBe(error);
   });
 
   it("retrieves a complete payload without rebuilding exact-width values", async () => {
     const result = getEnginePayloadResult();
-    engine.getPayload.mockResolvedValue(result);
+    getPayload.mockResolvedValue(result);
 
     const builtPayload = await source.getPayload(handle);
 
-    expect(engine.getPayload).toHaveBeenCalledWith(ForkName.gloas, payloadId);
+    expect(getPayload).toHaveBeenCalledWith(ForkName.gloas, payloadId);
     expect(builtPayload.sourceId).toBe(sourceId);
     expect(builtPayload.fork).toBe(ForkName.gloas);
     expect(builtPayload.executionPayload).toBe(result.executionPayload);
@@ -132,11 +134,11 @@ describe("EnginePayloadSource", () => {
       sourceId,
       handleSourceId: "engine-1",
     });
-    expect(engine.getPayload).not.toHaveBeenCalled();
+    expect(getPayload).not.toHaveBeenCalled();
   });
 
   it("rejects a response without a blobs bundle", async () => {
-    engine.getPayload.mockResolvedValue({...getEnginePayloadResult(), blobsBundle: undefined});
+    getPayload.mockResolvedValue({...getEnginePayloadResult(), blobsBundle: undefined});
 
     const error = await getPayloadSourceError(source.getPayload(handle));
 
@@ -144,7 +146,7 @@ describe("EnginePayloadSource", () => {
   });
 
   it("rejects a response without execution requests", async () => {
-    engine.getPayload.mockResolvedValue({...getEnginePayloadResult(), executionRequests: undefined});
+    getPayload.mockResolvedValue({...getEnginePayloadResult(), executionRequests: undefined});
 
     const error = await getPayloadSourceError(source.getPayload(handle));
 
@@ -153,7 +155,7 @@ describe("EnginePayloadSource", () => {
 
   it("propagates retrieval errors without replacing their type", async () => {
     const error = new TimeoutError("engine_getPayloadV6");
-    engine.getPayload.mockRejectedValue(error);
+    getPayload.mockRejectedValue(error);
 
     await expect(source.getPayload(handle)).rejects.toBe(error);
   });
@@ -167,6 +169,17 @@ function getEnginePayloadResult(): EnginePayloadResult {
     executionPayloadValue: 12_345_678_901_234_567_890n,
   };
 }
+
+type NotifyForkchoiceUpdate = (
+  fork: ForkPostGloas,
+  headBlockHash: RootHex,
+  safeBlockHash: RootHex,
+  finalizedBlockHash: RootHex,
+  payloadAttributes: PayloadAttributes,
+  custodyColumns: ColumnIndex[]
+) => Promise<PayloadId | null>;
+
+type GetPayload = (fork: ForkPostGloas, payloadId: PayloadId) => Promise<EnginePayloadResult>;
 
 async function getPayloadSourceError(promise: Promise<unknown>): Promise<PayloadSourceError> {
   try {
