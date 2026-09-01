@@ -7,7 +7,6 @@ import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
@@ -82,15 +81,18 @@ async function validatePayloadAttestationMessage(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // Use the referenced block's branch state for the PTC committee check
-  const state = await chain.regen
-    .getBlockSlotState(block, data.slot, {dontTransferCache: true}, RegenCaller.validateGossipPayloadAttestationMessage)
-    .catch(() => {
-      throw new PayloadAttestationError(GossipAction.IGNORE, {
-        code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
-        blockRoot: toRootHex(data.beaconBlockRoot),
-      });
+  // Use the referenced block's branch state for the PTC committee check.
+  // block.slot === data.slot is enforced above, so the block's post-state (cached by state root
+  // at import) is exactly the block state
+  const state = chain.regen.getStateSync(block.stateRoot);
+  if (state == null) {
+    // Block state not in cache — same "cannot validate now" case the regen path handled by
+    // rejecting. Skip the expensive replay-regen a fallback would trigger and just ignore.
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
     });
+  }
 
   if (!isStatePostGloas(state)) {
     throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
