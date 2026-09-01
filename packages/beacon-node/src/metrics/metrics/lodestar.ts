@@ -83,15 +83,15 @@ export function createLodestarMetrics(
       }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
-        help: "Time to process gossip validation queue job in seconds",
+        help: "Time to process gossip validation queue job in seconds (accepted messages only)",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       jobWaitTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       concurrency: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_concurrency",
