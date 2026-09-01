@@ -737,6 +737,37 @@ describe("api/validator - produceBlockV4", () => {
     },
     {
       // ⏎
+      id: "max boost between builders compares value",
+      entries: [
+        {value: 1, boostFactor: maxBuilderBoostFactor},
+        {value: 2, boostFactor: maxBuilderBoostFactor},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max boost tie prefers the earlier received api bid",
+      entries: [
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 2000},
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 1500},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max p2p boost wins over a higher api bid",
+      entries: [{value: 5}],
+      p2pValue: 1,
+      builderBoostFactor: maxBuilderBoostFactor,
+      engineValueGwei: 0,
+      expected: "p2p",
+    },
+    {
+      // ⏎
       id: "p2p bid below min bid is discarded",
       entries: [],
       p2pValue: 1,
