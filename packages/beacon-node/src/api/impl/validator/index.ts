@@ -168,14 +168,14 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
 
 /** Render a bid candidate for the ranking log */
 function formatBidCandidate(candidate: BidCandidate): string {
-  return `[${[
+  return `{${[
     `source=${candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p"}`,
     `builder=${candidate.signedBid.message.builderIndex}`,
     `total=${prettyGweiToEth(candidate.totalGwei)}`,
     `boost=${candidate.boostFactor}`,
     `boosted=${prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n)}`,
     `received=${candidate.receivedMs}ms`,
-  ].join(", ")}]`;
+  ].join(", ")}}`;
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
