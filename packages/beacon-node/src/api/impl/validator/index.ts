@@ -132,53 +132,51 @@ type BidCandidate = {
   receivedMs: number;
 };
 
-/** Render a bid candidate for the ranking log, `boostedTotal` is the value selection compares */
-function formatBidCandidate(candidate: BidCandidate, boostedTotal: bigint): string {
+/** Boosted total payment a bid is ranked by, `boostFactor` is a percentage so 100 is neutral */
+function getBoostedTotalGwei({totalGwei, boostFactor}: BidCandidate): bigint {
+  return (boostFactor * totalGwei) / 100n;
+}
+
+/**
+ * Order bid candidates by preference, best first. A candidate with the max boost factor is
+ * preferred over any other regardless of value, ties prefer a builder api bid over the
+ * p2p bid, and the earlier received bid between builder api bids.
+ */
+function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
+  const aIsMaxBoost = a.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+  const bIsMaxBoost = b.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+  if (aIsMaxBoost !== bIsMaxBoost) {
+    return aIsMaxBoost ? -1 : 1;
+  }
+  const aValue = getBoostedTotalGwei(a);
+  const bValue = getBoostedTotalGwei(b);
+  if (aValue !== bValue) {
+    return aValue > bValue ? -1 : 1;
+  }
+  if ((a.url !== undefined) !== (b.url !== undefined)) {
+    return a.url !== undefined ? -1 : 1;
+  }
+  return a.receivedMs - b.receivedMs;
+}
+
+/** Render a bid candidate for the ranking log */
+function formatBidCandidate(candidate: BidCandidate): string {
   return [
     candidate.url ?? "p2p",
     `builder=${candidate.signedBid.message.builderIndex}`,
     `total=${prettyGweiToEth(candidate.totalGwei)}`,
     `boost=${candidate.boostFactor}`,
-    `boosted=${prettyGweiToEth(boostedTotal)}`,
+    `boosted=${prettyGweiToEth(getBoostedTotalGwei(candidate))}`,
     `received=${candidate.receivedMs}ms`,
   ].join(":");
 }
 
-/**
- * Return the best bid by boosted total payment. A candidate with the max boost factor is
- * preferred over any other regardless of value, ties prefer a builder api bid over the
- * p2p bid, and the earlier received bid between builder api bids.
- */
+/** Return the best bid, see `compareBidCandidates` for the ordering */
 function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
-  const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
-  let best: BidCandidate | null = null;
-  for (const candidate of candidates) {
-    if (best === null) {
-      best = candidate;
-      continue;
-    }
-    // Preserve max boost preference before comparing bid values
-    const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-    const bestIsMaxBoost = best.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-    if (candidateIsMaxBoost !== bestIsMaxBoost) {
-      if (candidateIsMaxBoost) {
-        best = candidate;
-      }
-      continue;
-    }
-    const candidateValue = boostedValue(candidate);
-    const bestValue = boostedValue(best);
-    if (candidateValue > bestValue) {
-      best = candidate;
-    } else if (
-      candidateValue === bestValue &&
-      // A tie prefers a builder api bid over the p2p bid, and the earlier received bid otherwise
-      (best.url === undefined || (candidate.url !== undefined && candidate.receivedMs < best.receivedMs))
-    ) {
-      best = candidate;
-    }
-  }
-  return best;
+  return candidates.reduce<BidCandidate | null>(
+    (best, candidate) => (best === null || compareBidCandidates(candidate, best) < 0 ? candidate : best),
+    null
+  );
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
@@ -1065,11 +1063,7 @@ export function getValidatorApi(
         if (candidates.length > 0) {
           logger.debug("Ranked builder bid candidates", {
             slot,
-            candidates: candidates
-              .map((candidate) => ({candidate, boostedTotal: (candidate.boostFactor * candidate.totalGwei) / 100n}))
-              .sort((a, b) => (a.boostedTotal === b.boostedTotal ? 0 : a.boostedTotal < b.boostedTotal ? 1 : -1))
-              .map(({candidate, boostedTotal}) => formatBidCandidate(candidate, boostedTotal))
-              .join(","),
+            candidates: [...candidates].sort(compareBidCandidates).map(formatBidCandidate).join(","),
             bidSource: best?.url ?? "p2p",
           });
         }
