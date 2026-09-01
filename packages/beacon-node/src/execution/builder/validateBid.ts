@@ -37,10 +37,11 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
     entry: routes.validator.BuilderEntry;
+    getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry} = request;
+  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -120,7 +121,7 @@ export async function validateBuilderApiExecutionPayloadBid(
 
   // The parent's payload does not try to exit the builder
   if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
-    const requests = await chain.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
+    const requests = await getParentExecutionRequests();
     if (
       requests.builderExits.some(
         (request) =>
