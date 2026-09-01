@@ -408,8 +408,10 @@ describe("api/validator - produceBlockV4", () => {
     };
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     apiBid.message.value = 1;
+    apiBid.message.builderIndex = 1;
     const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     p2pBid.message.value = 1;
+    p2pBid.message.builderIndex = 2;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
@@ -428,6 +430,8 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: {minBid: 0n, builderBoostFactor: 150n, builders: [entry]},
     });
 
+    // The bids only differ by a boost factor of 150 vs 100, truncating the boosted total would
+    // tie them and hand it to the api bid
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
   });
 

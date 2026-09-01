@@ -132,9 +132,12 @@ type BidCandidate = {
   receivedMs: number;
 };
 
-/** Boosted total payment a bid is ranked by, `boostFactor` is a percentage so 100 is neutral */
-function getBoostedTotalGwei({totalGwei, boostFactor}: BidCandidate): bigint {
-  return (boostFactor * totalGwei) / 100n;
+/**
+ * Ranking value of a bid, the boosted total payment scaled by 100 as `boostFactor` is a percentage.
+ * Kept scaled so bids that differ by less than a percent are not truncated into a tie.
+ */
+function getBoostedTotalScaled({totalGwei, boostFactor}: BidCandidate): bigint {
+  return boostFactor * totalGwei;
 }
 
 /** Order bid candidates by preference, best first, used to select a bid and to log the ranking */
@@ -146,8 +149,8 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
     return aIsMaxBoost ? -1 : 1;
   }
 
-  const aBoostedTotal = getBoostedTotalGwei(a);
-  const bBoostedTotal = getBoostedTotalGwei(b);
+  const aBoostedTotal = getBoostedTotalScaled(a);
+  const bBoostedTotal = getBoostedTotalScaled(b);
   if (aBoostedTotal !== bBoostedTotal) {
     return aBoostedTotal > bBoostedTotal ? -1 : 1;
   }
@@ -170,7 +173,7 @@ function formatBidCandidate(candidate: BidCandidate): string {
     `builder=${candidate.signedBid.message.builderIndex}`,
     `total=${prettyGweiToEth(candidate.totalGwei)}`,
     `boost=${candidate.boostFactor}`,
-    `boosted=${prettyGweiToEth(getBoostedTotalGwei(candidate))}`,
+    `boosted=${prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n)}`,
     `received=${candidate.receivedMs}ms`,
   ].join(":");
 }
