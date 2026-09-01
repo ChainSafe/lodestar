@@ -482,15 +482,14 @@ export function upgradeLightClientStore(
   targetFork: ForkName,
   store: ILightClientStore
 ): ILightClientStore {
-  const bestValidUpdates = new Map(
-    Array.from(store.bestValidUpdates, ([period, bestValidUpdate]) => [
-      period,
-      {
-        update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
-        summary: bestValidUpdate.summary,
-      },
-    ])
-  );
+  const bestValidUpdates = new Map();
+
+  for (const [period, entry] of store.bestValidUpdates) {
+    bestValidUpdates.set(period, {
+      ...entry,
+      update: upgradeLightClientUpdate(config, targetFork, entry.update),
+    });
+  }
   const finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
   const optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
 
