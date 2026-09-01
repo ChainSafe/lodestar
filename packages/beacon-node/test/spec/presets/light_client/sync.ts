@@ -246,13 +246,13 @@ function pickConfigForkValues(config: Partial<ChainConfig>): Partial<ChainConfig
     const value = config[key];
     if (key.endsWith("_FORK_EPOCH")) {
       // Overwrite 2^64 to Infinity for an unscheduled fork.
-      const epoch = typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER) ? Infinity : Number(value);
-      forkConfig[key] = epoch as never;
-    } else if (
-      key.endsWith("_FORK_VERSION") &&
-      (typeof value === "bigint" || typeof value === "number" || typeof value === "string")
-    ) {
-      forkConfig[key] = intToBytes(BigInt(value), 4, "be") as never;
+      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
+        forkConfig[key] = Infinity as never;
+      } else {
+        forkConfig[key] = Number(value) as never;
+      }
+    } else if (key.endsWith("_FORK_VERSION") && typeof value === "bigint") {
+      forkConfig[key] = intToBytes(value, 4, "be") as never;
     } else if (key === "BLOB_SCHEDULE" && Array.isArray(value)) {
       forkConfig[key] = value.map((entry) => ({
         EPOCH: Number(entry.EPOCH),
