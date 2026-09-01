@@ -91,6 +91,8 @@ function isBidCompatibleWithHead(
  * Transient gossip rules (head compatibility, first bid per tuple, value increment, proposer
  * preferences) are not applied, since those only limit forwarding of peers' messages and the
  * builder may legitimately bid on a branch this node does not consider head.
+ * The parent-payload builder-exit rule is omitted because this endpoint only accepts bids from
+ * the operator's own builder.
  *
  * Throws on any failed check. Also throws if the bid's parent block is unknown or its state is
  * unavailable, since the checks cannot be evaluated against the parent branch.
