@@ -21,7 +21,13 @@ describe("EnginePayloadSource", () => {
     finalizedBlockHash: toRootHex(Uint8Array.from({length: 32}, () => 3)),
   };
   const payloadAttributes = ssz.gloas.PayloadAttributes.defaultValue();
-  const request: BuildRequest<ForkName.gloas> = {fork: ForkName.gloas, forkchoiceState, payloadAttributes};
+  const custodyColumns = [0, 3, 127];
+  const request: BuildRequest<ForkName.gloas> = {
+    fork: ForkName.gloas,
+    forkchoiceState,
+    payloadAttributes,
+    custodyColumns,
+  };
   const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
 
   let engine: Mocked<PayloadSourceEngine>;
@@ -45,7 +51,8 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.headBlockHash,
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
-      payloadAttributes
+      payloadAttributes,
+      custodyColumns
     );
     expect(result).toEqual(handle);
   });
@@ -65,6 +72,7 @@ describe("EnginePayloadSource", () => {
       fork: ForkName.heze,
       forkchoiceState,
       payloadAttributes: hezePayloadAttributes,
+      custodyColumns,
     });
     const builtPayload = await source.getPayload(result);
 
@@ -74,7 +82,8 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.headBlockHash,
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
-      hezePayloadAttributes
+      hezePayloadAttributes,
+      custodyColumns
     );
     expect(engine.getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId);
     expect(builtPayload.fork).toBe(ForkName.heze);

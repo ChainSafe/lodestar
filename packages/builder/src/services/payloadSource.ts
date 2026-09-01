@@ -1,5 +1,12 @@
 import type {ForkPostGloas} from "@lodestar/params";
-import type {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, SSEPayloadAttributes} from "@lodestar/types";
+import type {
+  BlobsBundle,
+  ColumnIndex,
+  ExecutionPayload,
+  ExecutionRequests,
+  RootHex,
+  SSEPayloadAttributes,
+} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
 export type PayloadId = string;
@@ -16,6 +23,7 @@ export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = {
   fork: F;
   forkchoiceState: ForkchoiceState;
   payloadAttributes: PayloadAttributes<F>;
+  custodyColumns: ColumnIndex[];
 };
 
 export type BuildHandle<F extends ForkPostGloas = ForkPostGloas> = {
@@ -47,7 +55,8 @@ export interface PayloadSourceEngine {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes: PayloadAttributes
+    payloadAttributes: PayloadAttributes,
+    custodyColumns: ColumnIndex[]
   ): Promise<PayloadId | null>;
   getPayload(fork: ForkPostGloas, payloadId: PayloadId): Promise<EnginePayloadResult>;
 }
@@ -95,7 +104,8 @@ export class EnginePayloadSource implements PayloadSource {
       headBlockHash,
       safeBlockHash,
       finalizedBlockHash,
-      request.payloadAttributes
+      request.payloadAttributes,
+      request.custodyColumns
     );
 
     if (payloadId === null) {
