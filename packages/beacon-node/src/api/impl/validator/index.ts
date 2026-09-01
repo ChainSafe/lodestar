@@ -132,6 +132,18 @@ type BidCandidate = {
   receivedMs: number;
 };
 
+/** Render a bid candidate for the ranking log, `boostedTotal` is the value selection compares */
+function formatBidCandidate(candidate: BidCandidate, boostedTotal: bigint): string {
+  return [
+    candidate.url ?? "p2p",
+    `builder=${candidate.signedBid.message.builderIndex}`,
+    `total=${prettyGweiToEth(candidate.totalGwei)}`,
+    `boost=${candidate.boostFactor}`,
+    `boosted=${prettyGweiToEth(boostedTotal)}`,
+    `received=${candidate.receivedMs}ms`,
+  ].join(":");
+}
+
 /**
  * Return the best bid by boosted total payment. A candidate with the max boost factor is
  * preferred over any other regardless of value, ties prefer a builder api bid over the
@@ -1056,10 +1068,7 @@ export function getValidatorApi(
             candidates: candidates
               .map((candidate) => ({candidate, boostedTotal: (candidate.boostFactor * candidate.totalGwei) / 100n}))
               .sort((a, b) => (a.boostedTotal === b.boostedTotal ? 0 : a.boostedTotal < b.boostedTotal ? 1 : -1))
-              .map(
-                ({candidate, boostedTotal}) =>
-                  `${candidate.url ?? "p2p"}:builder=${candidate.signedBid.message.builderIndex}:total=${prettyGweiToEth(candidate.totalGwei)}:boost=${candidate.boostFactor}:boosted=${prettyGweiToEth(boostedTotal)}:received=${candidate.receivedMs}ms`
-              )
+              .map(({candidate, boostedTotal}) => formatBidCandidate(candidate, boostedTotal))
               .join(","),
             bidSource: best?.url ?? "p2p",
           });
