@@ -85,11 +85,6 @@ export const defaultSkipOpts: SkipOpts = {
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
     /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
-    // New test suite added by consensus-specs #5441; Lodestar still applies
-    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
-    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
-    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,

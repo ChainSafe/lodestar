@@ -192,7 +192,7 @@ export class ArchiveStore {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
+    this.chain.regen.onCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot

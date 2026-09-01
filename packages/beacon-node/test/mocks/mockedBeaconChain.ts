@@ -14,6 +14,7 @@ import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from ".
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
+import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
@@ -27,6 +28,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
+  builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
@@ -158,6 +160,11 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       executionPayloadBidPool: {
         add: vi.fn(),
         getBestBid: vi.fn(),
+      },
+      builderApiClient: {
+        getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
+        submitBuilderPreferences: vi.fn(),
+        submitSignedBeaconBlock: vi.fn(),
       },
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),

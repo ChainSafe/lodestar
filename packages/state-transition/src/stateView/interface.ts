@@ -29,6 +29,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  Gwei,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -53,6 +54,20 @@ import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+
+/** Inputs for computing the state root of a locally produced block. */
+export type ComputeNewStateRootInput = {
+  block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+  /** Pre-serialized block bytes for native implementations. */
+  ssz?: Uint8Array;
+};
+
+/** State root computation result. Includes data derived from the post-state. */
+export type ComputeNewStateRootResult = {
+  newStateRoot: Root;
+  proposerReward: Gwei;
+  postState: IBeaconStateView;
+};
 
 /**
  * A read-only view of the BeaconState.
@@ -161,6 +176,7 @@ export interface IBeaconStateView {
   hashTreeRoot(): Uint8Array;
 
   // State transition
+  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
@@ -308,13 +324,20 @@ export type IBeaconStateViewLatestFork = Omit<
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
  *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
  *   via `Parameters<...>` to avoid duplicating signatures.
+ * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ
+ *   between the TypeScript and Zig implementations.
  *
  * The TS-side `BeaconStateView` also structurally satisfies this contract since
  * `BitArray` exposes `uint8Array` and `bitLen`.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+  | "computeNewStateRoot"
+  | "executionPayloadAvailability"
+  | "loadOtherState"
+  | "stateTransition"
+  | "processSlots"
+  | "withParentPayloadApplied"
 > & {
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;

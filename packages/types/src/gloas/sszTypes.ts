@@ -1,5 +1,6 @@
 import {
   BitVectorType,
+  ByteListType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -17,6 +18,7 @@ import {
   EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BUILDER_AUTH_DATA_SIZE,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
@@ -355,6 +357,39 @@ export const SignedExecutionPayloadBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
+);
+
+// Builder API types (builder-specs)
+
+export const BuilderRequestAuth = new ContainerType(
+  {
+    data: new ByteListType(MAX_BUILDER_AUTH_DATA_SIZE),
+    slot: Slot,
+  },
+  {typeName: "BuilderRequestAuth", jsonCase: "eth2"}
+);
+
+export const SignedBuilderRequestAuth = new ContainerType(
+  {
+    message: BuilderRequestAuth,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderRequestAuth", jsonCase: "eth2"}
+);
+
+export const BuilderPreferences = new ContainerType(
+  {
+    maxExecutionPayment: Gwei,
+  },
+  {typeName: "BuilderPreferences", jsonCase: "eth2"}
+);
+
+export const BuilderPreferencesRequest = new ContainerType(
+  {
+    preferences: BuilderPreferences,
+    auth: SignedBuilderRequestAuth,
+  },
+  {typeName: "BuilderPreferencesRequest", jsonCase: "eth2"}
 );
 
 export const BlockAccessList = new ProgressiveByteListType({typeName: "BlockAccessList"});
