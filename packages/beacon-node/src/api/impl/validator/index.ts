@@ -1062,14 +1062,12 @@ export function getValidatorApi(
           return null;
         }
 
-        candidates.sort(compareBidCandidates);
-        const best = candidates[0];
+        const rankedCandidates = candidates.toSorted(compareBidCandidates);
         logger.debug("Ranked builder bid candidates", {
           slot,
-          candidates: candidates.map(formatBidCandidate).join(","),
-          bidSource: best.url ?? "p2p",
+          candidates: rankedCandidates.map(formatBidCandidate).join(","),
         });
-        return best;
+        return rankedCandidates[0];
       })();
 
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
