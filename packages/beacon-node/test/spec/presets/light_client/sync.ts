@@ -1,5 +1,5 @@
 import {expect} from "vitest";
-import {ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {BlobScheduleEntry, ChainConfig, GasLimitScheduleEntry, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, ForkPostAltair, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -254,9 +254,14 @@ function pickConfigForkValues(config: Partial<ChainConfig>): Partial<ChainConfig
     } else if (key.endsWith("_FORK_VERSION") && typeof value === "bigint") {
       forkConfig[key] = intToBytes(value, 4, "be") as never;
     } else if (key === "BLOB_SCHEDULE" && Array.isArray(value)) {
-      forkConfig[key] = value.map((entry) => ({
+      forkConfig[key] = (value as BlobScheduleEntry[]).map((entry) => ({
         EPOCH: Number(entry.EPOCH),
         MAX_BLOBS_PER_BLOCK: Number(entry.MAX_BLOBS_PER_BLOCK),
+      }));
+    } else if (key === "GAS_LIMIT_SCHEDULE" && Array.isArray(value)) {
+      forkConfig[key] = (value as GasLimitScheduleEntry[]).map((entry) => ({
+        EPOCH: Number(entry.EPOCH),
+        GAS_LIMIT: Number(entry.GAS_LIMIT),
       }));
     }
   }
