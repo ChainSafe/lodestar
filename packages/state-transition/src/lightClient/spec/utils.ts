@@ -261,12 +261,14 @@ export function upgradeLightClientBootstrap(
   targetFork: ForkName,
   bootstrap: LightClientBootstrap
 ): LightClientBootstrap {
-  bootstrap.header = upgradeLightClientHeader(config, targetFork, bootstrap.header);
-  bootstrap.currentSyncCommitteeBranch = normalizeMerkleBranch(
-    bootstrap.currentSyncCommitteeBranch,
-    currentSyncCommitteeGindexAtFork(targetFork)
-  );
-  return bootstrap;
+  return {
+    ...bootstrap,
+    header: upgradeLightClientHeader(config, targetFork, bootstrap.header),
+    currentSyncCommitteeBranch: normalizeMerkleBranch(
+      bootstrap.currentSyncCommitteeBranch,
+      currentSyncCommitteeGindexAtFork(targetFork)
+    ),
+  };
 }
 
 export function upgradeLightClientHeader(
@@ -279,9 +281,7 @@ export function upgradeLightClientHeader(
     throw Error(`Invalid upgrade request from headerFork=${headerFork} to targetFork=${targetFork}`);
   }
 
-  // We are modifying the same header object, may be we could create a copy, but its
-  // not required as of now
-  let upgradedHeader = header;
+  let upgradedHeader = {...header} as LightClientHeader;
   const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
 
   switch (startUpgradeFromFork) {
@@ -299,23 +299,30 @@ export function upgradeLightClientHeader(
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.capella:
-      (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
-        ssz.capella.LightClientHeader.fields.execution.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.capella>).executionBranch =
-        ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
+      upgradedHeader = {
+        ...upgradedHeader,
+        execution: ssz.capella.LightClientHeader.fields.execution.defaultValue(),
+        executionBranch: ssz.capella.LightClientHeader.fields.executionBranch.defaultValue(),
+      } as LightClientHeader<ForkName.capella>;
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
-    case ForkName.deneb:
-      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
-        ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.excessBlobGas =
-        ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue();
+    case ForkName.deneb: {
+      const capellaHeader = upgradedHeader as LightClientHeader<ForkName.capella>;
+      upgradedHeader = {
+        ...capellaHeader,
+        execution: {
+          ...capellaHeader.execution,
+          blobGasUsed: ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue(),
+          excessBlobGas: ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue(),
+        },
+      } as LightClientHeader<ForkName.deneb>;
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
+    }
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.electra:
@@ -429,15 +436,16 @@ export function upgradeLightClientUpdate(
   targetFork: ForkName,
   update: LightClientUpdate
 ): LightClientUpdate {
-  update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
-  update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
-  update.nextSyncCommitteeBranch = normalizeMerkleBranch(
-    update.nextSyncCommitteeBranch,
-    nextSyncCommitteeGindexAtFork(targetFork)
-  );
-  update.finalityBranch = normalizeMerkleBranch(update.finalityBranch, finalizedRootGindexAtFork(targetFork));
-
-  return update;
+  return {
+    ...update,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, update.attestedHeader),
+    finalizedHeader: upgradeLightClientHeader(config, targetFork, update.finalizedHeader),
+    nextSyncCommitteeBranch: normalizeMerkleBranch(
+      update.nextSyncCommitteeBranch,
+      nextSyncCommitteeGindexAtFork(targetFork)
+    ),
+    finalityBranch: normalizeMerkleBranch(update.finalityBranch, finalizedRootGindexAtFork(targetFork)),
+  };
 }
 
 export function upgradeLightClientFinalityUpdate(
@@ -445,14 +453,12 @@ export function upgradeLightClientFinalityUpdate(
   targetFork: ForkName,
   finalityUpdate: LightClientFinalityUpdate
 ): LightClientFinalityUpdate {
-  finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
-  finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
-  finalityUpdate.finalityBranch = normalizeMerkleBranch(
-    finalityUpdate.finalityBranch,
-    finalizedRootGindexAtFork(targetFork)
-  );
-
-  return finalityUpdate;
+  return {
+    ...finalityUpdate,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader),
+    finalizedHeader: upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader),
+    finalityBranch: normalizeMerkleBranch(finalityUpdate.finalityBranch, finalizedRootGindexAtFork(targetFork)),
+  };
 }
 
 export function upgradeLightClientOptimisticUpdate(
@@ -460,9 +466,10 @@ export function upgradeLightClientOptimisticUpdate(
   targetFork: ForkName,
   optimisticUpdate: LightClientOptimisticUpdate
 ): LightClientOptimisticUpdate {
-  optimisticUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader);
-
-  return optimisticUpdate;
+  return {
+    ...optimisticUpdate,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader),
+  };
 }
 
 /**
@@ -475,15 +482,23 @@ export function upgradeLightClientStore(
   targetFork: ForkName,
   store: ILightClientStore
 ): ILightClientStore {
-  for (const [period, bestValidUpdate] of store.bestValidUpdates) {
-    store.bestValidUpdates.set(period, {
-      update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
-      summary: bestValidUpdate.summary,
-    });
-  }
+  const bestValidUpdates = new Map(
+    Array.from(store.bestValidUpdates, ([period, bestValidUpdate]) => [
+      period,
+      {
+        update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
+        summary: bestValidUpdate.summary,
+      },
+    ])
+  );
+  const finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
+  const optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
 
-  store.finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
-  store.optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
+  for (const [period, bestValidUpdate] of bestValidUpdates) {
+    store.bestValidUpdates.set(period, bestValidUpdate);
+  }
+  store.finalizedHeader = finalizedHeader;
+  store.optimisticHeader = optimisticHeader;
 
   return store;
 }
