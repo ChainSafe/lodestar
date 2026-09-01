@@ -1054,9 +1054,11 @@ export function getValidatorApi(
           logger.debug("Ranked builder bid candidates", {
             slot,
             candidates: candidates
+              .map((candidate) => ({candidate, boostedTotal: (candidate.boostFactor * candidate.totalGwei) / 100n}))
+              .sort((a, b) => (a.boostedTotal === b.boostedTotal ? 0 : a.boostedTotal < b.boostedTotal ? 1 : -1))
               .map(
-                (candidate) =>
-                  `${candidate.url ?? "p2p"}:total=${prettyGweiToEth(candidate.totalGwei)}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
+                ({candidate, boostedTotal}) =>
+                  `${candidate.url ?? "p2p"}:builder=${candidate.signedBid.message.builderIndex}:total=${prettyGweiToEth(candidate.totalGwei)}:boost=${candidate.boostFactor}:boosted=${prettyGweiToEth(boostedTotal)}:received=${candidate.receivedMs}ms`
               )
               .join(","),
             bidSource: best?.url ?? "p2p",
