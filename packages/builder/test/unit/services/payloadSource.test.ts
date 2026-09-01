@@ -79,6 +79,7 @@ describe("EnginePayloadSource", () => {
 
   it.each([
     ["transport", new Error("connection reset")],
+    ["unsupported Engine response", new Error("Method not found")],
     ["timeout", new TimeoutError("engine_forkchoiceUpdatedV4")],
     ["cancellation", new ErrorAborted("engine_forkchoiceUpdatedV4")],
   ])("propagates %s errors from payload preparation", async (_name, error) => {
