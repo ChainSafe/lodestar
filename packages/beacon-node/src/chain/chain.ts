@@ -1150,8 +1150,9 @@ export class BeaconChain implements IBeaconChain {
 
     const isBlinded = isBlindedBeaconBlock(block);
 
-    // Build the serialized block and set signature to zero
-    // to re-use stateTransition() function which requires signed blocks
+    // NOTE: We serialize the block to use native state transition.
+    // This is a bit of an unavoidable overhead we have to pay in this
+    // path, since we create it as an object first.
     const serializedBlock = isBlinded
       ? this.config.getPostBellatrixForkTypes(slot).SignedBlindedBeaconBlock.serialize({
           message: block as BlindedBeaconBlock,
