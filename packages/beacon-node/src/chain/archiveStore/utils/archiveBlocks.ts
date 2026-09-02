@@ -22,6 +22,16 @@ const BLOB_SIDECAR_BATCH_SIZE = 32;
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
 /**
+ * Why a finalized-canonical block was imported after the attestation cutoff.
+ */
+export enum LateCanonicalBlockReason {
+  // received on time, but finished importing after the attestation cutoff → this node's processing lagged
+  SlowImport = "slow_import",
+  // block reached this node late on the network thread
+  LateReceive = "late_receive",
+}
+
+/**
  * Persist orphaned block to disk
  */
 async function persistOrphanedBlock(
@@ -84,11 +94,19 @@ export async function archiveBlocks(
   if (isNodeSynced && finalizedCanonicalBlocks.length > 1) {
     const lateBlocks = finalizedCanonicalBlocks.slice(0, -1).filter((block) => !block.importedTimely);
     if (lateBlocks.length > 0) {
-      metrics?.importBlock.lateCanonicalBlock.inc(lateBlocks.length);
+      let slowImport = 0;
+      for (const block of lateBlocks) {
+        // received late => late_receive; otherwise we had it on time but were slow to import => slow_import
+        const reason = block.timeliness ? LateCanonicalBlockReason.SlowImport : LateCanonicalBlockReason.LateReceive;
+        if (block.timeliness) slowImport++;
+        metrics?.importBlock.lateCanonicalBlock.inc({reason});
+      }
       const lateSlots = lateBlocks.map((block) => block.slot).sort((a, b) => a - b);
       logger.verbose("Late imported canonical blocks", {
         ...logCtx,
         count: lateBlocks.length,
+        slowImport,
+        lateReceive: lateBlocks.length - slowImport,
         slotRange: prettyPrintIndices(lateSlots),
       });
     }
