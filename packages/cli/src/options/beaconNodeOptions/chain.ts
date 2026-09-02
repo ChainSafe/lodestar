@@ -73,6 +73,8 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs & AdversarialArgs
     adversarialReorgDelayLastSlotProposal: args["adversarial.reorg.delayLastSlotProposal"],
     adversarialReorgLastSlotProposalDelayBps: args["adversarial.reorg.lastSlotProposalDelayBps"],
     adversarialReorgBuildOnParentInLastSlot: args["adversarial.reorg.buildOnParentInLastSlot"],
+    adversarialBidBlockHashEqualsParentStall: args["adversarial.bid.blockHashEqualsParentStall"],
+    adversarialBidBlockHashEqualsParentMisclassify: args["adversarial.bid.blockHashEqualsParentMisclassify"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],

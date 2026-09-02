@@ -235,6 +235,8 @@ describe("options / adversarial", () => {
       "adversarial.reorg.delayLastSlotProposal": true,
       "adversarial.reorg.lastSlotProposalDelayBps": 8_000,
       "adversarial.reorg.buildOnParentInLastSlot": false,
+      "adversarial.bid.blockHashEqualsParentStall": true,
+      "adversarial.bid.blockHashEqualsParentMisclassify": false,
     } as BeaconNodeArgs);
 
     expect(options.chain).toMatchObject({
@@ -243,6 +245,8 @@ describe("options / adversarial", () => {
       adversarialReorgDelayLastSlotProposal: true,
       adversarialReorgLastSlotProposalDelayBps: 8_000,
       adversarialReorgBuildOnParentInLastSlot: false,
+      adversarialBidBlockHashEqualsParentStall: true,
+      adversarialBidBlockHashEqualsParentMisclassify: false,
     });
   });
 

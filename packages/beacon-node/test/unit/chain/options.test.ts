@@ -10,6 +10,8 @@ describe("defaultChainOptions", () => {
     expect(defaultChainOptions.adversarialReorgOmitPtcAttestations).toBe(false);
     expect(defaultChainOptions.adversarialReorgDelayLastSlotProposal).toBe(false);
     expect(defaultChainOptions.adversarialReorgBuildOnParentInLastSlot).toBe(false);
+    expect(defaultChainOptions.adversarialBidBlockHashEqualsParentStall).toBe(false);
+    expect(defaultChainOptions.adversarialBidBlockHashEqualsParentMisclassify).toBe(false);
     expect(defaultChainOptions.adversarialReorgLastSlotProposalDelayBps).toBe(
       DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS
     );

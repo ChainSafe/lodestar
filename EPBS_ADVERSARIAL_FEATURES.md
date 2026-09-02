@@ -60,7 +60,13 @@ beacon block but never its execution payload envelope; default false). Seventh:
 `--adversarial.delay.executionPayload` (Tier 1 #2, publish a self-built beacon
 block immediately but hold its envelope until
 `--adversarial.delay.executionPayloadBps`, default 8000 basis points into the
-slot; default false).
+slot; default false). Eighth and ninth: `--adversarial.bid.blockHashEqualsParentStall` and
+`--adversarial.bid.blockHashEqualsParentMisclassify` (Tier 1 #1b, two beacon-node
+chain flags that set a self-built bid's `block_hash` equal to its
+`parent_block_hash`, differing only in the committed `execution_requests_root` —
+a non-empty sentinel to stall the branch, or the empty root to let the honest
+child import and misclassify the parent; both binary, default false, stall wins
+if both are set; pair with `--adversarial.withhold.executionPayload`).
 
 ## How ePBS changes the threat model
 
@@ -124,6 +130,55 @@ Publish the beacon block and winning bid, then never publish the
   payment to a withholding builder) and empty-slot handling end to end.
 - Variants: always / probabilistic / only when self-built / only above a
   bid-value threshold (maximize grief per slot).
+
+### 1b. Bid block_hash equals parent_block_hash (ambiguous EMPTY/FULL parent)
+
+Implemented as two beacon-node chain flags,
+`--adversarial.bid.blockHashEqualsParentStall` and
+`--adversarial.bid.blockHashEqualsParentMisclassify`. For self-built Gloas blocks
+both set `bid.block_hash = bid.parent_block_hash` at bid construction in
+`produceBlockBody.ts` (instead of the real `executionPayload.blockHash`). They
+differ only in the committed `execution_requests_root`: the stall flag commits a
+non-empty sentinel root, the misclassify flag commits the empty root. If both are
+set, stall wins.
+
+A winning bid with `block_hash == parent_block_hash` whose payload is withheld
+makes every honest child ambiguous: the child must set `parent_block_hash =
+latest_block_hash`, which now equals the malicious parent bid's `block_hash`, so
+`get_parent_payload_status` / `process_parent_execution_payload` classify the
+parent as FULL even though its payload was EMPTY. The child can never
+unambiguously encode that the parent was EMPTY.
+
+- Injection point: bid assembly in
+  `packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts` (self-build
+  branch), gated on `this.opts?.adversarialBidBlockHashEqualsParentStall` /
+  `...Misclassify`.
+- The requests root selects the outcome. The honest child builds on EMPTY, so it
+  carries empty `parentExecutionRequests`, but the `block_hash == parent_block_hash`
+  collision routes its state transition into the FULL branch of
+  `process_parent_execution_payload`, which asserts
+  `hash_tree_root(child.parentExecutionRequests) == parent_bid.execution_requests_root`.
+  - Stall (non-empty sentinel root): the assert fails, so the honest proposer
+    throws during state-root computation and cannot produce the child. Spec-literal
+    clients reject even earlier: `on_block` asserts `is_payload_verified` for a FULL
+    parent, which never holds for a withheld payload. No child of the malicious
+    block can be produced or imported, and the branch stalls until reorged out. A
+    sentinel is used rather than the real payload's requests root because a payload
+    with zero execution requests hashes to the empty root, collapsing into the
+    misclassify case.
+  - Misclassify (empty root): the assert passes, so the child IMPORTS and then
+    silently mis-settles the withheld parent (builder payment, availability bit,
+    dropped withdrawals batch). This is the dangerous, spec-relevant path.
+- Cross-client split (misclassify): Lodestar's fork choice resolves the parent to
+  EMPTY by variant-hash lookup and keeps importing children, while its state
+  transition still treats the parent as FULL, so a mixed network diverges between
+  Lodestar and spec-literal clients.
+- Pair with `--adversarial.withhold.executionPayload` (validator flag) so the
+  proposer never attempts the doomed envelope reveal. The bid flag alone still
+  reproduces the shape, since the committed hash is unverifiable either way;
+  withholding just keeps the run quiet.
+- Spec status: no consensus-specs rule rejects this bid shape as of writing;
+  candidate fix is a REJECT in `process_execution_payload_bid` and bid gossip.
 
 ### 2. Late payload reveal (timing straddle)
 

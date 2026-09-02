@@ -22,6 +22,8 @@ export type AdversarialArgs = {
   "adversarial.reorg.delayLastSlotProposal"?: boolean;
   "adversarial.reorg.lastSlotProposalDelayBps"?: number;
   "adversarial.reorg.buildOnParentInLastSlot"?: boolean;
+  "adversarial.bid.blockHashEqualsParentStall"?: boolean;
+  "adversarial.bid.blockHashEqualsParentMisclassify"?: boolean;
 };
 
 export const options: CliCommandOptions<AdversarialArgs> = {
@@ -77,6 +79,24 @@ export const options: CliCommandOptions<AdversarialArgs> = {
     description:
       "ADVERSARIAL (devnet test only): when proposing the epoch's final slot, build on the current head's parent even when the head is strong",
     defaultDescription: String(chainDefaults.adversarialReorgBuildOnParentInLastSlot ?? false),
+    group: "adversarial",
+  },
+
+  "adversarial.bid.blockHashEqualsParentStall": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): for self-built Gloas blocks, set the bid's block_hash equal to its parent_block_hash AND commit a non-empty execution_requests_root. Combined with --adversarial.withhold.executionPayload, no honest child of the block can be produced or imported, stalling the branch until it is reorged out",
+    defaultDescription: String(defaultOptions.chain.adversarialBidBlockHashEqualsParentStall),
+    group: "adversarial",
+  },
+
+  "adversarial.bid.blockHashEqualsParentMisclassify": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): for self-built Gloas blocks, set the bid's block_hash equal to its parent_block_hash AND commit the empty execution_requests_root. Combined with --adversarial.withhold.executionPayload, the honest child imports but silently misclassifies the withheld parent as FULL, mis-settling its builder payment, availability bit, and withdrawals",
+    defaultDescription: String(defaultOptions.chain.adversarialBidBlockHashEqualsParentMisclassify),
     group: "adversarial",
   },
 };

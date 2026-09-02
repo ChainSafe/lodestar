@@ -364,11 +364,48 @@ export async function produceBlockBody<T extends BlockType>(
       await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
     }
 
+    // ADVERSARIAL (devnet test only): set the self-built bid's block_hash equal to its parent_block_hash
+    // and withhold the payload (pair with --adversarial.withhold.executionPayload). The committed
+    // block_hash can never match a real execution payload, so the payload is never verified, and every
+    // honest child inherits a parent_block_hash equal to this bid's block_hash. Because
+    // block_hash == parent_block_hash, the honest child's state transition takes the FULL branch of
+    // process_parent_execution_payload and asserts
+    //   hash_tree_root(child.parentExecutionRequests) == this bid's execution_requests_root.
+    // The honest child builds on the EMPTY parent, so it supplies EMPTY parentExecutionRequests. Two
+    // variants, selected by which flag is set (stall wins if both are):
+    //  - Stall (adversarialBidBlockHashEqualsParentStall): commit a NON-EMPTY sentinel requests root.
+    //    The assert fails, so no child of this block can be produced or imported (spec-literal clients
+    //    reject even earlier: on_block asserts is_payload_verified for a FULL parent, which never holds
+    //    for a withheld payload). The branch stalls until reorged out. A sentinel is used rather than
+    //    the real payload's requests root because a payload with zero execution requests hashes to the
+    //    empty root, collapsing into the misclassification case below.
+    //  - Misclassify (adversarialBidBlockHashEqualsParentMisclassify): commit the EMPTY requests root.
+    //    The assert passes, so the honest child IMPORTS but silently misclassifies the withheld parent
+    //    as FULL, mis-settling its builder payment, availability bit, and withdrawals batch.
+    // See EPBS_ADVERSARIAL_FEATURES.md #1b.
+    const bidStall = this.opts?.adversarialBidBlockHashEqualsParentStall === true;
+    const bidMisclassify = this.opts?.adversarialBidBlockHashEqualsParentMisclassify === true;
+    const bidBlockHashEqualsParent = bidStall || bidMisclassify;
+    const bidBlockHash = bidBlockHashEqualsParent ? parentBlockHash : executionPayload.blockHash;
+    const bidExecutionRequestsRoot = bidStall
+      ? new Uint8Array(32).fill(0xff)
+      : bidMisclassify
+        ? ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue())
+        : ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests);
+    if (bidBlockHashEqualsParent) {
+      this.logger.warn("ADVERSARIAL: Setting bid block_hash equal to parent_block_hash", {
+        slot: blockSlot,
+        mode: bidStall ? "stall" : "misclassify",
+        parentBlockHash: toRootHex(parentBlockHash),
+        realBlockHash: toRootHex(executionPayload.blockHash),
+        bidExecutionRequestsRoot: toRootHex(bidExecutionRequestsRoot),
+      });
+    }
     // Create self-build execution payload bid
     const bid: gloas.ExecutionPayloadBid = {
       parentBlockHash,
       parentBlockRoot,
-      blockHash: executionPayload.blockHash,
+      blockHash: bidBlockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
       gasLimit: BigInt(executionPayload.gasLimit),
@@ -377,7 +414,7 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
+      executionRequestsRoot: bidExecutionRequestsRoot,
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
       // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.

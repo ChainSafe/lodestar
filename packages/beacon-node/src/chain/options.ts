@@ -65,6 +65,10 @@ export type IChainOptions = BlockProcessOpts &
     adversarialReorgLastSlotProposalDelayBps?: number;
     /** ADVERSARIAL (devnet test only): in the epoch's last slot, build on the current head's parent */
     adversarialReorgBuildOnParentInLastSlot?: boolean;
+    /** ADVERSARIAL (devnet test only): self-built bid block_hash == parent_block_hash + non-empty requests root (stall) */
+    adversarialBidBlockHashEqualsParentStall?: boolean;
+    /** ADVERSARIAL (devnet test only): self-built bid block_hash == parent_block_hash + empty requests root (misclassify) */
+    adversarialBidBlockHashEqualsParentMisclassify?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -130,6 +134,10 @@ export const defaultChainOptions: IChainOptions = {
   adversarialReorgLastSlotProposalDelayBps: DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS,
   // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.buildOnParentInLastSlot=true
   adversarialReorgBuildOnParentInLastSlot: false,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.bid.blockHashEqualsParentStall=true
+  adversarialBidBlockHashEqualsParentStall: false,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.bid.blockHashEqualsParentMisclassify=true
+  adversarialBidBlockHashEqualsParentMisclassify: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
