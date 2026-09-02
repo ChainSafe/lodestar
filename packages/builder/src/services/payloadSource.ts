@@ -19,13 +19,15 @@ export type ForkchoiceState = {
 
 export type PayloadAttributes<F extends ForkPostGloas = ForkPostGloas> = SSEPayloadAttributes<F>["payloadAttributes"];
 
-export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = {
-  fork: F;
-  forkchoiceState: ForkchoiceState;
-  payloadAttributes: PayloadAttributes<F>;
-  /** Logical custody set. The transport serializes it for Engine API; null means no custody service. */
-  custodyColumns: ColumnIndex[] | null;
-};
+export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = F extends ForkPostGloas
+  ? {
+      fork: F;
+      forkchoiceState: ForkchoiceState;
+      payloadAttributes: PayloadAttributes<F>;
+      /** Logical custody set. The transport serializes it for Engine API; null means no custody service. */
+      custodyColumns: ColumnIndex[] | null;
+    }
+  : never;
 
 export type BuildHandle<F extends ForkPostGloas = ForkPostGloas> = {
   sourceId: string;
@@ -65,7 +67,7 @@ export interface PayloadSourceEngine {
 /** Source that prepares and retrieves complete execution payloads without owning build scheduling policy. */
 export interface PayloadSource {
   readonly id: string;
-  prepare<F extends ForkPostGloas>(request: BuildRequest<F>): Promise<BuildHandle<F>>;
+  prepare<R extends BuildRequest>(request: R): Promise<BuildHandle<R["fork"]>>;
   getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>): Promise<BuiltPayload<F>>;
 }
 
@@ -98,7 +100,7 @@ export class EnginePayloadSource implements PayloadSource {
     private readonly engine: PayloadSourceEngine
   ) {}
 
-  async prepare<F extends ForkPostGloas>(request: BuildRequest<F>): Promise<BuildHandle<F>> {
+  async prepare<R extends BuildRequest>(request: R): Promise<BuildHandle<R["fork"]>> {
     const {headBlockHash, safeBlockHash, finalizedBlockHash} = request.forkchoiceState;
     const payloadId = await this.engine.notifyForkchoiceUpdate(
       request.fork,

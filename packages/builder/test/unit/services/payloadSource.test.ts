@@ -30,6 +30,11 @@ describe("EnginePayloadSource", () => {
     payloadAttributes,
     custodyColumns,
   };
+
+  // @ts-expect-error Heze requests cannot use Gloas payload attributes.
+  const mismatchedRequest: BuildRequest = {...request, fork: ForkName.heze};
+  void mismatchedRequest;
+
   const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
 
   let notifyForkchoiceUpdate: Mock<NotifyForkchoiceUpdate>;
