@@ -91,7 +91,7 @@ describe("BidLedger", () => {
     });
   });
 
-  it("sums each unsettled winning bid once", () => {
+  it("sums each winning bid until its payment is explicitly settled", () => {
     const ledger = new BidLedger();
     const first = submittedBid({valueGwei: 100});
     const second = submittedBid({parentBlockRoot: root(8), blockHash: root(9), valueGwei: 50});
@@ -105,7 +105,21 @@ describe("BidLedger", () => {
 
     expect(ledger.getUnsettledValueGwei(0)).toBe(150);
     expect(ledger.getUnsettledValueGwei(2)).toBe(150);
-    expect(ledger.getUnsettledValueGwei(3)).toBe(0);
+    expect(ledger.getUnsettledValueGwei(3)).toBe(150);
+    expect(ledger.recordPaymentSettled(first)).toEqual({...first, wonBlockRoots: [root(6), root(7)]});
+    expect(ledger.recordPaymentSettled(first)).toEqual({...first, wonBlockRoots: [root(6), root(7)]});
+    expect(ledger.getUnsettledValueGwei(3)).toBe(50);
+  });
+
+  it("only settles an exact winning bid identity", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    ledger.recordBid(bid);
+
+    expect(ledger.recordPaymentSettled(bid)).toBeNull();
+    ledger.recordWin(bid, root(6));
+    expect(ledger.recordPaymentSettled({...bid, blockHash: root(7)})).toBeNull();
+    expect(ledger.getUnsettledValueGwei(4)).toBe(bid.valueGwei);
   });
 
   it("fails closed if unsettled liability exceeds the safe integer range", () => {
@@ -134,7 +148,7 @@ describe("BidLedger", () => {
     expect(ledger.getBidsForSlot(bid.slot)).toEqual([{...bid, wonBlockRoots: [root(6)]}]);
   });
 
-  it("prunes records and reveal protection after the retention boundary", () => {
+  it("retains unsettled winning bids past the retention boundary", () => {
     const ledger = new BidLedger();
     const bid = submittedBid();
     const blockRoot = root(6);
@@ -146,9 +160,22 @@ describe("BidLedger", () => {
     expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(true);
     expect(ledger.hasRevealed(blockRoot)).toBe(true);
 
+    expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(0);
+    expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(true);
+    expect(ledger.hasRevealed(blockRoot)).toBe(false);
+
+    ledger.recordPaymentSettled(bid);
     expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
     expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(false);
-    expect(ledger.hasRevealed(blockRoot)).toBe(false);
+  });
+
+  it("prunes old bids that never won", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    ledger.recordBid(bid);
+
+    expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
+    expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(false);
   });
 
   it("prunes reveal protection even when no winning bid record exists", () => {
