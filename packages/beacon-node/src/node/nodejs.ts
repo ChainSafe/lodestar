@@ -198,6 +198,8 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
+    await db.initDataColumnStore(dataDir, logger, metrics?.flatFileStore ?? null);
+
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();

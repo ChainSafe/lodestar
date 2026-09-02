@@ -98,6 +98,8 @@ export async function archiveBlocks(
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
 
+    // Keep the normal LevelDB hot-to-cold flow for legacy columns. New columns are written
+    // directly to flat files, so this only moves fallback data left by older versions.
     if (finalizedPostFulu) {
       const migratedSlots = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
@@ -106,7 +108,7 @@ export async function archiveBlocks(
         finalizedCanonicalBlocks,
         currentEpoch
       );
-      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {
+      logger.verbose("Migrated legacy dataColumnSidecars from hot DB to cold DB", {
         ...logCtx,
         migratedEntries: migratedSlots.length,
         slotRange: prettyPrintIndices(migratedSlots),
@@ -159,17 +161,29 @@ export async function archiveBlocks(
       slotRange: prettyPrintIndices(nonCanonicalSlots),
     };
 
+    const columnItems = finalizedNonCanonicalBlocks
+      // Gloas EMPTY and FULL variants share a block root. EMPTY has no sidecars, so deleting by its root could
+      // remove the canonical FULL variant's columns. Pre-Gloas blocks are always FULL.
+      .filter(
+        (summary) => config.getForkSeq(summary.slot) >= ForkSeq.fulu && summary.payloadStatus === PayloadStatus.FULL
+      )
+      .map((summary) => ({slot: summary.slot, blockRoot: summary.blockRoot}));
+    if (columnItems.length > 0) {
+      // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
+      await db.dataColumns.deleteMany(columnItems);
+      logger.verbose("Deleted non canonical dataColumnSidecars", {
+        ...logCtx,
+        count: columnItems.length,
+        slotRange: prettyPrintIndices(columnItems.map(({slot}) => slot).sort((a, b) => a - b)),
+      });
+    }
+
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical blobSidecars from hot DB", nonCanonicalLogCtx);
-    }
-
-    if (finalizedPostFulu) {
-      await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", nonCanonicalLogCtx);
     }
 
     if (finalizedPostGloas) {
@@ -209,24 +223,9 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
-          // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
-          lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
-        });
-        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
-        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
-
-        if (slotsToDelete.length > 0) {
-          await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose("dataColumnSidecars prune", {
-            ...logCtx,
-            slotRange: prettyPrintIndices(slotsToDelete),
-            numOfSlots: slotsToDelete.length,
-            totalNumOfSidecars: prefixedKeys.length,
-          });
-        } else {
-          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`, logCtx);
-        }
+        const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
+        await db.dataColumns.pruneBefore(columnsPruneSlot);
+        logger.verbose(`dataColumnSidecars prune: pruned before slot ${columnsPruneSlot}`, logCtx);
       } else {
         logger.verbose(
           `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`,
@@ -353,7 +352,6 @@ async function migrateBlobSidecarsFromHotToColdDb(
       )
     ).filter((e): e is KeyValue<Slot, Uint8Array> => e !== null);
 
-    // put to blockArchive db and delete block db
     await Promise.all([
       db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
       db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
@@ -366,11 +364,9 @@ async function migrateBlobSidecarsFromHotToColdDb(
 
 // TODO: This function can be simplified further by reducing layers of promises in a loop
 /**
- * Post-gloas the data columns of a Gloas block are tied to its execution payload envelope —
- * columns only exist once the FULL variant of the block is in the proto-array. Pre-Gloas (Fulu)
- * blocks only have a FULL variant, so the `payloadStatus === FULL` filter passes them all.
- * Blocks whose canonical variant is PENDING/EMPTY are skipped here — their columns will be picked
- * up on a later run once the FULL variant appears in the ancestor walk.
+ * Post-gloas the data columns of a Gloas block are tied to its execution payload envelope.
+ * Columns only exist once the FULL variant of the block is in the proto-array. Pre-Gloas
+ * blocks only have a FULL variant, so the payload-status filter passes them all.
  */
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
@@ -392,32 +388,24 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
     if (batch.length === 0) break;
 
     const promises: Promise<void>[] = [];
-
-    // load Buffer instead of ssz deserialized to improve performance
     for (const block of batch) {
-      const blockSlot = block.slot;
-      const blockEpoch = computeEpochAtSlot(blockSlot);
-
+      const blockEpoch = computeEpochAtSlot(block.slot);
       if (
-        config.getForkSeq(blockSlot) < ForkSeq.fulu ||
-        // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+        config.getForkSeq(block.slot) < ForkSeq.fulu ||
         blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
       ) {
         continue;
       }
 
-      // Here we assume the data column sidecars are already in the hot db
       const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
       if (dataColumnSidecarBytes.length === 0) {
-        // Empty stream: either the block has no blobs, or columns were already archived on a
-        // previous run (boundary block). Nothing to migrate.
         logger.debug("DataColumnSidecars in forkchoice but missing in hot db, could be already archived", {
           slot: block.slot,
           root: toRootHex(block.root),
         });
         continue;
       }
-      logger.verbose("Migrated dataColumnSidecars for block", {
+      logger.verbose("Migrated legacy dataColumnSidecars for block", {
         currentEpoch,
         slot: block.slot,
         root: toRootHex(block.root),
@@ -426,18 +414,16 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,
-          dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
+          dataColumnSidecarBytes.map((entry) => ({key: entry.id, value: entry.value}))
         )
       );
       migratedSlots.push(block.slot);
     }
 
-    promises.push(db.dataColumnSidecar.deleteMany(batch.map((block) => block.root)));
-
     await Promise.all(promises);
+    await db.dataColumnSidecar.deleteMany(batch.map((block) => block.root));
   }
 
-  // Ancestor walk is newest → oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
 }
 

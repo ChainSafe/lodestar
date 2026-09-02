@@ -1,4 +1,7 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import type {Logger} from "@lodestar/utils";
+import type {IDataColumnStore} from "./dataColumnStore.js";
+import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
@@ -58,6 +61,9 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+
+  dataColumns: IDataColumnStore;
+  initDataColumnStore(dataDir: string, logger: Logger, metrics: FlatFileStoreMetrics | null): Promise<void>;
 
   pruneHotDb(): Promise<void>;
 

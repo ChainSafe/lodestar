@@ -15,6 +15,8 @@ $dataDir # specified by --dataDir on the beacon command
 ├── peer-id.json
 ├── chain-db # default if --dbDir not specified
 │   └── (db files)
+├── data_columns
+│   └── (data column flat files grouped by slot)
 └── peerstore # default if --peerStoreDir not specified
     └── (peerstore files)
 

@@ -1,6 +1,6 @@
 import {Mocked, vi} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {BeaconDb} from "../../src/db/index.js";
+import {BeaconDb, type IDataColumnStore} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -39,9 +39,21 @@ vi.mock("../../src/db/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/db/index.js")>();
 
   const mockedBeaconDb = vi.fn().mockImplementation(function MockedBeaconDb() {
+    const dataColumns: IDataColumnStore = {
+      getAll: vi.fn().mockResolvedValue([]),
+      getManyBinary: vi.fn().mockImplementation(async (_key, indices) => indices.map(() => undefined)),
+      putManyBinary: vi.fn().mockResolvedValue(undefined),
+      deleteMany: vi.fn().mockResolvedValue(undefined),
+      pruneBefore: vi.fn().mockResolvedValue(undefined),
+    };
+
     return {
       block: vi.mocked(new BlockRepository({} as any, {} as any)),
       blockArchive: vi.mocked(new BlockArchiveRepository({} as any, {} as any)),
+      blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
+      blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
+      dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
+      dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
       stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
 
       voluntaryExit: vi.mocked(new VoluntaryExitRepository({} as any, {} as any)),
@@ -49,11 +61,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
 
-      blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
-      blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
-
-      dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
-      dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
+      dataColumns,
+      initDataColumnStore: vi.fn().mockResolvedValue(undefined),
     };
   });
 

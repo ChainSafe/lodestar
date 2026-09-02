@@ -969,12 +969,15 @@ export class BeaconChain implements IBeaconChain {
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);
+    const sidecarsByIndex = new Map<number, DataColumnSidecar>();
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return payloadInput.getAllColumns();
+        for (const sidecar of payloadInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -983,16 +986,17 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return blockInput.getAllColumns();
+        for (const sidecar of blockInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
-    if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
+    for (const sidecar of await this.db.dataColumns.getAll({slot: blockSlot, blockRoot: blockRootHex})) {
+      if (!sidecarsByIndex.has(sidecar.index)) sidecarsByIndex.set(sidecar.index, sidecar);
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+
+    return [...sidecarsByIndex.values()].sort((a, b) => a.index - b.index);
   }
 
   async getSerializedDataColumnSidecars(
@@ -1001,22 +1005,25 @@ export class BeaconChain implements IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
     const fork = this.config.getForkName(blockSlot);
+    const dataColumnSidecars: (Uint8Array | undefined)[] = indices.map(() => undefined);
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = payloadInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
           }
-          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -1025,26 +1032,42 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = blockInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(
+              sidecar
+            );
           }
-          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
-    if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
-      return sidecarsUnfinalized;
+    const missingPositions = dataColumnSidecars
+      .map((sidecar, position) => (sidecar === undefined ? position : -1))
+      .filter((position) => position !== -1);
+
+    if (missingPositions.length > 0) {
+      const persistedSidecars = await this.db.dataColumns.getManyBinary(
+        {slot: blockSlot, blockRoot: blockRootHex},
+        missingPositions.map((position) => indices[position])
+      );
+      for (let i = 0; i < missingPositions.length; i++) {
+        const sidecar = persistedSidecars[i];
+        if (sidecar !== undefined) {
+          dataColumnSidecars[missingPositions[i]] = sidecar;
+        }
+      }
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices);
-    return sidecarsFinalized;
+
+    return dataColumnSidecars;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {

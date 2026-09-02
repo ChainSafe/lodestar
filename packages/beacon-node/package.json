@@ -148,6 +148,7 @@
     "multiformats": "^13.4.2",
     "prom-client": "^15.1.0",
     "qs": "^6.14.2",
+    "snappy": "^7.2.2",
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.22.9",
     "uint8arraylist": "^2.4.7",
@@ -165,7 +166,6 @@
     "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "rimraf": "^4.4.1",
-    "snappy": "^7.2.2",
     "snappyjs": "^0.7.0",
     "tmp": "^0.2.1"
   },
