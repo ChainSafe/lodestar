@@ -177,6 +177,10 @@ export interface IBeaconStateView {
 
   // State transition
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
+  /**
+   * `signedBlockBytes` must be the fork-specific SSZ serialization of `signedBlock`, using the matching full or
+   * blinded block type.
+   */
   stateTransition(
     signedBlockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
