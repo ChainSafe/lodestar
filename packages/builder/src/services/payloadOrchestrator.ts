@@ -114,9 +114,19 @@ export class PayloadOrchestrator {
       );
     }
 
-    let handle: BuildHandle;
+    let prepareResult: {status: "success"; handle: BuildHandle} | {status: "error"; error: unknown};
     try {
-      handle = await withTimeout(() => this.source.prepare(job.request), prepareTimeout, signal);
+      prepareResult = await withTimeout(
+        async () => {
+          try {
+            return {status: "success", handle: await this.source.prepare(job.request)} as const;
+          } catch (error) {
+            return {status: "error", error} as const;
+          }
+        },
+        prepareTimeout,
+        signal
+      );
     } catch (error) {
       if (error instanceof TimeoutError) {
         throw new PayloadOrchestratorError(
@@ -126,14 +136,29 @@ export class PayloadOrchestrator {
       }
       throw error;
     }
+    if (prepareResult.status === "error") {
+      throw prepareResult.error;
+    }
+    const {handle} = prepareResult;
 
     const waitTime = job.getPayloadAt - Date.now();
     if (waitTime > 0) {
       await sleep(waitTime, signal);
     }
 
+    let payloadResult: {status: "success"; payload: BuiltPayload} | {status: "error"; error: unknown};
     try {
-      return await withTimeout(() => this.source.getPayload(handle), this.options.getPayloadTimeout, signal);
+      payloadResult = await withTimeout(
+        async () => {
+          try {
+            return {status: "success", payload: await this.source.getPayload(handle)} as const;
+          } catch (error) {
+            return {status: "error", error} as const;
+          }
+        },
+        this.options.getPayloadTimeout,
+        signal
+      );
     } catch (error) {
       if (error instanceof TimeoutError) {
         throw new PayloadOrchestratorError(
@@ -143,6 +168,10 @@ export class PayloadOrchestrator {
       }
       throw error;
     }
+    if (payloadResult.status === "error") {
+      throw payloadResult.error;
+    }
+    return payloadResult.payload;
   }
 
   private assertOption(option: keyof PayloadOrchestratorOptions, value: number): void {

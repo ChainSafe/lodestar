@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {ErrorAborted, defer} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, defer} from "@lodestar/utils";
 import {
   type PayloadBuildJob,
   PayloadOrchestrator,
@@ -275,6 +275,19 @@ describe("PayloadOrchestrator", () => {
     expect(orchestrator.activeJobCount).toBe(0);
   });
 
+  it("preserves a source preparation timeout", async () => {
+    const source = new StubPayloadSource();
+    const sourceError = new TimeoutError("engine_forkchoiceUpdatedV4");
+    source.prepareImpl = async () => {
+      throw sourceError;
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const controller = new AbortController();
+
+    await expect(orchestrator.run(buildJob(), controller.signal)).rejects.toBe(sourceError);
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
   it("propagates missing payload material and permits a later retry", async () => {
     const source = new StubPayloadSource();
     const missingPayload = new PayloadSourceError(
@@ -318,6 +331,22 @@ describe("PayloadOrchestrator", () => {
 
     pendingPayload.resolve(builtPayload());
     await Promise.resolve();
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
+  it("preserves a source retrieval timeout", async () => {
+    const source = new StubPayloadSource();
+    const sourceError = new TimeoutError("engine_getPayloadV6");
+    source.getPayloadImpl = async () => {
+      throw sourceError;
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const controller = new AbortController();
+
+    const resultPromise = orchestrator.run(buildJob(), controller.signal);
+    const resultExpectation = expect(resultPromise).rejects.toBe(sourceError);
+    await vi.advanceTimersByTimeAsync(100);
+    await resultExpectation;
     expect(orchestrator.activeJobCount).toBe(0);
   });
 });
