@@ -49,9 +49,8 @@ export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorE
 
 /**
  * Coordinates bounded payload preparation and retrieval without owning Engine connections or chain inputs.
- * Duplicate job IDs share one result. Aborting a job stops waiting for its source but does not replace the
- * source transport's Builder-lifetime cancellation. Each phase calls the source once; request-level retries
- * remain owned by that transport, and the orchestrator does not retry a failed job.
+ * Duplicate job IDs share one result. Aborting a job cancels its active source request. Each phase calls the
+ * source once; request-level retries remain owned by that transport, and the orchestrator does not retry a failed job.
  */
 export class PayloadOrchestrator {
   private readonly activeJobs = new Map<string, Promise<BuiltPayload>>();
@@ -117,9 +116,12 @@ export class PayloadOrchestrator {
     let prepareResult: {status: "success"; handle: BuildHandle} | {status: "error"; error: unknown};
     try {
       prepareResult = await withTimeout(
-        async () => {
+        async (requestSignal) => {
           try {
-            return {status: "success", handle: await this.source.prepare(job.request)} as const;
+            return {
+              status: "success",
+              handle: await this.source.prepare(job.request, requestSignal ?? signal),
+            } as const;
           } catch (error) {
             return {status: "error", error} as const;
           }
@@ -149,9 +151,9 @@ export class PayloadOrchestrator {
     let payloadResult: {status: "success"; payload: BuiltPayload} | {status: "error"; error: unknown};
     try {
       payloadResult = await withTimeout(
-        async () => {
+        async (requestSignal) => {
           try {
-            return {status: "success", payload: await this.source.getPayload(handle)} as const;
+            return {status: "success", payload: await this.source.getPayload(handle, requestSignal ?? signal)} as const;
           } catch (error) {
             return {status: "error", error} as const;
           }

@@ -21,22 +21,33 @@ const NOW = 1_000;
 class StubPayloadSource implements PayloadSource {
   readonly id = "engine-0";
   readonly prepareCalls: BuildRequest[] = [];
+  readonly prepareSignals: AbortSignal[] = [];
   readonly getPayloadCalls: BuildHandle[] = [];
-  prepareImpl: (request: BuildRequest) => Promise<BuildHandle> = async (request) => ({
+  readonly getPayloadSignals: AbortSignal[] = [];
+  prepareImpl: (request: BuildRequest, signal: AbortSignal) => Promise<BuildHandle> = async (request) => ({
     sourceId: this.id,
     fork: request.fork,
     payloadId: "0x01",
   });
-  getPayloadImpl: (handle: BuildHandle) => Promise<BuiltPayload> = async (handle) => builtPayload(handle);
+  getPayloadImpl: (handle: BuildHandle, signal: AbortSignal) => Promise<BuiltPayload> = async (handle) =>
+    builtPayload(handle);
 
-  async prepare<F extends BuildRequest["fork"]>(request: BuildRequest<F>): Promise<BuildHandle<F>> {
+  async prepare<F extends BuildRequest["fork"]>(
+    request: BuildRequest<F>,
+    signal: AbortSignal
+  ): Promise<BuildHandle<F>> {
     this.prepareCalls.push(request);
-    return (await this.prepareImpl(request)) as BuildHandle<F>;
+    this.prepareSignals.push(signal);
+    return (await this.prepareImpl(request, signal)) as BuildHandle<F>;
   }
 
-  async getPayload<F extends BuildHandle["fork"]>(handle: BuildHandle<F>): Promise<BuiltPayload<F>> {
+  async getPayload<F extends BuildHandle["fork"]>(
+    handle: BuildHandle<F>,
+    signal: AbortSignal
+  ): Promise<BuiltPayload<F>> {
     this.getPayloadCalls.push(handle);
-    return (await this.getPayloadImpl(handle)) as BuiltPayload<F>;
+    this.getPayloadSignals.push(signal);
+    return (await this.getPayloadImpl(handle, signal)) as BuiltPayload<F>;
   }
 }
 
@@ -193,6 +204,7 @@ describe("PayloadOrchestrator", () => {
     await vi.advanceTimersByTimeAsync(100);
     await resultExpectation;
     expect(orchestrator.activeJobCount).toBe(0);
+    expect(source.prepareSignals[0]?.aborted).toBe(true);
 
     pendingPrepare.resolve({sourceId: source.id, fork: ForkName.gloas, payloadId: "0x01"});
     await Promise.resolve();
@@ -221,6 +233,7 @@ describe("PayloadOrchestrator", () => {
 
     await expect(resultPromise).rejects.toBeInstanceOf(ErrorAborted);
     expect(orchestrator.activeJobCount).toBe(0);
+    expect(source.prepareSignals[0]?.aborted).toBe(true);
 
     pendingPrepare.resolve({sourceId: source.id, fork: ForkName.gloas, payloadId: "0x01"});
     await Promise.resolve();
@@ -256,6 +269,7 @@ describe("PayloadOrchestrator", () => {
 
     await expect(resultPromise).rejects.toBeInstanceOf(ErrorAborted);
     expect(orchestrator.activeJobCount).toBe(0);
+    expect(source.getPayloadSignals[0]?.aborted).toBe(true);
 
     pendingPayload.resolve(builtPayload());
     await Promise.resolve();
@@ -328,6 +342,7 @@ describe("PayloadOrchestrator", () => {
     await vi.advanceTimersByTimeAsync(150);
     await resultExpectation;
     expect(orchestrator.activeJobCount).toBe(0);
+    expect(source.getPayloadSignals[0]?.aborted).toBe(true);
 
     pendingPayload.resolve(builtPayload());
     await Promise.resolve();
