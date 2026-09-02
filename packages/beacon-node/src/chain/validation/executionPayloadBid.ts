@@ -104,6 +104,15 @@ export async function validateApiExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
 
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
+    });
+  }
+
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
     !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
@@ -256,6 +265,15 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
   const bidParentBlockHash = toRootHex(bid.parentBlockHash);
+
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
+    });
+  }
 
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
