@@ -8,6 +8,7 @@ import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
@@ -54,6 +55,8 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
+  metrics: Metrics | null,
+  isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
@@ -75,6 +78,21 @@ export async function archiveBlocks(
   }));
 
   const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
+
+  // `finalizedCanonicalBlocks` is newest -> oldest; its LAST element is the previous-finalized
+  // boundary block, already audited on the prior run, so exclude it to avoid double counting.
+  if (isNodeSynced && finalizedCanonicalBlocks.length > 1) {
+    const lateBlocks = finalizedCanonicalBlocks.slice(0, -1).filter((block) => !block.importedTimely);
+    if (lateBlocks.length > 0) {
+      metrics?.importBlock.lateCanonicalBlock.inc(lateBlocks.length);
+      const lateSlots = lateBlocks.map((block) => block.slot).sort((a, b) => a - b);
+      logger.verbose("Late imported canonical blocks", {
+        ...logCtx,
+        count: lateBlocks.length,
+        slotRange: prettyPrintIndices(lateSlots),
+      });
+    }
+  }
 
   if (finalizedCanonicalBlockRoots.length > 0) {
     const migratedSlots = await migrateBlocksFromHotToColdDb(db, logger, finalizedCanonicalBlockRoots);

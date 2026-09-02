@@ -481,6 +481,7 @@ export async function runGossipValidationTest(
             signedBlock.message,
             postState,
             0,
+            0,
             slot,
             ExecutionStatus.Valid,
             getDataAvailabilityStatusForFork(fork)
@@ -495,6 +496,7 @@ export async function runGossipValidationTest(
           chain.forkChoice.onBlock(
             signedBlock.message,
             postState,
+            0,
             0,
             slot,
             ExecutionStatus.Syncing,
