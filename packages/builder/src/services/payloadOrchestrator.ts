@@ -17,6 +17,7 @@ export type PayloadOrchestratorOptions = {
 };
 
 export enum PayloadOrchestratorErrorCode {
+  INVALID_OPTION = "PAYLOAD_ORCHESTRATOR_ERROR_INVALID_OPTION",
   ACTIVE_JOB_LIMIT = "PAYLOAD_ORCHESTRATOR_ERROR_ACTIVE_JOB_LIMIT",
   PREPARE_DEADLINE_REACHED = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_DEADLINE_REACHED",
   PREPARE_TIMEOUT = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_TIMEOUT",
@@ -24,6 +25,11 @@ export enum PayloadOrchestratorErrorCode {
 }
 
 export type PayloadOrchestratorErrorType =
+  | {
+      code: PayloadOrchestratorErrorCode.INVALID_OPTION;
+      option: keyof PayloadOrchestratorOptions;
+      value: number;
+    }
   | {
       code: PayloadOrchestratorErrorCode.ACTIVE_JOB_LIMIT;
       jobId: string;
@@ -53,7 +59,10 @@ export class PayloadOrchestrator {
   constructor(
     private readonly source: PayloadSource,
     private readonly options: PayloadOrchestratorOptions
-  ) {}
+  ) {
+    this.assertOption("maxActiveJobs", options.maxActiveJobs);
+    this.assertOption("getPayloadTimeout", options.getPayloadTimeout);
+  }
 
   get activeJobCount(): number {
     return this.activeJobs.size;
@@ -133,6 +142,15 @@ export class PayloadOrchestrator {
         );
       }
       throw error;
+    }
+  }
+
+  private assertOption(option: keyof PayloadOrchestratorOptions, value: number): void {
+    if (!Number.isInteger(value) || value < 1) {
+      throw new PayloadOrchestratorError(
+        {code: PayloadOrchestratorErrorCode.INVALID_OPTION, option, value},
+        `Invalid payload orchestrator option option=${option} value=${value}`
+      );
     }
   }
 }

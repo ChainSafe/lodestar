@@ -79,6 +79,18 @@ describe("PayloadOrchestrator", () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    ["maxActiveJobs", 0, {maxActiveJobs: 0, getPayloadTimeout: 50}],
+    ["getPayloadTimeout", 0, {maxActiveJobs: 1, getPayloadTimeout: 0}],
+    ["maxActiveJobs", 1.5, {maxActiveJobs: 1.5, getPayloadTimeout: 50}],
+  ] as const)("rejects an invalid %s option", (option, value, options) => {
+    expect(() => new PayloadOrchestrator(new StubPayloadSource(), options)).toThrowError(
+      expect.objectContaining({
+        type: {code: PayloadOrchestratorErrorCode.INVALID_OPTION, option, value},
+      })
+    );
+  });
+
   it("prepares immediately and retrieves at the requested time", async () => {
     const source = new StubPayloadSource();
     const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 2, getPayloadTimeout: 50});
