@@ -23,6 +23,7 @@ import {
   electra,
   fulu,
   gloas,
+  isBlindedBeaconBlock,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -641,8 +642,16 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // State transition
 
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    if (input.ssz === undefined) {
+      throw Error("Serialized block bytes are required to compute a state root with NativeBeaconStateView");
+    }
+
     const postState = new NativeBeaconStateView(
-      this.binding.stateTransition(input.block, computeNewStateRootStateTransitionOpts, modules)
+      this.binding.stateTransition(
+        input.ssz,
+        isBlindedBeaconBlock(input.block.message),
+        computeNewStateRootStateTransitionOpts
+      )
     );
     return getComputeNewStateRootResult(postState, modules);
   }
