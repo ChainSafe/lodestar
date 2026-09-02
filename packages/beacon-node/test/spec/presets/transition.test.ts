@@ -57,6 +57,7 @@ const transition =
 
           state = state.stateTransition(
             testConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            signedBlock,
             false,
             {
               // Assume valid and available for this test

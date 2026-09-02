@@ -25,6 +25,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
 
         state = state.stateTransition(
           state.cachedState.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+          signedBlock,
           false,
           {
             // Should assume payload valid and blob data available for this test

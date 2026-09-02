@@ -55,6 +55,7 @@ export async function getHistoricalState(
     try {
       state = state.stateTransition(
         config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+        block,
         false,
         {
           verifyProposer: false,

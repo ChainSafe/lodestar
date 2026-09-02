@@ -69,6 +69,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           wrappedState.cachedState.config
             .getForkTypes(signedBlock.message.slot)
             .SignedBeaconBlock.serialize(signedBlock),
+          signedBlock,
           false,
           {
             // Assume valid and available for this test
