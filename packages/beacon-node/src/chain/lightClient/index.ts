@@ -53,6 +53,7 @@ import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
+import type {SyncCommitteeWitness} from "./types.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -404,6 +405,71 @@ export class LightClientServer {
     ]);
   }
 
+  /**
+   * Persist the data needed to serve `LightClientBootstrap` for the checkpoint-sync anchor block.
+   *
+   * After checkpoint sync the node never imports the anchor block itself, so `onImportBlockHead` is
+   * never called for it and `getBootstrap(anchorRoot)` fails with RESOURCE_UNAVAILABLE until a later
+   * checkpoint finalizes. The spec requires full nodes to serve bootstraps for all finalized epoch
+   * boundary blocks in the retention window, which includes the anchor. Call this once the anchor
+   * block is available (backfill sync retrieves it) with the anchor state kept in memory.
+   */
+  async persistAnchorBootstrapData(
+    anchorBlock: BeaconBlock<ForkPostAltair>,
+    anchorState: IBeaconStateViewAltair
+  ): Promise<void> {
+    // TODO GLOAS: same limitation as onImportBlockHead, `blockToLightClientHeader` cannot build gloas headers
+    if (this.config.getForkSeq(anchorBlock.slot) >= ForkSeq.gloas) {
+      return;
+    }
+
+    const fork = this.config.getForkName(anchorBlock.slot);
+    const header = blockToLightClientHeader(fork, anchorBlock);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
+    const syncCommitteeWitness = anchorState.getSyncCommitteesWitness();
+
+    await this.storeCurrentSyncCommittees(anchorState, syncCommitteeWitness, anchorBlock.slot);
+    await this.persistWitnessAndHeader(blockRoot, syncCommitteeWitness, header);
+
+    this.logger.debug("Stored light client bootstrap data for anchor block", {
+      slot: anchorBlock.slot,
+      root: toRootHex(blockRoot),
+    });
+  }
+
+  /**
+   * Store `currentSyncCommittee` and `nextSyncCommittee` referenced by a witness, only once per run
+   */
+  private async storeCurrentSyncCommittees(
+    postState: IBeaconStateViewAltair,
+    syncCommitteeWitness: SyncCommitteeWitness,
+    slot: Slot
+  ): Promise<void> {
+    if (this.storedCurrentSyncCommittee) {
+      return;
+    }
+    await Promise.all([
+      this.storeSyncCommittee(postState.currentSyncCommittee, syncCommitteeWitness.currentSyncCommitteeRoot),
+      this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot),
+    ]);
+    this.storedCurrentSyncCommittee = true;
+    this.logger.debug("Stored currentSyncCommittee", {slot});
+  }
+
+  /**
+   * Persist the witness and header that `getBootstrap` needs for `blockRoot`.
+   * Referenced sync committees must already be persisted.
+   */
+  private async persistWitnessAndHeader(
+    blockRoot: Uint8Array,
+    syncCommitteeWitness: SyncCommitteeWitness,
+    header: LightClientHeader
+  ): Promise<void> {
+    await this.db.syncCommitteeWitness.put(blockRoot, syncCommitteeWitness);
+    // Store header in case it is referenced latter by a future finalized checkpoint
+    await this.db.checkpointHeader.put(blockRoot, header);
+  }
+
   private async persistPostBlockImportData(
     block: BeaconBlock<ForkPostAltair>,
     postState: IBeaconStateViewAltair,
@@ -418,15 +484,7 @@ export class LightClientServer {
 
     const syncCommitteeWitness = postState.getSyncCommitteesWitness();
 
-    // Only store current sync committee once per run
-    if (!this.storedCurrentSyncCommittee) {
-      await Promise.all([
-        this.storeSyncCommittee(postState.currentSyncCommittee, syncCommitteeWitness.currentSyncCommitteeRoot),
-        this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot),
-      ]);
-      this.storedCurrentSyncCommittee = true;
-      this.logger.debug("Stored currentSyncCommittee", {slot: blockSlot});
-    }
+    await this.storeCurrentSyncCommittees(postState, syncCommitteeWitness, blockSlot);
 
     // Only store next sync committee once per dependent root
     const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlockSlot);
@@ -443,10 +501,7 @@ export class LightClientServer {
     }
 
     // Ensure referenced syncCommittee are persisted before persiting this one
-    await this.db.syncCommitteeWitness.put(blockRoot, syncCommitteeWitness);
-
-    // Store header in case it is referenced latter by a future finalized checkpoint
-    await this.db.checkpointHeader.put(blockRoot, header);
+    await this.persistWitnessAndHeader(blockRoot, syncCommitteeWitness, header);
 
     // Store finalized checkpoint data
     const finalizedCheckpoint = postState.finalizedCheckpoint;
