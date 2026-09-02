@@ -2,6 +2,7 @@ import {LodestarError, TimeoutError, sleep, withTimeout} from "@lodestar/utils";
 import type {BuildHandle, BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
 
 export type PayloadBuildJob = {
+  /** Stable identity for all build inputs. Jobs with the same ID share one lifecycle and result. */
   id: string;
   request: BuildRequest;
   /** Unix timestamp in milliseconds at which the prepared payload should be retrieved. */
@@ -58,6 +59,10 @@ export class PayloadOrchestrator {
     return this.activeJobs.size;
   }
 
+  /**
+   * Runs one build job. The first invocation for an active job ID owns its abort signal; duplicate
+   * invocations share that job's promise and must therefore use the same Builder-lifetime signal.
+   */
   run(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
     const existing = this.activeJobs.get(job.id);
     if (existing !== undefined) {

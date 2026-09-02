@@ -117,6 +117,28 @@ describe("PayloadOrchestrator", () => {
     expect(source.getPayloadCalls).toHaveLength(1);
   });
 
+  it("shares the first invocation's cancellation lifecycle for duplicate job IDs", async () => {
+    const source = new StubPayloadSource();
+    const pendingPrepare = defer<BuildHandle>();
+    source.prepareImpl = () => pendingPrepare.promise;
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 2, getPayloadTimeout: 50});
+    const firstController = new AbortController();
+    const duplicateController = new AbortController();
+    const job = buildJob();
+
+    const first = orchestrator.run(job, firstController.signal);
+    const duplicate = orchestrator.run(job, duplicateController.signal);
+    duplicateController.abort();
+
+    expect(duplicate).toBe(first);
+    expect(orchestrator.activeJobCount).toBe(1);
+
+    pendingPrepare.resolve({sourceId: source.id, fork: ForkName.gloas, payloadId: "0x01"});
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(first).resolves.toEqual(builtPayload());
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
   it("rejects a distinct job when the active job limit is reached", async () => {
     const source = new StubPayloadSource();
     source.prepareImpl = () => defer<BuildHandle>().promise;
