@@ -5,8 +5,8 @@ import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transiti
 import {ssz} from "@lodestar/types";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {MockBlockInput} from "../../../utils/blockInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
+import {MockBlockInput} from "../../../utils/blockInput.js";
 
 describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
   // A block with an invalid deposit/attestation/operation makes preState.stateTransition() throw a
@@ -35,7 +35,6 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       serializedCache,
       new AbortController().signal,
       {}
-
     ).then(
       () => null,
       (e) => e
