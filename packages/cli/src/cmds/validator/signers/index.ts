@@ -11,7 +11,7 @@ import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitio
 import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
 import {IValidatorCliArgs} from "../options.js";
 import {getAccountPaths} from "../paths.js";
-import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
+import {readKeystoreDefinitionsFromArgs} from "./importExternalKeystores.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
@@ -19,7 +19,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * Options processing hierarchy
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
- * --importKeystores, then requires --importKeystoresPassword
+ * --importKeystores, then supports --importKeystoresPassword or --importKeystoresPasswords
  * --externalSigner.fetch, then requires --externalSigner.urls
  * --externalSigner.pubkeys, then requires --externalSigner.urls
  * else load from persisted
@@ -76,9 +76,10 @@ export async function getSignersFromArgs(
 
   // Import JSON keystores and run
   if (args.importKeystores) {
-    const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
+    const keystoreDefinitions = await readKeystoreDefinitionsFromArgs({
       keystoresPath: args.importKeystores,
-      password: await readPassphraseOrPrompt(args),
+      importKeystoresPassword: args.importKeystoresPassword,
+      importKeystoresPasswords: args.importKeystoresPasswords,
     });
 
     const needle = showProgress({

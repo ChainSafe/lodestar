@@ -26,11 +26,11 @@ To import a validator JSON keystore that was created via one of the methods desc
 
 Inside the keystore JSON file, you should have an [EIP-2335 keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema).
 
-You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.
+You will also need the passphrase used to encrypt the keystore. This can be entered interactively, provided in a shared plaintext file, or provided as per-keystore plaintext files.
 
 #### Option 1: Import Keys To Lodestar's Keystores Folder
 
-You can load the keys into the keystore folder using the [`validator import`](../validator-management/validator-cli.md#validator-import) command. There are two methods for importing keystores:
+You can load the keys into the keystore folder using the [`validator import`](../validator-management/validator-cli.md#validator-import) command. There are three methods for importing keystores:
 
 _Interactive passphrase import_
 
@@ -44,22 +44,34 @@ _Plaintext passphrase file import_
 ./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
+_Per-keystore plaintext passphrase file import_
+
+```bash
+./lodestar validator import --importKeystores ./validator_keys --importKeystoresPasswords ./passwords
+```
+
 :::info
-The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
+The interactive passphrase import method will prompt once for a shared password and use it for every keystore found in the `validator_keys` folder.
 
 The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency.
+
+The per-keystore plaintext passphrase file import method expects one file per validator in `./passwords`, named `0x<validator-public-key-hex>.txt`.
 :::
 
-Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the [`validator list`](./validator-cli.md#validator-list) command.
+Once imported with any of these methods, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the [`validator list`](./validator-cli.md#validator-list) command.
 
 ---
 
 #### Option 2: Import Keys When Starting the Validator
 
-To import keys when you start the validator specify the [`--importKeystores`](./validator-cli.md#--importkeystores) and [`--importKeystoresPassword`](./validator-cli.md#--importkeystorespassword) flags with the [`validator`](./validator-cli.md#base-validator-command) command:
+To import keys when you start the validator, specify the [`--importKeystores`](./validator-cli.md#--importkeystores) flag on the [`validator`](./validator-cli.md#base-validator-command) command. To avoid the interactive prompt, also pass either [`--importKeystoresPassword`](./validator-cli.md#--importkeystorespassword) for a shared password file or [`--importKeystoresPasswords`](./validator-cli.md#--importkeystorespasswords) for per-keystore password files:
 
 ```bash
 ./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
+```
+
+```bash
+./lodestar validator --importKeystores ./validator_keys --importKeystoresPasswords ./passwords
 ```
 
 :::warning
