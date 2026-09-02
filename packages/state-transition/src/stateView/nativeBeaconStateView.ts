@@ -13,6 +13,8 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -647,6 +649,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   stateTransition(
     signedBlockBytes: Uint8Array,
+    _signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     isBlinded: boolean,
     options: StateTransitionOpts,
     _modules: StateTransitionModules

@@ -32,6 +32,8 @@ import {
   Gwei,
   Root,
   RootHex,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
   Slot,
   ValidatorIndex,
   altair,
@@ -177,6 +179,7 @@ export interface IBeaconStateView {
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
   stateTransition(
     signedBlockBytes: Uint8Array,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     isBlinded: boolean,
     options: StateTransitionOpts,
     modules: StateTransitionModules
@@ -321,13 +324,10 @@ export type IBeaconStateViewLatestFork = Omit<
  *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
  * - Methods that produce another view (`stateTransition`, `processSlots`,
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
- *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
- *   via `Parameters<...>` to avoid duplicating signatures.
+ *   so callers can re-wrap without an `as unknown` cast.
+ * - `stateTransition` accepts the native block inputs and omits JS-only modules.
  * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ
  *   between the TypeScript and Zig implementations.
- *
- * The TS-side `BeaconStateView` also structurally satisfies this contract since
- * `BitArray` exposes `uint8Array` and `bitLen`.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
