@@ -95,8 +95,8 @@ export function stateTransition(
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
-  const blockSlot = signedBlock.message.slot;
   const block = signedBlock.message;
+  const blockSlot = block.slot;
 
   // .clone() before mutating state in state transition
   let postState = state.clone(options.dontTransferCache);
