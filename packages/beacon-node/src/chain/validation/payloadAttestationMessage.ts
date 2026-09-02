@@ -81,13 +81,10 @@ async function validatePayloadAttestationMessage(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // Use the referenced block's branch state for the PTC committee check.
-  // block.slot === data.slot is enforced above, so the block's post-state (cached by state root
-  // at import) is exactly the block state
+  // block.slot === data.slot is enforced above, so use the block's post-state directly to avoid
+  // getting through regen queue
   const state = chain.regen.getStateSync(block.stateRoot);
   if (state == null) {
-    // Block state not in cache — same "cannot validate now" case the regen path handled by
-    // rejecting. Skip the expensive replay-regen a fallback would trigger and just ignore.
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
