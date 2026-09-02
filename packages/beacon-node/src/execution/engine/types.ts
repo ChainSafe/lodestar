@@ -100,6 +100,7 @@ export type EngineApiRpcParamTypes = {
    * Object - Instance of ClientVersion
    */
   engine_getClientVersionV1: [ClientVersionRpc];
+  engine_exchangeCapabilities: [string[]];
 
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
@@ -152,6 +153,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
+  engine_exchangeCapabilities: string[];
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
