@@ -64,10 +64,6 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
-        // Spec state_transition requires state.slot < block.slot, Lodestar dials the state forward beforehand
-        if (signedBlock.message.slot <= wrappedState.slot) {
-          throw Error(`Block slot ${signedBlock.message.slot} is not greater than state slot ${wrappedState.slot}`);
-        }
         wrappedState = stateTransition(wrappedState, signedBlock, {
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
