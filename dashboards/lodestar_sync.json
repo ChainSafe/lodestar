@@ -329,7 +329,32 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "subscribed"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 5,
@@ -356,10 +381,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_sync_switch_gossip_subscriptions[$rate_interval])",
           "interval": "",
           "legendFormat": "{{action}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -518,10 +545,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_sync_chains_events_total[$rate_interval])",
           "interval": "",
-          "legendFormat": "{{event}}",
+          "legendFormat": "{{syncType}}_{{event}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -772,7 +801,32 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "IncompleteBlockInput requests"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -921,7 +975,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"1.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s",
           "range": true,
@@ -933,7 +987,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"2.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s",
           "range": true,
@@ -945,7 +999,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"4.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=4s",
           "range": true,
@@ -957,7 +1011,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"6.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=6s",
           "range": true,
@@ -969,7 +1023,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"12\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"12.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=12s",
           "range": true,
@@ -1253,6 +1307,30 @@
                 "value": "right"
               }
             ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "success_resolved"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
           }
         ]
       },
@@ -1430,7 +1508,32 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "success_missing_parent"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
