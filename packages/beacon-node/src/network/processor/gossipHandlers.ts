@@ -1268,16 +1268,27 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
       metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
+      let isNextSlotProposer = true;
       try {
-        const insertOutcome = chain.payloadAttestationPool.add(
-          payloadAttestationMessage,
-          validationResult.attDataRootHex,
-          validationResult.validatorCommitteeIndices
-        );
-        metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+        const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
+        isNextSlotProposer = chain.beaconProposerCache.get(nextSlotProposer) !== undefined;
+      } catch (_e) {
+        // getBeaconProposer out of lookahead etc. — keep the permissive default
       }
+
+      if (isNextSlotProposer) {
+        try {
+          const insertOutcome = chain.payloadAttestationPool.add(
+            payloadAttestationMessage,
+            validationResult.attDataRootHex,
+            validationResult.validatorCommitteeIndices
+          );
+          metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+        } catch (e) {
+          logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+        }
+      }
+
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
         payloadAttestationMessage.data.slot,
