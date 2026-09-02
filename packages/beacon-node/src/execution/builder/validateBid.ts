@@ -56,6 +56,10 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Bid block hash ${toRootHex(bid.blockHash)} must not equal its parent block hash`);
+  }
+
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(
