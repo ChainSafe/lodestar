@@ -42,10 +42,15 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
               topics: req.query.topics,
               signal: controller.signal,
               onEvent: (event) => {
+                // Serialization is per event and must not tear down the stream. Throwing here is
+                // handled by the caller which logs it and keeps the subscription alive, the client
+                // only misses this single event instead of silently losing the whole stream.
+                const data = eventSerdes.toJson(event);
+
                 try {
-                  const data = eventSerdes.toJson(event);
                   res.raw.write(serializeSSEEvent({event: event.type, data}));
                 } catch (e) {
+                  // The connection itself is broken, there is no way to recover it
                   reject(e);
                 }
               },
@@ -58,10 +63,12 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
             req.socket.once("close", () => resolve());
             req.socket.once("end", () => resolve());
           });
-
-          // api.eventstream will never stop, so no need to ever call `res.raw.end();`
         } finally {
           controller.abort();
+          // Always end the response. If an error is thrown after the headers were sent, fastify can
+          // no longer write a status code and would leave the socket open, the client then waits
+          // forever on a stream that will never emit another event.
+          if (!res.raw.writableEnded && !res.raw.destroyed) res.raw.end();
         }
       },
     },

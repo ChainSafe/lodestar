@@ -13,6 +13,7 @@ import {Attestation, Epoch, IndexedAttestation, SignedBeaconBlock, ssz} from "@l
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
@@ -148,7 +149,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.regen.dropCache();
+      await chain.regen.dropCache();
     },
 
     async connectPeer({peerId, multiaddrs}) {
@@ -372,7 +373,8 @@ export function getLodestarApi({
           forkName: fork,
           sampledColumns: chain.custodyConfig.sampledColumns,
           custodyColumns: chain.custodyConfig.custodyColumns,
-          timeCreatedSec: seenTimestampSec,
+          seenTimestampSec,
+          source: PayloadEnvelopeInputSource.api,
         });
       }
 

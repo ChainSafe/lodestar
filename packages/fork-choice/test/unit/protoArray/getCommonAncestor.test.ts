@@ -42,6 +42,8 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedRoot: "-",
 
       timeliness: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -71,6 +73,8 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -103,7 +107,7 @@ describe("getCommonAncestor", () => {
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     attestationDeltas: deltas,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -115,7 +119,7 @@ describe("getCommonAncestor", () => {
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     attestationDeltas: deltasNew,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,

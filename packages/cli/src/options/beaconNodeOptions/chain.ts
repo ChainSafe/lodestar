@@ -355,7 +355,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
-    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    description:
+      "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",

@@ -1,3 +1,4 @@
+import {getCiphers} from "node:crypto";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
 import type {PrivateKey} from "@libp2p/interface";
@@ -9,11 +10,19 @@ import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
-import {defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
 import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
+
+const noiseCrypto = getCiphers().includes("chacha20-poly1305")
+  ? defaultCrypto
+  : {
+      ...defaultCrypto,
+      chaCha20Poly1305Encrypt: asCrypto.chaCha20Poly1305Encrypt,
+      chaCha20Poly1305Decrypt: asCrypto.chaCha20Poly1305Decrypt,
+    };
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -122,7 +131,7 @@ export async function createNodeJsLibp2p(
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncrypters: [noise({crypto: defaultCrypto})],
+    connectionEncrypters: [noise({crypto: noiseCrypto})],
     transports,
     streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,

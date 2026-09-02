@@ -6,8 +6,17 @@ import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
+import {
+  PayloadError,
+  PayloadErrorCode,
+  importExecutionPayload,
+} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
@@ -19,6 +28,10 @@ import {MockBlockInput} from "../../../utils/blockInput.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/importBlock.js");
+vi.mock("../../../../src/chain/blocks/importExecutionPayload.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../../../src/chain/blocks/importExecutionPayload.js")>();
+  return {...mod, importExecutionPayload: vi.fn()};
+});
 vi.mock("../../../../src/chain/blocks/utils/chainSegment.js");
 vi.mock("../../../../src/chain/blocks/verifyBlock.js");
 vi.mock("../../../../src/chain/blocks/verifyBlocksSanityChecks.js");
@@ -117,5 +130,111 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    {name: "imports a DA-verified payload inline after its block", envelopeBeforeDa: true},
+    {name: "does not import an envelope received after the DA verification snapshot", envelopeBeforeDa: false},
+  ])("$name", async ({envelopeBeforeDa}) => {
+    const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+    chain = getMockedBeaconChain({config: gloasConfig});
+    Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const blockRootHex = toRootHex(blockRoot);
+    const gloasBlockInput = BlockInputNoData.createFromBlock({
+      block,
+      blockRootHex,
+      forkName: ForkName.gloas,
+      daOutOfRange: false,
+      source: BlockInputSource.byRange,
+      seenTimestampSec: 0,
+    });
+    const payloadInput = PayloadEnvelopeInput.createFromBlock({
+      block,
+      blockRootHex,
+      forkName: ForkName.gloas,
+      sampledColumns: [0],
+      custodyColumns: [0],
+      daOutOfRange: false,
+      source: PayloadEnvelopeInputSource.byRange,
+      seenTimestampSec: 0,
+    });
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.beaconBlockRoot = blockRoot;
+    if (envelopeBeforeDa) {
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+    }
+
+    vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
+      relevantBlocks: [gloasBlockInput],
+      parentSlots: [slot - 1],
+      parentBlock: generateProtoBlock({slot: slot - 1}),
+    });
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      postStates: [{forkName: ForkName.gloas} as IBeaconStateView],
+      proposerBalanceDeltas: [0],
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.NotRequired],
+      payloadDAStatuses: new Map(envelopeBeforeDa ? [[slot, DataAvailabilityStatus.NotRequired]] : []),
+      indexedAttestationsByBlock: [[]],
+    });
+    vi.mocked(importBlock).mockImplementationOnce(async () => {
+      expect(payloadInput.hasPayloadEnvelope()).toBe(envelopeBeforeDa);
+      if (!envelopeBeforeDa) {
+        payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 2});
+      }
+    });
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    await processBlocks.call(chain, [gloasBlockInput], new Map([[slot, payloadInput]]), {});
+
+    expect(payloadInput.isComplete()).toBe(true);
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({blockInput: gloasBlockInput}), {});
+    if (envelopeBeforeDa) {
+      expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
+        validSignature: false,
+      });
+      expect(vi.mocked(importBlock).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(importExecutionPayload).mock.invocationCallOrder[0]
+      );
+    } else {
+      expect(importExecutionPayload).not.toHaveBeenCalled();
+    }
+  });
+
+  // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
+  // read the INVALID/ERROR code and decide peer attribution — getBlockOrPayloadError must pass it
+  // through, not flatten it into a generic BEACON_CHAIN_ERROR. (The origin is mocked here; what matters
+  // is that a PayloadError raised anywhere in the pipeline is re-thrown unwrapped.)
+  it("re-throws a PayloadError unwrapped, without flattening it into BEACON_CHAIN_ERROR", async () => {
+    const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
+    const payloadError = new PayloadError(payloadInput, {
+      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "bad payload",
+    });
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(payloadError);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(payloadError);
+  });
+
+  // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
+  // has to be selective.
+  it("wraps a non-Block/Payload error into BEACON_CHAIN_ERROR", async () => {
+    const internalError = new Error("regen boom");
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(internalError);
+
+    const err = await processBlocks.call(chain, [blockInput], null, {}).then(
+      () => null,
+      (e) => e
+    );
+    expect(err).toBeInstanceOf(BlockError);
+    expect((err as BlockError).type.code).toBe(BlockErrorCode.BEACON_CHAIN_ERROR);
   });
 });

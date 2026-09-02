@@ -100,7 +100,9 @@ export function getBeaconPoolApi({
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
-            if (network.shouldAggregate(subnet, slot)) {
+            try {
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.attestationPool.add(
                 committeeIndex,
                 attestation,
@@ -110,6 +112,10 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              // The pool is a local optimization, failing to insert must not stop us from publishing a
+              // validated attestation, which the route requires us to do. Same handling as the gossip path
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {
@@ -173,7 +179,21 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      const result = await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+
+      if (result.status === "deferred") {
+        const currentEpoch = chain.clock.currentEpoch;
+        const inserted = chain.deferredVoluntaryExitPool.insert(signedVoluntaryExit, result.validity, currentEpoch);
+        if (!inserted) {
+          throw new ApiError(400, "Deferred voluntary exit pool is full or already contains this validator");
+        }
+        logger.info("Voluntary exit deferred until transient conditions are met", {
+          validatorIndex: signedVoluntaryExit.message.validatorIndex,
+          reason: result.validity,
+        });
+        return;
+      }
+
       chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);

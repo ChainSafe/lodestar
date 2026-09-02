@@ -8,7 +8,7 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
-import {importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
@@ -143,16 +143,16 @@ export async function processBlocks(
         await importBlock.call(this, fullyVerifiedBlock, opts);
       }
 
-      const payloadInput = payloadEnvelopes?.get(slot);
-      if (payloadInput?.hasPayloadEnvelope()) {
+      // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
+      const payloadDA = payloadDAStatuses.get(slot);
+      if (payloadDA !== undefined) {
+        const payloadInput = payloadEnvelopes?.get(slot);
+        if (payloadInput === undefined) {
+          throw new Error(`Missing payload input for slot ${slot} after DA verification`);
+        }
         if (!payloadInput.isComplete()) {
           // we validated DA before reaching this
           throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
-        }
-        // we already awaited DA in verifyBlocksInEpoch for this segment
-        const payloadDA = payloadDAStatuses.get(slot);
-        if (payloadDA === undefined) {
-          throw new Error(`Missing payload DA status for slot ${slot}`);
         }
         await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
       }
@@ -164,13 +164,21 @@ export async function processBlocks(
       return; // Ignore
     }
 
-    // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0].getBlock());
+    // above functions should only throw BlockError, or PayloadError from the gloas payload import
+    const err = getBlockOrPayloadError(e, blocks[0].getBlock());
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
-    if (!(err instanceof BlockError)) {
-      this.logger.debug("Non BlockError received", {}, err);
+    if (!(err instanceof BlockError) && !(err instanceof PayloadError)) {
+      this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
+    } else if (err instanceof PayloadError) {
+      if (!opts.disableOnBlockError) {
+        this.logger.debug(
+          "Payload error",
+          {slot: err.payloadInput.slot, blockRoot: err.payloadInput.blockRootHex},
+          err
+        );
+      }
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
@@ -201,8 +209,12 @@ export async function processBlocks(
   }
 }
 
-function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
+function getBlockOrPayloadError(e: unknown, block: SignedBeaconBlock): BlockError | PayloadError {
   if (e instanceof BlockError) {
+    return e;
+  }
+
+  if (e instanceof PayloadError) {
     return e;
   }
 

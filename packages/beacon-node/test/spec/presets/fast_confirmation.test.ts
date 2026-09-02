@@ -1,6 +1,7 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -24,11 +25,9 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -50,6 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -114,8 +114,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -291,7 +290,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
@@ -441,7 +441,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
