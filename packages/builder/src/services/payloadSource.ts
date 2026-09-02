@@ -51,7 +51,7 @@ export type EnginePayloadResult<F extends ForkPostGloas = ForkPostGloas> = {
   executionRequests?: ExecutionRequests<F>;
 };
 
-/** Narrow Engine boundary whose transport owns serialization, retries, timeouts, and Builder-lifetime cancellation. */
+/** Narrow Engine boundary whose transport owns serialization, retries, and request execution. */
 export interface PayloadSourceEngine {
   notifyForkchoiceUpdate<F extends ForkPostGloas>(
     fork: F,
