@@ -121,16 +121,19 @@ export class BidLedger {
 
   recordReveal(slot: Slot, blockRoot: RootHex, blockHash: RootHex): void {
     const revealedPayload = this.revealedPayloadByBlockRoot.get(blockRoot);
-    if (revealedPayload !== undefined && revealedPayload.blockHash !== blockHash) {
-      throw new BidLedgerError(
-        {
-          code: BidLedgerErrorCode.REVEAL_CONFLICT,
-          blockRoot,
-          blockHash,
-          revealedBlockHash: revealedPayload.blockHash,
-        },
-        `Envelope already recorded blockRoot=${blockRoot} blockHash=${revealedPayload.blockHash}`
-      );
+    if (revealedPayload !== undefined) {
+      if (revealedPayload.blockHash !== blockHash) {
+        throw new BidLedgerError(
+          {
+            code: BidLedgerErrorCode.REVEAL_CONFLICT,
+            blockRoot,
+            blockHash,
+            revealedBlockHash: revealedPayload.blockHash,
+          },
+          `Envelope already recorded blockRoot=${blockRoot} blockHash=${revealedPayload.blockHash}`
+        );
+      }
+      return;
     }
 
     this.revealedPayloadByBlockRoot.set(blockRoot, {slot, blockHash});

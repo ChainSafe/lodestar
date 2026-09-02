@@ -159,6 +159,18 @@ describe("BidLedger", () => {
     expect(ledger.prune(1 + 3 * SLOTS_PER_EPOCH + 1)).toBe(0);
     expect(ledger.hasRevealed(blockRoot)).toBe(false);
   });
+
+  it("preserves the original reveal slot on an idempotent repeat", () => {
+    const ledger = new BidLedger();
+    const blockRoot = root(6);
+    const blockHash = root(4);
+    ledger.recordReveal(10, blockRoot, blockHash);
+    ledger.recordReveal(1, blockRoot, blockHash);
+
+    ledger.prune(1 + 3 * SLOTS_PER_EPOCH + 1);
+
+    expect(ledger.hasRevealed(blockRoot)).toBe(true);
+  });
 });
 
 function submittedBid(overrides: Partial<SubmittedBid> = {}): SubmittedBid {
