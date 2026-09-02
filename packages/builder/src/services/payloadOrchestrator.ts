@@ -18,6 +18,7 @@ export type PayloadOrchestratorOptions = {
 
 export enum PayloadOrchestratorErrorCode {
   INVALID_OPTION = "PAYLOAD_ORCHESTRATOR_ERROR_INVALID_OPTION",
+  INVALID_GET_PAYLOAD_AT = "PAYLOAD_ORCHESTRATOR_ERROR_INVALID_GET_PAYLOAD_AT",
   ACTIVE_JOB_LIMIT = "PAYLOAD_ORCHESTRATOR_ERROR_ACTIVE_JOB_LIMIT",
   PREPARE_DEADLINE_REACHED = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_DEADLINE_REACHED",
   PREPARE_TIMEOUT = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_TIMEOUT",
@@ -34,6 +35,11 @@ export type PayloadOrchestratorErrorType =
       code: PayloadOrchestratorErrorCode.ACTIVE_JOB_LIMIT;
       jobId: string;
       maxActiveJobs: number;
+    }
+  | {
+      code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT;
+      jobId: string;
+      getPayloadAt: number;
     }
   | {
       code: PayloadOrchestratorErrorCode.PREPARE_DEADLINE_REACHED;
@@ -75,6 +81,19 @@ export class PayloadOrchestrator {
     const existing = this.activeJobs.get(job.id);
     if (existing !== undefined) {
       return existing;
+    }
+
+    if (!Number.isSafeInteger(job.getPayloadAt)) {
+      return Promise.reject(
+        new PayloadOrchestratorError(
+          {
+            code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT,
+            jobId: job.id,
+            getPayloadAt: job.getPayloadAt,
+          },
+          `Invalid payload retrieval time jobId=${job.id} getPayloadAt=${job.getPayloadAt}`
+        )
+      );
     }
 
     if (this.activeJobs.size >= this.options.maxActiveJobs) {
@@ -177,7 +196,7 @@ export class PayloadOrchestrator {
   }
 
   private assertOption(option: keyof PayloadOrchestratorOptions, value: number): void {
-    if (!Number.isInteger(value) || value < 1) {
+    if (!Number.isSafeInteger(value) || value < 1) {
       throw new PayloadOrchestratorError(
         {code: PayloadOrchestratorErrorCode.INVALID_OPTION, option, value},
         `Invalid payload orchestrator option option=${option} value=${value}`

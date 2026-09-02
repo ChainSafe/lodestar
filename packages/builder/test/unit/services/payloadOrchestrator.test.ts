@@ -94,6 +94,11 @@ describe("PayloadOrchestrator", () => {
     ["maxActiveJobs", 0, {maxActiveJobs: 0, getPayloadTimeout: 50}],
     ["getPayloadTimeout", 0, {maxActiveJobs: 1, getPayloadTimeout: 0}],
     ["maxActiveJobs", 1.5, {maxActiveJobs: 1.5, getPayloadTimeout: 50}],
+    [
+      "getPayloadTimeout",
+      Number.MAX_SAFE_INTEGER + 1,
+      {maxActiveJobs: 1, getPayloadTimeout: Number.MAX_SAFE_INTEGER + 1},
+    ],
   ] as const)("rejects an invalid %s option", (option, value, options) => {
     expect(() => new PayloadOrchestrator(new StubPayloadSource(), options)).toThrowError(
       expect.objectContaining({
@@ -101,6 +106,22 @@ describe("PayloadOrchestrator", () => {
       })
     );
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects an invalid payload retrieval time %s",
+    async (getPayloadAt) => {
+      const source = new StubPayloadSource();
+      const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+
+      await expect(
+        orchestrator.run(buildJob("invalid-time", getPayloadAt), new AbortController().signal)
+      ).rejects.toMatchObject({
+        type: {code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT, jobId: "invalid-time", getPayloadAt},
+      });
+      expect(source.prepareCalls).toHaveLength(0);
+      expect(orchestrator.activeJobCount).toBe(0);
+    }
+  );
 
   it("prepares immediately and retrieves at the requested time", async () => {
     const source = new StubPayloadSource();
