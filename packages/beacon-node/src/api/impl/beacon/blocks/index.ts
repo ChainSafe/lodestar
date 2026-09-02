@@ -1064,7 +1064,11 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
+      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+      // TODO: once the builder is tested and can be trusted, skip this local validation
+      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+      validationTimer?.();
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);

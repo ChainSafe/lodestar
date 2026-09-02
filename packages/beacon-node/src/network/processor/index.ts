@@ -1,3 +1,4 @@
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -560,6 +561,7 @@ export class NetworkProcessor {
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
+    message.queueAddedMs = Date.now();
     const droppedCount = this.gossipQueues[topicType].add(message);
     if (droppedCount) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
@@ -746,12 +748,20 @@ export class NetworkProcessor {
       for (const msg of messageOrArray) {
         msg.startProcessUnixSec = nowSec;
         if (msg.queueAddedMs !== undefined) {
-          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+          this.metrics?.gossipValidationQueue.queueTime.observe(
+            {topic: msg.topic.type},
+            nowSec - msg.queueAddedMs / 1000
+          );
         }
       }
     } else {
-      // indexed queue is not used here
       messageOrArray.startProcessUnixSec = nowSec;
+      if (messageOrArray.queueAddedMs !== undefined) {
+        this.metrics?.gossipValidationQueue.queueTime.observe(
+          {topic: messageOrArray.topic.type},
+          nowSec - messageOrArray.queueAddedMs / 1000
+        );
+      }
     }
 
     const acceptanceArr = Array.isArray(messageOrArray)
@@ -764,11 +774,11 @@ export class NetworkProcessor {
         ];
 
     if (Array.isArray(messageOrArray)) {
-      for (const msg of messageOrArray) {
-        this.trackJobTime(msg, messageOrArray.length);
+      for (const [i, msg] of messageOrArray.entries()) {
+        this.trackJobTime(msg, messageOrArray.length, acceptanceArr[i]);
       }
     } else {
-      this.trackJobTime(messageOrArray, 1);
+      this.trackJobTime(messageOrArray, 1, acceptanceArr[0]);
     }
 
     // Use setTimeout to yield to the macro queue
@@ -796,17 +806,21 @@ export class NetworkProcessor {
     }
   }
 
-  private trackJobTime(message: PendingGossipsubMessage, numJob: number): void {
+  private trackJobTime(message: PendingGossipsubMessage, numJob: number, acceptance: TopicValidatorResult): void {
     if (message.startProcessUnixSec !== null) {
+      // record job wait time for all messages
       this.metrics?.gossipValidationQueue.jobWaitTime.observe(
         {topic: message.topic.type},
         message.startProcessUnixSec - message.seenTimestampSec
       );
-      // if it takes 64ms to process 64 jobs, the average job time is 1ms
-      this.metrics?.gossipValidationQueue.jobTime.observe(
-        {topic: message.topic.type},
-        (Date.now() / 1000 - message.startProcessUnixSec) / numJob
-      );
+      // but only record job time for ACCEPT messages
+      if (acceptance === TopicValidatorResult.Accept) {
+        // if it takes 64ms to process 64 jobs, the average job time is 1ms
+        this.metrics?.gossipValidationQueue.jobTime.observe(
+          {topic: message.topic.type},
+          (Date.now() / 1000 - message.startProcessUnixSec) / numJob
+        );
+      }
     }
   }
 

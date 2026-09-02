@@ -118,7 +118,7 @@
     "@fastify/swagger-ui": "^5.0.1",
     "@libp2p/bootstrap": "^12.0.30",
     "@libp2p/crypto": "^5.1.23",
-    "@libp2p/gossipsub": "^16.1.1",
+    "@libp2p/gossipsub": "^17.1.0",
     "@libp2p/identify": "^4.1.13",
     "@libp2p/interface": "^3.3.0",
     "@libp2p/mdns": "^12.0.30",

@@ -68,7 +68,15 @@ import {loadState} from "../util/loadState/loadState.js";
 import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
+import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
+import {
+  ComputeNewStateRootInput,
+  ComputeNewStateRootResult,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  IBeaconStateViewLatestFork,
+  isStatePostGloas,
+} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -820,6 +828,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   // State transition
+
+  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = new BeaconStateView(
+      stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
+    );
+    return getComputeNewStateRootResult(postState, modules);
+  }
 
   stateTransition(
     signedBlockBytes: Uint8Array,
