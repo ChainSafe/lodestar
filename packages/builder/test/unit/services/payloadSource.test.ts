@@ -36,6 +36,7 @@ describe("EnginePayloadSource", () => {
   void mismatchedRequest;
 
   const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
+  const signal = new AbortController().signal;
 
   let notifyForkchoiceUpdate: Mock<NotifyForkchoiceUpdate>;
   let getPayload: Mock<GetPayload>;
@@ -51,7 +52,7 @@ describe("EnginePayloadSource", () => {
   it("prepares a payload and returns a source-bound handle", async () => {
     notifyForkchoiceUpdate.mockResolvedValue(payloadId);
 
-    const result = await source.prepare(request);
+    const result = await source.prepare(request, signal);
 
     expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
@@ -59,7 +60,8 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       payloadAttributes,
-      custodyColumns
+      custodyColumns,
+      signal
     );
     expect(result).toEqual(handle);
   });
@@ -67,7 +69,7 @@ describe("EnginePayloadSource", () => {
   it("preserves a null custody set", async () => {
     notifyForkchoiceUpdate.mockResolvedValue(payloadId);
 
-    await source.prepare({...request, custodyColumns: null});
+    await source.prepare({...request, custodyColumns: null}, signal);
 
     expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
@@ -75,7 +77,8 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       payloadAttributes,
-      null
+      null,
+      signal
     );
   });
 
@@ -90,13 +93,16 @@ describe("EnginePayloadSource", () => {
       executionPayloadValue: 12_345_678_901_234_567_890n,
     });
 
-    const result = await source.prepare({
-      fork: ForkName.heze,
-      forkchoiceState,
-      payloadAttributes: hezePayloadAttributes,
-      custodyColumns,
-    });
-    const builtPayload = await source.getPayload(result);
+    const result = await source.prepare(
+      {
+        fork: ForkName.heze,
+        forkchoiceState,
+        payloadAttributes: hezePayloadAttributes,
+        custodyColumns,
+      },
+      signal
+    );
+    const builtPayload = await source.getPayload(result, signal);
 
     expect(result.fork).toBe(ForkName.heze);
     expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
@@ -105,9 +111,10 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       hezePayloadAttributes,
-      custodyColumns
+      custodyColumns,
+      signal
     );
-    expect(getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId);
+    expect(getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId, signal);
     expect(builtPayload.fork).toBe(ForkName.heze);
     expect(hezePayloadAttributes.inclusionListTransactions).toHaveLength(1);
   });
@@ -115,7 +122,7 @@ describe("EnginePayloadSource", () => {
   it("rejects a missing payload ID with a structured error", async () => {
     notifyForkchoiceUpdate.mockResolvedValue(null);
 
-    const error = await getPayloadSourceError(source.prepare(request));
+    const error = await getPayloadSourceError(source.prepare(request, signal));
 
     expect(error.type).toEqual({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId});
   });
@@ -128,16 +135,16 @@ describe("EnginePayloadSource", () => {
   ])("propagates %s errors from payload preparation", async (_name, error) => {
     notifyForkchoiceUpdate.mockRejectedValue(error);
 
-    await expect(source.prepare(request)).rejects.toBe(error);
+    await expect(source.prepare(request, signal)).rejects.toBe(error);
   });
 
   it("retrieves a complete payload without rebuilding exact-width values", async () => {
     const result = getEnginePayloadResult();
     getPayload.mockResolvedValue(result);
 
-    const builtPayload = await source.getPayload(handle);
+    const builtPayload = await source.getPayload(handle, signal);
 
-    expect(getPayload).toHaveBeenCalledWith(ForkName.gloas, payloadId);
+    expect(getPayload).toHaveBeenCalledWith(ForkName.gloas, payloadId, signal);
     expect(builtPayload.sourceId).toBe(sourceId);
     expect(builtPayload.fork).toBe(ForkName.gloas);
     expect(builtPayload.executionPayload).toBe(result.executionPayload);
@@ -147,7 +154,7 @@ describe("EnginePayloadSource", () => {
   });
 
   it("rejects a handle belonging to another source before calling the Engine API", async () => {
-    const error = await getPayloadSourceError(source.getPayload({...handle, sourceId: "engine-1"}));
+    const error = await getPayloadSourceError(source.getPayload({...handle, sourceId: "engine-1"}, signal));
 
     expect(error.type).toEqual({
       code: PayloadSourceErrorCode.SOURCE_MISMATCH,
@@ -160,7 +167,7 @@ describe("EnginePayloadSource", () => {
   it("rejects a response without a blobs bundle", async () => {
     getPayload.mockResolvedValue({...getEnginePayloadResult(), blobsBundle: undefined});
 
-    const error = await getPayloadSourceError(source.getPayload(handle));
+    const error = await getPayloadSourceError(source.getPayload(handle, signal));
 
     expect(error.type).toEqual({code: PayloadSourceErrorCode.MISSING_BLOBS_BUNDLE, sourceId, payloadId});
   });
@@ -168,7 +175,7 @@ describe("EnginePayloadSource", () => {
   it("rejects a response without execution requests", async () => {
     getPayload.mockResolvedValue({...getEnginePayloadResult(), executionRequests: undefined});
 
-    const error = await getPayloadSourceError(source.getPayload(handle));
+    const error = await getPayloadSourceError(source.getPayload(handle, signal));
 
     expect(error.type).toEqual({code: PayloadSourceErrorCode.MISSING_EXECUTION_REQUESTS, sourceId, payloadId});
   });
@@ -177,7 +184,7 @@ describe("EnginePayloadSource", () => {
     const error = new TimeoutError("engine_getPayloadV6");
     getPayload.mockRejectedValue(error);
 
-    await expect(source.getPayload(handle)).rejects.toBe(error);
+    await expect(source.getPayload(handle, signal)).rejects.toBe(error);
   });
 });
 
@@ -196,10 +203,11 @@ type NotifyForkchoiceUpdate = (
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   payloadAttributes: PayloadAttributes,
-  custodyColumns: ColumnIndex[] | null
+  custodyColumns: ColumnIndex[] | null,
+  signal: AbortSignal
 ) => Promise<PayloadId | null>;
 
-type GetPayload = (fork: ForkPostGloas, payloadId: PayloadId) => Promise<EnginePayloadResult>;
+type GetPayload = (fork: ForkPostGloas, payloadId: PayloadId, signal: AbortSignal) => Promise<EnginePayloadResult>;
 
 async function getPayloadSourceError(promise: Promise<unknown>): Promise<PayloadSourceError> {
   try {

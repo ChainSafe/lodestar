@@ -59,16 +59,21 @@ export interface PayloadSourceEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes: PayloadAttributes<F>,
-    custodyColumns: ColumnIndex[] | null
+    custodyColumns: ColumnIndex[] | null,
+    signal: AbortSignal
   ): Promise<PayloadId | null>;
-  getPayload<F extends ForkPostGloas>(fork: F, payloadId: PayloadId): Promise<EnginePayloadResult<F>>;
+  getPayload<F extends ForkPostGloas>(
+    fork: F,
+    payloadId: PayloadId,
+    signal: AbortSignal
+  ): Promise<EnginePayloadResult<F>>;
 }
 
 /** Source that prepares and retrieves complete execution payloads without owning build scheduling policy. */
 export interface PayloadSource {
   readonly id: string;
-  prepare<R extends BuildRequest>(request: R): Promise<BuildHandle<R["fork"]>>;
-  getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>): Promise<BuiltPayload<F>>;
+  prepare<R extends BuildRequest>(request: R, signal: AbortSignal): Promise<BuildHandle<R["fork"]>>;
+  getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>, signal: AbortSignal): Promise<BuiltPayload<F>>;
 }
 
 export enum PayloadSourceErrorCode {
@@ -100,7 +105,7 @@ export class EnginePayloadSource implements PayloadSource {
     private readonly engine: PayloadSourceEngine
   ) {}
 
-  async prepare<R extends BuildRequest>(request: R): Promise<BuildHandle<R["fork"]>> {
+  async prepare<R extends BuildRequest>(request: R, signal: AbortSignal): Promise<BuildHandle<R["fork"]>> {
     const {headBlockHash, safeBlockHash, finalizedBlockHash} = request.forkchoiceState;
     const payloadId = await this.engine.notifyForkchoiceUpdate(
       request.fork,
@@ -108,7 +113,8 @@ export class EnginePayloadSource implements PayloadSource {
       safeBlockHash,
       finalizedBlockHash,
       request.payloadAttributes,
-      request.custodyColumns
+      request.custodyColumns,
+      signal
     );
 
     if (payloadId === null) {
@@ -121,7 +127,7 @@ export class EnginePayloadSource implements PayloadSource {
     return {sourceId: this.id, fork: request.fork, payloadId};
   }
 
-  async getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>): Promise<BuiltPayload<F>> {
+  async getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>, signal: AbortSignal): Promise<BuiltPayload<F>> {
     if (handle.sourceId !== this.id) {
       throw new PayloadSourceError(
         {
@@ -135,7 +141,8 @@ export class EnginePayloadSource implements PayloadSource {
 
     const {executionPayload, executionPayloadValue, blobsBundle, executionRequests} = await this.engine.getPayload(
       handle.fork,
-      handle.payloadId
+      handle.payloadId,
+      signal
     );
 
     if (blobsBundle === undefined) {
