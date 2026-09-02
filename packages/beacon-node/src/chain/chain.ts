@@ -1161,7 +1161,7 @@ export class BeaconChain implements IBeaconChain {
           message: block as BeaconBlock,
           signature: EMPTY_SIGNATURE,
         } as SignedBeaconBlock);
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, serializedBlock, isBlinded);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block, serializedBlock);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
