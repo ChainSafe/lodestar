@@ -87,9 +87,19 @@ describe("NativeBeaconStateView", () => {
     expect(view.getBalance(2)).toBe(32_000_000_002);
   });
 
-  it("forwards serialized block bytes and blinded flag to native stateTransition", () => {
+  it.each([
+    {
+      blockType: "full",
+      block: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      isBlinded: false,
+    },
+    {
+      blockType: "blinded",
+      block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
+      isBlinded: true,
+    },
+  ])("derives the blinded flag for a $blockType block", ({block, isBlinded}) => {
     const blockBytes = new Uint8Array([1, 2, 3]);
-    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     const options: StateTransitionOpts = {
       verifyStateRoot: false,
       executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -101,9 +111,9 @@ describe("NativeBeaconStateView", () => {
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding);
-    const postState = view.stateTransition(blockBytes, signedBlock, true, options, {});
+    const postState = view.stateTransition(blockBytes, block, options, {});
 
-    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, true, options);
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
     expect(postState).toBeInstanceOf(NativeBeaconStateView);
     expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
   });

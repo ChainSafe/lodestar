@@ -841,7 +841,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   stateTransition(
     _signedBlockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
-    _isBlinded: boolean,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView {

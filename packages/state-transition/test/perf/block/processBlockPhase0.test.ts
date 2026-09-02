@@ -111,7 +111,6 @@ describe("phase0 processBlock", () => {
         const postState = new BeaconStateView(state).stateTransition(
           state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
           block,
-          false,
           {
             executionPayloadStatus: ExecutionPayloadStatus.valid,
             dataAvailabilityStatus: DataAvailabilityStatus.Available,

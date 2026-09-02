@@ -296,7 +296,6 @@ function computePostState(
   return parentState.stateTransition(
     sszTypesFor(fork).SignedBeaconBlock.serialize(signedBlock),
     signedBlock,
-    false,
     {
       verifyStateRoot: true,
       verifyProposer: true,

@@ -18,7 +18,7 @@ describe("BeaconStateView", () => {
     stateTransitionMock.mockReset();
   });
 
-  it("uses the parsed block and ignores the serialized bytes and blinded flag", () => {
+  it("uses the parsed block and ignores the serialized bytes", () => {
     const preState = {config: {}} as unknown as CachedBeaconStateAllForks;
     const postState = {config: {}} as unknown as CachedBeaconStateAllForks;
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -32,7 +32,6 @@ describe("BeaconStateView", () => {
     const result = new BeaconStateView(preState).stateTransition(
       new Uint8Array([1, 2, 3]),
       signedBlock,
-      true,
       options,
       modules
     );

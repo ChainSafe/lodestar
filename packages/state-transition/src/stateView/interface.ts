@@ -184,7 +184,6 @@ export interface IBeaconStateView {
   stateTransition(
     signedBlockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
-    isBlinded: boolean,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;

@@ -658,12 +658,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   stateTransition(
     signedBlockBytes: Uint8Array,
-    _signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
-    isBlinded: boolean,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.stateTransition(signedBlockBytes, isBlinded, options));
+    return new NativeBeaconStateView(
+      this.binding.stateTransition(signedBlockBytes, isBlindedBeaconBlock(signedBlock.message), options)
+    );
   }
 
   processSlots(

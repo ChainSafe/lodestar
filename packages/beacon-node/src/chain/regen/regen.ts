@@ -240,7 +240,6 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           this.modules.serializedCache.get(block) ??
             this.modules.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
           block,
-          false,
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,

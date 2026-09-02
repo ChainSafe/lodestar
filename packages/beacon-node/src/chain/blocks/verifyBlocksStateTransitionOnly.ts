@@ -56,7 +56,6 @@ export async function verifyBlocksStateTransitionOnly(
         // syncing/download.
         serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block),
         block,
-        false,
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
