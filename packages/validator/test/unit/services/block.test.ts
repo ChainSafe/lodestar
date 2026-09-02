@@ -1,5 +1,5 @@
 import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
@@ -39,6 +39,8 @@ describe("BlockDutiesService", () => {
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
     vi.spyOn(validatorStore, "getBuilderSelectionParams");
+    vi.spyOn(validatorStore, "getBuilderMinBid");
+    vi.spyOn(validatorStore, "getResolvedBuilderEntries");
     vi.spyOn(validatorStore, "getGraffiti");
     vi.spyOn(validatorStore, "getFeeRecipient");
     vi.spyOn(validatorStore, "strictFeeRecipientCheck");
@@ -188,5 +190,86 @@ describe("BlockDutiesService", () => {
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
       {signedBlindedBlock: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
+  });
+
+  it("Should pass strict fee recipient check when producing a Gloas block", async () => {
+    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+    const slot = 0;
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [{slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      dutiesService,
+      null,
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        blindedLocal: false,
+        payloadLocal: false,
+      }
+    );
+
+    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_, block) => ({
+      message: block,
+      signature: signedBlock.signature,
+    }));
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.ExecutionAlways,
+      boostFactor: BigInt(0),
+    });
+    validatorStore.getBuilderMinBid.mockReturnValue(0n);
+    validatorStore.getResolvedBuilderEntries.mockReturnValue([]);
+    validatorStore.getGraffiti.mockReturnValue("aaaa");
+    validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
+    validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+
+    api.validator.produceBlockV4.mockResolvedValue(
+      mockApiResponse({
+        data: signedBlock.message,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(1),
+          executionPayloadIncluded: false,
+        },
+      })
+    );
+    api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+
+    const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+    notifyBlockProductionFn(1, [pubkeys[0]]);
+    await sleep(20, controller.signal);
+
+    expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
+      slot: 1,
+      randaoReveal: signedBlock.message.body.randaoReveal,
+      graffiti: "aaaa",
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
+    });
   });
 });

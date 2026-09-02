@@ -3,6 +3,7 @@ APIs
 Andreas
 Antonopoulos
 AssemblyScript
+Auth
 BLS
 BeaconNode
 Besu
@@ -51,6 +52,7 @@ Golang
 Gossipsub
 Grafana
 Grandine
+Gwei
 HTTPS
 HackMD
 Hashicorp
@@ -114,10 +116,12 @@ VM
 Vitalik
 Vitest
 Wagyu
+Zig
 addons
 api
 args
 async
+auth
 backfill
 beaconcha
 blockRoot
@@ -214,6 +218,7 @@ params
 performant
 pid
 plaintext
+plataberget
 pnpm
 pre
 premined
@@ -244,8 +249,10 @@ tcp
 testnet
 testnets
 todo
+trustless
 typesafe
 udp
+uint
 unpkg
 util
 utils

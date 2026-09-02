@@ -6,13 +6,24 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockInputSource,
+} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
+import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
+import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
+import {config as forkConfig, generateBlockWithColumnSidecars} from "../../../../../utils/blocksAndData.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
+vi.mock("../../../../../../src/chain/validation/block.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../../../../src/chain/validation/block.js")>();
+  return {...original, validateGossipBlock: vi.fn()};
+});
 
 describe("api - beacon - publishBlockV2", () => {
   const config = createBeaconConfig(configDef, Buffer.alloc(32, 1));
@@ -26,6 +37,140 @@ describe("api - beacon - publishBlockV2", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishBeaconBlock = vi.fn();
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
+  });
+
+  describe("broadcast_validation=gossip", () => {
+    it("returns successfully for an already-known block", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      vi.mocked(validateGossipBlock).mockRejectedValueOnce(
+        new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot})
+      );
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(modules.chain.persistInvalidSszValue).not.toHaveBeenCalled();
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
+
+    it("returns successfully without publishing a block that is already imported", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+        BlockInputPreData.createFromBlock({
+          forkName: ForkName.phase0,
+          block: signedBlock,
+          blockRootHex: blockRoot,
+          source: BlockInputSource.api,
+          seenTimestampSec: 0,
+          daOutOfRange: false,
+        })
+      );
+      modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(modules.chain.forkChoice.hasBlockHex).toHaveBeenCalledWith(blockRoot);
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
+
+    it("returns successfully for a locally produced block imported while publishing", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      // Locally produced blocks skip gossip validation, a duplicate publish can still race the import
+      modules.chain.blockProductionCache.set(blockRoot, {} as never);
+      modules.chain.processBlock = vi
+        .fn()
+        .mockRejectedValue(new BlockError(signedBlock, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot}));
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(validateGossipBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).toHaveBeenCalledOnce();
+    });
+
+    it("rejects a repeat proposal", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      const error = new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex: signedBlock.message.proposerIndex,
+        root: blockRoot,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      vi.mocked(validateGossipBlock).mockRejectedValueOnce(error);
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toBe(error);
+
+      expect(modules.chain.persistInvalidSszValue).toHaveBeenCalledWith(
+        modules.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock,
+        signedBlock,
+        "api_reject_gossip_failure"
+      );
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
@@ -129,10 +274,49 @@ describe("api - beacon - publishBlockV2", () => {
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
-        const verifyOpts = vi.mocked(verifyBlocksInEpoch).mock.calls[0][3];
-        expect(verifyOpts.skipVerifyBlockSignatures).not.toBe(true);
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
+  });
+
+  it("tracks data column publication results", async () => {
+    const {block, blobs, columnSidecars, rootHex} = generateBlockWithColumnSidecars({
+      forkName: ForkName.fulu,
+      returnBlobs: true,
+    });
+    if (blobs === undefined) {
+      throw Error("Missing generated blobs");
+    }
+    const kzgProofs = blobs.flatMap((_, rowIndex) =>
+      columnSidecars.map((columnSidecar) => columnSidecar.kzgProofs[rowIndex])
+    );
+    const blockInput = BlockInputColumns.createFromBlock({
+      forkName: ForkName.fulu,
+      block,
+      blockRootHex: rootHex,
+      source: BlockInputSource.api,
+      seenTimestampSec: 0,
+      daOutOfRange: false,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+
+    modules = getApiTestModules({config: forkConfig});
+    Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+    Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+    modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.network.publishBeaconBlock = vi.fn();
+    modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
+
+    const api = getBeaconBlockApi(modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock: block, blobs, kzgProofs},
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(modules.network.publishDataColumnSidecar).toHaveBeenCalledTimes(columnSidecars.length);
   });
 });

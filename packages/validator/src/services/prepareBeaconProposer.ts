@@ -103,7 +103,7 @@ export function pollBuilderValidatorRegistration(
           const registrations = await Promise.all(
             pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
               const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-              const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+              const gasLimit = validatorStore.getGasLimit(pubkeyHex, slot, logger);
               return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
             })
           );

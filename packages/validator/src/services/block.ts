@@ -190,12 +190,48 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+    const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
     const {broadcastValidation, payloadLocal} = this.opts;
     const {selection: builderSelection, boostFactor: builderBoostFactor} =
       this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
+    const builderMinBid = this.validatorStore.getBuilderMinBid(pubkeyHex);
+    const builderEntries = this.validatorStore.getResolvedBuilderEntries(pubkeyHex, builderBoostFactor);
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal, builderSelection});
+    this.logger.debug("Producing block", {
+      ...debugLogCtx,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      payloadLocal,
+      builderSelection,
+      builderBoostFactor,
+      builderMinBid,
+      builderUrls: builderEntries.map((entry) => entry.url).join(","),
+    });
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
+    // One entry per resolved builder, authenticated by a request auth signed over the entry's
+    // auth data. The auth is usually pre-signed when preferences are submitted ahead of the
+    // proposal. An entry whose auth cannot be signed is skipped so it never fails the proposal.
+    const builders: routes.validator.BuilderEntry[] = (
+      await Promise.all(
+        builderEntries.map(async (entry) => {
+          try {
+            const auth = await this.validatorStore.getBuilderRequestAuth(pubkey, entry.authData, slot, slot);
+            return {
+              url: new TextEncoder().encode(entry.url),
+              auth,
+              builderPubkeys: entry.builderPubkeys,
+              maxExecutionPayment: entry.maxExecutionPayment,
+              minBid: entry.minBid,
+              builderBoostFactor: entry.builderBoostFactor,
+            };
+          } catch (e) {
+            this.logger.warn("Failed to sign builder request auth", {...logCtx, builderUrl: entry.url}, e as Error);
+            return null;
+          }
+        })
+      )
+    ).filter((entry) => entry !== null);
 
     // Step 1: Produce beacon block with execution payload bid
     const blockRes = await this.api.validator
@@ -204,9 +240,13 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        strictFeeRecipientCheck,
         includePayload: !payloadLocal,
-        builderSelection,
-        builderBoostFactor,
+        builderConfig: {
+          minBid: builderMinBid,
+          builderBoostFactor,
+          builders,
+        },
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
@@ -242,6 +282,8 @@ export class BlockProposingService {
         .publishBlockV2({
           signedBlockContents: {signedBlock},
           broadcastValidation,
+          // Echo the winning builder url so any beacon node can forward the block to the builder
+          builderUrl: blockMeta.builderUrl,
         })
         .catch((e: Error) => {
           this.metrics?.blockProposingErrors.inc({error: "publish"});

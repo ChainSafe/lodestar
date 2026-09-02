@@ -89,13 +89,20 @@ export async function validateGossipBlock(
 
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
-  const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
-      await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
-      chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
+      if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
+        await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
+        chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+      }
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
     }
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
@@ -301,10 +308,17 @@ export async function validateGossipBlock(
 
   // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
-  chain.seenBlockProposers.add(blockSlot, proposerIndex);
+  chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
 
   return {skippedSlots};
 }

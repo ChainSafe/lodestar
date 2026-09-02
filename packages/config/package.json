@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.46.0",
+  "version": "1.47.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -65,8 +65,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.2.4",
-    "@chainsafe/ssz": "^1.6.2",
+    "@chainsafe/as-sha256": "^1.2.5",
+    "@chainsafe/ssz": "^1.6.3",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^"

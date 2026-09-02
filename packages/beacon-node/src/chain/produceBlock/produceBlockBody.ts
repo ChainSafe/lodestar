@@ -100,6 +100,8 @@ export type BlockAttributes = {
   slot: Slot;
   parentBlock: ProtoBlock;
   feeRecipient?: string;
+  /** Verify that a locally produced execution payload uses `feeRecipient`. */
+  strictFeeRecipientCheck?: boolean;
   /** When provided, build block with this builder bid instead of a self-build bid */
   builderBid?: gloas.SignedExecutionPayloadBid;
 };
@@ -201,6 +203,7 @@ export async function produceBlockBody<T extends BlockType>(
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
+    strictFeeRecipientCheck,
     parentBlock,
     proposerIndex,
     proposerPubKey,
@@ -238,7 +241,7 @@ export async function produceBlockBody<T extends BlockType>(
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.gloas.ExecutionRequests.defaultValue();
-    executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
+    executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
@@ -271,7 +274,7 @@ export async function produceBlockBody<T extends BlockType>(
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
     // ProposerPreferencesPool. Consider using this unified cache instead
     // see https://github.com/ChainSafe/lodestar/issues/9379
@@ -333,6 +336,16 @@ export async function produceBlockBody<T extends BlockType>(
     const {executionPayload, blobsBundle, executionRequests} = payloadRes;
     executionPayloadValue = payloadRes.executionPayloadValue;
     shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
+
+    if (
+      strictFeeRecipientCheck &&
+      requestedFeeRecipient &&
+      !byteArrayEquals(executionPayload.feeRecipient, fromHex(requestedFeeRecipient))
+    ) {
+      throw Error(
+        `Invalid feeRecipient set in engine payload expected=${requestedFeeRecipient} actual=${toHex(executionPayload.feeRecipient)}`
+      );
+    }
 
     if (blobsBundle === undefined) {
       throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
@@ -417,7 +430,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
     const feeRecipientType = requestedFeeRecipient
       ? "requested"

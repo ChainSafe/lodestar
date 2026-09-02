@@ -85,11 +85,23 @@ export const testData: GenericServerTestCases<Endpoints> = {
       randaoReveal,
       graffiti,
       skipRandaoVerification: true,
-      builderBoostFactor: 0n,
       feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
       includePayload: true,
+      builderConfig: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: new TextEncoder().encode("https://builder.example.com"),
+            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
     },
     res: {
       data: ssz.gloas.BlockContents.defaultValue(),
@@ -162,6 +174,19 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitProposerPreferences: {
     args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
+    res: undefined,
+  },
+  submitBuilderPreferences: {
+    args: {
+      builderPreferences: [
+        {
+          proposerPubkey: new Uint8Array(48).fill(1),
+          url: new TextEncoder().encode("https://builder.example.com"),
+          auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+          maxExecutionPayment: 0n,
+        },
+      ],
+    },
     res: undefined,
   },
 };

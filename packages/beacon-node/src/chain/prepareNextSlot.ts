@@ -151,25 +151,40 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = await getProposerIndex();
         feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
 
-        if (feeRecipient) {
-          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
+        // Predict the proposer head of the next slot when either:
+        //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
+        //  - this is an epoch transition: post-Fulu the next proposer may reorg a weak
+        //    last-block-of-epoch and build slot 0 on the strong parent (epoch-boundary reorg),
+        //    so we should dial the strong parent through the boundary instead of the weak head.
+        if (feeRecipient || isEpochTransition) {
           const proposerHead = this.chain.predictProposerHead(clockSlot);
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
-          // If we predict we can reorg, we build on the proposer head (parent) block instead
+          // If we predict a reorg, we build the epoch transition on the proposer head (parent) instead
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on parent block instead", {
+            // feeRecipient set => WE propose the next slot and may reorg it out ourselves;
+            // otherwise it's a predicted reorg by another proposer (epoch-boundary reorg).
+            const logMessage = feeRecipient
+              ? "Weak head detected. We may build on parent block instead"
+              : "Weak head detected. Another proposer may build on parent block instead";
+            this.logger.verbose(logMessage, {
               proposerHeadSlot,
               proposerHeadRoot,
               headSlot,
               headRoot,
+              isEpochTransition,
             });
             this.metrics?.weakHeadDetected.inc();
+            if (isEpochTransition) {
+              this.metrics?.precomputeNextEpochTransition.predictedReorg.inc();
+            }
             updatedHead = proposerHead;
           }
+        }
 
+        if (feeRecipient) {
           if (isForkPostGloas(fork)) {
-            this.chain.builderCircuitBreaker.update(clockSlot);
+            this.chain.builderCircuitBreaker.update(clockSlot, updatedHead);
           } else {
             // Update the builder status, if enabled shoot an api call to check status
             this.chain.updateBuilderStatus(clockSlot);
@@ -182,6 +197,7 @@ export class PrepareNextSlotScheduler {
         }
 
         // post-fulu we'll always reach here because preparedState is undefined
+        // we may run epoch transition not with headBlock if it's weak
         if (preparedState === undefined || updatedHead !== headBlock) {
           preparedState = await this.chain.regen.getBlockSlotState(
             updatedHead,
@@ -224,7 +240,7 @@ export class PrepareNextSlotScheduler {
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
-          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice, this.logger);
+          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
@@ -280,7 +296,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(updatedHead.blockRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
@@ -289,6 +305,8 @@ export class PrepareNextSlotScheduler {
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
+          headRoot,
+          updatedHeadRoot: updatedHead.blockRoot,
           prepareSlot,
           previousHits,
           durationMs: Date.now() - start,
