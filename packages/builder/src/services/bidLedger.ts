@@ -23,6 +23,7 @@ type RevealedPayload = {
 
 type MutableBidLedgerRecord = SubmittedBid & {
   wonBlockRoots: Set<RootHex>;
+  paymentSettled: boolean;
 };
 
 export enum BidLedgerErrorCode {
@@ -56,8 +57,8 @@ export type BidLedgerErrorType =
 
 export class BidLedgerError extends LodestarError<BidLedgerErrorType> {}
 
-const UNSETTLED_EPOCHS = 2;
-const KEEP_SLOTS = (UNSETTLED_EPOCHS + 1) * SLOTS_PER_EPOCH;
+const RECORD_RETENTION_EPOCHS = 3;
+const KEEP_SLOTS = RECORD_RETENTION_EPOCHS * SLOTS_PER_EPOCH;
 
 /** Tracks one-shot bids and reveal obligations without owning signing, publication, or persistence. */
 export class BidLedger {
@@ -95,7 +96,7 @@ export class BidLedger {
       );
     }
 
-    const record = {...bid, wonBlockRoots: new Set<RootHex>()};
+    const record = {...bid, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
     bidsForSlot.set(key, record);
     return toRecord(record);
   }
@@ -107,6 +108,17 @@ export class BidLedger {
     }
 
     record.wonBlockRoots.add(blockRoot);
+    return toRecord(record);
+  }
+
+  /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
+  recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
+    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
+    if (record === null || record.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
+      return null;
+    }
+
+    record.paymentSettled = true;
     return toRecord(record);
   }
 
@@ -141,13 +153,9 @@ export class BidLedger {
 
   getUnsettledValueGwei(currentEpoch: Epoch): number {
     let total = 0;
-    for (const [slot, bidsForSlot] of this.bidsBySlot) {
-      if (Math.floor(slot / SLOTS_PER_EPOCH) < currentEpoch - UNSETTLED_EPOCHS) {
-        continue;
-      }
-
+    for (const bidsForSlot of this.bidsBySlot.values()) {
       for (const record of bidsForSlot.values()) {
-        if (record.wonBlockRoots.size === 0) {
+        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
           continue;
         }
 
@@ -174,8 +182,15 @@ export class BidLedger {
         continue;
       }
 
-      removed += bidsForSlot.size;
-      this.bidsBySlot.delete(slot);
+      for (const [key, record] of bidsForSlot) {
+        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+          bidsForSlot.delete(key);
+          removed++;
+        }
+      }
+      if (bidsForSlot.size === 0) {
+        this.bidsBySlot.delete(slot);
+      }
     }
 
     for (const [blockRoot, revealedPayload] of this.revealedPayloadByBlockRoot) {
@@ -196,5 +211,12 @@ function tupleKey(parentBlockHash: RootHex, parentBlockRoot: RootHex): string {
 }
 
 function toRecord(record: MutableBidLedgerRecord): BidLedgerRecord {
-  return {...record, wonBlockRoots: Array.from(record.wonBlockRoots)};
+  return {
+    slot: record.slot,
+    parentBlockHash: record.parentBlockHash,
+    parentBlockRoot: record.parentBlockRoot,
+    blockHash: record.blockHash,
+    valueGwei: record.valueGwei,
+    wonBlockRoots: Array.from(record.wonBlockRoots),
+  };
 }
