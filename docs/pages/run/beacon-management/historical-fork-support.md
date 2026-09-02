@@ -10,4 +10,4 @@ Lodestar supports different historical fork ranges depending on the beacon node 
 | ------------------ | ------------------- | -------------- | ---------------- |
 | **Supported from** | Phase0              | Fulu           | Fulu             |
 
-Sync support includes both downloading and serving historical blocks. It does not imply support for following the head or producing blocks on those historical forks.
+Sync support includes both downloading and serving historical blocks. It does not imply support for following the head or producing blocks on those historical forks. These are operational support boundaries, not a list of fork-specific types and code paths retained for historical sync, replay, and tests.
