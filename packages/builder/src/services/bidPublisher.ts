@@ -1,7 +1,7 @@
 import type {ApiClient} from "@lodestar/api";
 import type {BuilderIndex, RootHex, gloas} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import type {BidLedger} from "./bidLedger.js";
+import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
 
 export type BidPublisherModules = {
@@ -9,7 +9,7 @@ export type BidPublisherModules = {
   signer: BuilderSigner;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
-  hasPayload: (blockHash: RootHex) => boolean;
+  hasPayload: (identity: BidIdentity) => boolean;
 };
 
 export enum BidPublisherErrorCode {
@@ -25,6 +25,9 @@ export type BidPublisherErrorType =
     }
   | {
       code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED;
+      slot: BidIdentity["slot"];
+      parentBlockHash: RootHex;
+      parentBlockRoot: RootHex;
       blockHash: RootHex;
     };
 
@@ -49,22 +52,21 @@ export class BidPublisher {
       );
     }
 
-    const blockHash = toRootHex(bid.blockHash);
-    if (!hasPayload(blockHash)) {
+    const identity: BidIdentity = {
+      slot: bid.slot,
+      parentBlockHash: toRootHex(bid.parentBlockHash),
+      parentBlockRoot: toRootHex(bid.parentBlockRoot),
+      blockHash: toRootHex(bid.blockHash),
+    };
+    if (!hasPayload(identity)) {
       throw new BidPublisherError(
-        {code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED, blockHash},
-        `Bid payload is not retained blockHash=${blockHash}`
+        {code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED, ...identity},
+        `Bid payload is not retained slot=${identity.slot} parentBlockHash=${identity.parentBlockHash} parentBlockRoot=${identity.parentBlockRoot} blockHash=${identity.blockHash}`
       );
     }
 
     const signedExecutionPayloadBid = signer.signExecutionPayloadBid(bid);
-    ledger.recordBid({
-      slot: bid.slot,
-      parentBlockHash: toRootHex(bid.parentBlockHash),
-      parentBlockRoot: toRootHex(bid.parentBlockRoot),
-      blockHash,
-      valueGwei: bid.value,
-    });
+    ledger.recordBid({...identity, valueGwei: bid.value});
 
     const response = await api.beacon.publishExecutionPayloadBid({signedExecutionPayloadBid}, {signal});
     response.assertOk();

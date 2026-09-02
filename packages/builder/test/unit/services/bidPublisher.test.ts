@@ -4,9 +4,9 @@ import {HttpStatusCode} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
-import {RootHex, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BidLedger, BidLedgerErrorCode} from "../../../src/services/bidLedger.js";
+import {type BidIdentity, BidLedger, BidLedgerErrorCode} from "../../../src/services/bidLedger.js";
 import {BidPublisher, BidPublisherError, BidPublisherErrorCode} from "../../../src/services/bidPublisher.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
@@ -21,11 +21,13 @@ describe("BidPublisher", () => {
   it("signs, records, and submits a bid with retained payload material", async () => {
     const bid = createBid();
     const blockHash = toRootHex(bid.blockHash);
-    const {api, ledger, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
+    const hasPayload = vi.fn(() => true);
+    const {api, ledger, publisher} = createPublisher({hasPayload});
 
     const signedBid = await publisher.publish(bid, new AbortController().signal);
 
     expect(signedBid.message).toBe(bid);
+    expect(hasPayload).toHaveBeenCalledWith(bidIdentity(bid));
     expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledWith(
       {signedExecutionPayloadBid: signedBid},
       {signal: expect.any(AbortSignal)}
@@ -54,13 +56,13 @@ describe("BidPublisher", () => {
 
   it("rejects a bid whose reveal material is not retained", async () => {
     const bid = createBid();
-    const blockHash = toRootHex(bid.blockHash);
+    const identity = bidIdentity(bid);
     const {api, ledger, publisher} = createPublisher({hasPayload: vi.fn(() => false)});
 
     await expect(publisher.publish(bid, new AbortController().signal)).rejects.toThrowError(
       new BidPublisherError(
-        {code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED, blockHash},
-        `Bid payload is not retained blockHash=${blockHash}`
+        {code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED, ...identity},
+        `Bid payload is not retained slot=${identity.slot} parentBlockHash=${identity.parentBlockHash} parentBlockRoot=${identity.parentBlockRoot} blockHash=${identity.blockHash}`
       )
     );
     expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
@@ -102,7 +104,7 @@ describe("BidPublisher", () => {
   });
 });
 
-function createPublisher({hasPayload}: {hasPayload: (blockHash: RootHex) => boolean}) {
+function createPublisher({hasPayload}: {hasPayload: (identity: BidIdentity) => boolean}) {
   const api = getApiClientStub();
   Object.assign(api.beacon, {publishExecutionPayloadBid: vi.fn()});
   api.beacon.publishExecutionPayloadBid.mockResolvedValue(mockApiResponse({}));
