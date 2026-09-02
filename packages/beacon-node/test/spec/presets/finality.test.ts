@@ -18,13 +18,14 @@ import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = new BeaconStateView(createCachedBeaconStateTest(testcase.pre, getConfig(fork)));
+      const config = getConfig(fork);
+      let state = new BeaconStateView(createCachedBeaconStateTest(testcase.pre, config));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = state.stateTransition(
-          state.cachedState.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
           signedBlock,
           false,
           {

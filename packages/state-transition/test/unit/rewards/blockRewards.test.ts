@@ -66,7 +66,7 @@ describe("chain / rewards / blockRewards", () => {
       id: "Attester slashing only",
       opts: {
         proposerSlashingLen: 0,
-        attesterSlashingLen: 2,
+        attesterSlashingLen: 5,
         attestationLen: 0,
         depositsLen: 0,
         voluntaryExitLen: 0,

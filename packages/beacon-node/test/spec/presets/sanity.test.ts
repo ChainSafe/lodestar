@@ -60,15 +60,14 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre;
-      let wrappedState = new BeaconStateView(createCachedBeaconStateTest(stateTB, getConfig(fork)));
+      const config = getConfig(fork);
+      let wrappedState = new BeaconStateView(createCachedBeaconStateTest(stateTB, config));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
 
         wrappedState = wrappedState.stateTransition(
-          wrappedState.cachedState.config
-            .getForkTypes(signedBlock.message.slot)
-            .SignedBeaconBlock.serialize(signedBlock),
+          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
           signedBlock,
           false,
           {
