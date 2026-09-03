@@ -15,7 +15,7 @@ import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {toGraffitiBytes} from "../../../../../src/util/graffiti.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../../../utils/state.js";
+import {generateCachedElectraState, zeroProtoBlock} from "../../../../utils/state.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
 describe("api/validator - produceBlockV3", () => {
@@ -38,7 +38,7 @@ describe("api/validator - produceBlockV3", () => {
   beforeEach(() => {
     modules = getApiTestModules({config});
     api = getValidatorApi(defaultApiOptions, {...modules, config});
-    state = new BeaconStateView(generateCachedBellatrixState());
+    state = new BeaconStateView(generateCachedElectraState());
 
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
   });
@@ -325,9 +325,9 @@ describe("api/validator - produceBlockV3", () => {
   });
 
   it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
-    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const fullBlock = ssz.fulu.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
-    const slot = 1 * SLOTS_PER_EPOCH;
+    const slot = 2 * SLOTS_PER_EPOCH;
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
@@ -348,8 +348,10 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain["executionEngine"].payloadIdCache = new PayloadIdCache();
     modules.chain["executionEngine"].notifyForkchoiceUpdate.mockResolvedValue("0x");
     modules.chain["executionEngine"].getPayload.mockResolvedValue({
-      executionPayload: ssz.bellatrix.ExecutionPayload.defaultValue(),
+      executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
       executionPayloadValue,
+      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+      executionRequests: ssz.electra.ExecutionRequests.defaultValue(),
     });
 
     // Helper function to create a mock common block body promise
@@ -379,7 +381,7 @@ describe("api/validator - produceBlockV3", () => {
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
-      ForkName.bellatrix,
+      ForkName.fulu,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
@@ -387,6 +389,8 @@ describe("api/validator - produceBlockV3", () => {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
         prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: feeRecipient,
+        withdrawals: [],
+        parentBeaconBlockRoot: new Uint8Array(32),
       }
     );
 
@@ -404,7 +408,7 @@ describe("api/validator - produceBlockV3", () => {
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
-      ForkName.bellatrix,
+      ForkName.fulu,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
@@ -412,6 +416,8 @@ describe("api/validator - produceBlockV3", () => {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
         prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: "0x fee recipient address",
+        withdrawals: [],
+        parentBeaconBlockRoot: new Uint8Array(32),
       }
     );
   });
