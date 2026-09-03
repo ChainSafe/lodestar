@@ -745,8 +745,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const blockInput = chain.seenBlockInputCache.get(e.type.root);
           if (blockInput) {
             // We're returning IGNORE (thrown below), so this block is not forwarded to peers. Unlike the
-            // happy path there is no accept verdict to rush-forward, so we import synchronously here
-            // rather than deferring via callInNextEventLoop.
+            // happy path there is no rush to forward, so we don't need to wrap in callInNextEventLoop.
             chain.serializedCache.set(signedBlock, serializedData);
             // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
             // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
@@ -1342,7 +1341,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             });
             chain.logger[logLevel](
               "Error processing execution payload from gossip",
-              {slot, peer: peerIdStr, root: blockRootHex},
+              {slot, root: blockRootHex, peer: peerIdStr},
               e as Error
             );
           });
@@ -1431,8 +1430,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             "Error handling gossip execution payload bid",
             {
               slot: executionPayloadBid.message.slot,
-              proposerIndex,
               root: toRootHex(executionPayloadBid.message.parentBlockRoot),
+              proposerIndex,
             },
             e as Error
           );
