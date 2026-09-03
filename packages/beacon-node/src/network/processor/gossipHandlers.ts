@@ -1365,12 +1365,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
           metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
-          const insertOutcome = chain.payloadAttestationPool.add(
-            payloadAttestationMessage,
-            validationResult.attDataRootHex,
-            validationResult.validatorCommitteeIndices
-          );
-          metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+          try {
+            const insertOutcome = chain.payloadAttestationPool.add(
+              payloadAttestationMessage,
+              validationResult.attDataRootHex,
+              validationResult.validatorCommitteeIndices
+            );
+            metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+          } catch (e) {
+            logger.debug(
+              "Error adding to payloadAttestation pool",
+              {slot: payloadAttestationMessage.data.slot},
+              e as Error
+            );
+          }
+
           chain.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
             payloadAttestationMessage.data.slot,
@@ -1504,8 +1513,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      // per-iteration try/catch isolates one bad item from the rest of the batch
+      // Handler - deferred to next event loop so the validation result propagates first.
       callInNextEventLoop(() => {
         for (const [i, validationResult] of validationResults.entries()) {
           if (validationResult.err) continue;
@@ -1524,21 +1532,30 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               indexedAttestation
             );
 
-            // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-            // but don't add to attestation pool, to save CPU and RAM
-            if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-              const insertOutcome = chain.attestationPool.add(
-                committeeIndex,
-                attestation,
-                attDataRootHex,
-                validatorCommitteeIndex,
-                committeeSize
-              );
-              metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
+            try {
+              // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+              // but don't add to attestation pool, to save CPU and RAM
+              if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
+                const insertOutcome = chain.attestationPool.add(
+                  committeeIndex,
+                  attestation,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
+              }
+            } catch (e) {
+              logger.debug("Error adding gossip unaggregated attestation to pool", {subnet}, e as Error);
             }
 
+            // Separate boundary: a pool insertion error above must not skip the fork-choice vote
             if (!options.dontSendGossipAttestationsToForkchoice) {
-              chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+              try {
+                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+              } catch (e) {
+                logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+              }
             }
 
             if (isForkPostElectra(fork)) {
