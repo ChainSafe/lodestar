@@ -1,4 +1,4 @@
-import type {BuilderIndex, RootHex, Slot, gloas} from "@lodestar/types";
+import type {BuilderIndex, Root, RootHex, Slot, gloas} from "@lodestar/types";
 import {LodestarError, fromHex, toRootHex} from "@lodestar/utils";
 import type {BuiltPayload} from "./payloadSource.js";
 
@@ -13,7 +13,10 @@ export type ExecutionPayloadEnvelopeInput = {
   blockRoot: RootHex;
   builderIndex: BuilderIndex;
   selectedBid: SelectedBidIdentity;
-  payload: BuiltPayload;
+  storedPayload: {
+    parentBlockRoot: Root;
+    payload: BuiltPayload;
+  };
 };
 
 export type ExecutionPayloadEnvelopeMaterial = {
@@ -24,11 +27,17 @@ export type ExecutionPayloadEnvelopeMaterial = {
 
 export enum ExecutionPayloadEnvelopeErrorCode {
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISMATCH",
+  PARENT_BLOCK_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_ROOT_MISMATCH",
   PARENT_BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_HASH_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
 }
 
 export type ExecutionPayloadEnvelopeErrorType =
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_ROOT_MISMATCH;
+      bidParentBlockRoot: RootHex;
+      storedParentBlockRoot: RootHex;
+    }
   | {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH;
       bidSlot: Slot;
@@ -51,8 +60,21 @@ export function createExecutionPayloadEnvelopeMaterial({
   blockRoot,
   builderIndex,
   selectedBid,
-  payload,
+  storedPayload,
 }: ExecutionPayloadEnvelopeInput): ExecutionPayloadEnvelopeMaterial {
+  const storedParentBlockRoot = toRootHex(storedPayload.parentBlockRoot);
+  if (storedParentBlockRoot !== selectedBid.parentBlockRoot) {
+    throw new ExecutionPayloadEnvelopeError(
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_ROOT_MISMATCH,
+        bidParentBlockRoot: selectedBid.parentBlockRoot,
+        storedParentBlockRoot,
+      },
+      `Selected bid beacon parent does not match retained payload bidParentBlockRoot=${selectedBid.parentBlockRoot} storedParentBlockRoot=${storedParentBlockRoot}`
+    );
+  }
+
+  const {payload} = storedPayload;
   const payloadSlot = payload.executionPayload.slotNumber;
   if (payloadSlot !== selectedBid.slot) {
     throw new ExecutionPayloadEnvelopeError(

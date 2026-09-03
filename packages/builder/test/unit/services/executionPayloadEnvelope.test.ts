@@ -6,6 +6,7 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
+  type ExecutionPayloadEnvelopeInput,
   type SelectedBidIdentity,
   createExecutionPayloadEnvelopeMaterial,
 } from "../../../src/services/executionPayloadEnvelope.js";
@@ -19,8 +20,9 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
     it(`assembles exact ${fork} stateless envelope material`, () => {
       const payload = createBuiltPayload(fork);
       const selectedBid = bidIdentity(payload);
+      const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
-      const material = createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, payload});
+      const material = createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload});
 
       expect(material.envelope).toEqual({
         payload: payload.executionPayload,
@@ -37,34 +39,61 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   it("rejects retained material for a different slot", () => {
     const payload = createBuiltPayload(ForkName.gloas);
     const selectedBid = {...bidIdentity(payload), slot: 11};
+    const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
-    expectEnvelopeError(() => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, payload}), {
-      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
-      bidSlot: 11,
-      payloadSlot: payload.executionPayload.slotNumber,
-    });
+    expectEnvelopeError(
+      () => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload}),
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+        bidSlot: 11,
+        payloadSlot: payload.executionPayload.slotNumber,
+      }
+    );
+  });
+
+  it("rejects retained material for a different parent block root", () => {
+    const payload = createBuiltPayload(ForkName.gloas);
+    const selectedBid = bidIdentity(payload);
+    const storedPayload = retain(payload, root(9));
+
+    expectEnvelopeError(
+      () => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload}),
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_ROOT_MISMATCH,
+        bidParentBlockRoot: selectedBid.parentBlockRoot,
+        storedParentBlockRoot: root(9),
+      }
+    );
   });
 
   it("rejects retained material for a different parent block hash", () => {
     const payload = createBuiltPayload(ForkName.gloas);
     const selectedBid = {...bidIdentity(payload), parentBlockHash: root(9)};
+    const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
-    expectEnvelopeError(() => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, payload}), {
-      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_HASH_MISMATCH,
-      bidParentBlockHash: selectedBid.parentBlockHash,
-      payloadParentBlockHash: toRootHex(payload.executionPayload.parentHash),
-    });
+    expectEnvelopeError(
+      () => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload}),
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_HASH_MISMATCH,
+        bidParentBlockHash: selectedBid.parentBlockHash,
+        payloadParentBlockHash: toRootHex(payload.executionPayload.parentHash),
+      }
+    );
   });
 
   it("rejects retained material for a different execution block hash", () => {
     const payload = createBuiltPayload(ForkName.gloas);
     const selectedBid = {...bidIdentity(payload), blockHash: root(9)};
+    const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
-    expectEnvelopeError(() => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, payload}), {
-      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
-      bidBlockHash: selectedBid.blockHash,
-      payloadBlockHash: toRootHex(payload.executionPayload.blockHash),
-    });
+    expectEnvelopeError(
+      () => createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload}),
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+        bidBlockHash: selectedBid.blockHash,
+        payloadBlockHash: toRootHex(payload.executionPayload.blockHash),
+      }
+    );
   });
 });
 
@@ -95,6 +124,10 @@ function bidIdentity(payload: BuiltPayload): SelectedBidIdentity {
     parentBlockRoot: root(3),
     blockHash: toRootHex(payload.executionPayload.blockHash),
   };
+}
+
+function retain(payload: BuiltPayload, parentBlockRoot: RootHex): ExecutionPayloadEnvelopeInput["storedPayload"] {
+  return {parentBlockRoot: fromHex(parentBlockRoot), payload};
 }
 
 function root(byte: number): RootHex {
