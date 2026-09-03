@@ -58,7 +58,6 @@ import {
   getCurrentSyncCommitteeBranch,
   getNextSyncCommitteeBranch,
 } from "./proofs.js";
-import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
 import type {SyncCommitteeWitness} from "./types.js";
 
 export type LightClientServerOpts = {
