@@ -19,6 +19,8 @@ export type BidLedgerRecord = SubmittedBid & {
 type RevealedPayload = {
   slot: Slot;
   blockHash: RootHex;
+  envelopeRoot: RootHex;
+  published: boolean;
 };
 
 type MutableBidLedgerRecord = SubmittedBid & {
@@ -49,6 +51,8 @@ export type BidLedgerErrorType =
       blockRoot: RootHex;
       blockHash: RootHex;
       revealedBlockHash: RootHex;
+      envelopeRoot: RootHex;
+      revealedEnvelopeRoot: RootHex;
     }
   | {
       code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW;
@@ -122,33 +126,50 @@ export class BidLedger {
     return toRecord(record);
   }
 
-  canReveal(blockRoot: RootHex, blockHash: RootHex): boolean {
+  canReveal(blockRoot: RootHex, blockHash: RootHex, envelopeRoot: RootHex): boolean {
     const revealedPayload = this.revealedPayloadByBlockRoot.get(blockRoot);
-    return revealedPayload === undefined || revealedPayload.blockHash === blockHash;
+    return (
+      revealedPayload === undefined ||
+      (revealedPayload.blockHash === blockHash && revealedPayload.envelopeRoot === envelopeRoot)
+    );
   }
 
   hasRevealed(blockRoot: RootHex): boolean {
     return this.revealedPayloadByBlockRoot.has(blockRoot);
   }
 
-  recordReveal(slot: Slot, blockRoot: RootHex, blockHash: RootHex): void {
+  hasPublishedReveal(blockRoot: RootHex): boolean {
+    return this.revealedPayloadByBlockRoot.get(blockRoot)?.published ?? false;
+  }
+
+  recordReveal(slot: Slot, blockRoot: RootHex, blockHash: RootHex, envelopeRoot: RootHex): void {
     const revealedPayload = this.revealedPayloadByBlockRoot.get(blockRoot);
     if (revealedPayload !== undefined) {
-      if (revealedPayload.blockHash !== blockHash) {
+      if (revealedPayload.blockHash !== blockHash || revealedPayload.envelopeRoot !== envelopeRoot) {
         throw new BidLedgerError(
           {
             code: BidLedgerErrorCode.REVEAL_CONFLICT,
             blockRoot,
             blockHash,
             revealedBlockHash: revealedPayload.blockHash,
+            envelopeRoot,
+            revealedEnvelopeRoot: revealedPayload.envelopeRoot,
           },
-          `Envelope already recorded blockRoot=${blockRoot} blockHash=${revealedPayload.blockHash}`
+          `Different envelope already recorded blockRoot=${blockRoot} envelopeRoot=${revealedPayload.envelopeRoot}`
         );
       }
       return;
     }
 
-    this.revealedPayloadByBlockRoot.set(blockRoot, {slot, blockHash});
+    this.revealedPayloadByBlockRoot.set(blockRoot, {slot, blockHash, envelopeRoot, published: false});
+  }
+
+  recordRevealPublished(slot: Slot, blockRoot: RootHex, blockHash: RootHex, envelopeRoot: RootHex): void {
+    this.recordReveal(slot, blockRoot, blockHash, envelopeRoot);
+    const revealedPayload = this.revealedPayloadByBlockRoot.get(blockRoot);
+    if (revealedPayload !== undefined) {
+      revealedPayload.published = true;
+    }
   }
 
   getUnsettledValueGwei(currentEpoch: Epoch): number {
