@@ -18,6 +18,8 @@ import {
 
 const NOW = 1_000;
 
+type GloasPayloadBuildJob = Omit<PayloadBuildJob, "request"> & {request: BuildRequest<ForkName.gloas>};
+
 class StubPayloadSource implements PayloadSource {
   readonly id = "engine-0";
   readonly prepareCalls: BuildRequest[] = [];
@@ -64,7 +66,7 @@ function buildRequest(): BuildRequest<ForkName.gloas> {
   };
 }
 
-function buildJob(id = "slot-1-full", getPayloadAt = NOW + 100): PayloadBuildJob {
+function buildJob(id = "slot-1-full", getPayloadAt = NOW + 100): GloasPayloadBuildJob {
   return {id, request: buildRequest(), getPayloadAt};
 }
 
@@ -160,6 +162,69 @@ describe("PayloadOrchestrator", () => {
     await expect(first).resolves.toEqual(builtPayload());
     expect(source.getPayloadCalls).toHaveLength(1);
   });
+
+  it("shares one promise for separately constructed jobs with identical inputs", async () => {
+    const source = new StubPayloadSource();
+    const pendingPrepare = defer<BuildHandle>();
+    source.prepareImpl = () => pendingPrepare.promise;
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 2, getPayloadTimeout: 50});
+    const controller = new AbortController();
+
+    const first = orchestrator.run(buildJob(), controller.signal);
+    const duplicate = orchestrator.run(buildJob(), controller.signal);
+
+    expect(duplicate).toBe(first);
+    expect(source.prepareCalls).toHaveLength(1);
+
+    pendingPrepare.resolve({sourceId: source.id, fork: ForkName.gloas, payloadId: "0x01"});
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(first).resolves.toEqual(builtPayload());
+  });
+
+  it.each([
+    ["retrieval time", (job: GloasPayloadBuildJob) => ({...job, getPayloadAt: job.getPayloadAt + 1})],
+    [
+      "forkchoice state",
+      (job: GloasPayloadBuildJob) => ({
+        ...job,
+        request: {
+          ...job.request,
+          forkchoiceState: {...job.request.forkchoiceState, safeBlockHash: `0x${"44".repeat(32)}`},
+        },
+      }),
+    ],
+    [
+      "payload attributes",
+      (job: GloasPayloadBuildJob) => ({
+        ...job,
+        request: {
+          ...job.request,
+          payloadAttributes: {...job.request.payloadAttributes, timestamp: job.request.payloadAttributes.timestamp + 1},
+        },
+      }),
+    ],
+    ["custody columns", (job) => ({...job, request: {...job.request, custodyColumns: [0, 3, 126]}})],
+  ] satisfies [string, (job: GloasPayloadBuildJob) => PayloadBuildJob][])(
+    "rejects reuse of an active job ID with different %s",
+    async (_field, changeJob) => {
+      const source = new StubPayloadSource();
+      source.prepareImpl = () => defer<BuildHandle>().promise;
+      const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 2, getPayloadTimeout: 50});
+      const controller = new AbortController();
+      const job = buildJob();
+      const first = orchestrator.run(job, controller.signal);
+      const firstExpectation = expect(first).rejects.toBeInstanceOf(ErrorAborted);
+
+      await expect(orchestrator.run(changeJob(job), controller.signal)).rejects.toMatchObject({
+        type: {code: PayloadOrchestratorErrorCode.JOB_ID_CONFLICT, jobId: job.id},
+      });
+      expect(source.prepareCalls).toHaveLength(1);
+      expect(orchestrator.activeJobCount).toBe(1);
+
+      controller.abort();
+      await firstExpectation;
+    }
+  );
 
   it("shares the first invocation's cancellation lifecycle for duplicate job IDs", async () => {
     const source = new StubPayloadSource();

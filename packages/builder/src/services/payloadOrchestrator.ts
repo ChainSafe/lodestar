@@ -1,3 +1,4 @@
+import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, TimeoutError, sleep, withTimeout} from "@lodestar/utils";
 import type {BuildHandle, BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
 
@@ -19,6 +20,7 @@ export type PayloadOrchestratorOptions = {
 export enum PayloadOrchestratorErrorCode {
   INVALID_OPTION = "PAYLOAD_ORCHESTRATOR_ERROR_INVALID_OPTION",
   INVALID_GET_PAYLOAD_AT = "PAYLOAD_ORCHESTRATOR_ERROR_INVALID_GET_PAYLOAD_AT",
+  JOB_ID_CONFLICT = "PAYLOAD_ORCHESTRATOR_ERROR_JOB_ID_CONFLICT",
   ACTIVE_JOB_LIMIT = "PAYLOAD_ORCHESTRATOR_ERROR_ACTIVE_JOB_LIMIT",
   PREPARE_DEADLINE_REACHED = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_DEADLINE_REACHED",
   PREPARE_TIMEOUT = "PAYLOAD_ORCHESTRATOR_ERROR_PREPARE_TIMEOUT",
@@ -37,6 +39,10 @@ export type PayloadOrchestratorErrorType =
       maxActiveJobs: number;
     }
   | {
+      code: PayloadOrchestratorErrorCode.JOB_ID_CONFLICT;
+      jobId: string;
+    }
+  | {
       code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT;
       jobId: string;
       getPayloadAt: number;
@@ -53,13 +59,18 @@ export type PayloadOrchestratorErrorType =
 
 export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorErrorType> {}
 
+type ActivePayloadBuildJob = {
+  fingerprint: string;
+  promise: Promise<BuiltPayload>;
+};
+
 /**
  * Coordinates bounded payload preparation and retrieval without owning Engine connections or chain inputs.
  * Duplicate job IDs share one result. Aborting a job cancels its active source request. Each phase calls the
  * source once; request-level retries remain owned by that transport, and the orchestrator does not retry a failed job.
  */
 export class PayloadOrchestrator {
-  private readonly activeJobs = new Map<string, Promise<BuiltPayload>>();
+  private readonly activeJobs = new Map<string, ActivePayloadBuildJob>();
 
   constructor(
     private readonly source: PayloadSource,
@@ -78,11 +89,6 @@ export class PayloadOrchestrator {
    * invocations share that job's promise and must therefore use the same Builder-lifetime signal.
    */
   run(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
-    const existing = this.activeJobs.get(job.id);
-    if (existing !== undefined) {
-      return existing;
-    }
-
     if (!Number.isSafeInteger(job.getPayloadAt)) {
       return Promise.reject(
         new PayloadOrchestratorError(
@@ -94,6 +100,21 @@ export class PayloadOrchestrator {
           `Invalid payload retrieval time jobId=${job.id} getPayloadAt=${job.getPayloadAt}`
         )
       );
+    }
+
+    const fingerprint = getPayloadBuildJobFingerprint(job);
+    const existing = this.activeJobs.get(job.id);
+    if (existing !== undefined) {
+      if (existing.fingerprint !== fingerprint) {
+        return Promise.reject(
+          new PayloadOrchestratorError(
+            {code: PayloadOrchestratorErrorCode.JOB_ID_CONFLICT, jobId: job.id},
+            `Payload build job ID reused with different inputs jobId=${job.id}`
+          )
+        );
+      }
+
+      return existing.promise;
     }
 
     if (this.activeJobs.size >= this.options.maxActiveJobs) {
@@ -110,12 +131,12 @@ export class PayloadOrchestrator {
     }
 
     const promise = this.runJob(job, signal).finally(() => {
-      if (this.activeJobs.get(job.id) === promise) {
+      if (this.activeJobs.get(job.id)?.promise === promise) {
         this.activeJobs.delete(job.id);
       }
     });
 
-    this.activeJobs.set(job.id, promise);
+    this.activeJobs.set(job.id, {fingerprint, promise});
     return promise;
   }
 
@@ -203,4 +224,18 @@ export class PayloadOrchestrator {
       );
     }
   }
+}
+
+function getPayloadBuildJobFingerprint(job: PayloadBuildJob): string {
+  const {request} = job;
+  const {headBlockHash, safeBlockHash, finalizedBlockHash} = request.forkchoiceState;
+  return JSON.stringify({
+    getPayloadAt: job.getPayloadAt,
+    fork: request.fork,
+    headBlockHash,
+    safeBlockHash,
+    finalizedBlockHash,
+    payloadAttributes: sszTypesFor(request.fork, "PayloadAttributes").toJson(request.payloadAttributes),
+    custodyColumns: request.custodyColumns,
+  });
 }
