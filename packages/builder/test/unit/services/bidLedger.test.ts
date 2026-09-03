@@ -73,22 +73,40 @@ describe("BidLedger", () => {
     const ledger = new BidLedger();
     const blockRoot = root(6);
     const blockHash = root(4);
+    const envelopeRoot = root(5);
 
-    expect(ledger.canReveal(blockRoot, blockHash)).toBe(true);
-    ledger.recordReveal(1, blockRoot, blockHash);
-    ledger.recordReveal(1, blockRoot, blockHash);
+    expect(ledger.canReveal(blockRoot, blockHash, envelopeRoot)).toBe(true);
+    ledger.recordReveal(1, blockRoot, blockHash, envelopeRoot);
+    ledger.recordReveal(1, blockRoot, blockHash, envelopeRoot);
 
     expect(ledger.hasRevealed(blockRoot)).toBe(true);
-    expect(ledger.canReveal(blockRoot, blockHash)).toBe(true);
-    expect(ledger.canReveal(blockRoot, root(7))).toBe(false);
+    expect(ledger.hasPublishedReveal(blockRoot)).toBe(false);
+    expect(ledger.canReveal(blockRoot, blockHash, envelopeRoot)).toBe(true);
+    expect(ledger.canReveal(blockRoot, root(7), envelopeRoot)).toBe(false);
+    expect(ledger.canReveal(blockRoot, blockHash, root(8))).toBe(false);
 
-    const error = getBidLedgerError(() => ledger.recordReveal(1, blockRoot, root(7)));
+    const error = getBidLedgerError(() => ledger.recordReveal(1, blockRoot, root(7), root(8)));
     expect(error.type).toEqual({
       code: BidLedgerErrorCode.REVEAL_CONFLICT,
       blockRoot,
       blockHash: root(7),
       revealedBlockHash: blockHash,
+      envelopeRoot: root(8),
+      revealedEnvelopeRoot: envelopeRoot,
     });
+  });
+
+  it("records publication separately from the reveal reservation", () => {
+    const ledger = new BidLedger();
+    const blockRoot = root(6);
+    const blockHash = root(4);
+    const envelopeRoot = root(5);
+
+    ledger.recordReveal(1, blockRoot, blockHash, envelopeRoot);
+    expect(ledger.hasPublishedReveal(blockRoot)).toBe(false);
+
+    ledger.recordRevealPublished(1, blockRoot, blockHash, envelopeRoot);
+    expect(ledger.hasPublishedReveal(blockRoot)).toBe(true);
   });
 
   it("sums each winning bid until its payment is explicitly settled", () => {
@@ -154,7 +172,7 @@ describe("BidLedger", () => {
     const blockRoot = root(6);
     ledger.recordBid(bid);
     ledger.recordWin(bid, blockRoot);
-    ledger.recordReveal(bid.slot, blockRoot, bid.blockHash);
+    ledger.recordReveal(bid.slot, blockRoot, bid.blockHash, root(5));
 
     expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH)).toBe(0);
     expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(true);
@@ -181,7 +199,7 @@ describe("BidLedger", () => {
   it("prunes reveal protection even when no winning bid record exists", () => {
     const ledger = new BidLedger();
     const blockRoot = root(6);
-    ledger.recordReveal(1, blockRoot, root(4));
+    ledger.recordReveal(1, blockRoot, root(4), root(5));
 
     expect(ledger.prune(1 + 3 * SLOTS_PER_EPOCH + 1)).toBe(0);
     expect(ledger.hasRevealed(blockRoot)).toBe(false);
@@ -191,8 +209,9 @@ describe("BidLedger", () => {
     const ledger = new BidLedger();
     const blockRoot = root(6);
     const blockHash = root(4);
-    ledger.recordReveal(10, blockRoot, blockHash);
-    ledger.recordReveal(1, blockRoot, blockHash);
+    const envelopeRoot = root(5);
+    ledger.recordReveal(10, blockRoot, blockHash, envelopeRoot);
+    ledger.recordReveal(1, blockRoot, blockHash, envelopeRoot);
 
     ledger.prune(1 + 3 * SLOTS_PER_EPOCH + 1);
 
