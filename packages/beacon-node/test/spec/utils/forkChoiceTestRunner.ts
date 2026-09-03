@@ -170,8 +170,6 @@ export const forkChoiceTestRunner =
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 
-        // Block roots successfully imported so far, to recognize duplicate deliveries produced by
-        // the generator's `multi_route` mutation (see the catch below).
         const importedBlockRootHexes = new Set<string>();
 
         try {
@@ -516,12 +514,10 @@ export const forkChoiceTestRunner =
                 importedBlockRootHexes.add(blockRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                // Runner accommodation: the spec's `on_block` returns early for a block already in
-                // the store (consensus-specs #5495), while lodestar's production import path rejects
-                // the duplicate — with ALREADY_KNOWN, or with WOULD_REVERT_FINALIZED_SLOT when
-                // finalization has advanced past the block's slot in the meantime (the sanity check
-                // fires before the already-known check, and fork choice has pruned the block by
-                // then). Both are equivalent to the spec's no-op.
+                // The spec's `on_block` returns early for a known block (consensus-specs #5495).
+                // Lodestar rejects the duplicate instead: ALREADY_KNOWN, or
+                // WOULD_REVERT_FINALIZED_SLOT once finalization has passed the block's slot, since
+                // the sanity check runs before the already-known check. Both match the spec's no-op.
                 const isDuplicateNoOp =
                   e instanceof BlockError &&
                   (e.type.code === BlockErrorCode.ALREADY_KNOWN ||
@@ -698,15 +694,10 @@ export const forkChoiceTestRunner =
 
                 if (isGloas) {
                   // TODO-GLOAS: restore the exact-set comparison below once
-                  // https://github.com/ethereum/consensus-specs/issues/5496 is resolved and the
-                  // spec pin includes the fix. The spec's `filter_block_tree` FFG-tests only
-                  // childless blocks while `get_node_children` emits EMPTY/FULL variants
-                  // unconditionally, so a childless variant of a never-FFG-tested block stays in
-                  // the spec's leaf set. Lodestar applies the FFG test per node and drops exactly
-                  // those variants, making its set a strict subset of the spec's. Assert that
-                  // subset relation (plus weight equality on the intersection) instead of pinning
-                  // the affected test cases by name — case names embed the generation seed and
-                  // change on every comptests regeneration.
+                  // https://github.com/ethereum/consensus-specs/issues/5496 is resolved. Lodestar
+                  // drops FFG-unviable payload-status variants the spec keeps, so assert subset
+                  // rather than equality. Pinning the affected cases by name instead would not
+                  // survive a comptests regeneration, since case names embed the generation seed.
                   expect(actual.length).toBeGreaterThan(0);
                   const expectedByKey = new Map(expected.map((e) => [`${e.root}/${e.payloadStatus}`, e]));
                   for (const act of actual) {
@@ -715,12 +706,10 @@ export const forkChoiceTestRunner =
                       true,
                       `Viable head ${act.root} (payloadStatus ${act.payloadStatus}) not in spec's leaf set at step ${i}`
                     );
-                    if (exp) {
-                      expect(act.weightGwei).toEqualWithMessage(
-                        exp.weightGwei,
-                        `Invalid viable head weight for ${act.root} at step ${i}`
-                      );
-                    }
+                    expect(act.weightGwei).toEqualWithMessage(
+                      exp?.weightGwei,
+                      `Invalid viable head weight for ${act.root} at step ${i}`
+                    );
                   }
                 } else {
                   // The set of viable heads is determined by justified/finalized epochs, not weight,
@@ -856,8 +845,7 @@ export const forkChoiceTestRunner =
             payloadAttestationMessages,
           };
         },
-        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails.
-        // The gloas compliance vectors are the slowest cases at ~13s, so keep plenty of headroom above them.
+        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 60000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
