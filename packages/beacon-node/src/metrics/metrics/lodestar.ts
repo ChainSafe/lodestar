@@ -2,6 +2,7 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {
@@ -1046,6 +1047,11 @@ export function createLodestarMetrics(
       setHeadAfterCutoff: register.gauge({
         name: "lodestar_import_block_set_head_after_cutoff_total",
         help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
+      }),
+      lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
+        name: "lodestar_import_block_late_canonical_total",
+        help: "Total finalized-canonical blocks this node imported after the attestation cutoff; reason distinguishes this node's processing lag (slow_import) from late reception (late_receive)",
+        labelNames: ["reason"],
       }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
