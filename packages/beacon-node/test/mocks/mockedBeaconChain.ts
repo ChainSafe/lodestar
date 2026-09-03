@@ -11,6 +11,7 @@ import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
@@ -28,6 +29,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
+  proposerPreferencesPool: Mocked<ProposerPreferencesPool>;
   builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
@@ -160,6 +162,15 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       executionPayloadBidPool: {
         add: vi.fn(),
         getBestBid: vi.fn(),
+      },
+      proposerPreferencesPool: {
+        // Default to "no preferences pooled" so consumers hit their unresolved-preferences branch
+        // instead of dereferencing `undefined` from a bare `vi.fn()`.
+        get: vi.fn().mockReturnValue(null),
+        isKnown: vi.fn(),
+        add: vi.fn(),
+        getAll: vi.fn(),
+        prune: vi.fn(),
       },
       builderApiClient: {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),

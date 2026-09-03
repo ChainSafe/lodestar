@@ -81,6 +81,7 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
+import {checkBidProposerPreferences} from "../../../chain/validation/executionPayloadBid.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -654,7 +655,10 @@ export function getValidatorApi(
     const builderPromise = isBuilderEnabled
       ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
-          // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
+          // Pre-gloas MEV-boost path only (produceBlockV3): the blinded builder bid does not
+          // carry a fee recipient to check against. The gloas bid does carry `fee_recipient`,
+          // and produceBlockV4 enforces it in validateBuilderApiExecutionPayloadBid and in the
+          // p2p bid backstop below.
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlock,
@@ -997,6 +1001,42 @@ export function getValidatorApi(
                 minBid: prettyGweiToEth(builderConfig.minBid),
               });
               return null;
+            }
+            // Defence in depth: gossip ingress already refuses a peer bid whose proposer
+            // preferences it cannot resolve, and the publish API refuses a mismatching one, so
+            // this is the last hop before a bid can reach a block. Declining to build on a bid is
+            // local block-production policy — the locally built block is used instead, the slot is
+            // never missed, and which blocks this node ACCEPTS is unchanged.
+            if (p2pBid !== null) {
+              const preferencesCheck = checkBidProposerPreferences(
+                chain,
+                p2pBid.signedBid.message,
+                parentBlock,
+                bidParentBlockHash
+              );
+              if (preferencesCheck.outcome === "unavailable") {
+                // Fail open, same as the pool-ingress paths: never drop a bid because this node is
+                // missing the preferences or the parent payload variant.
+                metrics?.opPool.executionPayloadBidPool.proposerPreferencesCheck.inc({
+                  source: "blockProduction",
+                  outcome: "unavailable",
+                });
+                logger.debug("Building on p2p bid without a proposer preferences check", {
+                  slot,
+                  builderIndex: p2pBid.signedBid.message.builderIndex,
+                  reason: preferencesCheck.reason,
+                });
+              } else if (preferencesCheck.outcome !== "ok") {
+                metrics?.opPool.executionPayloadBidPool.proposerPreferencesCheck.inc({
+                  source: "blockProduction",
+                  outcome: preferencesCheck.outcome,
+                });
+                logger.warn("Discarding p2p bid disagreeing with proposer preferences", {
+                  slot,
+                  ...preferencesCheck.error,
+                });
+                return null;
+              }
             }
             return p2pBid;
           });

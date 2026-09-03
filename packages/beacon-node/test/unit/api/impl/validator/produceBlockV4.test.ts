@@ -6,6 +6,7 @@ import {gloas, ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {ExecutionPayloadBidErrorCode} from "../../../../../src/chain/errors/index.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
@@ -809,6 +810,201 @@ describe("api/validator - produceBlockV4", () => {
       }
     });
   }
+
+  describe("proposer preferences backstop", () => {
+    const targetGasLimit = 150_000_000n;
+    const preferencesFeeRecipient = Buffer.alloc(20, 7);
+    const dependentRoot = `0x${"22".repeat(32)}`;
+
+    function mockProposerPreferences() {
+      const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+      preferences.message.proposalSlot = slot;
+      preferences.message.feeRecipient = preferencesFeeRecipient;
+      preferences.message.targetGasLimit = targetGasLimit;
+      return preferences;
+    }
+
+    function mockP2pBid() {
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      // The pool is keyed by the bid's own slot, so a bid returned by `getBestBid(slot, ...)`
+      // always has `bid.slot === slot`; leaving it at the default 0 would make the preferences
+      // lookup key untestable
+      signedBid.message.slot = slot;
+      signedBid.message.value = 1;
+      signedBid.message.builderIndex = 42;
+      signedBid.message.feeRecipient = preferencesFeeRecipient;
+      // Parent gas limit equal to the target makes the target itself the only compatible value
+      signedBid.message.gasLimit = targetGasLimit;
+      return signedBid;
+    }
+
+    beforeEach(() => {
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+      modules.chain.forkChoice.getDependentRoot.mockReturnValue(dependentRoot);
+      modules.chain.proposerPreferencesPool.get.mockReturnValue(mockProposerPreferences());
+      modules.chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue({
+        ...parentBlock,
+        executionPayloadGasLimit: Number(targetGasLimit),
+      } as ProtoBlock);
+    });
+
+    it("builds on a p2p bid that honors the proposer preferences", async () => {
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(mockP2pBid()));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(bidBlock);
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+      // Pin the lookup keys: a wrong key resolves no preferences, which fails open and makes the
+      // whole backstop a no-op while this assertion on the produced block stays green
+      expect(modules.chain.proposerPreferencesPool.get).toHaveBeenCalledWith(slot, dependentRoot);
+      expect(modules.chain.forkChoice.getBlockHexAndBlockHash).toHaveBeenCalledWith(
+        parentBlock.blockRoot,
+        parentBlock.executionPayloadBlockHash
+      );
+    });
+
+    it("discards a p2p bid whose fee recipient disagrees with the proposer preferences", async () => {
+      const p2pBid = mockP2pBid();
+      p2pBid.message.feeRecipient = Buffer.alloc(20, 0xaa);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      // Falls back to the locally built block, the slot is never missed
+      expect(block).toEqual(engineBlock);
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+      // The diagnostic an operator actually reads must name the offending field and both addresses
+      expect(modules.logger.warn).toHaveBeenCalledWith(
+        "Discarding p2p bid disagreeing with proposer preferences",
+        expect.objectContaining({
+          code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH,
+          bidFeeRecipient: `0x${"aa".repeat(20)}`,
+          expectedFeeRecipient: `0x${"07".repeat(20)}`,
+        })
+      );
+    });
+
+    it("discards a p2p bid whose gas limit disagrees with the proposer's target", async () => {
+      const p2pBid = mockP2pBid();
+      p2pBid.message.gasLimit = 2n ** 64n - 1n;
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(engineBlock);
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+      expect(modules.logger.warn).toHaveBeenCalledWith(
+        "Discarding p2p bid disagreeing with proposer preferences",
+        expect.objectContaining({
+          code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
+          bidGasLimit: 2n ** 64n - 1n,
+          parentGasLimit: targetGasLimit,
+          targetGasLimit,
+        })
+      );
+    });
+
+    it("builds on a p2p bid when no proposer preferences are pooled", async () => {
+      // Fail open: a bid must never be dropped because this node is missing the preferences
+      modules.chain.proposerPreferencesPool.get.mockReturnValue(null);
+      const p2pBid = mockP2pBid();
+      p2pBid.message.feeRecipient = Buffer.alloc(20, 0xaa);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(bidBlock);
+    });
+
+    it("builds on a p2p bid when the dependent root cannot be derived", async () => {
+      // Fail open on the third missing-data condition, and `getShufflingDependentRoot`'s
+      // ForkChoiceError must not escape and reject `p2pBidPromise`
+      modules.chain.forkChoice.getDependentRoot.mockImplementation(() => {
+        throw Error("unknown ancestor");
+      });
+      const p2pBid = mockP2pBid();
+      p2pBid.message.feeRecipient = Buffer.alloc(20, 0xaa);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(bidBlock);
+      expect(modules.chain.proposerPreferencesPool.get).not.toHaveBeenCalled();
+    });
+
+    it("builds on a p2p bid when the parent payload variant lookup throws", async () => {
+      modules.chain.forkChoice.getBlockHexAndBlockHash.mockImplementation(() => {
+        throw new TypeError("Cannot read properties of undefined");
+      });
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(mockP2pBid()));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(bidBlock);
+    });
+
+    it("builds on a p2p bid when the parent payload gas limit is unknown", async () => {
+      // Fail open on the gas-limit rule only, the fee recipient is still enforced
+      modules.chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue(null);
+      const p2pBid = mockP2pBid();
+      p2pBid.message.gasLimit = 2n ** 64n - 1n;
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(block).toEqual(bidBlock);
+    });
+  });
 });
 
 function toPooledBid(signedBid: gloas.SignedExecutionPayloadBid | null) {

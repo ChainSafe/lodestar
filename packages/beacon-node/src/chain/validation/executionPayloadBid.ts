@@ -12,7 +12,12 @@ import {
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
-import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
+import {
+  ExecutionPayloadBidError,
+  ExecutionPayloadBidErrorCode,
+  type ExecutionPayloadBidErrorType,
+  GossipAction,
+} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
@@ -86,16 +91,28 @@ function isBidCompatibleWithHead(
 /**
  * Validation for bids submitted via the API by the operator's own builder.
  *
- * Only non-transient checks are applied: slot later than parent, zero execution payment, blob
- * commitment count, builder eligibility, version and balance coverage, prev_randao, and signature.
- * Transient gossip rules (head compatibility, first bid per tuple, value increment, proposer
- * preferences) are not applied, since those only limit forwarding of peers' messages and the
- * builder may legitimately bid on a branch this node does not consider head.
+ * Only non-transient checks are applied: slot later than parent, zero execution payment, proposer
+ * preferences (fee recipient and gas limit), blob commitment count, builder eligibility, version
+ * and balance coverage, prev_randao, and signature.
+ * Transient gossip rules (head compatibility, first bid per tuple, value increment) are not
+ * applied, since those only limit forwarding of peers' messages and the builder may legitimately
+ * bid on a branch this node does not consider head.
+ * The proposer-preferences rules are NOT transient and are applied here: the preferences are
+ * looked up by `(bid.slot, dependent_root)` where the dependent root is derived from the bid's own
+ * parent branch, so a bid on a branch this node does not consider head still resolves the correct
+ * preferences (same derivation as `validateBuilderApiExecutionPayloadBid`). They are also the only
+ * constraint that exists anywhere on `bid.fee_recipient`, which `process_execution_payload_bid`
+ * copies verbatim into the builder's pending payment, and on `bid.gas_limit`, which the state
+ * transition never reads while `verify_execution_payload_envelope` binds the revealed payload to
+ * it. A bid that fails either rule is IGNOREd by every honest peer, so refusing to pool and
+ * re-gossip it here cannot lose a bid that would otherwise have been usable.
+ * If the preferences or the parent payload cannot be resolved locally the two rules are skipped
+ * rather than failed, see `checkBidProposerPreferences`.
  * The parent-payload builder-exit rule is omitted because this endpoint only accepts bids from
  * the operator's own builder.
  *
  * Throws on any failed check. Also throws if the bid's parent block is unknown or its state is
- * unavailable, since the checks cannot be evaluated against the parent branch.
+ * unavailable, since the remaining checks cannot be evaluated against the parent branch.
  */
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
@@ -103,6 +120,7 @@ export async function validateApiExecutionPayloadBid(
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
+  const bidParentBlockHash = toRootHex(bid.parentBlockHash);
 
   // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
   // `bid.block_hash != bid.parent_block_hash`.
@@ -167,6 +185,33 @@ export async function validateApiExecutionPayloadBid(
       blobKzgCommitmentsLen,
       commitmentLimit: maxBlobsPerBlock,
     });
+  }
+
+  // [IGNORE] `bid.fee_recipient == proposer_preferences.fee_recipient` and
+  // [IGNORE] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`.
+  // Placed before the regen and the signature verification, both of which are far more expensive.
+  const preferencesCheck = checkBidProposerPreferences(chain, bid, parentBlock, bidParentBlockHash);
+  if (preferencesCheck.outcome === "unavailable") {
+    // Fail open. This endpoint ORIGINATES a bid onto the network rather than forwarding one, and
+    // both rules are IGNORE-level, so refusing because this node is missing data (e.g. the
+    // preferences pool cannot be backfilled for up to `SLOTS_PER_EPOCH / 4` slots after a restart,
+    // or the parent payload envelope has not been processed yet) would suppress a bid that every
+    // peer holding the data would have accepted and forwarded.
+    chain.metrics?.opPool.executionPayloadBidPool.proposerPreferencesCheck.inc({
+      source: "api",
+      outcome: "unavailable",
+    });
+    chain.logger.debug("Publishing execution payload bid without a proposer preferences check", {
+      slot: bid.slot,
+      builderIndex: bid.builderIndex,
+      reason: preferencesCheck.reason,
+    });
+  } else if (preferencesCheck.outcome !== "ok") {
+    chain.metrics?.opPool.executionPayloadBidPool.proposerPreferencesCheck.inc({
+      source: "api",
+      outcome: preferencesCheck.outcome,
+    });
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, preferencesCheck.error);
   }
 
   const state = await chain.regen
@@ -571,4 +616,122 @@ async function validateExecutionPayloadBid(
   chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
+}
+
+/** The two `ExecutionPayloadBidError` variants a proposer-preferences disagreement can produce. */
+type ProposerPreferencesViolation = Extract<
+  ExecutionPayloadBidErrorType,
+  {
+    code:
+      | ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH
+      | ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;
+  }
+>;
+
+export type BidPreferencesCheck =
+  /** The bid honors the `SignedProposerPreferences` resolved for its branch. */
+  | {outcome: "ok"}
+  /**
+   * The local data needed to judge the bid is missing. Callers must NOT hold this against the bid:
+   * both rules are `[IGNORE]`-level, so a peer that does have the data still accepts and forwards
+   * the bid, and treating "this node is behind" as "the bid is bad" would suppress honest bids.
+   */
+  | {outcome: "unavailable"; reason: "dependentRoot" | "preferences" | "parentPayloadVariant"}
+  /** The bid disagrees with the preferences. */
+  | {outcome: "feeRecipientMismatch" | "gasLimitMismatch"; error: ProposerPreferencesViolation};
+
+/**
+ * Check a bid against the `SignedProposerPreferences` for its own branch.
+ *
+ * Neither rule is enforced by the state transition: `process_execution_payload_bid` copies
+ * `bid.fee_recipient` verbatim into the builder's pending withdrawal and never reads
+ * `bid.gas_limit`, while `verify_execution_payload_envelope` binds `payload.gas_limit ==
+ * bid.gas_limit`, so a bid naming an address the proposer never chose is a valid block, and a bid
+ * carrying a gas limit the proposer never asked for can be included and then never revealed. Both
+ * fields therefore have to be constrained by local policy, and only by local policy — asserting
+ * either one in the state transition would fork Lodestar off clients that follow the spec.
+ *
+ * The preferences are keyed by `(bid.slot, dependent_root)` with the dependent root derived from
+ * the bid's own parent branch, so a bid on a branch this node does not consider head still
+ * resolves the correct preferences.
+ *
+ * Shared by `validateApiExecutionPayloadBid` (pool ingress for the operator's own builder) and by
+ * `produceBlockV4` (the last hop before a bid can reach a block) so the two cannot drift apart.
+ * Total: never throws, both fork-choice lookups are guarded, so callers need no `try/catch`.
+ */
+export function checkBidProposerPreferences(
+  chain: IBeaconChain,
+  bid: gloas.ExecutionPayloadBid,
+  parentBlock: ProtoBlock,
+  bidParentBlockHash: RootHex
+): BidPreferencesCheck {
+  // `getShufflingDependentRoot` throws a `ForkChoiceError` on an unknown/finalized-pruned ancestor
+  // or at the genesis edge.
+  const dependentRootHex = (() => {
+    try {
+      return getShufflingDependentRoot(
+        chain.forkChoice,
+        computeEpochAtSlot(bid.slot),
+        computeEpochAtSlot(parentBlock.slot),
+        parentBlock
+      );
+    } catch {
+      return null;
+    }
+  })();
+  if (dependentRootHex === null) {
+    return {outcome: "unavailable", reason: "dependentRoot"};
+  }
+
+  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  if (proposerPreferences === null) {
+    return {outcome: "unavailable", reason: "preferences"};
+  }
+
+  if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
+    return {
+      outcome: "feeRecipientMismatch",
+      error: {
+        code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH,
+        builderIndex: bid.builderIndex,
+        bidFeeRecipient: toHex(bid.feeRecipient),
+        expectedFeeRecipient: toHex(proposerPreferences.message.feeRecipient),
+      },
+    };
+  }
+
+  // Looks up the variant of the parent block whose payload hash is `bid.parent_block_hash` — works
+  // for both FULL parents (FULL variant carries the delivered payload's hash) and EMPTY parents
+  // (EMPTY/PENDING variants carry the inherited grandparent payload's hash). That variant carries
+  // the executed payload's gas limit, used as `parent_gas_limit` below.
+  // `protoArray.getNodeIndexByRootAndBlockHash` indexes `nodes` with a possibly-undefined EMPTY
+  // variant index, so this can throw a `TypeError` instead of returning `null`; guard it so this
+  // function stays total.
+  const parentPayloadVariant = (() => {
+    try {
+      return chain.forkChoice.getBlockHexAndBlockHash(parentBlock.blockRoot, bidParentBlockHash);
+    } catch {
+      return null;
+    }
+  })();
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    return {outcome: "unavailable", reason: "parentPayloadVariant"};
+  }
+
+  const parentGasLimit = BigInt(parentPayloadVariant.executionPayloadGasLimit);
+  const targetGasLimit = proposerPreferences.message.targetGasLimit;
+  if (!isGasLimitTargetCompatible(parentGasLimit, bid.gasLimit, targetGasLimit)) {
+    return {
+      outcome: "gasLimitMismatch",
+      error: {
+        code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
+        builderIndex: bid.builderIndex,
+        bidGasLimit: bid.gasLimit,
+        parentGasLimit,
+        targetGasLimit,
+      },
+    };
+  }
+
+  return {outcome: "ok"};
 }

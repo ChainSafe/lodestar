@@ -1362,6 +1362,14 @@ export function createLodestarMetrics(
           help: "Time elapsed for signed execution payload bid validation - api path",
           buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
         }),
+        proposerPreferencesCheck: register.counter<{
+          source: "api" | "blockProduction";
+          outcome: "feeRecipientMismatch" | "gasLimitMismatch" | "unavailable";
+        }>({
+          name: "lodestar_execution_payload_bid_proposer_preferences_check_total",
+          help: "Total number of execution payload bids that disagreed with the proposer preferences, or that could not be checked against them because the preferences or the parent payload were not available locally",
+          labelNames: ["source", "outcome"],
+        }),
       },
     },
 
