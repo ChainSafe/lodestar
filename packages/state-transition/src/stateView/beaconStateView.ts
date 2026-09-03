@@ -14,6 +14,8 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -65,9 +67,18 @@ import {
 } from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
+import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
+import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
+import {
+  ComputeNewStateRootInput,
+  ComputeNewStateRootResult,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  IBeaconStateViewLatestFork,
+  isStatePostGloas,
+} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -339,6 +350,18 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return preVerifyBuilderDepositsPreGloas(
+      this.cachedState as CachedBeaconStateFulu,
+      maxBuilderDeposits,
+      maxDurationMs
+    );
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.cachedState.epochCtx.builderDepositSignatureCache.clear();
+  }
+
   // gloas
 
   get latestBlockHash(): Bytes32 {
@@ -394,6 +417,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
+  }
+
+  getBuildersLength(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
   }
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
@@ -503,14 +534,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    try {
-      return this.cachedState.epochCtx.getBeaconProposer(slot);
-    } catch {
-      return null;
-    }
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
@@ -808,17 +831,20 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
+  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = new BeaconStateView(
+      stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
+    );
+    return getComputeNewStateRootResult(postState, modules);
+  }
+
   stateTransition(
-    signedBlockBytes: Uint8Array,
-    isBlinded: boolean,
+    _signedBlockBytes: Uint8Array,
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
-    {metrics, validatorMonitor}: StateTransitionModules
+    modules: StateTransitionModules
   ): IBeaconStateView {
-    const newState = stateTransition(this.cachedState, signedBlockBytes, isBlinded, options, {
-      metrics,
-      validatorMonitor,
-    });
-    return new BeaconStateView(newState);
+    return new BeaconStateView(stateTransition(this.cachedState, signedBlock, options, modules));
   }
 
   processSlots(

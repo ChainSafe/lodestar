@@ -122,7 +122,8 @@ describe("PrepareNextSlot scheduler", () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
     const state = generateCachedBellatrixState();
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
@@ -138,8 +139,78 @@ describe("PrepareNextSlot scheduler", () => {
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
-    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("post-fulu - should read proposer from head state and dial only the proposer head on reorg", async () => {
+    getForkStub.mockReturnValue(ForkName.fulu);
+    const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
+    // predicted proposer-boost-reorg: build on the parent block instead of the canonical head
+    const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
+    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    chainStub.predictProposerHead.mockReturnValue(proposerHead);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    updateBuilderStatus.mockReturnValue(void 0);
+
+    const headState = generateCachedBellatrixState();
+    vi.spyOn(headState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    chainStub.getHeadState.mockReturnValue(new BeaconStateView(headState));
+    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(generateCachedBellatrixState()));
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    // proposer comes from the head state, so no dial is needed just to learn it
+    expect(chainStub.getHeadState).toHaveBeenCalled();
+    // a single dial, on the proposer head (reorg parent) - not two dials
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledWith(
+      proposerHead,
+      SLOTS_PER_EPOCH - 1,
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("gloas - should update builder circuit breaker and check builder api status ahead of the slot", async () => {
+    // Anchor the fake clock to the start of clockSlot, else msFromSlot resolves against wall time
+    // and the scheduled check collapses to a zero delay
+    vi.setSystemTime((SLOTS_PER_EPOCH - 2) * config.SLOT_DURATION_MS);
+    getForkStub.mockReturnValue(ForkName.gloas);
+    const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
+    const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
+    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    chainStub.predictProposerHead.mockReturnValue(proposerHead);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    const state = generateCachedBellatrixState();
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    // post-fulu (gloas): proposer is read from the head state, not from a dialed prepare state
+    chainStub.getHeadState.mockReturnValue(new BeaconStateView(state));
+    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
+    // The legacy pre-gloas builder status path stays untouched
+    expect(updateBuilderStatus).not.toHaveBeenCalled();
+
+    // Past PREPARE_NEXT_SLOT_BPS but before the check is due, an undelayed check would have run
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 12);
+    expect(chainStub.builderApiClient.checkStatus).not.toHaveBeenCalled();
+
+    // Past BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS, connections are warmed before bids are requested
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 4);
+    expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
   });
 });

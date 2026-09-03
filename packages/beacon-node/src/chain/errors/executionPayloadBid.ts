@@ -5,9 +5,11 @@ export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",
   INVALID_BUILDER_VERSION = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_BUILDER_VERSION",
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
+  INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
+  BUILDER_MAY_EXIT = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_MAY_EXIT",
   TOO_MANY_KZG_COMMITMENTS = "EXECUTION_PAYLOAD_BID_ERROR_TOO_MANY_KZG_COMMITMENTS",
   UNKNOWN_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_BLOCK_ROOT",
   UNKNOWN_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_BLOCK_HASH",
@@ -31,7 +33,14 @@ export type ExecutionPayloadBidErrorType =
   | {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
       builderIndex: BuilderIndex;
-      executionPayment: number;
+      executionPayment: bigint;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD;
+      slot: Slot;
+      parentBlockRoot: RootHex;
+      parentBlockHash: RootHex;
+      headBlockRoot: RootHex;
     }
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
@@ -42,6 +51,11 @@ export type ExecutionPayloadBidErrorType =
     }
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: number; currentHighestBid: number}
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
+  | {
+      code: ExecutionPayloadBidErrorCode.BUILDER_MAY_EXIT;
+      builderIndex: BuilderIndex;
+      parentBlockRoot: RootHex;
+    }
   | {
       code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS;
       blobKzgCommitmentsLen: number;
@@ -73,9 +87,9 @@ export type ExecutionPayloadBidErrorType =
   | {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;
       builderIndex: BuilderIndex;
-      bidGasLimit: number;
-      parentGasLimit: number;
-      targetGasLimit: number;
+      bidGasLimit: bigint;
+      parentGasLimit: bigint;
+      targetGasLimit: bigint;
     };
 
 export class ExecutionPayloadBidError extends GossipActionError<ExecutionPayloadBidErrorType> {}

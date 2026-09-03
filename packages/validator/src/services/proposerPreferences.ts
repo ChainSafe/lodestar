@@ -1,11 +1,11 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {fromHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService} from "./blockDuties.js";
 import {ValidatorStore} from "./validatorStore.js";
 
@@ -36,6 +36,7 @@ type SubmittedAtEpoch = {dependentRoot: RootHex; slots: Set<Slot>};
  */
 export class ProposerPreferencesService {
   private readonly submitted = new Map<Epoch, SubmittedAtEpoch>();
+  private activeScheduledGasLimit: number | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -47,7 +48,7 @@ export class ProposerPreferencesService {
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runProposerPreferencesTask);
-    clock.runEveryEpoch(this.pruneSubmitted);
+    clock.runEveryEpoch(this.runEveryEpochTask);
   }
 
   private runProposerPreferencesTask = async (slot: Slot): Promise<void> => {
@@ -98,7 +99,7 @@ export class ProposerPreferencesService {
             duty,
             dependentRootBytes,
             this.validatorStore.getFeeRecipient(pubkeyHex),
-            this.validatorStore.getGasLimit(pubkeyHex),
+            this.validatorStore.getGasLimit(pubkeyHex, duty.slot, this.logger),
             slot
           );
           batch.push(signed);
@@ -118,7 +119,7 @@ export class ProposerPreferencesService {
     }
 
     try {
-      await this.api.beacon.submitSignedProposerPreferences({signedProposerPreferences: batch});
+      await this.api.validator.submitProposerPreferences({signedProposerPreferences: batch});
       // Only mark as submitted after the API call succeeds; a thrown error leaves the
       // slot eligible for retry on the next tick.
       for (const {submission, slot: submittedSlot} of pending) {
@@ -130,8 +131,20 @@ export class ProposerPreferencesService {
     }
   };
 
-  /** Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed. */
-  private pruneSubmitted = async (epoch: Epoch): Promise<void> => {
+  private runEveryEpochTask = async (epoch: Epoch): Promise<void> => {
+    const scheduledGasLimit = this.config.getScheduledGasLimit(epoch);
+    if (scheduledGasLimit !== undefined && scheduledGasLimit !== this.activeScheduledGasLimit) {
+      const configuredDefaultGasLimit = this.validatorStore.getConfiguredDefaultGasLimit();
+      this.logger.info("Gas limit schedule active", {
+        epoch,
+        recommendedGasLimit: scheduledGasLimit,
+        effectiveDefaultGasLimit: configuredDefaultGasLimit ?? scheduledGasLimit,
+        defaultGasLimitSource: configuredDefaultGasLimit === undefined ? "schedule" : "operator",
+      });
+      this.activeScheduledGasLimit = scheduledGasLimit;
+    }
+
+    // Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed.
     for (const trackedEpoch of this.submitted.keys()) {
       if (trackedEpoch < epoch) {
         this.submitted.delete(trackedEpoch);

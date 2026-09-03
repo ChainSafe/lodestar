@@ -1,8 +1,10 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
+import {ssz} from "@lodestar/types";
+import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
-import type {IBeaconStateView, IBeaconStateViewNative} from "../../../src/stateView/interface.js";
+import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
+import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
@@ -68,31 +70,76 @@ describe("NativeBeaconStateView", () => {
     expect(view.getBalance(2)).toBe(32_000_000_002);
   });
 
-  it("forwards serialized block bytes and blinded flag to native stateTransition", () => {
-    type NativeStateTransitionBytes = (
-      blockBytes: Uint8Array,
-      isBlinded: boolean,
-      options: StateTransitionOpts
-    ) => IBeaconStateView;
-
+  it.each([
+    {
+      blockType: "full",
+      block: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      isBlinded: false,
+    },
+    {
+      blockType: "blinded",
+      block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
+      isBlinded: true,
+    },
+  ])("derives the blinded flag for a $blockType block", ({block, isBlinded}) => {
     const blockBytes = new Uint8Array([1, 2, 3]);
     const options: StateTransitionOpts = {
+      verifyStateRoot: false,
       executionPayloadStatus: ExecutionPayloadStatus.valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      verifyStateRoot: false,
     };
     const postBinding = {} as IBeaconStateViewNative;
     const binding = {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding, config) as NativeBeaconStateView & {
-      stateTransition: NativeStateTransitionBytes;
-    };
-    const postState = view.stateTransition(blockBytes, true, options);
+    const view = new NativeBeaconStateView(binding, config);
+    const postState = view.stateTransition(blockBytes, block, options, {});
 
-    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, true, options);
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
     expect(postState).toBeInstanceOf(NativeBeaconStateView);
     expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
+  });
+
+  it.each([
+    {
+      blockType: "full",
+      block: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      isBlinded: false,
+    },
+    {
+      blockType: "blinded",
+      block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
+      isBlinded: true,
+    },
+  ])("computes a state root from $blockType block bytes", ({block, isBlinded}) => {
+    const blockBytes = new Uint8Array([1, 2, 3]);
+    const stateRoot = new Uint8Array(32).fill(1);
+    const postBinding = {
+      proposerRewards: {attestations: 1, syncAggregate: 2, slashing: 3},
+      hashTreeRoot: () => stateRoot,
+    } as unknown as IBeaconStateViewNative;
+    const binding = {
+      stateTransition: vi.fn(() => postBinding),
+    } as unknown as IBeaconStateViewNative;
+
+    const result = new NativeBeaconStateView(binding, config).computeNewStateRoot({block, ssz: blockBytes}, {});
+
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, computeNewStateRootStateTransitionOpts);
+    expect(result.newStateRoot).toBe(stateRoot);
+    expect(result.proposerReward).toBe(6n);
+    expect(result.postState).toBeInstanceOf(NativeBeaconStateView);
+  });
+
+  it("rejects state root computation without serialized block bytes", () => {
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    const binding = {
+      stateTransition: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+
+    expect(() => new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {})).toThrow(
+      "Serialized block bytes are required to compute a state root with NativeBeaconStateView"
+    );
+    expect(binding.stateTransition).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,9 @@
 import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {getBalanceChurnLimit, getChurnLimit} from "../../../src/util/validator.js";
+import {getBalanceChurnLimit, getChurnLimit, getGloasChurnLimits} from "../../../src/util/validator.js";
 import {
   computeWeakSubjectivityPeriodFromConstituentsElectra,
+  computeWeakSubjectivityPeriodFromConstituentsGloas,
   computeWeakSubjectivityPeriodFromConstituentsPhase0,
 } from "../../../src/util/weakSubjectivity.js";
 
@@ -60,6 +61,30 @@ describe("weak subjectivity tests", () => {
             config.CHURN_LIMIT_QUOTIENT,
             config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
           ),
+          config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        );
+        expect(wsPeriod).toBe(expectedWsPeriod);
+      }
+    );
+  });
+  describe("computeWeakSubjectivityPeriodFromConstituentsGloas", () => {
+    const testValues = [
+      {totalBalanceIncrement: 1_048_576, wsPeriod: 620},
+      {totalBalanceIncrement: 2_097_152, wsPeriod: 911},
+      {totalBalanceIncrement: 4_194_304, wsPeriod: 1348},
+      {totalBalanceIncrement: 8_388_608, wsPeriod: 1348},
+      {totalBalanceIncrement: 16_777_216, wsPeriod: 1484},
+      {totalBalanceIncrement: 33_554_432, wsPeriod: 1566},
+    ];
+    it.each(testValues)(
+      "should have wsPeriod: $wsPeriod with totalActiveBalance: $totalBalanceIncrement",
+      ({totalBalanceIncrement, wsPeriod: expectedWsPeriod}) => {
+        const churn = getGloasChurnLimits(config, totalBalanceIncrement);
+        const wsPeriod = computeWeakSubjectivityPeriodFromConstituentsGloas(
+          totalBalanceIncrement,
+          churn.exit,
+          churn.activation,
+          churn.consolidation,
           config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         );
         expect(wsPeriod).toBe(expectedWsPeriod);

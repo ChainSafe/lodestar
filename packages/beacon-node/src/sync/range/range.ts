@@ -212,7 +212,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       for (const block of blocks) {
         await this.chain.processBlock(block, flags);
         const payloadEnvelope = payloadEnvelopes?.get(block.slot);
-        if (payloadEnvelope) {
+        if (payloadEnvelope?.hasPayloadEnvelope()) {
           await this.chain.processExecutionPayload(payloadEnvelope);
         }
       }

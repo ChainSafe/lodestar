@@ -30,6 +30,19 @@ export const eventTestData: EventData = {
     currentDutyDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
     executionOptimistic: false,
   },
+  [EventType.headV2]: {
+    version: ForkName.gloas,
+    data: {
+      slot: 10,
+      block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      state: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
+      payloadStatus: "empty",
+      epochTransition: false,
+      currentEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      nextEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      executionOptimistic: false,
+    },
+  },
   [EventType.block]: {
     slot: 10,
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
@@ -296,10 +309,10 @@ export const eventTestData: EventData = {
     data: ssz.gloas.SignedProposerPreferences.fromJson({
       message: {
         dependent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        proposal_slot: "10",
-        validator_index: "42",
+        proposal_slot: "32",
+        validator_index: "123",
         fee_recipient: "0x0000000000000000000000000000000000000000",
-        target_gas_limit: "30000000",
+        target_gas_limit: "60000000",
       },
       signature:
         "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
@@ -323,6 +336,20 @@ export const eventTestData: EventData = {
           "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2",
         ],
         execution_requests_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      },
+      signature:
+        "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    }),
+  },
+  [EventType.payloadAttestationMessage]: {
+    version: ForkName.gloas,
+    data: ssz.gloas.PayloadAttestationMessage.fromJson({
+      validator_index: "123",
+      data: {
+        beacon_block_root: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+        slot: "10",
+        payload_present: true,
+        blob_data_available: true,
       },
       signature:
         "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",

@@ -5,7 +5,8 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
 import snappy from "snappy";
 import {expect} from "vitest";
-import {BeaconConfig, chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -19,9 +20,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
@@ -292,12 +291,11 @@ function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatu
 function computePostState(
   parentState: IBeaconStateView,
   signedBlock: SignedBeaconBlock,
-  fork: ForkName,
-  beaconConfig: BeaconConfig
+  fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    beaconConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-    false,
+    sszTypesFor(fork).SignedBeaconBlock.serialize(signedBlock),
+    signedBlock,
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -384,9 +382,7 @@ export async function runGossipValidationTest(
     signal: controller.signal,
     logger: testLogger("executionEngine"),
   });
-
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {config: beaconConfig, pubkeyCache},
@@ -476,8 +472,7 @@ export async function runGossipValidationTest(
           continue;
         }
 
-        const postState = computePostState(parentState, signedBlock, fork, beaconConfig);
-        const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
+        const postState = computePostState(parentState, signedBlock, fork);
 
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
@@ -489,8 +484,7 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Valid,
-            getDataAvailabilityStatusForFork(fork),
-            expectedProposerIndex
+            getDataAvailabilityStatusForFork(fork)
           );
           blockStatesByRoot.set(blockRootHex, postState);
           continue;
@@ -505,8 +499,7 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Syncing,
-            getDataAvailabilityStatusForFork(fork),
-            expectedProposerIndex
+            getDataAvailabilityStatusForFork(fork)
           );
           blockStatesByRoot.set(blockRootHex, postState);
           invalidateImportedBlock(chain, blockRootHex, parentRootHex);
@@ -613,7 +606,11 @@ async function validateMessageForTopic(
       }
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
+      chain.seenBlockProposers.add(
+        signedBlock.message.slot,
+        signedBlock.message.proposerIndex,
+        toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message))
+      );
       break;
     }
 

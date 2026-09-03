@@ -1,5 +1,4 @@
-import type {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
@@ -7,6 +6,7 @@ import {
   NativeBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
+import {sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -26,7 +26,6 @@ import {ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
-  config: BeaconConfig,
   preState0: IBeaconStateView,
   blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
@@ -43,35 +42,47 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blocks[i].getBlock();
+    const blockInput = blocks[i];
+    const block = blockInput.getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
-    const blockFork = config.getForkSeq(block.message.slot);
 
-    if (preState instanceof NativeBeaconStateView && blockFork === ForkSeq.gloas) {
+    if (preState instanceof NativeBeaconStateView && isForkPostGloas(blockInput.forkName)) {
       throw new Error(`NativeBeaconStateView does not support Gloas state transition at slot ${block.message.slot}`);
     }
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = preState.stateTransition(
-      serializedCache.get(block) ?? config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-      false,
-      {
-        // NOTE: Assume valid for now while sending payload to execution engine in parallel
-        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus,
-        // false because it's verified below with better error typing
-        verifyStateRoot: false,
-        // if block is trusted don't verify proposer or op signature
-        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-        verifySignatures: !useBlsBatchVerify && !validSignatures,
-        dontTransferCache: false,
-      },
-      {metrics, validatorMonitor}
-    );
+    let postState: IBeaconStateView;
+    try {
+      postState = preState.stateTransition(
+        // We should have the serialized block from gossip in the hot path.
+        // Otherwise, fall back to serializing from block for the less latency critical paths like
+        // syncing/download.
+        serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block),
+        block,
+        {
+          // NOTE: Assume valid for now while sending payload to execution engine in parallel
+          // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus,
+          // false because it's verified below with better error typing
+          verifyStateRoot: false,
+          // if block is trusted don't verify proposer or op signature
+          verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+          verifySignatures: !useBlsBatchVerify && !validSignatures,
+          dontTransferCache: false,
+        },
+        {metrics, validatorMonitor}
+      );
+    } catch (e) {
+      throw new BlockError(block, {
+        code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+        blockRoot: blocks[i].blockRootHex,
+        error: e as Error,
+      });
+    }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,

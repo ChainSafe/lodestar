@@ -53,7 +53,11 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     if (proposerConfig !== null) {
       // if proposerConfig is not empty write or update the json to file
       const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
-      writeFile600Perm(proposerDirPath, JSON.stringify(proposerConfig));
+      writeFile600Perm(
+        proposerDirPath,
+        // Default JSON serialization can't handle BigInt
+        JSON.stringify(proposerConfig, (_key, value) => (typeof value === "bigint" ? value.toString() : value))
+      );
     } else {
       this.deleteProposerConfig(pubkeyHex);
     }

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -47,7 +47,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => useNativeStateTransition && fork === ForkName.gloas,
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };
@@ -63,7 +63,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
 
         state = state.stateTransition(
           config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-          false,
+          signedBlock,
           {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -92,7 +92,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => useNativeStateTransition && fork === ForkName.gloas,
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };

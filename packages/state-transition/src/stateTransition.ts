@@ -1,5 +1,5 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, Slot, ssz} from "@lodestar/types";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
@@ -16,6 +16,7 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
   upgradeStateToGloas,
+  upgradeStateToHeze,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
@@ -26,6 +27,7 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -83,8 +85,7 @@ export enum StateHashTreeRootSource {
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlockBytes: Uint8Array,
-  isBlinded: boolean,
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -94,11 +95,8 @@ export function stateTransition(
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
-  const blockSlot = readSignedBlockSlot(signedBlockBytes);
-  const signedBlock = isBlinded
-    ? state.config.getPostBellatrixForkTypes(blockSlot).SignedBlindedBeaconBlock.deserialize(signedBlockBytes)
-    : state.config.getForkTypes(blockSlot).SignedBeaconBlock.deserialize(signedBlockBytes);
   const block = signedBlock.message;
+  const blockSlot = block.slot;
 
   // .clone() before mutating state in state transition
   let postState = state.clone(options.dontTransferCache);
@@ -115,7 +113,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.pubkeyCache, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 
@@ -156,20 +154,6 @@ export function stateTransition(
   }
 
   return postState;
-}
-
-function readSignedBlockSlot(signedBlockBytes: Uint8Array): Slot {
-  if (signedBlockBytes.byteLength < 12) {
-    throw Error("Invalid signed block bytes: too short to read message offset and slot");
-  }
-
-  const view = new DataView(signedBlockBytes.buffer, signedBlockBytes.byteOffset, signedBlockBytes.byteLength);
-  const messageOffset = view.getUint32(0, true);
-  if (messageOffset + 8 > signedBlockBytes.byteLength) {
-    throw Error("Invalid signed block bytes: message offset out of range");
-  }
-
-  return Number(view.getBigUint64(messageOffset, true));
 }
 
 /**
@@ -294,7 +278,15 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
-        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+        // Timed, unlike the other fork upgrades: this one does unbounded work.
+        // onboardBuildersFromPendingDeposits walks the entire pending deposit queue, so its
+        // cost is set by whatever is sitting in that queue when the fork lands.
+        const timer = metrics?.forkUpgradeTime.startTimer({fork: ForkName.gloas});
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu, metrics) as CachedBeaconStateAllForks;
+        timer?.();
+      }
+      if (stateEpoch === config.HEZE_FORK_EPOCH) {
+        postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
 
       {

@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -51,13 +51,12 @@ const transition =
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
         let state = createBeaconStateViewForTest(forkPrev, testcase.pre, testConfig);
-
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
           state = state.stateTransition(
             testConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-            false,
+            signedBlock,
             {
               // Assume valid and available for this test
               executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -70,7 +69,6 @@ const transition =
             {}
           );
         }
-
         return stateViewToBeaconState(forkNext, state);
       },
       options: {
@@ -90,7 +88,7 @@ const transition =
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         shouldSkip: (_testcase, name, _index) =>
-          (useNativeStateTransition && forkNext === ForkName.gloas) ||
+          (useNativeStateTransition && isForkPostGloas(forkNext)) ||
           (skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false),
       },
     };
@@ -134,6 +132,17 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: forkEpoch,
+      };
+    case ForkName.heze:
+      return {
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: forkEpoch,
       };
   }
 }

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -25,7 +25,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
 
         state = state.stateTransition(
           config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-          false,
+          signedBlock,
           {
             // Should assume payload valid and blob data available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -55,7 +55,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => useNativeStateTransition && fork === ForkName.gloas,
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };

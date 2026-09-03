@@ -25,7 +25,6 @@ export async function getNearestState(
   }
 
   const stateBytes = stateBytesArr[0];
-
   return createBeaconStateViewForHistoricalRegen({useNative: nativeStateView, config, stateBytes});
 }
 
@@ -54,7 +53,7 @@ export async function getHistoricalState(
     try {
       state = state.stateTransition(
         config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-        false,
+        block,
         {
           verifyProposer: false,
           verifySignatures: false,

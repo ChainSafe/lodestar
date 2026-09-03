@@ -69,6 +69,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {
       signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
+      builderUrl: "https://builder.example.com",
     },
     res: undefined,
   },
@@ -80,7 +81,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   publishExecutionPayloadEnvelope: {
-    args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
+    args: {
+      signedEnvelopeOrContents: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
+      broadcastValidation: BroadcastValidation.gossip,
+    },
     res: undefined,
   },
   publishExecutionPayloadBid: {
@@ -117,11 +121,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getPoolPayloadAttestations: {
     args: {slot: 1},
-    res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
-  },
-  getPoolProposerPreferences: {
-    args: {slot: 1},
-    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
+    res: {
+      data: Array.from({length: 5}, () => ssz.gloas.PayloadAttestation.defaultValue()),
+      meta: {version: ForkName.gloas},
+    },
   },
   getPoolAttesterSlashingsV2: {
     args: undefined,
@@ -167,10 +170,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
     res: undefined,
   },
-  submitSignedProposerPreferences: {
-    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
-    res: undefined,
-  },
 
   // state
 
@@ -204,6 +203,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
   postStateValidators: {
     args: {stateId: "head", validatorIds: [pubkeyHex, 1300], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
+  },
+  getStateBuilders: {
+    args: {stateId: "head", builderIds: [pubkeyHex, 32], statuses: ["active"]},
+    res: {
+      data: [{index: 32, status: "active", builder: ssz.gloas.Builder.defaultValue()}],
+      meta: {executionOptimistic: true, finalized: false},
+    },
   },
   postStateValidatorIdentities: {
     args: {stateId: "head", validatorIds: [1300]},

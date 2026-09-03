@@ -5,7 +5,13 @@ import {pruneSetToMax} from "@lodestar/utils";
 import {computeSyncPeriodAtSlot} from "../../util/epoch.js";
 import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
 import {type ILightClientStore, MAX_SYNC_PERIODS_CACHE, type SyncCommitteeFast} from "./store.js";
-import {deserializeSyncCommittee, getSafetyThreshold, isSyncCommitteeUpdate, sumBits} from "./utils.js";
+import {
+  deserializeSyncCommittee,
+  getSafetyThreshold,
+  isFinalityUpdate,
+  isSyncCommitteeUpdate,
+  sumBits,
+} from "./utils.js";
 import {validateLightClientUpdate} from "./validateLightClientUpdate.js";
 
 export interface ProcessUpdateOpts {
@@ -44,7 +50,13 @@ export function processLightClientUpdate(
   }
 
   // Update finalized header
+  // Defense-in-depth: require isFinalityUpdate(update) so a non-finality update can never
+  // overwrite store.finalizedHeader, regardless of any future loosening of the zeroed-header
+  // checks in validateLightClientUpdate. Spec-faithful behavior also holds without this guard
+  // once update.finalizedHeader is guaranteed fully-zero in the non-finality case, but the
+  // guard makes the invariant local to this write site.
   if (
+    isFinalityUpdate(update) &&
     syncCommitteeTrueBits * 3 >= SYNC_COMMITTEE_SIZE * 2 &&
     update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot
   ) {

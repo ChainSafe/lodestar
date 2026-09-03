@@ -201,7 +201,7 @@ export async function verifyBlockExecutionPayload(
         invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
       };
       const execError = new BlockError(block, {
-        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+        code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });

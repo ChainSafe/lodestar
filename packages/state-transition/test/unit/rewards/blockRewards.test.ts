@@ -1,21 +1,21 @@
-import {describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
-import {stateTransition} from "../../../src/stateTransition.js";
+import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateAllForks} from "../../../src/types.js";
 import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
 
 describe("chain / rewards / blockRewards", () => {
   const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));
-  const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
+  const validatorCount = 8192;
+  const testCases: {id: string; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
-      timeout: 90_000,
       opts: {
         proposerSlashingLen: 1,
         attesterSlashingLen: 2,
@@ -66,7 +66,7 @@ describe("chain / rewards / blockRewards", () => {
       id: "Attester slashing only",
       opts: {
         proposerSlashingLen: 0,
-        attesterSlashingLen: 2,
+        attesterSlashingLen: 5,
         attestationLen: 0,
         depositsLen: 0,
         voluntaryExitLen: 0,
@@ -76,13 +76,9 @@ describe("chain / rewards / blockRewards", () => {
     },
   ];
 
-  for (const {id, timeout, opts} of testCases) {
-    if (timeout) {
-      vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
-    }
-
+  for (const {id, opts} of testCases) {
     it(`${id}`, async () => {
-      const state = generatePerfTestCachedStateAltair();
+      const state = generatePerfTestCachedStateAltair({vc: validatorCount, goBackOneSlot: false});
       const block = getBlockAltair(state, opts);
       // Populate permanent root caches of the block
       ssz.altair.BeaconBlock.hashTreeRoot(block.message);
@@ -113,17 +109,17 @@ describe("chain / rewards / blockRewards", () => {
         expect(attesterSlashings).toBe(0);
       }
 
-      const postState = stateTransition(
-        state as CachedBeaconStateAllForks,
+      const postState = new BeaconStateView(state as CachedBeaconStateAllForks).stateTransition(
         state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-        false,
+        block,
         {
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyProposer: false,
           verifySignatures: false,
           verifyStateRoot: false,
-        }
+        },
+        {}
       );
 
       // Cross check with rewardCache
@@ -137,7 +133,7 @@ describe("chain / rewards / blockRewards", () => {
 
   // Check if `computeBlockRewards` consults reward cache in the post state first
   it("Check reward cache", async () => {
-    const preState = generatePerfTestCachedStateAltair();
+    const preState = generatePerfTestCachedStateAltair({vc: validatorCount, goBackOneSlot: false});
     const {opts} = testCases[0]; // Use opts of `normal case`
     const block = getBlockAltair(preState, testCases[0].opts);
     // Populate permanent root caches of the block
@@ -146,17 +142,17 @@ describe("chain / rewards / blockRewards", () => {
     preState.hashTreeRoot();
     cachedStateAltairPopulateCaches(preState);
 
-    const postState = stateTransition(
-      preState as CachedBeaconStateAllForks,
+    const postState = new BeaconStateView(preState as CachedBeaconStateAllForks).stateTransition(
       config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-      false,
+      block,
       {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         dataAvailabilityStatus: DataAvailabilityStatus.Available,
         verifyProposer: false,
         verifySignatures: false,
         verifyStateRoot: false,
-      }
+      },
+      {}
     );
 
     // Set postState's reward cache

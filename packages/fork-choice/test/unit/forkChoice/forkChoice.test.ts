@@ -48,6 +48,8 @@ describe("Forkchoice", () => {
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -148,6 +150,8 @@ describe("Forkchoice", () => {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
@@ -203,7 +207,8 @@ describe("Forkchoice", () => {
       bestChild: undefined,
       bestDescendant: undefined,
       parent: 0,
-      weight: 0,
+      weight: 0n,
+      attestationScore: 0n,
       payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
     });
   });

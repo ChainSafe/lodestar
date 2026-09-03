@@ -39,7 +39,6 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
     };
 
     const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
-      suppressTranspileTS: Boolean(globalThis.Bun),
       workerData,
     } as ConstructorParameters<typeof Worker>[1]);
 

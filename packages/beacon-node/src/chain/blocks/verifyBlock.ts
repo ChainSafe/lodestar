@@ -1,8 +1,14 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -13,6 +19,7 @@ import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {GLOAS_POLAR_BEAR_BANNER} from "./utils/polarBearBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
@@ -125,12 +132,15 @@ export async function verifyBlocksInEpoch(
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
-            // Validate DA for ALL payloads in the Map, not just those paired with blockInputs.
+            // Range sync creates a PayloadEnvelopeInput for every Gloas block, but an entry without
+            // an envelope represents a valid EMPTY slot and has no payload DA to verify.
             // A checkpoint-sync batch may include a payload for a slot whose block was filtered
             // out of relevantBlocks (e.g., the anchor at the finalized slot); that payload still
             // needs DA validation so it can be imported in processBlocks.
             const payloadInputsForDa: PayloadEnvelopeInput[] =
-              payloadEnvelopes !== null ? Array.from(payloadEnvelopes.values()) : [];
+              payloadEnvelopes !== null
+                ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
+                : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
               payloadInputsForDa,
               abortController.signal
@@ -174,7 +184,6 @@ export async function verifyBlocksInEpoch(
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
-        this.config,
         preState0,
         blockInputs,
         // hack availability for state transition eval as availability is separately determined
@@ -188,22 +197,32 @@ export async function verifyBlocksInEpoch(
       ),
 
       // All signatures at once
-      opts.skipVerifyBlockSignatures !== true
-        ? verifyBlocksSignatures(
-            this.config,
-            this.bls,
-            this.logger,
-            this.metrics,
-            preState0,
-            blocks,
-            indexedAttestationsByBlock,
-            opts
-          )
-        : Promise.resolve({verifySignaturesTime: Date.now()}),
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        opts
+      ),
 
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    for (const blockInput of blockInputs) {
+      const block = blockInput.getBlock();
+      const {slot, proposerIndex} = block.message;
+      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex, signedBlockHeader);
+      // Only produce a slashing while importing the block. A block that is verified before it is published
+      // must not be treated as equivocation evidence since it may never be seen by the network
+      if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
+      }
+    }
 
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
@@ -230,6 +249,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
             this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            break;
+
+          case ForkName.gloas:
+            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:
