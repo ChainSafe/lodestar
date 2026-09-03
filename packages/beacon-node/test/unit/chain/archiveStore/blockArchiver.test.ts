@@ -6,8 +6,9 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -70,7 +71,9 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      currentEpoch
+      currentEpoch,
+      null,
+      false
     );
 
     const expectedData = canonicalBlocks
@@ -148,7 +151,9 @@ describe("block archiver task", () => {
         root: fromHexString(ZERO_HASH_HEX),
         rootHex: ZERO_HASH_HEX,
       },
-      currentEpoch
+      currentEpoch,
+      null,
+      false
     );
 
     // Verify data column sidecars are archived
@@ -224,7 +229,9 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      1
+      1,
+      null,
+      false
     );
 
     // Block migration writes only the new ancestor (boundary skipped because its hot-db entry is null)
@@ -263,10 +270,102 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      1
+      1,
+      null,
+      false
     );
 
     expect(dbStub.blockArchive.batchPutBinary).not.toHaveBeenCalled();
     expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
+  });
+
+  describe("audit late-imported-but-canonical blocks", () => {
+    // newest -> oldest; last element is the previous-finalized boundary (excluded). Late =
+    // importedTimely === false. Invariant: timeliness === false implies importedTimely === false.
+    //   slot 10: late import, received late     => late_receive
+    //   slot  9: imported on time               => not late
+    //   slot  8: late import, received on time   => slow_import
+    //   slot  7: boundary, excluded
+    function getCanonicalBlocksWithLateImports() {
+      return [
+        generateProtoBlock({
+          slot: 10,
+          blockRoot: toHexString(Buffer.alloc(32, 10)),
+          importedTimely: false,
+          timeliness: false,
+        }),
+        generateProtoBlock({
+          slot: 9,
+          blockRoot: toHexString(Buffer.alloc(32, 9)),
+          importedTimely: true,
+          timeliness: true,
+        }),
+        generateProtoBlock({
+          slot: 8,
+          blockRoot: toHexString(Buffer.alloc(32, 8)),
+          importedTimely: false,
+          timeliness: true,
+        }),
+        generateProtoBlock({
+          slot: 7,
+          blockRoot: toHexString(Buffer.alloc(32, 7)),
+          importedTimely: false,
+          timeliness: false,
+        }),
+      ];
+    }
+
+    function getMetricsWithIncSpy() {
+      const inc = vi.fn();
+      const metrics = {importBlock: {lateCanonicalBlock: {inc}}} as unknown as Metrics;
+      return {metrics, inc};
+    }
+
+    it("counts non-boundary late-imported canonical blocks by reason when synced", async () => {
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: getCanonicalBlocksWithLateImports(),
+        nonAncestors: [],
+      });
+      const {metrics, inc} = getMetricsWithIncSpy();
+
+      await archiveBlocks(
+        defaultConfig,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8,
+        metrics,
+        true // isNodeSynced
+      );
+
+      // one inc per late non-boundary block: slot 10 (late_receive), slot 8 (slow_import)
+      expect(inc).toHaveBeenCalledTimes(2);
+      expect(inc).toHaveBeenCalledWith({reason: LateCanonicalBlockReason.LateReceive});
+      expect(inc).toHaveBeenCalledWith({reason: LateCanonicalBlockReason.SlowImport});
+    });
+
+    it("does not count late-imported blocks when not synced", async () => {
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: getCanonicalBlocksWithLateImports(),
+        nonAncestors: [],
+      });
+      const {metrics, inc} = getMetricsWithIncSpy();
+
+      await archiveBlocks(
+        defaultConfig,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8,
+        metrics,
+        false // isNodeSynced
+      );
+
+      expect(inc).not.toHaveBeenCalled();
+    });
   });
 });
