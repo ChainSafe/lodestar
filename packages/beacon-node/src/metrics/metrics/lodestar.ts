@@ -83,15 +83,15 @@ export function createLodestarMetrics(
       }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
-        help: "Time to process gossip validation queue job in seconds",
+        help: "Time to process gossip validation queue job in seconds (accepted messages only)",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       jobWaitTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       concurrency: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_concurrency",
@@ -920,6 +920,12 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
+      }),
+
+      preStateSource: register.counter<{source: "parentState" | "fallbackPreState" | "preState"}>({
+        name: "lodestar_gossip_block_validation_pre_state_source_total",
+        help: "Source of the pre-state used for gossip block validation",
+        labelNames: ["source"],
       }),
     },
     gossipBlob: {
@@ -2036,6 +2042,11 @@ export function createLodestarMetrics(
     },
 
     builderApi: {
+      statusChecks: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_status_checks_total",
+        help: "Total count of status checks sent to external builders ahead of a proposal",
+        labelNames: ["status"],
+      }),
       bidRequests: register.counter({
         name: "lodestar_builder_api_bid_requests_total",
         help: "Total count of execution payload bid requests sent to external builders",
