@@ -1364,20 +1364,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         try {
           const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
           metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
+          const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
+          const isNextSlotProposer = chain.beaconProposerCache.get(nextSlotProposer) !== undefined;
 
-          try {
-            const insertOutcome = chain.payloadAttestationPool.add(
-              payloadAttestationMessage,
-              validationResult.attDataRootHex,
-              validationResult.validatorCommitteeIndices
-            );
-            metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-          } catch (e) {
-            logger.debug(
-              "Error adding to payloadAttestation pool",
-              {slot: payloadAttestationMessage.data.slot},
-              e as Error
-            );
+          if (isNextSlotProposer) {
+            try {
+              const insertOutcome = chain.payloadAttestationPool.add(
+                payloadAttestationMessage,
+                validationResult.attDataRootHex,
+                validationResult.validatorCommitteeIndices
+              );
+              metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              logger.debug("Error adding to payloadAttestation pool", {}, e as Error);
+            }
           }
 
           chain.forkChoice.notifyPtcMessages(
