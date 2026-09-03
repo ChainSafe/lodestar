@@ -35,6 +35,26 @@ describe("BidPublisher", () => {
     expect(ledger.recordWin(bidIdentity(bid), toRootHex(Buffer.alloc(32, 8)))?.blockHash).toBe(blockHash);
   });
 
+  it("preserves Heze bid fields through signing and publication", async () => {
+    const bid = ssz.heze.ExecutionPayloadBid.defaultValue();
+    bid.slot = 10;
+    bid.builderIndex = builderIndex;
+    bid.parentBlockHash = Buffer.alloc(32, 2);
+    bid.parentBlockRoot = Buffer.alloc(32, 3);
+    bid.blockHash = Buffer.alloc(32, 4);
+    bid.value = 5;
+    bid.inclusionListBits.set(1, true);
+    const {api, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
+
+    const signedBid = await publisher.publish(bid, new AbortController().signal);
+
+    expect(signedBid.message.inclusionListBits.get(1)).toBe(true);
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledWith(
+      {signedExecutionPayloadBid: signedBid},
+      {signal: expect.any(AbortSignal)}
+    );
+  });
+
   it("rejects a bid for another Builder before signing or recording", async () => {
     const bid = createBid();
     bid.builderIndex++;

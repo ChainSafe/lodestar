@@ -46,6 +46,16 @@ describe("BuilderSigner", () => {
     ).toEqual(true);
   });
 
+  it("preserves Heze bid fields", () => {
+    const bid = ssz.heze.ExecutionPayloadBid.defaultValue();
+    bid.slot = 1;
+    bid.inclusionListBits.set(1, true);
+
+    const signedBid = builderSigner.signExecutionPayloadBid(bid);
+
+    expect(signedBid.message.inclusionListBits.get(1)).toBe(true);
+  });
+
   describe("negative tests - different network", () => {
     const genesisValidatorsRootOtherNetwork = Buffer.alloc(32, 8);
     const beaconConfigOtherNetwork = createBeaconConfig(chainConfig, genesisValidatorsRootOtherNetwork);

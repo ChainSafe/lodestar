@@ -1,5 +1,5 @@
 import type {ApiClient} from "@lodestar/api";
-import type {BuilderIndex, RootHex, gloas} from "@lodestar/types";
+import type {BuilderIndex, RootHex, gloas, heze} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
@@ -37,6 +37,8 @@ export class BidPublisherError extends LodestarError<BidPublisherErrorType> {}
 export class BidPublisher {
   constructor(private readonly modules: BidPublisherModules) {}
 
+  publish(bid: heze.ExecutionPayloadBid, signal: AbortSignal): Promise<heze.SignedExecutionPayloadBid>;
+  publish(bid: gloas.ExecutionPayloadBid, signal: AbortSignal): Promise<gloas.SignedExecutionPayloadBid>;
   async publish(bid: gloas.ExecutionPayloadBid, signal: AbortSignal): Promise<gloas.SignedExecutionPayloadBid> {
     signal.throwIfAborted();
 
