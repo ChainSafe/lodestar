@@ -156,7 +156,10 @@ export function getBeaconBlockApi({
         ) as fulu.DataColumnSidecar[];
         timer?.();
       } else {
-        throw Error(`Invalid data fork=${fork} for publish`);
+        // Deneb..electra block contents are still accepted from the validator client, but blob
+        // sidecars are no longer published or persisted (#9956): the blob retention window has
+        // expired on all networks and blob gossip has been removed, so the blobs are dropped here.
+        dataColumnSidecars = [];
       }
     } else {
       dataColumnSidecars = [];
