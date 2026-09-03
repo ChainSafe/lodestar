@@ -83,7 +83,9 @@ export class AttestationService {
       sleep(attestationDueMs - this.clock.msFromSlot(slot), signal),
       this.emitter.waitForBlockSlot(slot),
     ]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
+    const produceMarginSec = this.clock.secFromSlot(slot) - attestationDueMs / 1000;
+    this.metrics?.attesterStepCallProduceAttestation.observe(produceMarginSec);
+    this.metrics?.attesterProduceMarginSlotFraction.observe(produceMarginSec / (this.config.SLOT_DURATION_MS / 1000));
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
@@ -177,7 +179,9 @@ export class AttestationService {
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
+    const publishMarginSec = this.clock.secFromSlot(slot) - attestationDueMs / 1000;
+    this.metrics?.attesterStepCallPublishAttestation.observe(publishMarginSec);
+    this.metrics?.attesterPublishMarginSlotFraction.observe(publishMarginSec / (this.config.SLOT_DURATION_MS / 1000));
 
     // Step 2. Publish all `Attestations` in one go
     try {

@@ -21,6 +21,11 @@ export function getMetrics(register: MetricsRegister) {
       // as of Sep 2025, on mainnet, epoch transition time of lodestar is never less than 0.5s, and it could be up to 3s
       buckets: [0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 10],
     }),
+    epochTransitionSlotFraction: register.histogram({
+      name: "lodestar_stfn_epoch_transition_slot_fraction",
+      help: "Epoch transition duration as a fraction of the slot duration",
+      buckets: [0.05, 0.1, 0.15, 0.2, 0.25, 0.333, 0.5, 0.75, 1, 1.5],
+    }),
     epochTransitionCommitTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_commit_seconds",
       help: "Time to call commit after process a single epoch transition in seconds",

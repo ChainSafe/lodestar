@@ -1826,6 +1826,7 @@ export class BeaconChain implements IBeaconChain {
     this.forkChoice.updateTime(slot);
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
+    this.metrics?.slotTiming.slotDurationSeconds.set(this.config.SLOT_DURATION_MS / 1000);
 
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);

@@ -48,6 +48,13 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
 type BlsBufferFlushReason = "size" | "timeout";
 type BlsVerificationCallOperation = "batch" | "single" | "fallback" | "same_message";
 
+// Edges align with slot-component deadlines expressed in basis points of the slot,
+// e.g. 0.25 (ATTESTATION_DUE_BPS_GLOAS), 0.333 (ATTESTATION_DUE_BPS), 0.667 (PREPARE_NEXT_SLOT_BPS),
+// so deadline crossings land on bucket boundaries regardless of the configured slot duration.
+const ARRIVAL_SLOT_FRACTION_BUCKETS = [
+  0.083, 0.167, 0.25, 0.333, 0.417, 0.5, 0.583, 0.667, 0.75, 0.833, 1, 1.25, 1.5, 2,
+];
+
 /**
  * Extra Lodestar custom metrics
  */
@@ -935,6 +942,12 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      arrivalSlotFraction: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_block_arrival_slot_fraction",
+        help: "Time elapsed between block slot start and block received, as a fraction of the slot duration",
+        labelNames: ["source"],
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
+      }),
 
       gossipValidation: {
         recvToValidation: register.histogram({
@@ -1154,6 +1167,11 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_elapsed_time_till_become_head",
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      becomeHeadSlotFraction: register.histogram({
+        name: "lodestar_import_block_become_head_slot_fraction",
+        help: "Time elapsed between block slot start and the block becoming head, as a fraction of the slot duration",
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
       }),
       setHeadAfterCutoff: register.gauge({
         name: "lodestar_import_block_set_head_after_cutoff_total",
@@ -1915,6 +1933,25 @@ export function createLodestarMetrics(
         help: "Duration of state transition in regen.getState",
         labelNames: ["caller"],
         buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+    },
+
+    // Slot-relative timing: durations normalized by the configured slot duration, so values are
+    // comparable across networks (mainnet/minimal) and across slot-duration changes (EIP-8198).
+    slotTiming: {
+      slotDurationSeconds: register.gauge({
+        name: "lodestar_slot_duration_seconds",
+        help: "Slot duration in seconds currently in effect",
+      }),
+      prepareNextSlotLeadMargin: register.histogram({
+        name: "lodestar_prepare_next_slot_lead_margin_slot_fraction",
+        help: "Fraction of the slot remaining when prepareNextSlot work completed for the next slot",
+        buckets: [0, 0.042, 0.083, 0.125, 0.167, 0.25, 0.333, 0.5],
+      }),
+      deadlineMissed: register.counter<{deadline: string; task: string}>({
+        name: "lodestar_deadline_missed_total",
+        help: "Total slot-relative deadline overruns, by deadline and task",
+        labelNames: ["deadline", "task"],
       }),
     },
 

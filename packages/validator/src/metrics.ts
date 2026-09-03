@@ -66,6 +66,16 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Time between ATTESTATION_DUE_BPS of slot and call publish attestation",
       buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
+    attesterProduceMarginSlotFraction: register.histogram({
+      name: "vc_attester_produce_attestation_margin_slot_fraction",
+      help: "Offset from the attestation due point when produce was called, as a fraction of the slot duration (negative = before due)",
+      buckets: [-0.25, -0.167, -0.083, 0, 0.083, 0.167, 0.25, 0.5, 1],
+    }),
+    attesterPublishMarginSlotFraction: register.histogram({
+      name: "vc_attester_publish_attestation_margin_slot_fraction",
+      help: "Offset from the attestation due point when publish was called, as a fraction of the slot duration (negative = before due)",
+      buckets: [-0.25, -0.167, -0.083, 0, 0.083, 0.167, 0.25, 0.5, 1],
+    }),
 
     attesterStepCallProduceAggregate: register.histogram({
       name: "vc_attester_step_call_produce_aggregate_seconds",

@@ -361,6 +361,10 @@ export function getBeaconBlockApi(
     // TODO: Validate block
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+    metrics?.gossipBlock.arrivalSlotFraction.observe(
+      {source: OpSource.api},
+      delaySec / (config.SLOT_DURATION_MS / 1000)
+    );
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);

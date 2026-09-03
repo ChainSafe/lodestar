@@ -338,9 +338,11 @@ export async function importBlock(
       const headFork = this.config.getForkName(newHead.slot);
       if (delaySec < (SLOTS_PER_EPOCH * this.config.getSlotDurationMs(headFork)) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
+        this.metrics.importBlock.becomeHeadSlotFraction.observe(delaySec / (this.config.SLOT_DURATION_MS / 1000));
         const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
         if (delaySec > cutOffSec) {
           this.metrics.importBlock.setHeadAfterCutoff.inc();
+          this.metrics.slotTiming.deadlineMissed.inc({deadline: "attestation_due", task: "block_become_head"});
         }
       }
     }

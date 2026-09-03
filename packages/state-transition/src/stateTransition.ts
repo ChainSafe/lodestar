@@ -301,7 +301,10 @@ function processSlotsWithTransientCache(
       }
 
       // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, upgradeState*, finalProcessEpoch, commit
-      epochTransitionTimer?.();
+      const epochTransitionTimeSec = epochTransitionTimer?.();
+      if (epochTransitionTimeSec !== undefined) {
+        metrics?.epochTransitionSlotFraction.observe(epochTransitionTimeSec / (config.SLOT_DURATION_MS / 1000));
+      }
     } else {
       postState.slot++;
     }

@@ -320,6 +320,15 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
       }
 
+      // msFromSlot is negative while prepareSlot is still in the future
+      const leadMarginMs = -this.chain.clock.msFromSlot(prepareSlot);
+      this.metrics?.slotTiming.prepareNextSlotLeadMargin.observe(
+        Math.max(0, leadMarginMs) / this.config.SLOT_DURATION_MS
+      );
+      if (leadMarginMs < 0) {
+        this.metrics?.slotTiming.deadlineMissed.inc({deadline: "next_slot_start", task: "prepare_next_slot"});
+      }
+
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations

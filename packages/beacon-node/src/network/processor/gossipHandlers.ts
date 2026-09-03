@@ -650,6 +650,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
+    metrics?.gossipBlock.arrivalSlotFraction.observe(
+      {source: OpSource.gossip},
+      delaySec / (config.SLOT_DURATION_MS / 1000)
+    );
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     if (!blockInput.hasBlockAndAllData()) {
       chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());
