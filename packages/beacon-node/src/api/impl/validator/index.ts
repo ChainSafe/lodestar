@@ -880,6 +880,11 @@ export function getValidatorApi(
 
   return {
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
+      const fork = config.getForkName(slot);
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `produceBlockV3 not supported for pre-fulu fork=${fork}`);
+      }
+
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
         randaoReveal,
@@ -889,8 +894,8 @@ export function getValidatorApi(
         opts
       );
 
-      const fork = ForkSeq[meta.version];
-      if (opts.blindedLocal === true && fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
+      const forkSeq = ForkSeq[meta.version];
+      if (opts.blindedLocal === true && forkSeq >= ForkSeq.bellatrix && forkSeq < ForkSeq.gloas) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }

@@ -27,6 +27,10 @@ describe("api/validator - produceBlockV3", () => {
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 1,
+    CAPELLA_FORK_EPOCH: 2,
+    DENEB_FORK_EPOCH: 2,
+    ELECTRA_FORK_EPOCH: 2,
+    FULU_FORK_EPOCH: 2,
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -41,6 +45,30 @@ describe("api/validator - produceBlockV3", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("rejects block production before Fulu", async () => {
+    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const slot = 1 * SLOTS_PER_EPOCH;
+
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue: BigInt(0),
+      consensusBlockValue: BigInt(0),
+    });
+
+    await expect(
+      api.produceBlockV3({
+        slot,
+        randaoReveal: fullBlock.body.randaoReveal,
+      })
+    ).rejects.toThrow("produceBlockV3 not supported for pre-fulu fork=bellatrix");
+
+    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlindedBlock).not.toHaveBeenCalled();
   });
 
   const testCases: [routes.validator.BuilderSelection, number | null, number | null, number, boolean, string][] = [
@@ -79,10 +107,10 @@ describe("api/validator - produceBlockV3", () => {
     finalSelection,
   ] of testCases) {
     it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
-      const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-      const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
+      const fullBlock = ssz.fulu.BeaconBlock.defaultValue();
+      const blindedBlock = ssz.fulu.BlindedBeaconBlock.defaultValue();
 
-      const slot = 1 * SLOTS_PER_EPOCH;
+      const slot = 2 * SLOTS_PER_EPOCH;
       const randaoReveal = fullBlock.body.randaoReveal;
       const graffiti = "a".repeat(32);
       const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
@@ -161,9 +189,9 @@ describe("api/validator - produceBlockV3", () => {
   }
 
   it("treats deprecated builderonly selection as builderalways", async () => {
-    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-    const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-    const slot = 1 * SLOTS_PER_EPOCH;
+    const fullBlock = ssz.fulu.BeaconBlock.defaultValue();
+    const blindedBlock = ssz.fulu.BlindedBeaconBlock.defaultValue();
+    const slot = 2 * SLOTS_PER_EPOCH;
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
@@ -211,8 +239,8 @@ describe("api/validator - produceBlockV3", () => {
   });
 
   it("rejects block production if parent block is optimistic", async () => {
-    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-    const slot = 1 * SLOTS_PER_EPOCH;
+    const fullBlock = ssz.fulu.BeaconBlock.defaultValue();
+    const slot = 2 * SLOTS_PER_EPOCH;
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
@@ -235,7 +263,7 @@ describe("api/validator - produceBlockV3", () => {
   });
 
   it("correctly pass feeRecipient to produceBlock", async () => {
-    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const fullBlock = ssz.fulu.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const consensusBlockValue = ssz.Wei.defaultValue();
 
@@ -299,7 +327,7 @@ describe("api/validator - produceBlockV3", () => {
   it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
-    const slot = 100000;
+    const slot = 1 * SLOTS_PER_EPOCH;
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
