@@ -32,6 +32,7 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {MAX_PEERS_PER_ROOT} from "./constants.js";
+import {canKnownBlockRequireExecutionPayloadEnvelope} from "./executionPayloadEnvelopeEligibility.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
@@ -310,6 +311,17 @@ export class NetworkProcessor {
     if (this.chain.seenPayloadEnvelope(root)) {
       return;
     }
+
+    // Skip roots that can never have an execution payload envelope: a known genesis block
+    // (slot 0, no envelope) or a known pre-Gloas block. Unknown roots are kept so sync can
+    // still recover a real post-Gloas block's envelope.
+    const knownBlock = this.chain.forkChoice.getBlockHexDefaultStatus(root);
+    if (
+      !canKnownBlockRequireExecutionPayloadEnvelope((blockSlot) => this.chain.config.getForkSeq(blockSlot), knownBlock)
+    ) {
+      return;
+    }
+
     const peersForRoot = this.unknownEnvelopesBySlot.getOrDefault(slot);
     // capture "already searching" BEFORE getOrDefault(root) creates the entry
     const alreadySearching = peersForRoot.has(root) || this.awaitingMessagesByPayloadBlockRoot.has(root);
