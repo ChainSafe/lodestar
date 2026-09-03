@@ -56,9 +56,16 @@ export class SlashingProtectionAttestationService {
       throw new InvalidAttestationError({code: InvalidAttestationErrorCode.SOURCE_EXCEEDS_TARGET});
     }
 
+    const latestAtt = await this.attestationByTarget.getLatest(pubKey);
+
     // Check for a double vote. Namely, an existing attestation with the same target epoch,
-    // and a different signing root.
-    const sameTargetAtt = await this.attestationByTarget.get(pubKey, attestation.targetEpoch);
+    // and a different signing root. No db read needed if the latest attestation has a lower target epoch.
+    let sameTargetAtt: SlashingProtectionAttestation | null = null;
+    if (latestAtt && latestAtt.targetEpoch === attestation.targetEpoch) {
+      sameTargetAtt = latestAtt;
+    } else if (latestAtt && latestAtt.targetEpoch > attestation.targetEpoch) {
+      sameTargetAtt = await this.attestationByTarget.get(pubKey, attestation.targetEpoch);
+    }
     if (sameTargetAtt) {
       // Interchange format allows for attestations without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameTargetAtt.signingRoot, attestation.signingRoot)) {
@@ -69,6 +76,20 @@ export class SlashingProtectionAttestationService {
         attestation: attestation,
         prev: sameTargetAtt,
       });
+    }
+
+    // Min-span entries only exist within the lookback window below each recorded source epoch, a surround vote
+    // with an older source epoch is undetectable by min-max surround and must be rejected outright. Recorded
+    // attestations are surround-free, so the latest one has the highest source epoch and the widest window.
+    if (latestAtt) {
+      const minSourceEpoch = this.minMaxSurround.minSpanCoverageStart(latestAtt.sourceEpoch);
+      if (attestation.sourceEpoch < minSourceEpoch) {
+        throw new InvalidAttestationError({
+          code: InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK,
+          sourceEpoch: attestation.sourceEpoch,
+          minSourceEpoch,
+        });
+      }
     }
 
     // Check for a surround vote
@@ -143,12 +164,12 @@ export class SlashingProtectionAttestationService {
    * Interchange import / export functionality
    */
   async importAttestations(pubkey: BLSPubkey, attestations: SlashingProtectionAttestation[]): Promise<void> {
-    await this.attestationByTarget.set(pubkey, attestations);
-
-    // Pre-compute spans for all attestations
+    // Pre-compute spans for all attestations, before storing them so a rejected interchange leaves none behind
     for (const attestation of attestations) {
       await this.minMaxSurround.insertAttestation(pubkey, attestation);
     }
+
+    await this.attestationByTarget.set(pubkey, attestations);
 
     // Pre-compute and store lower-bound
     const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
