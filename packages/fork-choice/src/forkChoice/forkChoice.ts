@@ -1757,6 +1757,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Return true if THIS node finished importing the block before the attestation cutoff, ie. the
    * block was imported in a timely manner for its own slot.
+   * This is not part of the spec, we use this to determine late canonical blocks.
    */
   protected isBlockImportedTimely(block: BeaconBlock, importDelaySec: number): boolean {
     const fork = this.config.getForkName(block.slot);
