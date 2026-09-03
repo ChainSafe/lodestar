@@ -34,9 +34,7 @@ export async function verifyBlocksDataAvailability(
       return DataAvailabilityStatus.NotRequired;
     }
     if (blockInput.type === DAType.PreData) {
-      // deneb..electra blocks are tracked without blob data since their blob retention window
-      // expired on all networks. The state transition rejects PreData for post-deneb forks, so
-      // report them as OutOfRange instead.
+      // The state transition rejects PreData for post-deneb forks, so report OutOfRange instead.
       return ForkSeq[blockInput.forkName] >= ForkSeq.deneb
         ? DataAvailabilityStatus.OutOfRange
         : DataAvailabilityStatus.PreData;

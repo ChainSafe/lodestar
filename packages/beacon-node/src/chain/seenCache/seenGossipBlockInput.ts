@@ -223,8 +223,6 @@ export class SeenBlockInput {
           peerIdStr,
         });
       } else {
-        // Pre-fulu: block-only. Deneb..electra blob data is no longer tracked, the blob
-        // retention window has expired on all networks (see BlockInputPreData).
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,

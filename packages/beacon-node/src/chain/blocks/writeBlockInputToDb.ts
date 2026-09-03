@@ -12,8 +12,6 @@ import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
  *
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
- *
- * Block (all forks) and data columns (fulu+) are written in parallel.
  */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];

@@ -323,10 +323,7 @@ const fastConfirmationTest =
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
                 } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
-                  // deneb..electra blob data is no longer tracked on the BlockInput (blob support
-                  // removed post-fulu); blocks import with DataAvailabilityStatus.OutOfRange.
-                  // Note: blob kzg proofs were never validated here (minimal-preset kzg not integrated),
-                  // vectors with missing blobs previously failed on length checks pre-import only.
+                  // Blocks import with DataAvailabilityStatus.OutOfRange, blob data is not tracked
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
                     block: signedBlock as SignedBeaconBlock<ForkPreFulu>,

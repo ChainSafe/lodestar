@@ -167,8 +167,7 @@ export async function verifyBlockExecutionPayload(
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
   const fork = blockInput.forkName;
-  // Versioned hashes are derived from the block body's kzg commitments so re-synced deneb..electra
-  // blocks (whose blob data is no longer tracked on the BlockInput) still pass them to the EL
+  // Versioned hashes come from the block body's kzg commitments, not from the blob data
   const versionedHashes =
     ForkSeq[fork] >= ForkSeq.deneb
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)

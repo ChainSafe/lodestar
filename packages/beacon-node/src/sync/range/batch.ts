@@ -336,7 +336,6 @@ export class Batch {
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
-      // Skip the column re-request when we have no specific column indices outstanding.
       // Peer rejects an empty `columns` list
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow && neededColumns.size > 0) {
         requests.columnsRequest = {
