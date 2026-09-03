@@ -17,7 +17,9 @@ import {RegenCaller} from "../regen/index.js";
 import {isValidDependentRoot} from "./proposerPreferences.js";
 
 export enum InvalidInclusionListReason {
+  emptyTransactions = "empty_transactions",
   maxSizeExceeded = "max_size_exceeded",
+  emptyTransaction = "empty_transaction",
   slotOutOfRange = "slot_out_of_range",
   seenTwice = "seen_twice",
   unknownDependentRoot = "unknown_dependent_root",
@@ -76,12 +78,26 @@ async function validateInclusionList(
     });
   }
 
+  // [IGNORE] The size of message.transactions is greater than 0
+  if (inclusionListSize === 0) {
+    ignore(InvalidInclusionListReason.emptyTransactions, {code: InclusionListErrorCode.EMPTY_TRANSACTIONS});
+  }
+
   // [REJECT] The size of message.transactions is within upperbound MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST
   if (inclusionListSize > chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST) {
     reject(InvalidInclusionListReason.maxSizeExceeded, {
       code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED,
       inclusionListSize,
       sizeLimit: chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST,
+    });
+  }
+
+  // [REJECT] Every transaction in message.transactions is non-empty
+  const emptyTransactionIndex = transactions.findIndex((transaction) => transaction.byteLength === 0);
+  if (emptyTransactionIndex !== -1) {
+    reject(InvalidInclusionListReason.emptyTransaction, {
+      code: InclusionListErrorCode.EMPTY_TRANSACTION,
+      transactionIndex: emptyTransactionIndex,
     });
   }
 

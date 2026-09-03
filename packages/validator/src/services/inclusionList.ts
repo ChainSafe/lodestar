@@ -67,6 +67,13 @@ export class InclusionListService {
     // If there is more than one duty, all validators on duty will sign and publish the same IL
     const inclusionListTransactions = await this.produceInclusionList(slot);
 
+    // An empty inclusion list is IGNOREd by gossip validation and rejected by on_inclusion_list
+    // per https://github.com/ethereum/consensus-specs/pull/5576, so there is nothing to publish
+    if (inclusionListTransactions.length === 0) {
+      this.logger.debug("Produced inclusion list has no transactions, skipping publish", {slot});
+      return;
+    }
+
     await this.signAndPublishInclusionList(inclusionListTransactions, duties);
   };
 
