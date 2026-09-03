@@ -1352,11 +1352,6 @@ export function createLodestarMetrics(
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
           labelNames: ["insertOutcome"],
         }),
-        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
-          labelNames: ["insertOutcome"],
-        }),
         apiValidationTime: register.histogram({
           name: "lodestar_api_execution_payload_bid_validation_time_seconds",
           help: "Time elapsed for signed execution payload bid validation - api path",
