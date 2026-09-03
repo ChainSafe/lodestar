@@ -102,19 +102,15 @@ describe("SlashingProtection attestation min-span lookback", () => {
     await rejectsWith(sign(5_000, 20_002), InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK);
   });
 
-  it("records nothing from an interchange import that fails validation", async () => {
-    await sign(10, 11);
-    await sign(11, 12);
-    // (9, 14) surrounds (10, 11) so the import must be rejected as a whole, including (12, 13)
-    await expect(
+  it("rejects an interchange import whose highest target attestation surrounds one beyond the lookback", async () => {
+    // (0, 20000) surrounds (10000, 10001) but 0 is below its min-span coverage
+    await rejectsWith(
       importInterchange([
-        [12, 13],
-        [9, 14],
-      ])
-    ).rejects.toThrow();
-
-    expect(await slashingProtection.hasAttestedInEpoch(pubkey, 13)).toBe(false);
-    await expect(sign(12, 13)).resolves.toBeUndefined();
+        [10_000, 10_001],
+        [0, 20_000],
+      ]),
+      InvalidAttestationErrorCode.NEW_SURROUNDS_PREV
+    );
   });
 
   it("rejects a double vote for a target recorded by an interchange import", async () => {

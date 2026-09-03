@@ -164,12 +164,32 @@ export class SlashingProtectionAttestationService {
    * Interchange import / export functionality
    */
   async importAttestations(pubkey: BLSPubkey, attestations: SlashingProtectionAttestation[]): Promise<void> {
-    // Pre-compute spans for all attestations, before storing them so a rejected interchange leaves none behind
+    // Min-max surround misses a surround vote beyond its lookback, require the highest target attestation to
+    // have the highest source epoch as `checkAttestation` relies on it
+    let latestAtt = await this.attestationByTarget.getLatest(pubkey);
+    let maxSourceAtt = latestAtt;
     for (const attestation of attestations) {
-      await this.minMaxSurround.insertAttestation(pubkey, attestation);
+      if (latestAtt === null || attestation.targetEpoch >= latestAtt.targetEpoch) {
+        latestAtt = attestation;
+      }
+      if (maxSourceAtt === null || attestation.sourceEpoch > maxSourceAtt.sourceEpoch) {
+        maxSourceAtt = attestation;
+      }
+    }
+    if (latestAtt && maxSourceAtt && latestAtt.sourceEpoch < maxSourceAtt.sourceEpoch) {
+      throw new InvalidAttestationError({
+        code: InvalidAttestationErrorCode.NEW_SURROUNDS_PREV,
+        attestation: latestAtt,
+        prev: maxSourceAtt,
+      });
     }
 
     await this.attestationByTarget.set(pubkey, attestations);
+
+    // Pre-compute spans for all attestations
+    for (const attestation of attestations) {
+      await this.minMaxSurround.insertAttestation(pubkey, attestation);
+    }
 
     // Pre-compute and store lower-bound
     const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
