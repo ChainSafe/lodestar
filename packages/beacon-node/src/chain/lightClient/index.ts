@@ -395,6 +395,8 @@ export class LightClientServer {
 
   /**
    * Persist the data needed to serve `LightClientBootstrap` for the checkpoint-sync anchor block.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/master/specs/altair/light-client/sync-protocol.md#lightclientbootstrap
    */
   async persistAnchorBootstrapData(
     anchorBlock: BeaconBlock<ForkPostAltair>,
