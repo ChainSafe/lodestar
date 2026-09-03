@@ -23,18 +23,18 @@ import {
 } from "@lodestar/params";
 import {
   BeaconBlockHeader,
+  LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientHeader,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  Slot,
   SyncCommittee,
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-import {byteArrayEquals, verifyMerkleBranch} from "@lodestar/utils";
-import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "../../util/epoch.js";
-import type {LightClientStore, SyncCommitteeFast} from "./store.js";
+import {byteArrayEquals, hash, verifyMerkleBranch} from "@lodestar/utils";
+import {computeEpochAtSlot} from "../../util/epoch.js";
+import type {ILightClientStore, SyncCommitteeFast} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -201,6 +201,76 @@ function getGindexIndex(gindex: number): number {
   return gindex - 2 ** getGindexDepth(gindex);
 }
 
+/**
+ * Returns the execution root represented by a light-client header.
+ *
+ * Gloas headers removed `execution` so Pre-Gloas headers upgraded to the Gloas format
+ * require reconstruction of the original execution payload header root.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/e762dd6e2c45ee05648b5787e7d261279aec226a/specs/gloas/light-client/sync-protocol.md#modified-get_lc_execution_root
+ */
+export function getLcExecutionRoot(config: ChainForkConfig, header: LightClientHeader): Uint8Array {
+  const epoch = computeEpochAtSlot(header.beacon.slot);
+
+  if (!isGloasLightClientHeader(header)) {
+    if (epoch < config.CAPELLA_FORK_EPOCH) {
+      return ZERO_HASH;
+    }
+
+    return config
+      .getPostBellatrixForkTypes(header.beacon.slot)
+      .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution);
+  }
+
+  if (epoch >= config.GLOAS_FORK_EPOCH) {
+    return header.executionBlockHash;
+  }
+
+  // Reconstruct the pre-Gloas execution payload root for a header upgraded to the Gloas format
+  // because the structure is different, `execution` is removed
+  const executionPayloadDepth = getGindexDepth(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX);
+  const innerBranch = header.executionBranch.slice(0, -executionPayloadDepth);
+
+  if (epoch >= config.DENEB_FORK_EPOCH) {
+    if (header.beacon.slot === GENESIS_SLOT) {
+      return ssz.deneb.ExecutionPayloadHeader.hashTreeRoot(ssz.deneb.ExecutionPayloadHeader.defaultValue());
+    }
+    return computeBranchRoot(
+      header.executionBlockHash,
+      innerBranch,
+      ssz.deneb.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex
+    );
+  }
+
+  if (epoch >= config.CAPELLA_FORK_EPOCH) {
+    if (header.beacon.slot === GENESIS_SLOT) {
+      return ssz.capella.ExecutionPayloadHeader.hashTreeRoot(ssz.capella.ExecutionPayloadHeader.defaultValue());
+    }
+    return computeBranchRoot(
+      header.executionBlockHash,
+      innerBranch,
+      ssz.capella.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex
+    );
+  }
+
+  return ZERO_HASH;
+}
+
+export function upgradeLightClientBootstrap(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  bootstrap: LightClientBootstrap
+): LightClientBootstrap {
+  return {
+    ...bootstrap,
+    header: upgradeLightClientHeader(config, targetFork, bootstrap.header),
+    currentSyncCommitteeBranch: normalizeMerkleBranch(
+      bootstrap.currentSyncCommitteeBranch,
+      currentSyncCommitteeGindexAtFork(targetFork)
+    ),
+  };
+}
+
 export function upgradeLightClientHeader(
   config: ChainForkConfig,
   targetFork: ForkName,
@@ -211,9 +281,7 @@ export function upgradeLightClientHeader(
     throw Error(`Invalid upgrade request from headerFork=${headerFork} to targetFork=${targetFork}`);
   }
 
-  // We are modifying the same header object, may be we could create a copy, but its
-  // not required as of now
-  let upgradedHeader = header;
+  let upgradedHeader = {...header} as LightClientHeader;
   const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
 
   switch (startUpgradeFromFork) {
@@ -231,23 +299,30 @@ export function upgradeLightClientHeader(
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.capella:
-      (upgradedHeader as LightClientHeader<ForkName.capella>).execution =
-        ssz.capella.LightClientHeader.fields.execution.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.capella>).executionBranch =
-        ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
+      upgradedHeader = {
+        ...upgradedHeader,
+        execution: ssz.capella.LightClientHeader.fields.execution.defaultValue(),
+        executionBranch: ssz.capella.LightClientHeader.fields.executionBranch.defaultValue(),
+      } as LightClientHeader<ForkName.capella>;
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
-    case ForkName.deneb:
-      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.blobGasUsed =
-        ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
-      (upgradedHeader as LightClientHeader<ForkName.deneb>).execution.excessBlobGas =
-        ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue();
+    case ForkName.deneb: {
+      const capellaHeader = upgradedHeader as LightClientHeader<ForkName.capella>;
+      upgradedHeader = {
+        ...capellaHeader,
+        execution: {
+          ...capellaHeader.execution,
+          blobGasUsed: ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue(),
+          excessBlobGas: ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue(),
+        },
+      } as LightClientHeader<ForkName.deneb>;
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
+    }
 
     // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.electra:
@@ -361,15 +436,16 @@ export function upgradeLightClientUpdate(
   targetFork: ForkName,
   update: LightClientUpdate
 ): LightClientUpdate {
-  update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
-  update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
-  update.nextSyncCommitteeBranch = normalizeMerkleBranch(
-    update.nextSyncCommitteeBranch,
-    nextSyncCommitteeGindexAtFork(targetFork)
-  );
-  update.finalityBranch = normalizeMerkleBranch(update.finalityBranch, finalizedRootGindexAtFork(targetFork));
-
-  return update;
+  return {
+    ...update,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, update.attestedHeader),
+    finalizedHeader: upgradeLightClientHeader(config, targetFork, update.finalizedHeader),
+    nextSyncCommitteeBranch: normalizeMerkleBranch(
+      update.nextSyncCommitteeBranch,
+      nextSyncCommitteeGindexAtFork(targetFork)
+    ),
+    finalityBranch: normalizeMerkleBranch(update.finalityBranch, finalizedRootGindexAtFork(targetFork)),
+  };
 }
 
 export function upgradeLightClientFinalityUpdate(
@@ -377,14 +453,12 @@ export function upgradeLightClientFinalityUpdate(
   targetFork: ForkName,
   finalityUpdate: LightClientFinalityUpdate
 ): LightClientFinalityUpdate {
-  finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
-  finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
-  finalityUpdate.finalityBranch = normalizeMerkleBranch(
-    finalityUpdate.finalityBranch,
-    finalizedRootGindexAtFork(targetFork)
-  );
-
-  return finalityUpdate;
+  return {
+    ...finalityUpdate,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader),
+    finalizedHeader: upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader),
+    finalityBranch: normalizeMerkleBranch(finalityUpdate.finalityBranch, finalizedRootGindexAtFork(targetFork)),
+  };
 }
 
 export function upgradeLightClientOptimisticUpdate(
@@ -392,9 +466,10 @@ export function upgradeLightClientOptimisticUpdate(
   targetFork: ForkName,
   optimisticUpdate: LightClientOptimisticUpdate
 ): LightClientOptimisticUpdate {
-  optimisticUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader);
-
-  return optimisticUpdate;
+  return {
+    ...optimisticUpdate,
+    attestedHeader: upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader),
+  };
 }
 
 /**
@@ -405,23 +480,42 @@ export function upgradeLightClientOptimisticUpdate(
 export function upgradeLightClientStore(
   config: ChainForkConfig,
   targetFork: ForkName,
-  store: LightClientStore,
-  signatureSlot: Slot
-): LightClientStore {
-  const updateSignaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
-  const bestValidUpdate = store.bestValidUpdates.get(updateSignaturePeriod);
+  store: ILightClientStore
+): ILightClientStore {
+  const bestValidUpdates = new Map();
 
-  if (bestValidUpdate) {
-    store.bestValidUpdates.set(updateSignaturePeriod, {
-      update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
-      summary: bestValidUpdate.summary,
+  for (const [period, entry] of store.bestValidUpdates) {
+    bestValidUpdates.set(period, {
+      ...entry,
+      update: upgradeLightClientUpdate(config, targetFork, entry.update),
     });
   }
+  const finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
+  const optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
 
-  store.finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
-  store.optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
+  for (const [period, bestValidUpdate] of bestValidUpdates) {
+    store.bestValidUpdates.set(period, bestValidUpdate);
+  }
+  store.finalizedHeader = finalizedHeader;
+  store.optimisticHeader = optimisticHeader;
 
   return store;
+}
+
+function computeBranchRoot(leaf: Uint8Array, branch: Uint8Array[], gindex: bigint): Uint8Array {
+  const depth = getGindexDepth(Number(gindex));
+  if (branch.length < depth) {
+    throw Error(`Invalid Merkle branch length ${branch.length}, expected at least ${depth}`);
+  }
+  const proof = branch.slice(-depth);
+  const index = getGindexIndex(Number(gindex));
+  let root = leaf;
+
+  for (let i = 0; i < depth; i++) {
+    root = Math.floor(index / 2 ** i) % 2 === 1 ? hash(proof[i], root) : hash(root, proof[i]);
+  }
+
+  return root;
 }
 
 function isGloasLightClientHeader(header: LightClientHeader): header is LightClientHeader<ForkName.gloas> {
