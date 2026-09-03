@@ -1012,6 +1012,7 @@ export function getValidatorApi(
       // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
         const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+        let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
 
         const candidates = (
           await Promise.all(
@@ -1023,6 +1024,10 @@ export function getValidatorApi(
                   parentBlockHash: bidParentBlockHash,
                   parentBlockRoot: parentBlockRootHex,
                   entry,
+                  getParentExecutionRequests: () => {
+                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+                    return parentExecutionRequestsPromise;
+                  },
                 });
                 return {
                   signedBid,

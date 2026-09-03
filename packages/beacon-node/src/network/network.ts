@@ -482,7 +482,7 @@ export class Network implements INetwork {
   }
 
   async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
-    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.attestedHeader.beacon.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_finality_update>(
@@ -492,7 +492,7 @@ export class Network implements INetwork {
   }
 
   async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
-    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.attestedHeader.beacon.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_optimistic_update>(
@@ -517,7 +517,8 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.execution_payload_bid>(
       {type: GossipType.execution_payload_bid, boundary},
-      signedBid
+      signedBid,
+      {floodPublish: true}
     );
   }
 
@@ -553,17 +554,19 @@ export class Network implements INetwork {
 
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
-    object: GossipTypeMap[K]
+    object: GossipTypeMap[K],
+    opts?: PublishOpts
   ): Promise<number> {
     const topicStr = stringifyGossipTopic(this.config, topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    const opts: PublishOpts = {
+    const publishOpts: PublishOpts = {
       ignoreDuplicatePublishError: gossipTopicIgnoreDuplicatePublishError[topic.type],
       // Leave undefined unless the topic opts out, so `--network.allowPublishToZeroPeers` still applies
       allowPublishToZeroTopicPeers: gossipTopicAllowPublishToZeroPeers[topic.type] ? true : undefined,
+      ...opts,
     };
-    const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
+    const sentPeers = await this.core.publishGossip(topicStr, messageData, publishOpts);
 
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers, currentSlot: this.clock.currentSlot});
     return sentPeers;
