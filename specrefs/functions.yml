@@ -12145,7 +12145,7 @@
 - name: record_block_timeliness#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: '^\s+protected isBlockTimely\('
+      search: '^\s+protected isBlockReceivedTimely\('
       regex: true
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+protected isBlockPtcTimely\('

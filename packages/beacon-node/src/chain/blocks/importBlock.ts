@@ -85,7 +85,7 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec =
+  const receiveDelaySec =
     fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
@@ -122,10 +122,12 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
+  const importDelaySec = this.clock.secFromSlot(blockSlot);
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
-    blockDelaySec,
+    receiveDelaySec,
+    importDelaySec,
     currentSlot,
     executionStatus,
     dataAvailabilityStatus

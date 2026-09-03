@@ -481,7 +481,7 @@ export class Network implements INetwork {
   }
 
   async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
-    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.attestedHeader.beacon.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_finality_update>(
@@ -491,7 +491,7 @@ export class Network implements INetwork {
   }
 
   async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
-    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.attestedHeader.beacon.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_optimistic_update>(
