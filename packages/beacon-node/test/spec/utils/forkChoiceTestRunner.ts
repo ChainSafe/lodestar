@@ -765,14 +765,17 @@ export const forkChoiceTestRunner =
         timeout: 15000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
+        // EXCEPTION: these are skipped here because the testId is the same for the whole directory
+        // (`deneb/fork_choice/on_block/pyspec_tests`) so a prefix match cannot single them out.
         //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
+        // All four are negative vectors whose only invalid property is the blob data. Blob download,
+        // gossip and validation were removed for deneb..electra, so the runner never loads the blobs
+        // and the block imports successfully — the expected rejection can no longer be produced.
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
+          name.includes("invalid_data_unavailable") ||
+          name.includes("invalid_wrong_blobs_length") ||
+          name.includes("invalid_wrong_proofs_length") ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
           ((name.includes("gloas") || name.includes("heze")) &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
