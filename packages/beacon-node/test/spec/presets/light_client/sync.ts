@@ -6,7 +6,7 @@ import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {
   LightclientSpec,
-  getLcExecutionRoot,
+  getLightClientExecutionRoot,
   toLightClientUpdateSummary,
   upgradeLightClientBootstrap,
   upgradeLightClientStore,
@@ -129,7 +129,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (_fork) => {
           msg
         );
         if (expectedHeader.execution_root !== undefined) {
-          expect(toHex(getLcExecutionRoot(config, actualHeader))).equals(
+          expect(toHex(getLightClientExecutionRoot(config, actualHeader))).equals(
             expectedHeader.execution_root,
             `${msg} executionRoot`
           );
