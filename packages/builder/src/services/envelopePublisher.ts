@@ -1,5 +1,5 @@
 import {type ApiClient, routes} from "@lodestar/api";
-import type {BuilderIndex, RootHex, Slot, gloas} from "@lodestar/types";
+import {type BuilderIndex, type RootHex, type Slot, type gloas, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import type {BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
@@ -47,6 +47,8 @@ export type EnvelopePublicationResult =
 
 /** Signs and submits stateless envelope material for an exact recorded local selection. */
 export class EnvelopePublisher {
+  private readonly activePublications = new Map<RootHex, Promise<EnvelopePublicationResult>>();
+
   constructor(private readonly modules: EnvelopePublisherModules) {}
 
   async publish(material: EnvelopePublicationMaterial, signal: AbortSignal): Promise<EnvelopePublicationResult> {
@@ -79,15 +81,38 @@ export class EnvelopePublisher {
       );
     }
 
-    if (ledger.hasRevealed(identity.blockRoot)) {
-      if (!ledger.canReveal(identity.blockRoot, identity.blockHash)) {
-        ledger.recordReveal(identity.slot, identity.blockRoot, identity.blockHash);
-      }
+    const envelopeRoot = toRootHex(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(envelope));
+    ledger.recordReveal(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
+    if (ledger.hasPublishedReveal(identity.blockRoot)) {
       return {status: "duplicate"};
     }
 
-    const signedEnvelope = signer.signExecutionPayloadEnvelope(envelope);
-    ledger.recordReveal(identity.slot, identity.blockRoot, identity.blockHash);
+    const activePublication = this.activePublications.get(identity.blockRoot);
+    if (activePublication !== undefined) {
+      return activePublication;
+    }
+
+    const publication = this.publishEnvelope(material, identity, envelopeRoot, api, ledger, signer, signal).finally(
+      () => {
+        if (this.activePublications.get(identity.blockRoot) === publication) {
+          this.activePublications.delete(identity.blockRoot);
+        }
+      }
+    );
+    this.activePublications.set(identity.blockRoot, publication);
+    return publication;
+  }
+
+  private async publishEnvelope(
+    material: EnvelopePublicationMaterial,
+    identity: EnvelopeSelectionIdentity,
+    envelopeRoot: RootHex,
+    api: ApiClient,
+    ledger: BidLedger,
+    signer: BuilderSigner,
+    signal: AbortSignal
+  ): Promise<EnvelopePublicationResult> {
+    const signedEnvelope = signer.signExecutionPayloadEnvelope(material.envelope);
 
     const response = await api.beacon.publishExecutionPayloadEnvelope(
       {
@@ -101,6 +126,7 @@ export class EnvelopePublisher {
       {signal}
     );
     response.assertOk();
+    ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
     return {status: "published", signedEnvelope};
   }
 }
