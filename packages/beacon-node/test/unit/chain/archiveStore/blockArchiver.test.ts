@@ -281,7 +281,7 @@ describe("block archiver task", () => {
 
   describe("audit late-imported-but-canonical blocks", () => {
     // newest -> oldest; last element is the previous-finalized boundary (excluded). Late =
-    // importedTimely === false. Invariant: timeliness === false ⟹ importedTimely === false.
+    // importedTimely === false. Invariant: timeliness === false implies importedTimely === false.
     //   slot 10: late import, received late     => late_receive
     //   slot  9: imported on time               => not late
     //   slot  8: late import, received on time   => slow_import

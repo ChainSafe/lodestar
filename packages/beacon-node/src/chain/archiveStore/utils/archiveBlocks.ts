@@ -25,7 +25,7 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
  * Why a finalized-canonical block was imported after the attestation cutoff.
  */
 export enum LateCanonicalBlockReason {
-  // received on time, but finished importing after the attestation cutoff → this node's processing lagged
+  // received on time, but finished importing after the attestation cutoff
   SlowImport = "slow_import",
   // block reached this node late on the network thread
   LateReceive = "late_receive",
@@ -334,7 +334,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
     ]);
     for (const entry of canonicalBlockEntries) migratedSlots.push(entry.slot);
   }
-  // Ancestor walk is newest → oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
 }
 
@@ -473,7 +473,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
     await Promise.all(promises);
   }
 
-  // Ancestor walk is newest → oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
 }
 
@@ -521,7 +521,7 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   ]);
 
   // Slots are ascending in hot-db key order — sort to guarantee `prettyPrintIndices` output is clean
-  // regardless of ancestor-walk order (newest → oldest).
+  // regardless of ancestor-walk order (newest to oldest).
   return envelopeEntries.map((entry) => entry.key).sort((a, b) => a - b);
 }
 
