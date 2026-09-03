@@ -1,4 +1,5 @@
 import type {RootHex, Slot, gloas} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
 /** Retains validated proposer preferences by the branch-specific identity used for bid validation. */
@@ -18,12 +19,13 @@ export class ProposerPreferencesTracker {
       return false;
     }
 
-    byDependentRoot.set(dependentRootHex, signedProposerPreferences);
+    byDependentRoot.set(dependentRootHex, cloneSignedProposerPreferences(signedProposerPreferences));
     return true;
   }
 
   get(slot: Slot, dependentRoot: RootHex): gloas.SignedProposerPreferences | null {
-    return this.byDependentRootBySlot.get(slot)?.get(dependentRoot) ?? null;
+    const signedProposerPreferences = this.byDependentRootBySlot.get(slot)?.get(dependentRoot);
+    return signedProposerPreferences === undefined ? null : cloneSignedProposerPreferences(signedProposerPreferences);
   }
 
   prune(currentSlot: Slot): number {
@@ -38,4 +40,11 @@ export class ProposerPreferencesTracker {
     }
     return removed;
   }
+}
+
+function cloneSignedProposerPreferences(
+  signedProposerPreferences: gloas.SignedProposerPreferences
+): gloas.SignedProposerPreferences {
+  const type = ssz.gloas.SignedProposerPreferences;
+  return type.deserialize(type.serialize(signedProposerPreferences));
 }

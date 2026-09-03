@@ -10,7 +10,8 @@ describe("ProposerPreferencesTracker", () => {
     const signed = preferences(4, 1, 2);
 
     expect(tracker.onProposerPreferences(signed)).toBe(true);
-    expect(tracker.get(4, root(1))).toBe(signed);
+    expect(tracker.get(4, root(1))).toEqual(signed);
+    expect(tracker.get(4, root(1))).not.toBe(signed);
     expect(tracker.get(5, root(1))).toBeNull();
     expect(tracker.get(4, root(2))).toBeNull();
   });
@@ -23,8 +24,8 @@ describe("ProposerPreferencesTracker", () => {
     tracker.onProposerPreferences(first);
     tracker.onProposerPreferences(second);
 
-    expect(tracker.get(4, root(1))).toBe(first);
-    expect(tracker.get(4, root(2))).toBe(second);
+    expect(tracker.get(4, root(1))).toEqual(first);
+    expect(tracker.get(4, root(2))).toEqual(second);
   });
 
   it("preserves the first validated preferences for a duplicate identity", () => {
@@ -34,7 +35,23 @@ describe("ProposerPreferencesTracker", () => {
 
     expect(tracker.onProposerPreferences(first)).toBe(true);
     expect(tracker.onProposerPreferences(duplicate)).toBe(false);
-    expect(tracker.get(4, root(1))).toBe(first);
+    expect(tracker.get(4, root(1))).toEqual(first);
+  });
+
+  it("does not expose mutable retained preferences", () => {
+    const tracker = new ProposerPreferencesTracker();
+    const signed = preferences(4, 1, 2);
+    tracker.onProposerPreferences(signed);
+
+    signed.message.feeRecipient[0] = 9;
+    const firstRead = tracker.get(4, root(1));
+    expect(firstRead?.message.feeRecipient[0]).toBe(2);
+
+    if (firstRead === null) {
+      throw Error("Expected retained proposer preferences");
+    }
+    firstRead.message.feeRecipient[0] = 8;
+    expect(tracker.get(4, root(1))?.message.feeRecipient[0]).toBe(2);
   });
 
   it("prunes past proposal slots while retaining current and future preferences", () => {
