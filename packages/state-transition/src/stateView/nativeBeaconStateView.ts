@@ -220,7 +220,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get eth1Data(): phase0.Eth1Data {
     if (this._eth1Data === null) {
-      this._eth1Data = this.binding.eth1Data;
+      const eth1Data = this.binding.eth1Data;
+      this._eth1Data = {...eth1Data, depositCount: BigInt(eth1Data.depositCount)};
     }
     return this._eth1Data;
   }
@@ -861,12 +862,15 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
-  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
-    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
+  preVerifyBuilderDepositsPreGloas(
+    _maxBuilderDeposits: number,
+    _maxDurationMs: number
+  ): PreVerifyBuilderDepositsResult {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   clearPreGloasBuilderDepositCache(): void {
-    this.binding.clearPreGloasBuilderDepositCache();
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────

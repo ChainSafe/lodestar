@@ -330,6 +330,7 @@ export type IBeaconStateViewLatestFork = Omit<
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
   | "computeNewStateRoot"
+  | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
@@ -337,6 +338,8 @@ export type IBeaconStateViewNative = Omit<
   | "pendingConsolidations"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
+  | "preVerifyBuilderDepositsPreGloas"
+  | "clearPreGloasBuilderDepositCache"
   | "processSlots"
   | "proposerLookahead"
   | "stateTransition"
@@ -346,6 +349,8 @@ export type IBeaconStateViewNative = Omit<
   pendingPartialWithdrawals: Uint8Array;
   pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
+  // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
+  eth1Data: Omit<phase0.Eth1Data, "depositCount"> & {depositCount: number};
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
