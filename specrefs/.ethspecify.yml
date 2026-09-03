@@ -227,6 +227,12 @@ exceptions:
 
     # deneb
     - compute_fork_version#deneb
+    # Blob sidecar gossip, reqresp and production were removed (#9956): the blob retention
+    # window (FULU_FORK_EPOCH + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) has expired on all
+    # supported networks and blob_sidecars_by_range/root are deprecated at the spec level,
+    # so blobs are no longer gossiped, served, downloaded or produced.
+    - compute_subnet_for_blob_sidecar#deneb
+    - get_blob_sidecars#deneb
     - get_lc_execution_root#deneb
     - is_current_or_previous_epoch#deneb
     - is_within_epoch#deneb
@@ -235,10 +241,13 @@ exceptions:
     - validate_beacon_block_gossip#deneb
     - validate_blob_sidecar_gossip#deneb
     - validate_voluntary_exit_gossip#deneb
+    - verify_blob_sidecar_inclusion_proof#deneb
 
     # electra
     - compute_fork_version#electra
     - compute_on_chain_aggregate#electra
+    # See compute_subnet_for_blob_sidecar#deneb: blob sidecar support was removed (#9956)
+    - compute_subnet_for_blob_sidecar#electra
     - current_sync_committee_gindex_at_slot#electra
     - finalized_root_gindex_at_slot#electra
     - get_committee_indices#electra

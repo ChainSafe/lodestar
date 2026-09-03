@@ -25,7 +25,7 @@ import {
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -519,7 +519,6 @@ export async function runGossipValidationTest(
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
-          validBlobSidecars: BlobSidecarValidation.Full,
           importAttestations: AttestationImportOpt.Force,
           validSignatures: false,
         });

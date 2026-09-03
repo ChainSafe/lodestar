@@ -1552,9 +1552,7 @@
     </spec>
 
 - name: compute_subnet_for_blob_sidecar#deneb
-  sources:
-    - file: packages/beacon-node/src/chain/validation/blobSidecar.ts
-      search: function computeSubnetForBlobSidecar(
+  sources: []
   spec: |
     <spec fn="compute_subnet_for_blob_sidecar" fork="deneb" hash="09ae77b3">
     def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
@@ -1562,9 +1560,7 @@
     </spec>
 
 - name: compute_subnet_for_blob_sidecar#electra
-  sources:
-    - file: packages/beacon-node/src/chain/validation/blobSidecar.ts
-      search: function computeSubnetForBlobSidecar(
+  sources: []
   spec: |
     <spec fn="compute_subnet_for_blob_sidecar" fork="electra" hash="d07c6ad7">
     def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
@@ -2890,9 +2886,7 @@
     </spec>
 
 - name: get_blob_sidecars#deneb
-  sources:
-    - file: packages/beacon-node/src/util/blobs.ts
-      search: export function getBlobSidecars(
+  sources: []
   spec: |
     <spec fn="get_blob_sidecars" fork="deneb" hash="0206e9a5">
     def get_blob_sidecars(
@@ -16640,9 +16634,7 @@
     </spec>
 
 - name: verify_blob_sidecar_inclusion_proof#deneb
-  sources:
-    - file: packages/beacon-node/src/chain/validation/blobSidecar.ts
-      search: export function validateBlobSidecarInclusionProof(
+  sources: []
   spec: |
     <spec fn="verify_blob_sidecar_inclusion_proof" fork="deneb" hash="0ccdc846">
     def verify_blob_sidecar_inclusion_proof(blob_sidecar: BlobSidecar) -> bool:

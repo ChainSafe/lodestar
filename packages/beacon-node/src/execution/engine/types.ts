@@ -24,7 +24,6 @@ import {
   gloas,
   ssz,
 } from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
   ExecutionPayloadStatus,
@@ -101,7 +100,6 @@ export type EngineApiRpcParamTypes = {
    */
   engine_getClientVersionV1: [ClientVersionRpc];
 
-  engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
 };
 
@@ -153,7 +151,6 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
-  engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 };
 
@@ -228,11 +225,6 @@ export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
 export type BuilderDepositRequestsRpc = DATA;
 export type BuilderExitRequestsRpc = DATA;
-
-export type BlobAndProofRpc = {
-  blob: DATA;
-  proof: DATA;
-};
 
 export type BlobAndProofV2Rpc = {
   blob: DATA;
@@ -683,15 +675,6 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-      }
-    : null;
-}
-
-export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
-  return data
-    ? {
-        blob: dataToBytes(data.blob, BLOB_BYTES),
-        proof: dataToBytes(data.proof, PROOF_BYTES),
       }
     : null;
 }

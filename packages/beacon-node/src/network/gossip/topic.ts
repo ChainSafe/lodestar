@@ -86,8 +86,6 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
-    case GossipType.blob_sidecar:
-      return `${topic.type}_${topic.subnet}`;
     case GossipType.data_column_sidecar:
       return `${topic.type}_${topic.subnet}`;
   }
@@ -99,8 +97,6 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return ssz[fork].SignedBeaconBlock;
-    case GossipType.blob_sidecar:
-      return ssz.deneb.BlobSidecar;
     case GossipType.data_column_sidecar:
       return isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
@@ -251,13 +247,6 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       }
     }
 
-    if (gossipTypeStr.startsWith(GossipType.blob_sidecar)) {
-      const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
-      const subnet = parseInt(subnetStr, 10);
-      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.blob_sidecar, subnet, boundary, encoding};
-    }
-
     if (gossipTypeStr.startsWith(GossipType.data_column_sidecar)) {
       const subnetStr = gossipTypeStr.slice(GossipType.data_column_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
@@ -299,18 +288,6 @@ export function getCoreTopicsAtFork(
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
     topics.push(...getDataColumnSidecarTopics(networkConfig, opts.subscribeAllColumnSubnets));
-  }
-
-  // After Deneb and before Fulu also track blob_sidecar_{subnet_id}
-  if (ForkSeq[fork] >= ForkSeq.deneb && ForkSeq[fork] < ForkSeq.fulu) {
-    const {config} = networkConfig;
-    const subnetCount = isForkPostElectra(fork)
-      ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
-      : config.BLOB_SIDECAR_SUBNET_COUNT;
-
-    for (let subnet = 0; subnet < subnetCount; subnet++) {
-      topics.push({type: GossipType.blob_sidecar, subnet});
-    }
   }
 
   // capella
@@ -397,7 +374,6 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
 // TODO: Review which yes, and which not
 export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: true,
-  [GossipType.blob_sidecar]: true,
   [GossipType.data_column_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: true,
   [GossipType.beacon_attestation]: true,
@@ -429,7 +405,6 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
  */
 export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: false,
-  [GossipType.blob_sidecar]: false,
   // data_column_sidecar: we ensure having all topic peers via prioritizePeers(). Even with 0 peers on the
   // topic the overall publish can still succeed, because a supernode rebuilds and publishes the missing
   // columns for us, so track sent peers as 0 instead of raising

@@ -20,7 +20,6 @@ import {
   Slot,
   SubnetID,
   UintNum64,
-  deneb,
   fulu,
   gloas,
   isGloasDataColumnSidecar,
@@ -29,7 +28,6 @@ import {
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
-  BlockInput,
   BlockInputColumns,
   BlockInputSource,
   IBlockInput,
@@ -37,13 +35,10 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
-  BlobSidecarErrorCode,
-  BlobSidecarGossipError,
   BlockError,
   BlockErrorCode,
   BlockGossipError,
@@ -58,7 +53,6 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {
   validateGossipFuluDataColumnSidecar,
   validateGossipGloasDataColumnSidecar,
@@ -85,7 +79,6 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {validateGossipProposerPreferences} from "../../chain/validation/proposerPreferences.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
@@ -265,91 +258,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (chain.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
         chain.processProposerEquivocation(slot, proposerIndex);
       }
-    }
-  }
-
-  async function validateBeaconBlob(
-    blobSidecar: deneb.BlobSidecar,
-    subnet: SubnetID,
-    peerIdStr: string,
-    seenTimestampSec: number
-  ): Promise<BlockInput> {
-    const blobBlockHeader = blobSidecar.signedBlockHeader.message;
-    const slot = blobBlockHeader.slot;
-    const fork = config.getForkName(slot);
-    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader));
-    const blockShortHex = prettyBytes(blockRootHex);
-
-    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
-
-    try {
-      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
-      const blockInput = chain.seenBlockInputCache.getByBlob({
-        blockRootHex,
-        blobSidecar,
-        source: BlockInputSource.gossip,
-        seenTimestampSec,
-        peerIdStr,
-      });
-      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
-      const validationTime = recvToValidation - recvToValLatency;
-
-      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
-      metrics?.gossipBlob.validationTime.observe(validationTime);
-
-      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-        let versionedHash: Uint8Array;
-        if (blockInput.hasBlock()) {
-          // if block hasn't arrived yet then this will throw and need to calculate the versionedHash as a 1-off
-          versionedHash = blockInput.getVersionedHashes()[blobSidecar.index];
-        } else {
-          versionedHash = kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment);
-        }
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockRootHex,
-          slot,
-          index: blobSidecar.index,
-          kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(versionedHash),
-        });
-      }
-
-      logger.debug("Received gossip blob", {
-        ...blockInput.getLogMeta(),
-        currentSlot: chain.clock.currentSlot,
-        peerId: peerIdStr,
-        delaySec,
-        subnet,
-        recvToValLatency,
-        recvToValidation,
-        validationTime,
-      });
-
-      return blockInput;
-    } catch (e) {
-      if (e instanceof BlobSidecarGossipError) {
-        // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
-          logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
-          // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
-          //
-          // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
-          //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
-          //        BlockInputSync event handler. Check this!!
-          // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
-        }
-
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(
-            ssz.deneb.BlobSidecar,
-            blobSidecar,
-            `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
-          );
-        }
-      }
-
-      throw e;
     }
   }
 
@@ -623,8 +531,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         ignoreIfKnown: true,
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
-        // blobSidecars already checked in validateGossipBlobSidecars()
-        validBlobSidecars: BlobSidecarValidation.Individual,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
@@ -740,46 +646,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
         // rethrow so gossipValidatorFn maps IGNORE -> TopicValidatorResult.Ignore (message not forwarded)
         throw e;
-      }
-    },
-
-    [GossipType.blob_sidecar]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
-      const {serializedData} = gossipData;
-      const blobSidecar = sszDeserialize(topic, serializedData);
-      const blobSlot = blobSidecar.signedBlockHeader.message.slot;
-      const index = blobSidecar.index;
-
-      if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
-      }
-      const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
-      chain.serializedCache.set(blobSidecar, serializedData);
-      if (!blockInput.hasBlockAndAllData()) {
-        const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-        chain.logger.debug("Received gossip blob, waiting for full data availability", {
-          msToWait: cutoffTimeMs,
-          blobIndex: index,
-          ...blockInput.getLogMeta(),
-        });
-        blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
-          chain.logger.debug(
-            "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
-            {
-              blobIndex: index,
-              ...blockInput.getLogMeta(),
-            }
-          );
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
-            blockInput,
-            peer: peerIdStr,
-            source: BlockInputSource.gossip,
-          });
-        });
       }
     },
 

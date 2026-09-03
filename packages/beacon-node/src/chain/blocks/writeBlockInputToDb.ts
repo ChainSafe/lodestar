@@ -3,7 +3,7 @@ import {SignedBeaconBlock} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -12,8 +12,6 @@ import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
  *
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
- *
- * Block+blobs (pre-fulu) and data columns (fulu+) are written in parallel.
  */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];
@@ -47,23 +45,6 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
   }
 
   this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
-
-  if (isBlockInputBlobs(blockInput)) {
-    fnPromises.push(
-      (async () => {
-        if (!blockInput.hasAllData()) {
-          await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-        }
-        const blobSidecars = blockInput.getBlobs();
-        await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          slot,
-          root: blockRootHex,
-          numBlobs: blobSidecars.length,
-        });
-      })()
-    );
-  }
 
   await Promise.all(fnPromises);
 }

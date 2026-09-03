@@ -60,7 +60,6 @@ import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRoot
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -78,7 +77,7 @@ import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
+import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -879,43 +878,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputBlobs(blockInput)) {
-        throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
-      }
-      if (!blockInput.hasAllData()) {
-        return null;
-      }
-      return blockInput.getBlobs();
-    }
     const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
     if (unfinalizedBlobSidecars) {
       return unfinalizedBlobSidecars;
     }
     return (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
-  }
-
-  async getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputBlobs(blockInput)) {
-        throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
-      }
-      if (!blockInput.hasAllData()) {
-        return null;
-      }
-      return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
-    }
-    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
-    if (unfinalizedBlobSidecarsWrapper) {
-      return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-    }
-    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
-    if (finalizedBlobSidecarsWrapper) {
-      return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-    }
-    return null;
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {

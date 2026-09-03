@@ -1,3 +1,4 @@
+import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
@@ -33,7 +34,13 @@ export async function verifyBlocksDataAvailability(
       return DataAvailabilityStatus.NotRequired;
     }
     if (blockInput.type === DAType.PreData) {
-      return DataAvailabilityStatus.PreData;
+      // deneb..electra blocks are tracked without blob data since blob support was removed (#9956),
+      // their DA is no longer enforced which matches NotRequired. The state transition rejects
+      // PreData for post-deneb forks, and OutOfRange would wrongly block validator duties on such
+      // a head (see notOnOutOfRangeData).
+      return ForkSeq[blockInput.forkName] >= ForkSeq.deneb
+        ? DataAvailabilityStatus.NotRequired
+        : DataAvailabilityStatus.PreData;
     }
     if (blockInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;
