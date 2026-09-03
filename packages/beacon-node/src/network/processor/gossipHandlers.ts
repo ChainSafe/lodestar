@@ -1268,13 +1268,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
       metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
-      let isNextSlotProposer = true;
-      try {
-        const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
-        isNextSlotProposer = chain.beaconProposerCache.get(nextSlotProposer) !== undefined;
-      } catch (_e) {
-        // getBeaconProposer out of lookahead etc. — keep the permissive default
-      }
+      const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
+      const isNextSlotProposer = chain.beaconProposerCache.get(nextSlotProposer) !== undefined;
 
       if (isNextSlotProposer) {
         try {
@@ -1285,7 +1280,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           );
           metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
         } catch (e) {
-          logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+          logger.debug("Error adding to payloadAttestation pool", {}, e as Error);
         }
       }
 
