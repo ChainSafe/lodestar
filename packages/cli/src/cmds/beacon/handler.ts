@@ -67,7 +67,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
+  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}), {
+    dataColumnDir: beaconPaths.dataColumnDir,
+    logger,
+  });
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
@@ -99,6 +102,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       processShutdownCallback,
       privateKey,
       dataDir: beaconPaths.dataDir,
+      dataColumnDir: beaconPaths.dataColumnDir,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState: anchorStateView,
       isAnchorStateFinalized: isFinalized,

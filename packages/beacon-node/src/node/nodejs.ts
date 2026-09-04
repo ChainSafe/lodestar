@@ -54,6 +54,7 @@ export type BeaconNodeInitModules = {
   processShutdownCallback: ProcessShutdownCallback;
   privateKey: PrivateKey;
   dataDir: string;
+  dataColumnDir: string;
   peerStoreDir?: string;
   anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
@@ -156,6 +157,7 @@ export class BeaconNode {
     processShutdownCallback,
     privateKey,
     dataDir,
+    dataColumnDir,
     peerStoreDir,
     anchorState,
     isAnchorStateFinalized,
@@ -181,7 +183,7 @@ export class BeaconNode {
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
-      db.setMetrics(metrics.db);
+      db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
@@ -198,7 +200,7 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
-    await db.initDataColumnStore(dataDir, logger, metrics?.flatFileStore ?? null);
+    await db.init();
 
     // Prune hot db repos
     // TODO: Should this call be awaited?
@@ -246,6 +248,7 @@ export class BeaconNode {
       clock,
       pubkeyCache,
       dataDir,
+      dataColumnDir,
       db,
       dbName: opts.db.name,
       logger: logger.child({module: LoggerModule.chain}),

@@ -1,5 +1,7 @@
 import {Mocked, vi} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
+import type {Db} from "@lodestar/db";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconDb, type IDataColumnStore} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
@@ -62,7 +64,7 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
 
       dataColumns,
-      initDataColumnStore: vi.fn().mockResolvedValue(undefined),
+      init: vi.fn().mockResolvedValue(undefined),
     };
   });
 
@@ -73,7 +75,10 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 });
 
 export function getMockedBeaconDb(): MockedBeaconDb {
-  return new BeaconDb(minimalConfig, {} as any) as MockedBeaconDb;
+  return new BeaconDb(minimalConfig, {} as Db, {
+    dataColumnDir: "data_columns",
+    logger: testLogger(),
+  }) as MockedBeaconDb;
 }
 
 vi.resetModules();

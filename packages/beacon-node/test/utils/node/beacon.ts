@@ -1,3 +1,4 @@
+import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
@@ -54,7 +55,10 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}));
+  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}), {
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
+    logger,
+  });
 
   let anchorState = opts.anchorState;
   let wsCheckpoint = opts.wsCheckpoint;
@@ -151,6 +155,7 @@ export async function getDevBeaconNode(
     processShutdownCallback: () => {},
     privateKey,
     dataDir: tmpDir.name,
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
     peerStoreDir,
     anchorState: new BeaconStateView(cachedState),
     wsCheckpoint,

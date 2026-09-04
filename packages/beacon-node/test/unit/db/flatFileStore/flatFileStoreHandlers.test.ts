@@ -12,7 +12,7 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {DAType} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
-import {DataColumnStore} from "../../../../src/db/dataColumnStore.js";
+import {LegacyDataColumnStore} from "../../../../src/db/dataColumnStore.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 import type {IFlatFileStore} from "../../../../src/db/flatFileStore/interface.js";
 import type {IBeaconDb} from "../../../../src/db/interface.js";
@@ -45,7 +45,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
-    store = new FlatFileStore(tmpDir, defaultConfig, testLogger);
+    store = new FlatFileStore(path.join(tmpDir, "data_columns"), defaultConfig, testLogger);
     await store.init();
   });
 
@@ -86,8 +86,8 @@ describe("FlatFileStore reqresp handler integration", () => {
       getArchivedSlot?: (root: Uint8Array) => Promise<number | null>;
       hotValues?: () => Promise<ReturnType<typeof ssz.fulu.DataColumnSidecar.defaultValue>[]>;
       archivedValues?: () => Promise<ReturnType<typeof ssz.fulu.DataColumnSidecar.defaultValue>[]>;
-    }): DataColumnStore {
-      return new DataColumnStore(
+    }): LegacyDataColumnStore {
+      return new LegacyDataColumnStore(
         opts.flatFiles ?? store,
         {
           getManyBinary: opts.getHot ?? (async (_root, indices) => indices.map(() => undefined)),

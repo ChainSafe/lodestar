@@ -4,7 +4,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
+import {ColumnIndex, Epoch, RootHex, fulu} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -56,144 +56,127 @@ export async function* onDataColumnSidecarsByRange(
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
   const headBlock = chain.forkChoice.getHead();
-  // The canonical walk reaches back to the previous finalized boundary. Within that range fork choice is
-  // authoritative: a missing block means the canonical chain skipped the slot, not that storage should choose a root.
   const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+
+  for await (const block of resolveCanonicalDataColumnBlocks(
+    chain,
+    db,
+    headChain,
+    startSlot,
+    endSlot,
+    archiveMaxSlot,
+    finalizedSlot
+  )) {
+    const dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
+      block.slot,
+      block.blockRoot,
+      availableColumns
+    );
+    const unavailableColumnIndices: ColumnIndex[] = [];
+    for (let i = 0; i < dataColumnSidecars.length; i++) {
+      const dataColumnSidecarBytes = dataColumnSidecars[i];
+      if (dataColumnSidecarBytes) {
+        yield {
+          data: dataColumnSidecarBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+        };
+      } else {
+        unavailableColumnIndices.push(availableColumns[i]);
+      }
+    }
+
+    if (unavailableColumnIndices.length > 0) {
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        metrics: chain.metrics,
+        unavailableColumnIndices,
+        blockRoot: block.unavailabilityBlockRoot ? fromHex(block.unavailabilityBlockRoot) : undefined,
+        finalized: block.finalized,
+        slot: block.slot,
+        requestedColumns,
+        availableColumns,
+      });
+    }
+  }
+}
+
+type CanonicalDataColumnBlock = {
+  slot: number;
+  blockRoot: RootHex;
+  unavailabilityBlockRoot?: RootHex;
+  finalized: boolean;
+};
+
+async function* resolveCanonicalDataColumnBlocks(
+  chain: IBeaconChain,
+  db: IBeaconDb,
+  headChain: ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>,
+  startSlot: number,
+  endSlot: number,
+  archiveMaxSlot: number,
+  finalizedSlot: number
+): AsyncIterable<CanonicalDataColumnBlock> {
   const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
   const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
+  const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
 
-  // Finalized range of columns
-  if (startSlot <= archiveMaxSlot) {
-    const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
-    for (let slot = startSlot; slot < archiveEnd; slot++) {
-      const canonicalBlock = slot >= oldestForkChoiceSlot ? canonicalBlocksBySlot.get(slot) : undefined;
-      let unavailabilityBlockRoot: Uint8Array | undefined;
-      let dataColumnSidecars: (Uint8Array | undefined)[];
-      if (slot >= oldestForkChoiceSlot) {
-        // Post-Gloas, only the FULL variant has columns. EMPTY and PENDING variants may share its block root.
-        if (!canonicalBlock || canonicalBlock.payloadStatus !== PayloadStatus.FULL) continue;
-        unavailabilityBlockRoot = fromHex(canonicalBlock.blockRoot);
-        dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
+  for (let slot = startSlot; slot < archiveEnd; slot++) {
+    if (slot >= oldestForkChoiceSlot) {
+      const block = canonicalBlocksBySlot.get(slot);
+      if (block?.payloadStatus === PayloadStatus.FULL) {
+        yield {
           slot,
-          canonicalBlock.blockRoot,
-          availableColumns
-        );
-      } else {
-        const canonicalBlockResult = await chain.getCanonicalBlockAtSlot(slot);
-        if (!canonicalBlockResult) continue;
-        const blockRootHex = toRootHex(
-          chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(canonicalBlockResult.block.message)
-        );
-        if (chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
-          const blockRoot = fromHex(blockRootHex);
-          if (!chain.seenPayloadEnvelopeInputCache.hasPayload(blockRootHex)) {
-            const hotEnvelopeBytes = await db.executionPayloadEnvelope.getBinary(blockRoot);
-            const envelopeBytes = hotEnvelopeBytes ?? (await db.executionPayloadEnvelopeArchive.getBinary(slot));
-            if (!envelopeBytes) continue;
-          }
-          unavailabilityBlockRoot = blockRoot;
-        }
-        dataColumnSidecars = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
-      }
-
-      const unavailableColumnIndices: ColumnIndex[] = [];
-      for (let i = 0; i < dataColumnSidecars.length; i++) {
-        const dataColumnSidecarBytes = dataColumnSidecars[i];
-        if (dataColumnSidecarBytes) {
-          yield {
-            data: dataColumnSidecarBytes,
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-          };
-        }
-
-        // TODO: Check blobs for that block and respond resource_unavailable
-        // After we have consensus from other teams on the specs
-        else {
-          unavailableColumnIndices.push(availableColumns[i]);
-        }
-      }
-
-      if (unavailableColumnIndices.length) {
-        await handleColumnSidecarUnavailability({
-          chain,
-          db,
-          metrics: chain.metrics,
-          unavailableColumnIndices,
-          blockRoot: unavailabilityBlockRoot,
+          blockRoot: block.blockRoot,
+          unavailabilityBlockRoot: block.blockRoot,
           finalized: true,
-          slot,
-          requestedColumns,
-          availableColumns,
-        });
+        };
       }
+      continue;
     }
+
+    const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
+    if (!canonicalBlock) continue;
+    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(canonicalBlock.block.message));
+    if (
+      chain.config.getForkSeq(slot) >= ForkSeq.gloas &&
+      !(await hasExecutionPayloadEnvelope(chain, db, slot, blockRoot))
+    ) {
+      continue;
+    }
+    yield {
+      slot,
+      blockRoot,
+      unavailabilityBlockRoot: chain.config.getForkSeq(slot) >= ForkSeq.gloas ? blockRoot : undefined,
+      finalized: true,
+    };
   }
 
-  // Non-finalized range of columns
-  if (endSlot > archiveMaxSlot) {
-    // getAllAncestorBlocks includes the last finalized block as its final element.
-    // Skip anything the archive loop above already served via the block.slot > archiveMaxSlot filter below.
-
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
-
-      // Must include only columns in the range requested
-      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
-        // Post-gloas, columns exist only for FULL blocks (pre-gloas blocks are always FULL)
-        if (block.payloadStatus !== PayloadStatus.FULL) {
-          continue;
-        }
-
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
-        // re-org there's no need to abort the request
-        // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
-        const dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
-          block.slot,
-          block.blockRoot,
-          availableColumns
-        );
-
-        const unavailableColumnIndices: ColumnIndex[] = [];
-        for (let i = 0; i < dataColumnSidecars.length; i++) {
-          const dataColumnSidecarBytes = dataColumnSidecars[i];
-          if (dataColumnSidecarBytes) {
-            yield {
-              data: dataColumnSidecarBytes,
-              boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-            };
-          }
-
-          // TODO: Check blobs for that block and respond resource_unavailable
-          // After we have consensus from other teams on the specs
-          else {
-            unavailableColumnIndices.push(availableColumns[i]);
-          }
-        }
-
-        if (unavailableColumnIndices.length) {
-          await handleColumnSidecarUnavailability({
-            chain,
-            db,
-            metrics: chain.metrics,
-            unavailableColumnIndices,
-            blockRoot: fromHex(block.blockRoot),
-            // At Gloas the beacon-finalized boundary stays in this section until its payload finalizes.
-            finalized: block.slot <= finalizedSlot,
-            slot: block.slot,
-            requestedColumns,
-            availableColumns,
-          });
-        }
-      }
-
-      // If block is after endSlot, stop iterating
-      else if (block.slot >= endSlot) {
-        break;
-      }
-    }
+  for (let i = headChain.length - 1; i >= 0; i--) {
+    const block = headChain[i];
+    if (block.slot >= endSlot) break;
+    if (block.slot <= archiveMaxSlot || block.slot < startSlot || block.payloadStatus !== PayloadStatus.FULL) continue;
+    yield {
+      slot: block.slot,
+      blockRoot: block.blockRoot,
+      unavailabilityBlockRoot: block.blockRoot,
+      finalized: block.slot <= finalizedSlot,
+    };
   }
+}
+
+async function hasExecutionPayloadEnvelope(
+  chain: IBeaconChain,
+  db: IBeaconDb,
+  slot: number,
+  blockRoot: RootHex
+): Promise<boolean> {
+  if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
+  const root = fromHex(blockRoot);
+  return (
+    (await db.executionPayloadEnvelope.getBinary(root)) !== null ||
+    (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null
+  );
 }
 
 export function validateDataColumnSidecarsByRangeRequest(

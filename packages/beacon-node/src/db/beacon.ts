@@ -2,8 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
 import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
-import {DataColumnStore, type IDataColumnStore} from "./dataColumnStore.js";
-import {DataColumnStoreError, DataColumnStoreErrorCode} from "./flatFileStore/errors.js";
+import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
@@ -29,9 +28,10 @@ import {
   VoluntaryExitRepository,
 } from "./repositories/index.js";
 
-export type BeaconDbModules = {
-  config: ChainForkConfig;
-  db: Db;
+export type BeaconDbOpts = {
+  dataColumnDir: string;
+  logger: Logger;
+  metrics?: FlatFileStoreMetrics | null;
 };
 
 export class BeaconDb implements IBeaconDb {
@@ -62,12 +62,13 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  private flatFileStoreInstance: FlatFileStore | null = null;
-  private dataColumnStoreInstance: IDataColumnStore | null = null;
+  readonly dataColumns: IDataColumnStore;
+  private readonly flatFileStore: FlatFileStore;
 
   constructor(
-    private readonly config: ChainForkConfig,
-    protected readonly db: Db
+    config: ChainForkConfig,
+    protected readonly db: Db,
+    opts: BeaconDbOpts
   ) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(config, db);
@@ -95,37 +96,28 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
     this.backfilledRanges = new BackfilledRanges(config, db);
-  }
 
-  async initDataColumnStore(dataDir: string, logger: Logger, metrics: FlatFileStoreMetrics | null): Promise<void> {
-    const flatFiles = new FlatFileStore(dataDir, this.config, logger, metrics);
-    await flatFiles.init();
-    this.flatFileStoreInstance = flatFiles;
-    this.dataColumnStoreInstance = new DataColumnStore(
-      flatFiles,
+    this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);
+    this.dataColumns = new LegacyDataColumnStore(
+      this.flatFileStore,
       this.dataColumnSidecar,
       this.dataColumnSidecarArchive,
       this.blockArchive
     );
   }
 
-  get dataColumns(): IDataColumnStore {
-    if (!this.dataColumnStoreInstance) {
-      throw new DataColumnStoreError(
-        {code: DataColumnStoreErrorCode.NOT_INITIALIZED},
-        "Data column store is not initialized"
-      );
-    }
-    return this.dataColumnStoreInstance;
+  async init(): Promise<void> {
+    await this.flatFileStore.init();
   }
 
   async close(): Promise<void> {
-    await this.flatFileStoreInstance?.close();
+    await this.flatFileStore.close();
     return this.db.close();
   }
 
-  setMetrics(metrics: LevelDbControllerMetrics): void {
+  setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics: FlatFileStoreMetrics | null = null): void {
     this.db.setMetrics(metrics);
+    this.flatFileStore.setMetrics(flatFileStoreMetrics);
   }
 
   async pruneHotDb(): Promise<void> {

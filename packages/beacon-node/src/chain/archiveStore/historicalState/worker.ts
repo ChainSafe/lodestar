@@ -25,7 +25,10 @@ logger.info("Historical state worker started");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 
-const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}));
+const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}), {
+  dataColumnDir: workerData.dataColumnDir,
+  logger,
+});
 
 const abortController = new AbortController();
 

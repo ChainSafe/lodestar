@@ -13,6 +13,7 @@ import {
   mergeDcolColumns,
   offsetTableSize,
   parseDcolHeader,
+  parseDcolOffsets,
   readAllColumns,
   totalBits,
 } from "./dcolFormat.js";
@@ -25,22 +26,26 @@ import {uncompress} from "./snappy.js";
 /**
  * Filesystem data column store using `.dcol` format.
  *
- * Layout: `<baseDir>/data_columns/<padSlot>/0x<rootHex>.dcol`
+ * Layout: `<dataColumnDir>/<padSlot>/0x<rootHex>.dcol`
  *
- * Per-root write locking via promise chaining to handle concurrent incremental writes.
+ * Per-slot mutation locking coordinates incremental writes, deletion, and pruning.
  */
 export class ColumnStore {
   readonly dir: string;
-  /** Per-root write lock: serializes concurrent writes to the same file */
-  private readonly writeLocks = new Map<string, Promise<void>>();
+  private readonly mutationLocks = new Map<Slot, Promise<void>>();
+  private minRetainedSlot: Slot = 0;
 
   constructor(
-    baseDir: string,
+    dataColumnDir: string,
     private readonly config: ChainForkConfig,
     private readonly slotIndex: SlotIndex,
-    private readonly metrics: FlatFileStoreMetrics | null
+    private metrics: FlatFileStoreMetrics | null
   ) {
-    this.dir = path.join(baseDir, "data_columns");
+    this.dir = dataColumnDir;
+  }
+
+  setMetrics(metrics: FlatFileStoreMetrics | null): void {
+    this.metrics = metrics;
   }
 
   private filePath(slot: Slot, rootHex: RootHex): string {
@@ -48,23 +53,14 @@ export class ColumnStore {
     return path.join(this.dir, padSlot(slot), `${rootHex}.dcol`);
   }
 
-  private lockKey(slot: Slot, rootHex: RootHex): string {
-    return `${slot}:${rootHex}`;
-  }
-
-  /**
-   * Acquire a write lock for a (slot, root) pair.
-   * Returns a release function to call when done.
-   */
-  private acquireLock(slot: Slot, rootHex: RootHex): Promise<() => void> {
-    const key = this.lockKey(slot, rootHex);
+  private acquireMutationLock(slot: Slot): Promise<() => void> {
     let release!: () => void;
-    const prev = this.writeLocks.get(key) ?? Promise.resolve();
+    const prev = this.mutationLocks.get(slot) ?? Promise.resolve();
     const next = new Promise<void>((resolve) => {
       release = resolve;
     });
     const chained = prev.then(() => next);
-    this.writeLocks.set(key, chained);
+    this.mutationLocks.set(slot, chained);
 
     return prev.then(() => {
       let released = false;
@@ -72,8 +68,8 @@ export class ColumnStore {
         if (released) return;
         released = true;
         release();
-        if (this.writeLocks.get(key) === chained) {
-          this.writeLocks.delete(key);
+        if (this.mutationLocks.get(slot) === chained) {
+          this.mutationLocks.delete(slot);
         }
       };
     });
@@ -145,19 +141,14 @@ export class ColumnStore {
       await readExactly(fd, offsetTable, DCOL_HEADER_SIZE);
       this.metrics?.readBytes.inc(offsetTable.length);
       const fileSize = (await fd.stat()).size;
+      const offsets = parseDcolOffsets(offsetTable, N, fileSize - DCOL_HEADER_SIZE - tableSize);
 
       const results: (Uint8Array | undefined)[] = [];
       for (const idx of indices) {
-        const range = getColumnByteRange(header, offsetTable, idx);
+        const range = getColumnByteRange(header, offsets, idx);
         if (!range) {
           results.push(undefined);
           continue;
-        }
-        if (range.length < 0 || range.offset + range.length > fileSize) {
-          throw new DataColumnStoreError(
-            {code: DataColumnStoreErrorCode.INVALID_OFFSET, slot, root: rootHex, index: idx},
-            `Invalid dcol offset for slot=${slot} root=${rootHex} index=${idx}`
-          );
         }
         const buf = new Uint8Array(range.length);
         await readExactly(fd, buf, range.offset);
@@ -184,8 +175,14 @@ export class ColumnStore {
     if (columns.length === 0) return;
 
     await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.write, async () => {
-      const release = await this.acquireLock(slot, rootHex);
+      const release = await this.acquireMutationLock(slot);
       try {
+        if (slot < this.minRetainedSlot) {
+          throw new DataColumnStoreError(
+            {code: DataColumnStoreErrorCode.SLOT_PRUNED, slot, minRetainedSlot: this.minRetainedSlot},
+            `Cannot write pruned data column slot=${slot} minRetainedSlot=${this.minRetainedSlot}`
+          );
+        }
         const existing = await this.readFile(slot, rootHex);
         let fileData: Uint8Array;
 
@@ -212,7 +209,7 @@ export class ColumnStore {
    */
   async delete(slot: Slot, rootHex: RootHex): Promise<void> {
     await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.delete, async () => {
-      const release = await this.acquireLock(slot, rootHex);
+      const release = await this.acquireMutationLock(slot);
       try {
         await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
       } finally {
@@ -226,10 +223,21 @@ export class ColumnStore {
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
     await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.prune, async () => {
-      for (const slot of this.slotIndex.getBefore(minSlot)) {
-        await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
-        this.slotIndex.remove(slot);
-        this.metrics?.prunedDirectories.inc();
+      this.minRetainedSlot = Math.max(this.minRetainedSlot, minSlot);
+      const slotsToPrune = new Set(this.slotIndex.getBefore(this.minRetainedSlot));
+      for (const slot of this.mutationLocks.keys()) {
+        if (slot < this.minRetainedSlot) slotsToPrune.add(slot);
+      }
+
+      for (const slot of slotsToPrune) {
+        const release = await this.acquireMutationLock(slot);
+        try {
+          await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
+          this.slotIndex.remove(slot);
+          this.metrics?.prunedDirectories.inc();
+        } finally {
+          release();
+        }
       }
     });
   }

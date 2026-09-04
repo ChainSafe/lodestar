@@ -165,16 +165,12 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
  * This function is a convenience for tests and mergeDcolColumns.
  */
 export function readColumn(fileData: Uint8Array, header: DcolHeader, index: number): Uint8Array | null {
+  const {dataStart, offsets} = parseDcolOffsetsFromFile(fileData, header);
   if (!getBit(header.bitmap, index)) return null;
 
   const p = popcount(header.bitmap, index);
-  const N = totalBits(header.bitmap);
-  const tableStart = DCOL_HEADER_SIZE;
-  const dataStart = tableStart + offsetTableSize(N);
-  const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
-
-  const colStart = dataStart + tableView.getUint32(tableStart + p * 4, false);
-  const colEnd = dataStart + tableView.getUint32(tableStart + (p + 1) * 4, false);
+  const colStart = dataStart + offsets[p];
+  const colEnd = dataStart + offsets[p + 1];
   const compressed = fileData.subarray(colStart, colEnd);
 
   return uncompress(compressed);
@@ -186,17 +182,13 @@ export function readColumn(fileData: Uint8Array, header: DcolHeader, index: numb
  */
 export function readAllColumns(fileData: Uint8Array, header: DcolHeader): {index: number; data: Uint8Array}[] {
   const result: {index: number; data: Uint8Array}[] = [];
-  const N = totalBits(header.bitmap);
-
-  const tableStart = DCOL_HEADER_SIZE;
-  const dataStart = tableStart + offsetTableSize(N);
-  const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
+  const {dataStart, offsets} = parseDcolOffsetsFromFile(fileData, header);
 
   let pos = 0;
   for (let i = 0; i < 128; i++) {
     if (getBit(header.bitmap, i)) {
-      const colStart = dataStart + tableView.getUint32(tableStart + pos * 4, false);
-      const colEnd = dataStart + tableView.getUint32(tableStart + (pos + 1) * 4, false);
+      const colStart = dataStart + offsets[pos];
+      const colEnd = dataStart + offsets[pos + 1];
       const compressed = fileData.subarray(colStart, colEnd);
       result.push({index: i, data: uncompress(compressed)});
       pos++;
@@ -219,7 +211,7 @@ export interface ColumnByteRange {
  * Compute the file byte range for a specific column, using the header
  * and offset table bytes. Returns null if column is absent.
  */
-export function getColumnByteRange(header: DcolHeader, offsetTable: Uint8Array, index: number): ColumnByteRange | null {
+export function getColumnByteRange(header: DcolHeader, offsets: number[], index: number): ColumnByteRange | null {
   if (!getBit(header.bitmap, index)) return null;
 
   // popcount(bitmap, index) counts bits in [0, index) — the number of columns
@@ -227,15 +219,54 @@ export function getColumnByteRange(header: DcolHeader, offsetTable: Uint8Array, 
   const p = popcount(header.bitmap, index);
   const N = totalBits(header.bitmap);
   const dataStart = DCOL_HEADER_SIZE + offsetTableSize(N);
-  const view = new DataView(offsetTable.buffer, offsetTable.byteOffset, offsetTable.byteLength);
-
-  const colStart = view.getUint32(p * 4, false);
-  const colEnd = view.getUint32((p + 1) * 4, false);
+  const colStart = offsets[p];
+  const colEnd = offsets[p + 1];
 
   return {
     offset: dataStart + colStart,
     length: colEnd - colStart,
   };
+}
+
+export function parseDcolOffsets(offsetTable: Uint8Array, columnCount: number, dataLength: number): number[] {
+  const expectedTableSize = offsetTableSize(columnCount);
+  if (offsetTable.length !== expectedTableSize || dataLength < 0) {
+    throw invalidOffsetTable("size");
+  }
+
+  const view = new DataView(offsetTable.buffer, offsetTable.byteOffset, offsetTable.byteLength);
+  const offsets = Array.from({length: columnCount + 1}, (_, index) => view.getUint32(index * 4, false));
+  if (offsets[0] !== 0) {
+    throw invalidOffsetTable("first offset is not zero");
+  }
+  for (let i = 1; i < offsets.length; i++) {
+    if (offsets[i] < offsets[i - 1]) {
+      throw invalidOffsetTable("offsets are not monotonic");
+    }
+  }
+  if (offsets[columnCount] !== dataLength) {
+    throw invalidOffsetTable("terminal offset does not match data length");
+  }
+
+  return offsets;
+}
+
+function parseDcolOffsetsFromFile(fileData: Uint8Array, header: DcolHeader): {dataStart: number; offsets: number[]} {
+  const columnCount = totalBits(header.bitmap);
+  const tableSize = offsetTableSize(columnCount);
+  const dataStart = DCOL_HEADER_SIZE + tableSize;
+  const offsetTable = fileData.subarray(DCOL_HEADER_SIZE, dataStart);
+  return {
+    dataStart,
+    offsets: parseDcolOffsets(offsetTable, columnCount, fileData.length - dataStart),
+  };
+}
+
+function invalidOffsetTable(reason: string): DataColumnStoreError {
+  return new DataColumnStoreError(
+    {code: DataColumnStoreErrorCode.INVALID_OFFSET_TABLE, reason},
+    `Invalid dcol offset table: ${reason}`
+  );
 }
 
 /** Size of the offset table in bytes for N present columns. */

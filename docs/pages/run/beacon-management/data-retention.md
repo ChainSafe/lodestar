@@ -15,7 +15,7 @@ $dataDir # specified by --dataDir on the beacon command
 ├── peer-id.json
 ├── chain-db # default if --dbDir not specified
 │   └── (db files)
-├── data_columns
+├── data_columns # default if --dataColumnDir not specified
 │   └── (data column flat files grouped by slot)
 └── peerstore # default if --peerStoreDir not specified
     └── (peerstore files)
@@ -52,6 +52,8 @@ Configuring your node to store and prune data is key to success. On average you 
 `keystores`, `keystore-cache` and `peerstore` are not usually very large and are not expected to grow much during normal operation.
 
 Logs can also become quite large so please check out the section on [log management](../logging-and-metrics/log-management.md) for more information.
+
+Data column flat files are stored in `$dataDir/data_columns` by default. Use `--dataColumnDir` to place them on a separate volume.
 
 There is really only one flag that is needed to manage the data for Lodestar, [`--dataDir`](./beacon-cli#--datadir). Other than that handling log management is really the heart of the data management story. Beacon node data is what it is. Depending on the execution client that is chosen, there may be flags to help with data storage growth but that is outside the scope of this document.
 

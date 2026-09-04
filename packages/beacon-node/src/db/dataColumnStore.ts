@@ -25,7 +25,11 @@ export interface IDataColumnStore {
   pruneBefore(slot: Slot): Promise<void>;
 }
 
-export class DataColumnStore implements IDataColumnStore {
+/**
+ * Bridges pre-flat-file LevelDB columns during the supported in-place upgrade window.
+ * Remove the legacy repositories after upgrades from the last pre-flat-file release are no longer supported.
+ */
+export class LegacyDataColumnStore implements IDataColumnStore {
   constructor(
     private readonly flatFiles: IFlatFileStore,
     private readonly legacyHot: LegacyHotDataColumnStore,

@@ -25,7 +25,7 @@ describe("FlatFileStore metrics", () => {
 
   it("should record filesystem operations, bytes, pruning, and failures", async () => {
     const metrics = createMetricsTest();
-    const store = new FlatFileStore(tmpDir, config, logger, metrics.flatFileStore);
+    const store = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger, metrics.flatFileStore);
     await store.init();
 
     await store.putDataColumnsBinary(100, ROOT, [{index: 0, data: new Uint8Array(50).fill(0xaa)}]);
@@ -61,12 +61,12 @@ describe("FlatFileStore metrics", () => {
     ).resolves.toContain("lodestar_flat_file_store_startup_duration_seconds_count 1");
 
     const startupError = Object.assign(new Error("startup failed"), {code: "EIO"});
-    const mkdirSpy = vi.spyOn(fs.promises, "mkdir").mockRejectedValueOnce(startupError);
+    const readdirSpy = vi.spyOn(fs.promises, "readdir").mockRejectedValueOnce(startupError);
     try {
-      const failedStore = new FlatFileStore(tmpDir, config, logger, metrics.flatFileStore);
+      const failedStore = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger, metrics.flatFileStore);
       await expect(failedStore.init()).rejects.toMatchObject({cause: startupError});
     } finally {
-      mkdirSpy.mockRestore();
+      readdirSpy.mockRestore();
     }
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_startup_errors_total")

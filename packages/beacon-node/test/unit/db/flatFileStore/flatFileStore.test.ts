@@ -28,7 +28,7 @@ describe("FlatFileStore", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
-    store = new FlatFileStore(tmpDir, config, testLogger());
+    store = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
     await store.init();
   });
 
@@ -221,6 +221,75 @@ describe("FlatFileStore", () => {
     });
   });
 
+  describe("concurrent pruning", () => {
+    it("should prune a first write already in progress below the boundary", async () => {
+      const readFile = fs.promises.readFile.bind(fs.promises);
+      let markReadStarted: (() => void) | undefined;
+      let resumeWrite: (() => void) | undefined;
+      const readStarted = new Promise<void>((resolve) => {
+        markReadStarted = resolve;
+      });
+      const writePaused = new Promise<void>((resolve) => {
+        resumeWrite = resolve;
+      });
+      const readFileSpy = vi.spyOn(fs.promises, "readFile").mockImplementation(async (file, options) => {
+        markReadStarted?.();
+        await writePaused;
+        return readFile(file, options);
+      });
+
+      try {
+        const write = store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array([1])}]);
+        await readStarted;
+        const prune = store.pruneBefore(200);
+        resumeWrite?.();
+
+        await Promise.all([write, prune]);
+        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([undefined]);
+      } finally {
+        resumeWrite?.();
+        readFileSpy.mockRestore();
+      }
+    });
+
+    it("should reject writes below an active pruning boundary", async () => {
+      await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array([1])}]);
+
+      const remove = fs.promises.rm.bind(fs.promises);
+      let markRemoved: (() => void) | undefined;
+      let resumePrune: (() => void) | undefined;
+      const removed = new Promise<void>((resolve) => {
+        markRemoved = resolve;
+      });
+      const prunePaused = new Promise<void>((resolve) => {
+        resumePrune = resolve;
+      });
+      const removeSpy = vi.spyOn(fs.promises, "rm").mockImplementation(async (target, options) => {
+        await remove(target, options);
+        if (options?.recursive) {
+          markRemoved?.();
+          await prunePaused;
+        }
+      });
+
+      try {
+        const prune = store.pruneBefore(200);
+        await removed;
+        const write = store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array([2])}]);
+        resumePrune?.();
+
+        await prune;
+        await expect(write).rejects.toMatchObject({
+          type: {code: "DATA_COLUMN_STORE_SLOT_PRUNED", slot: 100, minRetainedSlot: 200},
+        });
+        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([undefined]);
+      } finally {
+        resumePrune?.();
+        removeSpy.mockRestore();
+      }
+    });
+  });
+
   describe("slot index rebuild", () => {
     it("should rebuild the slot index without opening slot directories", async () => {
       await store.putDataColumnsBinary(1000, ROOT_B, [
@@ -228,7 +297,7 @@ describe("FlatFileStore", () => {
         {index: 5, data: new Uint8Array(20)},
       ]);
 
-      const store2 = new FlatFileStore(tmpDir, config, testLogger());
+      const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
       const readdirSpy = vi.spyOn(fs.promises, "readdir");
       try {
         await store2.init();
@@ -250,7 +319,7 @@ describe("FlatFileStore", () => {
       const columnPartPath = path.join(columnSlotDir, `${ROOT_A}.dcol.part-crash`);
       await fs.promises.writeFile(columnPartPath, new Uint8Array([2]));
 
-      const store2 = new FlatFileStore(tmpDir, config, testLogger());
+      const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
       await store2.init();
       expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
       await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
@@ -276,7 +345,7 @@ describe("FlatFileStore", () => {
 
       const logger = testLogger();
       const warn = vi.spyOn(logger, LogLevel.warn);
-      const store2 = new FlatFileStore(tmpDir, config, logger);
+      const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger);
       await store2.init();
 
       const readdirSpy = vi.spyOn(fs.promises, "readdir");
@@ -316,7 +385,7 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(skippedBoundarySlot, ROOT_B, [{index: 0, data: new Uint8Array([3])}]);
       await store.putDataColumnsBinary(hotSlot, ROOT_B, [{index: 0, data: new Uint8Array([4])}]);
 
-      const store2 = new FlatFileStore(tmpDir, config, testLogger());
+      const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
       await store2.init();
 
       expect(await store2.getDataColumnsBinary(finalizedBlockSlot, ROOT_A, [0])).toEqual([new Uint8Array([2])]);

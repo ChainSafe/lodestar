@@ -1,9 +1,15 @@
 import fs from "node:fs";
+import {open} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {atomicWrite} from "../../../../src/db/flatFileStore/atomicWrite.js";
 import {assertValidRootHex, isValidRootHex, padSlot} from "../../../../src/db/flatFileStore/path.js";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {...actual, open: vi.fn(actual.open)};
+});
 
 describe("atomicWrite", () => {
   let tmpDir: string;
@@ -26,6 +32,27 @@ describe("atomicWrite", () => {
     expect(new Uint8Array(result)).toEqual(data);
 
     expect(await fs.promises.readdir(path.dirname(target))).toEqual([path.basename(target)]);
+  });
+
+  it("should sync the parent after creating the target directory", async () => {
+    const target = path.join(tmpDir, "slot", "test.ssz");
+    vi.mocked(open).mockClear();
+
+    await atomicWrite(target, new Uint8Array([1]));
+
+    expect(open).toHaveBeenCalledWith(tmpDir, "r");
+  });
+
+  it("should retry a failed parent directory sync", async () => {
+    const target = path.join(tmpDir, "slot", "test.ssz");
+    vi.mocked(open).mockClear();
+    vi.mocked(open).mockRejectedValueOnce(new Error("sync failed"));
+
+    await expect(atomicWrite(target, new Uint8Array([1]))).rejects.toThrow("sync failed");
+    await atomicWrite(target, new Uint8Array([1]));
+
+    expect(open).toHaveBeenNthCalledWith(1, tmpDir, "r");
+    expect(open).toHaveBeenNthCalledWith(2, tmpDir, "r");
   });
 
   it("should overwrite existing file", async () => {

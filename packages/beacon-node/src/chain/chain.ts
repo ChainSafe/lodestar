@@ -266,6 +266,7 @@ export class BeaconChain implements IBeaconChain {
       db,
       dbName,
       dataDir,
+      dataColumnDir,
       logger,
       processShutdownCallback,
       clock,
@@ -282,6 +283,7 @@ export class BeaconChain implements IBeaconChain {
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
+      dataColumnDir?: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -499,7 +501,12 @@ export class BeaconChain implements IBeaconChain {
 
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
-      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      {
+        ...opts,
+        dbName,
+        dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
+        anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint},
+      },
       signal
     );
 

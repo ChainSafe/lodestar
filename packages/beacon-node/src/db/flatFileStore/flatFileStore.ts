@@ -1,7 +1,7 @@
-import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
+import {mkdirDurable} from "./atomicWrite.js";
 import {ColumnStore} from "./columnStore.js";
 import {DataColumnStoreError, DataColumnStoreErrorCode} from "./errors.js";
 import type {IFlatFileStore} from "./interface.js";
@@ -18,19 +18,24 @@ export class FlatFileStore implements IFlatFileStore {
   private readonly columnStore: ColumnStore;
 
   constructor(
-    dataDir: string,
+    dataColumnDir: string,
     config: ChainForkConfig,
     private readonly logger: Logger,
-    private readonly metrics: FlatFileStoreMetrics | null = null
+    private metrics: FlatFileStoreMetrics | null = null
   ) {
     this.slotIndex = new SlotIndex();
-    this.columnStore = new ColumnStore(dataDir, config, this.slotIndex, metrics);
+    this.columnStore = new ColumnStore(dataColumnDir, config, this.slotIndex, metrics);
+  }
+
+  setMetrics(metrics: FlatFileStoreMetrics | null): void {
+    this.metrics = metrics;
+    this.columnStore.setMetrics(metrics);
   }
 
   async init(): Promise<void> {
     const endTimer = this.metrics?.startupDuration.startTimer();
     try {
-      await fs.promises.mkdir(this.columnStore.dir, {recursive: true});
+      await mkdirDurable(this.columnStore.dir);
       const stats = await this.slotIndex.rebuildFromDisk(this.columnStore.dir);
       if (stats.ignoredEntries > 0) {
         this.logger.warn("Ignored non-canonical flat file store entries", {

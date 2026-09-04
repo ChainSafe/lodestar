@@ -260,6 +260,17 @@ describe("dcolFormat", () => {
       expect(readColumn(encoded, header, 0)).toBeNull();
       expect(readColumn(encoded, header, 6)).toBeNull();
     });
+
+    it("should reject a terminal offset beyond the data region", () => {
+      const encoded = encodeDcolFile(new Uint8Array(32), 1, [{index: 0, data: new Uint8Array(50).fill(0xab)}]);
+      new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength).setUint32(
+        DCOL_HEADER_SIZE + 4,
+        1_000_000,
+        false
+      );
+
+      expect(() => readAllColumns(encoded, parseDcolHeader(encoded))).toThrow("Invalid dcol offset table");
+    });
   });
 
   describe("mergeDcolColumns", () => {
@@ -304,6 +315,19 @@ describe("dcolFormat", () => {
           {index: 3, data: new Uint8Array([3])},
         ])
       ).toThrow("Duplicate dcol column index");
+    });
+
+    it("should reject malformed existing offsets", () => {
+      const existing = encodeDcolFile(new Uint8Array(32), 200, [{index: 0, data: new Uint8Array([1])}]);
+      new DataView(existing.buffer, existing.byteOffset, existing.byteLength).setUint32(
+        DCOL_HEADER_SIZE + 4,
+        1_000_000,
+        false
+      );
+
+      expect(() => mergeDcolColumns(existing, [{index: 1, data: new Uint8Array([2])}])).toThrow(
+        "Invalid dcol offset table"
+      );
     });
   });
 });

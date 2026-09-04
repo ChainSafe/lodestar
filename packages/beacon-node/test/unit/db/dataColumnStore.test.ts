@@ -1,12 +1,12 @@
 import {describe, expect, it, vi} from "vitest";
 import {type RootHex, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {DataColumnStore} from "../../../src/db/dataColumnStore.js";
+import {LegacyDataColumnStore} from "../../../src/db/dataColumnStore.js";
 import type {IFlatFileStore} from "../../../src/db/flatFileStore/interface.js";
 
 const ROOT: RootHex = `0x${"ab".repeat(32)}`;
 
-describe("DataColumnStore", () => {
+describe("LegacyDataColumnStore", () => {
   it("should fill flat file misses from hot and canonical archive storage", async () => {
     const flatData = new Uint8Array([1]);
     const hotData = new Uint8Array([2]);
@@ -19,7 +19,7 @@ describe("DataColumnStore", () => {
     const getArchived = vi.fn(async (_slot: number, indices: number[]) =>
       indices.map((index) => (index === 2 ? archiveData : undefined))
     );
-    const store = new DataColumnStore(
+    const store = new LegacyDataColumnStore(
       flatFiles,
       {values: vi.fn().mockResolvedValue([]), getManyBinary: getHot, deleteMany: vi.fn()},
       {
@@ -44,7 +44,7 @@ describe("DataColumnStore", () => {
     const flatFiles = makeFlatFiles();
     vi.mocked(flatFiles.getDataColumnsBinary).mockResolvedValue([undefined]);
     const getArchived = vi.fn().mockResolvedValue([new Uint8Array([3])]);
-    const store = new DataColumnStore(
+    const store = new LegacyDataColumnStore(
       flatFiles,
       {
         values: vi.fn().mockResolvedValue([]),
@@ -75,7 +75,7 @@ describe("DataColumnStore", () => {
     archivedColumn.index = 2;
     const flatFiles = makeFlatFiles();
     vi.mocked(flatFiles.getDataColumns).mockResolvedValue([flatColumn]);
-    const store = new DataColumnStore(
+    const store = new LegacyDataColumnStore(
       flatFiles,
       {
         values: vi.fn().mockResolvedValue([duplicateHotColumn, hotColumn]),
@@ -98,7 +98,7 @@ describe("DataColumnStore", () => {
     const flatFiles = makeFlatFiles();
     const deleteHot = vi.fn().mockResolvedValue(undefined);
     const deleteArchive = vi.fn().mockResolvedValue(undefined);
-    const store = new DataColumnStore(
+    const store = new LegacyDataColumnStore(
       flatFiles,
       {values: vi.fn(), getManyBinary: vi.fn(), deleteMany: deleteHot},
       {
