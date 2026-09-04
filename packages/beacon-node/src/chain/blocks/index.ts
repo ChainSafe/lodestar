@@ -74,7 +74,7 @@ export async function processBlocks(
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
       // parentBlock can only be null if relevantBlocks are empty
-      await importPayloadEnvelopesOfKnownBlocks.call(this, payloadEnvelopes);
+      await importPayloadEnvelopesOfKnownBlocks.call(this, payloadEnvelopes, opts);
       return;
     }
 
@@ -230,30 +230,47 @@ export async function processBlocks(
  * A peer can serve a block without its envelope, the block is then imported with a PENDING payload. Later batches
  * carry the envelope but all their blocks are known, without importing it here every child building on the FULL
  * variant fails with PARENT_PAYLOAD_UNKNOWN and range sync never progresses. If our head already descends from the
- * block's EMPTY variant the chain did not build on the payload, importing it would only add a dead FULL leaf.
+ * block's EMPTY variant the chain did not build on the payload, importing it would only add a dead FULL leaf. As for
+ * orphaned payloads in a segment this only applies while the block attestations are not imported, a recent payload
+ * is imported anyway so a reorg building on it does not have to fetch it through unknown block sync.
  */
 async function importPayloadEnvelopesOfKnownBlocks(
   this: BeaconChain,
-  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+  opts: ImportBlockOpts
 ): Promise<void> {
   if (payloadEnvelopes === null) {
     return;
   }
 
   const head = this.forkChoice.getHead();
+  const currentEpoch = this.clock.currentEpoch;
   const payloadInputs: PayloadEnvelopeInput[] = [];
+  const orphanedSlots: Slot[] = [];
   for (const payloadInput of payloadEnvelopes.values()) {
-    const {blockRootHex} = payloadInput;
+    const {blockRootHex, slot} = payloadInput;
     if (
       !payloadInput.hasPayloadEnvelope() ||
       !this.forkChoice.hasBlockHex(blockRootHex) ||
-      this.forkChoice.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null ||
-      (head.blockRoot !== blockRootHex &&
-        this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus))
+      this.forkChoice.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
     ) {
       continue;
     }
+    if (
+      head.blockRoot !== blockRootHex &&
+      !importsBlockAttestations(opts, computeEpochAtSlot(slot), currentEpoch) &&
+      this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
+    ) {
+      // never validated, see processBlocks()
+      this.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+      orphanedSlots.push(slot);
+      continue;
+    }
     payloadInputs.push(payloadInput);
+  }
+
+  if (orphanedSlots.length > 0) {
+    this.logger.debug("Skipping orphaned payload envelopes of known blocks", {slots: orphanedSlots.join(",")});
   }
 
   if (payloadInputs.length === 0) {
