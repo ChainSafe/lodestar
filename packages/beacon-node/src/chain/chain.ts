@@ -82,7 +82,7 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
-import {ImportPayloadOpts} from "./blocks/types.js";
+import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
@@ -1167,15 +1167,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], null, opts);
+    await this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
   async processChainSegment(
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void> {
-    await this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
+  ): Promise<ProcessBlocksResult> {
+    return this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
