@@ -10,6 +10,7 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
@@ -25,7 +26,17 @@ import {
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  BeaconBlock,
+  BuilderIndex,
+  altair,
+  capella,
+  electra,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -531,10 +542,21 @@ export async function importBlock(
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
       if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        let gloasFields: undefined | {blockHash: string; builderIndex: BuilderIndex};
+        if (isGloasBeaconBlock(block.message)) {
+          const builderIndex = block.message.body.signedExecutionPayloadBid.message.builderIndex;
+          if (builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+            gloasFields = {
+              blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+              builderIndex,
+            };
+          }
+        }
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...gloasFields,
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
