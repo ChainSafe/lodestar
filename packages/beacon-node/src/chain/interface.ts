@@ -35,7 +35,7 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
@@ -262,7 +262,7 @@ export interface IBeaconChain {
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void>;
+  ): Promise<ProcessBlocksResult>;
 
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
