@@ -10,7 +10,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeCheckpointSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -186,7 +186,7 @@ export class SeenBlockInput {
 
   onFinalized = (checkpoint: CheckpointWithHex) => {
     let deletedCount = 0;
-    const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    const cutoffSlot = computeCheckpointSlotAtEpoch(this.config, checkpoint.epoch);
     for (const [, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
         deletedCount++;

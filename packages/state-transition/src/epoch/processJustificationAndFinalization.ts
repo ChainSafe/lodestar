@@ -2,7 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
-import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
+import {computeEpochAtSlot, getCheckpointRoot} from "../util/index.js";
 
 /**
  * Update justified and finalized checkpoints depending on network participation.
@@ -54,14 +54,14 @@ export function weighJustificationAndFinalization(
   if (previousEpochTargetBalance * 3 >= totalActiveBalance * 2) {
     state.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: previousEpoch,
-      root: getBlockRoot(state, previousEpoch),
+      root: getCheckpointRoot(state.config, state, previousEpoch),
     });
     bits[1] = true;
   }
   if (currentEpochTargetBalance * 3 >= totalActiveBalance * 2) {
     state.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: currentEpoch,
-      root: getBlockRoot(state, currentEpoch),
+      root: getCheckpointRoot(state.config, state, currentEpoch),
     });
     bits[0] = true;
   }

@@ -1,7 +1,7 @@
 import {Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStatePhase0} from "../types.js";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "../util/index.js";
+import {getBlockRootAtSlot, getCheckpointRoot} from "../util/index.js";
 
 /**
  * Mutates `proposerIndices`, `inclusionDelays` and `flags` from all pending attestations.
@@ -34,7 +34,7 @@ export function processPendingAttestations(
   // Prevent frequent object get of external CommonJS dependencies
   const byteArrayEqualsFn = byteArrayEquals;
 
-  const actualTargetBlockRoot = getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
+  const actualTargetBlockRoot = getCheckpointRoot(state.config, state, epoch);
 
   for (const att of attestations) {
     // Ignore empty BitArray, from spec test minimal/phase0/epoch_processing/participation_record_updates updated_participation_record

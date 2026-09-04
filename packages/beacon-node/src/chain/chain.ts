@@ -345,7 +345,7 @@ export class BeaconChain implements IBeaconChain {
     });
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
-    this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.checkpointBalancesCache = new CheckpointBalancesCache(config);
     this.serializedCache = new SerializedCache();
     this.seenBlockInputCache = new SeenBlockInput({
       config,
@@ -1670,7 +1670,7 @@ export class BeaconChain implements IBeaconChain {
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
-    const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
+    const finalizedSlot = this.forkChoice.getFinalizedCheckpointSlot();
     this.seenBlockProposers.prune(finalizedSlot);
 
     // Update validator custody to account for effective balance changes

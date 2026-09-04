@@ -6,11 +6,7 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
 } from "@lodestar/params";
-import {
-  computeStartSlotAtEpoch,
-  getExecutionPayloadEnvelopeSignatureSet,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
+import {getExecutionPayloadEnvelopeSignatureSet, isStatePostGloas} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -70,9 +66,8 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `payload.slotNumber >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized checkpoint slot.
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
   if (payload.slotNumber < finalizedSlot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK,

@@ -11,6 +11,7 @@ import {
   EffectiveBalanceIncrements,
   IBeaconStateView,
   ZERO_HASH,
+  computeCheckpointSlotAtEpoch,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -773,7 +774,7 @@ export class ForkChoice implements IForkChoice {
 
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to
     // get_ancestor).
-    const finalizedSlot = computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch);
+    const finalizedSlot = this.getFinalizedCheckpointSlot();
     if (slot <= finalizedSlot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
@@ -864,7 +865,7 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedCheckpoint = finalizedCheckpoint;
     }
 
-    const targetSlot = computeStartSlotAtEpoch(blockEpoch);
+    const targetSlot = computeCheckpointSlotAtEpoch(this.config, blockEpoch);
     const targetRoot = slot === targetSlot ? blockRoot : state.getBlockRootAtSlot(targetSlot);
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
@@ -1307,7 +1308,7 @@ export class ForkChoice implements IForkChoice {
 
   getFinalizedCheckpointSlot(): Slot {
     const finalizedEpoch = this.fcStore.finalizedCheckpoint.epoch;
-    return computeStartSlotAtEpoch(finalizedEpoch);
+    return computeCheckpointSlotAtEpoch(this.config, finalizedEpoch);
   }
 
   /**
@@ -1598,7 +1599,7 @@ export class ForkChoice implements IForkChoice {
         return block.parentRoot;
       }
 
-      // For the first slot of the epoch, a block is it's own target
+      // Jump through the cached checkpoint target root when it moves us closer to the dependent slot.
       const nextRoot = block.blockRoot === block.targetRoot ? block.parentRoot : block.targetRoot;
       // Use default variant (PENDING for Gloas, FULL for pre-Gloas)
       // For Gloas: we search for PENDING blocks because dependent root is determined by the block itself,
