@@ -1,3 +1,4 @@
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -7,7 +8,7 @@ import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
-import {importBlock} from "./importBlock.js";
+import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
@@ -79,9 +80,21 @@ export async function processBlocks(
       payloadEnvelopes,
       parentBlock
     );
-    if (orphanedPayloads != null) {
+    // Orphaned payloads of recent blocks are still imported, a reorg of the child could make the payload canonical
+    // again and later blocks build on it. Older ones are skipped: without the block attestations the orphaned FULL
+    // variant has no descendants and ties at zero weight with the EMPTY variant carrying the chain, the payload
+    // status tiebreaker then picks FULL and parks the head there.
+    const blockEpoch = computeEpochAtSlot(relevantBlocks[0].getBlock().message.slot);
+    const importsAttestations = importsBlockAttestations(opts, blockEpoch, this.clock.currentEpoch);
+    let payloadEnvelopesToImport = payloadEnvelopes;
+    if (orphanedPayloads != null && payloadEnvelopes !== null && !importsAttestations) {
+      payloadEnvelopesToImport = new Map(payloadEnvelopes);
       for (const orphaned of orphanedPayloads) {
-        this.logger.debug("Orphaned payload envelope in chain segment", {
+        payloadEnvelopesToImport.delete(orphaned.slot);
+        // never validated, drop it from the shared cache so it is not served to peers, by-root sync reloads the
+        // entry from db if the payload is ever needed
+        this.seenPayloadEnvelopeInputCache.prune(orphaned.payloadEnvelopeInput.blockRootHex);
+        this.logger.debug("Skipping orphaned payload envelope in chain segment", {
           slot: orphaned.slot,
           blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,
         });
@@ -97,7 +110,7 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopesToImport, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -132,8 +145,8 @@ export async function processBlocks(
     }
 
     const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
-    if (payloadEnvelopes) {
-      for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
+    if (payloadEnvelopesToImport) {
+      for (const slot of payloadEnvelopesToImport.keys()) slotSet.add(slot);
     }
     const slots = Array.from(slotSet).sort((a, b) => a - b);
     for (const slot of slots) {
@@ -146,7 +159,7 @@ export async function processBlocks(
       // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
       const payloadDA = payloadDAStatuses.get(slot);
       if (payloadDA !== undefined) {
-        const payloadInput = payloadEnvelopes?.get(slot);
+        const payloadInput = payloadEnvelopesToImport?.get(slot);
         if (payloadInput === undefined) {
           throw new Error(`Missing payload input for slot ${slot} after DA verification`);
         }
