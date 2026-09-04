@@ -76,6 +76,74 @@ describe("fast confirmation pause/resume", () => {
     };
   }
 
+  function makeChainBlock(slot: Slot): ProtoBlock {
+    return {
+      slot,
+      stateRoot: getStateRoot(slot),
+      parentRoot: getBlockRoot(slot - 1),
+      blockRoot: getBlockRoot(slot),
+      targetRoot: finalizedRoot,
+
+      justifiedEpoch: genesisEpoch,
+      justifiedRoot: genesisRoot,
+      finalizedEpoch: genesisEpoch,
+      finalizedRoot: genesisRoot,
+      unrealizedJustifiedEpoch: genesisEpoch,
+      unrealizedJustifiedRoot: genesisRoot,
+      unrealizedFinalizedEpoch: genesisEpoch,
+      unrealizedFinalizedRoot: genesisRoot,
+
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
+      timeliness: false,
+      importedTimely: false,
+    } as ProtoBlock;
+  }
+
+  it("pins confirmed root to finalized when its block is pruned", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const protoArr = makeProtoArr();
+    for (const slot of [1, 2, 3]) {
+      protoArr.onBlock(makeChainBlock(slot), slot, null);
+    }
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {fastConfirmation: true});
+    forkchoice.setPruneThreshold(0);
+
+    // finality moved to slot 2 between slot ticks, the rule still points at slot 1
+    const newFinalizedRoot = getBlockRoot(2);
+    fcStore.finalizedCheckpoint = {epoch: 1, root: fromHexString(newFinalizedRoot), rootHex: newFinalizedRoot};
+    fcStore.confirmedRoot = getBlockRoot(1);
+
+    forkchoice.prune(newFinalizedRoot);
+
+    expect(forkchoice.getBlockHex(getBlockRoot(1))).toBeNull();
+    expect(fcStore.confirmedRoot).toBe(newFinalizedRoot);
+    expect(forkchoice.getConfirmedBlock()?.blockRoot).toBe(newFinalizedRoot);
+    expect(notify).toHaveBeenCalledExactlyOnceWith({block: newFinalizedRoot, slot: 2, currentSlot: genesisSlot + 1});
+  });
+
+  it("leaves the confirmed root alone when prune keeps its block", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const protoArr = makeProtoArr();
+    for (const slot of [1, 2, 3]) {
+      protoArr.onBlock(makeChainBlock(slot), slot, null);
+    }
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {fastConfirmation: true});
+    forkchoice.setPruneThreshold(0);
+    fcStore.confirmedRoot = getBlockRoot(3);
+
+    forkchoice.prune(getBlockRoot(2));
+
+    expect(fcStore.confirmedRoot).toBe(getBlockRoot(3));
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it("pins confirmed root to finalized and emits the event while paused", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
