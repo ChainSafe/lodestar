@@ -31,6 +31,7 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {MAX_PEERS_PER_ROOT} from "./constants.js";
+import {canKnownBlockRequireExecutionPayloadEnvelope} from "./executionPayloadEnvelopeEligibility.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
@@ -300,6 +301,20 @@ export class NetworkProcessor {
   }
 
   /**
+   * Whether a payload block root could ever have an execution payload envelope. Unknown roots
+   * qualify (a real post-Gloas block may still need one); known genesis / pre-Gloas roots never do.
+   * Callers must not await an envelope (or search for one) for a root this rejects, otherwise the
+   * awaiting message is never expired (pruning only traverses `unknownEnvelopesBySlot`).
+   */
+  private canRootRequireEnvelope(root: RootHex): boolean {
+    const knownBlock = this.chain.forkChoice.getBlockHexDefaultStatus(root);
+    return canKnownBlockRequireExecutionPayloadEnvelope(
+      (blockSlot) => this.chain.config.getForkSeq(blockSlot),
+      knownBlock
+    );
+  }
+
+  /**
    * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` event
    * Slot is the message slot, which is not necessarily the same as the envelope's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
@@ -309,6 +324,12 @@ export class NetworkProcessor {
     if (this.chain.seenPayloadEnvelope(root)) {
       return;
     }
+
+    // Skip roots that can never have an execution payload envelope (known genesis / pre-Gloas).
+    if (!this.canRootRequireEnvelope(root)) {
+      return;
+    }
+
     const peersForRoot = this.unknownEnvelopesBySlot.getOrDefault(slot);
     // capture "already searching" BEFORE getOrDefault(root) creates the entry
     const alreadySearching = peersForRoot.has(root) || this.awaitingMessagesByPayloadBlockRoot.has(root);
@@ -428,7 +449,7 @@ export class NetworkProcessor {
             topicType === GossipType.beacon_attestation
               ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
-          if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root) && this.canRootRequireEnvelope(root)) {
             // attestation votes that the payload is available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
@@ -503,7 +524,11 @@ export class NetworkProcessor {
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
             } else if (
               protoBlock.executionPayloadBlockHash &&
-              protoBlock.executionPayloadBlockHash !== parentBlockHash
+              protoBlock.executionPayloadBlockHash !== parentBlockHash &&
+              canKnownBlockRequireExecutionPayloadEnvelope(
+                (blockSlot) => this.chain.config.getForkSeq(blockSlot),
+                protoBlock
+              )
             ) {
               this.searchUnknownEnvelope(
                 {slot, root: parentBlockRoot},
