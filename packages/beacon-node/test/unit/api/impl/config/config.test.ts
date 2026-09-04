@@ -75,7 +75,7 @@ describe("config api implementation", () => {
       expect(specJson.GAS_LIMIT_SCHEDULE).toEqual([{EPOCH: "10", GAS_LIMIT: "60000000"}]);
     });
 
-    it("still omits BLOB_SCHEDULE when Fulu is unscheduled", () => {
+    it("omits BLOB_SCHEDULE when Fulu is unscheduled", () => {
       const specJson = renderJsonSpec(
         createChainForkConfig({
           ...defaultChainConfig,
