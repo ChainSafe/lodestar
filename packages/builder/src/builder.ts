@@ -7,12 +7,14 @@ import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
+import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
+  blockObserver: BlockObserver;
   builderStatusTracker: BuilderStatusTracker;
   clock: IClock;
   index: BuilderIndex;
@@ -34,6 +36,7 @@ export type BuilderOptions = {
  */
 export class Builder {
   readonly builderSigner: BuilderSigner;
+  private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
   private readonly clock: IClock;
@@ -41,8 +44,9 @@ export class Builder {
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
 
-  constructor({opts, builderSigner, builderStatusTracker, clock, index}: BuilderModules) {
+  constructor({opts, builderSigner, blockObserver, builderStatusTracker, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
+    this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
     this.clock = clock;
     this.controller = opts.abortController;
@@ -53,6 +57,7 @@ export class Builder {
 
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
+    this.blockObserver.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
       index: this.index,
@@ -89,8 +94,9 @@ export class Builder {
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    const blockObserver = new BlockObserver(config, logger, api);
 
-    return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
+    return new Builder({opts, builderSigner, blockObserver, builderStatusTracker, clock, index});
   }
 
   async close(): Promise<void> {
