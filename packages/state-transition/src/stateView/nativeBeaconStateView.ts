@@ -1,7 +1,7 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import type {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -68,6 +68,7 @@ import {
 export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private _forkName: ForkName | null = null;
+  private _forkSeq: ForkSeq | null = null;
   private _slot: Slot | null = null;
   private _fork: Fork | null = null;
   private _epoch: Epoch | null = null;
@@ -181,6 +182,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._forkName = this.binding.forkName;
     }
     return this._forkName;
+  }
+
+  get forkSeq(): ForkSeq {
+    if (this._forkSeq === null) {
+      this._forkSeq = this.binding.forkSeq;
+    }
+    return this._forkSeq;
   }
 
   get slot(): Slot {

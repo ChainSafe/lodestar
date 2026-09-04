@@ -104,6 +104,37 @@ export async function validateApiExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
 
+  // [REJECT] `bid.execution_payment` is zero.
+  if (bid.executionPayment !== 0n) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
+      builderIndex: bid.builderIndex,
+      executionPayment: bid.executionPayment,
+    });
+  }
+
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
+    });
+  }
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
+  // consensus layer -- i.e. validate that
+  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      blobKzgCommitmentsLen,
+      commitmentLimit: maxBlobsPerBlock,
+    });
+  }
+
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
     !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
@@ -135,28 +166,6 @@ export async function validateApiExecutionPayloadBid(
       code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: bid.slot,
-    });
-  }
-
-  // [REJECT] `bid.execution_payment` is zero.
-  if (bid.executionPayment !== 0n) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
-      builderIndex: bid.builderIndex,
-      executionPayment: bid.executionPayment,
-    });
-  }
-
-  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
-  // consensus layer -- i.e. validate that
-  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
-  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
-  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
-      blobKzgCommitmentsLen,
-      commitmentLimit: maxBlobsPerBlock,
     });
   }
 
@@ -256,6 +265,37 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
   const bidParentBlockHash = toRootHex(bid.parentBlockHash);
+
+  // [REJECT] `bid.execution_payment` is zero.
+  if (bid.executionPayment !== 0n) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
+      builderIndex: bid.builderIndex,
+      executionPayment: bid.executionPayment,
+    });
+  }
+
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
+    });
+  }
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
+  // consensus layer -- i.e. validate that
+  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      blobKzgCommitmentsLen,
+      commitmentLimit: maxBlobsPerBlock,
+    });
+  }
 
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
@@ -402,15 +442,6 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `bid.execution_payment` is zero.
-  if (bid.executionPayment !== 0n) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
-      builderIndex: bid.builderIndex,
-      executionPayment: bid.executionPayment,
-    });
-  }
-
   // [IGNORE] `bid.fee_recipient == proposer_preferences.fee_recipient`.
   if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
@@ -448,19 +479,6 @@ async function validateExecutionPayloadBid(
       bidGasLimit,
       parentGasLimit,
       targetGasLimit,
-    });
-  }
-
-  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
-  // consensus layer -- i.e. validate that
-  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
-  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
-  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
-      blobKzgCommitmentsLen,
-      commitmentLimit: maxBlobsPerBlock,
     });
   }
 
