@@ -363,7 +363,7 @@ export class AggregatedAttestationPool {
             stateEpoch,
             rootCache,
             gloasState?.executionPayloadAvailability ?? null,
-            gloasState?.latestExecutionPayloadBid.slot ?? null
+            gloasState?.latestBlockHeader.slot ?? null
           );
 
           const weight =
