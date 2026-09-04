@@ -260,6 +260,11 @@ export class ArchiveStore {
       await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
       timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
+      // Keep the advertised earliestAvailableSlot in sync with what the node still retains after
+      // archiving/pruning (and any backfill progress), so peers do not request ranges we can no
+      // longer serve (issue #8147). Runs after updateBackfillRange so it sees this cycle's ranges.
+      await this.chain.updateEarliestAvailableSlot();
+
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
         rootHex: finalized.rootHex,
