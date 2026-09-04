@@ -1,3 +1,4 @@
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
@@ -6,6 +7,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {FORK_CHOICE_ATT_EPOCH_LIMIT, importBlock} from "./importBlock.js";
@@ -15,6 +17,7 @@ import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
+import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
@@ -71,6 +74,7 @@ export async function processBlocks(
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
       // parentBlock can only be null if relevantBlocks are empty
+      await importPayloadEnvelopesOfKnownBlocks.call(this, payloadEnvelopes);
       return;
     }
 
@@ -221,6 +225,52 @@ export async function processBlocks(
 
     throw err;
   }
+}
+
+/**
+ * A peer can serve a block without its envelope, the block is then imported with a PENDING payload. Later batches
+ * carry the envelope but all their blocks are known, without importing it here every child building on the FULL
+ * variant fails with PARENT_PAYLOAD_UNKNOWN and range sync never progresses. If our head already descends from the
+ * block's EMPTY variant the chain did not build on the payload, importing it would only add a dead FULL leaf.
+ */
+async function importPayloadEnvelopesOfKnownBlocks(
+  this: BeaconChain,
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null
+): Promise<void> {
+  if (payloadEnvelopes === null) {
+    return;
+  }
+
+  const head = this.forkChoice.getHead();
+  const payloadInputs: PayloadEnvelopeInput[] = [];
+  for (const payloadInput of payloadEnvelopes.values()) {
+    const {blockRootHex} = payloadInput;
+    if (
+      !payloadInput.hasPayloadEnvelope() ||
+      !this.forkChoice.hasBlockHex(blockRootHex) ||
+      this.forkChoice.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null ||
+      (head.blockRoot !== blockRootHex &&
+        this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus))
+    ) {
+      continue;
+    }
+    payloadInputs.push(payloadInput);
+  }
+
+  if (payloadInputs.length === 0) {
+    return;
+  }
+
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
+  for (let i = 0; i < payloadInputs.length; i++) {
+    this.logger.debug("Importing payload envelope of known block", {
+      slot: payloadInputs[i].slot,
+      blockRoot: payloadInputs[i].blockRootHex,
+    });
+    await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
+  }
+  // the new FULL variants are not seen by the head cached from the last block import
+  this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 }
 
 function getBlockOrPayloadError(e: unknown, block: SignedBeaconBlock): BlockError | PayloadError {
