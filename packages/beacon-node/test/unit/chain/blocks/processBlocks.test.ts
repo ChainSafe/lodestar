@@ -306,6 +306,86 @@ describe("chain / blocks / processBlocks", () => {
     expect(payloadEnvelopes.size).toBe(2);
   });
 
+  it.each([
+    {
+      name: "imports the envelope of a known block that has no FULL variant when all blocks are known",
+      headOnEmpty: false,
+      skipAttestations: true,
+    },
+    {
+      name: "does not import the envelope of a known block if the head built on its EMPTY variant",
+      headOnEmpty: true,
+      skipAttestations: true,
+    },
+    {
+      name: "imports the envelope of a known block whose EMPTY variant the head built on when attestations are imported",
+      headOnEmpty: true,
+      skipAttestations: false,
+    },
+  ])("$name", async ({headOnEmpty, skipAttestations}) => {
+    const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+    chain = getMockedBeaconChain({config: gloasConfig});
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const blockRootHex = toRootHex(blockRoot);
+    const gloasBlockInput = BlockInputNoData.createFromBlock({
+      block,
+      blockRootHex,
+      forkName: ForkName.gloas,
+      daOutOfRange: false,
+      source: BlockInputSource.byRange,
+      seenTimestampSec: 0,
+    });
+    const payloadInput = PayloadEnvelopeInput.createFromBlock({
+      block,
+      blockRootHex,
+      forkName: ForkName.gloas,
+      sampledColumns: [0],
+      custodyColumns: [0],
+      daOutOfRange: false,
+      source: PayloadEnvelopeInputSource.byRange,
+      seenTimestampSec: 0,
+    });
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.beaconBlockRoot = blockRoot;
+    payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+
+    // block already imported (PENDING payload), batch only re-delivers it together with its envelope
+    vi.mocked(verifyBlocksSanityChecks).mockReturnValue({relevantBlocks: [], parentSlots: [], parentBlock: null});
+    vi.spyOn(chain.forkChoice, "hasBlockHex").mockReturnValue(true);
+    vi.spyOn(chain.forkChoice, "getBlockHexAndBlockHash").mockReturnValue(null);
+    vi.spyOn(chain.forkChoice, "getHead").mockReturnValue(
+      headOnEmpty
+        ? generateProtoBlock({slot: slot + 1, parentRoot: blockRootHex})
+        : generateProtoBlock({slot, blockRoot: blockRootHex})
+    );
+    // not part of the automocked ForkChoice
+    Object.defineProperty(chain.forkChoice, "isDescendant", {value: vi.fn(() => headOnEmpty)});
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    await processBlocks.call(
+      chain,
+      [gloasBlockInput],
+      new Map([[slot, payloadInput]]),
+      skipAttestations ? {importAttestations: AttestationImportOpt.Skip} : {}
+    );
+
+    expect(verifyBlocksInEpoch).not.toHaveBeenCalled();
+    expect(importBlock).not.toHaveBeenCalled();
+    if (headOnEmpty && skipAttestations) {
+      expect(importExecutionPayload).not.toHaveBeenCalled();
+      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockRootHex);
+      expect(chain.recomputeForkChoiceHead).not.toHaveBeenCalled();
+    } else {
+      expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
+        validSignature: false,
+      });
+      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+      expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    }
+  });
+
   // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
   // read the INVALID/ERROR code and decide peer attribution — getBlockOrPayloadError must pass it
   // through, not flatten it into a generic BEACON_CHAIN_ERROR. (The origin is mocked here; what matters
