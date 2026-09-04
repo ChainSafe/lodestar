@@ -114,17 +114,18 @@ describe("fast confirmation pause/resume", () => {
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {fastConfirmation: true});
     forkchoice.setPruneThreshold(0);
 
-    // finality moved to slot 2 between slot ticks, the rule still points at slot 1
-    const newFinalizedRoot = getBlockRoot(2);
+    // finality moved to slot 3 between slot ticks while the rule still points at slot 1, the deferred prune job
+    // runs with the older finalized root of slot 2
+    const newFinalizedRoot = getBlockRoot(3);
     fcStore.finalizedCheckpoint = {epoch: 1, root: fromHexString(newFinalizedRoot), rootHex: newFinalizedRoot};
     fcStore.confirmedRoot = getBlockRoot(1);
 
-    forkchoice.prune(newFinalizedRoot);
+    forkchoice.prune(getBlockRoot(2));
 
-    expect(forkchoice.getBlockHex(getBlockRoot(1))).toBeNull();
+    expect(forkchoice.getBlockHexDefaultStatus(getBlockRoot(1))).toBeNull();
     expect(fcStore.confirmedRoot).toBe(newFinalizedRoot);
     expect(forkchoice.getConfirmedBlock()?.blockRoot).toBe(newFinalizedRoot);
-    expect(notify).toHaveBeenCalledExactlyOnceWith({block: newFinalizedRoot, slot: 2, currentSlot: genesisSlot + 1});
+    expect(notify).toHaveBeenCalledExactlyOnceWith({block: newFinalizedRoot, slot: 3, currentSlot: genesisSlot + 1});
   });
 
   it("leaves the confirmed root alone when prune keeps its block", () => {
