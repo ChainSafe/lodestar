@@ -39,6 +39,7 @@ function toProtoBlock(slot: number, blockRoot: RootHex, parentRoot: RootHex): Pr
     unrealizedFinalizedRoot: "-",
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
 

@@ -113,6 +113,15 @@ export async function validateApiExecutionPayloadBid(
     });
   }
 
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
+    });
+  }
+
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
   // consensus layer -- i.e. validate that
   // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
@@ -263,6 +272,15 @@ async function validateExecutionPayloadBid(
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
       builderIndex: bid.builderIndex,
       executionPayment: bid.executionPayment,
+    });
+  }
+
+  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
+  // `bid.block_hash != bid.parent_block_hash`.
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
+      blockHash: toRootHex(bid.blockHash),
     });
   }
 
