@@ -76,6 +76,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
+import {computeEarliestAvailableSlot} from "./archiveStore/utils/computeEarliestAvailableSlot.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -256,6 +257,22 @@ export class BeaconChain implements IBeaconChain {
     if (this._earliestAvailableSlot !== slot) {
       this._earliestAvailableSlot = slot;
       this.emitter.emit(ChainEvent.updateStatus);
+    }
+  }
+
+  /**
+   * Recompute {@link earliestAvailableSlot} from what is actually persisted in the DB and, if it
+   * changed, update the advertised Status. Called at startup and after each finalized-checkpoint
+   * archive/prune cycle so the value tracks both the node's retained history and sidecar pruning,
+   * instead of staying frozen at the anchor slot.
+   */
+  async updateEarliestAvailableSlot(): Promise<void> {
+    const prev = this._earliestAvailableSlot;
+    const next = await computeEarliestAvailableSlot(this.db, this.anchorStateLatestBlockSlot);
+    if (next !== prev) {
+      this.logger.verbose("Updated earliestAvailableSlot", {prev, next});
+      // Uses the setter, which emits ChainEvent.updateStatus so peers receive the new value.
+      this.earliestAvailableSlot = next;
     }
   }
 
@@ -547,6 +564,7 @@ export class BeaconChain implements IBeaconChain {
   async init(): Promise<void> {
     await this.archiveStore.init();
     await this.loadFromDisk();
+    await this.updateEarliestAvailableSlot();
   }
 
   async close(): Promise<void> {
