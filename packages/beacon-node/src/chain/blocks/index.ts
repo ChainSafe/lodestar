@@ -95,7 +95,8 @@ export async function processBlocks(
       payloadEnvelopesToImport = new Map(payloadEnvelopes);
       for (const orphaned of orphanedPayloads) {
         payloadEnvelopesToImport.delete(orphaned.slot);
-        // never validated, drop it from the shared cache so gossip or by-root can still deliver a valid one
+        // never validated, drop it from the shared cache so it is not served to peers, by-root sync reloads the
+        // entry from db if the payload is ever needed
         this.seenPayloadEnvelopeInputCache.prune(orphaned.payloadEnvelopeInput.blockRootHex);
         this.logger.debug("Skipping orphaned payload envelope in chain segment", {
           slot: orphaned.slot,
