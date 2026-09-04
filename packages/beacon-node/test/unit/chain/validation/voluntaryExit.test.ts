@@ -10,7 +10,8 @@ import {
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
+import {GossipAction} from "../../../../src/chain/errors/gossipValidation.js";
+import {VoluntaryExitError, VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
@@ -67,6 +68,10 @@ describe("validate voluntary exit", () => {
   beforeEach(() => {
     state = new TestBeaconStateView(createCachedBeaconStateTest(originalState.clone(), config));
     chainStub = getMockedBeaconChain({config});
+    Object.defineProperty(chainStub.clock, "currentSlotWithGossipDisparity", {
+      configurable: true,
+      get: () => state.slot,
+    });
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
@@ -105,7 +110,7 @@ describe("validate voluntary exit", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalid),
-      VoluntaryExitErrorCode.EARLY_EPOCH
+      new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.EARLY_EPOCH})
     );
   });
 
@@ -139,7 +144,7 @@ describe("validate voluntary exit", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
-      VoluntaryExitErrorCode.ALREADY_EXITED
+      new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.ALREADY_EXITED})
     );
   });
 
