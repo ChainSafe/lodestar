@@ -1909,6 +1909,11 @@ export class ProtoArray {
    * Returns both ancestor and non-ancestor nodes in a single traversal.
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
+   *
+   * Post-gloas a block occupies several nodes (PENDING/EMPTY/FULL) that all share one blockRoot,
+   * and only one of them is on the ancestor walk. `nonAncestors` excludes the sibling variants of
+   * ancestor blocks, so a root never appears in both lists: callers key their data by blockRoot
+   * and would otherwise treat a canonical block as non-canonical.
    */
   getAllAncestorAndNonAncestorNodes(
     blockRoot: RootHex,
@@ -1955,7 +1960,9 @@ export class ProtoArray {
     // Collect remaining non-ancestor nodes from nodeIndex to beginning
     nonAncestors.push(...this.getNodesBetween(nodeIndex, 0).filter((n) => n.payloadStatus !== PayloadStatus.PENDING));
 
-    return {ancestors, nonAncestors};
+    // Drop the sibling payload variants of ancestor blocks, they are the same block
+    const ancestorRoots = new Set(ancestors.map((n) => n.blockRoot));
+    return {ancestors, nonAncestors: nonAncestors.filter((n) => !ancestorRoots.has(n.blockRoot))};
   }
 
   /**

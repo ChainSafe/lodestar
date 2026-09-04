@@ -221,6 +221,47 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
+  describe("getAllAncestorAndNonAncestorNodes", () => {
+    it("does not report a canonical block as a non-ancestor via its sibling payload variant", () => {
+      // A gloas block occupies several nodes (PENDING/EMPTY/FULL) sharing one blockRoot, and the
+      // ancestor walk only visits one of them. Callers key their data by blockRoot, so a sibling
+      // variant leaking into nonAncestors makes them delete data of a canonical block.
+      const currentSlot = gloasForkSlot + 2;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      const canonicalRoots = ["0x02", "0x03"];
+      let parentRoot = genesisRoot;
+      let parentBlockHash = genesisRoot;
+      for (const [i, blockRoot] of canonicalRoots.entries()) {
+        const block = createTestBlock(gloasForkSlot + i, blockRoot, parentRoot, parentBlockHash);
+        protoArray.onBlock(block, currentSlot, null);
+        // Reveal the payload so both the EMPTY and the FULL variant exist for this block
+        protoArray.onExecutionPayload(
+          blockRoot,
+          currentSlot,
+          `${blockRoot}ff`,
+          1,
+          30000000,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        );
+        parentRoot = blockRoot;
+        parentBlockHash = `${blockRoot}ff`;
+      }
+
+      const {ancestors, nonAncestors} = protoArray.getAllAncestorAndNonAncestorNodes("0x03", PayloadStatus.FULL);
+
+      const ancestorRoots = new Set(ancestors.map((n) => n.blockRoot));
+      expect(ancestorRoots).toEqual(new Set([...canonicalRoots, genesisRoot]));
+      // No root may appear in both lists
+      expect(nonAncestors.filter((n) => ancestorRoots.has(n.blockRoot))).toEqual([]);
+    });
+  });
+
   describe("Pre-Gloas (Fulu) behavior", () => {
     let protoArray: ProtoArray;
 
