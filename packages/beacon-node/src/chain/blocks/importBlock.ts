@@ -25,7 +25,17 @@ import {
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  BeaconBlock,
+  Epoch,
+  altair,
+  capella,
+  electra,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -43,7 +53,16 @@ import {getCheckpointFromState} from "./utils/checkpoint.js";
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
  */
-export const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+/**
+ * Whether the attestations of a block at `blockEpoch` are imported into fork choice
+ */
+export function importsBlockAttestations(opts: ImportBlockOpts, blockEpoch: Epoch, currentEpoch: Epoch): boolean {
+  return (
+    opts.importAttestations === AttestationImportOpt.Force ||
+    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+  );
+}
 /**
  * Emit eventstream events for block contents events only for blocks that are recent enough to clock
  */
@@ -149,10 +168,7 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
-  if (
-    opts.importAttestations === AttestationImportOpt.Force ||
-    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
-  ) {
+  if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();

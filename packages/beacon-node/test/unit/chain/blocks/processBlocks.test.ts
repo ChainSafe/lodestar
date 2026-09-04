@@ -28,7 +28,10 @@ import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeac
 import {MockBlockInput} from "../../../utils/blockInput.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-vi.mock("../../../../src/chain/blocks/importBlock.js");
+vi.mock("../../../../src/chain/blocks/importBlock.js", async (importActual) => {
+  const actual = await importActual<typeof import("../../../../src/chain/blocks/importBlock.js")>();
+  return {...actual, importBlock: vi.fn()};
+});
 vi.mock("../../../../src/chain/blocks/importExecutionPayload.js", async (importActual) => {
   const mod = await importActual<typeof import("../../../../src/chain/blocks/importExecutionPayload.js")>();
   return {...mod, importExecutionPayload: vi.fn()};
