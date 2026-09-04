@@ -14,7 +14,7 @@ import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
-import {assertLinearChainSegment} from "./utils/chainSegment.js";
+import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
@@ -81,8 +81,7 @@ export async function processBlocks(
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
       // parentBlock can only be null if relevantBlocks are empty
-      await importPayloadEnvelopesOfKnownBlocks.call(this, payloadEnvelopes, opts);
-      return emptyResult;
+      return await importPayloadEnvelopesOfKnownBlocks.call(this, payloadEnvelopes, opts);
     }
 
     const {warnings: orphanedPayloads} = assertLinearChainSegment(
@@ -244,15 +243,15 @@ async function importPayloadEnvelopesOfKnownBlocks(
   this: BeaconChain,
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: ImportBlockOpts
-): Promise<void> {
+): Promise<ProcessBlocksResult> {
   if (payloadEnvelopes === null) {
-    return;
+    return {orphaned: [], skipped: false};
   }
 
   const head = this.forkChoice.getHead();
   const currentEpoch = this.clock.currentEpoch;
   const payloadInputs: PayloadEnvelopeInput[] = [];
-  const orphanedSlots: Slot[] = [];
+  const orphaned: OrphanedPayloadEnvelope[] = [];
   for (const payloadInput of payloadEnvelopes.values()) {
     const {blockRootHex, slot} = payloadInput;
     if (
@@ -269,18 +268,17 @@ async function importPayloadEnvelopesOfKnownBlocks(
     ) {
       // never validated, see processBlocks()
       this.seenPayloadEnvelopeInputCache.prune(blockRootHex);
-      orphanedSlots.push(slot);
+      orphaned.push({slot, payloadEnvelopeInput: payloadInput});
       continue;
     }
     payloadInputs.push(payloadInput);
   }
 
-  if (orphanedSlots.length > 0) {
-    this.logger.debug("Skipping orphaned payload envelopes of known blocks", {slots: orphanedSlots.join(",")});
-  }
+  // orphaned envelopes on this path are always skipped, range sync logs them with peer/client context
+  const result: ProcessBlocksResult = {orphaned, skipped: orphaned.length > 0};
 
   if (payloadInputs.length === 0) {
-    return;
+    return result;
   }
 
   const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
@@ -293,6 +291,8 @@ async function importPayloadEnvelopesOfKnownBlocks(
   }
   // the new FULL variants are not seen by the head cached from the last block import
   this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+
+  return result;
 }
 
 function getBlockOrPayloadError(e: unknown, block: SignedBeaconBlock): BlockError | PayloadError {

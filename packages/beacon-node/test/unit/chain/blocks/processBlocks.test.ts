@@ -364,7 +364,7 @@ describe("chain / blocks / processBlocks", () => {
     Object.defineProperty(chain.forkChoice, "isDescendant", {value: vi.fn(() => headOnEmpty)});
     vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
 
-    await processBlocks.call(
+    const result = await processBlocks.call(
       chain,
       [gloasBlockInput],
       new Map([[slot, payloadInput]]),
@@ -377,12 +377,15 @@ describe("chain / blocks / processBlocks", () => {
       expect(importExecutionPayload).not.toHaveBeenCalled();
       expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockRootHex);
       expect(chain.recomputeForkChoiceHead).not.toHaveBeenCalled();
+      // the skipped orphaned envelope is returned so range sync can log the serving peer/client
+      expect(result).toEqual({orphaned: [{slot, payloadEnvelopeInput: payloadInput}], skipped: true});
     } else {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
         validSignature: false,
       });
       expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
       expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      expect(result).toEqual({orphaned: [], skipped: false});
     }
   });
 
