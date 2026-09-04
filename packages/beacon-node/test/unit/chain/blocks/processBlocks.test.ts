@@ -17,6 +17,7 @@ import {
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {AttestationImportOpt} from "../../../../src/chain/blocks/types.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
@@ -208,7 +209,13 @@ describe("chain / blocks / processBlocks", () => {
     }
   });
 
-  it("does not import payload envelopes the chain segment reports as orphaned", async () => {
+  it.each([
+    {name: "does not import orphaned payload envelopes when attestations are not imported", skipAttestations: true},
+    {
+      name: "imports orphaned payload envelopes when attestations are imported, weight decides",
+      skipAttestations: false,
+    },
+  ])("$name", async ({skipAttestations}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     chain = getMockedBeaconChain({config: gloasConfig});
     Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
@@ -270,15 +277,28 @@ describe("chain / blocks / processBlocks", () => {
       [slot - 1, parent.payloadInput],
       [slot, current.payloadInput],
     ]);
-    await processBlocks.call(chain, [current.blockInput], payloadEnvelopes, {});
+    await processBlocks.call(
+      chain,
+      [current.blockInput],
+      payloadEnvelopes,
+      skipAttestations ? {importAttestations: AttestationImportOpt.Skip} : {}
+    );
 
     const envelopesForDa = vi.mocked(verifyBlocksInEpoch).mock.calls[0][2];
-    expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot]);
-    expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
-      current.payloadInput,
-      DataAvailabilityStatus.NotRequired,
-      {validSignature: false}
-    );
+    if (skipAttestations) {
+      expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot]);
+      expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
+        current.payloadInput,
+        DataAvailabilityStatus.NotRequired,
+        {validSignature: false}
+      );
+      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(
+        parent.payloadInput.blockRootHex
+      );
+    } else {
+      expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot - 1, slot]);
+      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+    }
     // the batch's own map is left untouched, range sync still owns it
     expect(payloadEnvelopes.size).toBe(2);
   });

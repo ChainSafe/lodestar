@@ -1,3 +1,4 @@
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -7,10 +8,10 @@ import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
-import {importBlock} from "./importBlock.js";
+import {FORK_CHOICE_ATT_EPOCH_LIMIT, importBlock} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -79,13 +80,21 @@ export async function processBlocks(
       payloadEnvelopes,
       parentBlock
     );
-    // The chain did not build on an orphaned payload, importing it only adds a FULL fork choice variant without
-    // descendants that wins the zero-weight tiebreaker during range sync and gets stuck as head
+    // Same condition as importBlock() for importing the block's attestations into fork choice. Without them an
+    // orphaned payload is a FULL variant without descendants that ties at zero weight with the EMPTY variant
+    // carrying the chain and wins the payload status tiebreaker, parking the head. With attestations weight decides.
+    const blockEpoch = computeEpochAtSlot(relevantBlocks[0].getBlock().message.slot);
+    const importsAttestations =
+      opts.importAttestations === AttestationImportOpt.Force ||
+      (opts.importAttestations !== AttestationImportOpt.Skip &&
+        blockEpoch >= this.clock.currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT);
     let payloadEnvelopesToImport = payloadEnvelopes;
-    if (orphanedPayloads != null && payloadEnvelopes !== null) {
+    if (orphanedPayloads != null && payloadEnvelopes !== null && !importsAttestations) {
       payloadEnvelopesToImport = new Map(payloadEnvelopes);
       for (const orphaned of orphanedPayloads) {
         payloadEnvelopesToImport.delete(orphaned.slot);
+        // never validated, drop it from the shared cache so gossip or by-root can still deliver a valid one
+        this.seenPayloadEnvelopeInputCache.prune(orphaned.payloadEnvelopeInput.blockRootHex);
         this.logger.debug("Skipping orphaned payload envelope in chain segment", {
           slot: orphaned.slot,
           blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,

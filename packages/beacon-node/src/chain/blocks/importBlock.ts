@@ -43,7 +43,7 @@ import {getCheckpointFromState} from "./utils/checkpoint.js";
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
  */
-const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+export const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
 /**
  * Emit eventstream events for block contents events only for blocks that are recent enough to clock
  */
