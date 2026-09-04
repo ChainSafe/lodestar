@@ -1,5 +1,4 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {VoluntaryExitValidity, computeEpochAtSlot, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
+import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -95,13 +94,6 @@ async function validateVoluntaryExit(
     });
   }
 
-  const currentEpochWithGossipDisparity = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);
-  if (currentEpochWithGossipDisparity < voluntaryExit.message.epoch) {
-    throw new VoluntaryExitError(GossipAction.IGNORE, {
-      code: VoluntaryExitErrorCode.EARLY_EPOCH,
-    });
-  }
-
   // What state should the voluntaryExit validate against?
   //
   // The only condition that is time sensitive and may require a non-head state is
@@ -111,25 +103,13 @@ async function validateVoluntaryExit(
   // relevant on periods of many skipped slots.
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
 
-  if (
-    voluntaryExit.message.validatorIndex < state.validatorCount &&
-    state.getValidator(voluntaryExit.message.validatorIndex).exitEpoch !== FAR_FUTURE_EPOCH
-  ) {
-    throw new VoluntaryExitError(GossipAction.IGNORE, {
-      code: VoluntaryExitErrorCode.ALREADY_EXITED,
-    });
-  }
-
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
   const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
   if (validity !== VoluntaryExitValidity.valid) {
-    throw new VoluntaryExitError(
-      validity === VoluntaryExitValidity.earlyEpoch ? GossipAction.IGNORE : GossipAction.REJECT,
-      {
-        code: voluntaryExitValidityToErrorCode(validity),
-      }
-    );
+    throw new VoluntaryExitError(GossipAction.REJECT, {
+      code: voluntaryExitValidityToErrorCode(validity),
+    });
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);

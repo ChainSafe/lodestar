@@ -7181,9 +7181,7 @@
     </spec>
 
 - name: is_future_epoch#phase0
-  sources:
-    - file: packages/beacon-node/src/chain/validation/voluntaryExit.ts
-      search: "const currentEpochWithGossipDisparity = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);"
+  sources: []
   spec: |
     <spec fn="is_future_epoch" fork="phase0" hash="3fcd17f8">
     def is_future_epoch(
