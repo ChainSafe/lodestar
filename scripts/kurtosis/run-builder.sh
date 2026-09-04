@@ -55,4 +55,4 @@ echo '  --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \'
 echo '  --paramsFile ./temp/builder-dev/netcfg/config.yaml'
 echo
 echo "don't forget to clean up later"
-echo 'kurtosis enclave rm -f builder-dev && kurtosis engine stop && rm -rf ./temp/builder-dev'
+echo 'kurtosis enclave rm -f builder-dev && kurtosis engine stop'
