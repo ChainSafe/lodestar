@@ -10,6 +10,7 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPostHeze,
+  ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -77,6 +78,7 @@ export interface IBeaconStateView {
 
   // phase0
   forkName: ForkName;
+  forkSeq: ForkSeq;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;

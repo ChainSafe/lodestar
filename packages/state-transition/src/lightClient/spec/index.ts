@@ -32,7 +32,7 @@ export {
   type SyncCommitteeFast,
 } from "./store.js";
 export {
-  getLcExecutionRoot,
+  getLightClientExecutionRoot,
   getSafetyThreshold,
   isFinalityUpdate,
   isSyncCommitteeUpdate,

@@ -207,9 +207,9 @@ function getGindexIndex(gindex: number): number {
  * Gloas headers removed `execution` so Pre-Gloas headers upgraded to the Gloas format
  * require reconstruction of the original execution payload header root.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/e762dd6e2c45ee05648b5787e7d261279aec226a/specs/gloas/light-client/sync-protocol.md#modified-get_lc_execution_root
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/light-client/sync-protocol.md#modified-get_lc_execution_root
  */
-export function getLcExecutionRoot(config: ChainForkConfig, header: LightClientHeader): Uint8Array {
+export function getLightClientExecutionRoot(config: ChainForkConfig, header: LightClientHeader): Uint8Array {
   const epoch = computeEpochAtSlot(header.beacon.slot);
 
   if (!isGloasLightClientHeader(header)) {
