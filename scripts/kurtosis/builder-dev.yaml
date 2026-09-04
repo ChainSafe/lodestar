@@ -1,0 +1,57 @@
+participants:
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: local/lodestar:builder-dev
+    cl_log_level: debug
+    validator_count: 0
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: local/lodestar:builder-dev
+    vc_image: local/lodestar:builder-dev
+    cl_log_level: debug
+    vc_log_level: debug
+    vc_extra_params:
+      - --graffiti=builder-dev
+    supernode: true
+    validator_count: 64
+
+# The legacy single Buildoor mode is intentional here: it derives the builder key
+# after all participant validators and always targets participant 1. Lifecycle
+# registration takes roughly three minimal-preset epochs before bidding starts.
+mev_type: buildoor
+buildoor_params:
+  image: ethpandaops/buildoor@sha256:501764a3c43e6289fa1b85df9e7489f1d2de24e1efe0a65c4d316bd340166991
+  builder_api: true
+  epbs_builder: true
+  lifecycle: true
+  extra_args:
+    - --log-level=debug
+
+network_params:
+  preset: minimal
+  seconds_per_slot: 6
+  gloas_fork_epoch: 0
+  attestation_due_bps_gloas: 2500
+  withdrawal_type: "0x01"
+  validator_balance: 32
+  builder_count: 1
+  builder_balance: 100
+  deploy_eip8282_contracts: true
+
+additional_services:
+  - dora
+  - prometheus
+
+dora_params:
+  image: ethpandaops/dora:master-latest
+
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 37000
+  additional_services:
+    enabled: true
+
+global_log_level: info
