@@ -79,9 +79,14 @@ export async function processBlocks(
       payloadEnvelopes,
       parentBlock
     );
-    if (orphanedPayloads != null) {
+    // The chain did not build on an orphaned payload, importing it only adds a FULL fork choice variant without
+    // descendants that wins the zero-weight tiebreaker during range sync and gets stuck as head
+    let payloadEnvelopesToImport = payloadEnvelopes;
+    if (orphanedPayloads != null && payloadEnvelopes !== null) {
+      payloadEnvelopesToImport = new Map(payloadEnvelopes);
       for (const orphaned of orphanedPayloads) {
-        this.logger.debug("Orphaned payload envelope in chain segment", {
+        payloadEnvelopesToImport.delete(orphaned.slot);
+        this.logger.debug("Skipping orphaned payload envelope in chain segment", {
           slot: orphaned.slot,
           blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,
         });
@@ -97,7 +102,7 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopesToImport, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -132,8 +137,8 @@ export async function processBlocks(
     }
 
     const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
-    if (payloadEnvelopes) {
-      for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
+    if (payloadEnvelopesToImport) {
+      for (const slot of payloadEnvelopesToImport.keys()) slotSet.add(slot);
     }
     const slots = Array.from(slotSet).sort((a, b) => a - b);
     for (const slot of slots) {
@@ -146,7 +151,7 @@ export async function processBlocks(
       // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
       const payloadDA = payloadDAStatuses.get(slot);
       if (payloadDA !== undefined) {
-        const payloadInput = payloadEnvelopes?.get(slot);
+        const payloadInput = payloadEnvelopesToImport?.get(slot);
         if (payloadInput === undefined) {
           throw new Error(`Missing payload input for slot ${slot} after DA verification`);
         }

@@ -208,6 +208,81 @@ describe("chain / blocks / processBlocks", () => {
     }
   });
 
+  it("does not import payload envelopes the chain segment reports as orphaned", async () => {
+    const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+    chain = getMockedBeaconChain({config: gloasConfig});
+    Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
+    const payloadInputFor = (blockSlot: number): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} => {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = blockSlot;
+      const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      const blockInput = BlockInputNoData.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        daOutOfRange: false,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: [0],
+        custodyColumns: [0],
+        daOutOfRange: false,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = blockRoot;
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+      return {blockInput, payloadInput};
+    };
+    // parent's payload was orphaned, the block builds on the parent's EMPTY variant but peers still serve the envelope
+    const parent = payloadInputFor(slot - 1);
+    const current = payloadInputFor(slot);
+
+    vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
+      relevantBlocks: [current.blockInput],
+      parentSlots: [slot - 1],
+      parentBlock: generateProtoBlock({slot: slot - 1}),
+    });
+    vi.mocked(assertLinearChainSegment).mockReturnValue({
+      warnings: [{slot: slot - 1, payloadEnvelopeInput: parent.payloadInput}],
+    });
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      postStates: [{forkName: ForkName.gloas} as IBeaconStateView],
+      proposerBalanceDeltas: [0],
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.NotRequired],
+      payloadDAStatuses: new Map([[slot, DataAvailabilityStatus.NotRequired]]),
+      indexedAttestationsByBlock: [[]],
+    });
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    const payloadEnvelopes = new Map([
+      [slot - 1, parent.payloadInput],
+      [slot, current.payloadInput],
+    ]);
+    await processBlocks.call(chain, [current.blockInput], payloadEnvelopes, {});
+
+    const envelopesForDa = vi.mocked(verifyBlocksInEpoch).mock.calls[0][2];
+    expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot]);
+    expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
+      current.payloadInput,
+      DataAvailabilityStatus.NotRequired,
+      {validSignature: false}
+    );
+    // the batch's own map is left untouched, range sync still owns it
+    expect(payloadEnvelopes.size).toBe(2);
+  });
+
   // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
   // read the INVALID/ERROR code and decide peer attribution — getBlockOrPayloadError must pass it
   // through, not flatten it into a generic BEACON_CHAIN_ERROR. (The origin is mocked here; what matters
