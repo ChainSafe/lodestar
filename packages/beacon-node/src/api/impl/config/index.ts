@@ -25,7 +25,7 @@ export function renderJsonSpec(config: ChainConfig): routes.config.Spec {
   if (config.FULU_FORK_EPOCH === Infinity) {
     delete configJson.BLOB_SCHEDULE;
   }
-  if (config.GLOAS_FORK_EPOCH === Infinity || config.GAS_LIMIT_SCHEDULE.length === 0) {
+  if (config.GLOAS_FORK_EPOCH === Infinity) {
     delete configJson.GAS_LIMIT_SCHEDULE;
   }
 

@@ -51,7 +51,7 @@ describe("config api implementation", () => {
       expect(specJson).not.toHaveProperty("GAS_LIMIT_SCHEDULE");
     });
 
-    it("omits GAS_LIMIT_SCHEDULE when the schedule is empty", () => {
+    it("includes empty GAS_LIMIT_SCHEDULE when Gloas is scheduled", () => {
       const specJson = renderJsonSpec(
         createChainForkConfig({
           ...defaultChainConfig,
@@ -60,7 +60,7 @@ describe("config api implementation", () => {
         })
       );
 
-      expect(specJson).not.toHaveProperty("GAS_LIMIT_SCHEDULE");
+      expect(specJson.GAS_LIMIT_SCHEDULE).toEqual([]);
     });
 
     it("includes GAS_LIMIT_SCHEDULE when Gloas is scheduled with entries", () => {
