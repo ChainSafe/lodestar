@@ -10,10 +10,10 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
-import {FORK_CHOICE_ATT_EPOCH_LIMIT, importBlock} from "./importBlock.js";
+import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -84,14 +84,11 @@ export async function processBlocks(
       payloadEnvelopes,
       parentBlock
     );
-    // Same condition as importBlock() for importing the block's attestations into fork choice. Without them an
-    // orphaned payload is a FULL variant without descendants that ties at zero weight with the EMPTY variant
-    // carrying the chain and wins the payload status tiebreaker, parking the head. With attestations weight decides.
+    // Without the block attestations an orphaned payload is a FULL variant without descendants that ties at zero
+    // weight with the EMPTY variant carrying the chain and wins the payload status tiebreaker, parking the head.
+    // Recent orphaned payloads are still imported, attestation weight decides and a reorg could still build on them.
     const blockEpoch = computeEpochAtSlot(relevantBlocks[0].getBlock().message.slot);
-    const importsAttestations =
-      opts.importAttestations === AttestationImportOpt.Force ||
-      (opts.importAttestations !== AttestationImportOpt.Skip &&
-        blockEpoch >= this.clock.currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT);
+    const importsAttestations = importsBlockAttestations(opts, blockEpoch, this.clock.currentEpoch);
     let payloadEnvelopesToImport = payloadEnvelopes;
     if (orphanedPayloads != null && payloadEnvelopes !== null && !importsAttestations) {
       payloadEnvelopesToImport = new Map(payloadEnvelopes);
