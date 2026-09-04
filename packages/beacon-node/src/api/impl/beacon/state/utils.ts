@@ -25,10 +25,6 @@ export function resolveStateId(
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
 ): RootHex | Slot | CheckpointWithHex {
-  if (stateId === "head") {
-    return forkChoice.getHead().stateRoot;
-  }
-
   if (stateId === "genesis") {
     return GENESIS_SLOT;
   }
