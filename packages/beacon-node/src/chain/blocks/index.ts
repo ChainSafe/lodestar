@@ -80,9 +80,10 @@ export async function processBlocks(
       payloadEnvelopes,
       parentBlock
     );
-    // Without the block attestations an orphaned payload is a FULL variant without descendants that ties at zero
-    // weight with the EMPTY variant carrying the chain and wins the payload status tiebreaker, parking the head.
-    // Recent orphaned payloads are still imported, attestation weight decides and a reorg could still build on them.
+    // Orphaned payloads of recent blocks are still imported, a reorg of the child could make the payload canonical
+    // again and later blocks build on it. Older ones are skipped: without the block attestations the orphaned FULL
+    // variant has no descendants and ties at zero weight with the EMPTY variant carrying the chain, the payload
+    // status tiebreaker then picks FULL and parks the head there.
     const blockEpoch = computeEpochAtSlot(relevantBlocks[0].getBlock().message.slot);
     const importsAttestations = importsBlockAttestations(opts, blockEpoch, this.clock.currentEpoch);
     let payloadEnvelopesToImport = payloadEnvelopes;
