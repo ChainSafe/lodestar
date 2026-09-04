@@ -1331,6 +1331,21 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
+    // The confirmed root only moves when the rule runs on the slot tick, during range sync finality can advance
+    // several times in between and prune its block. Safe block lookups throw on a pruned confirmed root, pin it
+    // to the store's finalized checkpoint as the paused path does (the prune job may lag behind it)
+    if (
+      this.fastConfirmationRule !== undefined &&
+      prunedCount > 0 &&
+      this.getBlockHexDefaultStatus(this.fcStore.confirmedRoot) === null
+    ) {
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+    }
     for (let i = 0; i < this.voteNextSlots.length; i++) {
       const currentIndex = this.voteCurrentIndices[i];
 
