@@ -32,11 +32,13 @@ export {
   type SyncCommitteeFast,
 } from "./store.js";
 export {
+  getLightClientExecutionRoot,
   getSafetyThreshold,
   isFinalityUpdate,
   isSyncCommitteeUpdate,
   isValidLightClientHeader,
   normalizeMerkleBranch,
+  upgradeLightClientBootstrap,
   upgradeLightClientFinalityUpdate,
   upgradeLightClientHeader,
   upgradeLightClientOptimisticUpdate,

@@ -76,6 +76,10 @@ export function processExecutionPayloadBid(
     );
   }
 
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Block hash ${toRootHex(bid.blockHash)} of bid must not equal its parent block hash`);
+  }
+
   const parentBlockRoot = getBlockRootAtSlot(state, state.slot - 1);
   if (!byteArrayEquals(bid.parentBlockRoot, parentBlockRoot)) {
     throw Error(

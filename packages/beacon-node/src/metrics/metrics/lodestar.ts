@@ -2,6 +2,7 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {
@@ -83,15 +84,15 @@ export function createLodestarMetrics(
       }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
-        help: "Time to process gossip validation queue job in seconds",
+        help: "Time to process gossip validation queue job in seconds (accepted messages only)",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       jobWaitTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       concurrency: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_concurrency",
@@ -921,6 +922,12 @@ export function createLodestarMetrics(
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
       }),
+
+      preStateSource: register.counter<{source: "parentState" | "fallbackPreState" | "preState"}>({
+        name: "lodestar_gossip_block_validation_pre_state_source_total",
+        help: "Source of the pre-state used for gossip block validation",
+        labelNames: ["source"],
+      }),
     },
     gossipBlob: {
       recvToValidation: register.histogram({
@@ -1040,6 +1047,11 @@ export function createLodestarMetrics(
       setHeadAfterCutoff: register.gauge({
         name: "lodestar_import_block_set_head_after_cutoff_total",
         help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
+      }),
+      lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
+        name: "lodestar_import_block_late_canonical_total",
+        help: "Total finalized-canonical blocks this node imported after the attestation cutoff; reason distinguishes this node's processing lag (slow_import) from late reception (late_receive)",
+        labelNames: ["reason"],
       }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
@@ -1344,11 +1356,6 @@ export function createLodestarMetrics(
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
-          labelNames: ["insertOutcome"],
-        }),
-        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
         }),
         apiValidationTime: register.histogram({
@@ -2036,6 +2043,11 @@ export function createLodestarMetrics(
     },
 
     builderApi: {
+      statusChecks: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_status_checks_total",
+        help: "Total count of status checks sent to external builders ahead of a proposal",
+        labelNames: ["status"],
+      }),
       bidRequests: register.counter({
         name: "lodestar_builder_api_bid_requests_total",
         help: "Total count of execution payload bid requests sent to external builders",

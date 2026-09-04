@@ -652,7 +652,9 @@ export class SyncChain {
 
         const blockSlots = downloadSuccessOutput.blocks.map((b) => b.slot);
         const envelopeSlots = downloadSuccessOutput.payloadEnvelopes
-          ? Array.from(downloadSuccessOutput.payloadEnvelopes.keys())
+          ? Array.from(downloadSuccessOutput.payloadEnvelopes.entries())
+              .filter(([, payloadInput]) => payloadInput.hasPayloadEnvelope())
+              .map(([slot]) => slot)
           : null;
 
         this.logger.debug(logMessage, {
@@ -684,13 +686,18 @@ export class SyncChain {
    */
   private async processBatch(batch: Batch): Promise<void> {
     const {blocks, payloadEnvelopes, peers} = batch.startProcessing();
+    const envelopeSlots = payloadEnvelopes
+      ? Array.from(payloadEnvelopes.entries())
+          .filter(([, payloadInput]) => payloadInput.hasPayloadEnvelope())
+          .map(([slot]) => slot)
+      : null;
 
     const logCtx = {
       id: this.logId,
       ...batch.getMetadata(),
       blockCount: blocks.length,
       blockSlots: prettyPrintIndices(blocks.map((b) => b.slot)),
-      ...(payloadEnvelopes ? {envelopeSlots: prettyPrintIndices(Array.from(payloadEnvelopes.keys()))} : {}),
+      ...(envelopeSlots ? {envelopeSlots: prettyPrintIndices(envelopeSlots)} : {}),
       peers: peers.map(prettyPrintPeerIdStr).join(","),
     };
     this.logger.verbose("Processing batch", logCtx);
