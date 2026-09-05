@@ -35,7 +35,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       dbLocation: modules.opts.dbLocation,
       metricsEnabled: Boolean(modules.metrics),
       loggerOpts: modules.logger.toOpts(),
-      nativeStateView: modules.opts.nativeStateView,
+      useNativeStateView: modules.opts.nativeStateView,
     };
 
     const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {

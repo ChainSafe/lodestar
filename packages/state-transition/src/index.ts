@@ -38,6 +38,7 @@ export {type SyncCommitteeCache, SyncCommitteeCacheEmpty} from "./cache/syncComm
 export * from "./constants/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
+export {initNativeStateTransitionMetrics, scrapeNativeStateTransitionMetrics} from "./nativeMetrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
@@ -54,6 +55,7 @@ export {
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
   type IBeaconStateViewHeze,
+  type IBeaconStateViewNative,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -63,6 +65,7 @@ export {
   isStatePostGloas,
   isStatePostHeze,
 } from "./stateView/interface.js";
+export {NativeBeaconStateView} from "./stateView/nativeBeaconStateView.js";
 export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {
   BeaconStateAllForks,

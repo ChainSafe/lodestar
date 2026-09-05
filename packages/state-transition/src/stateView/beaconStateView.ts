@@ -843,12 +843,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   stateTransition(
+    _signedBlockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
-    {metrics, validatorMonitor}: StateTransitionModules
+    modules: StateTransitionModules
   ): IBeaconStateView {
-    const newState = stateTransition(this.cachedState, signedBlock, options, {metrics, validatorMonitor});
-    return new BeaconStateView(newState);
+    return new BeaconStateView(stateTransition(this.cachedState, signedBlock, options, modules));
   }
 
   processSlots(

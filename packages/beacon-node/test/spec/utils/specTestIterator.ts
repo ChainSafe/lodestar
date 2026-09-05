@@ -4,7 +4,16 @@ import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {useNativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
+
+let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+
+async function resetNativeStateTransition(): Promise<void> {
+  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  const nativeStateTransition = await nativeStateTransitionPromise;
+  nativeStateTransition.deinitReusedEpochTransitionCache();
+}
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -203,7 +212,10 @@ export function specTestIterator(
               describeDirectorySpecTest(
                 testId,
                 testSuiteDirpath,
-                (testCase, directoryName, testCaseName) => {
+                async (testCase, directoryName, testCaseName) => {
+                  if (useNativeStateTransition) {
+                    await resetNativeStateTransition();
+                  }
                   pubkeyCache.reset();
                   return testFunction(testCase, directoryName, testCaseName);
                 },

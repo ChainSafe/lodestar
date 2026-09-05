@@ -1,41 +1,48 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  stateTransition,
-} from "@lodestar/state-transition";
-import {altair, bellatrix, ssz} from "@lodestar/types";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
+import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {
+  createBeaconStateViewForTest,
+  replaceStateViewForTest,
+  stateViewToBeaconState,
+  useNativeStateTransition,
+} from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
+      const config = getConfig(fork);
+      let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
-        state = stateTransition(state, signedBlock, {
-          // Should assume payload valid and blob data available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: false,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        });
+        state = replaceStateViewForTest(state, (preState) =>
+          preState.stateTransition(
+            config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            signedBlock,
+            {
+              // Should assume payload valid and blob data available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyStateRoot: false,
+              verifyProposer: verify,
+              verifySignatures: verify,
+              assertCorrectProgressiveBalances,
+            },
+            {}
+          )
+        );
       }
 
-      state.commit();
-      return state;
+      return stateViewToBeaconState(fork, state);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,
@@ -51,6 +58,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };
