@@ -6,6 +6,7 @@ export type SyncArgs = {
   "sync.disableProcessAsChainSegment"?: boolean;
   "sync.disableRangeSync"?: boolean;
   "sync.backfillBatchSize"?: number;
+  "sync.backfillToGenesis"?: boolean;
   "sync.slotImportTolerance"?: number;
 };
 
@@ -14,6 +15,7 @@ export function parseArgs(args: SyncArgs): IBeaconNodeOptions["sync"] {
     isSingleNode: args["sync.isSingleNode"],
     disableProcessAsChainSegment: args["sync.disableProcessAsChainSegment"],
     backfillBatchSize: args["sync.backfillBatchSize"] ?? defaultOptions.sync.backfillBatchSize,
+    backfillToGenesis: args["sync.backfillToGenesis"] ?? defaultOptions.sync.backfillToGenesis,
     disableRangeSync: args["sync.disableRangeSync"],
     slotImportTolerance: args["sync.slotImportTolerance"] ?? defaultOptions.sync.slotImportTolerance,
   };
@@ -60,6 +62,14 @@ Use only for local networks with a single node, can be dangerous in regular netw
     type: "number",
     description: "Batch size for backfill sync to sync/process blocks, set non zero to enable backfill sync",
     defaultDescription: String(defaultOptions.sync.backfillBatchSize),
+    group: "sync",
+  },
+
+  "sync.backfillToGenesis": {
+    type: "boolean",
+    description:
+      "Backfill all the way to genesis. Off by default: backfill stops at the weak subjectivity period boundary, which is the minimum required by the spec. Enable for archival nodes.",
+    defaultDescription: String(defaultOptions.sync.backfillToGenesis),
     group: "sync",
   },
 };

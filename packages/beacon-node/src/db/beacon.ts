@@ -2,11 +2,11 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
 import {Bucket} from "./buckets.js";
 import {IBeaconDb} from "./interface.js";
+import {BackfillStateRepository} from "./repositories/backfillState.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -23,6 +23,7 @@ import {
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
+import {BackfilledRange} from "./single/backfilledRange.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -55,7 +56,8 @@ export class BeaconDb implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
+  backfillState: BackfillStateRepository;
+  backfilledRange: BackfilledRange;
 
   constructor(
     config: ChainForkConfig,
@@ -86,7 +88,8 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommittee = new SyncCommitteeRepository(config, db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
-    this.backfilledRanges = new BackfilledRanges(config, db);
+    this.backfillState = new BackfillStateRepository(config, db);
+    this.backfilledRange = new BackfilledRange(config, db);
   }
 
   close(): Promise<void> {

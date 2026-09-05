@@ -4,6 +4,7 @@ import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
+  BackfillStateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
   BlockArchiveRepository,
@@ -14,6 +15,7 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "../../src/db/repositories/index.js";
+import {BackfilledRange} from "../../src/db/single/backfilledRange.js";
 
 export type MockedBeaconDb = Mocked<BeaconDb> & {
   block: Mocked<BlockRepository>;
@@ -31,6 +33,9 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
   proposerSlashing: Mocked<ProposerSlashingRepository>;
   attesterSlashing: Mocked<AttesterSlashingRepository>;
+
+  backfillState: Mocked<BackfillStateRepository>;
+  backfilledRange: Mocked<BackfilledRange>;
 };
 
 vi.mock("../../src/db/repositories/index.js");
@@ -54,6 +59,9 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
+
+      backfillState: vi.mocked(new BackfillStateRepository({} as any, {} as any)),
+      backfilledRange: vi.mocked(new BackfilledRange({} as any, {} as any)),
     };
   });
 
