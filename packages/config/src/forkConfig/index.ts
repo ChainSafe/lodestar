@@ -255,6 +255,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return this.getSlotComponentDurationMs(config.PAYLOAD_DUE_BPS);
     },
 
+    getInclusionListDueMs(): number {
+      return this.getSlotComponentDurationMs(config.INCLUSION_LIST_DUE_BPS);
+    },
+
     getSlotComponentDurationMs(basisPoints: number): number {
       return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
     },

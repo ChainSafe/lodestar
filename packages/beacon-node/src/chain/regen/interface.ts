@@ -24,6 +24,7 @@ export enum RegenCaller {
   validateApiVoluntaryExit = "validateApiVoluntaryExit",
   publishDeferredVoluntaryExits = "publishDeferredVoluntaryExits",
   validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
+  validateGossipInclusionList = "validateGossipInclusionList",
   validateApiExecutionPayloadBid = "validateApiExecutionPayloadBid",
   validateGossipPayloadAttestationMessage = "validateGossipPayloadAttestationMessage",
   validateGossipProposerPreferences = "validateGossipProposerPreferences",

@@ -12,6 +12,7 @@ import {
   Slot,
   altair,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -37,6 +38,7 @@ export enum SignableMessageType {
   PAYLOAD_ATTESTATION = "PAYLOAD_ATTESTATION",
   PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
   BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
+  INCLUSION_LIST = "INCLUSION_LIST",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -89,7 +91,8 @@ export type SignableMessage =
   | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
   | {type: SignableMessageType.PAYLOAD_ATTESTATION; data: gloas.PayloadAttestationData}
   | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
-  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth};
+  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
+  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -108,6 +111,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.PAYLOAD_ATTESTATION]: true,
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
   [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
+  [SignableMessageType.INCLUSION_LIST]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -291,6 +295,9 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.BUILDER_REQUEST_AUTH:
       return {builder_request_auth: ssz.gloas.BuilderRequestAuth.toJson(payload.data)};
+
+    case SignableMessageType.INCLUSION_LIST:
+      return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};
   }
 }
 

@@ -1,6 +1,8 @@
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
+import {InclusionListSource} from "../../chain/blocks/types.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -415,6 +417,47 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     weakHeadDetected: register.gauge({
       name: "beacon_weak_head_detected_total",
       help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
+    }),
+
+    // HEZE:EIP-7805
+    inclusionListsReceived: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_received_total",
+      help: "Total number of received inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsValid: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_valid_total",
+      help: "Total number of valid inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
+      name: "beacon_inclusion_lists_invalid_total",
+      help: "Total number of invalid inclusion lists",
+      labelNames: ["source", "reason"],
+    }),
+    inclusionListsValidSize: register.counter({
+      name: "beacon_inclusion_lists_valid_size_bytes_total",
+      help: "Total size of valid inclusion lists in bytes",
+    }),
+    inclusionListTransactionsReceived: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_list_transactions_received_total",
+      help: "Total number of transactions in received inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsPublished: register.counter({
+      name: "beacon_inclusion_lists_published_total",
+      help: "Total number of published inclusion lists",
+    }),
+    inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_validation_time_seconds",
+      help: "Time taken to validate inclusion lists",
+      buckets: [0.1, 0.25, 0.5, 0.75, 1, 2],
+      labelNames: ["source"],
+    }),
+    inclusionListArrivalTime: register.histogram({
+      name: "beacon_inclusion_lists_arrival_time_seconds",
+      help: "Inclusion list arrival time since the beginning of slot",
+      buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
     }),
   };
 }

@@ -19,6 +19,10 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         name: "beacon_fork_choice_requests_total",
         help: "Count of occasions where fork choice has tried to find a head",
       }),
+      unsatisfiedInclusionListBlocks: register.gauge({
+        name: "beacon_fork_choice_unsatisfied_inclusion_list_blocks_total",
+        help: "Count of payloads not extended because they did not satisfy the inclusion list constraints",
+      }),
       errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
         name: "beacon_fork_choice_errors_total",
         help: "Count of occasions where fork choice has returned an error when trying to find a head",

@@ -273,6 +273,13 @@ export interface IForkChoice {
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
+  /**
+   * [New in Heze:EIP7805] Record whether the execution payload for `blockRoot` satisfied its
+   * inclusion list constraints, as reported by the execution engine.
+   */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void;
+  /** [New in Heze:EIP7805] True only if the payload is locally verified and satisfied its constraints. */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

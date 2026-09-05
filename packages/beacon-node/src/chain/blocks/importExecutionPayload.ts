@@ -5,9 +5,10 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {getInclusionListDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -171,6 +172,19 @@ export async function importExecutionPayload(
     );
   }
 
+  // [New in Heze:EIP7805] The payload is checked against the inclusion lists observed for the
+  // slot preceding the block, keyed by that slot's shuffling dependent root on the block's branch
+  // and restricted to those that arrived before the inclusion list deadline. The engine reports
+  // the outcome on the newPayload response.
+  const inclusionListSlot = protoBlock.slot - 1;
+  const inclusionListTransactions = isStatePostHeze(blockState)
+    ? this.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getInclusionListDependentRoot(this.forkChoice, protoBlock, inclusionListSlot),
+        true
+      )
+    : undefined;
+
   // 4a. Run EL and signature verification in parallel
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
@@ -178,7 +192,8 @@ export async function importExecutionPayload(
       envelope.payload,
       payloadInput.getVersionedHashes(),
       envelope.parentBeaconBlockRoot,
-      envelope.executionRequests
+      envelope.executionRequests,
+      inclusionListTransactions
     ),
 
     opts.validSignature === true
@@ -235,6 +250,19 @@ export async function importExecutionPayload(
       );
     }
   });
+
+  // [New in Heze:EIP7805] Record whether the payload satisfied the inclusion list constraints
+  // before the payload enters fork choice, so should_extend_payload never sees a delivered
+  // payload with no recorded outcome. A VALID response always carries the flag; anything else
+  // has no verdict yet, so treat it as unsatisfied rather than assuming compliance.
+  if (inclusionListTransactions !== undefined) {
+    const satisfied =
+      execResult.status === ExecutionPayloadStatus.VALID ? (execResult.inclusionListSatisfied ?? false) : false;
+    this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
+    if (!satisfied) {
+      this.logger.verbose("Payload did not satisfy inclusion list constraints", {slot, blockRoot: blockRootHex});
+    }
+  }
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);

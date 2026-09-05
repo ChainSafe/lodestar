@@ -11,6 +11,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
@@ -46,6 +47,7 @@ import {
   altair,
   bellatrix,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -952,6 +954,36 @@ export class ValidatorStore {
 
     return {
       message,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signInclusionList(
+    duty: routes.validator.InclusionListDuty,
+    inclusionList: heze.InclusionList
+  ): Promise<heze.SignedInclusionList> {
+    if (duty.slot !== inclusionList.slot) {
+      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
+    }
+    if (duty.validatorIndex !== inclusionList.validatorIndex) {
+      throw Error(
+        `Inconsistent duties during signing: duty.validatorIndex ${duty.validatorIndex} != il.validatorIndex ${inclusionList.validatorIndex}`
+      );
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const signingSlot = inclusionList.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
+    const signingRoot = computeSigningRoot(ssz.heze.InclusionList, inclusionList, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.INCLUSION_LIST,
+      data: inclusionList,
+    };
+
+    return {
+      message: inclusionList,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
