@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {setImmediate} from "node:timers/promises";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
@@ -13,6 +14,8 @@ async function resetNativeStateTransition(): Promise<void> {
   nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
   const nativeStateTransition = await nativeStateTransitionPromise;
   nativeStateTransition.deinitReusedEpochTransitionCache();
+  // NAPI finalizers need an event-loop turn between fixtures to release native state memory.
+  await setImmediate();
 }
 
 const ARTIFACT_FILENAMES = new Set([
