@@ -57,7 +57,6 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
@@ -169,8 +168,6 @@ export const forkChoiceTestRunner =
 
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
-
-        const importedBlockRootHexes = new Set<string>();
 
         try {
           for (const [i, step] of steps.entries()) {
@@ -510,24 +507,16 @@ export const forkChoiceTestRunner =
                   validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
+                  // The spec's `on_block` returns early for a block already in the store
+                  // (consensus-specs#5495), and a block at or below the finalized slot has been
+                  // pruned from fork choice. Both are no-ops for the spec, so ignore rather than
+                  // reject to keep re-deliveries (the generator's `multi_route` mutation) passing.
+                  ignoreIfKnown: true,
+                  ignoreIfFinalized: true,
                 });
-                importedBlockRootHexes.add(blockRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                // The spec's `on_block` returns early for a known block (consensus-specs #5495).
-                // Lodestar rejects the duplicate instead: ALREADY_KNOWN, or
-                // WOULD_REVERT_FINALIZED_SLOT once finalization has passed the block's slot, since
-                // the sanity check runs before the already-known check. Both match the spec's no-op.
-                const isDuplicateNoOp =
-                  e instanceof BlockError &&
-                  (e.type.code === BlockErrorCode.ALREADY_KNOWN ||
-                    (e.type.code === BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT &&
-                      importedBlockRootHexes.has(blockRootHex)));
-                if (isValid && isDuplicateNoOp) {
-                  logger.debug(`Step ${i}/${stepsLen} block already known — treating as no-op success`, {
-                    id: step.block,
-                  });
-                } else if (isValid || (e as Error).message === "Expect error since this is a negative test") {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") {
                   throw e;
                 }
               }
