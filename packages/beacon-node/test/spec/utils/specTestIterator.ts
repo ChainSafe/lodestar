@@ -85,8 +85,7 @@ export const defaultSkipOpts: SkipOpts = {
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
     /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO GLOAS: enable this after gloas fork choice is ready
-    /^gloas\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: enable this after heze fork choice is ready
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,

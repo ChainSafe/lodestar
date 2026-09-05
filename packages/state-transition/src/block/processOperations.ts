@@ -103,7 +103,7 @@ export function processOperations(
 
   if (fork >= ForkSeq.gloas) {
     for (const payloadAttestation of (body as gloas.BeaconBlockBody).payloadAttestations) {
-      processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation);
+      processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation, opts.verifySignatures);
     }
   }
 }
