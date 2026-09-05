@@ -69,7 +69,7 @@ import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {ProposerPreferencesPool} from "../opPools/index.js";
-import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
+import {validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -528,23 +528,19 @@ export async function produceBlockBody<T extends BlockType>(
         }
       }
 
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blobKzgCommitments} = builderRes;
-        if (blobKzgCommitments === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
-        }
-
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
-        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+      const {blobKzgCommitments} = builderRes;
+      if (blobKzgCommitments === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
       }
 
-      if (ForkSeq[fork] >= ForkSeq.electra) {
-        const {executionRequests} = builderRes;
-        if (executionRequests === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
-        }
-        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
+      Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+
+      const {executionRequests} = builderRes;
+      if (executionRequests === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
       }
+      (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
     }
 
     // blockType === BlockType.Full
@@ -622,51 +618,34 @@ export async function produceBlockBody<T extends BlockType>(
           this.metrics?.blockPayload.emptyPayloads.inc({prepType});
         }
 
-        if (ForkSeq[fork] >= ForkSeq.fulu) {
-          if (blobsBundle === undefined) {
-            throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+        if (blobsBundle === undefined) {
+          throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+        }
+        // NOTE: Even though the fulu.BlobsBundle type is superficially the same as deneb.BlobsBundle, it is NOT.
+        // In fulu, proofs are _cell_ proofs, vs in deneb they are _blob_ proofs.
+
+        const timer = this?.metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+        const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+        timer?.();
+        if (this.opts.sanityCheckExecutionEngineBlobs) {
+          const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+          try {
+            await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+          } finally {
+            validationTimer?.();
           }
-          // NOTE: Even though the fulu.BlobsBundle type is superficially the same as deneb.BlobsBundle, it is NOT.
-          // In fulu, proofs are _cell_ proofs, vs in deneb they are _blob_ proofs.
-
-          const timer = this?.metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-          const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
-          timer?.();
-          if (this.opts.sanityCheckExecutionEngineBlobs) {
-            const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
-            try {
-              await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
-            } finally {
-              validationTimer?.();
-            }
-          }
-
-          (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-          (produceResult as ProduceFullFulu).blobsBundle = blobsBundle;
-          (produceResult as ProduceFullFulu).cells = cells;
-
-          Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
-        } else if (ForkSeq[fork] >= ForkSeq.deneb) {
-          if (blobsBundle === undefined) {
-            throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
-          }
-
-          if (this.opts.sanityCheckExecutionEngineBlobs) {
-            await validateBlobsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, blobsBundle.blobs);
-          }
-
-          (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-          (produceResult as ProduceFullDeneb).blobsBundle = blobsBundle;
-
-          Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
         }
 
-        if (ForkSeq[fork] >= ForkSeq.electra) {
-          if (executionRequests === undefined) {
-            throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
-          }
-          (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
+        (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
+        (produceResult as ProduceFullFulu).blobsBundle = blobsBundle;
+        (produceResult as ProduceFullFulu).cells = cells;
+
+        Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
+
+        if (executionRequests === undefined) {
+          throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
         }
+        (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
       }
     }
   } else {
@@ -905,39 +884,35 @@ function preparePayloadAttributes(
     suggestedFeeRecipient: feeRecipient,
   };
 
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    if (!isStatePostCapella(prepareState)) {
-      throw new Error("Expected Capella state for withdrawals");
-    }
+  if (!isStatePostCapella(prepareState)) {
+    throw new Error("Expected Capella state for withdrawals");
+  }
 
-    if (isStatePostGloas(prepareState)) {
-      const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
-      if (isExtendingPayload) {
-        // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
-        // here means the caller did not apply parent payload to prepareState
-        if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
-          throw new Error("Expected state with parent execution payload applied for withdrawals");
-        }
-        (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-          prepareState.getExpectedWithdrawals().expectedWithdrawals;
-      } else {
-        // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
-        // already deducted from CL balances but never credited on the EL (the envelope
-        // was not delivered). The next payload must carry those same withdrawals to
-        // restore CL/EL consistency, otherwise validators permanently lose that balance.
-        (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-          prepareState.payloadExpectedWithdrawals;
+  if (isStatePostGloas(prepareState)) {
+    const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
+    if (isExtendingPayload) {
+      // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
+      // here means the caller did not apply parent payload to prepareState
+      if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
+        throw new Error("Expected state with parent execution payload applied for withdrawals");
       }
-    } else {
-      // withdrawals logic is now fork aware as it changes on electra fork post capella
       (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
         prepareState.getExpectedWithdrawals().expectedWithdrawals;
+    } else {
+      // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
+      // already deducted from CL balances but never credited on the EL (the envelope
+      // was not delivered). The next payload must carry those same withdrawals to
+      // restore CL/EL consistency, otherwise validators permanently lose that balance.
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
+        prepareState.payloadExpectedWithdrawals;
     }
+  } else {
+    // withdrawals logic is now fork aware as it changes on electra fork post capella
+    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
+      prepareState.getExpectedWithdrawals().expectedWithdrawals;
   }
 
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
-    (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
-  }
+  (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     if (!isStatePostGloas(prepareState)) {
@@ -1050,7 +1025,18 @@ export async function produceCommonBlockBody<T extends BlockType>(
     step: BlockProductionStep.attestations,
   });
 
-  const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
+  const endSyncAggregate = stepsMetrics?.startTimer();
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
+  const previousSlot = slot - 1;
+  const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+  this.metrics?.production.producedSyncAggregateParticipants.observe(
+    syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+  );
+  endSyncAggregate?.({
+    step: BlockProductionStep.syncAggregate,
+  });
+
+  const blockBody: CommonBlockBody = {
     randaoReveal,
     graffiti,
     // Eth1 data voting is no longer required since electra
@@ -1062,25 +1048,9 @@ export async function produceCommonBlockBody<T extends BlockType>(
     // we no longer support handling deposits from earlier forks.
     deposits: [],
     voluntaryExits,
+    blsToExecutionChanges,
+    syncAggregate,
   };
-
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
-  }
-
-  const endSyncAggregate = stepsMetrics?.startTimer();
-  if (ForkSeq[fork] >= ForkSeq.altair) {
-    const parentBlockRoot = fromHex(parentBlock.blockRoot);
-    const previousSlot = slot - 1;
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
-    this.metrics?.production.producedSyncAggregateParticipants.observe(
-      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
-    );
-    (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
-  }
-  endSyncAggregate?.({
-    step: BlockProductionStep.syncAggregate,
-  });
 
   return blockBody as CommonBlockBody;
 }
