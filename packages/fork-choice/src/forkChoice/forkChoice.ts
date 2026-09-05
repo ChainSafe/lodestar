@@ -811,7 +811,7 @@ export class ForkChoice implements IForkChoice {
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null &&
-      this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
+      this.isProposerBoostSameDependentRoot(parentRootHex);
     // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
     // store only after the insertion succeeds.
     const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
@@ -1624,7 +1624,7 @@ export class ForkChoice implements IForkChoice {
    * The block is not yet in the proto-array when this runs, so its dependent root is traced from
    * its parent
    */
-  private isProposerBoostSameDependentRoot(headRootHex: RootHex, blockParentRootHex: RootHex): boolean {
+  private isProposerBoostSameDependentRoot(blockParentRootHex: RootHex): boolean {
     const epoch = computeEpochAtSlot(this.fcStore.currentSlot);
     // Genesis block parent
     if (epoch <= MIN_SEED_LOOKAHEAD) {
@@ -1632,9 +1632,17 @@ export class ForkChoice implements IForkChoice {
     }
 
     const dependentSlot = computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1;
+    const justifiedRootHex = this.fcStore.justified.checkpoint.rootHex;
+    const justifiedBlock = this.protoArray.getNodeDefaultStatus(justifiedRootHex);
+    // Every viable head descends from the justified checkpoint. If that block is at or after the
+    // dependent slot, its dependent root is canonical without recomputing fork choice.
+    const headRootHex =
+      justifiedBlock !== undefined && justifiedBlock.slot >= dependentSlot
+        ? justifiedRootHex
+        : this.updateHead().blockRoot;
     const headDependentRoot = this.protoArray.getAncestorOrNull(headRootHex, dependentSlot)?.blockRoot;
     const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
-    // On lookup failure, we lean on the conservative side and withold the boost
+    // On lookup failure, we lean on the conservative side and withhold the boost
     if (headDependentRoot === undefined || blockDependentRoot === undefined) {
       return false;
     }
