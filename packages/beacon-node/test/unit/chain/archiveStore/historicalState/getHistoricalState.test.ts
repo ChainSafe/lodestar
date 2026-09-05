@@ -7,6 +7,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconStateView, createStateViewFactory} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {getHistoricalState} from "../../../../../src/chain/archiveStore/historicalState/getHistoricalState.js";
 import {createHistoricalStateRegenMetrics} from "../../../../../src/chain/archiveStore/historicalState/metrics.js";
 import {BeaconDb} from "../../../../../src/db/index.js";
@@ -39,8 +40,9 @@ describe("historical state factory", () => {
           });
       try {
         const result = await getHistoricalState(1, db, factory);
-        expect(result).toEqual(expected.postState.serialize());
-        expect(await getHistoricalState(0, db, factory)).toEqual(fixture.serialize());
+        expect(byteArrayEquals(result, expected.postState.serialize()), "replayed state bytes").toBe(true);
+        const reloaded = await getHistoricalState(0, db, factory);
+        expect(byteArrayEquals(reloaded, fixture.serialize()), "archived anchor state bytes").toBe(true);
       } finally {
         serialize?.mockRestore();
       }
