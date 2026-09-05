@@ -64,6 +64,19 @@ describe("progress", () => {
       expect(progress).nthCalledWith(1, {total, current: total, ratePerSec: 0, percentage: 100});
     });
 
+    it("should remove the abort listener when total is reached", () => {
+      const progress = vi.fn();
+      const controller = new AbortController();
+      const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+      const removeEventListener = vi.spyOn(controller.signal, "removeEventListener");
+      const needle = showProgress({total: 1, signal: controller.signal, frequencyMs: 50, progress});
+
+      needle(0);
+
+      expect(addEventListener).toHaveBeenCalledTimes(1);
+      expect(removeEventListener).toHaveBeenCalledWith("abort", addEventListener.mock.calls[0][1]);
+    });
+
     it("should not call progress when initiated with zero total", () => {
       const progress = vi.fn();
       const frequencyMs = 50;
