@@ -15,6 +15,7 @@ import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js"
 import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {LogArgs} from "../../options/logOptions.js";
+import {startBeaconBuddy} from "../../util/buddy/index.js";
 import {
   cleanOldLogFiles,
   mkdir,
@@ -110,6 +111,11 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       (globalThis as unknown as {bn: BeaconNode}).bn = node;
     }
 
+    const buddy =
+      args.fun && args.fun !== "off"
+        ? startBeaconBuddy({node, dataDir: beaconPaths.dataDir, mode: args.fun, logger})
+        : null;
+
     // Prune invalid SSZ objects every interval
     const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
     const pruneInvalidSSZObjectsInterval =
@@ -144,11 +150,14 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       if (pruneInvalidSSZObjectsInterval !== null) {
         clearInterval(pruneInvalidSSZObjectsInterval);
       }
+
+      buddy?.stop();
     }, logger.info.bind(logger));
 
     abortController.signal.addEventListener(
       "abort",
       async () => {
+        buddy?.stop();
         try {
           await node.close();
           logger.debug("Beacon node closed");

@@ -26,6 +26,7 @@ type BeaconExtraArgs = {
   validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
   disableLightClientServer?: boolean;
+  fun?: "off" | "tty" | "file" | "both";
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -168,6 +169,16 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   disableLightClientServer: {
     description: "Disable light client server.",
     type: "boolean",
+  },
+
+  fun: {
+    hidden: true,
+    // A value is required: yargs would otherwise swallow the next CLI token
+    // (e.g. `--fun --reset` would set fun="--reset"). Use `--fun both` or `--fun=both`.
+    description: "Enable beacon buddy ASCII pet easter egg. Requires a value: off|tty|file|both",
+    type: "string",
+    choices: ["off", "tty", "file", "both"],
+    default: "off",
   },
 };
 
