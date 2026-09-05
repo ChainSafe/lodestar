@@ -10,6 +10,7 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
@@ -577,6 +578,17 @@ export async function importBlock(
         for (const proposerSlashing of block.message.body.proposerSlashings) {
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         }
+      }
+      if (
+        this.emitter.listenerCount(routes.events.EventType.includedExecutionPayloadBid) &&
+        isGloasBeaconBlock(block.message) &&
+        // self-builds have no external builder to notify
+        block.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD
+      ) {
+        this.emitter.emit(routes.events.EventType.includedExecutionPayloadBid, {
+          version: this.config.getForkName(block.message.slot),
+          data: block.message.body.signedExecutionPayloadBid,
+        });
       }
     });
   }
