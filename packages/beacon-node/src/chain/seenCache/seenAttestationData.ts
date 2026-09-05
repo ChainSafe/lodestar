@@ -1,3 +1,4 @@
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CommitteeIndex, RootHex, Slot, SubnetID, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -18,8 +19,8 @@ export type AttestationDataCacheEntry = {
   // caching this for 3 slots take 600 instances max, this is nothing compared to attestations processed per slot
   // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
   attestationData: phase0.AttestationData;
-  /** Finalized root against which this attestation's ancestry was checked. */
-  finalizedRoot: RootHex;
+  /** Checkpoint against which ancestry was checked; skipped slots can give successive checkpoints the same root. */
+  finalizedCheckpoint: Pick<CheckpointWithHex, "epoch" | "rootHex">;
   subnet: SubnetID;
 };
 

@@ -286,7 +286,7 @@ async function validateAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
-  const finalizedRoot = chain.forkChoice.getFinalizedCheckpoint().rootHex;
+  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   let committeeIndex: number | null;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
@@ -400,9 +400,12 @@ async function validateAttestationNoSignatureCheck(
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: SubnetID;
   if (attestationOrCache.cache) {
-    if (attestationOrCache.cache.finalizedRoot !== finalizedRoot) {
+    if (
+      attestationOrCache.cache.finalizedCheckpoint.rootHex !== finalizedCheckpoint.rootHex ||
+      attestationOrCache.cache.finalizedCheckpoint.epoch !== finalizedCheckpoint.epoch
+    ) {
       verifyHeadBlockIsKnown(chain, attData.beaconBlockRoot);
-      attestationOrCache.cache.finalizedRoot = finalizedRoot;
+      attestationOrCache.cache.finalizedCheckpoint = finalizedCheckpoint;
     }
     committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
     const signingRoot = attestationOrCache.cache.signingRoot;
@@ -560,7 +563,7 @@ async function validateAttestationNoSignatureCheck(
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
         attestationData: attData,
-        finalizedRoot,
+        finalizedCheckpoint,
       });
     }
   }
