@@ -133,40 +133,49 @@ type BidCandidate = {
 };
 
 /**
- * Return the best bid by boosted total payment. A candidate with the max boost factor is
- * preferred over any other regardless of value, ties prefer a builder api bid over the
- * p2p bid, and the earlier received bid between builder api bids.
+ * Ranking value of a bid, the boosted total payment scaled by 100 as `boostFactor` is a percentage.
+ * Kept scaled so bids that differ by less than a percent are not truncated into a tie.
  */
-function selectBestBid(candidates: BidCandidate[]): BidCandidate | null {
-  const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => boostFactor * totalGwei;
-  let best: BidCandidate | null = null;
-  for (const candidate of candidates) {
-    if (best === null) {
-      best = candidate;
-      continue;
-    }
-    // Preserve max boost preference before comparing bid values
-    const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-    const bestIsMaxBoost = best.boostFactor === MAX_BUILDER_BOOST_FACTOR;
-    if (candidateIsMaxBoost !== bestIsMaxBoost) {
-      if (candidateIsMaxBoost) {
-        best = candidate;
-      }
-      continue;
-    }
-    const candidateValue = boostedValue(candidate);
-    const bestValue = boostedValue(best);
-    if (candidateValue > bestValue) {
-      best = candidate;
-    } else if (
-      candidateValue === bestValue &&
-      // A tie prefers a builder api bid over the p2p bid, and the earlier received bid otherwise
-      (best.url === undefined || (candidate.url !== undefined && candidate.receivedMs < best.receivedMs))
-    ) {
-      best = candidate;
-    }
+function getBoostedTotalScaled({totalGwei, boostFactor}: BidCandidate): bigint {
+  return boostFactor * totalGwei;
+}
+
+/** Order bid candidates by preference, best first, used to select a bid and to log the ranking */
+function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
+  // Preserve max boost preference before comparing bid values
+  const aIsMaxBoost = a.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+  const bIsMaxBoost = b.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+  if (aIsMaxBoost !== bIsMaxBoost) {
+    return aIsMaxBoost ? -1 : 1;
   }
-  return best;
+
+  const aBoostedTotal = getBoostedTotalScaled(a);
+  const bBoostedTotal = getBoostedTotalScaled(b);
+  if (aBoostedTotal !== bBoostedTotal) {
+    return aBoostedTotal > bBoostedTotal ? -1 : 1;
+  }
+
+  // A tie prefers a builder api bid over the p2p bid
+  const aIsBuilderApi = a.url !== undefined;
+  const bIsBuilderApi = b.url !== undefined;
+  if (aIsBuilderApi !== bIsBuilderApi) {
+    return aIsBuilderApi ? -1 : 1;
+  }
+
+  // and the earlier received bid between builder api bids
+  return a.receivedMs - b.receivedMs;
+}
+
+/** Render a bid candidate for the ranking log */
+function formatBidCandidate(candidate: BidCandidate): string {
+  return `{${[
+    `source=${candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p"}`,
+    `builder=${candidate.signedBid.message.builderIndex}`,
+    `total=${prettyGweiToEth(candidate.totalGwei)}`,
+    `boost=${candidate.boostFactor}`,
+    `boosted=${prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n)}`,
+    `received=${candidate.receivedMs}ms`,
+  ].join(", ")}}`;
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
@@ -1049,20 +1058,16 @@ export function getValidatorApi(
           });
         }
 
-        const best = selectBestBid(candidates);
-        if (candidates.length > 0) {
-          logger.debug("Ranked builder bid candidates", {
-            slot,
-            candidates: candidates
-              .map(
-                (candidate) =>
-                  `${candidate.url ?? "p2p"}:total=${prettyGweiToEth(candidate.totalGwei)}:boost=${candidate.boostFactor}:received=${candidate.receivedMs}ms`
-              )
-              .join(","),
-            bidSource: best?.url ?? "p2p",
-          });
+        if (candidates.length === 0) {
+          return null;
         }
-        return best;
+
+        const rankedCandidates = candidates.toSorted(compareBidCandidates);
+        logger.debug("Ranked builder bid candidates", {
+          slot,
+          candidates: rankedCandidates.map(formatBidCandidate).join(", "),
+        });
+        return rankedCandidates[0];
       })();
 
       const commonBlockBodyPromise = chain.produceCommonBlockBody({

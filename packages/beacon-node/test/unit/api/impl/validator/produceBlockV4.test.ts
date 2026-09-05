@@ -408,8 +408,10 @@ describe("api/validator - produceBlockV4", () => {
     };
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     apiBid.message.value = 1;
+    apiBid.message.builderIndex = 1;
     const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     p2pBid.message.value = 1;
+    p2pBid.message.builderIndex = 2;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
@@ -428,6 +430,8 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: {minBid: 0n, builderBoostFactor: 150n, builders: [entry]},
     });
 
+    // The bids only differ by a boost factor of 150 vs 100, truncating the boosted total would
+    // tie them and hand it to the api bid
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
   });
 
@@ -464,6 +468,11 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
+
+    // The ranking log must agree with the selection, ranking by boosted value alone would put the
+    // zero value max boost bid last even though it wins
+    const ranked = modules.chain.logger.debug.mock.calls.find(([msg]) => msg === "Ranked builder bid candidates");
+    expect((ranked?.[1] as {candidates: string}).candidates.split("}, {")[0]).toContain(builderUrl);
   });
 
   it("falls back to the p2p bid when the builder API bid fails validation", async () => {
@@ -728,6 +737,37 @@ describe("api/validator - produceBlockV4", () => {
       p2pValue: null,
       engineValueGwei: 0,
       expected: 1,
+    },
+    {
+      // ⏎
+      id: "max boost between builders compares value",
+      entries: [
+        {value: 1, boostFactor: maxBuilderBoostFactor},
+        {value: 2, boostFactor: maxBuilderBoostFactor},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max boost tie prefers the earlier received api bid",
+      entries: [
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 2000},
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 1500},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max p2p boost wins over a higher api bid",
+      entries: [{value: 5}],
+      p2pValue: 1,
+      builderBoostFactor: maxBuilderBoostFactor,
+      engineValueGwei: 0,
+      expected: "p2p",
     },
     {
       // ⏎
