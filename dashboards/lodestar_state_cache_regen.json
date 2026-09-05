@@ -3670,16 +3670,9 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus_local"
+          "uid": "${DS_PROMETHEUS}"
         },
-        "filters": [
-          {
-            "condition": "",
-            "key": "instance",
-            "operator": "=",
-            "value": "unstable-super"
-          }
-        ],
+        "filters": [],
         "hide": 0,
         "name": "Filters",
         "skipUrlSync": false,
