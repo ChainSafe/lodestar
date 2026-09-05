@@ -1,12 +1,9 @@
-import {isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
-  NativeBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -47,21 +44,13 @@ export async function verifyBlocksStateTransitionOnly(
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
-    if (preState instanceof NativeBeaconStateView && isForkPostGloas(blockInput.forkName)) {
-      throw new Error(`NativeBeaconStateView does not support Gloas state transition at slot ${block.message.slot}`);
-    }
-
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
     let postState: IBeaconStateView;
     try {
       postState = preState.stateTransition(
-        // We should have the serialized block from gossip in the hot path.
-        // Otherwise, fall back to serializing from block for the less latency critical paths like
-        // syncing/download.
-        serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block),
-        block,
+        {block, ssz: serializedCache.get(block)},
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid

@@ -23,7 +23,6 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EMPTY_SIGNATURE,
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
@@ -44,7 +43,6 @@ import {
   Root,
   RootHex,
   SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   Status,
   UintNum64,
@@ -1148,21 +1146,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const isBlinded = isBlindedBeaconBlock(block);
-
-    // NOTE: We serialize the block to use native state transition.
-    // This is a bit of an unavoidable overhead we have to pay in this
-    // path, since we create it as an object first.
-    const serializedBlock = isBlinded
-      ? this.config.getPostBellatrixForkTypes(slot).SignedBlindedBeaconBlock.serialize({
-          message: block as BlindedBeaconBlock,
-          signature: EMPTY_SIGNATURE,
-        } as SignedBlindedBeaconBlock)
-      : this.config.getForkTypes(slot).SignedBeaconBlock.serialize({
-          message: block as BeaconBlock,
-          signature: EMPTY_SIGNATURE,
-        } as SignedBeaconBlock);
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block, serializedBlock);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full

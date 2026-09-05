@@ -1,11 +1,12 @@
-import {ChainForkConfig} from "@lodestar/config";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
   IBeaconStateView,
-  createBeaconStateView,
+  createStateViewFactory,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -24,12 +25,12 @@ export function createBeaconStateViewForTest(
   state: BeaconStateAllForks,
   chainConfig: ChainForkConfig = getConfig(fork)
 ): IBeaconStateView {
-  const cachedState = createCachedBeaconStateTest(state, chainConfig);
   if (useNativeStateTransition) {
-    return createBeaconStateView({useNative: true, config: cachedState.config, stateBytes: cachedState.serialize()});
+    pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
+    const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
+    return createStateViewFactory(config, pubkeyCache, {native: true}).createFromBytes(state.serialize());
   }
-
-  return new BeaconStateView(cachedState);
+  return new BeaconStateView(createCachedBeaconStateTest(state, chainConfig));
 }
 
 /**

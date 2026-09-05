@@ -43,6 +43,7 @@ export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
 export {BeaconStateView} from "./stateView/beaconStateView.js";
+export {StateViewError, StateViewErrorCode} from "./stateView/errors.js";
 export {
   type ComputeNewStateRootInput,
   type ComputeNewStateRootResult,
@@ -56,6 +57,7 @@ export {
   type IBeaconStateViewGloas,
   type IBeaconStateViewHeze,
   type IBeaconStateViewNative,
+  type StateTransitionInput,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -66,7 +68,7 @@ export {
   isStatePostHeze,
 } from "./stateView/interface.js";
 export {NativeBeaconStateView} from "./stateView/nativeBeaconStateView.js";
-export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
+export {type StateViewFactory, createStateViewFactory} from "./stateView/stateViewFactory.js";
 export type {
   BeaconStateAllForks,
   BeaconStateAltair,

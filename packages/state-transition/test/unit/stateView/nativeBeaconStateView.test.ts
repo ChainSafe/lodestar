@@ -1,10 +1,11 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {isBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
 import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
-import {ForkSeq} from "@lodestar/params";
 import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
@@ -12,7 +13,7 @@ describe("NativeBeaconStateView", () => {
   const config = createBeaconConfig(defaultChainConfig, new Uint8Array(32));
 
   it("throws for Gloas-only fields while native Gloas is unsupported", () => {
-    const binding = {} as IBeaconStateViewNative;
+    const binding = {slot: 0} as IBeaconStateViewNative;
     const view = new NativeBeaconStateView(binding, config);
 
     expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
@@ -36,6 +37,7 @@ describe("NativeBeaconStateView", () => {
     };
 
     const binding = {
+      slot: 0,
       get fork() {
         forkAccessCount++;
         return fakeFork;
@@ -97,13 +99,14 @@ describe("NativeBeaconStateView", () => {
       executionPayloadStatus: ExecutionPayloadStatus.valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
     };
-    const postBinding = {} as IBeaconStateViewNative;
+    const postBinding = {slot: 0} as IBeaconStateViewNative;
     const binding = {
+      slot: 0,
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding, config);
-    const postState = view.stateTransition(blockBytes, block, options, {});
+    const postState = view.stateTransition({block, ssz: blockBytes}, options, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
     expect(postState).toBeInstanceOf(NativeBeaconStateView);
@@ -125,10 +128,12 @@ describe("NativeBeaconStateView", () => {
     const blockBytes = new Uint8Array([1, 2, 3]);
     const stateRoot = new Uint8Array(32).fill(1);
     const postBinding = {
+      slot: 0,
       proposerRewards: {attestations: 1, syncAggregate: 2, slashing: 3},
       hashTreeRoot: () => stateRoot,
     } as unknown as IBeaconStateViewNative;
     const binding = {
+      slot: 0,
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
@@ -140,15 +145,78 @@ describe("NativeBeaconStateView", () => {
     expect(result.postState).toBeInstanceOf(NativeBeaconStateView);
   });
 
-  it("rejects state root computation without serialized block bytes", () => {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const binding = {
-      stateTransition: vi.fn(),
+  it.each([false, true])("serializes a missing Bellatrix block with blinded=%s", (isBlinded) => {
+    const schema = isBlinded ? ssz.bellatrix.SignedBlindedBeaconBlock : ssz.bellatrix.SignedBeaconBlock;
+    const block = schema.defaultValue();
+    const bellatrixConfig = createBeaconConfig(getConfig(ForkName.bellatrix), new Uint8Array(32));
+    const root = new Uint8Array(32).fill(3);
+    const postBinding = {
+      slot: 0,
+      hashTreeRoot: () => root,
+      proposerRewards: {attestations: 0, syncAggregate: 0, slashing: 0},
     } as unknown as IBeaconStateViewNative;
-
-    expect(() => new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {})).toThrow(
-      "Serialized block bytes are required to compute a state root with NativeBeaconStateView"
+    const binding = {slot: 0, stateTransition: vi.fn(() => postBinding)} as unknown as IBeaconStateViewNative;
+    const result = new NativeBeaconStateView(binding, bellatrixConfig).computeNewStateRoot({block}, {});
+    expect(result.newStateRoot).toEqual(root);
+    expect(binding.stateTransition).toHaveBeenCalledWith(
+      isBlindedBeaconBlock(block.message)
+        ? ssz.bellatrix.SignedBlindedBeaconBlock.serialize({message: block.message, signature: block.signature})
+        : ssz.bellatrix.SignedBeaconBlock.serialize({message: block.message, signature: block.signature}),
+      isBlinded,
+      computeNewStateRootStateTransitionOpts
     );
-    expect(binding.stateTransition).not.toHaveBeenCalled();
+  });
+
+  it("rejects creation of a Gloas view with a specific error", () => {
+    const gloasConfig = createBeaconConfig(getConfig(ForkName.gloas), new Uint8Array(32));
+    const binding = {slot: 0} as IBeaconStateViewNative;
+    expect(() => new NativeBeaconStateView(binding, gloasConfig)).toThrowError(
+      expect.objectContaining({type: expect.objectContaining({code: "NATIVE_STF_UNSUPPORTED_FORK"})})
+    );
+  });
+
+  it("does not run Gloas builder preverification on Fulu states", () => {
+    const binding = {slot: 0, pendingDepositsCount: 5} as IBeaconStateViewNative;
+    const result = new NativeBeaconStateView(binding, config).preVerifyBuilderDepositsPreGloas(10, 100);
+    expect(result.scannedPendingDeposits).toBe(0);
+    expect(result.totalCachedDeposits).toBe(0);
+    expect(result.pendingDepositsCount).toBe(5);
+  });
+
+  it.each([ForkName.gloas, ForkName.heze])("rejects every native advance into %s", (fork) => {
+    const boundaryConfig = createBeaconConfig(
+      {...getConfig(ForkName.heze), GLOAS_FORK_EPOCH: 1, HEZE_FORK_EPOCH: 2},
+      new Uint8Array(32)
+    );
+    const slot = (fork === ForkName.gloas ? 1 : 2) * SLOTS_PER_EPOCH;
+    const binding = {
+      slot: 0,
+      stateTransition: () => {
+        throw new Error("unexpected native transition");
+      },
+      processSlots: () => {
+        throw new Error("unexpected native slot processing");
+      },
+      loadOtherState: () => {
+        throw new Error("unexpected native reload");
+      },
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(binding, boundaryConfig);
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    const operations = {
+      processSlots: () => view.processSlots(slot),
+      stateTransition: () => view.stateTransition({block}, computeNewStateRootStateTransitionOpts, {}),
+      computeNewStateRoot: () => view.computeNewStateRoot({block}, {}),
+      loadOtherState: () => view.loadOtherState(bytes),
+    };
+    for (const [name, operation] of Object.entries(operations)) {
+      expect(operation, name).toThrowError(
+        expect.objectContaining({type: expect.objectContaining({code: "NATIVE_STF_UNSUPPORTED_FORK", fork, slot})})
+      );
+    }
   });
 });

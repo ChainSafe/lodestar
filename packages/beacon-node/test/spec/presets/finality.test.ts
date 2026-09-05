@@ -24,8 +24,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
         state = state.stateTransition(
-          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-          signedBlock,
+          {block: signedBlock},
           {
             // Should assume payload valid and blob data available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,

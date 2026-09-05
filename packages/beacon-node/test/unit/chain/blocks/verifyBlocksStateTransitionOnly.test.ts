@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
@@ -25,6 +25,9 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
     const blockInput = new MockBlockInput({forkName: ForkName.deneb, slot: 1, blockRootHex});
     blockInput._block = ssz.deneb.SignedBeaconBlock.defaultValue();
 
+    const serializer = vi.spyOn(ssz.deneb.SignedBeaconBlock, "serialize").mockImplementation(() => {
+      throw new Error("unexpected block serialization");
+    });
     const err = await verifyBlocksStateTransitionOnly(
       preState,
       [blockInput],
@@ -40,6 +43,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       (e) => e
     );
 
+    serializer.mockRestore();
     expect(err).toBeInstanceOf(BlockError);
     const {type} = err as BlockError;
     expect(type.code).toBe(BlockErrorCode.PER_BLOCK_PROCESSING_ERROR);

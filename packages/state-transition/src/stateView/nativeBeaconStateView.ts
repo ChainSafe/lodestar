@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -39,7 +37,9 @@ import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+import {getStateSlotFromBytes} from "../util/sszBytes.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
+import {assertNativeForkSupported} from "./errors.js";
 import {
   ComputeNewStateRootInput,
   ComputeNewStateRootResult,
@@ -47,17 +47,12 @@ import {
   IBeaconStateViewGloas,
   IBeaconStateViewLatestFork,
   IBeaconStateViewNative,
+  StateTransitionInput,
 } from "./interface.js";
 
 /**
- * Wraps a native binding (the auto-generated JS interface produced by a `.node`
- * file) and exposes it as a fully-conformant `IBeaconStateViewLatestFork`.
- *
- * The binding is typed `IBeaconStateViewNative` — identical to
- * `IBeaconStateViewLatestFork` except `executionPayloadAvailability` is a raw
- * `{uint8Array, bitLen}` POJO. The `executionPayloadAvailability` getter lifts
- * that POJO back to a `BitArray` so beacon-node consumers see no difference from
- * the TS-side `BeaconStateView`.
+ * Native state adapter for Phase0 through Fulu. Converts native SSZ representations
+ * to the shared state-view types. Descendants retain their setup configuration.
  *
  * Every getter that returns a value stable for the view's lifetime is cached so
  * the binding is hit at most once per field per view. Only mutable counters
@@ -169,7 +164,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   constructor(
     readonly binding: IBeaconStateViewNative,
     private readonly config: BeaconConfig
-  ) {}
+  ) {
+    assertNativeForkSupported(config, binding.slot);
+  }
 
   get executionPayloadAvailability(): BitArray {
     throw new Error("NativeBeaconStateView does not support Gloas");
@@ -505,7 +502,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
     verifySignature: boolean
   ): VoluntaryExitValidity {
-    return this.binding.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature);
+    return this.binding.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature) as VoluntaryExitValidity;
   }
 
   isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean {
@@ -584,6 +581,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
+    assertNativeForkSupported(this.config, getStateSlotFromBytes(stateBytes));
     return new NativeBeaconStateView(this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts), this.config);
   }
 
@@ -640,29 +638,28 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // State transition
 
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
-    if (input.ssz === undefined) {
-      throw Error("Serialized block bytes are required to compute a state root with NativeBeaconStateView");
-    }
-
-    const postState = new NativeBeaconStateView(
-      this.binding.stateTransition(
-        input.ssz,
-        isBlindedBeaconBlock(input.block.message),
-        computeNewStateRootStateTransitionOpts
-      ),
-      this.config
-    );
+    const postState = this.stateTransition(input, computeNewStateRootStateTransitionOpts, modules);
     return getComputeNewStateRootResult(postState, modules);
   }
 
   stateTransition(
-    signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block, ssz}: StateTransitionInput,
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
+    const slot = block.message.slot;
+    assertNativeForkSupported(this.config, slot);
+    const bytes =
+      ssz ??
+      (isBlindedBeaconBlock(block.message)
+        ? this.config
+            .getPostBellatrixForkTypes(slot)
+            .SignedBlindedBeaconBlock.serialize({message: block.message, signature: block.signature})
+        : this.config
+            .getForkTypes(slot)
+            .SignedBeaconBlock.serialize({message: block.message, signature: block.signature}));
     return new NativeBeaconStateView(
-      this.binding.stateTransition(signedBlockBytes, isBlindedBeaconBlock(signedBlock.message), options),
+      this.binding.stateTransition(bytes, isBlindedBeaconBlock(block.message), options),
       this.config
     );
   }
@@ -672,6 +669,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     _modules?: StateTransitionModules
   ): IBeaconStateView {
+    assertNativeForkSupported(this.config, slot);
     return new NativeBeaconStateView(this.binding.processSlots(slot, epochTransitionCacheOpts), this.config);
   }
 
@@ -874,12 +872,20 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     _maxBuilderDeposits: number,
     _maxDurationMs: number
   ): PreVerifyBuilderDepositsResult {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    // Native STF rejects Gloas, so this optional fork-upgrade optimization has no work to do.
+    return {
+      validBuilderSignaturesCount: 0,
+      invalidBuilderSignaturesCount: 0,
+      validValidatorSignaturesCount: 0,
+      invalidValidatorSignaturesCount: 0,
+      scannedPendingDeposits: 0,
+      totalCachedDeposits: 0,
+      totalBuilderPubkeys: 0,
+      pendingDepositsCount: this.pendingDepositsCount,
+    };
   }
 
-  clearPreGloasBuilderDepositCache(): void {
-    throw new Error("NativeBeaconStateView does not support Gloas");
-  }
+  clearPreGloasBuilderDepositCache(): void {}
 
   // ─── gloas ───────────────────────────────────────────────────────────────
 

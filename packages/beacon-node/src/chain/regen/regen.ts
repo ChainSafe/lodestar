@@ -237,9 +237,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
         state = state.stateTransition(
-          this.modules.serializedCache.get(block) ??
-            this.modules.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-          block,
+          {block, ssz: this.modules.serializedCache.get(block)},
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,

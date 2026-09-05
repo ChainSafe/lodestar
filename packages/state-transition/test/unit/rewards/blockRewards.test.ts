@@ -110,8 +110,7 @@ describe("chain / rewards / blockRewards", () => {
       }
 
       const postState = new BeaconStateView(state as CachedBeaconStateAllForks).stateTransition(
-        state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-        block,
+        {block: block},
         {
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
@@ -143,8 +142,7 @@ describe("chain / rewards / blockRewards", () => {
     cachedStateAltairPopulateCaches(preState);
 
     const postState = new BeaconStateView(preState as CachedBeaconStateAllForks).stateTransition(
-      config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-      block,
+      {block: block},
       {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         dataAvailabilityStatus: DataAvailabilityStatus.Available,
