@@ -120,7 +120,10 @@ function applyPendingDeposit(
 
   if (!isValidatorKnown(state, validatorIndex)) {
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-    if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
+    if (
+      cache.dangerouslyAssumeValidDepositSignatures ||
+      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+    ) {
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
       const newValidatorIndex = state.validators.length - 1;
       cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);

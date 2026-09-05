@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {EpochTransitionCacheOpts, IBeaconStateView} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {CheckpointHex} from "../stateCache/types.js";
 
@@ -37,7 +37,7 @@ export enum RegenFnName {
   getPreState = "getPreState",
 }
 
-export type StateRegenerationOpts = {
+export type StateRegenerationOpts = EpochTransitionCacheOpts & {
   dontTransferCache: boolean;
 };
 
