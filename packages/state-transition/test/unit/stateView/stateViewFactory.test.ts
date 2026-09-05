@@ -6,6 +6,7 @@ import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from
 import {ssz} from "@lodestar/types";
 import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {StateViewErrorCode} from "../../../src/stateView/errors.js";
+import {isStatePostAltair} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 import {createStateViewFactory} from "../../../src/stateView/stateViewFactory.js";
 import {generateState} from "../../../src/testUtils/state.js";
@@ -83,6 +84,35 @@ describe("state view factory", () => {
     const native = createStateViewFactory(slotConfig, pubkeyCache, {native: true}).createFromState(fixture);
     const typescript = createStateViewFactory(slotConfig, pubkeyCache).createFromState(fixture);
     expect(native.processSlots(1).hashTreeRoot()).toEqual(typescript.processSlots(1).hashTreeRoot());
+  });
+
+  it.each(["current", "epoch", "slot"])("matches TypeScript sync committee duties for %s lookups", (lookup) => {
+    const fixture = createFixture();
+    const altairConfig = createBeaconConfig({...getConfig(ForkName.phase0), ALTAIR_FORK_EPOCH: 1}, new Uint8Array(32));
+    const native = createStateViewFactory(altairConfig, pubkeyCache, {native: true})
+      .createFromState(fixture)
+      .processSlots(SLOTS_PER_EPOCH);
+    const typescript = createStateViewFactory(altairConfig, pubkeyCache)
+      .createFromState(fixture)
+      .processSlots(SLOTS_PER_EPOCH);
+    if (!isStatePostAltair(native) || !isStatePostAltair(typescript)) {
+      throw new Error("Expected Altair states after the fork transition");
+    }
+    const [actual, expected] = [native, typescript].map((state) =>
+      lookup === "current"
+        ? state.currentSyncCommitteeIndexed
+        : lookup === "epoch"
+          ? state.getIndexedSyncCommitteeAtEpoch(1)
+          : state.getIndexedSyncCommittee(SLOTS_PER_EPOCH)
+    );
+    expect(actual.validatorIndexMap).toBeInstanceOf(Map);
+    expect(actual.validatorIndices).toEqual(expected.validatorIndices);
+    expect(actual.validatorIndexMap.size).toBe(expected.validatorIndexMap.size);
+    for (const [validatorIndex, positions] of expected.validatorIndexMap) {
+      expect(actual.validatorIndexMap.get(validatorIndex), `sync duties for validator ${validatorIndex}`).toEqual(
+        positions
+      );
+    }
   });
 
   it("keeps native factory and descendant configuration after another setup", () => {
