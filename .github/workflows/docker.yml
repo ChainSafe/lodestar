@@ -98,6 +98,9 @@ jobs:
         # OCI registry (Ethereum Swarm via the Uncloud Registry). Inert unless
         # the SWARM_REGISTRY repo variable is set, so it is a no-op by default.
         # PoC: https://github.com/lodekeeper/lodestar-swarm-registry-poc
+        # Durability (image not GC'd) needs an externally-funded postage batch
+        # + keeper, and the registry stack is unmaintained today — see the PoC's
+        # docs/RETENTION.md before enabling this for real releases.
         #
         # Uses `regctl image copy` rather than `docker buildx imagetools create`:
         # the target is a separate registry that does not already hold the layers,
