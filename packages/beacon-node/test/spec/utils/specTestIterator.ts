@@ -64,6 +64,12 @@ const coveredTestRunners = [
 export const defaultSkipOpts: SkipOpts = {
   skippedForks: ["eip8148"],
   skippedTestSuites: [
+    // Gossip tests after Electra will be enabled separately.
+    /^(fulu|gloas|heze)\/networking\/gossip_.*/,
+    // Blob gossip is obsolete: following head on pre-Fulu networks is no longer supported.
+    /^(deneb|electra)\/networking\/gossip_blob_sidecar\/.*/,
+    // Voluntary exit gossip tests will be enabled separately.
+    /^.+\/networking\/gossip_voluntary_exit\/.*/,
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
@@ -100,8 +106,6 @@ export const defaultSkipOpts: SkipOpts = {
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
     /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
   ],
-  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["networking"],
 };
 
 /**

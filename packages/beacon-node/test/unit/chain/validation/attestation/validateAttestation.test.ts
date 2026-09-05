@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
@@ -6,6 +6,7 @@ import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
+import {SeenAttestationDatas} from "../../../../../src/chain/seenCache/seenAttestationData.js";
 import {
   ApiAttestation,
   GossipAttestation,
@@ -49,6 +50,51 @@ describe("validateAttestation", () => {
     const fork = chain.config.getForkName(stateSlot);
     await validateApiAttestation(fork, chain, {attestation, serializedData: null});
   });
+
+  it("ignores an attestation on a conflicting finalized branch before pruning", async () => {
+    const {chain, attestation} = getValidData();
+    const ancestor = chain.forkChoice.getAncestor("", 0);
+    vi.spyOn(chain.forkChoice, "getAncestor").mockReturnValue({...ancestor, blockRoot: "conflicting-root"});
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.NOT_FINALIZED_DESCENDANT);
+  });
+
+  it.each(["root", "epoch"] as const)(
+    "rechecks cached attestation ancestry when the finalized %s changes",
+    async (field) => {
+      const {chain: baseChain, attestation, subnet} = getValidData();
+      const chain = {...baseChain, seenAttestationDatas: new SeenAttestationDatas(null)};
+      const fork = chain.config.getForkName(stateSlot);
+      const originalAncestor = chain.forkChoice.getAncestor("", 0);
+      const getAncestor = vi.spyOn(chain.forkChoice, "getAncestor");
+      const validate = (value: typeof attestation) => {
+        const serializedData = ssz.phase0.Attestation.serialize(value);
+        return validateGossipAttestationsSameAttData(fork, chain, [
+          {
+            attestation: null,
+            serializedData,
+            attSlot: value.data.slot,
+            attDataBase64: getAttDataFromAttestationSerialized(serializedData) as string,
+            subnet,
+          },
+        ]);
+      };
+      expect((await validate(attestation)).results[0].err).toBeNull();
+      getAncestor.mockClear();
+      expect((await validate(getValidData({bitIndex: 2}).attestation)).results[0].err).toBeNull();
+      expect(getAncestor).not.toHaveBeenCalled();
+      const checkpoint = chain.forkChoice.getFinalizedCheckpoint();
+      vi.spyOn(chain.forkChoice, "getFinalizedCheckpoint").mockReturnValue({
+        ...checkpoint,
+        ...(field === "root" ? {root: UNKNOWN_ROOT, rootHex: "conflicting-root"} : {epoch: checkpoint.epoch + 1}),
+      });
+      if (field === "epoch") {
+        getAncestor.mockReturnValue({...originalAncestor, blockRoot: "conflicting-root"});
+      }
+      expect((await validate(getValidData({bitIndex: 3}).attestation)).results[0].err).toMatchObject({
+        type: {code: AttestationErrorCode.NOT_FINALIZED_DESCENDANT},
+      });
+    }
+  );
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
     const {chain, subnet} = getValidData();

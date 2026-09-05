@@ -31,6 +31,7 @@ import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
+import {isFinalizedCheckpointAncestor} from "./isFinalizedCheckpointAncestor.js";
 
 export type GossipBlockValidationResult = {
   /** Number of skipped slots between the block and its parent (blockSlot - parentSlot - 1) */
@@ -106,21 +107,13 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
-  // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
-  // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+  // [IGNORE] The block parent has been seen via gossip or another import path.
   const parentRoot = toRootHex(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
-    // If fork choice does *not* consider the parent to be a descendant of the finalized block,
-    // then there are two more cases:
-    //
-    // 1. We have the parent stored in our database. Because fork-choice has confirmed the
-    //    parent is *not* in our post-finalization DAG, all other blocks must be either
-    //    pre-finalization or conflicting with finalization.
-    // 2. The parent is unknown to us, we probably want to download it since it might actually
-    //    descend from the finalized root.
-    // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
-    // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    // The parent may be unknown, pre-finalization, or outside the finalized branch.
+    // Non-canonical blocks are deleted during archiving, so db.block cannot reliably
+    // distinguish an unseen parent from a known conflicting block.
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
@@ -153,6 +146,12 @@ export async function validateGossipBlock(
       parentSlot: parentBlock.slot,
       slot: blockSlot,
     });
+  }
+
+  // [REJECT] The current finalized_checkpoint is an ancestor of block.
+  // At epoch zero, fork-choice lookup does not enforce finalized ancestry.
+  if (!isFinalizedCheckpointAncestor(chain.forkChoice, parentRoot, finalizedCheckpoint)) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT, parentRoot});
   }
 
   // Number of skipped slots between block and parent (non-spec). Previously this gated blocks via
@@ -251,11 +250,9 @@ export async function validateGossipBlock(
   }
 
   // For gossip forwarding we only need the state to check the block's proposer index.
-  // If the state cannot be regenerated we throw an IGNORE (whereas the spec says we should REJECT for the
-  // finalized-ancestor scenario, which is already guarded by the parentBlock lookup above).
-  // this is something we should change this in the future to make the code airtight to the spec.
-  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
+  // Parents in fork choice have passed consensus validation, but their states may still be unavailable.
+  // If regeneration fails, IGNORE rather than treating a missing state as evidence of an invalid parent.
   const canUseParentState = blockEpoch - computeEpochAtSlot(parentBlock.slot) <= MIN_SEED_LOOKAHEAD;
 
   const getValidationState = async () => {

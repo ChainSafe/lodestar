@@ -57,6 +57,7 @@ import {
   PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX,
   SeenAttDataKey,
 } from "../seenCache/seenAttestationData.js";
+import {isFinalizedCheckpointAncestor} from "./isFinalizedCheckpointAncestor.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];
@@ -285,6 +286,7 @@ async function validateAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   let committeeIndex: number | null;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
@@ -398,6 +400,13 @@ async function validateAttestationNoSignatureCheck(
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: SubnetID;
   if (attestationOrCache.cache) {
+    if (
+      attestationOrCache.cache.finalizedCheckpoint.rootHex !== finalizedCheckpoint.rootHex ||
+      attestationOrCache.cache.finalizedCheckpoint.epoch !== finalizedCheckpoint.epoch
+    ) {
+      verifyHeadBlockIsKnown(chain, attData.beaconBlockRoot);
+      attestationOrCache.cache.finalizedCheckpoint = finalizedCheckpoint;
+    }
     committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
     const signingRoot = attestationOrCache.cache.signingRoot;
     getSigningRoot = () => signingRoot;
@@ -554,6 +563,7 @@ async function validateAttestationNoSignatureCheck(
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
         attestationData: attData,
+        finalizedCheckpoint,
       });
     }
   }
@@ -654,7 +664,9 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     );
 
     const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
-    if (attestationEpoch < earliestPermissiblePreviousEpoch) {
+    // The upper time boundary is inclusive, including at exactly the gossip disparity.
+    const endSlot = computeStartSlotAtEpoch(attestationEpoch + 2);
+    if (chain.clock.msFromSlot(endSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_EPOCH,
         previousEpoch: earliestPermissiblePreviousEpoch,
@@ -778,6 +790,14 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): Pro
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
       root: toRootHex(beaconBlockRoot),
+    });
+  }
+
+  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+  if (!isFinalizedCheckpointAncestor(chain.forkChoice, headBlock.blockRoot, finalizedCheckpoint)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.NOT_FINALIZED_DESCENDANT,
+      root: headBlock.blockRoot,
     });
   }
 
