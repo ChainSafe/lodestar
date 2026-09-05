@@ -7,6 +7,7 @@ import snappy from "snappy";
 import tmp from "tmp";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {routes} from "@lodestar/api";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -38,10 +39,7 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
-import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
-import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
-import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
@@ -50,9 +48,13 @@ import {BeaconDb} from "../../../src/db/index.js";
 import {ExecutionPayloadStatus as EnginePayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {GossipType} from "../../../src/network/gossip/interface.js";
+import {NetworkEventBus} from "../../../src/network/events.js";
+import {GossipHandlers, GossipType, SequentialGossipHandler} from "../../../src/network/gossip/interface.js";
 import {sszDeserialize, sszDeserializeSingleAttestation} from "../../../src/network/gossip/topic.js";
+import {AggregatorTracker} from "../../../src/network/processor/aggregatorTracker.js";
+import {getGossipHandlers} from "../../../src/network/processor/gossipHandlers.js";
 import type {IClock} from "../../../src/util/clock.js";
+import {nextEventLoop} from "../../../src/util/eventLoop.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
@@ -301,6 +303,18 @@ class GossipForkChoice extends ForkChoice {
     this.fixtureProtoArray.finalizedEpoch = checkpoint.epoch;
     this.fixtureProtoArray.finalizedRoot = checkpoint.rootHex;
   }
+
+  pruneFinalizedCheckpoint(): void {
+    const {epoch, rootHex} = this.getFinalizedCheckpoint();
+    expect(epoch, "Pruning requires a finalized checkpoint after genesis").toBeGreaterThan(0);
+    expect(this.getBlockHexDefaultStatus(rootHex)).not.toBeNull();
+    this.fixtureProtoArray.pruneThreshold = 0;
+    expect(this.prune(rootHex).length, "Pruning must remove ancestors of the finalized block").toBeGreaterThan(0);
+  }
+
+  getEquivocatingIndices(): ReadonlySet<number> {
+    return this.fixtureStore.equivocatingIndices;
+  }
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
@@ -353,7 +367,8 @@ export function gossipValidationResult(
 export async function runGossipValidationTest(
   fork: ForkName,
   topicHandler: string,
-  testCaseDir: string
+  testCaseDir: string,
+  opts?: {pruneFinalized?: boolean}
 ): Promise<void> {
   const meta = loadMeta(testCaseDir);
   const logger = gossipLogger.child({module: `${fork}/${path.basename(testCaseDir)}`});
@@ -532,6 +547,30 @@ export async function runGossipValidationTest(
     }
     await drainFinalizationTasks();
 
+    if (opts?.pruneFinalized) {
+      expect(meta.finalized_checkpoint, "Pruning coverage must use finalization from imported blocks").toBeUndefined();
+      if (!(chain.forkChoice instanceof GossipForkChoice)) throw Error("Unexpected fork choice");
+      chain.forkChoice.pruneFinalizedCheckpoint();
+      chain.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    }
+
+    const gossipHandlers = getGossipHandlers(
+      {
+        chain,
+        config: beaconConfig,
+        logger,
+        metrics: null,
+        events: new NetworkEventBus(),
+        aggregatorTracker: new AggregatorTracker(),
+        core: {
+          reportPeer: () => {
+            throw Error("Operation gossip fixtures must not report peers");
+          },
+        },
+      },
+      {}
+    );
+
     const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
       const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
@@ -540,7 +579,7 @@ export async function runGossipValidationTest(
       let result: "valid" | "ignore" | "reject";
       let validationError: unknown;
       try {
-        await validateMessageForTopic(chain, fork, topic, testCaseDir, message);
+        await validateMessageForTopic(chain, fork, topic, testCaseDir, message, gossipHandlers);
         result = "valid";
       } catch (e) {
         validationError = e;
@@ -569,7 +608,8 @@ async function validateMessageForTopic(
   fork: ForkName,
   topic: GossipType,
   testCaseDir: string,
-  message: MetaYaml["messages"][number]
+  message: MetaYaml["messages"][number],
+  gossipHandlers: GossipHandlers
 ): Promise<void> {
   const bytes = loadSszSnappy(testCaseDir, message.message);
   const boundary = {fork, epoch: chain.config.forks[fork].epoch};
@@ -614,20 +654,47 @@ async function validateMessageForTopic(
       break;
     }
 
-    case GossipType.proposer_slashing: {
-      const slashing = sszDeserialize({type: topic, boundary}, bytes);
-      await validateGossipProposerSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing);
-      break;
-    }
-
-    case GossipType.attester_slashing: {
-      const slashing = sszDeserialize({type: topic, boundary}, bytes);
-      await validateGossipAttesterSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing);
-      chain.forkChoice.onAttesterSlashing(slashing);
+    case GossipType.proposer_slashing:
+    case GossipType.attester_slashing:
+    case GossipType.bls_to_execution_change: {
+      const event = {
+        [GossipType.proposer_slashing]: routes.events.EventType.proposerSlashing,
+        [GossipType.attester_slashing]: routes.events.EventType.attesterSlashing,
+        [GossipType.bls_to_execution_change]: routes.events.EventType.blsToExecutionChange,
+      }[topic];
+      let handled = false;
+      const onHandled = (): void => {
+        handled = true;
+      };
+      chain.emitter.once(event, onHandled);
+      try {
+        const handler = gossipHandlers[topic] as SequentialGossipHandler<typeof topic>;
+        await handler({
+          gossipData: {serializedData: bytes},
+          topic: {type: topic, boundary},
+          peerIdStr: "spec-test",
+          seenTimestampSec: chain.clock.genesisTime + chain.clock.secFromSlot(0),
+        });
+        // Handler updates are deferred until after the validation result is returned.
+        await nextEventLoop();
+        expect(handled, `Accepted ${topic} did not complete its production handler`).toBe(true);
+        if (topic === GossipType.attester_slashing) {
+          const slashing = sszDeserialize({type: topic, boundary}, bytes);
+          if (!(chain.forkChoice instanceof GossipForkChoice)) throw Error("Unexpected fork choice");
+          const equivocatingIndices = chain.forkChoice.getEquivocatingIndices();
+          const secondIndices = new Set(slashing.attestation2.attestingIndices);
+          for (const index of slashing.attestation1.attestingIndices) {
+            if (secondIndices.has(index)) {
+              expect(
+                equivocatingIndices.has(index),
+                `Slashed validator ${index} must be excluded from fork choice`
+              ).toBe(true);
+            }
+          }
+        }
+      } finally {
+        chain.emitter.off(event, onHandled);
+      }
       break;
     }
 
@@ -648,14 +715,6 @@ async function validateMessageForTopic(
     case GossipType.sync_committee_contribution_and_proof: {
       const signedContributionAndProof = sszDeserialize({type: topic, boundary}, bytes);
       await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
-      break;
-    }
-
-    case GossipType.bls_to_execution_change: {
-      const blsToExecutionChange = sszDeserialize({type: topic, boundary}, bytes);
-      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
       break;
     }
 
