@@ -27,7 +27,7 @@ export type HistoricalStateWorkerData = {
   dbLocation: string;
   metricsEnabled: boolean;
   loggerOpts: LoggerNodeOpts;
-  nativeStateView: boolean;
+  useNativeStateView: boolean;
 };
 
 export type HistoricalStateWorkerApi = {

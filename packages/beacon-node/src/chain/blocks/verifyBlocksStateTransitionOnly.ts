@@ -1,7 +1,9 @@
+import {isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  NativeBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {sszTypesFor} from "@lodestar/types";
@@ -44,6 +46,10 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blockInput.getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
+
+    if (preState instanceof NativeBeaconStateView && isForkPostGloas(blockInput.forkName)) {
+      throw new Error(`NativeBeaconStateView does not support Gloas state transition at slot ${block.message.slot}`);
+    }
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states

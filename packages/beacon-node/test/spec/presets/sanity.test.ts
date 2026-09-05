@@ -1,21 +1,19 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {
-  BeaconStateAllForks,
-  BeaconStateView,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  processSlots,
-} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {
+  createBeaconStateViewForTest,
+  stateViewToBeaconState,
+  useNativeStateTransition,
+} from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
 const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
@@ -32,12 +30,9 @@ const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuit
 const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      const stateTB = testcase.pre.clone();
-      const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
-      // TODO: May be part of runStateTranstion, necessary to commit again?
-      postState.commit();
-      return postState;
+      let state = createBeaconStateViewForTest(fork, testcase.pre);
+      state = state.processSlots(state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances}, {});
+      return stateViewToBeaconState(fork, state);
     },
     options: {
       inputTypes: {...inputTypeSszTreeViewDU, slots: InputType.YAML},
@@ -52,6 +47,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };
@@ -59,14 +55,13 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
 const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      const stateTB = testcase.pre;
       const config = getConfig(fork);
-      let wrappedState = new BeaconStateView(createCachedBeaconStateTest(stateTB, config));
+      let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
-        wrappedState = wrappedState.stateTransition(
+        state = state.stateTransition(
           config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
           signedBlock,
           {
@@ -80,9 +75,9 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
             assertCorrectProgressiveBalances,
           },
           {}
-        ) as BeaconStateView;
+        );
       }
-      return wrappedState.cachedState;
+      return stateViewToBeaconState(fork, state);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,
@@ -98,6 +93,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
     },
   };
 };

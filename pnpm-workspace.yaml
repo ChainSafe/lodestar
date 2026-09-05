@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "^1.0.0"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#bing/blinded-stf"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"

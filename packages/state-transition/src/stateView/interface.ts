@@ -323,32 +323,45 @@ export type IBeaconStateViewLatestFork = Omit<
 /**
  * Contract a BeaconStateView backing implementation must satisfy.
  *
- * Differs from `IBeaconStateViewLatestFork` in two ways:
- * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
- *   native (`.node`) binding cannot construct a `BitArray` across FFI.
- *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
- * - Methods that produce another view (`stateTransition`, `processSlots`,
- *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
- *   so callers can re-wrap without an `as unknown` cast.
+ * Differs from `IBeaconStateViewLatestFork` in these ways:
+ * - SSZ-backed lists use serialized bytes or native typed arrays at the FFI boundary.
+ * - Methods that produce another view return `IBeaconStateViewNative` so callers can re-wrap them.
  * - `stateTransition` accepts the native block inputs and omits JS-only modules.
- * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ
- *   between the TypeScript and Zig implementations.
+ * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ between implementations.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
   | "computeNewStateRoot"
+  | "eth1Data"
   | "executionPayloadAvailability"
+  | "getBeaconCommittee"
+  | "getIndicesInPayloadTimelinessCommittee"
   | "loadOtherState"
-  | "stateTransition"
+  | "pendingConsolidations"
+  | "pendingDeposits"
+  | "pendingPartialWithdrawals"
+  | "preVerifyBuilderDepositsPreGloas"
+  | "clearPreGloasBuilderDepositCache"
   | "processSlots"
+  | "proposerLookahead"
+  | "stateTransition"
   | "withParentPayloadApplied"
 > & {
+  pendingDeposits: Uint8Array;
+  pendingPartialWithdrawals: Uint8Array;
+  pendingConsolidations: Uint8Array;
+  proposerLookahead: Uint32Array;
+  // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
+  eth1Data: Omit<phase0.Eth1Data, "depositCount"> & {depositCount: number};
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
+  getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
+  getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
   stateTransition(
     signedBlockBytes: Uint8Array,
     isBlinded: boolean,
-    options: StateTransitionOpts
+    options?: StateTransitionOpts
   ): IBeaconStateViewNative;
   processSlots(
     slot: Slot,

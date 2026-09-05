@@ -1,20 +1,19 @@
 import path from "node:path";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  BeaconStateView,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-} from "@lodestar/state-transition";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {
+  createBeaconStateViewForTest,
+  stateViewToBeaconState,
+  useNativeStateTransition,
+} from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
@@ -51,7 +50,7 @@ const transition =
         const forkEpoch = bnToNum(meta.fork_epoch);
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
-        let state = new BeaconStateView(createCachedBeaconStateTest(testcase.pre, testConfig));
+        let state = createBeaconStateViewForTest(forkPrev, testcase.pre, testConfig);
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
@@ -68,9 +67,9 @@ const transition =
               assertCorrectProgressiveBalances,
             },
             {}
-          ) as BeaconStateView;
+          );
         }
-        return state.cachedState;
+        return stateViewToBeaconState(forkNext, state);
       },
       options: {
         inputTypes: inputTypeSszTreeViewDU,
@@ -89,7 +88,8 @@ const transition =
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         shouldSkip: (_testcase, name, _index) =>
-          skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
+          (useNativeStateTransition && isForkPostGloas(forkNext)) ||
+          (skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false),
       },
     };
   };

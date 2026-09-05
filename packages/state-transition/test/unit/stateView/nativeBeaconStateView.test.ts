@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
+import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
@@ -9,34 +9,17 @@ import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
-  it("lifts the raw {uint8Array, bitLen} into a BitArray for executionPayloadAvailability", () => {
-    // 0b10100101 — bits at indices 0, 2, 5, 7 are set
-    const uint8Array = new Uint8Array([0b10100101]);
-    const bitLen = 8;
+  const config = createBeaconConfig(defaultChainConfig, new Uint8Array(32));
 
-    let fetchCount = 0;
-    const binding = {
-      get executionPayloadAvailability() {
-        fetchCount++;
-        return {uint8Array, bitLen};
-      },
-    } as unknown as IBeaconStateViewNative;
+  it("throws for Gloas-only fields while native Gloas is unsupported", () => {
+    const binding = {} as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(binding, config);
 
-    const view = new NativeBeaconStateView(binding);
-    const bits = view.executionPayloadAvailability;
-
-    expect(bits).toBeInstanceOf(BitArray);
-    expect(bits.bitLen).toBe(bitLen);
-    expect(bits.uint8Array).toBe(uint8Array);
-    expect(bits.get(0)).toBe(true);
-    expect(bits.get(1)).toBe(false);
-    expect(bits.get(2)).toBe(true);
-    expect(bits.get(5)).toBe(true);
-    expect(bits.get(7)).toBe(true);
-
-    // Cached: a second access doesn't go back to the binding
-    expect(view.executionPayloadAvailability).toBe(bits);
-    expect(fetchCount).toBe(1);
+    expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
+    expect(() => view.latestBlockHash).toThrow("NativeBeaconStateView does not support Gloas");
+    expect(() => view.getIndicesInPayloadTimelinessCommittee(0, 0)).toThrow(
+      "NativeBeaconStateView does not support Gloas"
+    );
   });
 
   it("caches forwarded properties so the binding is hit once", () => {
@@ -67,7 +50,7 @@ describe("NativeBeaconStateView", () => {
       },
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding);
+    const view = new NativeBeaconStateView(binding, config);
     expect(view.fork).toBe(fakeFork);
     expect(view.fork).toBe(fakeFork);
     expect(view.latestBlockHeader).toBe(fakeHeader);
@@ -88,7 +71,7 @@ describe("NativeBeaconStateView", () => {
       getBalance: (index: number) => 32_000_000_000 + index,
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding);
+    const view = new NativeBeaconStateView(binding, config);
     expect(view.slot).toBe(123);
     expect(view.epoch).toBe(4);
     expect(view.validatorCount).toBe(17);
@@ -119,7 +102,7 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding);
+    const view = new NativeBeaconStateView(binding, config);
     const postState = view.stateTransition(blockBytes, block, options, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
@@ -149,7 +132,7 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const result = new NativeBeaconStateView(binding).computeNewStateRoot({block, ssz: blockBytes}, {});
+    const result = new NativeBeaconStateView(binding, config).computeNewStateRoot({block, ssz: blockBytes}, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, computeNewStateRootStateTransitionOpts);
     expect(result.newStateRoot).toBe(stateRoot);
@@ -163,7 +146,7 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(),
     } as unknown as IBeaconStateViewNative;
 
-    expect(() => new NativeBeaconStateView(binding).computeNewStateRoot({block}, {})).toThrow(
+    expect(() => new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {})).toThrow(
       "Serialized block bytes are required to compute a state root with NativeBeaconStateView"
     );
     expect(binding.stateTransition).not.toHaveBeenCalled();
