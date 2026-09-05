@@ -28,8 +28,6 @@ import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipV
 import {
   AttestationError,
   AttestationErrorCode,
-  BlobSidecarErrorCode,
-  BlobSidecarGossipError,
   BlockErrorCode,
   BlockGossipError,
 } from "../../../src/chain/errors/index.js";
@@ -39,7 +37,6 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
@@ -162,7 +159,6 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
-  gossip_blob_sidecar: GossipType.blob_sidecar,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -372,12 +368,6 @@ export function gossipValidationResult(
     e instanceof AttestationError &&
     e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT &&
     unimportedBlocks.has(e.type.root)
-  )
-    return "reject";
-  if (
-    e instanceof BlobSidecarGossipError &&
-    e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN &&
-    unimportedBlocks.has(e.type.parentRoot)
   )
     return "reject";
 
@@ -659,13 +649,6 @@ async function validateMessageForTopic(
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      break;
-    }
-
-    case GossipType.blob_sidecar: {
-      const blobSidecar = sszDeserialize({type: topic, boundary, subnet}, bytes);
-
-      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
       break;
     }
 

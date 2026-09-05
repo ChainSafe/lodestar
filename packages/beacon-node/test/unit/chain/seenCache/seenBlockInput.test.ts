@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {
@@ -15,7 +15,6 @@ import {
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
-import {MAX_LOOK_AHEAD_EPOCHS} from "../../../../src/sync/constants.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -52,24 +51,6 @@ describe("SeenBlockInputCache", async () => {
       serializedCache,
       logger,
       metrics: null,
-    });
-  });
-
-  describe("blob sidecar tuples", () => {
-    it("keys duplicates by slot, proposer, and blob index", () => {
-      cache.markSeenBlobSidecar(1, 2, 3);
-      expect(cache.isSeenBlobSidecar(1, 2, 3)).toBe(true);
-      expect(cache.isSeenBlobSidecar(2, 2, 3)).toBe(false);
-      expect(cache.isSeenBlobSidecar(1, 3, 3)).toBe(false);
-      expect(cache.isSeenBlobSidecar(1, 2, 4)).toBe(false);
-    });
-
-    it("bounds remembered slots when pruning", () => {
-      const slots = (MAX_LOOK_AHEAD_EPOCHS + 2) * SLOTS_PER_EPOCH;
-      for (let slot = 0; slot < slots; slot++) cache.markSeenBlobSidecar(slot, 0, 0);
-      cache.prune("unknown-block");
-      expect(cache.isSeenBlobSidecar(0, 0, 0)).toBe(false);
-      expect(cache.isSeenBlobSidecar(slots - 1, 0, 0)).toBe(true);
     });
   });
 

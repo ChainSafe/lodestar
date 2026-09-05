@@ -64,9 +64,10 @@ const coveredTestRunners = [
 export const defaultSkipOpts: SkipOpts = {
   skippedForks: ["eip8148"],
   skippedTestSuites: [
-    // Networking coverage beyond Electra requires additional gossip handlers.
-    // Enable these in a follow-up to https://github.com/ChainSafe/lodestar/pull/9372.
+    // Gossip tests after Electra will be enabled separately.
     /^(fulu|gloas|heze)\/networking\/gossip_.*/,
+    // Blob gossip is obsolete: following head on pre-Fulu networks is no longer supported.
+    /^(deneb|electra)\/networking\/gossip_blob_sidecar\/.*/,
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,

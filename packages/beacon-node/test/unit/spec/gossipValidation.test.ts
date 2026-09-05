@@ -4,8 +4,6 @@ import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {
   AttestationError,
   AttestationErrorCode,
-  BlobSidecarErrorCode,
-  BlobSidecarGossipError,
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
@@ -58,23 +56,13 @@ describe("gossip fixture error adaptation", () => {
     expect(gossipValidationResult(invalidPayload, ForkName.deneb, unimported)).toBe("ignore");
   });
 
-  it("adapts unknown attested blocks and blob parents only when explicitly unimported", () => {
-    const errors = [
-      new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
-        root: parentRoot,
-      }),
-      new BlobSidecarGossipError(GossipAction.IGNORE, {
-        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
-        parentRoot,
-        blockRoot: parentRoot,
-        slot: 1,
-      }),
-    ];
-    for (const error of errors) {
-      expect(gossipValidationResult(error, ForkName.deneb, unimported), error.type.code).toBe("reject");
-      expect(gossipValidationResult(error, ForkName.deneb, new Map()), error.type.code).toBe("ignore");
-    }
+  it("adapts unknown attested blocks only when explicitly unimported", () => {
+    const error = new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
+      root: parentRoot,
+    });
+    expect(gossipValidationResult(error, ForkName.deneb, unimported)).toBe("reject");
+    expect(gossipValidationResult(error, ForkName.deneb, new Map())).toBe("ignore");
   });
 
   it("fails on missing fixture files", async () => {

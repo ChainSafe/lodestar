@@ -11,7 +11,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BLSSignature, RootHex, SignedBeaconBlock, Slot, ValidatorIndex, deneb, fulu} from "@lodestar/types";
+import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
@@ -111,10 +111,6 @@ export class SeenBlockInput {
   // there should only 1 block root per slot but we need to always compare against rootHex
   // and the signature to ensure we only skip verification if both match
   private verifiedProposerSignatures = new Map<Slot, Map<RootHex, BLSSignature>>();
-  // Tracks blob sidecar tuples `(slot, proposer_index, blob_index)` already seen via
-  // gossip validation. Spec requires `[IGNORE]` for a subsequent sidecar matching the
-  // same tuple.
-  private blobSidecarTuples = new Map<Slot, Set<string>>();
 
   constructor({
     config,
@@ -415,23 +411,6 @@ export class SeenBlockInput {
     seenMap.set(blockRootHex, signature);
   }
 
-  /**
-   * Same proposer signing two different blocks at the same slot (equivocation)
-   * yields the same tuple, and only the first valid sidecar should propagate.
-   */
-  isSeenBlobSidecar(slot: Slot, proposerIndex: ValidatorIndex, blobIndex: number): boolean {
-    return this.blobSidecarTuples.get(slot)?.has(`${proposerIndex}:${blobIndex}`) ?? false;
-  }
-
-  markSeenBlobSidecar(slot: Slot, proposerIndex: ValidatorIndex, blobIndex: number): void {
-    let seenSet = this.blobSidecarTuples.get(slot);
-    if (!seenSet) {
-      seenSet = new Set<string>();
-      this.blobSidecarTuples.set(slot, seenSet);
-    }
-    seenSet.add(`${proposerIndex}:${blobIndex}`);
-  }
-
   private buildCommonProps(slot: Slot): {
     daOutOfRange: boolean;
     forkName: ForkName;
@@ -459,7 +438,6 @@ export class SeenBlockInput {
       }
     }
     pruneSetToMax(this.verifiedProposerSignatures, MAX_BLOCK_INPUT_CACHE_SIZE);
-    pruneSetToMax(this.blobSidecarTuples, MAX_BLOCK_INPUT_CACHE_SIZE);
   }
 
   private evictBlockInput(blockInput: IBlockInput): void {

@@ -40,6 +40,7 @@ export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
   }
 }
 
+// Comments for each call are present inside `validateVoluntaryExit`.
 export async function validateApiVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
@@ -83,6 +84,14 @@ export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
+  return validateVoluntaryExit(chain, voluntaryExit);
+}
+
+async function validateVoluntaryExit(
+  chain: IBeaconChain,
+  voluntaryExit: phase0.SignedVoluntaryExit,
+  prioritizeBls = false
+): Promise<void> {
   // [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator with index
   // signed_voluntary_exit.message.validator_index.
   if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
@@ -115,7 +124,7 @@ export async function validateGossipVoluntaryExit(
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });
