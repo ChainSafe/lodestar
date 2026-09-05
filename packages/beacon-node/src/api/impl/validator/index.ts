@@ -1827,6 +1827,14 @@ export function getValidatorApi(
             );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
+            try {
+              // Same as the gossip path, an aggregate submitted through the api carries votes our own fork
+              // choice should count
+              chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+            } catch (e) {
+              logger.debug("Error adding api aggregated attestation to forkchoice", {slot}, e as Error);
+            }
+
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {

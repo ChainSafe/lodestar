@@ -79,6 +79,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),
       notifyPtcMessages: vi.fn(),
+      onAttestation: vi.fn(),
       shouldBuildOnFull: vi.fn(),
       getCanonicalPayloadCounts: vi.fn(),
     };
