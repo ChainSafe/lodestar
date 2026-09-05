@@ -129,24 +129,16 @@ export function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch):
 }
 
 /**
- * Get the shuffling decision block root for the given epoch of given state.
- * Mirrors `forkchoice.getDependentRoot()` so attestation shuffling lookups hit
- * the cache when syncing from genesis.
- *
- * Special case close to genesis: when the pivot slot is at or before
- * GENESIS_SLOT, return the anchor block root. The naive `state.slot > GENESIS_SLOT`
- * guard misses states that have been process_slots-advanced past genesis but
- * still resolve to a pre-genesis pivot slot (e.g. state.slot=1, epoch=0 →
- * pivotSlot=-33), causing shuffling lookups to miss and regen to fail.
+ * Get the shuffling decision block root for the given epoch of given state
+ *   - Special case close to genesis block, return the genesis block root
+ *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
  */
 export function calculateShufflingDecisionRoot(
   config: BeaconConfig,
   state: BeaconStateAllForks,
   epoch: Epoch
 ): RootHex {
-  const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
-  if (pivotSlot <= GENESIS_SLOT) {
-    return toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
-  }
-  return calculateDecisionRoot(state, epoch);
+  return state.slot > GENESIS_SLOT
+    ? calculateDecisionRoot(state, epoch)
+    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
 }

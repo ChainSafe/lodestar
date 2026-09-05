@@ -32,7 +32,6 @@ export enum BlobSidecarErrorCode {
   /** Already accepted a sidecar for this (slot, proposer_index, blob_index) tuple via gossip */
   ALREADY_SEEN_TUPLE = "BLOB_SIDECAR_ERROR_ALREADY_SEEN_TUPLE",
   PARENT_UNKNOWN = "BLOB_SIDECAR_ERROR_PARENT_UNKNOWN",
-  PARENT_EXECUTION_INVALID = "BLOB_SIDECAR_ERROR_PARENT_EXECUTION_INVALID",
   FINALIZED_NOT_ANCESTOR = "BLOB_SIDECAR_ERROR_FINALIZED_NOT_ANCESTOR",
   NOT_LATER_THAN_PARENT = "BLOB_SIDECAR_ERROR_NOT_LATER_THAN_PARENT",
   PROPOSAL_SIGNATURE_INVALID = "BLOB_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
@@ -62,7 +61,6 @@ export type BlobSidecarErrorType =
       slot: Slot;
       blockRoot: RootHex;
     }
-  | {code: BlobSidecarErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
   | {code: BlobSidecarErrorCode.FINALIZED_NOT_ANCESTOR; parentRoot: RootHex; finalizedRoot: RootHex}
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {

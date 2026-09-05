@@ -18,6 +18,8 @@ export type AttestationDataCacheEntry = {
   // caching this for 3 slots take 600 instances max, this is nothing compared to attestations processed per slot
   // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
   attestationData: phase0.AttestationData;
+  /** Finalized root against which this attestation's ancestry was checked. */
+  finalizedRoot: RootHex;
   subnet: SubnetID;
 };
 

@@ -1,4 +1,10 @@
-import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {
+  VoluntaryExitValidity,
+  computeEpochAtSlot,
+  getVoluntaryExitSignatureSet,
+  isActiveValidator,
+} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -34,7 +40,6 @@ export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
   }
 }
 
-// Comments for each call are present inside `validateVoluntaryExit`.
 export async function validateApiVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
@@ -78,14 +83,6 @@ export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
-  return validateVoluntaryExit(chain, voluntaryExit);
-}
-
-async function validateVoluntaryExit(
-  chain: IBeaconChain,
-  voluntaryExit: phase0.SignedVoluntaryExit,
-  prioritizeBls = false
-): Promise<void> {
   // [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator with index
   // signed_voluntary_exit.message.validator_index.
   if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
@@ -94,26 +91,31 @@ async function validateVoluntaryExit(
     });
   }
 
-  // What state should the voluntaryExit validate against?
-  //
-  // The only condition that is time sensitive and may require a non-head state is
-  // -> Validator is active && validator has not initiated exit
-  // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
-  // We dial the head state to the current epoch to get the current status of the validator. This is
-  // relevant on periods of many skipped slots.
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
+  if (voluntaryExit.message.epoch > computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity)) {
+    throw new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.EARLY_EPOCH});
+  }
 
-  // [REJECT] All of the conditions within process_voluntary_exit pass validation.
-  // verifySignature = false, verified in batch below
-  const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
-  if (validity !== VoluntaryExitValidity.valid) {
+  const state = chain.getHeadState();
+  if (voluntaryExit.message.validatorIndex >= state.validatorCount) {
+    throw new VoluntaryExitError(GossipAction.REJECT, {code: VoluntaryExitErrorCode.INVALID_VALIDATOR_INDEX});
+  }
+
+  const validator = state.getValidator(voluntaryExit.message.validatorIndex);
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
+    throw new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.ALREADY_EXITED});
+  }
+  if (!isActiveValidator(validator, currentEpoch)) {
+    throw new VoluntaryExitError(GossipAction.REJECT, {code: VoluntaryExitErrorCode.INACTIVE});
+  }
+  if (currentEpoch < validator.activationEpoch + chain.config.SHARD_COMMITTEE_PERIOD) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: voluntaryExitValidityToErrorCode(validity),
+      code: VoluntaryExitErrorCode.SHORT_TIME_ACTIVE,
     });
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });

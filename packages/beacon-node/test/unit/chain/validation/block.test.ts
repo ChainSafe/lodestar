@@ -65,6 +65,7 @@ describe("gossip block validation", () => {
       root: ZERO_HASH,
       rootHex: "",
     });
+    forkChoice.getAncestor.mockReturnValue({blockRoot: ""} as ReturnType<typeof forkChoice.getAncestor>);
 
     // Reset seen cache
     (
@@ -112,6 +113,18 @@ describe("gossip block validation", () => {
       validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.ALREADY_KNOWN
     );
+  });
+
+  it("rejects a parent on a conflicting finalized branch before it is pruned", async () => {
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null).mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getAncestor.mockReturnValue({blockRoot: "conflicting-root"} as ReturnType<
+      typeof forkChoice.getAncestor
+    >);
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.NOT_FINALIZED_DESCENDANT
+    );
+    expect(regen.getState).not.toHaveBeenCalled();
   });
 
   describe("repeat proposal handling", () => {

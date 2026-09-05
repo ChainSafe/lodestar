@@ -57,6 +57,7 @@ import {
   PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX,
   SeenAttDataKey,
 } from "../seenCache/seenAttestationData.js";
+import {isFinalizedCheckpointAncestor} from "./isFinalizedCheckpointAncestor.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];
@@ -285,6 +286,7 @@ async function validateAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+  const finalizedRoot = chain.forkChoice.getFinalizedCheckpoint().rootHex;
   let committeeIndex: number | null;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
@@ -398,6 +400,10 @@ async function validateAttestationNoSignatureCheck(
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: SubnetID;
   if (attestationOrCache.cache) {
+    if (attestationOrCache.cache.finalizedRoot !== finalizedRoot) {
+      verifyHeadBlockIsKnown(chain, attData.beaconBlockRoot);
+      attestationOrCache.cache.finalizedRoot = finalizedRoot;
+    }
     committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
     const signingRoot = attestationOrCache.cache.signingRoot;
     getSigningRoot = () => signingRoot;
@@ -554,6 +560,7 @@ async function validateAttestationNoSignatureCheck(
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
         attestationData: attData,
+        finalizedRoot,
       });
     }
   }
@@ -638,32 +645,28 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   } else {
     const attestationEpoch = computeEpochAtSlot(attestationSlot);
 
-    // EIP-7045: an attestation is valid for the current or previous epoch with
-    // MAXIMUM_GOSSIP_CLOCK_DISPARITY tolerance on each side of the epoch's slot range.
-    // We mirror is_within_slot_range from the spec by comparing milliseconds to the
-    // start/end of the epoch's slot range, so messages exactly at an epoch boundary plus
-    // disparity remain in-range.
-    const disparityMs = chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY;
-    const isWithinEpochSlotRange = (epoch: Epoch): boolean => {
-      const epochStartSlot = computeStartSlotAtEpoch(epoch);
-      const epochEndSlot = epochStartSlot + SLOTS_PER_EPOCH;
-      return (
-        chain.clock.msFromSlot(epochStartSlot) >= -disparityMs && chain.clock.msFromSlot(epochEndSlot) <= disparityMs
-      );
-    };
+    // upper bound for current epoch is same as epoch of latestPermissibleSlot
+    const latestPermissibleCurrentEpoch = computeEpochAtSlot(latestPermissibleSlot);
+    if (attestationEpoch > latestPermissibleCurrentEpoch) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.FUTURE_EPOCH,
+        currentEpoch: latestPermissibleCurrentEpoch,
+        attestationEpoch,
+      });
+    }
 
-    if (!isWithinEpochSlotRange(attestationEpoch) && !isWithinEpochSlotRange(attestationEpoch + 1)) {
-      const latestPermissibleCurrentEpoch = computeEpochAtSlot(latestPermissibleSlot);
-      if (attestationEpoch > latestPermissibleCurrentEpoch) {
-        throw new AttestationError(GossipAction.IGNORE, {
-          code: AttestationErrorCode.FUTURE_EPOCH,
-          currentEpoch: latestPermissibleCurrentEpoch,
-          attestationEpoch,
-        });
-      }
+    // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
+    const currentEpochWithPastTolerance = computeEpochAtSlot(
+      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
+    );
+
+    const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
+    // The upper time boundary is inclusive, including at exactly the gossip disparity.
+    const endSlot = computeStartSlotAtEpoch(attestationEpoch + 2);
+    if (chain.clock.msFromSlot(endSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_EPOCH,
-        previousEpoch: Math.max(latestPermissibleCurrentEpoch - 1, 0),
+        previousEpoch: earliestPermissiblePreviousEpoch,
         attestationEpoch,
       });
     }
@@ -784,6 +787,14 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): Pro
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
       root: toRootHex(beaconBlockRoot),
+    });
+  }
+
+  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+  if (!isFinalizedCheckpointAncestor(chain.forkChoice, headBlock.blockRoot, finalizedCheckpoint)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.NOT_FINALIZED_DESCENDANT,
+      root: headBlock.blockRoot,
     });
   }
 

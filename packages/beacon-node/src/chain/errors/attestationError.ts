@@ -49,6 +49,7 @@ export enum AttestationErrorCode {
    * The `attestation.data.beacon_block_root` block is unknown or prefinalized.
    */
   UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT = "ATTESTATION_ERROR_UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT",
+  NOT_FINALIZED_DESCENDANT = "ATTESTATION_ERROR_NOT_FINALIZED_DESCENDANT",
   /**
    * The `attestation.data.slot` is not from the same epoch as `data.target.epoch`.
    */
@@ -165,6 +166,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN; targetEpoch: Epoch; aggregateRoot: RootHex}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT; root: RootHex}
+  | {code: AttestationErrorCode.NOT_FINALIZED_DESCENDANT; root: RootHex}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}

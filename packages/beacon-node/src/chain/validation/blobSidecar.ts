@@ -1,5 +1,4 @@
 import {ChainConfig} from "@lodestar/config";
-import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
@@ -11,13 +10,14 @@ import {
   computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSetByHeaderSlot,
 } from "@lodestar/state-transition";
-import {BlobIndex, Root, RootHex, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
+import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
+import {isFinalizedCheckpointAncestor} from "./isFinalizedCheckpointAncestor.js";
 
 export async function validateGossipBlobSidecar(
   fork: ForkName,
@@ -27,6 +27,16 @@ export async function validateGossipBlobSidecar(
 ): Promise<void> {
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
   const proposerIndex = blobSidecar.signedBlockHeader.message.proposerIndex;
+
+  // [IGNORE] The sidecar is the first sidecar for the tuple
+  // (block_header.slot, block_header.proposer_index, blob_sidecar.index)
+  if (chain.seenBlockInputCache.isSeenBlobSidecar(blobSlot, proposerIndex, blobSidecar.index)) {
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.ALREADY_SEEN_TUPLE,
+      root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message)),
+      blobIdx: blobSidecar.index,
+    });
+  }
 
   // [REJECT] The sidecar's index is consistent with MAX_BLOBS_PER_BLOCK
   const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(blobSlot));
@@ -77,15 +87,12 @@ export async function validateGossipBlobSidecar(
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
 
-  // [REJECT] The proposer index is a valid validator index
-  // Spec uses the input `state.validators`; Lodestar's analog is the head state's
-  // validator count. The shared pubkey cache is kept in sync with the head, so
-  // this also bounds the cache lookup performed during signature verification.
-  if (proposerIndex >= chain.getHeadState().validatorCount) {
+  const validatorCount = chain.getHeadState().validatorCount;
+  if (proposerIndex >= validatorCount) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.PROPOSER_INDEX_OUT_OF_RANGE,
       proposerIndex,
-      validatorCount: chain.getHeadState().validatorCount,
+      validatorCount,
     });
   }
 
@@ -119,19 +126,6 @@ export async function validateGossipBlobSidecar(
     });
   }
 
-  // [REJECT] The sidecar's block's parent passes validation.
-  // Lodestar does not retain consensus-invalid parent blocks (state transition
-  // failure drops the block before fork-choice), so the spec's `parent in
-  // store.blocks but not in store.block_states` case cannot occur here. This
-  // source-level check covers the EL-invalidation case: a parent that was
-  // imported optimistically and later marked `executionStatus = Invalid`.
-  if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
-    throw new BlobSidecarGossipError(GossipAction.REJECT, {
-      code: BlobSidecarErrorCode.PARENT_EXECUTION_INVALID,
-      parentRoot,
-    });
-  }
-
   // [REJECT] The sidecar is from a higher slot than the sidecar's block's parent
   if (parentBlock.slot >= blobSlot) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
@@ -142,19 +136,11 @@ export async function validateGossipBlobSidecar(
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
-  const fcFinalized = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedAncestorSlot = computeStartSlotAtEpoch(fcFinalized.epoch);
-  let ancestorRoot: RootHex | undefined;
-  try {
-    ancestorRoot = chain.forkChoice.getAncestor(parentRoot, finalizedAncestorSlot).blockRoot;
-  } catch {
-    // parent not in fork-choice or finalized slot before parent's chain start
-  }
-  if (ancestorRoot !== fcFinalized.rootHex) {
+  if (!isFinalizedCheckpointAncestor(chain.forkChoice, parentRoot, finalizedCheckpoint)) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.FINALIZED_NOT_ANCESTOR,
       parentRoot,
-      finalizedRoot: fcFinalized.rootHex,
+      finalizedRoot: finalizedCheckpoint.rootHex,
     });
   }
 
@@ -163,26 +149,6 @@ export async function validateGossipBlobSidecar(
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: blobSidecar.signedBlockHeader.message.slot,
-      blobIdx: blobSidecar.index,
-    });
-  }
-
-  // [REJECT] The sidecar's blob is valid as verified by verify_blob_kzg_proof
-  try {
-    await validateBlobsAndBlobProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
-  } catch (_e) {
-    throw new BlobSidecarGossipError(GossipAction.REJECT, {
-      code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
-      blobIdx: blobSidecar.index,
-    });
-  }
-
-  // [IGNORE] The sidecar is the first sidecar for the tuple
-  // (block_header.slot, block_header.proposer_index, blob_sidecar.index)
-  if (chain.seenBlockInputCache.isSeenBlobSidecar(blobSlot, proposerIndex, blobSidecar.index)) {
-    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
-      code: BlobSidecarErrorCode.ALREADY_SEEN_TUPLE,
-      root: blockHex,
       blobIdx: blobSidecar.index,
     });
   }
@@ -203,6 +169,25 @@ export async function validateGossipBlobSidecar(
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCORRECT_PROPOSER,
       proposerIndex,
+    });
+  }
+
+  // [REJECT] The sidecar's blob is valid as verified by verify_blob_kzg_proof
+  try {
+    await validateBlobsAndBlobProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
+  } catch (_e) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
+      blobIdx: blobSidecar.index,
+    });
+  }
+
+  // Another sidecar for this tuple may have completed validation during the awaits.
+  if (chain.seenBlockInputCache.isSeenBlobSidecar(blobSlot, proposerIndex, blobSidecar.index)) {
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.ALREADY_SEEN_TUPLE,
+      root: blockHex,
+      blobIdx: blobSidecar.index,
     });
   }
 
