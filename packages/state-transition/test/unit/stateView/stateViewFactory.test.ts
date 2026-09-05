@@ -76,6 +76,15 @@ describe("state view factory", () => {
     );
   });
 
+  it("accepts the canonical slot duration with a deprecated preset default", () => {
+    const slotConfig = createBeaconConfig({SLOT_DURATION_MS: 6000}, new Uint8Array(32));
+    expect(slotConfig.SECONDS_PER_SLOT).toBe(12);
+    const fixture = createFixture();
+    const native = createStateViewFactory(slotConfig, pubkeyCache, {native: true}).createFromState(fixture);
+    const typescript = createStateViewFactory(slotConfig, pubkeyCache).createFromState(fixture);
+    expect(native.processSlots(1).hashTreeRoot()).toEqual(typescript.processSlots(1).hashTreeRoot());
+  });
+
   it("keeps native factory and descendant configuration after another setup", () => {
     const fixture = createFixture();
     const altairConfig = createBeaconConfig({...getConfig(ForkName.phase0), ALTAIR_FORK_EPOCH: 1}, new Uint8Array(32));
