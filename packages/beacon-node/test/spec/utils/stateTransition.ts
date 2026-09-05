@@ -5,6 +5,7 @@ import {
   BeaconStateAllForks,
   BeaconStateView,
   IBeaconStateView,
+  NativeBeaconStateView,
   createBeaconStateView,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -41,7 +42,28 @@ export function createBeaconStateViewForTest(
  * values.
  **/
 export function stateViewToBeaconState(fork: ForkName, state: IBeaconStateView): BeaconStateAllForks {
-  return ssz[fork].BeaconState.deserializeToViewDU(state.serialize()) as BeaconStateAllForks;
+  try {
+    return ssz[fork].BeaconState.deserializeToViewDU(state.serialize()) as BeaconStateAllForks;
+  } finally {
+    releaseNativeStateView(state);
+  }
+}
+
+export function replaceStateViewForTest(
+  state: IBeaconStateView,
+  createNextState: (state: IBeaconStateView) => IBeaconStateView
+): IBeaconStateView {
+  try {
+    return createNextState(state);
+  } finally {
+    releaseNativeStateView(state);
+  }
+}
+
+function releaseNativeStateView(state: IBeaconStateView): void {
+  if (state instanceof NativeBeaconStateView) {
+    state.release();
+  }
 }
 
 /**

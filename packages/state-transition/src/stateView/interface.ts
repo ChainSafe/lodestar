@@ -347,6 +347,7 @@ export type IBeaconStateViewNative = Omit<
   | "stateTransition"
   | "withParentPayloadApplied"
 > & {
+  release(): void;
   pendingDeposits: Uint8Array;
   pendingPartialWithdrawals: Uint8Array;
   pendingConsolidations: Uint8Array;

@@ -9,6 +9,7 @@ import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqu
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
+  replaceStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
@@ -23,19 +24,21 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
-        state = state.stateTransition(
-          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-          signedBlock,
-          {
-            // Should assume payload valid and blob data available for this test
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyStateRoot: false,
-            verifyProposer: verify,
-            verifySignatures: verify,
-            assertCorrectProgressiveBalances,
-          },
-          {}
+        state = replaceStateViewForTest(state, (preState) =>
+          preState.stateTransition(
+            config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            signedBlock,
+            {
+              // Should assume payload valid and blob data available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyStateRoot: false,
+              verifyProposer: verify,
+              verifySignatures: verify,
+              assertCorrectProgressiveBalances,
+            },
+            {}
+          )
         );
       }
 

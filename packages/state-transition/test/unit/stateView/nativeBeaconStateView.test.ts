@@ -1,10 +1,10 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
 import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
-import {ForkSeq} from "@lodestar/params";
 import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
@@ -60,6 +60,16 @@ describe("NativeBeaconStateView", () => {
     expect(forkAccessCount).toBe(1);
     expect(latestBlockHeaderAccessCount).toBe(1);
     expect(forkSeqAccessCount).toBe(1);
+  });
+
+  it("releases the native binding", () => {
+    const binding = {
+      release: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+
+    new NativeBeaconStateView(binding, config).release();
+
+    expect(binding.release).toHaveBeenCalledOnce();
   });
 
   it("delegates pass-through getters and methods to the binding", () => {

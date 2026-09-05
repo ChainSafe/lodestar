@@ -11,6 +11,7 @@ import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqu
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
+  replaceStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
@@ -31,7 +32,9 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
   return {
     testFunction: (testcase) => {
       let state = createBeaconStateViewForTest(fork, testcase.pre);
-      state = state.processSlots(state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances}, {});
+      state = replaceStateViewForTest(state, (preState) =>
+        preState.processSlots(preState.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances}, {})
+      );
       return stateViewToBeaconState(fork, state);
     },
     options: {
@@ -61,20 +64,22 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
-        state = state.stateTransition(
-          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-          signedBlock,
-          {
-            // Assume valid and available for this test
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            // Always verify the state root, it is not gated by bls_setting
-            verifyStateRoot: true,
-            verifyProposer: verify,
-            verifySignatures: verify,
-            assertCorrectProgressiveBalances,
-          },
-          {}
+        state = replaceStateViewForTest(state, (preState) =>
+          preState.stateTransition(
+            config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            signedBlock,
+            {
+              // Assume valid and available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              // Always verify the state root, it is not gated by bls_setting
+              verifyStateRoot: true,
+              verifyProposer: verify,
+              verifySignatures: verify,
+              assertCorrectProgressiveBalances,
+            },
+            {}
+          )
         );
       }
       return stateViewToBeaconState(fork, state);
