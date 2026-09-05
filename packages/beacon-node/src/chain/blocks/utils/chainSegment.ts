@@ -37,23 +37,28 @@ export function assertLinearChainSegment(
 
   const warnings: OrphanedPayloadEnvelope[] = [];
 
-  let parentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
-  if (parentBlock !== null) {
-    const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
-    if (parentPayloadInput?.hasPayloadEnvelope()) {
-      // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)
-      // hash, not its own payload. Its payload envelope is in this batch, so use that blockHash as
-      // the real parent EL head.
-      parentExecHash = parentPayloadInput.getBlockHashHex();
-    }
-  }
-
   // Track the expected execution payload block hash through the segment, seeded from the FIRST
   // block's own bid
   const firstBlockMessage = blocks[0].getBlock().message;
   let currentExecHash: string | null = isGloasBeaconBlock(firstBlockMessage)
     ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentBlockHash)
     : null;
+
+  let parentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
+  if (parentBlock !== null) {
+    const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
+    if (parentPayloadInput?.hasPayloadEnvelope()) {
+      const parentPayloadBlockHash = parentPayloadInput.getBlockHashHex();
+      if (currentExecHash === parentPayloadBlockHash) {
+        // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)
+        // hash, its own payload is in this batch and is the real parent EL head
+        parentExecHash = parentPayloadBlockHash;
+      } else {
+        // First block builds on the parent's EMPTY variant, the parent's payload in this batch is orphaned
+        warnings.push({slot: parentBlock.slot, payloadEnvelopeInput: parentPayloadInput});
+      }
+    }
+  }
 
   // First block must build on the parent's EL head. PARENT_PAYLOAD_UNKNOWN (vs the in-segment
   // NON_LINEAR_PAYLOAD_ROOTS below) tells range sync this is a parent-link problem, not an in-batch one.

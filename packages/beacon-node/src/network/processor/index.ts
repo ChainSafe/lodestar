@@ -11,7 +11,6 @@ import {IBeaconChain} from "../../chain/interface.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
@@ -781,27 +780,22 @@ export class NetworkProcessor {
       this.trackJobTime(messageOrArray, 1, acceptanceArr[0]);
     }
 
-    // Use setTimeout to yield to the macro queue
-    // This is mostly due to too many attestation messages, and a gossipsub RPC may
-    // contain multiple of them. This helps avoid the I/O lag issue.
-
+    // Report the validation verdict synchronously so it reaches the network worker before any deferred
+    // handler (e.g. block import) runs on the next event loop. At network thread side, gossipsub onValidationResult()
+    // has its own callInNextEventLoop
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        callInNextEventLoop(() => {
-          this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-            msgId: msg.msgId,
-            propagationSource: msg.propagationSource,
-            acceptance: acceptanceArr[i],
-          });
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: msg.msgId,
+          propagationSource: msg.propagationSource,
+          acceptance: acceptanceArr[i],
         });
       }
     } else {
-      callInNextEventLoop(() => {
-        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: messageOrArray.msgId,
-          propagationSource: messageOrArray.propagationSource,
-          acceptance: acceptanceArr[0],
-        });
+      this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+        msgId: messageOrArray.msgId,
+        propagationSource: messageOrArray.propagationSource,
+        acceptance: acceptanceArr[0],
       });
     }
   }

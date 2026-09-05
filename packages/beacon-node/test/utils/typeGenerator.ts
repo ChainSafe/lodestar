@@ -40,6 +40,7 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,
