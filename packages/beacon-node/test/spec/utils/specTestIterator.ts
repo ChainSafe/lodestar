@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {setImmediate} from "node:timers/promises";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
@@ -13,6 +14,8 @@ async function resetNativeStateTransition(): Promise<void> {
   nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
   const nativeStateTransition = await nativeStateTransitionPromise;
   nativeStateTransition.deinitReusedEpochTransitionCache();
+  // NAPI finalizers need an event-loop turn between fixtures to release native state memory.
+  await setImmediate();
 }
 
 const ARTIFACT_FILENAMES = new Set([
@@ -102,21 +105,6 @@ export const defaultSkipOpts: SkipOpts = {
   ],
   skippedTests: [
     /\/heze_fork$/,
-    // v1.7.0-alpha.14 vectors create bids whose block hash equals the parent block hash.
-    // Re-enable after updating the vectors to v1.7.0-beta.0, which will include the fix from
-    // https://github.com/ethereum/consensus-specs/pull/5594
-    /^(gloas|heze)\/fork_choice\/deposit_with_reorg\/pyspec_tests\/new_validator_deposit_with_multiple_epoch_transitions$/,
-    /^(gloas|heze)\/fork_choice\/on_block\/pyspec_tests\/on_block_parent_full_accepts_verified_payload$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/epoch_boundary_full_parent_all_requests_gap_5_epochs$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/epoch_boundary_full_parent_gap_1_epoch$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/epoch_boundary_full_parent_gap_2_epochs$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/epoch_boundary_full_parent_gap_5_epochs$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/switch_to_compounding_across_epoch_boundary$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/many_partial_withdrawals_in_epoch_transition$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/missed_payload_recovery_resumes_with_remaining_withdrawals$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/missed_payload_recovery_resumes_without_remaining_withdrawals$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/partial_withdrawal_in_epoch_transition$/,
-    /^(gloas|heze)\/sanity\/blocks\/pyspec_tests\/withdrawal_success_two_blocks$/,
     // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
     // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
     // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,

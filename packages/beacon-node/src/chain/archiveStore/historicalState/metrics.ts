@@ -6,8 +6,8 @@ import {
   StateCloneSource,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {Gauge, Histogram} from "@lodestar/utils";
-import {RegistryMetricCreator} from "../../../metrics/index.js";
+import {Gauge, Histogram, MetricsRegister} from "@lodestar/utils";
+import {RegistryMetricCreator, unregisteredMetrics} from "../../../metrics/index.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
 import {RegenErrorType} from "./types.js";
 
@@ -25,7 +25,7 @@ export type HistoricalStateRegenMetrics = HistoricalStateTransitionMetrics & {
 };
 
 export function createHistoricalStateTransitionMetrics(
-  metricsRegister: RegistryMetricCreator
+  metricsRegister: MetricsRegister
 ): HistoricalStateTransitionMetrics {
   return {
     // state transition metrics
@@ -158,9 +158,12 @@ export function createHistoricalStateTransitionMetrics(
   };
 }
 
-export function createHistoricalStateRegenMetrics(metricsRegister: RegistryMetricCreator): HistoricalStateRegenMetrics {
+export function createHistoricalStateRegenMetrics(
+  metricsRegister: RegistryMetricCreator,
+  includeStateTransitionMetrics = true
+): HistoricalStateRegenMetrics {
   return {
-    ...createHistoricalStateTransitionMetrics(metricsRegister),
+    ...createHistoricalStateTransitionMetrics(includeStateTransitionMetrics ? metricsRegister : unregisteredMetrics),
     // historical state regen metrics
     regenTime: metricsRegister.histogram({
       name: "lodestar_historical_state_regen_time_seconds",

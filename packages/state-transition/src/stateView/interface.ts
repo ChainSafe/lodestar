@@ -56,12 +56,14 @@ import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 
-/** Inputs for computing the state root of a locally produced block. */
-export type ComputeNewStateRootInput = {
+/** A parsed signed block and its optional matching full or blinded SSZ serialization. */
+export type StateTransitionInput = {
   block: SignedBeaconBlock | SignedBlindedBeaconBlock;
   /** Pre-serialized block bytes for native implementations. */
   ssz?: Uint8Array;
 };
+
+export type ComputeNewStateRootInput = StateTransitionInput;
 
 /** State root computation result. Includes data derived from the post-state. */
 export type ComputeNewStateRootResult = {
@@ -179,13 +181,8 @@ export interface IBeaconStateView {
 
   // State transition
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
-  /**
-   * `signedBlockBytes` must be the fork-specific SSZ serialization of `signedBlock`, using the matching full or
-   * blinded block type.
-   */
   stateTransition(
-    signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    input: StateTransitionInput,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
@@ -334,6 +331,7 @@ export type IBeaconStateViewNative = Omit<
   | "computeNewStateRoot"
   | "eth1Data"
   | "executionPayloadAvailability"
+  | "getVoluntaryExitValidity"
   | "getBeaconCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
   | "loadOtherState"
@@ -354,6 +352,10 @@ export type IBeaconStateViewNative = Omit<
   // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
   eth1Data: Omit<phase0.Eth1Data, "depositCount"> & {depositCount: number};
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  getVoluntaryExitValidity(
+    signedVoluntaryExit: phase0.SignedVoluntaryExit,
+    verifySignature: boolean
+  ): `${VoluntaryExitValidity}`;
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
   getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];

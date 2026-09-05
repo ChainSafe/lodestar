@@ -258,4 +258,37 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
     const {warnings} = assertLinearChainSegment(config, [bi1], envelopes, parentBlock);
     expect(warnings).toBe(null);
   });
+
+  it("reports the parent's envelope as orphaned when the first block builds on the parent's EMPTY variant", () => {
+    // Range sync batch starting at an already imported block whose late payload was orphaned, peers
+    // still serve the envelope by range so it is in the batch but must not become the parent EL head
+    const grandparentHash = Buffer.alloc(32, 0x11); // parent's EMPTY variant hash (inherited)
+    const orphanedPayloadHash = Buffer.alloc(32, 0x22); // parent's own, orphaned payload
+    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(grandparentHash)} as unknown as ProtoBlock;
+
+    const parentInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00), orphanedPayloadHash);
+    const parentPayload = payloadInputFor(parentInput, orphanedPayloadHash);
+    const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), grandparentHash);
+
+    const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, parentPayload]]);
+    const {warnings} = assertLinearChainSegment(config, [bi1], envelopes, parentBlock);
+    expect(warnings).toEqual([{slot: 9, payloadEnvelopeInput: parentPayload}]);
+  });
+
+  it("throws PARENT_PAYLOAD_UNKNOWN when the first block builds on neither the parent's EL head nor its envelope", () => {
+    const grandparentHash = Buffer.alloc(32, 0x11);
+    const parentPayloadHash = Buffer.alloc(32, 0x22);
+    const unknownHash = Buffer.alloc(32, 0x33);
+    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(grandparentHash)} as unknown as ProtoBlock;
+
+    const parentInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00), parentPayloadHash);
+    const parentPayload = payloadInputFor(parentInput, parentPayloadHash);
+    const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), unknownHash);
+
+    const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, parentPayload]]);
+    expectThrowsLodestarError(
+      () => assertLinearChainSegment(config, [bi1], envelopes, parentBlock),
+      BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+    );
+  });
 });

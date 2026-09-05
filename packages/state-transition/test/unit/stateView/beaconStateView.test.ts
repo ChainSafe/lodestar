@@ -29,12 +29,7 @@ describe("BeaconStateView", () => {
     const modules: StateTransitionModules = {};
     stateTransitionMock.mockReturnValue(postState);
 
-    const result = new BeaconStateView(preState).stateTransition(
-      new Uint8Array([1, 2, 3]),
-      signedBlock,
-      options,
-      modules
-    );
+    const result = new BeaconStateView(preState).stateTransition({block: signedBlock}, options, modules);
 
     expect(stateTransitionMock).toHaveBeenCalledWith(preState, signedBlock, options, modules);
     expect(result).toBeInstanceOf(BeaconStateView);

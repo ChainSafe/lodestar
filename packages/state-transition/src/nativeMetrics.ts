@@ -2,9 +2,8 @@ import bindings from "@chainsafe/lodestar-z";
 
 let initialized = false;
 
-export function initNativeStateTransitionMetrics(): void {
-  if (initialized) return;
-  bindings.metrics.init();
+export function initNativeStateTransitionMetrics(options?: {historical?: boolean}): void {
+  bindings.metrics.init(options);
   initialized = true;
 }
 

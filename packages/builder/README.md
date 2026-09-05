@@ -1,7 +1,7 @@
 # Lodestar Builder
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.7.0-alpha.14](https://img.shields.io/badge/ETH%20consensus--spec-1.7.0_alpha.14-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.7.0-alpha.14)
+[![Eth Consensus Spec v1.7.0-beta.0](https://img.shields.io/badge/ETH%20consensus--spec-1.7.0_beta.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.7.0-beta.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-24.x-green)
 
