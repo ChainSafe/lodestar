@@ -9,7 +9,6 @@ export enum VoluntaryExitErrorCode {
   SHORT_TIME_ACTIVE = "VOLUNTARY_EXIT_ERROR_SHORT_TIME_ACTIVE",
   PENDING_WITHDRAWALS = "VOLUNTARY_EXIT_ERROR_PENDING_WITHDRAWALS",
   INVALID_SIGNATURE = "VOLUNTARY_EXIT_ERROR_INVALID_SIGNATURE",
-  INVALID_VALIDATOR_INDEX = "VOLUNTARY_EXIT_ERROR_INVALID_VALIDATOR_INDEX",
 }
 export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.ALREADY_EXISTS}
@@ -18,8 +17,7 @@ export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.EARLY_EPOCH}
   | {code: VoluntaryExitErrorCode.SHORT_TIME_ACTIVE}
   | {code: VoluntaryExitErrorCode.PENDING_WITHDRAWALS}
-  | {code: VoluntaryExitErrorCode.INVALID_SIGNATURE}
-  | {code: VoluntaryExitErrorCode.INVALID_VALIDATOR_INDEX};
+  | {code: VoluntaryExitErrorCode.INVALID_SIGNATURE};
 
 export class VoluntaryExitError extends GossipActionError<VoluntaryExitErrorType> {}
 

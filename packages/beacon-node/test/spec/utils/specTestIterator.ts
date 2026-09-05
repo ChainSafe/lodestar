@@ -68,6 +68,8 @@ export const defaultSkipOpts: SkipOpts = {
     /^(fulu|gloas|heze)\/networking\/gossip_.*/,
     // Blob gossip is obsolete: following head on pre-Fulu networks is no longer supported.
     /^(deneb|electra)\/networking\/gossip_blob_sidecar\/.*/,
+    // Voluntary exit gossip tests will be enabled separately.
+    /^.+\/networking\/gossip_voluntary_exit\/.*/,
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
