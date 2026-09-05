@@ -8,9 +8,9 @@ import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
+import {ForkName, isForkPostBellatrix} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -18,15 +18,22 @@ import {
   ExecutionPayloadStatus,
   IBeaconStateView,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   createCachedBeaconState,
   isExecutionStateType,
+  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputBlobs, BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  BlobSidecarErrorCode,
+  BlobSidecarGossipError,
+  BlockErrorCode,
+  BlockGossipError,
+} from "../../../src/chain/errors/index.js";
+import {ForkchoiceCaller} from "../../../src/chain/forkChoice/index.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
@@ -43,17 +50,16 @@ import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {GossipType} from "../../../src/network/gossip/interface.js";
+import {sszDeserialize, sszDeserializeSingleAttestation} from "../../../src/network/gossip/topic.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
-/**
- * A test clock that models gossip clock disparity from a millisecond timestamp.
- * Unlike ClockStopped which returns exact slot values, this clock computes
- * currentSlotWithGossipDisparity correctly for spec conformance tests.
- */
-class GossipTestClock extends EventEmitter implements IClock {
+const gossipLogger = testLogger("spec-gossip");
+
+/** Deterministic millisecond clock for gossip boundary vectors. */
+export class GossipTestClock extends EventEmitter implements IClock {
   genesisTime: number;
   private currentTimeMs: number;
   private secondsPerSlot: number;
@@ -72,9 +78,6 @@ class GossipTestClock extends EventEmitter implements IClock {
   }
 
   get currentSlotWithGossipDisparity(): number {
-    // Model: if we're within maxDisparityMs of next slot, return next slot
-    // Spec: current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY >= block_time_ms
-    // This means: nextSlotTimeMs - currentTimeMs <= maxDisparityMs
     const slot = this.currentSlot;
     const nextSlotTimeMs = (this.genesisTime + (slot + 1) * this.secondsPerSlot) * 1000;
     if (nextSlotTimeMs - this.currentTimeMs <= this.maxDisparityMs) {
@@ -128,7 +131,6 @@ class GossipTestClock extends EventEmitter implements IClock {
     this.currentTimeMs = this.genesisTime * 1000 + ms;
   }
 
-  /** Also support setSlot for block import phases */
   setSlot(slot: number): void {
     this.currentTimeMs = (this.genesisTime + slot * this.secondsPerSlot) * 1000;
   }
@@ -138,7 +140,7 @@ type MetaPayloadStatus = "VALID" | "NOT_VALIDATED" | "INVALIDATED";
 
 interface MetaYaml {
   topic: GossipType;
-  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
+  blocks: {block: string; failed?: boolean; pending?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
   current_time_ms?: bigint;
   messages: {
@@ -251,30 +253,55 @@ function resolveFinalizedCheckpoint(
   return {epoch: Number(cp.epoch), rootHex};
 }
 
-function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpoint): void {
-  const checkpointWithHex = {
-    epoch: checkpoint.epoch,
-    root: fromHex(checkpoint.rootHex),
-    rootHex: checkpoint.rootHex,
-  };
+// Pyspec anchors can be synthetic blocks whose header is not state.latestBlockHeader.
+// Only initialization metadata differs; the fixture state and its root stay unchanged.
+class GossipAnchorState extends BeaconStateView {
+  constructor(
+    state: ConstructorParameters<typeof BeaconStateView>[0],
+    private readonly anchorHeader: phase0.BeaconBlockHeader
+  ) {
+    super(state);
+  }
 
-  const forkChoice = chain.forkChoice as unknown as {
-    fcStore: {
-      finalizedCheckpoint: typeof checkpointWithHex;
-      unrealizedFinalizedCheckpoint: typeof checkpointWithHex;
+  override computeAnchorCheckpoint() {
+    return {
+      blockHeader: this.anchorHeader,
+      checkpoint: {
+        epoch: computeEpochAtSlot(this.slot),
+        root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(this.anchorHeader),
+      },
     };
-    protoArray: {
-      finalizedEpoch: number;
-      finalizedRoot: RootHex;
-    };
-    updateHead?: () => unknown;
-  };
+  }
+}
 
-  forkChoice.fcStore.finalizedCheckpoint = checkpointWithHex;
-  forkChoice.fcStore.unrealizedFinalizedCheckpoint = checkpointWithHex;
-  forkChoice.protoArray.finalizedEpoch = checkpoint.epoch;
-  forkChoice.protoArray.finalizedRoot = checkpoint.rootHex;
-  forkChoice.updateHead?.();
+class GossipForkChoice extends ForkChoice {
+  private readonly fixtureStore: ConstructorParameters<typeof ForkChoice>[1];
+  private readonly fixtureProtoArray: ConstructorParameters<typeof ForkChoice>[2];
+
+  constructor(...args: ConstructorParameters<typeof ForkChoice>) {
+    // The checkpoint-sync justified-epoch safety bump is not part of get_forkchoice_store.
+    const [, store, protoArray] = args;
+    store.justified = {...store.justified, checkpoint: store.finalizedCheckpoint};
+    store.unrealizedJustified = store.justified;
+    protoArray.justifiedEpoch = store.finalizedCheckpoint.epoch;
+    protoArray.nodes[0].justifiedEpoch = store.finalizedCheckpoint.epoch;
+    protoArray.nodes[0].unrealizedJustifiedEpoch = store.finalizedCheckpoint.epoch;
+    super(...args);
+    this.fixtureStore = args[1];
+    this.fixtureProtoArray = args[2];
+  }
+
+  setFinalizedCheckpoint(checkpoint: FinalizedCheckpoint): void {
+    const checkpointWithHex = {
+      epoch: checkpoint.epoch,
+      root: fromHex(checkpoint.rootHex),
+      rootHex: checkpoint.rootHex,
+    };
+    this.fixtureStore.finalizedCheckpoint = checkpointWithHex;
+    this.fixtureStore.unrealizedFinalizedCheckpoint = checkpointWithHex;
+    this.fixtureProtoArray.finalizedEpoch = checkpoint.epoch;
+    this.fixtureProtoArray.finalizedRoot = checkpoint.rootHex;
+  }
 }
 
 function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatus {
@@ -325,27 +352,37 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   });
 }
 
-function isDescendantAtFinalizedCheckpoint(
-  chain: BeaconChain,
-  blockRootHex: RootHex,
-  checkpoint: FinalizedCheckpoint
-): boolean {
-  try {
-    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
-  } catch {
-    return false;
+export function gossipValidationResult(
+  e: unknown,
+  fork: ForkName,
+  unimportedBlocks: Map<RootHex, MetaYaml["blocks"][number]>
+): "ignore" | "reject" {
+  // Lodestar drops consensus-invalid blocks before fork choice and keeps pending
+  // blocks outside it. Translate only a production unknown-block result for these
+  // explicitly known fixtures; all other validation decisions stay in production.
+  if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN) {
+    const block = unimportedBlocks.get(e.type.parentRoot);
+    if (block) {
+      return isForkPostBellatrix(fork) && block.payload_status && block.payload_status !== "NOT_VALIDATED"
+        ? "ignore"
+        : "reject";
+    }
   }
-}
+  if (
+    e instanceof AttestationError &&
+    e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT &&
+    unimportedBlocks.has(e.type.root)
+  )
+    return "reject";
+  if (
+    e instanceof BlobSidecarGossipError &&
+    e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN &&
+    unimportedBlocks.has(e.type.parentRoot)
+  )
+    return "reject";
 
-function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   if (e instanceof GossipActionError) {
     return e.action === GossipAction.IGNORE ? "ignore" : "reject";
-  }
-  // Some validation paths throw raw errors instead of GossipActionError
-  // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError) {
-    return "reject";
   }
   throw e;
 }
@@ -356,6 +393,7 @@ export async function runGossipValidationTest(
   testCaseDir: string
 ): Promise<void> {
   const meta = loadMeta(testCaseDir);
+  const logger = gossipLogger.child({module: `${fork}/${path.basename(testCaseDir)}`});
   const topic = getGossipTopic(topicHandler);
   if (meta.topic !== topic) {
     throw Error(`Gossip test topic mismatch for ${topicHandler}: expected ${topic}, got ${meta.topic}`);
@@ -381,7 +419,7 @@ export async function runGossipValidationTest(
   });
   const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
     signal: controller.signal,
-    logger: testLogger("executionEngine"),
+    logger: logger.child({module: "executionEngine"}),
   });
   pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
@@ -389,7 +427,18 @@ export async function runGossipValidationTest(
     {config: beaconConfig, pubkeyCache},
     {skipSyncPubkeys: true}
   );
-  const anchorStateView = new BeaconStateView(cachedState);
+  const anchorEntry = meta.blocks[0];
+  if (!anchorEntry || anchorEntry.failed || anchorEntry.pending) {
+    throw Error("First blocks entry must be the anchor");
+  }
+  const anchorBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, anchorEntry.block));
+  expect(toRootHex(anchorBlock.message.stateRoot)).toBe(toRootHex(anchorState.hashTreeRoot()));
+  expect(anchorBlock.message.slot).toBe(anchorState.slot);
+  const anchorStateView = new GossipAnchorState(
+    cachedState,
+    signedBlockToSignedHeader(beaconConfig, anchorBlock).message
+  );
+  clock.setSlot(anchorState.slot);
 
   const chain = new BeaconChain(
     {
@@ -402,6 +451,7 @@ export async function runGossipValidationTest(
       disableOnBlockError: true,
       disablePrepareNextSlot: true,
       assertCorrectProgressiveBalances,
+      forkchoiceConstructor: GossipForkChoice,
       proposerBoost: true,
       proposerBoostReorg: true,
     },
@@ -412,7 +462,7 @@ export async function runGossipValidationTest(
       db: getMockedBeaconDb(),
       dataDir: ".",
       dbName: ",",
-      logger: testLogger("spec-gossip"),
+      logger,
       processShutdownCallback: () => {},
       clock,
       metrics: null,
@@ -424,130 +474,67 @@ export async function runGossipValidationTest(
     }
   );
 
+  // Fixtures retain their full DAG, including branches that conflict with the finalized override.
   chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
   try {
     const blockRootsByName = new Map<string, RootHex>();
     const blockStatesByRoot = new Map<RootHex, IBeaconStateView>();
-    const rejectedFailedBlockRoots = new Set<RootHex>();
+    const unimportedBlocks = new Map<RootHex, MetaYaml["blocks"][number]>();
 
-    if (meta.blocks) {
-      for (const blockEntry of meta.blocks) {
-        const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(
-          loadSszSnappy(testCaseDir, blockEntry.block)
-        );
-        const slot = signedBlock.message.slot;
-        const blockRootHex = toHex(beaconConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-        blockRootsByName.set(blockEntry.block, blockRootHex);
+    const anchorRootHex = toRootHex(anchorStateView.computeAnchorCheckpoint().checkpoint.root);
+    blockStatesByRoot.set(anchorRootHex, anchorStateView);
+    blockRootsByName.set(anchorEntry.block, anchorRootHex);
 
-        // Fixtures list the chain anchor as the first entry in `meta.blocks`.
-        // It's already in fork-choice via chain init from `state.ssz_snappy`,
-        // so seed its post-state for descendant blocks and skip re-importing.
-        if (chain.forkChoice.getBlockHexDefaultStatus(blockRootHex) !== null) {
-          blockStatesByRoot.set(blockRootHex, anchorStateView);
-          continue;
-        }
-
-        const parentRootHex = toRootHex(signedBlock.message.parentRoot);
-        const parentState = blockStatesByRoot.get(parentRootHex);
-        if (!parentState) {
-          if (blockEntry.failed) {
-            rejectedFailedBlockRoots.add(blockRootHex);
-            continue;
-          }
-          throw new Error(`Missing parent state for ${blockEntry.block} with parent ${parentRootHex}`);
-        }
-
-        // Record consensus-invalid parents so topic handlers can surface REJECT
-        // for messages that reference them. Lodestar drops such blocks before
-        // fork-choice, so there is no source-level cache to consult.
-        if (blockEntry.failed && blockEntry.payload_status !== "VALID" && blockEntry.payload_status !== "INVALIDATED") {
-          rejectedFailedBlockRoots.add(blockRootHex);
-          continue;
-        }
-
-        const postState = computePostState(parentState, signedBlock, fork);
-
-        if (blockEntry.failed && blockEntry.payload_status === "VALID") {
-          clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
-            signedBlock.message,
-            postState,
-            0,
-            0,
-            slot,
-            ExecutionStatus.Valid,
-            getDataAvailabilityStatusForFork(fork)
-          );
-          blockStatesByRoot.set(blockRootHex, postState);
-          continue;
-        }
-
-        if (blockEntry.payload_status === "INVALIDATED") {
-          clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
-            signedBlock.message,
-            postState,
-            0,
-            0,
-            slot,
-            ExecutionStatus.Syncing,
-            getDataAvailabilityStatusForFork(fork)
-          );
-          blockStatesByRoot.set(blockRootHex, postState);
-          invalidateImportedBlock(chain, blockRootHex, parentRootHex);
-          if (blockEntry.failed) rejectedFailedBlockRoots.add(blockRootHex);
-          continue;
-        }
-
-        clock.setSlot(slot);
-        chain.forkChoice.updateTime(slot);
-
-        const blockImport = isForkPostDeneb(fork)
-          ? BlockInputBlobs.createFromBlock({
-              forkName: fork,
-              block: signedBlock as Parameters<typeof BlockInputBlobs.createFromBlock>[0]["block"],
-              blockRootHex,
-              source: BlockInputSource.gossip,
-              seenTimestampSec: 0,
-              daOutOfRange: false,
-            })
-          : BlockInputPreData.createFromBlock({
-              forkName: fork,
-              block: signedBlock,
-              blockRootHex,
-              source: BlockInputSource.gossip,
-              seenTimestampSec: 0,
-              daOutOfRange: false,
-            });
-
-        await chain.processBlock(blockImport, {
-          seenTimestampSec: 0,
-          validBlobSidecars: BlobSidecarValidation.Full,
-          importAttestations: AttestationImportOpt.Force,
-          validSignatures: false,
-        });
-
-        blockStatesByRoot.set(blockRootHex, postState);
+    // Setup imports are not gossip messages and must not populate gossip seen caches.
+    for (const blockEntry of meta.blocks.slice(1)) {
+      const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, blockEntry.block));
+      const slot = signedBlock.message.slot;
+      const blockRootHex = toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message));
+      blockRootsByName.set(blockEntry.block, blockRootHex);
+      // These flags describe store membership; some vectors use otherwise valid block bytes.
+      if (blockEntry.failed || blockEntry.pending) {
+        unimportedBlocks.set(blockRootHex, blockEntry);
+        continue;
       }
+
+      const parentRootHex = toRootHex(signedBlock.message.parentRoot);
+      const parentState = blockStatesByRoot.get(parentRootHex);
+      if (!parentState) {
+        throw Error(`Missing parent state for ${blockEntry.block} with parent ${parentRootHex}`);
+      }
+
+      const postState = computePostState(parentState, signedBlock, fork);
+      clock.setSlot(slot);
+      chain.forkChoice.updateTime(slot);
+      chain.checkpointBalancesCache.processState(blockRootHex, postState);
+      chain.forkChoice.onBlock(
+        signedBlock.message,
+        postState,
+        0,
+        0,
+        slot,
+        !isForkPostBellatrix(fork)
+          ? ExecutionStatus.PreMerge
+          : blockEntry.payload_status === "INVALIDATED" || blockEntry.payload_status === "NOT_VALIDATED"
+            ? ExecutionStatus.Syncing
+            : ExecutionStatus.Valid,
+        getDataAvailabilityStatusForFork(fork)
+      );
+      chain.regen.processState(blockRootHex, postState);
+      chain.shufflingCache.processState(postState);
+      blockStatesByRoot.set(blockRootHex, postState);
+      if (blockEntry.payload_status === "INVALIDATED") {
+        invalidateImportedBlock(chain, blockRootHex, parentRootHex);
+      }
+      chain.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
     }
 
     const finalizedCheckpoint = resolveFinalizedCheckpoint(meta, testCaseDir, fork, blockRootsByName);
     if (finalizedCheckpoint) {
-      setFinalizedCheckpoint(chain, finalizedCheckpoint);
+      if (!(chain.forkChoice instanceof GossipForkChoice)) throw Error("Unexpected fork choice");
+      chain.forkChoice.setFinalizedCheckpoint(finalizedCheckpoint);
     }
-
-    const failedBlockRoots = new Set<RootHex>(
-      (meta.blocks ?? [])
-        .filter((blockEntry) => blockEntry.failed === true)
-        .map((blockEntry) => {
-          const rootHex = blockRootsByName.get(blockEntry.block);
-          if (!rootHex) throw new Error(`Missing cached root for block ${blockEntry.block}`);
-          return rootHex;
-        })
-    );
 
     const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
@@ -555,25 +542,18 @@ export async function runGossipValidationTest(
       clock.setCurrentTimeMs(messageTimeMs);
 
       let result: "valid" | "ignore" | "reject";
+      let validationError: unknown;
       try {
-        await validateMessageForTopic(
-          chain,
-          fork,
-          topic,
-          testCaseDir,
-          message,
-          failedBlockRoots,
-          rejectedFailedBlockRoots,
-          finalizedCheckpoint
-        );
+        await validateMessageForTopic(chain, fork, topic, testCaseDir, message);
         result = "valid";
       } catch (e) {
-        result = mapErrorToResult(e);
+        validationError = e;
+        result = gossipValidationResult(e, fork, unimportedBlocks);
       }
 
       expect(result).toEqualWithMessage(
         message.expected,
-        `Unexpected gossip result for ${topicHandler}/${path.basename(testCaseDir)}/${message.message}`
+        `Unexpected gossip result for ${topicHandler}/${path.basename(testCaseDir)}/${message.message}: ${String(validationError ?? "accepted")}`
       );
     }
   } finally {
@@ -587,28 +567,15 @@ async function validateMessageForTopic(
   fork: ForkName,
   topic: GossipType,
   testCaseDir: string,
-  message: MetaYaml["messages"][number],
-  failedBlockRoots: Set<RootHex>,
-  rejectedFailedBlockRoots: Set<RootHex>,
-  finalizedCheckpoint: FinalizedCheckpoint | null
+  message: MetaYaml["messages"][number]
 ): Promise<void> {
-  const bytes = rejectOnInvalidSerializedBytes(() => loadSszSnappy(testCaseDir, message.message));
+  const bytes = loadSszSnappy(testCaseDir, message.message);
+  const boundary = {fork, epoch: chain.config.forks[fork].epoch};
+  const subnet = Number(message.subnet_id ?? 0);
 
   switch (topic) {
     case GossipType.beacon_block: {
-      const signedBlock = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes));
-      const parentRootHex = toRootHex(signedBlock.message.parentRoot);
-
-      if (rejectedFailedBlockRoots.has(parentRootHex)) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
-      }
-
-      if (
-        finalizedCheckpoint !== null &&
-        !isDescendantAtFinalizedCheckpoint(chain, parentRootHex, finalizedCheckpoint)
-      ) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
-      }
+      const signedBlock = sszDeserialize({type: topic, boundary}, bytes);
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
       chain.seenBlockProposers.add(
@@ -620,48 +587,18 @@ async function validateMessageForTopic(
     }
 
     case GossipType.beacon_aggregate_and_proof: {
-      const aggregate = rejectOnInvalidSerializedBytes(() =>
-        sszTypesFor(fork).SignedAggregateAndProof.deserialize(bytes)
-      );
-      const beaconBlockRootHex = toRootHex(aggregate.message.aggregate.data.beaconBlockRoot);
-
-      if (failedBlockRoots.has(beaconBlockRootHex)) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
-      }
-
-      if (
-        finalizedCheckpoint !== null &&
-        !isDescendantAtFinalizedCheckpoint(chain, beaconBlockRootHex, finalizedCheckpoint)
-      ) {
-        throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
-      }
+      const aggregate = sszDeserialize({type: topic, boundary}, bytes);
 
       await validateGossipAggregateAndProof(fork, chain, aggregate, bytes);
       break;
     }
 
     case GossipType.beacon_attestation: {
-      const attestationType = isForkPostElectra(fork)
-        ? sszTypesFor(fork).SingleAttestation
-        : sszTypesFor(fork).Attestation;
-      const attestation = rejectOnInvalidSerializedBytes(() => attestationType.deserialize(bytes));
-      const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
-
-      if (failedBlockRoots.has(beaconBlockRootHex)) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
-      }
-
-      if (
-        finalizedCheckpoint !== null &&
-        !isDescendantAtFinalizedCheckpoint(chain, beaconBlockRootHex, finalizedCheckpoint)
-      ) {
-        throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
-      }
-
       const attDataBase64 = getBeaconAttestationGossipIndex(fork, bytes);
       const attSlot = getSlotFromBeaconAttestationSerialized(fork, bytes);
       if (attDataBase64 == null || attSlot == null) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_INVALID_ATTESTATION_SERIALIZATION"});
+        sszDeserializeSingleAttestation(fork, bytes);
+        throw Error("Could not index a structurally valid gossip attestation");
       }
 
       const gossipAttestation: GossipAttestation = {
@@ -669,17 +606,19 @@ async function validateMessageForTopic(
         serializedData: bytes,
         attSlot,
         attDataBase64,
-        subnet: Number(message.subnet_id ?? 0),
+        subnet,
       };
 
       const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
+      expect(batchResult.results).toHaveLength(1);
       const first = batchResult.results[0];
-      if (first?.err) throw first.err;
+      if (first.err) throw first.err;
+      expect(first.result).toBeDefined();
       break;
     }
 
     case GossipType.proposer_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
+      const slashing = sszDeserialize({type: topic, boundary}, bytes);
       await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertProposerSlashing(slashing);
@@ -687,7 +626,7 @@ async function validateMessageForTopic(
     }
 
     case GossipType.attester_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
+      const slashing = sszDeserialize({type: topic, boundary}, bytes);
       await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing);
@@ -696,7 +635,7 @@ async function validateMessageForTopic(
     }
 
     case GossipType.voluntary_exit: {
-      const exit = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes));
+      const exit = sszDeserialize({type: topic, boundary}, bytes);
       await validateGossipVoluntaryExit(chain, exit);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertVoluntaryExit(exit);
@@ -704,25 +643,19 @@ async function validateMessageForTopic(
     }
 
     case GossipType.sync_committee: {
-      const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SyncCommitteeMessage.deserialize(bytes)
-      );
-      await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
+      const syncCommitteeMessage = sszDeserialize({type: topic, boundary, subnet}, bytes);
+      await validateGossipSyncCommittee(chain, syncCommitteeMessage, subnet);
       break;
     }
 
     case GossipType.sync_committee_contribution_and_proof: {
-      const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SignedContributionAndProof.deserialize(bytes)
-      );
+      const signedContributionAndProof = sszDeserialize({type: topic, boundary}, bytes);
       await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
       break;
     }
 
     case GossipType.bls_to_execution_change: {
-      const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
-        ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
-      );
+      const blsToExecutionChange = sszDeserialize({type: topic, boundary}, bytes);
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
@@ -730,29 +663,13 @@ async function validateMessageForTopic(
     }
 
     case GossipType.blob_sidecar: {
-      const blobSidecar = rejectOnInvalidSerializedBytes(() => ssz.deneb.BlobSidecar.deserialize(bytes));
-      const parentRootHex = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
+      const blobSidecar = sszDeserialize({type: topic, boundary, subnet}, bytes);
 
-      if (rejectedFailedBlockRoots.has(parentRootHex)) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
-      }
-
-      await validateGossipBlobSidecar(fork, chain, blobSidecar, Number(message.subnet_id ?? 0));
+      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
       break;
     }
 
     default:
       throw new Error(`Unknown gossip topic: ${topic}`);
-  }
-}
-
-function rejectOnInvalidSerializedBytes<T>(fn: () => T): T {
-  try {
-    return fn();
-  } catch (e) {
-    if (e instanceof Error) {
-      throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_INVALID_SERIALIZED_BYTES"});
-    }
-    throw e;
   }
 }
