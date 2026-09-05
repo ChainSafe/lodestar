@@ -1,8 +1,12 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {
+  ExecutionStatus,
+  PayloadExecutionStatus,
+  getFinalizedExecutionBlockHash,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -54,11 +58,12 @@ export type PayloadErrorType =
     };
 
 export class PayloadError extends Error {
-  type: PayloadErrorType;
-
-  constructor(type: PayloadErrorType, message?: string) {
+  constructor(
+    readonly payloadInput: PayloadEnvelopeInput,
+    readonly type: PayloadErrorType,
+    message?: string
+  ) {
     super(message ?? type.code);
-    this.type = type;
   }
 }
 
@@ -121,7 +126,7 @@ export async function importExecutionPayload(
   // 2. Get ProtoBlock for parent root lookup
   const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!protoBlock) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
       blockRootHex,
     });
@@ -129,20 +134,20 @@ export async function importExecutionPayload(
 
   // 3. Regenerate state for envelope verification
   const blockState = await this.regen
-    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.processBlock)
+    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.importExecutionPayload)
     .catch(() =>
       // only happen at the 1st batch of skipped slot checkpoint sync
       this.regen.getClosestHeadState(protoBlock)
     );
 
   if (blockState == null) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.MISS_BLOCK_STATE,
       blockRootHex: protoBlock.blockRoot,
     });
   }
   if (!isStatePostGloas(blockState)) {
-    throw new PayloadError({
+    throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
       message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
     });
@@ -157,6 +162,7 @@ export async function importExecutionPayload(
     });
   } catch (e) {
     throw new PayloadError(
+      payloadInput,
       {
         code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
         message: (e as Error).message,
@@ -180,7 +186,6 @@ export async function importExecutionPayload(
       : verifyExecutionPayloadEnvelopeSignature(
           this.config,
           blockState,
-          this.pubkeyCache,
           signedEnvelope,
           payloadInput.proposerIndex,
           this.bls
@@ -189,7 +194,7 @@ export async function importExecutionPayload(
 
   // 4b. Check signature verification result
   if (!signatureValid) {
-    throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
+    throw new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
   // 4c. Handle EL response
@@ -198,7 +203,7 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
-      throw new PayloadError({
+      throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
@@ -211,7 +216,7 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
     case ExecutionPayloadStatus.UNAVAILABLE:
-      throw new PayloadError({
+      throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
@@ -245,8 +250,8 @@ export async function importExecutionPayload(
   // 7. Queue notifyForkchoiceUpdate to engine api
   const head = this.forkChoice.getHead();
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);

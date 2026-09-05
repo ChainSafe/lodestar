@@ -67,6 +67,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
+          importedTimely: false,
+          ptcTimeliness: false,
+          proposerIndex: 0,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
@@ -95,6 +98,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
+            importedTimely: false,
+            ptcTimeliness: false,
+            proposerIndex: 0,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,
@@ -137,6 +143,25 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        confirmedRoot: toHexString(finalizedCheckpoint.root),
+        previousEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        currentEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        previousEpochGreatestUnrealizedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        previousEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousEpochGreatestUnrealizedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousSlotHead: toHexString(finalizedCheckpoint.root),
+        currentSlotHead: toHexString(finalizedCheckpoint.root),
+        stateGetter: () => null,
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },

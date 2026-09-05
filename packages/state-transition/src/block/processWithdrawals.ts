@@ -99,7 +99,7 @@ export function processWithdrawals(
     const stateGloas = state as CachedBeaconStateGloas;
 
     // Store expected withdrawals for verification
-    stateGloas.payloadExpectedWithdrawals = ssz.capella.Withdrawals.toViewDU(expectedWithdrawals);
+    stateGloas.payloadExpectedWithdrawals = ssz.gloas.Withdrawals.toViewDU(expectedWithdrawals);
 
     // Update builder pending withdrawals queue
     stateGloas.builderPendingWithdrawals = stateGloas.builderPendingWithdrawals.sliceFrom(
@@ -212,7 +212,12 @@ function getBuildersSweepWithdrawals(
       break;
     }
 
-    // Get next builder in turn
+    // Get next builder in turn, the spec does not wrap around an out of bounds start index
+    if (n === 0 && state.nextWithdrawalBuilderIndex >= builders.length) {
+      throw Error(
+        `Next withdrawal builder index ${state.nextWithdrawalBuilderIndex} out of bounds, builders count ${builders.length}`
+      );
+    }
     const builderIndex = (state.nextWithdrawalBuilderIndex + n) % builders.length;
     const builder = builders.getReadonly(builderIndex);
 
@@ -340,7 +345,12 @@ function getValidatorsSweepWithdrawals(
       break;
     }
 
-    // Get next validator in turn
+    // Get next validator in turn, the spec does not wrap around an out of bounds start index
+    if (n === 0 && nextWithdrawalValidatorIndex >= validators.length) {
+      throw Error(
+        `Next withdrawal validator index ${nextWithdrawalValidatorIndex} out of bounds, validators count ${validators.length}`
+      );
+    }
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
     const validator = validators.getReadonly(validatorIndex);

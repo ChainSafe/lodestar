@@ -1,7 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
   type IBeaconStateViewGloas,
-  type PubkeyCache,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
@@ -61,10 +60,8 @@ export function verifyExecutionPayloadEnvelope(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-  if (Number(bid.gasLimit) !== payload.gasLimit) {
-    throw new Error(
-      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${Number(bid.gasLimit)}`
-    );
+  if (bid.gasLimit !== BigInt(payload.gasLimit)) {
+    throw new Error(`Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`);
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
     throw new Error(
@@ -74,7 +71,7 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`
@@ -102,8 +99,8 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Verify consistency with expected withdrawals
-  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
+  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
     throw new Error(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
@@ -121,17 +118,10 @@ export function verifyExecutionPayloadEnvelope(
 export async function verifyExecutionPayloadEnvelopeSignature(
   config: BeaconConfig,
   state: IBeaconStateViewGloas,
-  pubkeyCache: PubkeyCache,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: number,
   bls: IBlsVerifier
 ): Promise<boolean> {
-  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-    config,
-    pubkeyCache,
-    state,
-    signedEnvelope,
-    proposerIndex
-  );
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(config, state, signedEnvelope, proposerIndex);
   return bls.verifySignatureSets([signatureSet]);
 }

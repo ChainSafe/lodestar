@@ -9,7 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {Eth2GossipsubMetrics} from "./metrics.js";
-import {GossipTopicCache, getGossipSSZType} from "./topic.js";
+import {GossipTopicCache, getGossipSSZMaxSize, getGossipSSZType} from "./topic.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -52,6 +52,13 @@ export function fastMsgIdFn(rpcMsg: RPC.Message): string {
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {
+  // Spec mandates a 20-byte gossipsub message-id, but control-message IDs from peers
+  // can be any length. Reject non-20-byte IDs to avoid a Buffer.set() RangeError on
+  // longer IDs and stale shared-buffer bytes on shorter ones.
+  // Ref: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.10/specs/phase0/p2p-interface.md?plain=1#L486
+  if (msgId.length !== 20) {
+    throw Error(`Expect msgId to be 20 bytes, got ${msgId.length}`);
+  }
   // this is the same logic to `toHex(msgId)` with better performance
   sharedMsgIdBuf.set(msgId);
   return `0x${sharedMsgIdBuf.toString("hex")}`;
@@ -91,7 +98,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
-    private readonly maxSizePerMessage: number,
+    private readonly maxPayloadSize: number,
     private readonly metrics: Eth2GossipsubMetrics | null
   ) {}
 
@@ -104,16 +111,17 @@ export class DataTransformSnappy implements DataTransform {
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     // check uncompressed data length before we actually decompress
     const uncompressedDataLength = snappyWasm.decompress_len(data);
-    if (uncompressedDataLength > this.maxSizePerMessage) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${this.maxSizePerMessage}`);
-    }
 
     const topic = this.gossipTopicCache.getTopic(topicStr);
     const sszType = getGossipSSZType(topic);
+    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
     this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
     if (uncompressedDataLength < sszType.minSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    }
+    if (uncompressedDataLength > maxSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${maxSize}`);
     }
     if (uncompressedDataLength > sszType.maxSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
@@ -132,9 +140,14 @@ export class DataTransformSnappy implements DataTransform {
    */
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     const topic = this.gossipTopicCache.getTopic(topicStr);
+    const sszType = getGossipSSZType(topic);
+    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
     this.metrics?.dataTransform.outbound.inc({type: topic.type});
-    if (data.length > this.maxSizePerMessage) {
-      throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
+    if (data.length > maxSize) {
+      throw Error(`ssz_snappy encoded data length ${data.length} > ${maxSize}`);
+    }
+    if (data.length > sszType.maxSize) {
+      throw Error(`ssz_snappy encoded data length ${data.length} > ${sszType.maxSize}`);
     }
 
     // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments

@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -37,11 +37,11 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
   });
 
-  it("PARENT_UNKNOWN", () => {
+  it("PARENT_BLOCK_UNKNOWN", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], null, {}),
-      BlockErrorCode.PARENT_UNKNOWN
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 
@@ -224,7 +224,7 @@ function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IF
       return blocks.has(blockRoot);
     },
     getFinalizedCheckpoint() {
-      return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: "", payloadStatus: PayloadStatus.FULL};
+      return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
     },
   } as Partial<IForkChoice> as IForkChoice;
 }

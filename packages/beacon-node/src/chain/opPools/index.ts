@@ -1,6 +1,7 @@
 export {AggregatedAttestationPool} from "./aggregatedAttestationPool.js";
 export {AttestationPool} from "./attestationPool.js";
-export {ExecutionPayloadBidPool} from "./executionPayloadBidPool.js";
+export {DeferredVoluntaryExitPool} from "./deferredVoluntaryExitPool.js";
+export {ExecutionPayloadBidPool, type PooledExecutionPayloadBid} from "./executionPayloadBidPool.js";
 export {OpPool} from "./opPool.js";
 export {PayloadAttestationPool} from "./payloadAttestationPool.js";
 export {ProposerPreferencesPool} from "./proposerPreferencesPool.js";

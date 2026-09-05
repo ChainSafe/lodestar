@@ -1,6 +1,5 @@
 import {
-  computeEpochAtSlot,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
 } from "@lodestar/state-transition";
@@ -35,7 +34,6 @@ async function validatePayloadAttestationMessage(
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
-  const epoch = computeEpochAtSlot(data.slot);
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
@@ -47,9 +45,8 @@ async function validatePayloadAttestationMessage(
   }
 
   // [IGNORE] The `payload_attestation_message` is the first valid message received
-  // from the validator with index `payload_attestation_message.validator_index`.
-  // A single validator can participate PTC at most once per epoch
-  if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
+  // for the slot from the validator with index `payload_attestation_message.validator_index`.
+  if (chain.seenPayloadAttesters.isKnown(data.slot, validatorIndex)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
       validatorIndex,
@@ -61,21 +58,42 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+  const block = chain.forkChoice.getBlockDefaultStatus(data.beaconBlockRoot);
+  if (!block) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
     });
   }
 
-  const state = chain.getHeadState();
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  // [IGNORE] The block referenced by `data.beacon_block_root` is at slot `data.slot`,
+  // i.e. the block has `block.slot == data.slot`.
+  if (block.slot !== data.slot) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.INVALID_BLOCK_SLOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+      blockSlot: block.slot,
+      slot: data.slot,
+    });
   }
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
+
+  // block.slot === data.slot is enforced above, so use the block's post-state directly to avoid
+  // getting through regen queue
+  const state = chain.regen.getStateSync(block.stateRoot);
+  if (state == null) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+    });
+  }
+
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  }
 
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
@@ -92,16 +110,8 @@ async function validatePayloadAttestationMessage(
   }
 
   // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
-  const validatorPubkey = chain.pubkeyCache.get(validatorIndex);
-  if (!validatorPubkey) {
-    throw new PayloadAttestationError(GossipAction.REJECT, {
-      code: PayloadAttestationErrorCode.INVALID_ATTESTER,
-      attesterIndex: validatorIndex,
-    });
-  }
-
-  const signatureSet = createSingleSignatureSetFromComponents(
-    validatorPubkey,
+  const signatureSet = createIndexedSignatureSetFromComponents(
+    validatorIndex,
     getPayloadAttestationDataSigningRoot(chain.config, data),
     payloadAttestationMessage.signature
   );
@@ -113,7 +123,7 @@ async function validatePayloadAttestationMessage(
   }
 
   // Valid
-  chain.seenPayloadAttesters.add(epoch, validatorIndex);
+  chain.seenPayloadAttesters.add(data.slot, validatorIndex);
 
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),

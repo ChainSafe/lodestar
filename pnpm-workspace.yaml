@@ -14,12 +14,14 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
+  "@chainsafe/lodestar-z": "^1.0.0"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
   vitest: "^4.0.7"
 
 allowBuilds:
+  "@chainsafe/lodestar-z": true
   "@parcel/watcher": true
   "@swc/core": true
   aws-sdk: true
@@ -37,3 +39,10 @@ overrides:
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"
   nan: "^2.19.0"
+  # Pin exactly while patches/sigstore@4.0.0.patch is in place (PR #9703).
+  # Remove together with the patch once sigstore-js#1709 ships and is consumed
+  # by libnpmpublish/lerna-lite.
+  sigstore: "4.0.0"
+
+patchedDependencies:
+  sigstore@4.0.0: patches/sigstore@4.0.0.patch

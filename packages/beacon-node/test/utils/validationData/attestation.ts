@@ -76,6 +76,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
     timeliness: false,
+    importedTimely: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     executionPayloadBlockHash: null,
     executionStatus: ExecutionStatus.PreMerge,
@@ -170,11 +173,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics: null, pubkeyCache: state.epochCtx.pubkeyCache})
-      : new BlsMultiThreadWorkerPool(
-          {},
-          {logger: testLogger(), metrics: null, pubkeyCache: state.epochCtx.pubkeyCache}
-        ),
+      ? new BlsSingleThreadVerifier({metrics: null})
+      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,

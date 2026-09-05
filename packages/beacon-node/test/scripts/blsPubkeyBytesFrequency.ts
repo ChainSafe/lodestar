@@ -9,7 +9,7 @@ import {newZeroedArray} from "@lodestar/state-transition";
 //
 // # How to use
 // ```
-// INFURA_ETH2_URL=https://someurl ../../node_modules/.bin/ts-node test/scripts/blsPubkeyBytesFrequency.ts collisions
+// INFURA_ETH2_URL=https://someurl ../../node_modules/.bin/tsx test/scripts/blsPubkeyBytesFrequency.ts collisions
 // ```
 // Available commands:
 // - `frequency`

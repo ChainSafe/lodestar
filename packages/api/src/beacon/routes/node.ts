@@ -15,10 +15,6 @@ import {HttpStatusCode} from "../../utils/httpStatusCode.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 
-// TODO: Workaround for tsgo import-elision bug: ensure this is treated as a runtime value.
-// https://github.com/microsoft/typescript-go/issues/2212
-void HttpStatusCode;
-
 export const NetworkIdentityType = new ContainerType(
   {
     /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
@@ -106,6 +102,7 @@ export enum NodeHealth {
  */
 export enum ClientCode {
   BU = "BU", // besu
+  CN = "CN", // caplin
   EJ = "EJ", // ethereumJS
   EG = "EG", // erigon
   EX = "EX", // ethrex
@@ -114,7 +111,8 @@ export enum ClientCode {
   LH = "LH", // lighthouse
   LS = "LS", // lodestar
   NM = "NM", // nethermind
-  NB = "NB", // nimbus
+  NB = "NB", // nimbus CL
+  NE = "NE", // nimbus EL
   TE = "TE", // trin-execution
   TK = "TK", // teku
   PM = "PM", // prysm
