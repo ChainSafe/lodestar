@@ -1,7 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {ForkChoiceError, ForkChoiceErrorCode, IForkChoice, ProtoNode} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, IForkChoice, ProtoArray, ProtoNode} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "@lodestar/params";
 import {isFinalizedCheckpointAncestor} from "../../../../src/chain/validation/isFinalizedCheckpointAncestor.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 describe("finalized checkpoint ancestry", () => {
   const checkpoint = {epoch: 2, root: ZERO_HASH, rootHex: ZERO_HASH_HEX};
@@ -17,16 +18,28 @@ describe("finalized checkpoint ancestry", () => {
   });
 
   it("handles a retained conflicting branch whose ancestor has been pruned", () => {
-    const forkChoice = {
-      getAncestor: () => {
-        throw new ForkChoiceError({
-          code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
-          descendantRoot: "descendant",
-          ancestorSlot: 2 * SLOTS_PER_EPOCH,
-        });
-      },
-    };
-    expect(isFinalizedCheckpointAncestor(forkChoice, "descendant", checkpoint)).toBe(false);
+    const protoArray = ProtoArray.initialize(generateProtoBlock({blockRoot: "genesis"}), 0);
+    const finalizedSlot = checkpoint.epoch * SLOTS_PER_EPOCH;
+    protoArray.onBlock(
+      generateProtoBlock({slot: finalizedSlot, blockRoot: checkpoint.rootHex, parentRoot: "genesis"}),
+      finalizedSlot,
+      null
+    );
+    protoArray.onBlock(
+      generateProtoBlock({slot: finalizedSlot + 1, blockRoot: "conflicting", parentRoot: "genesis"}),
+      finalizedSlot + 1,
+      null
+    );
+    expect(isFinalizedCheckpointAncestor(protoArray, checkpoint.rootHex, checkpoint)).toBe(true);
+    expect(isFinalizedCheckpointAncestor(protoArray, "conflicting", checkpoint)).toBe(false);
+
+    protoArray.pruneThreshold = 0;
+    expect(protoArray.maybePrune(checkpoint.rootHex).map((block) => block.blockRoot)).toEqual(["genesis"]);
+    expect(() => protoArray.getAncestor("conflicting", finalizedSlot)).toThrowError(
+      expect.objectContaining({type: expect.objectContaining({code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR})})
+    );
+    expect(isFinalizedCheckpointAncestor(protoArray, checkpoint.rootHex, checkpoint)).toBe(true);
+    expect(isFinalizedCheckpointAncestor(protoArray, "conflicting", checkpoint)).toBe(false);
   });
 
   it.each([

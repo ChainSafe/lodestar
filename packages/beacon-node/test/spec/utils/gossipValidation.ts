@@ -4,26 +4,28 @@ import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
 import snappy from "snappy";
+import tmp from "tmp";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, isForkPostBellatrix} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  IBeaconStateView,
   computeEpochAtSlot,
   createCachedBeaconState,
   isExecutionStateType,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {RootHex, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {IChainEvents} from "../../../src/chain/emitter.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {
   AttestationError,
@@ -44,13 +46,14 @@ import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCom
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {BeaconDb} from "../../../src/db/index.js";
+import {ExecutionPayloadStatus as EnginePayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {GossipType} from "../../../src/network/gossip/interface.js";
 import {sszDeserialize, sszDeserializeSingleAttestation} from "../../../src/network/gossip/topic.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
-import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
 const gossipLogger = testLogger("spec-gossip");
@@ -110,7 +113,7 @@ export class GossipTestClock extends EventEmitter implements IClock {
   }
 
   async waitForSlot(): Promise<void> {
-    // Not used in tests
+    throw Error("Gossip fixture clock does not support waiting for slots");
   }
 
   secFromSlot(slot: number, toSec?: number): number {
@@ -300,36 +303,6 @@ class GossipForkChoice extends ForkChoice {
   }
 }
 
-function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatus {
-  switch (fork) {
-    case ForkName.deneb:
-    case ForkName.electra:
-    case ForkName.fulu:
-    case ForkName.gloas:
-      return DataAvailabilityStatus.Available;
-
-    default:
-      return DataAvailabilityStatus.PreData;
-  }
-}
-
-function computePostState(
-  parentState: IBeaconStateView,
-  signedBlock: SignedBeaconBlock,
-  fork: ForkName
-): IBeaconStateView {
-  return parentState.stateTransition(
-    signedBlock,
-    {
-      verifyStateRoot: true,
-      verifyProposer: true,
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus: getDataAvailabilityStatusForFork(fork),
-    },
-    {}
-  );
-}
-
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
   if (!parentBlock?.executionPayloadBlockHash) {
@@ -430,101 +403,134 @@ export async function runGossipValidationTest(
   );
   clock.setSlot(anchorState.slot);
 
-  const chain = new BeaconChain(
-    {
-      ...defaultChainOptions,
-      // Disable non-spec maxSkipSlots check for conformance tests
-      maxSkipSlots: undefined,
-      blsVerifyAllMainThread: true,
-      disableArchiveOnCheckpoint: true,
-      disableLightClientServerOnImportBlockHead: true,
-      disableOnBlockError: true,
-      disablePrepareNextSlot: true,
-      assertCorrectProgressiveBalances,
-      forkchoiceConstructor: GossipForkChoice,
-      proposerBoost: true,
-      proposerBoostReorg: true,
-    },
-    {
-      privateKey: await generateKeyPair("secp256k1"),
-      config: beaconConfig,
-      pubkeyCache,
-      db: getMockedBeaconDb(),
-      dataDir: ".",
-      dbName: ",",
-      logger,
-      processShutdownCallback: () => {},
-      clock,
-      metrics: null,
-      validatorMonitor: null,
-      anchorState: anchorStateView,
-      isAnchorStateFinalized: true,
-      executionEngine,
-      executionBuilder: undefined,
+  const dbDir = tmp.dirSync({unsafeCleanup: true});
+  const db = new BeaconDb(beaconConfig, await LevelDbController.create({name: dbDir.name}, {logger}));
+  const finalizationTasks: Promise<PromiseSettledResult<void>[]>[] = [];
+  async function drainFinalizationTasks(): Promise<void> {
+    for (const results of await Promise.all(finalizationTasks.splice(0))) {
+      for (const result of results) {
+        if (result.status === "rejected") throw result.reason;
+      }
     }
-  );
-
-  // Fixtures retain their full DAG, including branches that conflict with the finalized override.
-  chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
-
+  }
+  let chain: BeaconChain | undefined;
   try {
+    await db.blockArchive.add(anchorBlock);
+    chain = new BeaconChain(
+      {
+        ...defaultChainOptions,
+        // Disable non-spec maxSkipSlots check for conformance tests
+        maxSkipSlots: undefined,
+        blsVerifyAllMainThread: true,
+        disableArchiveOnCheckpoint: true,
+        disableLightClientServerOnImportBlockHead: true,
+        disableOnBlockError: true,
+        disablePrepareNextSlot: true,
+        assertCorrectProgressiveBalances,
+        forkchoiceConstructor: GossipForkChoice,
+        proposerBoost: true,
+        proposerBoostReorg: true,
+      },
+      {
+        privateKey: await generateKeyPair("secp256k1"),
+        config: beaconConfig,
+        pubkeyCache,
+        db,
+        dataDir: dbDir.name,
+        dbName: "gossip-spec",
+        logger,
+        processShutdownCallback: () => {},
+        clock,
+        metrics: null,
+        validatorMonitor: null,
+        anchorState: anchorStateView,
+        isAnchorStateFinalized: true,
+        executionEngine,
+        executionBuilder: undefined,
+      }
+    );
+
+    // Run the real listeners, but await their work before validating messages or closing the fixture database.
+    const finalizedListeners = chain.emitter.listeners(
+      ChainEvent.forkChoiceFinalized
+    ) as IChainEvents[ChainEvent.forkChoiceFinalized][];
+    for (const listener of finalizedListeners) {
+      chain.emitter.off(ChainEvent.forkChoiceFinalized, listener);
+      chain.emitter.on(ChainEvent.forkChoiceFinalized, (checkpoint) => {
+        finalizationTasks.push(Promise.allSettled([listener(checkpoint)]));
+      });
+    }
+
     const blockRootsByName = new Map<string, RootHex>();
-    const blockStatesByRoot = new Map<RootHex, IBeaconStateView>();
     const unimportedBlocks = new Map<RootHex, MetaYaml["blocks"][number]>();
 
     const anchorRootHex = toRootHex(anchorStateView.computeAnchorCheckpoint().checkpoint.root);
-    blockStatesByRoot.set(anchorRootHex, anchorStateView);
     blockRootsByName.set(anchorEntry.block, anchorRootHex);
 
-    // Setup imports are not gossip messages and must not populate gossip seen caches.
+    // Setup blocks use the normal import path, including its seen-cache and fork-choice updates.
     for (const blockEntry of meta.blocks.slice(1)) {
       const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, blockEntry.block));
       const slot = signedBlock.message.slot;
       const blockRootHex = toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message));
       blockRootsByName.set(blockEntry.block, blockRootHex);
-      // These flags describe store membership; some vectors use otherwise valid block bytes.
-      if (blockEntry.failed || blockEntry.pending) {
+      if (blockEntry.pending) {
         unimportedBlocks.set(blockRootHex, blockEntry);
         continue;
       }
 
       const parentRootHex = toRootHex(signedBlock.message.parentRoot);
-      const parentState = blockStatesByRoot.get(parentRootHex);
-      if (!parentState) {
-        throw Error(`Missing parent state for ${blockEntry.block} with parent ${parentRootHex}`);
-      }
-
-      const postState = computePostState(parentState, signedBlock, fork);
       clock.setSlot(slot);
       chain.forkChoice.updateTime(slot);
-      chain.checkpointBalancesCache.processState(blockRootHex, postState);
-      chain.forkChoice.onBlock(
-        signedBlock.message,
-        postState,
-        0,
-        0,
-        slot,
-        !isForkPostBellatrix(fork)
-          ? ExecutionStatus.PreMerge
-          : blockEntry.payload_status === "INVALIDATED" || blockEntry.payload_status === "NOT_VALIDATED"
-            ? ExecutionStatus.Syncing
-            : ExecutionStatus.Valid,
-        getDataAvailabilityStatusForFork(fork)
-      );
-      chain.regen.processState(blockRootHex, postState);
-      chain.shufflingCache.processState(postState);
-      blockStatesByRoot.set(blockRootHex, postState);
+      if ("executionPayload" in signedBlock.message.body) {
+        const blockHash = toRootHex(signedBlock.message.body.executionPayload.blockHash);
+        const optimistic = blockEntry.payload_status === "INVALIDATED" || blockEntry.payload_status === "NOT_VALIDATED";
+        executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
+          status: optimistic ? EnginePayloadStatus.SYNCING : EnginePayloadStatus.VALID,
+          latestValidHash: optimistic ? null : blockHash,
+          validationError: null,
+        });
+      }
+
+      if ("blobKzgCommitments" in signedBlock.message.body) {
+        expect(signedBlock.message.body.blobKzgCommitments).toHaveLength(0);
+      }
+      const blockInput = chain.seenBlockInputCache.getByBlock({
+        block: signedBlock,
+        blockRootHex,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: genesisTimeSec + (slot * beaconConfig.SLOT_DURATION_MS) / 1000,
+      });
+      const importResult = chain.processBlock(blockInput, {
+        importAttestations: AttestationImportOpt.Force,
+        validSignatures: false,
+      });
+      if (blockEntry.failed) {
+        // Failed fixtures deliberately use incorrect state roots, not arbitrary import errors.
+        await expect(
+          importResult,
+          `Failed fixture ${blockEntry.block} must fail production import`
+        ).rejects.toMatchObject({
+          type: {code: BlockErrorCode.INVALID_STATE_ROOT},
+        });
+        expect(chain.forkChoice.getBlockHexDefaultStatus(blockRootHex)).toBeNull();
+        unimportedBlocks.set(blockRootHex, blockEntry);
+        continue;
+      }
+      await importResult;
+      await drainFinalizationTasks();
       if (blockEntry.payload_status === "INVALIDATED") {
         invalidateImportedBlock(chain, blockRootHex, parentRootHex);
+        chain.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
       }
-      chain.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
     }
 
     const finalizedCheckpoint = resolveFinalizedCheckpoint(meta, testCaseDir, fork, blockRootsByName);
     if (finalizedCheckpoint) {
       if (!(chain.forkChoice instanceof GossipForkChoice)) throw Error("Unexpected fork choice");
       chain.forkChoice.setFinalizedCheckpoint(finalizedCheckpoint);
+      chain.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
     }
+    await drainFinalizationTasks();
 
     const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
@@ -547,8 +553,14 @@ export async function runGossipValidationTest(
       );
     }
   } finally {
-    controller.abort();
-    await chain.close();
+    try {
+      await drainFinalizationTasks();
+    } finally {
+      controller.abort();
+      await chain?.close();
+      await db.close();
+      dbDir.removeCallback();
+    }
   }
 }
 
@@ -568,11 +580,6 @@ async function validateMessageForTopic(
       const signedBlock = sszDeserialize({type: topic, boundary}, bytes);
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(
-        signedBlock.message.slot,
-        signedBlock.message.proposerIndex,
-        toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message))
-      );
       break;
     }
 
