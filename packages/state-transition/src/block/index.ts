@@ -53,6 +53,10 @@ export function processBlock(
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
+  // Capture the parent block's slot before processBlockHeader overwrites latestBlockHeader
+  const parentSlot: Slot | null =
+    fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null;
+
   // Apply the parent's deferred payload effects before everything else. Must run before
   // processBlockHeader and processExecutionPayloadBid so subsequent steps see the updated state.
   if (fork >= ForkSeq.gloas) {
@@ -86,9 +90,8 @@ export function processBlock(
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
   }
 
-  let parentSlot: Slot | null = null;
   if (fork >= ForkSeq.gloas) {
-    parentSlot = processExecutionPayloadBid(
+    processExecutionPayloadBid(
       state as CachedBeaconStateGloas,
       (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
     );
