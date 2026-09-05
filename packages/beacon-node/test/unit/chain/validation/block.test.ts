@@ -115,7 +115,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("rejects a parent on a conflicting finalized branch before it is pruned", async () => {
+  it("rejects an explicit finalized checkpoint mismatch at epoch zero", async () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null).mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
     forkChoice.getAncestor.mockReturnValue({blockRoot: "conflicting-root"} as ReturnType<
       typeof forkChoice.getAncestor

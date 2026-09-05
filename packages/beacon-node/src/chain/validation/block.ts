@@ -111,7 +111,7 @@ export async function validateGossipBlock(
   const parentRoot = toRootHex(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
-    // The parent may be unknown, pre-finalization, or on a pruned conflicting branch.
+    // The parent may be unknown, pre-finalization, or outside the finalized branch.
     // Non-canonical blocks are deleted during archiving, so db.block cannot reliably
     // distinguish an unseen parent from a known conflicting block.
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
@@ -149,7 +149,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block.
-  // Being in fork choice is not sufficient: pruning runs asynchronously after finalization.
+  // At epoch zero, fork-choice lookup does not enforce finalized ancestry.
   if (!isFinalizedCheckpointAncestor(chain.forkChoice, parentRoot, finalizedCheckpoint)) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT, parentRoot});
   }
