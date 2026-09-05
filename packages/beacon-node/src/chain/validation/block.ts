@@ -111,7 +111,9 @@ export async function validateGossipBlock(
   const parentRoot = toRootHex(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
-    // Unknown parents cannot be distinguished from pruned pre-finalized or conflicting blocks.
+    // The parent may be unknown, pre-finalization, or on a pruned conflicting branch.
+    // Non-canonical blocks are deleted during archiving, so db.block cannot reliably
+    // distinguish an unseen parent from a known conflicting block.
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
@@ -146,7 +148,8 @@ export async function validateGossipBlock(
     });
   }
 
-  // Fork choice retains conflicting branches until asynchronous archive pruning completes.
+  // [REJECT] The current finalized_checkpoint is an ancestor of block.
+  // Being in fork choice is not sufficient: pruning runs asynchronously after finalization.
   if (!isFinalizedCheckpointAncestor(chain.forkChoice, parentRoot, finalizedCheckpoint)) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT, parentRoot});
   }
@@ -246,7 +249,10 @@ export async function validateGossipBlock(
     // This requires execution engine integration to verify the parent block hash
   }
 
-  // Gossip forwarding only needs a state for the proposer check. Missing states can be retried after regeneration.
+  // For gossip forwarding we only need the state to check the block's proposer index.
+  // [REJECT] The block's parent (defined by block.parent_root) passes validation.
+  // Parents in fork choice have passed consensus validation, but their states may still be unavailable.
+  // If regeneration fails, IGNORE rather than treating a missing state as evidence of an invalid parent.
   const canUseParentState = blockEpoch - computeEpochAtSlot(parentBlock.slot) <= MIN_SEED_LOOKAHEAD;
 
   const getValidationState = async () => {
