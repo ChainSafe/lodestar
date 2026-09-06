@@ -168,6 +168,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     assertNativeForkSupported(config, binding.slot);
   }
 
+  release(): void {
+    this.binding.release();
+  }
+
   get executionPayloadAvailability(): BitArray {
     throw new Error("NativeBeaconStateView does not support Gloas");
   }

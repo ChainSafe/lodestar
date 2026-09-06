@@ -11,6 +11,7 @@ import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqu
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
+  replaceStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
@@ -54,18 +55,20 @@ const transition =
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
-          state = state.stateTransition(
-            {block: signedBlock},
-            {
-              // Assume valid and available for this test
-              executionPayloadStatus: ExecutionPayloadStatus.valid,
-              dataAvailabilityStatus: DataAvailabilityStatus.Available,
-              verifyStateRoot: true,
-              verifyProposer: false,
-              verifySignatures: false,
-              assertCorrectProgressiveBalances,
-            },
-            {}
+          state = replaceStateViewForTest(state, (preState) =>
+            preState.stateTransition(
+              {block: signedBlock},
+              {
+                // Assume valid and available for this test
+                executionPayloadStatus: ExecutionPayloadStatus.valid,
+                dataAvailabilityStatus: DataAvailabilityStatus.Available,
+                verifyStateRoot: true,
+                verifyProposer: false,
+                verifySignatures: false,
+                assertCorrectProgressiveBalances,
+              },
+              {}
+            )
           );
         }
         return stateViewToBeaconState(forkNext, state);

@@ -64,6 +64,17 @@ describe("NativeBeaconStateView", () => {
     expect(forkSeqAccessCount).toBe(1);
   });
 
+  it("releases the native binding", () => {
+    const binding = {
+      slot: 0,
+      release: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+
+    new NativeBeaconStateView(binding, config).release();
+
+    expect(binding.release).toHaveBeenCalledOnce();
+  });
+
   it("delegates pass-through getters and methods to the binding", () => {
     const binding = {
       slot: 123,
