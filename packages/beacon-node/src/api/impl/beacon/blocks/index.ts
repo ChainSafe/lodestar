@@ -1073,16 +1073,6 @@ export function getBeaconBlockApi({
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(elapsedSec * 1000)
-        );
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
-
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {

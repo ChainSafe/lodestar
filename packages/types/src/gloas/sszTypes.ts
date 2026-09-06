@@ -251,7 +251,9 @@ export const BuilderPendingWithdrawals = new ProgressiveListCompositeType(Builde
 });
 
 export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
-export const PtcWindow = new VectorCompositeType(
+export const PayloadTimelinessCommitteeIndices = new ListBasicType(ValidatorIndex, PTC_SIZE);
+export const PayloadTimelinessCommitteeBits = new BitVectorType(PTC_SIZE);
+export const PayloadTimelinessCommitteeWindow = new VectorCompositeType(
   PayloadTimelinessCommittee,
   (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
 );
@@ -268,7 +270,7 @@ export const PayloadAttestationData = new ContainerType(
 
 export const PayloadAttestation = new ProgressiveContainerType(
   {
-    aggregationBits: new BitVectorType(PTC_SIZE),
+    aggregationBits: PayloadTimelinessCommitteeBits,
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
@@ -291,7 +293,7 @@ export const PayloadAttestationMessage = new ContainerType(
 
 export const IndexedPayloadAttestation = new ProgressiveContainerType(
   {
-    attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),
+    attestingIndices: PayloadTimelinessCommitteeIndices,
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
@@ -604,7 +606,7 @@ export const BeaconState = new ProgressiveContainerType(
     builderPendingWithdrawals: BuilderPendingWithdrawals, // New in GLOAS:EIP7732
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
-    ptcWindow: PtcWindow, // New in GLOAS:EIP7732
+    ptcWindow: PayloadTimelinessCommitteeWindow, // New in GLOAS:EIP7732
   },
   activeFields(46),
   {typeName: "BeaconState", jsonCase: "eth2"}

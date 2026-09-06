@@ -106,6 +106,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       unrealizedFinalizedEpoch: 0,
       unrealizedFinalizedRoot: blockRoot,
       timeliness: false,
+      importedTimely: false,
       ptcTimeliness: false,
       proposerIndex: 0,
       executionPayloadBlockHash: null,
