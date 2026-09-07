@@ -41,4 +41,16 @@ describe("ProportionalBidPolicy", () => {
       () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 1, maxValueGwei: 0})
     ).toThrow();
   });
+
+  it("computes a full-value bid without unsafe intermediate arithmetic", () => {
+    const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0});
+    expect(
+      policy.computeValue({payloadValueGwei: Number.MAX_SAFE_INTEGER, coverableGwei: Number.MAX_SAFE_INTEGER})
+    ).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  it("rounds a proportional value down before deducting the fixed cost", () => {
+    const policy = new ProportionalBidPolicy({shareBps: 3333, fixedCostGwei: 2, minValueGwei: 0});
+    expect(policy.computeValue({payloadValueGwei: 10, coverableGwei: 100})).toBe(1);
+  });
 });

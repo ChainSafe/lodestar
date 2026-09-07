@@ -43,7 +43,8 @@ export class ProportionalBidPolicy implements BidPolicy {
   }
 
   computeValue({payloadValueGwei, coverableGwei}: BidContext): number | null {
-    const share = Math.floor((payloadValueGwei * this.opts.shareBps) / 10_000) - this.opts.fixedCostGwei;
+    const proportionalValue = Number((BigInt(payloadValueGwei) * BigInt(this.opts.shareBps)) / 10_000n);
+    const share = proportionalValue - this.opts.fixedCostGwei;
     // This will override `fixedCostGwei` for the sake of fulfilling `minValueGwei`
     let value = Math.max(this.opts.minValueGwei, share);
     if (this.opts.maxValueGwei !== undefined) {
