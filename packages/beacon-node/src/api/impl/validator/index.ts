@@ -166,18 +166,6 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
   return a.receivedMs - b.receivedMs;
 }
 
-/** Render a bid candidate for the ranking log */
-function formatBidCandidate(candidate: BidCandidate): string {
-  return `{${[
-    `source=${candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p"}`,
-    `builder=${candidate.signedBid.message.builderIndex}`,
-    `total=${prettyGweiToEth(candidate.totalGwei)}`,
-    `boost=${candidate.boostFactor}`,
-    `boosted=${prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n)}`,
-    `received=${candidate.receivedMs}ms`,
-  ].join(", ")}}`;
-}
-
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents;
   version: ForkName;
@@ -1063,10 +1051,18 @@ export function getValidatorApi(
         }
 
         const rankedCandidates = candidates.toSorted(compareBidCandidates);
-        logger.debug("Ranked builder bid candidates", {
-          slot,
-          candidates: rankedCandidates.map(formatBidCandidate).join(", "),
-        });
+        for (const [index, candidate] of rankedCandidates.entries()) {
+          logger.debug("Builder bid candidate", {
+            slot,
+            rank: index + 1,
+            source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
+            builder: candidate.signedBid.message.builderIndex,
+            total: prettyGweiToEth(candidate.totalGwei),
+            boost: candidate.boostFactor,
+            boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
+            receivedMs: candidate.receivedMs,
+          });
+        }
         return rankedCandidates[0];
       })();
 
