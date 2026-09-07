@@ -87,6 +87,7 @@ export class PayloadOrchestrator {
   /**
    * Runs one build job. The first invocation for an active job ID owns its abort signal; duplicate
    * invocations share that job's promise and must therefore use the same Builder-lifetime signal.
+   * Request contents must remain unchanged until the job settles.
    */
   run(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
     if (!Number.isSafeInteger(job.getPayloadAt)) {
@@ -130,13 +131,14 @@ export class PayloadOrchestrator {
       );
     }
 
-    const promise = this.runJob(job, signal).finally(() => {
-      if (this.activeJobs.get(job.id)?.promise === promise) {
-        this.activeJobs.delete(job.id);
+    const {id} = job;
+    const promise = this.runJob({...job}, signal).finally(() => {
+      if (this.activeJobs.get(id)?.promise === promise) {
+        this.activeJobs.delete(id);
       }
     });
 
-    this.activeJobs.set(job.id, {fingerprint, promise});
+    this.activeJobs.set(id, {fingerprint, promise});
     return promise;
   }
 

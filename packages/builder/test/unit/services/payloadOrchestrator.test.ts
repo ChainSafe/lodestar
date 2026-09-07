@@ -143,6 +143,28 @@ describe("PayloadOrchestrator", () => {
     expect(orchestrator.activeJobCount).toBe(0);
   });
 
+  it("releases the original job when the caller reuses its input object", async () => {
+    const source = new StubPayloadSource();
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const job = buildJob();
+    const signal = new AbortController().signal;
+    const pending = orchestrator.run(job, signal);
+    job.id = "next-slot";
+    job.getPayloadAt = NOW + 1_000;
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(source.getPayloadCalls).toHaveLength(1);
+    await pending;
+    expect(orchestrator.activeJobCount).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+
+    const next = orchestrator.run(buildJob("next-slot", Date.now() + 100), signal);
+    await vi.advanceTimersByTimeAsync(100);
+    await next;
+    expect(orchestrator.activeJobCount).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("shares one promise for duplicate job IDs", async () => {
     const source = new StubPayloadSource();
     const pendingPrepare = defer<BuildHandle>();
