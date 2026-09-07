@@ -207,8 +207,7 @@ export async function processBlocks(
       if (isPeerAttributableFailure(err.type.code)) {
         this.seenPayloadEnvelopeInputCache.prune(err.payloadInput.blockRootHex);
       }
-    } else if (!opts.disableOnBlockError) {
-      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
+    } else {
       if (isPeerAttributableFailure(err.type.code)) {
         // Same for the block, its signature or data may be bad while the root matches the canonical block
         const blockRootHex =
@@ -219,26 +218,29 @@ export async function processBlocks(
         this.seenBlockInputCache.prune(blockRootHex);
       }
 
-      if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {state} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {preState, postState} = err.type;
-        const preRoot = preState.hashTreeRoot();
-        const postRoot = postState.hashTreeRoot();
-        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
-          this.logger.error(
-            "Error persisting invalid state root objects",
-            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
-            e
-          );
-        });
+      if (!opts.disableOnBlockError) {
+        this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
+        if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
+          const {signedBlock} = err;
+          const blockSlot = signedBlock.message.slot;
+          const {state} = err.type;
+          const forkTypes = this.config.getForkTypes(blockSlot);
+          this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
+          this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
+        } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
+          const {signedBlock} = err;
+          const blockSlot = signedBlock.message.slot;
+          const {preState, postState} = err.type;
+          const preRoot = preState.hashTreeRoot();
+          const postRoot = postState.hashTreeRoot();
+          this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
+            this.logger.error(
+              "Error persisting invalid state root objects",
+              {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
+              e
+            );
+          });
+        }
       }
     }
 
