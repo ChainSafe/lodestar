@@ -360,9 +360,10 @@ export class NetworkProcessor {
       return;
     }
 
-    // DOS protection: drop far-future messages before allocating any unknown-root tracking entry
-    // only execution_payload_bid accept the next slot
-    const latestPermissableSlot = this.chain.clock.currentSlotWithGossipDisparity + 1;
+    // DOS protection: drop far-future messages before allocating any unknown-root tracking entry.
+    // Bound each topic to what its gossip validator accepts; only execution_payload_bid accepts the next slot.
+    const latestPermissableSlot =
+      this.chain.clock.currentSlotWithGossipDisparity + (topicType === GossipType.execution_payload_bid ? 1 : 0);
     if (slot > latestPermissableSlot) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
       this.metrics?.networkProcessor.gossipValidationError.inc({
