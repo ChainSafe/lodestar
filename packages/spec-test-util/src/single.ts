@@ -128,6 +128,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
           } catch (_e) {
             return;
           }
+          expect.unreachable("Expected test function to throw");
         } else {
           const result = await testFunction(testCase, name, testSubDirname);
           if (!options.getExpected) throw Error("getExpected is not defined");

@@ -28,6 +28,7 @@ function buildBlock(opts: {
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: "0x00",
     timeliness: true,
+    importedTimely: true,
     ptcTimeliness: false,
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,

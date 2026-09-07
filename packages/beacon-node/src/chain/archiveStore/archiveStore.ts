@@ -1,5 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -208,6 +209,9 @@ export class ArchiveStore {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
+      // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
+      const isNodeSynced = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot <= SLOTS_PER_EPOCH;
+
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
@@ -217,6 +221,8 @@ export class ArchiveStore {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
+        this.metrics,
+        isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
         this.chain.opts.persistOrphanedBlocksDir

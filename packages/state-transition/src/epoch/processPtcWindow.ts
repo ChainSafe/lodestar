@@ -30,7 +30,7 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
 
   // Write shifted window to state: current(N) + next(N+1) + newlyComputed(N+2)
   // From the perspective of upcoming epoch N+1, this is previous + current + next
-  state.ptcWindow = ssz.gloas.PtcWindow.toViewDU([
+  state.ptcWindow = ssz.gloas.PayloadTimelinessCommitteeWindow.toViewDU([
     ...state.epochCtx.payloadTimelinessCommittees,
     ...state.epochCtx.nextPayloadTimelinessCommittees,
     ...newNextPayloadTimelinessCommittees,

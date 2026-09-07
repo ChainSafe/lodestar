@@ -57,6 +57,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -85,6 +86,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
 
@@ -115,6 +117,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
     weight: 212, // 240 - 29 + 1

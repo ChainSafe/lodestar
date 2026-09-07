@@ -50,12 +50,20 @@ describe("validateApiExecutionPayloadBid", () => {
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
     signedBid.message.prevRandao = randaoMix;
+    signedBid.message.blockHash = Buffer.alloc(32, 9);
     vi.mocked(chain.clock.isCurrentSlotGivenGossipDisparity).mockReturnValue(true);
   });
 
   it("accepts a valid bid", async () => {
     expect(await validateApiExecutionPayloadBid(chain, signedBid)).toBeUndefined();
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a bid whose block hash equals its parent block hash", async () => {
+    signedBid.message.blockHash = signedBid.message.parentBlockHash;
+    await expect(validateApiExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH},
+    });
   });
 
   it("rejects a bid outside the slot window", async () => {

@@ -56,6 +56,16 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Bid block hash ${toRootHex(bid.blockHash)} must not equal its parent block hash`);
+  }
+
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
+  }
+
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(
@@ -98,12 +108,6 @@ export async function validateBuilderApiExecutionPayloadBid(
       `Bid builder pubkey=${toHex(builder.pubkey)} is not in the entry's ` +
         `builderPubkeys=${entry.builderPubkeys.map(toHex).join(",")}`
     );
-  }
-
-  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
-  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-    throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
   }
 
   // The coverage check only applies to the staked collateral payment, a pure execution
