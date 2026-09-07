@@ -1,7 +1,7 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {LogLevel, isErrorAborted, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -11,9 +11,10 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
-import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadError, PayloadErrorCode, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
+import {getBlockErrorLogLevel} from "./utils/blockErrorLogLevel.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {isPeerAttributableFailure} from "./utils/peerAttributableError.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -23,6 +24,8 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
+/** Block or payload errors already logged above debug level, bounded to the most recent ones */
+const MAX_REPORTED_BLOCK_ERRORS = 1024;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -196,11 +199,7 @@ export async function processBlocks(
       this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
     } else if (err instanceof PayloadError) {
       if (!opts.disableOnBlockError) {
-        this.logger.debug(
-          "Payload error",
-          {slot: err.payloadInput.slot, blockRoot: err.payloadInput.blockRootHex},
-          err
-        );
+        logBlockOrPayloadError.call(this, "Payload error", err.type.code, err.payloadInput, err);
       }
       // The envelope came from an untrusted range peer, drop it from the shared cache so the retried batch
       // downloads it again instead of re-verifying the same bytes. Gossip does the same on REJECT
@@ -208,14 +207,20 @@ export async function processBlocks(
         this.seenPayloadEnvelopeInputCache.prune(err.payloadInput.blockRootHex);
       }
     } else if (!opts.disableOnBlockError) {
-      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
+      const blockRootHex =
+        blocks.find((blockInput) => blockInput.getBlock() === err.signedBlock)?.blockRootHex ??
+        toRootHex(
+          this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message)
+        );
+      logBlockOrPayloadError.call(
+        this,
+        "Block error",
+        err.type.code,
+        {slot: err.signedBlock.message.slot, blockRootHex},
+        err
+      );
       if (isPeerAttributableFailure(err.type.code)) {
         // Same for the block, its signature or data may be bad while the root matches the canonical block
-        const blockRootHex =
-          blocks.find((blockInput) => blockInput.getBlock() === err.signedBlock)?.blockRootHex ??
-          toRootHex(
-            this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message)
-          );
         this.seenBlockInputCache.prune(blockRootHex);
       }
 
@@ -244,6 +249,31 @@ export async function processBlocks(
 
     throw err;
   }
+}
+
+/**
+ * The first occurrence of an error for a block is logged at the level of the error, repeats of the same error for the
+ * same block are only logged at debug level. Range sync retries a failed batch several times and unknown block sync
+ * retries a block, both would otherwise repeat the same warning for a block that cannot be imported.
+ */
+function logBlockOrPayloadError(
+  this: BeaconChain,
+  message: string,
+  code: BlockErrorCode | PayloadErrorCode,
+  {slot, blockRootHex}: {slot: Slot; blockRootHex: RootHex},
+  err: Error
+): void {
+  const key = `${code}:${blockRootHex}`;
+  let level = getBlockErrorLogLevel(code);
+  if (level !== LogLevel.debug) {
+    if (this.reportedBlockErrors.has(key)) {
+      level = LogLevel.debug;
+    } else {
+      this.reportedBlockErrors.add(key);
+      pruneSetToMax(this.reportedBlockErrors, MAX_REPORTED_BLOCK_ERRORS);
+    }
+  }
+  this.logger[level](message, {slot, blockRoot: blockRootHex}, err);
 }
 
 /**

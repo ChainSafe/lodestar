@@ -5,7 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {LogLevel, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
@@ -452,6 +452,60 @@ describe("chain / blocks / processBlocks", () => {
       expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
     }
   });
+
+  it.each([
+    {message: "Block error", code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, level: LogLevel.debug},
+    {message: "Block error", code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS, level: LogLevel.warn},
+    {message: "Block error", code: BlockErrorCode.INCORRECT_TIMESTAMP, level: LogLevel.warn},
+    {message: "Block error", code: BlockErrorCode.BEACON_CHAIN_ERROR, level: LogLevel.error},
+    {message: "Payload error", code: PayloadErrorCode.EXECUTION_ENGINE_ERROR, level: LogLevel.debug},
+    {message: "Payload error", code: PayloadErrorCode.EXECUTION_ENGINE_INVALID, level: LogLevel.warn},
+  ])("logs $message $code at $level level", async ({message, code, level}) => {
+    const {err, slot, blockRoot} = createImportError(message, code);
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(err);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(err);
+
+    expect(chain.logger[level]).toHaveBeenCalledExactlyOnceWith(message, {slot, blockRoot}, err);
+    for (const other of [LogLevel.error, LogLevel.warn, LogLevel.debug].filter((l) => l !== level)) {
+      expect(chain.logger[other]).not.toHaveBeenCalledWith(message, expect.anything(), expect.anything());
+    }
+  });
+
+  it("logs repeats of the same error for the same block at debug level", async () => {
+    const {err, slot, blockRoot} = createImportError("Block error", BlockErrorCode.NON_LINEAR_PARENT_ROOTS);
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(err);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(err);
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(err);
+
+    expect(chain.logger.warn).toHaveBeenCalledExactlyOnceWith("Block error", {slot, blockRoot}, err);
+    expect(chain.logger.debug).toHaveBeenCalledExactlyOnceWith("Block error", {slot, blockRoot}, err);
+
+    // a different error for the same block is not a repeat
+    const {err: otherErr} = createImportError("Block error", BlockErrorCode.BLACKLISTED_BLOCK);
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(otherErr);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(otherErr);
+
+    expect(chain.logger.warn).toHaveBeenCalledWith("Block error", {slot, blockRoot}, otherErr);
+  });
+
+  function createImportError(
+    message: string,
+    code: BlockErrorCode | PayloadErrorCode
+  ): {err: BlockError | PayloadError; slot: number; blockRoot: string} {
+    if (message === "Block error") {
+      const err = new BlockError(blockInput.getBlock(), {
+        code,
+        error: new Error("boom"),
+      } as unknown as BlockError["type"]);
+      return {err, slot: blockInput.getBlock().message.slot, blockRoot: blockInput.blockRootHex};
+    }
+    const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
+    const err = new PayloadError(payloadInput, {code, errorMessage: "bad payload"} as unknown as PayloadError["type"]);
+    return {err, slot: 1, blockRoot: "0x1234"};
+  }
 
   // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
   // has to be selective.
