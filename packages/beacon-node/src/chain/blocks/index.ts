@@ -11,10 +11,11 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
-import {PayloadError, PayloadErrorCode, importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
+import {isPeerAttributableFailure} from "./utils/peerAttributableError.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
@@ -22,13 +23,6 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
-
-/** Payload errors caused by the envelope itself rather than by our own state or the execution client being unavailable */
-const REJECTED_PAYLOAD_ERROR_CODES = new Set<PayloadErrorCode>([
-  PayloadErrorCode.INVALID_SIGNATURE,
-  PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
-  PayloadErrorCode.EXECUTION_ENGINE_INVALID,
-]);
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -210,11 +204,20 @@ export async function processBlocks(
       }
       // The envelope came from an untrusted range peer, drop it from the shared cache so the retried batch
       // downloads it again instead of re-verifying the same bytes. Gossip does the same on REJECT
-      if (REJECTED_PAYLOAD_ERROR_CODES.has(err.type.code)) {
+      if (isPeerAttributableFailure(err.type.code)) {
         this.seenPayloadEnvelopeInputCache.prune(err.payloadInput.blockRootHex);
       }
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
+      if (isPeerAttributableFailure(err.type.code)) {
+        // Same for the block, its signature or data may be bad while the root matches the canonical block
+        const blockRootHex =
+          blocks.find((blockInput) => blockInput.getBlock() === err.signedBlock)?.blockRootHex ??
+          toRootHex(
+            this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message)
+          );
+        this.seenBlockInputCache.prune(blockRootHex);
+      }
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;

@@ -431,6 +431,28 @@ describe("chain / blocks / processBlocks", () => {
     }
   });
 
+  it.each([
+    // INVALID_SIGNATURE is persisted for debugging on the error path, needs a serializable state
+    {code: BlockErrorCode.INVALID_SIGNATURE, pruned: true, state: {slot: 1, serialize: () => new Uint8Array()}},
+    {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS, pruned: true},
+    {code: BlockErrorCode.BLACKLISTED_BLOCK, pruned: true},
+    {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, pruned: false},
+    {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, pruned: false},
+  ])("prunes the rejected block from the seen cache: $code -> $pruned", async ({code, pruned, state}) => {
+    const blockError = new BlockError(blockInput.getBlock(), {code, state} as unknown as BlockError["type"]);
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(blockError);
+    // debug artefacts written on the error path, not part of the mocked chain
+    Object.assign(chain, {persistInvalidSszValue: vi.fn(), persistInvalidSszBytes: vi.fn()});
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(blockError);
+
+    if (pruned) {
+      expect(chain.seenBlockInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockInput.blockRootHex);
+    } else {
+      expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+    }
+  });
+
   // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
   // has to be selective.
   it("wraps a non-Block/Payload error into BEACON_CHAIN_ERROR", async () => {
