@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName, type ForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, type ForkPostGloas} from "@lodestar/params";
 import type {RootHex, SignedBeaconBlock} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {
@@ -20,26 +20,66 @@ const builderIndex = 7;
 describe("BidSelector", () => {
   for (const fork of [ForkName.gloas, ForkName.heze] as const) {
     it(`matches an exact local ${fork} bid and records the selecting block`, () => {
-      const {identity, ledger, observed, selector} = setup(fork);
+      const {identity, ledger, observed, selector, signedBidRoot} = setup(fork);
 
       expect(selector.match(observed)).toEqual({
         status: "selected",
         blockRoot: observed.blockRoot,
-        bid: {...identity, valueGwei: 5, wonBlockRoots: [observed.blockRoot]},
+        bid: {...identity, valueGwei: 5, signedBidRoot, wonBlockRoots: [observed.blockRoot]},
       });
       expect(ledger.getBidsForSlot(identity.slot)[0].wonBlockRoots).toEqual([observed.blockRoot]);
     });
+    it.each(["value", "feeRecipient", "gasLimit", "signature"] as const)(
+      `ignores a ${fork} selection with different %s despite matching payload identity`,
+      (field) => {
+        const {ledger, observed, selector} = setup(fork);
+        const signedBid = observed.block.message.body.signedExecutionPayloadBid;
+        switch (field) {
+          case "value":
+            signedBid.message.value++;
+            break;
+          case "feeRecipient":
+            signedBid.message.feeRecipient[0] ^= 1;
+            break;
+          case "gasLimit":
+            signedBid.message.gasLimit++;
+            break;
+          case "signature":
+            signedBid.signature[0] ^= 1;
+            break;
+        }
+        observed.blockRoot = blockRoot(observed);
+
+        expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID});
+        expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
+        expect(ledger.getUnsettledValueGwei(0)).toBe(0);
+      }
+    );
   }
 
-  it("ignores a foreign or self-build selection before consulting retained payloads", () => {
-    const getRetainedPayloadIdentity = vi.fn();
-    const {observed, selector} = setup(ForkName.gloas, {getRetainedPayloadIdentity});
-    observed.block.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex + 1;
+  it("compares Heze inclusion list bits as part of the signed bid", () => {
+    const {ledger, observed, selector} = setup(ForkName.heze);
+    const bid = observed.block.message.body.signedExecutionPayloadBid.message;
+    if (!("inclusionListBits" in bid)) throw Error("Expected Heze bid");
+    bid.inclusionListBits.set(1, true);
     observed.blockRoot = blockRoot(observed);
 
-    expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.FOREIGN_BUILDER});
-    expect(getRetainedPayloadIdentity).not.toHaveBeenCalled();
+    expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID});
+    expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
   });
+
+  it.each([builderIndex + 1, BUILDER_INDEX_SELF_BUILD])(
+    "ignores Builder %s before consulting retained payloads",
+    (index) => {
+      const getRetainedPayloadIdentity = vi.fn();
+      const {observed, selector} = setup(ForkName.gloas, {getRetainedPayloadIdentity});
+      observed.block.message.body.signedExecutionPayloadBid.message.builderIndex = index;
+      observed.blockRoot = blockRoot(observed);
+
+      expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.FOREIGN_BUILDER});
+      expect(getRetainedPayloadIdentity).not.toHaveBeenCalled();
+    }
+  );
 
   it("ignores a selected bid that was not signed locally", () => {
     const {identity, ledger, observed, selector} = setup(ForkName.gloas, {recordBid: false});
@@ -143,8 +183,11 @@ function setup(
   };
   const identity = identityFor(toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash));
   const ledger = new BidLedger();
+  const signedBidRoot = toRootHex(
+    sszTypesFor(fork, "SignedExecutionPayloadBid").hashTreeRoot(block.message.body.signedExecutionPayloadBid)
+  );
   if (recordBid) {
-    ledger.recordBid({...identity, valueGwei: 5});
+    ledger.recordBid({...identity, valueGwei: 5, signedBidRoot});
   }
   const selector = new BidSelector({
     config,
@@ -152,7 +195,7 @@ function setup(
     builderIndex,
     getRetainedPayloadIdentity: getRetainedPayloadIdentity ?? vi.fn(() => identity),
   });
-  return {identity, ledger, observed, selector};
+  return {identity, ledger, observed, selector, signedBidRoot};
 }
 
 function createBlock(fork: ForkPostGloas): SignedBeaconBlock<ForkPostGloas> {
@@ -164,6 +207,7 @@ function createBlock(fork: ForkPostGloas): SignedBeaconBlock<ForkPostGloas> {
   block.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 2);
   block.message.body.signedExecutionPayloadBid.message.parentBlockRoot = Buffer.alloc(32, 3);
   block.message.body.signedExecutionPayloadBid.message.blockHash = Buffer.alloc(32, 4);
+  block.message.body.signedExecutionPayloadBid.message.value = 5;
   return block;
 }
 

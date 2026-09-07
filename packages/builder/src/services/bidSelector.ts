@@ -1,6 +1,7 @@
 import type {ChainForkConfig} from "@lodestar/config";
 import type {ForkPostGloas} from "@lodestar/params";
 import type {BuilderIndex, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import type {BidLedger, BidLedgerRecord} from "./bidLedger.js";
 
@@ -131,7 +132,10 @@ export class BidSelector {
       return {status: "ignored", reason: BidSelectionIgnoreReason.PAYLOAD_IDENTITY_MISMATCH};
     }
 
-    const localBid = ledger.recordWin(identity, blockRoot);
+    const signedBidRoot = toRootHex(
+      sszTypesFor(version, "SignedExecutionPayloadBid").hashTreeRoot(block.message.body.signedExecutionPayloadBid)
+    );
+    const localBid = ledger.recordWin({...identity, signedBidRoot}, blockRoot);
     if (localBid === null) {
       return {status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID};
     }
