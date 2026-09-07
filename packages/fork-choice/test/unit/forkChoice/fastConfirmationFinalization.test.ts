@@ -17,9 +17,9 @@ import {
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 /**
- * Finality advances on every `on_block` and `on_tick`, the rule only runs on the slot tick. These cover the
- * window in between: the confirmed root must never point outside the finalized subtree, otherwise every safe
- * block lookup throws `MISSING_PROTO_ARRAY_BLOCK` until the next tick.
+ * While paused the confirmed root tracks finality, but finality advances on every `on_block` and `on_tick`
+ * while the rule only re-pins on the slot tick. These cover the window in between, where the confirmed root
+ * would otherwise point outside the finalized subtree and read as `null`.
  */
 describe("fast confirmation on finalization", () => {
   const genesisSlot = 0;
@@ -103,15 +103,20 @@ describe("fast confirmation on finalization", () => {
 
   /**
    * `confirmedRootOnFinalized` records what the confirmed root was at the moment the finalized checkpoint
-   * moved, which is what `onFinalized` listeners and any import in that window observe.
+   * moved, before anything downstream of the assignment could repair it.
    */
-  function setup(confirmedRoot: RootHex): {
+  function setup(
+    confirmedRoot: RootHex,
+    paused: boolean
+  ): {
     forkchoice: ForkChoice;
     fcStore: IForkChoiceStore;
+    notify: ReturnType<typeof vi.fn>;
     confirmedRootOnFinalized: () => RootHex | null;
   } {
     const checkpoint = toCheckpoint(genesisEpoch, anchorRoot);
     const balances = new Uint16Array([32]);
+    const notify = vi.fn();
     let confirmedRootOnFinalized: RootHex | null = null;
     let finalizedCheckpoint = checkpoint;
 
@@ -139,7 +144,7 @@ describe("fast confirmation on finalization", () => {
       previousSlotHead: anchorRoot,
       currentSlotHead: anchorRoot,
       stateGetter: () => null,
-      notifyFastConfirmation: vi.fn(),
+      notifyFastConfirmation: notify,
     } as unknown as IForkChoiceStore;
 
     const protoArr = makeProtoArr();
@@ -148,30 +153,39 @@ describe("fast confirmation on finalization", () => {
     }
 
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {fastConfirmation: true});
-    // Same state as a syncing node: the rule is paused and only re-pins on the slot tick
-    forkchoice.pauseFastConfirmation();
-    // After pausing, which pins the root to the finalized checkpoint of the moment
+    if (paused) forkchoice.pauseFastConfirmation();
+    // Set after pausing, which pins the root to the finalized checkpoint of the moment
     fcStore.confirmedRoot = confirmedRoot;
+    notify.mockClear();
 
-    return {forkchoice, fcStore, confirmedRootOnFinalized: () => confirmedRootOnFinalized};
+    return {forkchoice, fcStore, notify, confirmedRootOnFinalized: () => confirmedRootOnFinalized};
   }
 
-  it("pins the confirmed root to finalized when finality advances past it, before any pruning", () => {
-    // Confirmed root is a block from the epoch that just got finalized away, it is still in protoArray
-    const {forkchoice, fcStore, confirmedRootOnFinalized} = setup(getBlockRoot(epoch1Slot));
+  it("re-pins the confirmed root while paused as soon as finality moves, not only on the slot tick", () => {
+    // Confirmed root is a block from the epoch that finality is about to move past, still in protoArray
+    const {forkchoice, fcStore, notify} = setup(getBlockRoot(epoch1Slot), true);
 
     forkchoice.updateTime(epoch2Slot);
 
+    // Two pins for this tick: one when finality advanced inside on_tick, one from the paused rule branch
+    // after it. Without the first, the confirmed root stays outside the finalized subtree for the whole
+    // window between the two, and every safe block lookup in it reads null
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify.mock.calls[0][0]).toEqual({
+      block: getBlockRoot(epoch2Slot),
+      slot: epoch2Slot,
+      currentSlot: epoch2Slot,
+    });
     expect(fcStore.finalizedCheckpoint.rootHex).toBe(getBlockRoot(epoch2Slot));
-    expect(confirmedRootOnFinalized()).toBe(getBlockRoot(epoch2Slot));
     expect(forkchoice.getConfirmedBlock()?.blockRoot).toBe(getBlockRoot(epoch2Slot));
   });
 
-  it("leaves a confirmed root that is a descendant of the new finalized checkpoint alone", () => {
-    const {forkchoice, confirmedRootOnFinalized} = setup(getBlockRoot(epoch2Slot + 1));
+  it("leaves the confirmed root to the rule when it is running", () => {
+    const {forkchoice, confirmedRootOnFinalized} = setup(getBlockRoot(epoch1Slot), false);
 
     forkchoice.updateTime(epoch2Slot);
 
-    expect(confirmedRootOnFinalized()).toBe(getBlockRoot(epoch2Slot + 1));
+    // A running rule owns the confirmed root, finality moving must not rewrite it out from under the spec
+    expect(confirmedRootOnFinalized()).toBe(getBlockRoot(epoch1Slot));
   });
 });

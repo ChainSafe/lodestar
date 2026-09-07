@@ -19,7 +19,10 @@ export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick
   const confirmedRoot = forkChoice.getConfirmedRoot();
   const confirmedBlock = forkChoice.getConfirmedBlock();
   if (confirmedBlock === null) {
-    throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: confirmedRoot});
+    // Finality can outrun the rule between slot ticks, leaving the confirmed root outside the finalized
+    // subtree. The safe block is only a hint to the EL, finalized is always sound, never fail the caller
+    logger?.debug("Confirmed block not available, falling back to finalized", {confirmedRoot});
+    return getFinalizedExecutionBlockHash(forkChoice);
   }
 
   if (confirmedBlock.blockRoot === forkChoice.getFinalizedBlock().blockRoot) {
