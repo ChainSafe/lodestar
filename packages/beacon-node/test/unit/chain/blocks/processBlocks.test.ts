@@ -405,6 +405,32 @@ describe("chain / blocks / processBlocks", () => {
     await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(payloadError);
   });
 
+  it.each([
+    {code: PayloadErrorCode.INVALID_SIGNATURE, pruned: true},
+    {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, pruned: true},
+    {code: PayloadErrorCode.EXECUTION_ENGINE_INVALID, pruned: true},
+    {code: PayloadErrorCode.EXECUTION_ENGINE_ERROR, pruned: false},
+    {code: PayloadErrorCode.MISS_BLOCK_STATE, pruned: false},
+  ])("prunes the rejected envelope from the seen cache: $code -> $pruned", async ({code, pruned}) => {
+    const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
+    const type = {
+      code,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "bad payload",
+      message: "bad payload",
+      blockRootHex: "0x1234",
+    } as unknown as PayloadError["type"];
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(new PayloadError(payloadInput, type));
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBeInstanceOf(PayloadError);
+
+    if (pruned) {
+      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith("0x1234");
+    } else {
+      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+    }
+  });
+
   // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
   // has to be selective.
   it("wraps a non-Block/Payload error into BEACON_CHAIN_ERROR", async () => {
