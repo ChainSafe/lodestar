@@ -18,6 +18,7 @@ import {processBlocks} from "../../../../src/chain/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {AttestationImportOpt} from "../../../../src/chain/blocks/types.js";
+import {BlockErrorLogLevel} from "../../../../src/chain/blocks/utils/blockErrorLogLevel.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
@@ -453,7 +454,7 @@ describe("chain / blocks / processBlocks", () => {
     }
   });
 
-  it.each([
+  it.each<{message: string; code: BlockErrorCode | PayloadErrorCode; level: BlockErrorLogLevel}>([
     {message: "Block error", code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, level: LogLevel.debug},
     {message: "Block error", code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS, level: LogLevel.warn},
     {message: "Block error", code: BlockErrorCode.INCORRECT_TIMESTAMP, level: LogLevel.warn},
@@ -467,7 +468,8 @@ describe("chain / blocks / processBlocks", () => {
     await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(err);
 
     expect(chain.logger[level]).toHaveBeenCalledExactlyOnceWith(message, {slot, blockRoot}, err);
-    for (const other of [LogLevel.error, LogLevel.warn, LogLevel.debug].filter((l) => l !== level)) {
+    const levels: BlockErrorLogLevel[] = [LogLevel.error, LogLevel.warn, LogLevel.debug];
+    for (const other of levels.filter((l) => l !== level)) {
       expect(chain.logger[other]).not.toHaveBeenCalledWith(message, expect.anything(), expect.anything());
     }
   });
