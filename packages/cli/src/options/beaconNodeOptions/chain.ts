@@ -319,7 +319,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.nativeStateView": {
     hidden: true,
-    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    description: "Use experimental native (Zig) state transition for Phase0 through Fulu; requires restart",
     type: "boolean",
     default: defaultOptions.chain.nativeStateView,
     group: "chain",

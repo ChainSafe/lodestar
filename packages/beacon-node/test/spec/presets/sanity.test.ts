@@ -66,8 +66,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
 
         state = replaceStateViewForTest(state, (preState) =>
           preState.stateTransition(
-            config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
-            signedBlock,
+            {block: signedBlock},
             {
               // Assume valid and available for this test
               executionPayloadStatus: ExecutionPayloadStatus.valid,

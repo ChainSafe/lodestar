@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -77,6 +75,7 @@ import {
   IBeaconStateView,
   IBeaconStateViewGloas,
   IBeaconStateViewLatestFork,
+  StateTransitionInput,
   isStatePostGloas,
 } from "./interface.js";
 
@@ -843,12 +842,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   stateTransition(
-    _signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block}: StateTransitionInput,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView {
-    return new BeaconStateView(stateTransition(this.cachedState, signedBlock, options, modules));
+    return new BeaconStateView(stateTransition(this.cachedState, block, options, modules));
   }
 
   processSlots(

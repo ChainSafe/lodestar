@@ -1,9 +1,14 @@
 import worker from "node:worker_threads";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {initNativeStateTransitionMetrics, scrapeNativeStateTransitionMetrics} from "@lodestar/state-transition";
+import {
+  createStateViewFactory,
+  initNativeStateTransitionMetrics,
+  scrapeNativeStateTransitionMetrics,
+} from "@lodestar/state-transition";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
@@ -25,6 +30,7 @@ const logger = getNodeLogger(workerData.loggerOpts);
 logger.info("Historical state worker started");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
+const stateViewFactory = createStateViewFactory(config, pubkeyCache, {native: workerData.useNativeStateView});
 
 const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}));
 
@@ -40,12 +46,12 @@ if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 
-  historicalStateRegenMetrics = createHistoricalStateRegenMetrics(metricsRegister);
+  historicalStateRegenMetrics = createHistoricalStateRegenMetrics(metricsRegister, !stateViewFactory.native);
   queueMetrics = createHistoricalStateQueueMetrics(metricsRegister);
 
-  if (workerData.useNativeStateView) {
+  if (stateViewFactory.native) {
     try {
-      await initNativeStateTransitionMetrics();
+      initNativeStateTransitionMetrics({historical: true});
       nativeStateTransitionMetricsEnabled = true;
     } catch (e) {
       logger.warn("Failed to initialize native state-transition metrics", {}, e as Error);
@@ -84,7 +90,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, workerData.useNativeStateView, historicalStateRegenMetrics)
+      getHistoricalState(slot, db, stateViewFactory, historicalStateRegenMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

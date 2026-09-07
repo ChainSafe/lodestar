@@ -12,7 +12,7 @@ describe("Metrics", () => {
     expect(metricsAsText).not.toBe("");
   });
 
-  it("can exclude state-transition metrics from the registry", async () => {
+  it("keeps shared chain timers while excluding TypeScript-only transition metrics", async () => {
     const state = ssz.phase0.BeaconState.defaultViewDU();
     const metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
       includeStateTransitionMetrics: false,
@@ -20,6 +20,8 @@ describe("Metrics", () => {
     metrics.close();
 
     const metricsAsText = await metrics.register.metrics();
+    expect(metricsAsText).toContain("lodestar_chain_stfn_hash_tree_root_seconds");
+    expect(metricsAsText).not.toContain("lodestar_stfn_hash_tree_root_seconds");
     expect(metricsAsText).not.toContain("lodestar_stfn_process_block_seconds");
     expect(metricsAsText).not.toContain("lodestar_stfn_validators_in_activation_queue");
     expect(metricsAsText).not.toContain("lodestar_stfn_balances_nodes_populated_hit_total");

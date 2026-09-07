@@ -9,6 +9,9 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   IBeaconStateView,
+  NativeBeaconStateView,
+  StateViewError,
+  StateViewErrorCode,
   initNativeStateTransitionMetrics,
   isStatePostBellatrix,
   isStatePostGloas,
@@ -168,6 +171,14 @@ export class BeaconNode {
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    const nativeStateView = opts.chain.nativeStateView ?? false;
+    if (anchorState instanceof NativeBeaconStateView !== nativeStateView) {
+      throw new StateViewError({code: StateViewErrorCode.BACKEND_MISMATCH, native: nativeStateView});
+    }
+    logger.info("State transition implementation", {
+      implementation: nativeStateView ? "native (experimental, pre-Gloas)" : "typescript",
+    });
+
     if (hasher.name !== "hashtree") {
       logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
@@ -185,7 +196,7 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      if (opts.metrics.enabled && opts.chain.nativeStateView) {
+      if (nativeStateView) {
         try {
           initNativeStateTransitionMetrics();
           nativeStateTransitionMetricsEnabled = true;
@@ -195,7 +206,7 @@ export class BeaconNode {
       }
 
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
-        includeStateTransitionMetrics: !nativeStateTransitionMetricsEnabled,
+        includeStateTransitionMetrics: !nativeStateView,
       });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards

@@ -34,7 +34,11 @@ export function createMetrics(
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
   const stateTransitionRegister = createOpts.includeStateTransitionMetrics === false ? unregisteredMetrics : register;
-  const stateTransition = getMetrics(stateTransitionRegister);
+  const stateTransition = getMetrics(
+    stateTransitionRegister,
+    register,
+    createOpts.includeStateTransitionMetrics === false ? "lodestar_chain" : "lodestar"
+  );
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
@@ -64,7 +68,7 @@ export function createMetrics(
   };
 }
 
-const unregisteredMetrics = {
+export const unregisteredMetrics = {
   gauge<Labels extends LabelsGeneric = NoLabels>(configuration: GaugeConfig<Labels>) {
     return new Gauge<LabelKeys<Labels>>({...configuration, registers: []});
   },

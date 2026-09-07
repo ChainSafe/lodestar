@@ -1,78 +1,52 @@
 import bindings from "@chainsafe/lodestar-z";
-import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
-import {getStateTypeFromBytes} from "../util/sszBytes.js";
+import {getStateSlotFromBytes, getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
-import {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
+import {assertNativeForkSupported} from "./errors.js";
+import {IBeaconStateView} from "./interface.js";
 import {NativeBeaconStateView} from "./nativeBeaconStateView.js";
 
-// ---- createBeaconStateView (startup path) ----
-
-type NodeJSOpts = {
-  useNative: false;
-  anchorState: BeaconStateAllForks;
-  config: BeaconConfig;
-  pubkeyCache: PubkeyCache;
-};
-
-type NativeOpts = {
-  useNative: true;
-  config: BeaconConfig;
-  stateBytes: Uint8Array;
-};
+export type StateViewFactory = Readonly<{
+  native: boolean;
+  createFromState(state: BeaconStateAllForks, stateBytes?: Uint8Array): IBeaconStateView;
+  createFromBytes(stateBytes: Uint8Array): IBeaconStateView;
+}>;
 
 /**
- * Create a BeaconStateView from a pre-deserialized state. Used at node startup.
- *
- * The caller is responsible for creating and populating `pubkeyCache` (it is also
- * passed separately to BeaconNode.init, so it must live outside this factory).
- *
- * Set `useNative: true` to use the native (Zig) implementation.
+ * Select the state implementation once during node or worker setup.
+ * The caller must populate the shared pubkey cache before creating states.
  */
-export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
-  if (opts.useNative) {
-    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
-    return new NativeBeaconStateView(
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
-      opts.config
-    );
+export function createStateViewFactory(
+  config: BeaconConfig,
+  pubkeyCache: PubkeyCache,
+  {native = false}: {native?: boolean} = {}
+): StateViewFactory {
+  if (native) {
+    const setup = new bindings.StateTransition(config, config.genesisValidatorsRoot);
+    const createFromBytes = (stateBytes: Uint8Array): IBeaconStateView => {
+      assertNativeForkSupported(config, getStateSlotFromBytes(stateBytes));
+      return new NativeBeaconStateView(setup.createFromBytes(stateBytes), config);
+    };
+    return Object.freeze({
+      native: true,
+      createFromState(state: BeaconStateAllForks, stateBytes?: Uint8Array): IBeaconStateView {
+        assertNativeForkSupported(config, state.slot);
+        return createFromBytes(stateBytes ?? state.serialize());
+      },
+      createFromBytes,
+    });
   }
-  const {anchorState, config, pubkeyCache} = opts;
-  const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
-  return new BeaconStateView(cachedState);
-}
 
-// ---- createBeaconStateViewForHistoricalRegen (regen path) ----
-
-type RegenNodeJSOpts = {
-  useNative: false;
-  config: BeaconConfig;
-  stateBytes: Uint8Array;
-};
-
-type RegenNativeOpts = {
-  useNative: true;
-  config: BeaconConfig;
-  stateBytes: Uint8Array;
-};
-
-/**
- * Create a BeaconStateView from raw SSZ bytes. Used in the historical state regen worker thread.
- *
- * Set `useNative: true` to use the native (Zig) implementation.
- */
-export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
-  if (opts.useNative) {
-    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
-    return new NativeBeaconStateView(
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
-      opts.config
-    );
-  }
-  const {config, stateBytes} = opts;
-  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
-  return new BeaconStateView(cachedState);
+  const createFromState = (state: BeaconStateAllForks): IBeaconStateView =>
+    new BeaconStateView(createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true}));
+  return Object.freeze({
+    native: false,
+    createFromState,
+    createFromBytes(stateBytes: Uint8Array): IBeaconStateView {
+      return createFromState(getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes));
+    },
+  });
 }

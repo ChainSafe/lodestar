@@ -18,12 +18,11 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  BeaconStateView,
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   computeEpochAtSlot,
-  createCachedBeaconState,
   createIndexedSignatureSetFromComponents,
+  createStateViewFactory,
   getIndexedAttestation,
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
@@ -117,18 +116,14 @@ export const forkChoiceTestRunner =
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
         pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
-        const cachedState = createCachedBeaconState(
-          anchorState,
-          {
-            config: beaconConfig,
-            pubkeyCache,
-          },
-          {skipSyncPubkeys: true}
-        );
+        const anchorStateView = createStateViewFactory(beaconConfig, pubkeyCache, {
+          native: useNativeStateTransition,
+        }).createFromState(anchorState);
 
         const chain = new BeaconChain(
           {
             ...defaultChainOptions,
+            nativeStateView: useNativeStateTransition,
             // Do not start workers
             blsVerifyAllMainThread: true,
             // Do not run any archiver tasks
@@ -158,7 +153,7 @@ export const forkChoiceTestRunner =
             clock,
             metrics: null,
             validatorMonitor: null,
-            anchorState: new BeaconStateView(cachedState),
+            anchorState: anchorStateView,
             isAnchorStateFinalized: true,
             executionEngine,
             executionBuilder: undefined,
