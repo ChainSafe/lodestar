@@ -1,7 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import type {BuilderIndex, ExecutionAddress, ExecutionPayloadBid, Root, Slot, gloas, heze} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, byteArrayEquals} from "@lodestar/utils";
 import type {BuiltPayload} from "./payloadSource.js";
 
 type CommonBidInput<F extends ForkName.gloas | ForkName.heze> = {
@@ -25,9 +25,13 @@ export type ExecutionPayloadBidInput = GloasBidInput | HezeBidInput;
 export enum ExecutionPayloadBidErrorCode {
   FORK_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_FORK_MISMATCH",
   INVALID_VALUE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_VALUE",
+  SLOT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_SLOT_MISMATCH",
+  BLOCK_HASH_EQUALS_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT",
 }
 
 export type ExecutionPayloadBidErrorType =
+  | {code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH; slot: Slot; payloadSlot: Slot}
+  | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT}
   | {
       code: ExecutionPayloadBidErrorCode.FORK_MISMATCH;
       fork: ForkName.gloas | ForkName.heze;
@@ -58,6 +62,17 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
   }
 
   const {executionPayload, executionRequests, blobsBundle} = input.payload;
+  if (executionPayload.slotNumber !== input.slot) {
+    throw new ExecutionPayloadBidError({
+      code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH,
+      slot: input.slot,
+      payloadSlot: executionPayload.slotNumber,
+    });
+  }
+  if (byteArrayEquals(executionPayload.blockHash, executionPayload.parentHash)) {
+    throw new ExecutionPayloadBidError({code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT});
+  }
+
   const bid: gloas.ExecutionPayloadBid = {
     parentBlockHash: executionPayload.parentHash,
     parentBlockRoot: input.parentBlockRoot,

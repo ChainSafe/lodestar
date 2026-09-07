@@ -108,11 +108,36 @@ describe("createExecutionPayloadBid", () => {
       )
     );
   });
+
+  it.each(["slot", "parent"] as const)("rejects inconsistent payload %s before assembling a bid", (field) => {
+    const payload = createBuiltPayload(ForkName.gloas);
+    if (field === "slot") payload.executionPayload.slotNumber++;
+    else payload.executionPayload.blockHash = payload.executionPayload.parentHash.slice();
+
+    expect(() =>
+      createExecutionPayloadBid({
+        fork: ForkName.gloas,
+        slot,
+        parentBlockRoot,
+        builderIndex,
+        feeRecipient,
+        value: 1,
+        payload,
+      })
+    ).toThrowError(
+      new ExecutionPayloadBidError(
+        field === "slot"
+          ? {code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH, slot, payloadSlot: slot + 1}
+          : {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT}
+      )
+    );
+  });
 });
 
 function createBuiltPayload<F extends ForkName.gloas | ForkName.heze>(fork: F): BuiltPayload<F> {
   const forkTypes = fork === ForkName.heze ? ssz.heze : ssz.gloas;
   const executionPayload = forkTypes.ExecutionPayload.defaultValue();
+  executionPayload.slotNumber = 10;
   executionPayload.parentHash = Buffer.alloc(32, 3);
   executionPayload.blockHash = Buffer.alloc(32, 4);
   executionPayload.prevRandao = Buffer.alloc(32, 5);
