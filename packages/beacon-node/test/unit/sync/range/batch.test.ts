@@ -840,14 +840,27 @@ describe("sync / range / batch", async () => {
         }
         expect(batch.executionErrorAttempts.length).toBe(3);
 
-        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS
+        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS, the error carries the last attempt for the log
         batch.startProcessing();
-        expectThrowsLodestarError(
-          () => batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR)),
-          new BatchError({
+        const err = (() => {
+          try {
+            batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+          } catch (e) {
+            return e;
+          }
+          return null;
+        })();
+        expect(err).toBeInstanceOf(BatchError);
+        expect((err as BatchError).type).toEqual(
+          expect.objectContaining({
             code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS,
             startEpoch,
             status: BatchStatus.Processing,
+            lastAttempt: expect.objectContaining({
+              code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+              peerAttributable: false,
+              message: expect.any(String),
+            }),
           })
         );
       });
