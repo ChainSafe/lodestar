@@ -1,21 +1,18 @@
 import {describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {HttpStatusCode} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
+import {getExecutionPayloadBidSigningRoot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {type BidIdentity, BidLedger, BidLedgerErrorCode} from "../../../src/services/bidLedger.js";
 import {BidPublisher, BidPublisherError, BidPublisherErrorCode} from "../../../src/services/bidPublisher.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 
 const builderIndex = 7;
-const signer = new BuilderSigner(
-  createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32, 9)),
-  keypair(Buffer.alloc(32, 1))
-);
 
 describe("BidPublisher", () => {
   it("signs, records, and submits a bid with retained payload material", async () => {
@@ -32,10 +29,13 @@ describe("BidPublisher", () => {
       {signedExecutionPayloadBid: signedBid},
       {signal: expect.any(AbortSignal)}
     );
-    expect(ledger.recordWin(bidIdentity(bid), toRootHex(Buffer.alloc(32, 8)))?.blockHash).toBe(blockHash);
+    const signedBidRoot = toRootHex(ssz.gloas.SignedExecutionPayloadBid.hashTreeRoot(signedBid));
+    expect(ledger.recordWin({...bidIdentity(bid), signedBidRoot}, toRootHex(Buffer.alloc(32, 8)))?.blockHash).toBe(
+      blockHash
+    );
   });
 
-  it("preserves Heze bid fields through signing and publication", async () => {
+  it("signs all Heze bid fields under the Heze fork", async () => {
     const bid = ssz.heze.ExecutionPayloadBid.defaultValue();
     bid.slot = 10;
     bid.builderIndex = builderIndex;
@@ -44,15 +44,25 @@ describe("BidPublisher", () => {
     bid.blockHash = Buffer.alloc(32, 4);
     bid.value = 5;
     bid.inclusionListBits.set(1, true);
-    const {api, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
+    const {api, config, keys, ledger, publisher} = createPublisher({
+      hasPayload: vi.fn(() => true),
+      fork: ForkName.heze,
+    });
 
     const signedBid = await publisher.publish(bid, new AbortController().signal);
 
     expect(signedBid.message.inclusionListBits.get(1)).toBe(true);
+    const signature = Signature.fromBytes(signedBid.signature, true);
+    expect(verify(getExecutionPayloadBidSigningRoot(config, bid), keys.publicKey, signature)).toBe(true);
+    expect(ledger.getBidsForSlot(bid.slot)[0].signedBidRoot).toBe(
+      toRootHex(ssz.heze.SignedExecutionPayloadBid.hashTreeRoot(signedBid))
+    );
     expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledWith(
       {signedExecutionPayloadBid: signedBid},
       {signal: expect.any(AbortSignal)}
     );
+    bid.inclusionListBits.set(1, false);
+    expect(verify(getExecutionPayloadBidSigningRoot(config, bid), keys.publicKey, signature)).toBe(false);
   });
 
   it("rejects a bid for another Builder before signing or recording", async () => {
@@ -104,14 +114,55 @@ describe("BidPublisher", () => {
 
   it("enforces one submission for the same parent tuple", async () => {
     const bid = createBid();
-    const {api, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
+    const {api, publisher, signer} = createPublisher({hasPayload: vi.fn(() => true)});
+    const sign = vi.spyOn(signer, "signExecutionPayloadBid");
     const signal = new AbortController().signal;
     await publisher.publish(bid, signal);
 
-    await expect(publisher.publish(bid, signal)).rejects.toMatchObject({
+    await expect(publisher.publish({...bid, value: bid.value + 1}, signal)).rejects.toMatchObject({
       type: {code: BidLedgerErrorCode.DUPLICATE_BID},
     });
     expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(sign).toHaveBeenCalledOnce();
+  });
+
+  it("reserves the tuple before publication completes", async () => {
+    const {api, publisher, signer} = createPublisher({hasPayload: vi.fn(() => true)});
+    const sign = vi.spyOn(signer, "signExecutionPayloadBid");
+    const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadBid>>>();
+    api.beacon.publishExecutionPayloadBid.mockReturnValue(response.promise);
+    const bid = createBid();
+    const signal = new AbortController().signal;
+    const first = publisher.publish(bid, signal);
+
+    await expect(publisher.publish({...bid, value: 6}, signal)).rejects.toMatchObject({
+      type: {code: BidLedgerErrorCode.DUPLICATE_BID},
+    });
+    expect(sign).toHaveBeenCalledOnce();
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    response.resolve(await mockApiResponse({data: undefined, meta: undefined}));
+    await first;
+  });
+
+  it("does not reserve a bid if signing fails", async () => {
+    const {api, ledger, publisher, signer} = createPublisher({hasPayload: vi.fn(() => true)});
+    vi.spyOn(signer, "signExecutionPayloadBid").mockImplementationOnce(() => {
+      throw Error("signing failed");
+    });
+    const bid = createBid();
+    await expect(publisher.publish(bid, new AbortController().signal)).rejects.toThrow("signing failed");
+    expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  it("rejects pre-Gloas input before signing", async () => {
+    const {api, publisher, signer} = createPublisher({hasPayload: vi.fn(() => true), fork: ForkName.fulu});
+    const sign = vi.spyOn(signer, "signExecutionPayloadBid");
+    await expect(publisher.publish(createBid(), new AbortController().signal)).rejects.toMatchObject({
+      type: {code: BidPublisherErrorCode.PRE_GLOAS_BID},
+    });
+    expect(sign).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
   it("keeps the one-shot record when the Beacon Node rejects publication", async () => {
@@ -124,13 +175,22 @@ describe("BidPublisher", () => {
   });
 });
 
-function createPublisher({hasPayload}: {hasPayload: (identity: BidIdentity) => boolean}) {
+function createPublisher({
+  hasPayload,
+  fork = ForkName.gloas,
+}: {
+  hasPayload: (identity: BidIdentity) => boolean;
+  fork?: ForkName;
+}) {
+  const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32, 9));
+  const keys = keypair(Buffer.alloc(32, 1));
+  const signer = new BuilderSigner(config, keys);
   const api = getApiClientStub();
   Object.assign(api.beacon, {publishExecutionPayloadBid: vi.fn()});
   api.beacon.publishExecutionPayloadBid.mockResolvedValue(mockApiResponse({}));
   const ledger = new BidLedger();
-  const publisher = new BidPublisher({api, signer, ledger, builderIndex, hasPayload});
-  return {api, ledger, publisher};
+  const publisher = new BidPublisher({api, config, signer, ledger, builderIndex, hasPayload});
+  return {api, config, keys, ledger, publisher, signer};
 }
 
 function createBid(): ReturnType<typeof ssz.gloas.ExecutionPayloadBid.defaultValue> {

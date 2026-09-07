@@ -46,14 +46,20 @@ describe("BuilderSigner", () => {
     ).toEqual(true);
   });
 
-  it("preserves Heze bid fields", () => {
+  it("signs Heze inclusion list bits", () => {
+    const hezeConfig = createBeaconConfig(getConfig(ForkName.heze), genesisValidatorsRoot);
+    const hezeSigner = new BuilderSigner(hezeConfig, {publicKey, secretKey});
     const bid = ssz.heze.ExecutionPayloadBid.defaultValue();
     bid.slot = 1;
     bid.inclusionListBits.set(1, true);
 
-    const signedBid = builderSigner.signExecutionPayloadBid(bid);
+    const signedBid = hezeSigner.signExecutionPayloadBid(bid);
 
     expect(signedBid.message.inclusionListBits.get(1)).toBe(true);
+    const signature = Signature.fromBytes(signedBid.signature, true);
+    expect(verify(getExecutionPayloadBidSigningRoot(hezeConfig, bid), publicKey, signature)).toBe(true);
+    bid.inclusionListBits.set(1, false);
+    expect(verify(getExecutionPayloadBidSigningRoot(hezeConfig, bid), publicKey, signature)).toBe(false);
   });
 
   describe("negative tests - different network", () => {

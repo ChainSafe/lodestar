@@ -1,11 +1,15 @@
 import type {ApiClient} from "@lodestar/api";
+import type {ChainForkConfig} from "@lodestar/config";
+import {isForkPostGloas} from "@lodestar/params";
 import type {BuilderIndex, RootHex, gloas, heze} from "@lodestar/types";
+import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import type {BidIdentity, BidLedger} from "./bidLedger.js";
+import {type BidIdentity, type BidLedger, BidLedgerError, BidLedgerErrorCode} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
 
 export type BidPublisherModules = {
   api: ApiClient;
+  config: ChainForkConfig;
   signer: BuilderSigner;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
@@ -15,9 +19,14 @@ export type BidPublisherModules = {
 export enum BidPublisherErrorCode {
   BUILDER_INDEX_MISMATCH = "BID_PUBLISHER_ERROR_BUILDER_INDEX_MISMATCH",
   PAYLOAD_NOT_RETAINED = "BID_PUBLISHER_ERROR_PAYLOAD_NOT_RETAINED",
+  PRE_GLOAS_BID = "BID_PUBLISHER_ERROR_PRE_GLOAS_BID",
 }
 
 export type BidPublisherErrorType =
+  | {
+      code: BidPublisherErrorCode.PRE_GLOAS_BID;
+      slot: BidIdentity["slot"];
+    }
   | {
       code: BidPublisherErrorCode.BUILDER_INDEX_MISMATCH;
       builderIndex: BuilderIndex;
@@ -42,7 +51,11 @@ export class BidPublisher {
   async publish(bid: gloas.ExecutionPayloadBid, signal: AbortSignal): Promise<gloas.SignedExecutionPayloadBid> {
     signal.throwIfAborted();
 
-    const {api, builderIndex, hasPayload, ledger, signer} = this.modules;
+    const {api, config, builderIndex, hasPayload, ledger, signer} = this.modules;
+    const fork = config.getForkName(bid.slot);
+    if (!isForkPostGloas(fork)) {
+      throw new BidPublisherError({code: BidPublisherErrorCode.PRE_GLOAS_BID, slot: bid.slot});
+    }
     if (bid.builderIndex !== builderIndex) {
       throw new BidPublisherError(
         {
@@ -67,8 +80,15 @@ export class BidPublisher {
       );
     }
 
+    if (ledger.hasSubmitted(identity.slot, identity.parentBlockHash, identity.parentBlockRoot)) {
+      throw new BidLedgerError({code: BidLedgerErrorCode.DUPLICATE_BID, ...identity});
+    }
+
     const signedExecutionPayloadBid = signer.signExecutionPayloadBid(bid);
-    ledger.recordBid({...identity, valueGwei: bid.value});
+    const signedBidRoot = toRootHex(
+      sszTypesFor(fork, "SignedExecutionPayloadBid").hashTreeRoot(signedExecutionPayloadBid)
+    );
+    ledger.recordBid({...identity, valueGwei: bid.value, signedBidRoot});
 
     const response = await api.beacon.publishExecutionPayloadBid({signedExecutionPayloadBid}, {signal});
     response.assertOk();
