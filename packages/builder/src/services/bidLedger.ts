@@ -8,6 +8,7 @@ export type SubmittedBid = {
   parentBlockRoot: RootHex;
   blockHash: RootHex;
   valueGwei: number;
+  signedBidRoot: RootHex;
 };
 
 export type BidIdentity = Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot" | "blockHash">;
@@ -105,9 +106,9 @@ export class BidLedger {
     return toRecord(record);
   }
 
-  recordWin(identity: BidIdentity, blockRoot: RootHex): BidLedgerRecord | null {
+  recordWin(identity: BidIdentity & Pick<SubmittedBid, "signedBidRoot">, blockRoot: RootHex): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    if (record === null || record.blockHash !== identity.blockHash) {
+    if (record === null || record.blockHash !== identity.blockHash || record.signedBidRoot !== identity.signedBidRoot) {
       return null;
     }
 
@@ -238,6 +239,7 @@ function toRecord(record: MutableBidLedgerRecord): BidLedgerRecord {
     parentBlockRoot: record.parentBlockRoot,
     blockHash: record.blockHash,
     valueGwei: record.valueGwei,
+    signedBidRoot: record.signedBidRoot,
     wonBlockRoots: Array.from(record.wonBlockRoots),
   };
 }
