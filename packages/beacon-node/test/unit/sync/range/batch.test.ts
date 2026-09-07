@@ -668,6 +668,38 @@ describe("sync / range / batch", async () => {
       blockError({code: BlockErrorCode.EXECUTION_ENGINE_ERROR, execStatus, errorMessage: "el is down"});
 
     describe("processingError", () => {
+      it.each([
+        {
+          name: "wrapped error",
+          err: blockError({code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("regen boom")}),
+          message: "BLOCK_ERROR_BEACON_CHAIN_ERROR: regen boom",
+        },
+        {
+          name: "execution client verdict",
+          err: blockError({
+            code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+            execStatus: ExecutionPayloadStatus.INVALID,
+            errorMessage: "bal is empty",
+          }),
+          message: "BLOCK_ERROR_EXECUTION_ENGINE_INVALID: bal is empty",
+        },
+        {
+          name: "envelope verification",
+          err: new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
+            code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+            message: "wrong parent",
+          }),
+          message: "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR: wrong parent",
+        },
+      ])("records the error detail of the failed attempt: $name", ({err, message}) => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(err);
+
+        const [attempt] = [...batch.failedProcessingAttempts, ...batch.executionErrorAttempts];
+        expect(attempt.message).toBe(message);
+      });
+
       const executionEngineErrorStatuses: ExecutionEngineErrorStatus[] = [
         ExecutionPayloadStatus.ELERROR,
         ExecutionPayloadStatus.UNAVAILABLE,

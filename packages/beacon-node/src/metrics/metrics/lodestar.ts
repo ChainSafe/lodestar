@@ -615,7 +615,7 @@ export function createLodestarMetrics(
         help: "Count of finalized sync peers by group index",
         labelNames: ["columnIndex"],
       }),
-      batchProcessError: register.gauge<{code: string}>({
+      batchProcessError: register.counter<{code: string}>({
         name: "lodestar_sync_range_batch_process_error_total",
         help: "Total number of range sync batch processing errors by block or payload error code",
         labelNames: ["code"],

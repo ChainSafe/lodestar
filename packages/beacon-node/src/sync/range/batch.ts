@@ -748,10 +748,13 @@ export class Batch {
 
   private routeProcessingFailure(err: Error, attempt: Attempt): void {
     const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
-    // LodestarError messages are just the code, the EL verdict lives in the type
+    // LodestarError messages are just the code, the detail lives in the type: the EL verdict in `errorMessage`, the
+    // wrapped error of internal and state transition failures in `error`, envelope verification failures in `message`
     const detail =
       err instanceof BlockError || err instanceof PayloadError
-        ? (err.type as {errorMessage?: string}).errorMessage
+        ? ((err.type as {errorMessage?: string; error?: Error; message?: string}).errorMessage ??
+          (err.type as {error?: Error}).error?.message ??
+          (err.type as {message?: string}).message)
         : undefined;
     const failedAttempt: FailedAttempt = {
       ...attempt,
