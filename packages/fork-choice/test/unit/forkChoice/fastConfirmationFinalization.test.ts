@@ -17,9 +17,9 @@ import {
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 /**
- * Finality advances on every `on_block` and `on_tick`, the rule only moves the confirmed root on the slot
- * tick. These cover the window in between, where the confirmed root would otherwise point outside the
- * finalized subtree and read as `null` from `getBlockHex()`.
+ * While paused the confirmed root tracks finality, but finality advances on every `on_block` and `on_tick`
+ * while the rule only re-pins on the slot tick. These cover the window in between, where the confirmed root
+ * would otherwise point outside the finalized subtree and read as `null` from `getBlockHex()`.
  */
 describe("fast confirmation on finalization", () => {
   const genesisSlot = 0;
@@ -176,28 +176,12 @@ describe("fast confirmation on finalization", () => {
     expect(forkchoice.getConfirmedBlock()?.blockRoot).toBe(getBlockRoot(epoch2Slot));
   });
 
-  it("re-pins a running rule's confirmed root when finality moves past it", () => {
-    // The state the rule leaves behind after any fallback to finality: confirmed sits on the finalized
-    // checkpoint, and the next finality advance strands it one checkpoint back
+  it("leaves the confirmed root to the rule when it is running", () => {
     const {forkchoice, notify} = setup(getBlockRoot(epoch1Slot), false);
 
     forkchoice.updateTime(epoch2Slot);
 
-    expect(notify).toHaveBeenCalledTimes(2);
-    expect(notify.mock.calls[0][0]).toEqual({
-      block: getBlockRoot(epoch2Slot),
-      slot: epoch2Slot,
-      currentSlot: epoch2Slot,
-    });
-  });
-
-  it("leaves a confirmed root that finality has not passed alone", () => {
-    // The healthy running case, confirmed is ahead of finalized and the rule owns it
-    const {forkchoice, notify} = setup(getBlockRoot(epoch2Slot + 1), false);
-
-    forkchoice.updateTime(epoch2Slot);
-
-    // Only the rule moved it, updateCheckpoints() left it alone
+    // A running rule owns the confirmed root, finality moving must not rewrite it out from under the spec
     expect(notify).toHaveBeenCalledTimes(1);
   });
 });
