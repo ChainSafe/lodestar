@@ -681,7 +681,7 @@ describe("sync / range / batch", async () => {
             execStatus: ExecutionPayloadStatus.INVALID,
             errorMessage: "bal is empty",
           }),
-          message: "BLOCK_ERROR_EXECUTION_ENGINE_INVALID: bal is empty",
+          message: "BLOCK_ERROR_EXECUTION_INVALID: bal is empty",
         },
         {
           name: "envelope verification",
