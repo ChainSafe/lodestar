@@ -509,6 +509,16 @@ describe("chain / blocks / processBlocks", () => {
     return {err, slot: 1, blockRoot: "0x1234"};
   }
 
+  it("prunes the rejected block from the seen cache with disableOnBlockError", async () => {
+    const blockError = new BlockError(blockInput.getBlock(), {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS});
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(blockError);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {disableOnBlockError: true})).rejects.toBe(blockError);
+
+    expect(chain.seenBlockInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockInput.blockRootHex);
+    expect(chain.logger.debug).not.toHaveBeenCalledWith("Block error", expect.anything(), expect.anything());
+  });
+
   // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
   // has to be selective.
   it("wraps a non-Block/Payload error into BEACON_CHAIN_ERROR", async () => {
