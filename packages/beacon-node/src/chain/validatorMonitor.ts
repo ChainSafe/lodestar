@@ -317,6 +317,7 @@ export function createValidatorMonitor(
   }));
 
   let lastRegisteredStatusEpoch = -1;
+  let lastAttestationSummaryEpoch = -1;
 
   // Track validator additions/removals per epoch for logging
   const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
@@ -356,7 +357,7 @@ export function createValidatorMonitor(
       // Track total balance instead of per-validator balance to reduce metric cardinality
       let totalBalance = 0;
 
-      for (const [index, monitoredValidator] of validators.entries()) {
+      for (const index of validators.keys()) {
         // We subtract two from the state of the epoch that generated these summaries.
         //
         // - One to account for it being the previous epoch.
@@ -385,48 +386,9 @@ export function createValidatorMonitor(
           validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
         }
 
-        const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
-        const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
-        if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
-          if (attestationCorrectHead) {
-            validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
-          } else {
-            validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
-          }
-        }
-
-        const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
-        const inclusionDistance =
-          attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
-            ? // altair, attestation is not missed
-              attestationMinBlockInclusionDistance
-            : summary.inclusionDistance
-              ? // phase0, this is from the state transition
-                summary.inclusionDistance
-              : null;
-
-        if (inclusionDistance !== null) {
-          validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
-          validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
-        } else {
-          validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
-        }
-
         const balance = balances?.[index];
         if (balance !== undefined) {
           totalBalance += balance;
-        }
-
-        if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
-          log("Failed attestation in previous epoch", {
-            validator: index,
-            prevEpoch: currentEpoch - 1,
-            isPrevSourceAttester: summary.isPrevSourceAttester,
-            isPrevHeadAttester: summary.isPrevHeadAttester,
-            isPrevTargetAttester: summary.isPrevTargetAttester,
-            // inclusionDistance is not available in summary since altair
-            inclusionDistance,
-          });
         }
       }
 
@@ -757,6 +719,38 @@ export function createValidatorMonitor(
         return;
       }
 
+      // On-chain attestation summary of prevEpoch. Reads only the epoch summaries filled by
+      // registerAttestationInBlock(), so it works with both TS and native state transition.
+      if (prevEpoch > lastAttestationSummaryEpoch) {
+        lastAttestationSummaryEpoch = prevEpoch;
+
+        for (const monitoredValidator of validators.values()) {
+          const prevEpochSummary = monitoredValidator.summaries.get(prevEpoch);
+          const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
+          if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
+            if (attestationCorrectHead) {
+              validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
+            } else {
+              validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
+            }
+          }
+
+          const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
+          const inclusionDistance =
+            attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
+              ? // altair, attestation is not missed
+                attestationMinBlockInclusionDistance
+              : null;
+
+          if (inclusionDistance !== null) {
+            validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
+            validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
+          } else {
+            validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
+          }
+        }
+      }
+
       const rootCache = new RootHexCache(headState);
 
       if (isStatePostAltair(headState)) {
@@ -774,6 +768,17 @@ export function createValidatorMonitor(
             epoch: prevEpoch,
             summary,
           });
+
+          if (!flags.timelySource || !flags.timelyTarget || !flags.timelyHead) {
+            log("Failed attestation in previous epoch", {
+              validator: index,
+              prevEpoch,
+              isPrevSourceAttester: flags.timelySource,
+              isPrevHeadAttester: flags.timelyHead,
+              isPrevTargetAttester: flags.timelyTarget,
+              inclusionDistance: validator.summaries.get(prevEpoch)?.attestationMinBlockInclusionDistance ?? null,
+            });
+          }
         }
       }
 

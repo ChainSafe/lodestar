@@ -1,3 +1,4 @@
+import {MetricValueWithName} from "prom-client";
 import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -5,7 +6,8 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
+import {ValidatorMonitor, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
+import {RegistryMetricCreator} from "../../../src/metrics/index.js";
 
 describe("ValidatorMonitor", () => {
   // Use phase0 config (no altair) to avoid needing full state with block roots
@@ -130,6 +132,112 @@ describe("ValidatorMonitor", () => {
       expect(monitor.getMonitoredValidatorIndices()).toContain(1);
 
       vi.restoreAllMocks();
+    });
+  });
+  describe("onceEveryEndOfEpoch on-chain attestation metrics", () => {
+    // Hook runs on the last slot of epoch 2, so it summarizes epoch 1
+    const headSlot = SLOTS_PER_EPOCH * 2;
+    const prevEpochSlot = SLOTS_PER_EPOCH + 8;
+
+    function createMonitorWithMetrics(): {register: RegistryMetricCreator; monitor: ValidatorMonitor} {
+      const register = new RegistryMetricCreator();
+      const monitor = createValidatorMonitor(register, config, genesisTime, logger, {});
+      return {register, monitor};
+    }
+
+    async function metricValue(
+      register: RegistryMetricCreator,
+      name: string,
+      suffix?: "count" | "sum"
+    ): Promise<number> {
+      const metric = register.getSingleMetric(name);
+      if (!metric) throw Error(`metric ${name} not registered`);
+      const {values} = await metric.get();
+      const value = suffix
+        ? (values as MetricValueWithName<string>[]).find((v) => v.metricName === `${name}_${suffix}`)
+        : values[0];
+      return value?.value ?? 0;
+    }
+
+    function includeAttestation(monitor: ValidatorMonitor, validatorIndex: number, correctHead: boolean): void {
+      const attestation = ssz.phase0.IndexedAttestation.defaultValue();
+      attestation.attestingIndices = [validatorIndex];
+      attestation.data.slot = prevEpochSlot;
+      attestation.data.target.epoch = 1;
+      // parentSlot === data.slot gives inclusion distance 1
+      monitor.registerAttestationInBlock(attestation, prevEpochSlot, correctHead, false, "0x00", prevEpochSlot + 1);
+    }
+
+    it("records hit, correct head and inclusion distance for an included attestation", async () => {
+      const {register, monitor} = createMonitorWithMetrics();
+      monitor.registerLocalValidator(1);
+      includeAttestation(monitor, 1, true);
+
+      monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
+
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        0
+      );
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "sum")).toBe(1);
+    });
+
+    it("records incorrect head for an included attestation with wrong head vote", async () => {
+      const {register, monitor} = createMonitorWithMetrics();
+      monitor.registerLocalValidator(1);
+      includeAttestation(monitor, 1, false);
+
+      monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
+
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        1
+      );
+    });
+
+    it("records a miss and no head vote for a validator with no included attestation", async () => {
+      const {register, monitor} = createMonitorWithMetrics();
+      monitor.registerLocalValidator(2);
+
+      monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
+
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        0
+      );
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(0);
+    });
+
+    it("does not count the same epoch twice", async () => {
+      const {register, monitor} = createMonitorWithMetrics();
+      monitor.registerLocalValidator(1);
+      includeAttestation(monitor, 1, true);
+
+      monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
+      monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
+
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(1);
+    });
+
+    it("registerValidatorStatuses does not record on-chain attestation metrics", async () => {
+      const {register, monitor} = createMonitorWithMetrics();
+      monitor.registerLocalValidator(1);
+      includeAttestation(monitor, 1, true);
+
+      // Epoch transition 2 -> 3 summarizes epoch 1, the same epoch onceEveryEndOfEpoch handles
+      monitor.registerValidatorStatuses(2, [], [], [], []);
+
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(0);
     });
   });
 });
