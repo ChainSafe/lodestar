@@ -17,9 +17,9 @@ import {
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 /**
- * While paused the confirmed root tracks finality, but finality advances on every `on_block` and `on_tick`
- * while the rule only re-pins on the slot tick. These cover the window in between, where the confirmed root
- * would otherwise point outside the finalized subtree and read as `null`.
+ * Finality advances on every `on_block` and `on_tick`, the rule only moves the confirmed root on the slot
+ * tick. These cover the window in between, where the confirmed root would otherwise point outside the
+ * finalized subtree and read as `null` from `getBlockHex()`.
  */
 describe("fast confirmation on finalization", () => {
   const genesisSlot = 0;
@@ -102,8 +102,8 @@ describe("fast confirmation on finalization", () => {
   }
 
   /**
-   * `confirmedRootOnFinalized` records what the confirmed root was at the moment the finalized checkpoint
-   * moved, before anything downstream of the assignment could repair it.
+   * The pin notifies, so `notify` is the visible signal that the confirmed root moved. A tick that pins on
+   * the finality advance notifies once for that and again for whatever moves the root afterwards.
    */
   function setup(
     confirmedRoot: RootHex,
@@ -112,12 +112,10 @@ describe("fast confirmation on finalization", () => {
     forkchoice: ForkChoice;
     fcStore: IForkChoiceStore;
     notify: ReturnType<typeof vi.fn>;
-    confirmedRootOnFinalized: () => RootHex | null;
   } {
     const checkpoint = toCheckpoint(genesisEpoch, anchorRoot);
     const balances = new Uint16Array([32]);
     const notify = vi.fn();
-    let confirmedRootOnFinalized: RootHex | null = null;
     let finalizedCheckpoint = checkpoint;
 
     const fcStore = {
@@ -128,7 +126,6 @@ describe("fast confirmation on finalization", () => {
         return finalizedCheckpoint;
       },
       set finalizedCheckpoint(cp: CheckpointWithHex) {
-        confirmedRootOnFinalized = fcStore.confirmedRoot;
         finalizedCheckpoint = cp;
       },
       unrealizedFinalizedCheckpoint: toCheckpoint(2, getBlockRoot(epoch2Slot)),
@@ -158,7 +155,7 @@ describe("fast confirmation on finalization", () => {
     fcStore.confirmedRoot = confirmedRoot;
     notify.mockClear();
 
-    return {forkchoice, fcStore, notify, confirmedRootOnFinalized: () => confirmedRootOnFinalized};
+    return {forkchoice, fcStore, notify};
   }
 
   it("re-pins the confirmed root while paused as soon as finality moves, not only on the slot tick", () => {
@@ -168,8 +165,7 @@ describe("fast confirmation on finalization", () => {
     forkchoice.updateTime(epoch2Slot);
 
     // Two pins for this tick: one when finality advanced inside on_tick, one from the paused rule branch
-    // after it. Without the first, the confirmed root stays outside the finalized subtree for the whole
-    // window between the two, and every safe block lookup in it reads null
+    // after it. Without the first, the confirmed root is unresolvable for the whole window between them
     expect(notify).toHaveBeenCalledTimes(2);
     expect(notify.mock.calls[0][0]).toEqual({
       block: getBlockRoot(epoch2Slot),
@@ -180,12 +176,28 @@ describe("fast confirmation on finalization", () => {
     expect(forkchoice.getConfirmedBlock()?.blockRoot).toBe(getBlockRoot(epoch2Slot));
   });
 
-  it("leaves the confirmed root to the rule when it is running", () => {
-    const {forkchoice, confirmedRootOnFinalized} = setup(getBlockRoot(epoch1Slot), false);
+  it("re-pins a running rule's confirmed root when finality moves past it", () => {
+    // The state the rule leaves behind after any fallback to finality: confirmed sits on the finalized
+    // checkpoint, and the next finality advance strands it one checkpoint back
+    const {forkchoice, notify} = setup(getBlockRoot(epoch1Slot), false);
 
     forkchoice.updateTime(epoch2Slot);
 
-    // A running rule owns the confirmed root, finality moving must not rewrite it out from under the spec
-    expect(confirmedRootOnFinalized()).toBe(getBlockRoot(epoch1Slot));
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify.mock.calls[0][0]).toEqual({
+      block: getBlockRoot(epoch2Slot),
+      slot: epoch2Slot,
+      currentSlot: epoch2Slot,
+    });
+  });
+
+  it("leaves a confirmed root that finality has not passed alone", () => {
+    // The healthy running case, confirmed is ahead of finalized and the rule owns it
+    const {forkchoice, notify} = setup(getBlockRoot(epoch2Slot + 1), false);
+
+    forkchoice.updateTime(epoch2Slot);
+
+    // Only the rule moved it, updateCheckpoints() left it alone
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 });

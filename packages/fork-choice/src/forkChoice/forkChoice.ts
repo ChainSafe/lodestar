@@ -275,7 +275,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Pin the confirmed root to finality, the contract while the rule is paused. Callers run in clock,
+   * Pin the confirmed root to finality, keeping it resolvable in protoArray. Callers run in clock,
    * network and block import context with no catch above, so the notification must not throw out.
    */
   private pinConfirmedRootToFinalized(): void {
@@ -1924,8 +1924,14 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.justifiedProposerBoostScore = null;
       updated = true;
-      // Finality advances several times per slot while syncing, hold the pin in between slot ticks
-      if (this.fastConfirmationPaused) this.pinConfirmedRootToFinalized();
+      // The rule only moves the confirmed root on the slot tick while finality advances on every on_block.
+      // Outside the finalized subtree it reads as null from getBlockHex(), well before the archiver prunes
+      // it, and every safe block lookup throws until the rule runs again
+      if (this.fastConfirmationRule !== undefined) {
+        const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+        const ancestor = this.protoArray.getAncestorOrNull(this.fcStore.confirmedRoot, finalizedSlot);
+        if (ancestor?.blockRoot !== finalizedCheckpoint.rootHex) this.pinConfirmedRootToFinalized();
+      }
     }
 
     return updated;
