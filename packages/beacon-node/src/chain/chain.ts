@@ -213,6 +213,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
+  /** Block or payload errors (code and block root) already logged above debug level, see `processBlocks` */
+  readonly reportedBlockErrors = new Set<string>();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
