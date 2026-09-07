@@ -267,8 +267,8 @@ describe("block archiver task", () => {
     const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
 
     const root = (i: number): string => toHexString(Buffer.alloc(32, i));
-    // Canonical chain: 
-    // slot 32 (epoch boundary, finalized via EMPTY), 
+    // Canonical chain:
+    // slot 32 (epoch boundary, finalized via EMPTY),
     // slot 31 (finalized via FULL),
     // slot 30 orphaned block
     const boundaryEmpty = generateProtoBlock({slot: 32, blockRoot: root(1), payloadStatus: PayloadStatus.EMPTY});
