@@ -42,9 +42,7 @@ export async function computeBlockRewards(
   let syncAggregateReward = cachedSyncAggregateReward;
 
   if (blockAttestationReward === 0) {
-    const parentSlot = isForkPostGloas(fork)
-      ? (preState as CachedBeaconStateGloas).latestExecutionPayloadBid.slot
-      : null;
+    const parentSlot = isForkPostGloas(fork) ? (preState as CachedBeaconStateGloas).latestBlockHeader.slot : null;
     blockAttestationReward =
       fork === ForkName.phase0
         ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, preState as CachedBeaconStatePhase0)
