@@ -121,15 +121,15 @@ const indexedGossipQueueOpts: {
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createGossipQueues(): {
+export function createGossipQueues(onDrop?: (item: PendingGossipsubMessage) => void): {
   [K in GossipType]: GossipQueue<PendingGossipsubMessage>;
 } {
   const gossipQueueOpts = {...linearGossipQueueOpts, ...indexedGossipQueueOpts};
 
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
-      return new IndexedGossipQueueMinSize(opts);
+      return new IndexedGossipQueueMinSize({...opts, onDrop});
     }
-    return new LinearGossipQueue<PendingGossipsubMessage>(opts);
+    return new LinearGossipQueue<PendingGossipsubMessage>({...opts, onDrop});
   });
 }

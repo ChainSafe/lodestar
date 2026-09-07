@@ -103,3 +103,42 @@ describe("GossipQueues - drop by count", () => {
     expect(gossipQueue.length).toBe(10);
   });
 });
+
+describe("LinearGossipQueue drop observation", () => {
+  it.each([QueueType.FIFO, QueueType.LIFO])("observes count eviction and clear for %s", (type) => {
+    const dropped: number[] = [];
+    const queue = new LinearGossipQueue<number>({
+      type,
+      maxLength: 2,
+      dropOpts: {type: DropType.count, count: 1},
+      onDrop: (item) => dropped.push(item),
+    });
+    queue.add(1);
+    queue.add(2);
+    expect(queue.add(3)).toBe(1);
+    expect(dropped).toEqual(type === QueueType.FIFO ? [3] : [1]);
+    expect(queue.next()).toBe(type === QueueType.FIFO ? 1 : 3);
+    queue.clear();
+    expect(dropped).toEqual(type === QueueType.FIFO ? [3, 2] : [1, 2]);
+    queue.clear();
+    expect(dropped).toHaveLength(2);
+    expect(queue.add(4)).toBe(0);
+    expect(queue.next()).toBe(4);
+    expect(queue.length).toBe(0);
+    expect(dropped).toHaveLength(2);
+  });
+
+  it.each([QueueType.FIFO, QueueType.LIFO])("observes ratio eviction in order for %s", (type) => {
+    const dropped: number[] = [];
+    const queue = new LinearGossipQueue<number>({
+      type,
+      maxLength: 3,
+      dropOpts: {type: DropType.ratio, start: 0.5, step: 0.1},
+      onDrop: (item) => dropped.push(item),
+    });
+    for (const item of [1, 2, 3]) queue.add(item);
+    expect(queue.add(4)).toBe(2);
+    expect(dropped).toEqual(type === QueueType.FIFO ? [4, 3] : [1, 2]);
+    expect(queue.getAll()).toEqual(type === QueueType.FIFO ? [1, 2] : [3, 4]);
+  });
+});

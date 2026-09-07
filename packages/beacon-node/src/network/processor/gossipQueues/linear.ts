@@ -19,7 +19,7 @@ export class LinearGossipQueue<T> implements GossipQueue<T> {
   // set recentDrop to false after we process up to maxLength items
   private processedCountSinceDrop = 0;
 
-  constructor(private readonly opts: LinearGossipQueueOpts) {
+  constructor(private readonly opts: LinearGossipQueueOpts<T>) {
     if (opts.dropOpts.type === DropType.ratio) {
       const {start, step} = opts.dropOpts;
       if (start <= 0 || start > 1) {
@@ -48,7 +48,15 @@ export class LinearGossipQueue<T> implements GossipQueue<T> {
   }
 
   clear(): void {
-    this.list.clear();
+    if (this.opts.onDrop) {
+      const length = this.list.length;
+      for (let i = 0; i < length; i++) {
+        const item = this.opts.type === QueueType.LIFO ? this.list.shift() : this.list.pop();
+        if (item !== null) this.opts.onDrop(item);
+      }
+    } else {
+      this.list.clear();
+    }
   }
 
   /**
@@ -149,11 +157,8 @@ export class LinearGossipQueue<T> implements GossipQueue<T> {
 
     let i = 0;
     while (i < count && this.length > 0) {
-      if (this.opts.type === QueueType.LIFO) {
-        this.list.shift();
-      } else {
-        this.list.pop();
-      }
+      const item = this.opts.type === QueueType.LIFO ? this.list.shift() : this.list.pop();
+      if (item !== null) this.opts.onDrop?.(item);
       i++;
     }
 
