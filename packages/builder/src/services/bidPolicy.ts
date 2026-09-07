@@ -27,8 +27,8 @@ export type ProportionalBidPolicyOpts = {
  */
 export class ProportionalBidPolicy implements BidPolicy {
   constructor(private readonly opts: ProportionalBidPolicyOpts) {
-    if (opts.shareBps < 0 || opts.shareBps > 10_000) {
-      throw Error(`Invalid shareBps=${opts.shareBps}, must be within [0, 10000]`);
+    if (!Number.isSafeInteger(opts.shareBps) || opts.shareBps < 0 || opts.shareBps > 10_000) {
+      throw Error(`Invalid shareBps=${opts.shareBps}, must be an integer within [0, 10000]`);
     }
 
     if (opts.minValueGwei < 0) {

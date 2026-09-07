@@ -53,4 +53,8 @@ describe("ProportionalBidPolicy", () => {
     const policy = new ProportionalBidPolicy({shareBps: 3333, fixedCostGwei: 2, minValueGwei: 0});
     expect(policy.computeValue({payloadValueGwei: 10, coverableGwei: 100})).toBe(1);
   });
+
+  it("rejects a non-integer shareBps value", () => {
+    expect(() => new ProportionalBidPolicy({shareBps: 12.5, fixedCostGwei: 2, minValueGwei: 0})).toThrow();
+  });
 });
