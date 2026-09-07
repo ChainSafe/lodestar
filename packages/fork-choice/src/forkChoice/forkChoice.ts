@@ -1914,12 +1914,60 @@ export class ForkChoice implements IForkChoice {
 
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
+      // Before the assignment, `onFinalized` listeners run synchronously and may read the confirmed root
+      this.pinConfirmedRootOnFinalization(finalizedCheckpoint);
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.justifiedProposerBoostScore = null;
       updated = true;
     }
 
     return updated;
+  }
+
+  /**
+   * Keep `confirmedRoot` inside the finalized subtree whenever finality moves.
+   *
+   * The rule only moves the confirmed root on the slot tick, but finality advances on every `on_block` and
+   * `on_tick`, several times per slot while syncing. A confirmed root outside the new finalized subtree reads
+   * as `null` from `getBlockHex()` right away, before the archiver ever prunes it, and then every safe block
+   * lookup throws until the next tick.
+   */
+  private pinConfirmedRootOnFinalization(finalizedCheckpoint: CheckpointWithHex): void {
+    if (this.fastConfirmationRule === undefined) return;
+
+    const previousConfirmedRoot = this.fcStore.confirmedRoot;
+    if (previousConfirmedRoot === finalizedCheckpoint.rootHex) return;
+
+    // protoArray still holds the previous finalized root, so `getBlockHex()` does not reject the confirmed
+    // root yet. Mirror `isFinalizedRootOrDescendant()` against the new checkpoint instead
+    const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+    if (
+      this.protoArray.getAncestorOrNull(previousConfirmedRoot, finalizedSlot)?.blockRoot === finalizedCheckpoint.rootHex
+    ) {
+      return;
+    }
+
+    this.fcStore.confirmedRoot = finalizedCheckpoint.rootHex;
+
+    // While paused the root is pinned to finality by design, only a running rule that finality outran is a reset
+    if (!this.fastConfirmationPaused) {
+      this.metrics?.fastConfirmation.resets.inc();
+      this.metrics?.fastConfirmation.fallbacks.inc();
+    }
+
+    this.logger?.verbose("Pinned fast confirmation root to finalized", {
+      slot: this.fcStore.currentSlot,
+      previousConfirmedRoot,
+      confirmedRoot: this.fcStore.confirmedRoot,
+      paused: this.fastConfirmationPaused,
+    });
+
+    try {
+      this.notifyConfirmedRoot();
+    } catch (err) {
+      // Runs inside on_block/on_tick with no catch above
+      this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+    }
   }
 
   /**
