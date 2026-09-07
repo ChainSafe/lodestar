@@ -493,6 +493,27 @@ describe("chain / blocks / processBlocks", () => {
     expect(chain.logger.warn).toHaveBeenCalledWith("Block error", {slot, blockRoot}, otherErr);
   });
 
+  it("logs a different wrapped error for the same block at error level", async () => {
+    const first = new BlockError(blockInput.getBlock(), {
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
+      error: new Error("a"),
+    });
+    const second = new BlockError(blockInput.getBlock(), {
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
+      error: new Error("b"),
+    });
+    for (const err of [first, first, second]) {
+      vi.mocked(verifyBlocksInEpoch).mockRejectedValue(err);
+      await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(err);
+    }
+
+    const context = {slot: blockInput.getBlock().message.slot, blockRoot: blockInput.blockRootHex};
+    expect(chain.logger.error).toHaveBeenCalledTimes(2);
+    expect(chain.logger.error).toHaveBeenCalledWith("Block error", context, first);
+    expect(chain.logger.error).toHaveBeenCalledWith("Block error", context, second);
+    expect(chain.logger.debug).toHaveBeenCalledExactlyOnceWith("Block error", context, first);
+  });
+
   function createImportError(
     message: string,
     code: BlockErrorCode | PayloadErrorCode

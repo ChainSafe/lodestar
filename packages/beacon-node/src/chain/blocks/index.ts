@@ -11,7 +11,7 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
-import {PayloadError, PayloadErrorCode, importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
 import {getBlockErrorLogLevel} from "./utils/blockErrorLogLevel.js";
@@ -199,7 +199,7 @@ export async function processBlocks(
       this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
     } else if (err instanceof PayloadError) {
       if (!opts.disableOnBlockError) {
-        logBlockOrPayloadError.call(this, "Payload error", err.type.code, err.payloadInput, err);
+        logBlockOrPayloadError.call(this, "Payload error", err, err.payloadInput);
       }
       // The envelope came from an untrusted range peer, drop it from the shared cache so the retried batch
       // downloads it again instead of re-verifying the same bytes. Gossip does the same on REJECT
@@ -218,13 +218,7 @@ export async function processBlocks(
       }
 
       if (!opts.disableOnBlockError) {
-        logBlockOrPayloadError.call(
-          this,
-          "Block error",
-          err.type.code,
-          {slot: err.signedBlock.message.slot, blockRootHex},
-          err
-        );
+        logBlockOrPayloadError.call(this, "Block error", err, {slot: err.signedBlock.message.slot, blockRootHex});
         if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
           const {signedBlock} = err;
           const blockSlot = signedBlock.message.slot;
@@ -261,13 +255,16 @@ export async function processBlocks(
 function logBlockOrPayloadError(
   this: BeaconChain,
   message: string,
-  code: BlockErrorCode | PayloadErrorCode,
-  {slot, blockRootHex}: {slot: Slot; blockRootHex: RootHex},
-  err: Error
+  err: BlockError | PayloadError,
+  {slot, blockRootHex}: {slot: Slot; blockRootHex: RootHex}
 ): void {
-  const key = `${code}:${blockRootHex}`;
+  const {code} = err.type;
   let level = getBlockErrorLogLevel(code);
   if (level !== LogLevel.debug) {
+    // BEACON_CHAIN_ERROR, PRESTATE_MISSING and PER_BLOCK_PROCESSING_ERROR wrap the actual error, a different one for
+    // the same block is not a repeat
+    const wrapped = (err.type as {error?: Error}).error?.message ?? "";
+    const key = `${code}:${blockRootHex}:${wrapped}`;
     if (this.reportedBlockErrors.has(key)) {
       level = LogLevel.debug;
     } else {
