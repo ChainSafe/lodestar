@@ -17,12 +17,21 @@ describe("rateLimiterGRCA", () => {
   });
 
   describe("allows()", () => {
-    it("should throw error if requested for a zero value", () => {
-      expect(() => rateLimiter.allows(null, 0)).toThrow("Token value should always be positive. Given: 0");
+    it("should charge (not throw) a zero-token request, clamping it to 1", () => {
+      // A zero/negative token count must never escape accounting via an uncaught throw; it is
+      // clamped to 1 so it is still charged and bannable (regression: zero-token req/resp requests
+      // previously threw out of the limiter and were never counted, banned, or metered).
+      expect(rateLimiter.allows(null, 0)).toBe(true);
+      expect(rateLimiter.allows(null, -1)).toBe(true);
     });
 
-    it("should throw error if requested for a negative value", () => {
-      expect(() => rateLimiter.allows(null, -1)).toThrow("Token value should always be positive. Given: -1");
+    it("should count clamped zero-token requests against the quota until it is exhausted", () => {
+      // Each zero-token request costs 1 after clamping, so `limit` of them fill the bucket
+      // and the next one is denied (which is what triggers the ban + metric at the caller).
+      for (let i = 0; i < limit; i++) {
+        expect(rateLimiter.allows(null, 0), `zero-token request ${i} should be charged and allowed`).toBe(true);
+      }
+      expect(rateLimiter.allows(null, 0)).toBe(false);
     });
 
     it("should return valid number of requests within request window", () => {

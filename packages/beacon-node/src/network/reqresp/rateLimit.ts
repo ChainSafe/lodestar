@@ -126,7 +126,11 @@ function getRequestCountFn<T extends ReqRespMethod>(
   const type = requestSszTypeByMethod(fork, config)[method];
   return (reqData: Uint8Array) => {
     try {
-      return (type && fn(type.deserialize(reqData))) ?? 1;
+      // A schema-valid request can still compute to 0 tokens (e.g. `BeaconBlocksByRange` with
+      // `count: 0`, or an empty-list `BeaconBlocksByRoot`). Never treat that as free: floor to 1
+      // so the request is still charged against the quota, counted, and bannable. `?? 1` only
+      // substituted for `null`/`undefined`, so a computed `0` slipped through unaccounted.
+      return Math.max(1, (type && fn(type.deserialize(reqData))) ?? 1);
     } catch (_e) {
       return 1;
     }
