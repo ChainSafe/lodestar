@@ -49,6 +49,9 @@ describe("BidLedger", () => {
     ledger.recordBid(bid);
 
     expect(ledger.recordWin({...bid, blockHash: root(7)}, blockRoot)).toBeNull();
+    expect(ledger.recordWin({...bid, signedBidRoot: root(8)}, blockRoot)).toBeNull();
+    expect(ledger.getBidsForSlot(bid.slot)).toEqual([{...bid, wonBlockRoots: []}]);
+    expect(ledger.getUnsettledValueGwei(0)).toBe(0);
     expect(ledger.recordWin(bid, blockRoot)).toEqual({...bid, wonBlockRoots: [blockRoot]});
     expect(ledger.recordWin(bid, blockRoot)).toEqual({...bid, wonBlockRoots: [blockRoot]});
   });
@@ -226,6 +229,7 @@ function submittedBid(overrides: Partial<SubmittedBid> = {}): SubmittedBid {
     parentBlockRoot: root(3),
     blockHash: root(4),
     valueGwei: 100,
+    signedBidRoot: root(5),
     ...overrides,
   };
 }
