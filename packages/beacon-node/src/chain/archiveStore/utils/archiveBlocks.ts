@@ -164,16 +164,28 @@ export async function archiveBlocks(
     }
   }
 
-  // deleteNonCanonicalBlocks
-  // loop through forkchoice single time
-
+  // We prune by payload-level and block-level by keeping two root sets:
+  // 1) `nonCanonicalBlockRoots`
+  //   Payload-level data (blob/data column sidecars, execution payload envelopes) belongs to one variant. Prune it
+  //   for every non-ancestor variant over the losing FULL sibling of an EMPTY-finalized block. Deleting by
+  //   root cannot hurt canonical blocks: the code above already migrated their payload data to the cold DB.
+  // 2) `nonCanonicalDistinctBlockRoots`
+  //   Block-level data (block, light client witness and header) exists once per root. A sibling variant of a
+  //   canonical block is the same block, so never prune it as non-canonical. Nothing migrates light client data,
+  //   so pruning it by the wrong root loses it permanently.
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
+  const canonicalBlockRootHexes = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
+  const nonCanonicalDistinctBlocks = finalizedNonCanonicalBlocks.filter(
+    (summary) => !canonicalBlockRootHexes.has(summary.blockRoot)
+  );
+  const nonCanonicalDistinctBlockRoots = nonCanonicalDistinctBlocks.map((summary) => fromHex(summary.blockRoot));
+
   if (nonCanonicalBlockRoots.length > 0) {
     if (persistOrphanedBlocks) {
       // Persist orphaned blocks to disk before deleting them from hot db
       await Promise.all(
-        nonCanonicalBlockRoots.map(async (root, index) => {
-          const block = finalizedNonCanonicalBlocks[index];
+        nonCanonicalDistinctBlockRoots.map(async (root, index) => {
+          const block = nonCanonicalDistinctBlocks[index];
           const blockBytes = await db.block.getBinary(root);
           const blockLogCtx = {slot: block.slot, root: block.blockRoot};
           if (blockBytes) {
@@ -195,8 +207,14 @@ export async function archiveBlocks(
       slotRange: prettyPrintIndices(nonCanonicalSlots),
     };
 
-    await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
+    if (nonCanonicalDistinctBlockRoots.length > 0) {
+      await db.block.batchDelete(nonCanonicalDistinctBlockRoots);
+      logger.verbose("Deleted non canonical blocks from hot DB", {
+        ...logCtx,
+        count: nonCanonicalDistinctBlockRoots.length,
+        slotRange: prettyPrintIndices(nonCanonicalDistinctBlocks.map((summary) => summary.slot).sort((a, b) => a - b)),
+      });
+    }
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
@@ -274,9 +292,11 @@ export async function archiveBlocks(
     }
   }
 
-  // Prunning potential checkpoint data
+  // Pruning potential checkpoint data
   const finalizedCanonicalNonCheckpointBlocks = getNonCheckpointBlocks(finalizedCanonicalBlockRoots);
-  const nonCheckpointBlockRoots: Uint8Array[] = [...nonCanonicalBlockRoots];
+  // Prune by non canonical distinct blocks, never prune
+  // block-level light client data for sibling payload variants of canonical blocks
+  const nonCheckpointBlockRoots: Uint8Array[] = [...nonCanonicalDistinctBlockRoots];
   for (const block of finalizedCanonicalNonCheckpointBlocks) {
     nonCheckpointBlockRoots.push(block.root);
   }
