@@ -148,6 +148,16 @@ export class NativeNetworkCore implements INetworkCore {
         const requests = this.requests.drain(8);
         const gossip = this.gossip.drain();
         const diagnostics = this.runtime.drain(16);
+        for (const event of diagnostics.events) {
+          if (event.type === "operationalError") {
+            this.modules.logger.debug("Native network operation failed", {
+              code: event.code,
+              count: String(event.count),
+            });
+          } else if (event.type === "peerClosed") {
+            this.modules.logger.debug("Native peer closed", {peer: hostPeerId(event.peerId), reason: event.reason});
+          }
+        }
         if (peers || requests || gossip || diagnostics.more) this.onReadable();
       } catch (error) {
         this.onFailure(error);
