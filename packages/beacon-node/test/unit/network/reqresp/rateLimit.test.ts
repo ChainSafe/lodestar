@@ -9,9 +9,6 @@ describe("network / reqresp / rateLimit getRequestCount", () => {
   const quotas = rateLimitQuotas(fork, config);
   const sszTypes = requestSszTypeByMethod(fork, config);
 
-  // Regression: a schema-valid request whose token count computes to 0 must be floored to 1, not
-  // treated as free. Before the fix the `?? 1` fallback only caught null/undefined, so a computed 0
-  // passed through and the request was never charged, counted, or bannable.
   it("floors a zero-count BeaconBlocksByRange request to 1 token", () => {
     const type = sszTypes[ReqRespMethod.BeaconBlocksByRange];
     // defaultValue has count: 0 — a schema-valid request that asks for nothing

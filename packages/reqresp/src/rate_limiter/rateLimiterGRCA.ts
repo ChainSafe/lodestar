@@ -44,7 +44,7 @@ export class RateLimiterGRCA<Key> {
   }
 
   allows(key: Key, tokens: number): boolean {
-    // Defense in depth: clamp to >=1 so a non-positive count is still charged, not skipped.
+    // Defense in depth: a non-positive count must still be charged, not skipped.
     const chargedTokens = Math.max(1, tokens);
 
     const msSinceStart = Date.now() - this.startTimeMs;
