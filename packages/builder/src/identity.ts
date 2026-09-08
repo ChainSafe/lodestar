@@ -1,11 +1,9 @@
 import {ApiClient, ApiError, HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {IClock} from "@lodestar/state-transition";
+import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {ErrorAborted, Logger, TimeoutError, isFetchError, sleep, toHex} from "@lodestar/utils";
-
-export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
 
 export async function resolveBuilderIdentity(
   api: ApiClient,
@@ -71,7 +69,7 @@ async function waitForBuilder(
         currentEpoch,
         slot: clock.getCurrentSlot(),
       });
-      await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+      await sleep(msToNextEpochPoll(clock), signal);
       continue;
     }
 
@@ -87,7 +85,7 @@ async function waitForBuilder(
           currentEpoch,
           slot: clock.getCurrentSlot(),
         });
-        await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+        await sleep(msToNextEpochPoll(clock), signal);
         continue;
       }
       throw e;
@@ -104,7 +102,7 @@ async function waitForBuilder(
     } else {
       logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
     }
-    await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+    await sleep(msToNextEpochPoll(clock), signal);
   }
   throw new ErrorAborted("waitForBuilder");
 }
@@ -144,4 +142,9 @@ async function fetchBuilder(
     }
     throw e;
   }
+}
+
+function msToNextEpochPoll(clock: IClock): number {
+  // wait a slot past the epoch boundary so the BN has processed the transition
+  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1) + 1);
 }

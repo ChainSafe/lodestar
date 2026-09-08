@@ -1,8 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ErrorAborted, FetchError, TimeoutError, toHex} from "@lodestar/utils";
-import {WAITING_FOR_BUILDER_POLL_MS, getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
+import {getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
@@ -20,6 +21,8 @@ describe("Identity", () => {
   const version = PAYLOAD_BUILDER_VERSION;
   // ClockMock reports currentEpoch=0, use GLOAS_FORK_EPOCH=0 so tests query the beacon node without waiting for the fork
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
+  // waitForBuilder polls one slot past the next epoch boundary
+  const epochPollMs = clock.msToSlot(computeStartSlotAtEpoch(1) + 1);
 
   let abortController: AbortController;
 
@@ -96,7 +99,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    await vi.advanceTimersByTimeAsync(epochPollMs);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -110,7 +113,12 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+
+    // Does not re-poll before one slot past the next epoch boundary
+    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(1);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -120,7 +128,7 @@ describe("Identity", () => {
     // ClockMock reports currentEpoch=0, so a future fork epoch keeps the builder in the pre-fork wait loop
     const futureForkConfig = createChainForkConfig({GLOAS_FORK_EPOCH: 1});
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, futureForkConfig);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
 
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalledWith(
@@ -139,7 +147,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    await vi.advanceTimersByTimeAsync(epochPollMs);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -154,12 +162,13 @@ describe("Identity", () => {
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, forkClock, forkConfig);
 
     // Pre-fork: the builder waits without querying the beacon node
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    const pollMs = forkClock.msToSlot(computeStartSlotAtEpoch(1) + 1);
+    await vi.advanceTimersByTimeAsync(pollMs - 1);
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
 
     // Gloas fork reached: the builder queries the beacon node and resolves
-    forkClock.currentEpoch = 1;
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    forkClock.currentSlot = SLOTS_PER_EPOCH;
+    await vi.advanceTimersByTimeAsync(1);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(1);
   });
@@ -187,7 +196,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    await vi.advanceTimersByTimeAsync(epochPollMs);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -206,7 +215,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    await vi.advanceTimersByTimeAsync(epochPollMs);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
