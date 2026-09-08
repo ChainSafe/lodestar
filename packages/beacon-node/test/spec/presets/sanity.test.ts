@@ -85,6 +85,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
       shouldError: (testCase) => testCase.post === undefined,
+      shouldErrorOnInput: (inputNames: Set<string>) => !inputNames.has("post"),
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {

@@ -33,6 +33,7 @@ beforeAll(() => {
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
+  fs.writeFileSync(path.join(__dirname, "../_test_files/single/case1/input.ssz"), new Uint8Array());
 });
 
 afterAll(() => {
@@ -61,6 +62,24 @@ describeDirectorySpecTest<SimpleCase, number>(
       output: ssz.UintNum64,
     },
     shouldError: (testCase) => !testCase.input.test,
+    getExpected: (testCase) => testCase.output,
+  }
+);
+
+describeDirectorySpecTest<SimpleCase, number>(
+  "single spec test input error",
+  path.join(__dirname, "../_test_files/single"),
+  (testCase) => testCase.input.number,
+  {
+    inputTypes: {
+      input: InputType.SSZ,
+      output: InputType.SSZ,
+    },
+    sszTypes: {
+      input: sampleContainerType,
+      output: ssz.UintNum64,
+    },
+    shouldErrorOnInput: (_inputNames, name) => name.endsWith("/case1"),
     getExpected: (testCase) => testCase.output,
   }
 );

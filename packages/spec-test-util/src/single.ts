@@ -66,6 +66,9 @@ export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
+  /** Determine whether an input deserialization error is expected from the files present in the test case. */
+  shouldErrorOnInput?: (inputNames: Set<string>, name: string, index: number) => boolean;
+
   shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
   expectFunc?: (testCase: TestCase, expected: any, actual: any) => void;
@@ -115,7 +118,21 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
           ? loadYaml(fs.readFileSync(metaFilePath, "utf8"))
           : undefined;
 
-        let testCase = loadInputFiles(testSubDirPath, options, meta);
+        let testCase: TestCase;
+        try {
+          testCase = loadInputFiles(testSubDirPath, options, meta);
+        } catch (e) {
+          const inputNames = new Set(
+            fs
+              .readdirSync(testSubDirPath)
+              .filter((file) => !isDirectory(path.join(testSubDirPath, file)))
+              .map((file) => path.parse(file).name)
+          );
+          if (options.shouldErrorOnInput?.(inputNames, testName, 0)) {
+            return;
+          }
+          throw e;
+        }
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
         if (options.shouldSkip?.(testCase, testName, 0)) {
           context.skip();

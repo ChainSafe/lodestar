@@ -88,7 +88,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(balances.sliceFrom(1).getAll()).toEqual([2, 3]);
   });
 
-  it("enforces Gloas progressive list limits on deserialization", () => {
+  it("enforces Gloas progressive list limits on deserialization and JSON parsing", () => {
     function assertLimit<Value>(
       type: {
         readonly elementType: {defaultValue(): Value};
@@ -96,6 +96,8 @@ describe("Gloas EIP-7688 SSZ types", () => {
         readonly typeName: string;
         serialize(value: Value[]): Uint8Array;
         deserialize(data: Uint8Array): Value[];
+        toJson(value: Value[]): unknown;
+        fromJson(json: unknown): Value[];
       },
       limit: number
     ): void {
@@ -105,6 +107,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
       expect(() => type.deserialize(type.serialize(value))).toThrow(
         `Invalid list length ${limit + 1} over limit ${limit}`
       );
+      expect(() => type.fromJson(type.toJson(value))).toThrow(`Invalid list length ${limit + 1} over limit ${limit}`);
     }
 
     assertLimit(ssz.gloas.Withdrawals, MAX_WITHDRAWALS_PER_PAYLOAD);

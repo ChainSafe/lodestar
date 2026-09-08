@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_PAYLOAD_ATTESTATIONS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {
@@ -122,7 +122,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPoolPayloadAttestations: {
     args: {slot: 1},
     res: {
-      data: Array.from({length: 5}, () => ssz.gloas.PayloadAttestation.defaultValue()),
+      data: Array.from({length: MAX_PAYLOAD_ATTESTATIONS}, () => ssz.gloas.PayloadAttestation.defaultValue()),
       meta: {version: ForkName.gloas},
     },
   },
