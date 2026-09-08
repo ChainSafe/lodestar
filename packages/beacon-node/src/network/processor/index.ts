@@ -60,15 +60,23 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 
 /**
- * We don't support super forky condition where there are more than 5 roots per slot via gossip.
- * If it's the case then UnknownBlockInput sync would help.
+ * Buffer (memory) budget: max distinct roots we BUFFER messages for, per slot. Kept tight to avoid the OOM
+ * risk. We don't support super forky condition where there are more than this many roots per slot via gossip.
  */
-const MAX_UNKNOWN_ROOTS_PER_SLOT = 5;
+export const MAX_BUFFERED_ROOTS_PER_SLOT = 5;
+
+/**
+ * Search (recovery) budget: max distinct roots we emit an unknown-root search for, per slot. Higher than
+ * the buffer budget because:
+ * - in the attack scenario, the genuine root may comes after the first MAX_BUFFERED_ROOTS_PER_SLOT roots
+ * - if we cannot search, we'll penalize peers in UnknownBlockInput, not in NetworkProcessor
+ */
+export const MAX_SEARCHED_ROOTS_PER_SLOT = 32;
 
 /**
  * Given the same root and topic, we'll ignore messages after the below cap.
  */
-const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>> = {
+export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>> = {
   [GossipType.data_column_sidecar]: NUMBER_OF_COLUMNS,
   [GossipType.execution_payload]: 1,
   [GossipType.execution_payload_bid]: 8,
@@ -549,24 +557,12 @@ export class NetworkProcessor {
         }
         break;
       case PreprocessAction.AwaitBlock:
-        if (this.maybeAwaitBlock(preprocessResult.root, topicType, slot, message)) {
-          this.searchUnknownRoot(
-            {slot, root: preprocessResult.root},
-            pendingSearchBlock,
-            pendingSearchEnvelope,
-            peerId
-          );
-        }
+        this.maybeAwaitBlock(preprocessResult.root, topicType, slot, message);
+        this.searchUnknownRoot({slot, root: preprocessResult.root}, pendingSearchBlock, pendingSearchEnvelope, peerId);
         break;
       case PreprocessAction.AwaitEnvelope:
-        if (this.maybeAwaitPayload(preprocessResult.root, topicType, slot, message)) {
-          this.searchUnknownRoot(
-            {slot, root: preprocessResult.root},
-            pendingSearchBlock,
-            pendingSearchEnvelope,
-            peerId
-          );
-        }
+        this.maybeAwaitPayload(preprocessResult.root, topicType, slot, message);
+        this.searchUnknownRoot({slot, root: preprocessResult.root}, pendingSearchBlock, pendingSearchEnvelope, peerId);
         break;
     }
   };
@@ -574,24 +570,22 @@ export class NetworkProcessor {
   /**
    * Buffer a gossip message that must wait for an unknown block before it can be validated.
    *
-   * For DOS protection, returns true when buffered; false (reject metric incremented) when any cap is hit:
+   * For DOS protection, the message is ignored (reject metric incremented) when any cap is hit:
    * - MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS: global awaiting-block message count
-   * - MAX_UNKNOWN_ROOTS_PER_SLOT: distinct unknown roots tracked per slot (so we don't search/buffer for a
-   *   root beyond the roots budget)
+   * - MAX_BUFFERED_ROOTS_PER_SLOT: distinct roots we buffer messages for, per slot
    * - MAX_AWAITING_MESSAGES_PER_ROOT[topic]: messages buffered per (root, topic)
-   *
    */
-  private maybeAwaitBlock(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): boolean {
+  private maybeAwaitBlock(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
     const metric = this.metrics?.awaitingBlockGossipMessages;
     // global message-count cap - cheapest check first
     if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
-      return false;
+      return;
     }
-    // roots budget: the awaited root itself must fit this slot's distinct-root budget
-    if (this.tooManyUnknownRoots(slot, root)) {
+    // buffer budget: the awaited root itself must fit this slot's distinct buffered-root budget
+    if (this.tooManyUnknownRoots(slot, root, MAX_BUFFERED_ROOTS_PER_SLOT)) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
-      return false;
+      return;
     }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
@@ -600,29 +594,24 @@ export class NetworkProcessor {
       (this.awaitingMessagesByBlockRoot.get(root)?.get(topicType)?.size ?? 0) >= perRootCap
     ) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
-      return false;
+      return;
     }
 
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingBlockMessageCount++;
-    return true;
   }
 
-  private maybeAwaitPayload(
-    root: RootHex,
-    topicType: GossipType,
-    slot: Slot,
-    message: PendingGossipsubMessage
-  ): boolean {
+  /** Payload counterpart of maybeAwaitBlock */
+  private maybeAwaitPayload(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
     const metric = this.metrics?.awaitingPayloadGossipMessages;
     if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
-      return false;
+      return;
     }
-    if (this.tooManyUnknownRoots(slot, root)) {
+    if (this.tooManyUnknownRoots(slot, root, MAX_BUFFERED_ROOTS_PER_SLOT)) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
-      return false;
+      return;
     }
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
     if (
@@ -630,24 +619,25 @@ export class NetworkProcessor {
       (this.awaitingMessagesByPayloadBlockRoot.get(root)?.get(topicType)?.size ?? 0) >= perRootCap
     ) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
-      return false;
+      return;
     }
 
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByPayloadBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingPayloadMessageCount++;
-    return true;
   }
 
   /**
-   * For DOS protection, We don't support super forky condition where there are more than 5 roots per slot via gossip.
-   * If it's the case then UnknownBlockInput sync would help.
+   * Cap distinct unknown roots per slot against `max`. Two budgets share `unknownRootsBySlot`:
+   * - buffer (memory): MAX_BUFFERED_ROOTS_PER_SLOT, gates maybeAwait* so a few fake roots can't OOM us
+   * - search (recovery): MAX_SEARCHED_ROOTS_PER_SLOT (higher), gates searchUnknownRoot so the real block
+   *   past the buffer cap still gets its by-root fetch.
+   * An already-tracked root (dedup) never counts as "too many".
    */
-  private tooManyUnknownRoots(slot: Slot, root: RootHex): boolean {
+  private tooManyUnknownRoots(slot: Slot, root: RootHex, max: number): boolean {
     const roots = this.unknownRootsBySlot.get(slot);
     if (roots === undefined) return false;
-    // already-tracked root (dedup) never counts as "too many"
-    return !roots.has(root) && roots.size >= MAX_UNKNOWN_ROOTS_PER_SLOT;
+    return !roots.has(root) && roots.size >= max;
   }
 
   private searchUnknownRoot(
@@ -657,7 +647,7 @@ export class NetworkProcessor {
     peerId: PeerIdStr
   ): void {
     if (!searchBlock && !searchEnvelope) return;
-    if (this.tooManyUnknownRoots(slotRoot.slot, slotRoot.root)) return;
+    if (this.tooManyUnknownRoots(slotRoot.slot, slotRoot.root, MAX_SEARCHED_ROOTS_PER_SLOT)) return;
     if (searchBlock) this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
     if (searchEnvelope) this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId);
   }
