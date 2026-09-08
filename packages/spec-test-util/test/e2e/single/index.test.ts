@@ -46,6 +46,9 @@ describeDirectorySpecTest<SimpleCase, number>(
   "single spec test",
   path.join(__dirname, "../_test_files/single"),
   (testCase) => {
+    if (!testCase.input.test) {
+      throw Error("test flag is false");
+    }
     return testCase.input.number;
   },
   {

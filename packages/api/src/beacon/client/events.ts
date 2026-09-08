@@ -37,8 +37,13 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
 
       for (const topic of topics) {
         eventSource.addEventListener(topic, (event: MessageEvent) => {
-          const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
-          onEvent({type: topic, message} as BeaconEvent);
+          try {
+            const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
+            onEvent({type: topic, message} as BeaconEvent);
+          } catch (e) {
+            // A throw here leaves the EventSource parser with a stale data buffer which breaks all later events
+            onError?.(e as Error);
+          }
         });
       }
 

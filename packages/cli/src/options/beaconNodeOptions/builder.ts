@@ -31,7 +31,8 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
 
 export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
-    description: "Enable external builder",
+    description:
+      "Enable external builder. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     type: "boolean",
     default: defaultExecutionBuilderHttpOpts.enabled,
     group: "builder",
@@ -39,7 +40,8 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.url": {
     alias: ["builder.urls"],
-    description: "Url hosting the builder API",
+    description:
+      "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     defaultDescription: defaultExecutionBuilderHttpOpts.url,
     type: "string",
     group: "builder",

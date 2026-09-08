@@ -61,6 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -81,7 +82,7 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
-import {ImportPayloadOpts} from "./blocks/types.js";
+import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
@@ -165,6 +166,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -276,6 +278,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
+      builderApiClientOpts,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -294,6 +297,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      builderApiClientOpts?: BuilderApiClientOpts;
     }
   ) {
     this.opts = opts;
@@ -449,6 +453,8 @@ export class BeaconChain implements IBeaconChain {
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
       {forkChoice, logger, metrics}
     );
+
+    this.builderApiClient = new BuilderApiClient(builderApiClientOpts ?? {}, config, clock, bls, metrics, logger);
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
@@ -1191,15 +1197,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], null, opts);
+    await this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
   async processChainSegment(
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void> {
-    await this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
+  ): Promise<ProcessBlocksResult> {
+    return this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
@@ -1351,9 +1357,10 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  predictProposerHead(slot: Slot): ProtoBlock {
+  predictProposerHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const slot = this.clock.currentSlot;
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {

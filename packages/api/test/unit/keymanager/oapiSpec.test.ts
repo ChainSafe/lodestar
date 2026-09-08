@@ -11,7 +11,7 @@ import {testData} from "./testData.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v1.1.0";
+const version = "v1.2.0-alpha.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/keymanager-APIs/releases/download/${version}/keymanager-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/keymanager-oapi.json"),

@@ -145,12 +145,19 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
+   * On a checkpoint event, prune the cache while keeping the head state.
+   */
+  onCheckpoint(headStateRootHex: string): void {
+    this.prune(headStateRootHex);
+  }
+
+  /**
    * Prune the cache from tail to keep the most recent n states consistently.
    * The tail of the list is the oldest state, in case regen adds back the same state,
    * it should stay next to head so that it won't be pruned right away.
    * The FIFO cache helps with this.
    */
-  prune(lastAddedKey: string): void {
+  private prune(lastAddedKey: string): void {
     while (this.keyOrder.length > this.maxStates) {
       const key = this.keyOrder.last();
       // it does not make sense to prune the last added state

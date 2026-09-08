@@ -8,7 +8,13 @@ import {testData} from "./testData.js";
 
 describe("builder", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    // Gloas at a later epoch so pre-gloas test data (slot 0) and gloas test data (slot 32000) both resolve
+    createChainForkConfig({
+      ...defaultChainConfig,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 1000,
+      GLOAS_FORK_EPOCH: 1000,
+    }),
     getClient,
     getRoutes,
     testData

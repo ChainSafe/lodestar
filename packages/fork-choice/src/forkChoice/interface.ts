@@ -155,7 +155,8 @@ export interface IForkChoice {
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    blockDelaySec: number,
+    receiveDelaySec: number,
+    importDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus

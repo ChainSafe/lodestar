@@ -46,6 +46,7 @@ describe("fast confirmation pause/resume", () => {
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
+        importedTimely: false,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );

@@ -126,7 +126,7 @@ export type ResponseDataCodec<T, M> = {
 
 export type ResponseMetadataCodec<T> = {
   toJson: (val: T) => unknown; // server
-  fromJson: (val: unknown) => T; // client
+  fromJson: (val: unknown, headers?: HeadersExtra) => T; // client
   toHeadersObject: (val: T) => Record<string, string>; // server
   fromHeaders: (headers: HeadersExtra) => T; // server
 };

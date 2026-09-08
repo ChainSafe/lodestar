@@ -80,19 +80,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
-    /^gloas\/light_client\/sync\/.*/,
-    /^heze\/light_client\/sync\/.*/,
-    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
-    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
-    // handling is not yet implemented in Lodestar.
-    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
-    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
-    // New test suite added by consensus-specs #5441; Lodestar still applies
-    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
-    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
-    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
@@ -100,8 +87,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
-    // TODO-GLOAS: re-enable after gloas light client is implemented
-    /\/gloas_fork$/,
     /\/heze_fork$/,
     // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
     // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability

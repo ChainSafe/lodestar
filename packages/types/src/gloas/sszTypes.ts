@@ -1,5 +1,6 @@
 import {
   BitVectorType,
+  ByteListType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -17,6 +18,7 @@ import {
   EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BUILDER_AUTH_DATA_SIZE,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
@@ -249,7 +251,9 @@ export const BuilderPendingWithdrawals = new ProgressiveListCompositeType(Builde
 });
 
 export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
-export const PtcWindow = new VectorCompositeType(
+export const PayloadTimelinessCommitteeIndices = new ListBasicType(ValidatorIndex, PTC_SIZE);
+export const PayloadTimelinessCommitteeBits = new BitVectorType(PTC_SIZE);
+export const PayloadTimelinessCommitteeWindow = new VectorCompositeType(
   PayloadTimelinessCommittee,
   (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
 );
@@ -266,7 +270,7 @@ export const PayloadAttestationData = new ContainerType(
 
 export const PayloadAttestation = new ProgressiveContainerType(
   {
-    aggregationBits: new BitVectorType(PTC_SIZE),
+    aggregationBits: PayloadTimelinessCommitteeBits,
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
@@ -289,7 +293,7 @@ export const PayloadAttestationMessage = new ContainerType(
 
 export const IndexedPayloadAttestation = new ProgressiveContainerType(
   {
-    attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),
+    attestingIndices: PayloadTimelinessCommitteeIndices,
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
@@ -355,6 +359,39 @@ export const SignedExecutionPayloadBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
+);
+
+// Builder API types (builder-specs)
+
+export const BuilderRequestAuth = new ContainerType(
+  {
+    data: new ByteListType(MAX_BUILDER_AUTH_DATA_SIZE),
+    slot: Slot,
+  },
+  {typeName: "BuilderRequestAuth", jsonCase: "eth2"}
+);
+
+export const SignedBuilderRequestAuth = new ContainerType(
+  {
+    message: BuilderRequestAuth,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderRequestAuth", jsonCase: "eth2"}
+);
+
+export const BuilderPreferences = new ContainerType(
+  {
+    maxExecutionPayment: Gwei,
+  },
+  {typeName: "BuilderPreferences", jsonCase: "eth2"}
+);
+
+export const BuilderPreferencesRequest = new ContainerType(
+  {
+    preferences: BuilderPreferences,
+    auth: SignedBuilderRequestAuth,
+  },
+  {typeName: "BuilderPreferencesRequest", jsonCase: "eth2"}
 );
 
 export const BlockAccessList = new ProgressiveByteListType({typeName: "BlockAccessList"});
@@ -569,7 +606,7 @@ export const BeaconState = new ProgressiveContainerType(
     builderPendingWithdrawals: BuilderPendingWithdrawals, // New in GLOAS:EIP7732
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
-    ptcWindow: PtcWindow, // New in GLOAS:EIP7732
+    ptcWindow: PayloadTimelinessCommitteeWindow, // New in GLOAS:EIP7732
   },
   activeFields(46),
   {typeName: "BeaconState", jsonCase: "eth2"}

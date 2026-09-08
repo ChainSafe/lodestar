@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar",
-  "version": "1.46.0",
+  "version": "1.47.0",
   "description": "Command line interface for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -59,9 +59,9 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.1.0",
-    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/discv5": "^12.0.2",
     "@chainsafe/enr": "^6.0.2",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.3.1",
     "@chainsafe/ssz": "^1.6.3",
     "@chainsafe/threads": "^1.11.3",
