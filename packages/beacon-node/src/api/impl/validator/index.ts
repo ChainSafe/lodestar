@@ -22,6 +22,7 @@ import {
   IBeaconStateView,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
+  computeCheckpointSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -1347,7 +1348,7 @@ export function getValidatorApi(
         index = committeeIndex;
       }
 
-      const targetSlot = computeStartSlotAtEpoch(attEpoch);
+      const targetSlot = computeCheckpointSlotAtEpoch(config, attEpoch);
       const targetRoot =
         targetSlot >= headSlot
           ? // If the state is earlier than the target slot then the target *must* be the head block root.

@@ -3,8 +3,8 @@ import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
+import {computeCheckpointSlotAtEpoch} from "../util/blockRoot.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
-import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
@@ -26,7 +26,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
   let isChurnLimitReached = false;
-  const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
+  const finalizedSlot = computeCheckpointSlotAtEpoch(state.config, state.finalizedCheckpoint.epoch);
 
   let startIndex = 0;
   // TODO: is this a good number?

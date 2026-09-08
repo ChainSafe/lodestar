@@ -1,5 +1,5 @@
 import {IForkChoice} from "@lodestar/fork-choice";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeCheckpointSlotAtEpoch, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
 import {IBeaconChain} from "../../chain/interface.js";
 import {ChainTarget} from "../range/utils/index.js";
@@ -114,7 +114,7 @@ export function getRangeSyncTarget(
       // If  RangeSyncType.Finalized, the range of blocks fetchable from startEpoch and target must allow to switch
       // to RangeSyncType.Head
       //
-      // finalizedRoot is a block with slot <= computeStartSlotAtEpoch(finalizedEpoch).
+      // finalizedRoot is the checkpoint block for finalizedEpoch.
       // If finalizedEpoch does not start with a skipped slot, the SyncChain with this target MUST process the
       // first block of the next epoch in order to trigger the condition above `forkChoice.hasBlock(remote.finalizedRoot)`
       // and do a Head sync.
@@ -130,7 +130,7 @@ export function getRangeSyncTarget(
       syncType: RangeSyncType.Finalized,
       startEpoch: local.finalizedEpoch,
       target: {
-        slot: computeStartSlotAtEpoch(remote.finalizedEpoch),
+        slot: computeCheckpointSlotAtEpoch(chain.config, remote.finalizedEpoch),
         root: remote.finalizedRoot,
       },
     };

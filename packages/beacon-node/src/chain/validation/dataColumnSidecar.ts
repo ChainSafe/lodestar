@@ -6,11 +6,7 @@ import {
   NUMBER_OF_COLUMNS,
   isForkPostFulu,
 } from "@lodestar/params";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getBlockHeaderProposerSignatureSetByHeaderSlot,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlockHeaderProposerSignatureSetByHeaderSlot} from "@lodestar/state-transition";
 import {DataColumnSidecar, Root, Slot, SubnetID, ValidatorIndex, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
@@ -62,10 +58,8 @@ export async function validateGossipFuluDataColumnSidecar(
     });
   }
 
-  // 4) [IGNORE] The sidecar is from a slot greater than the latest finalized slot -- i.e. validate that
-  //             sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  // 4) [IGNORE] The sidecar is from a slot greater than the latest finalized checkpoint slot.
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
   if (blockHeader.slot <= finalizedSlot) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,

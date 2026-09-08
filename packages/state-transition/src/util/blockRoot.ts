@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -31,6 +31,24 @@ export function getBlockRootAtSlot(state: BeaconStateAllForks, slot: Slot): Root
  */
 export function getBlockRoot(state: BeaconStateAllForks, epoch: Epoch): Root {
   return getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
+}
+
+export function computeCheckpointSlotAtEpoch(config: Pick<ChainForkConfig, "getForkSeqAtEpoch">, epoch: Epoch): Slot {
+  if (epoch === GENESIS_EPOCH) {
+    return GENESIS_SLOT;
+  }
+
+  return config.getForkSeqAtEpoch(epoch) >= ForkSeq.heze
+    ? computeStartSlotAtEpoch(epoch) - 1
+    : computeStartSlotAtEpoch(epoch);
+}
+
+export function getCheckpointRoot(
+  config: Pick<ChainForkConfig, "getForkSeqAtEpoch">,
+  state: BeaconStateAllForks,
+  epoch: Epoch
+): Root {
+  return getBlockRootAtSlot(state, computeCheckpointSlotAtEpoch(config, epoch));
 }
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.

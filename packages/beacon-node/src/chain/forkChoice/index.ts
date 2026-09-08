@@ -15,8 +15,8 @@ import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
+  computeCheckpointSlotAtEpoch,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   isStatePostBellatrix,
   isStatePostGloas,
 } from "@lodestar/state-transition";
@@ -284,12 +284,12 @@ export function initializeForkChoiceFromUnfinalizedState(
     // dummy data, we're not able to regen state before headBlock
     stateRoot: ZERO_HASH_HEX,
     blockRoot: headBlock.parentRoot,
-    targetRoot: toRootHex(unfinalizedState.getBlockRootAtSlot(computeStartSlotAtEpoch(parentEpoch))),
+    targetRoot: toRootHex(unfinalizedState.getBlockRootAtSlot(computeCheckpointSlotAtEpoch(config, parentEpoch))),
   };
 
   const justifiedBlock: ProtoBlock = {
     ...headBlock,
-    slot: computeStartSlotAtEpoch(justifiedCheckpoint.epoch),
+    slot: computeCheckpointSlotAtEpoch(config, justifiedCheckpoint.epoch),
     // link this to the finalized root so that getAncestors can find the finalized block
     parentRoot: toRootHex(finalizedCheckpoint.root),
     // dummy data, we're not able to regen state before headBlock
@@ -301,7 +301,7 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const finalizedBlock: ProtoBlock = {
     ...headBlock,
-    slot: computeStartSlotAtEpoch(finalizedCheckpoint.epoch),
+    slot: computeCheckpointSlotAtEpoch(config, finalizedCheckpoint.epoch),
     // we don't care parent of finalized block
     parentRoot: ZERO_HASH_HEX,
     // dummy data, we're not able to regen state before headBlock
