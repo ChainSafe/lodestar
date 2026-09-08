@@ -5,6 +5,19 @@ import {
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
 } from "@chainsafe/ssz";
+import {
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_PAYLOAD_ATTESTATIONS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+} from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
 describe("Gloas EIP-7688 SSZ types", () => {
@@ -73,6 +86,38 @@ describe("Gloas EIP-7688 SSZ types", () => {
     const balances = ssz.gloas.Balances.toViewDU([1, 2, 3]);
     expect(balances.sliceTo(1).getAll()).toEqual([1, 2]);
     expect(balances.sliceFrom(1).getAll()).toEqual([2, 3]);
+  });
+
+  it("enforces Gloas progressive list limits on deserialization", () => {
+    function assertLimit<Value>(
+      type: {
+        readonly elementType: {defaultValue(): Value};
+        readonly limit: number;
+        readonly typeName: string;
+        serialize(value: Value[]): Uint8Array;
+        deserialize(data: Uint8Array): Value[];
+      },
+      limit: number
+    ): void {
+      expect(type.limit, type.typeName).toBe(limit);
+
+      const value = Array.from({length: limit + 1}, () => type.elementType.defaultValue());
+      expect(() => type.deserialize(type.serialize(value))).toThrow(
+        `Invalid list length ${limit + 1} over limit ${limit}`
+      );
+    }
+
+    assertLimit(ssz.gloas.Withdrawals, MAX_WITHDRAWALS_PER_PAYLOAD);
+    assertLimit(ssz.gloas.WithdrawalRequests, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
+    assertLimit(ssz.gloas.ConsolidationRequests, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
+    assertLimit(ssz.gloas.BuilderDepositRequests, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD);
+    assertLimit(ssz.gloas.BuilderExitRequests, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
+    assertLimit(ssz.gloas.ProposerSlashings, MAX_PROPOSER_SLASHINGS);
+    assertLimit(ssz.gloas.AttesterSlashings, MAX_ATTESTER_SLASHINGS_ELECTRA);
+    assertLimit(ssz.gloas.Attestations, MAX_ATTESTATIONS_ELECTRA);
+    assertLimit(ssz.gloas.VoluntaryExits, MAX_VOLUNTARY_EXITS);
+    assertLimit(ssz.gloas.BlsToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
+    assertLimit(ssz.gloas.PayloadAttestations, MAX_PAYLOAD_ATTESTATIONS);
   });
 
   it("matches Gloas light-client state gindices from EIP-7688 progressive containers", () => {

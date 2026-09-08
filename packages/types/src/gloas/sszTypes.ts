@@ -18,7 +18,18 @@ import {
   EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_BUILDER_AUTH_DATA_SIZE,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_PAYLOAD_ATTESTATIONS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
@@ -71,7 +82,10 @@ export const AggregationBits = new ProgressiveBitListType({typeName: "Aggregatio
 export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {typeName: "AttestingIndices"});
 export const Transaction = new ProgressiveByteListType({typeName: "Transaction"});
 export const Transactions = new ProgressiveListCompositeType(Transaction, {typeName: "Transactions"});
-export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawal, {typeName: "Withdrawals"});
+export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawal, {
+  typeName: "Withdrawals",
+  limit: MAX_WITHDRAWALS_PER_PAYLOAD,
+});
 export const BlobKzgCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
   typeName: "BlobKzgCommitments",
 });
@@ -140,10 +154,12 @@ export const DepositRequests = new ProgressiveListCompositeType(DepositRequest, 
 export const WithdrawalRequest = electraSsz.WithdrawalRequest;
 export const WithdrawalRequests = new ProgressiveListCompositeType(WithdrawalRequest, {
   typeName: "WithdrawalRequests",
+  limit: MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
 });
 export const ConsolidationRequest = electraSsz.ConsolidationRequest;
 export const ConsolidationRequests = new ProgressiveListCompositeType(ConsolidationRequest, {
   typeName: "ConsolidationRequests",
+  limit: MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
 });
 
 // New in GLOAS:EIP8282
@@ -158,6 +174,7 @@ export const BuilderDepositRequest = new ContainerType(
 );
 export const BuilderDepositRequests = new ProgressiveListCompositeType(BuilderDepositRequest, {
   typeName: "BuilderDepositRequests",
+  limit: MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
 });
 
 // New in GLOAS:EIP8282
@@ -170,6 +187,7 @@ export const BuilderExitRequest = new ContainerType(
 );
 export const BuilderExitRequests = new ProgressiveListCompositeType(BuilderExitRequest, {
   typeName: "BuilderExitRequests",
+  limit: MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
 });
 
 export const ExecutionRequests = new ProgressiveContainerType(
@@ -186,17 +204,24 @@ export const ExecutionRequests = new ProgressiveContainerType(
 
 export const ProposerSlashings = new ProgressiveListCompositeType(phase0Ssz.ProposerSlashing, {
   typeName: "ProposerSlashings",
+  limit: MAX_PROPOSER_SLASHINGS,
 });
 export const AttesterSlashings = new ProgressiveListCompositeType(AttesterSlashing, {
   typeName: "AttesterSlashings",
+  limit: MAX_ATTESTER_SLASHINGS_ELECTRA,
 });
-export const Attestations = new ProgressiveListCompositeType(Attestation, {typeName: "Attestations"});
+export const Attestations = new ProgressiveListCompositeType(Attestation, {
+  typeName: "Attestations",
+  limit: MAX_ATTESTATIONS_ELECTRA,
+});
 export const Deposits = new ProgressiveListCompositeType(phase0Ssz.Deposit, {typeName: "Deposits"});
 export const VoluntaryExits = new ProgressiveListCompositeType(phase0Ssz.SignedVoluntaryExit, {
   typeName: "VoluntaryExits",
+  limit: MAX_VOLUNTARY_EXITS,
 });
 export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
   typeName: "BLSToExecutionChanges",
+  limit: MAX_BLS_TO_EXECUTION_CHANGES,
 });
 
 export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {typeName: "Validators"});
@@ -280,6 +305,7 @@ export const PayloadAttestation = new ProgressiveContainerType(
 
 export const PayloadAttestations = new ProgressiveListCompositeType(PayloadAttestation, {
   typeName: "PayloadAttestations",
+  limit: MAX_PAYLOAD_ATTESTATIONS,
 });
 
 export const PayloadAttestationMessage = new ContainerType(

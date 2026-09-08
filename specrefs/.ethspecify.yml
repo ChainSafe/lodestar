@@ -269,6 +269,9 @@ exceptions:
     - validate_partial_data_column_sidecar_gossip#fulu
 
     # gloas
+    # Enforced by progressive SSZ list limits during deserialization
+    - verify_block_body_operation_limits#gloas
+    - verify_execution_requests_limits#gloas
     - add_builder_to_registry#gloas
     - apply_withdrawals#gloas
     - compute_balance_weighted_selection#gloas
