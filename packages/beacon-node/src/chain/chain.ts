@@ -1671,7 +1671,24 @@ export class BeaconChain implements IBeaconChain {
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.metrics?.finalizedEpoch.set(cp.epoch);
-    this.emitFinalizedCheckpointEvent(cp);
+    const finalizedBlock = this.forkChoice.getBlockHexDefaultStatus(cp.rootHex);
+    if (finalizedBlock) {
+      // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
+      callInNextEventLoop(() => {
+        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+          block: cp.rootHex,
+          epoch: cp.epoch,
+          state: finalizedBlock.stateRoot,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+        });
+      });
+    } else {
+      this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {
+        epoch: cp.epoch,
+        root: cp.rootHex,
+      });
+    }
+
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
 
@@ -1693,31 +1710,6 @@ export class BeaconChain implements IBeaconChain {
     if (headState === null) {
       this.logger.verbose("Head state is null");
     }
-  }
-
-  /**
-   * Emitted from the fork choice finalized callback rather than from block import so finality carried by
-   * a block after a skipped epoch-boundary slot, or pulled up on the epoch tick, is not missed.
-   */
-  private emitFinalizedCheckpointEvent(cp: CheckpointWithHex): void {
-    const finalizedBlock = this.forkChoice.getBlockHexDefaultStatus(cp.rootHex);
-    if (!finalizedBlock) {
-      this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {
-        epoch: cp.epoch,
-        root: cp.rootHex,
-      });
-      return;
-    }
-
-    // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
-    callInNextEventLoop(() => {
-      this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-        block: cp.rootHex,
-        epoch: cp.epoch,
-        state: finalizedBlock.stateRoot,
-        executionOptimistic: isOptimisticBlock(finalizedBlock),
-      });
-    });
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
