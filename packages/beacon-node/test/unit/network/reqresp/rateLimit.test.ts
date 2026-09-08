@@ -1,8 +1,12 @@
 import {describe, expect, it} from "vitest";
-import {config} from "@lodestar/config/default";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {rateLimitQuotas} from "../../../../src/network/reqresp/rateLimit.js";
 import {ReqRespMethod, requestSszTypeByMethod} from "../../../../src/network/reqresp/types.js";
+
+const config = createBeaconConfig(chainConfig, ZERO_HASH);
 
 describe("network / reqresp / rateLimit getRequestCount", () => {
   const fork = ForkName.phase0;
