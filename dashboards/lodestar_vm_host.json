@@ -5866,10 +5866,43 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le, instance, operation) (rate(lodestar_flat_file_store_operation_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
-          "legendFormat": "{{instance}} {{operation}} p95",
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_flat_file_store_read_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
+          "legendFormat": "{{instance}} read p95",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_flat_file_store_write_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
+          "legendFormat": "{{instance}} write p95",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_flat_file_store_delete_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
+          "legendFormat": "{{instance}} delete p95",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_flat_file_store_prune_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
+          "legendFormat": "{{instance}} prune p95",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Flat file operation duration p95",

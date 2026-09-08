@@ -2110,12 +2110,28 @@ export function createLodestarMetrics(
     },
 
     flatFileStore: {
-      operationDuration: register.histogram<{operation: FlatFileStoreOperation}>({
-        name: "lodestar_flat_file_store_operation_duration_seconds",
-        help: "Duration of flat file store operations in seconds",
-        labelNames: ["operation"],
-        buckets: [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 30],
-      }),
+      operationDuration: {
+        read: register.histogram({
+          name: "lodestar_flat_file_store_read_duration_seconds",
+          help: "Duration of flat file store reads in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        write: register.histogram({
+          name: "lodestar_flat_file_store_write_duration_seconds",
+          help: "Duration of flat file store writes in seconds",
+          buckets: [0.005, 0.01, 0.05, 0.1, 0.5, 1],
+        }),
+        delete: register.histogram({
+          name: "lodestar_flat_file_store_delete_duration_seconds",
+          help: "Duration of flat file store deletions in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        prune: register.histogram({
+          name: "lodestar_flat_file_store_prune_duration_seconds",
+          help: "Duration of flat file store pruning in seconds",
+          buckets: [0.0005, 0.01, 0.05, 0.5, 5, 30],
+        }),
+      },
       operationErrors: register.counter<{operation: FlatFileStoreOperation}>({
         name: "lodestar_flat_file_store_operation_errors_total",
         help: "Total count of failed flat file store operations",

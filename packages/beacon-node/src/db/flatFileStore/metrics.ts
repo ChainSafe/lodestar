@@ -13,7 +13,7 @@ export type FlatFileStoreOperation = (typeof FlatFileStoreOperation)[keyof typeo
 type OperationLabels = {operation: FlatFileStoreOperation};
 
 export type FlatFileStoreMetrics = {
-  operationDuration: Histogram<OperationLabels>;
+  operationDuration: Record<FlatFileStoreOperation, Histogram>;
   operationErrors: Counter<OperationLabels>;
   readBytes: Counter;
   writeBytes: Counter;
@@ -28,7 +28,7 @@ export async function observeFlatFileStoreOperation<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   const labels = {operation};
-  const endTimer = metrics?.operationDuration.startTimer(labels);
+  const endTimer = metrics?.operationDuration[operation].startTimer();
   try {
     return await fn();
   } catch (e) {

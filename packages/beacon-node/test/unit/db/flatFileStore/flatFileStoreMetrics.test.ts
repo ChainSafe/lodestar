@@ -39,6 +39,7 @@ describe("FlatFileStore metrics", () => {
       readSpy.mockRestore();
     }
 
+    await store.deleteMany([{slot: 100, blockRoot: ROOT}]);
     await store.pruneBefore(200);
 
     await expect(
@@ -53,9 +54,19 @@ describe("FlatFileStore metrics", () => {
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_operation_errors_total")
     ).resolves.toContain('lodestar_flat_file_store_operation_errors_total{operation="read"} 1');
-    await expect(
-      metrics.register.getSingleMetricAsString("lodestar_flat_file_store_operation_duration_seconds")
-    ).resolves.toContain('lodestar_flat_file_store_operation_duration_seconds_count{operation="write"} 1');
+    const exportedMetrics = await metrics.register.getMetricsAsJSON();
+    for (const [operation, count] of Object.entries({read: 2, write: 1, delete: 1, prune: 1})) {
+      const name = `lodestar_flat_file_store_${operation}_duration_seconds`;
+      const histogram = exportedMetrics.find((metric) => metric.name === name);
+      expect(histogram, `${operation} duration histogram`).toBeDefined();
+      expect(histogram?.values, `${operation} duration series count`).toHaveLength(9);
+      expect(histogram?.values, `${operation} observation count`).toContainEqual({
+        metricName: `${name}_count`,
+        labels: {},
+        value: count,
+      });
+    }
+    expect(metrics.register.getSingleMetric("lodestar_flat_file_store_operation_duration_seconds")).toBeUndefined();
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_startup_duration_seconds")
     ).resolves.toContain("lodestar_flat_file_store_startup_duration_seconds_count 1");
