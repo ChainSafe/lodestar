@@ -184,10 +184,8 @@ export async function validateGossipBlock(
     // [REJECT] The block contains no deposits.
     if (body.deposits.length !== 0) {
       throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS,
-        name: "deposits",
+        code: BlockErrorCode.NON_ZERO_DEPOSITS,
         count: body.deposits.length,
-        limit: 0,
       });
     }
 
