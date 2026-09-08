@@ -8,6 +8,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   isForkPostAltair,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ServingConfigurationError, ServingLimits} from "../../../chain/serving/context.js";
@@ -39,8 +40,8 @@ function integer(value: number, name: string, zero = false): number {
 
 export function assertSupportedServingSlot(config: BeaconConfig, currentSlot: number): void {
   if (!Number.isSafeInteger(currentSlot)) throw new ServingConfigurationError("Invalid current serving slot");
-  if (config.getForkName(currentSlot) === ForkName.gloas)
-    throw new ServingConfigurationError("Unsupported serving fork gloas");
+  const fork = config.getForkName(currentSlot);
+  if (isForkPostGloas(fork)) throw new ServingConfigurationError(`Unsupported serving fork ${fork}`);
 }
 
 export function resolveServingPolicy(
@@ -88,7 +89,7 @@ export function resolveServingPolicy(
   const committee = ssz.altair.SyncCommittee.maxSize;
   let witness = 0;
   for (const fork of forks) {
-    if (fork.epoch === Infinity || fork.name === ForkName.gloas) continue;
+    if (fork.epoch === Infinity || isForkPostGloas(fork.name)) continue;
     const blockProtocol = protocols.BeaconBlocksByRangeV2(fork.name, config);
     blockBytes = Math.max(blockBytes, integer(blockProtocol.responseSizes(fork.name).maxSize, "block response"));
     wireBytes = Math.max(wireBytes, blockBytes);

@@ -77,14 +77,17 @@ describe("serving policy", () => {
     expect(() => resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 1, 0, {maxTasks: 0})).toThrow("tasks");
   });
   it("accepts future Gloas and rejects at and after activation", () => {
-    const config = createBeaconConfig({...servingConfig(), GLOAS_FORK_EPOCH: 6}, new Uint8Array(32));
+    const config = createBeaconConfig(
+      {...servingConfig(), GLOAS_FORK_EPOCH: 6, HEZE_FORK_EPOCH: 7},
+      new Uint8Array(32)
+    );
     expect(resolveServingPolicy(config, {boundedReadVersion: 1}, 6, -1).sourceBytes).toBe(10 * MiB);
     expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, NaN)).toThrow("current serving slot");
     expect(resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 6 * SLOTS_PER_EPOCH - 1).sourceBytes).toBe(
       10 * MiB
     );
-    for (const slot of [6 * SLOTS_PER_EPOCH, 7 * SLOTS_PER_EPOCH])
-      expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, slot)).toThrow("gloas");
+    for (const slot of [6 * SLOTS_PER_EPOCH, 7 * SLOTS_PER_EPOCH, 8 * SLOTS_PER_EPOCH])
+      expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, slot)).toThrow("Unsupported serving fork");
   });
   for (const value of [NaN, Infinity, -1, 0.5]) {
     it(`rejects invalid schedule epoch ${value}`, () => {

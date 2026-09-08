@@ -6,6 +6,7 @@ import {
   MAX_ATTESTER_SLASHINGS,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {SignedBeaconBlock, fulu} from "@lodestar/types";
 import {ServingCapacityError, ServingConfigurationError, ServingContext} from "./context.js";
@@ -28,7 +29,7 @@ export function serializeServingValue<T>(
 }
 
 export function preflightServingBlock(block: SignedBeaconBlock, fork: ForkName, context: ServingContext): void {
-  if (fork === ForkName.gloas) throw new ServingConfigurationError("Unsupported serving fork gloas");
+  if (isForkPostGloas(fork)) throw new ServingConfigurationError(`Unsupported serving fork ${fork}`);
   const body = block.message.body;
   if (
     body.attestations.length > (isForkPostElectra(fork) ? MAX_ATTESTATIONS_ELECTRA : MAX_ATTESTATIONS) ||
