@@ -119,6 +119,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("bellatrix - should prepare payload", async () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+    const computeStateHashTreeRoot = vi.spyOn(scheduler, "computeStateHashTreeRoot");
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
@@ -142,6 +143,11 @@ describe("PrepareNextSlot scheduler", () => {
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
+    // payload_attributes must not wait on the EL round trip or the state root warm-up
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(
+      executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
+    );
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
   });
 
   it("post-fulu - should read proposer from head state and dial only the proposer head on reorg", async () => {
