@@ -3,7 +3,7 @@ import {IBeaconChain} from "../../../chain/interface.js";
 import {ServingConfigurationError, ServingContext, isServingCapacityError} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getReqRespHandlers} from "../handlers/index.js";
-import {ReqRespMethod} from "../types.js";
+import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {HostServingBudget, ServingLease} from "./budget.js";
 import {assertSupportedServingSlot} from "./policy.js";
 
@@ -17,6 +17,16 @@ export class LocalServingResponseError extends ResponseError {
 export interface ServingHandler extends AsyncIterableIterator<ResponseOutgoing> {
   cancel(): void;
   readonly retired: Promise<void>;
+}
+
+export type BoundedReqRespHandlers = (
+  method: ReqRespMethod
+) => (...args: Parameters<ProtocolHandler>) => ServingHandler;
+const boundedFactories = new WeakSet<GetReqRespHandlerFn>();
+
+export function assertBoundedReqRespHandlers(factory: GetReqRespHandlerFn): asserts factory is BoundedReqRespHandlers {
+  if (!boundedFactories.has(factory))
+    throw new ServingConfigurationError("Native network requires bounded serving handlers");
 }
 
 /** route must drop the adapter's native route synchronously, before iterator cleanup. */
@@ -129,14 +139,17 @@ export function startServingHandler(
 export function getBoundedReqRespHandlers(
   modules: {chain: IBeaconChain; db: IBeaconDb},
   budget: HostServingBudget
-): (method: ReqRespMethod) => (...args: Parameters<ProtocolHandler>) => ServingHandler {
+): BoundedReqRespHandlers {
   if (modules.db.boundedReadVersion !== 1)
     throw new ServingConfigurationError("Actual bounded DB capability v1 required");
   assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
-  return (method) =>
+  const factory: BoundedReqRespHandlers =
+    (method) =>
     (...args) =>
       startServingHandler(budget, (context) => {
         assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
         return getReqRespHandlers(modules, context)(method)(...args);
       });
+  boundedFactories.add(factory);
+  return factory;
 }

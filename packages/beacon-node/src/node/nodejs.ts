@@ -19,6 +19,9 @@ import {initializeExecutionBuilder, initializeExecutionEngine} from "../executio
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
+import {HostServingBudget} from "../network/reqresp/serving/budget.js";
+import {getBoundedReqRespHandlers} from "../network/reqresp/serving/handler.js";
+import {resolveServingPolicy} from "../network/reqresp/serving/policy.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
@@ -281,7 +284,21 @@ export class BeaconNode {
       db,
       privateKey,
       peerStoreDir,
-      getReqRespHandler: getReqRespHandlers({db, chain}),
+      getReqRespHandler:
+        opts.network.backend === "native" || opts.network.native?.serving
+          ? getBoundedReqRespHandlers(
+              {db, chain},
+              HostServingBudget.forEnvironment(
+                resolveServingPolicy(
+                  config,
+                  db,
+                  opts.network.native?.profile === "small" ? 6 : 32,
+                  chain.clock.currentSlot,
+                  opts.network.native?.serving
+                )
+              )
+            )
+          : getReqRespHandlers({db, chain}),
     });
 
     const sync = new BeaconSync(opts.sync, {

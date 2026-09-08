@@ -46,6 +46,8 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {snapshotCommitteeSubscriptions} from "./core/native/intent.js";
+import {NativeNetworkCore} from "./core/native/nativeNetworkCore.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
@@ -172,63 +174,94 @@ export class Network implements INetwork {
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
-    if (opts.useWorker) {
+    if (opts.useWorker && opts.backend !== "native") {
       logger.info("running libp2p instance in worker thread");
     }
 
-    const core = opts.useWorker
-      ? await WorkerNetworkCore.init({
-          opts: {
-            ...opts,
+    const core =
+      opts.backend === "native"
+        ? await NativeNetworkCore.prepare({
+            opts,
+            config,
+            privateKey,
             peerStoreDir,
-            metricsEnabled: Boolean(metrics),
-            activeValidatorCount,
-            genesisTime: chain.genesisTime,
+            logger,
+            clock: chain.clock,
+            events,
+            getReqRespHandler,
+            metricsRegistry: null,
             initialStatus,
             initialCustodyGroupCount,
-          },
-          config,
-          privateKey,
-          logger,
-          events,
-          metrics,
-          getReqRespHandler,
-        })
-      : await NetworkCore.init({
-          opts,
-          config,
-          privateKey,
-          peerStoreDir,
-          logger,
-          clock: chain.clock,
-          events,
-          getReqRespHandler,
-          metricsRegistry: metrics ? new RegistryMetricCreator() : null,
-          initialStatus,
-          initialCustodyGroupCount,
-          activeValidatorCount,
-        });
+            activeValidatorCount,
+          })
+        : opts.useWorker
+          ? await WorkerNetworkCore.init({
+              opts: {
+                ...opts,
+                peerStoreDir,
+                metricsEnabled: Boolean(metrics),
+                activeValidatorCount,
+                genesisTime: chain.genesisTime,
+                initialStatus,
+                initialCustodyGroupCount,
+              },
+              config,
+              privateKey,
+              logger,
+              events,
+              metrics,
+              getReqRespHandler,
+            })
+          : await NetworkCore.init({
+              opts,
+              config,
+              privateKey,
+              peerStoreDir,
+              logger,
+              clock: chain.clock,
+              events,
+              getReqRespHandler,
+              metricsRegistry: metrics ? new RegistryMetricCreator() : null,
+              initialStatus,
+              initialCustodyGroupCount,
+              activeValidatorCount,
+            });
 
-    const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
-      opts
-    );
+    let networkProcessor: NetworkProcessor | undefined;
+    let network: Network | undefined;
+    try {
+      networkProcessor = new NetworkProcessor(
+        {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+        opts.backend === "native" ? {...opts, completeGossipWork: true} : opts
+      );
 
-    const multiaddresses = opts.localMultiaddrs?.join(",");
-    const peerId = peerIdFromPrivateKey(privateKey);
-    logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
+      const multiaddresses = opts.localMultiaddrs?.join(",");
+      const peerId = peerIdFromPrivateKey(privateKey);
+      logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
-    return new Network({
-      opts,
-      privateKey,
-      config,
-      logger,
-      chain,
-      networkEventBus: events,
-      aggregatorTracker,
-      networkProcessor,
-      core,
-    });
+      network = new Network({
+        opts,
+        privateKey,
+        config,
+        logger,
+        chain,
+        networkEventBus: events,
+        aggregatorTracker,
+        networkProcessor,
+        core,
+      });
+      if (core instanceof NativeNetworkCore) {
+        void core.terminated
+          .then(() => network?.close())
+          .catch((error: unknown) => logger.error("Native network stopped unexpectedly", {}, error as Error));
+        await core.activate(chain.getStatus(), chain.custodyConfig.targetCustodyGroupCount);
+      }
+      return network;
+    } catch (error) {
+      if (network) await network.close();
+      else await Promise.allSettled([networkProcessor?.stop(), core.close()]);
+      throw error;
+    }
   }
 
   get closed(): boolean {
@@ -273,6 +306,16 @@ export class Network implements INetwork {
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
+    if (this.core instanceof NativeNetworkCore) {
+      const snapshot = snapshotCommitteeSubscriptions(subscriptions, false);
+      await this.core.prepareBeaconCommitteeSubnets(snapshot);
+      if (this.closed) return;
+      for (const subscription of snapshot) {
+        if (subscription.isAggregator) this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
+      }
+      this.aggregatorTracker.prune();
+      return;
+    }
     for (const subscription of subscriptions) {
       if (subscription.isAggregator) {
         this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
@@ -331,10 +374,10 @@ export class Network implements INetwork {
    * Subscribe to all gossip events. Safe to call multiple times
    */
   async subscribeGossipCoreTopics(): Promise<void> {
-    if (!this.subscribedToCoreTopics) {
+    if (!this.subscribedToCoreTopics || this.core instanceof NativeNetworkCore) {
       await this.core.subscribeGossipCoreTopics();
       // Only mark subscribedToCoreTopics if worker resolved this call
-      this.subscribedToCoreTopics = true;
+      this.subscribedToCoreTopics = !this.closed;
     }
   }
 
