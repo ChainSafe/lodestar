@@ -31,7 +31,6 @@ export class BuilderCircuitBreaker {
 
   private active = false;
   private lastUpdatedSlot = -1;
-  private hasLoggedInit = false;
 
   constructor(
     opts: BuilderCircuitBreakerOpts,
@@ -53,16 +52,6 @@ export class BuilderCircuitBreaker {
       return;
     }
     this.lastUpdatedSlot = clockSlot;
-
-    // Log once when the circuit breaker is first exercised (post-gloas, on a node building blocks)
-    // rather than in the constructor, which runs for every BeaconChain instance incl. spec tests.
-    if (!this.hasLoggedInit) {
-      this.hasLoggedInit = true;
-      this.modules.logger.info("Builder circuit breaker initialized", {
-        faultInspectionWindow: this.faultInspectionWindow,
-        allowedFaults: this.allowedFaults,
-      });
-    }
 
     // Exclude clockSlot itself, its payload status may still be unresolved
     const {full, empty} = this.modules.forkChoice.getCanonicalPayloadCounts(

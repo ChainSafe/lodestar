@@ -227,6 +227,7 @@ export function getValidatorApi(
   {chain, config, logger, metrics, network, sync}: ApiModules
 ): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
+  let builderCircuitBreakerInitLogged = false;
 
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -953,6 +954,13 @@ export function getValidatorApi(
       // Post-gloas every proposal parent has an execution payload hash
       if (bidParentBlockHash === null) {
         throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
+      }
+      if (!builderCircuitBreakerInitLogged) {
+        builderCircuitBreakerInitLogged = true;
+        logger.info("Builder circuit breaker initialized", {
+          faultInspectionWindow: chain.builderCircuitBreaker.faultInspectionWindow,
+          allowedFaults: chain.builderCircuitBreaker.allowedFaults,
+        });
       }
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
 
