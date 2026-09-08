@@ -19,6 +19,10 @@ type NativeStats = {
   liveAsyncWorks: number;
   liveSnapshots: number;
   workerFailureCallbacks: number;
+  inputCopyCalls: number;
+  inputCopyBytes: number;
+  nullInputCopyOperands: number;
+  emptyInputCopiesSkipped: number;
 };
 const require = createRequire(import.meta.url);
 const native = require(require.resolve("classic-level").replace(/index.js$/, "binding.js")) as {
@@ -588,4 +592,128 @@ describe("bounded LevelDB controller", () => {
         });
     });
   }
+  for (const method of ["get", "getMany"] as const) {
+    it(`captures controller ${method} read policy before a getter changes it`, async () => {
+      const key = Buffer.from([1]);
+      await db.put(key, Buffer.alloc(8));
+      let calls = 0;
+      const opts = {
+        get readLimits() {
+          return calls++ === 0 ? {...readLimits, maxEntries: 1, maxValueBytes: 7} : undefined;
+        },
+      };
+      const pending = method === "get" ? db.get(key, opts) : db.getMany([key], opts);
+      await expect(pending).rejects.toMatchObject({code: "LEVEL_READ_LIMIT"});
+      expect(calls).toBe(1);
+    });
+  }
+
+  for (const method of ["entriesStream", "valuesStream", "keysStream", "entries", "values", "keys"] as const) {
+    it(`captures controller ${method} policy and finite range exactly once`, async () => {
+      await db.batchPut([1, 2].map((n) => ({key: Buffer.from([n]), value: Buffer.alloc(8, n)})));
+      let policyCalls = 0;
+      let limitCalls = 0;
+      const opts = {
+        get readLimits() {
+          return policyCalls++ === 0 ? {...readLimits, maxEntries: 1} : undefined;
+        },
+        get limit() {
+          return limitCalls++ === 0 ? 2 : 0;
+        },
+      };
+      let count: number;
+      if (method === "entries") count = (await db.entries(opts)).length;
+      else if (method === "values") count = (await db.values(opts)).length;
+      else if (method === "keys") count = (await db.keys(opts)).length;
+      else count = (await Array.fromAsync<unknown>(db[method](opts))).length;
+      expect(count).toBe(2);
+      expect(policyCalls).toBe(1);
+      expect(limitCalls).toBe(1);
+    });
+  }
+
+  it("does not downgrade a changing bounded stream policy to an ordinary value read", async () => {
+    await db.put(Buffer.from([1]), Buffer.alloc(8));
+    let calls = 0;
+    const opts = {
+      limit: 1,
+      get readLimits() {
+        return calls++ === 0 ? {...readLimits, maxEntries: 1, maxValueBytes: 7} : undefined;
+      },
+    };
+    await expect(Array.fromAsync(db.valuesStream(opts))).rejects.toMatchObject({code: "LEVEL_READ_LIMIT"});
+    expect(calls).toBe(1);
+  });
+
+  for (const method of ["entriesStream", "keysStream", "valuesStream"] as const) {
+    it.skipIf(!instrumented)(`retires ${method} on return before the first pull`, async () => {
+      const stats = native.bounded_test_stats;
+      if (!stats) throw new Error("Missing bounded instrumentation");
+      stats(-1);
+      const stream = db[method]({...options({maxEntries: 1}), limit: 2})[Symbol.asyncIterator]();
+      expect(stats().liveSnapshots).toBe(1);
+      await db.put(Buffer.from([1]), Buffer.alloc(4));
+      await stream.return?.();
+      await stream.return?.();
+      expect(stats()).toMatchObject({liveSnapshots: 0, liveArenaBytes: 0, liveWorkerRefs: 0, liveAsyncWorks: 0});
+      console.log(`unstarted-${method}-retired`, stats());
+      expect(await stream.next()).toMatchObject({done: true});
+    });
+  }
+
+  it("preserves the snapshot captured when a bounded stream is created", async () => {
+    await db.put(Buffer.from([1]), Buffer.alloc(4, 1));
+    const stream = db.entriesStream({...options({maxEntries: 1}), limit: 2})[Symbol.asyncIterator]();
+    try {
+      await db.put(Buffer.from([1]), Buffer.alloc(4, 2));
+      expect(await stream.next()).toEqual({done: false, value: {key: Buffer.from([1]), value: Buffer.alloc(4, 1)}});
+    } finally {
+      await stream.return?.();
+    }
+  });
+
+  it.skipIf(!instrumented)("awaits a pending first pull before explicit return retires the snapshot", async () => {
+    const stats = native.bounded_test_stats;
+    if (!stats) throw new Error("Missing bounded instrumentation");
+    await db.put(Buffer.from([1]), Buffer.alloc(4));
+    stats(-1);
+    const stream = db.entriesStream({...options({maxEntries: 1}), limit: 2})[Symbol.asyncIterator]();
+    const next = stream.next();
+    const returned = stream.return?.();
+    expect(await next).toMatchObject({done: false});
+    await returned;
+    expect(stats()).toMatchObject({liveSnapshots: 0, liveArenaBytes: 0, liveWorkerRefs: 0, liveAsyncWorks: 0});
+    expect(await stream.next()).toMatchObject({done: true});
+  });
+
+  it.skipIf(!instrumented)("never invokes the range input copy primitive for an empty key", async () => {
+    const stats = native.bounded_test_stats;
+    if (!stats) throw new Error("Missing bounded instrumentation");
+    stats(-1);
+    const empty = storage.iterator({...options({maxEntries: 1}), gte: new Uint8Array(0), limit: 1});
+    try {
+      console.log("empty-range-copy-site", stats());
+      expect(stats()).toMatchObject({
+        inputCopyCalls: 0,
+        inputCopyBytes: 0,
+        nullInputCopyOperands: 0,
+        emptyInputCopiesSkipped: 1,
+      });
+    } finally {
+      await empty.close();
+    }
+    stats(-1);
+    const nonempty = storage.iterator({...options({maxEntries: 1}), gte: Uint8Array.of(1), limit: 1});
+    try {
+      expect(stats()).toMatchObject({
+        inputCopyCalls: 1,
+        inputCopyBytes: 1,
+        nullInputCopyOperands: 0,
+        emptyInputCopiesSkipped: 0,
+      });
+      console.log("nonempty-range-copy-site", stats());
+    } finally {
+      await nonempty.close();
+    }
+  });
 });

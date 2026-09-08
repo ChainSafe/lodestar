@@ -69,10 +69,11 @@ export abstract class BinaryRepository<I extends Id> {
   }
 
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    if (opts?.readLimits !== undefined && this.db.boundedReadVersion !== 1) {
+    const readLimits = opts?.readLimits;
+    if (readLimits !== undefined && this.db.boundedReadVersion !== 1) {
       throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
     }
-    return opts?.readLimits === undefined ? this.dbReqOpts : {bucketId: this.bucketId, readLimits: opts.readLimits};
+    return readLimits === undefined ? this.dbReqOpts : {bucketId: this.bucketId, readLimits};
   }
 
   async getBinary(id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
@@ -149,31 +150,32 @@ export abstract class BinaryRepository<I extends Id> {
    * Transforms opts from I to Uint8Array
    */
   protected dbFilterOptions(opts?: FilterOptions<I>): FilterOptions<Uint8Array> {
+    const {readLimits, gt, gte, lt, lte, reverse, limit} = opts ?? {};
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 
     // Set at least one min key
-    if (opts?.lt !== undefined) {
-      optsBuff.lt = this.encodeKey(opts.lt);
-    } else if (opts?.lte !== undefined) {
-      optsBuff.lte = this.encodeKey(opts.lte);
+    if (lt !== undefined) {
+      optsBuff.lt = this.encodeKey(lt);
+    } else if (lte !== undefined) {
+      optsBuff.lte = this.encodeKey(lte);
     } else {
       optsBuff.lt = this.maxKey;
     }
 
     // Set at least one max key
-    if (opts?.gt !== undefined) {
-      optsBuff.gt = this.encodeKey(opts.gt);
-    } else if (opts?.gte !== undefined) {
-      optsBuff.gte = this.encodeKey(opts.gte);
+    if (gt !== undefined) {
+      optsBuff.gt = this.encodeKey(gt);
+    } else if (gte !== undefined) {
+      optsBuff.gte = this.encodeKey(gte);
     } else {
       optsBuff.gte = this.minKey;
     }
 
-    if (opts?.readLimits !== undefined) optsBuff.readLimits = this.readOptions(opts).readLimits;
-    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
-    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
+    if (readLimits !== undefined) optsBuff.readLimits = this.readOptions({readLimits}).readLimits;
+    if (reverse !== undefined) optsBuff.reverse = reverse;
+    if (limit !== undefined) optsBuff.limit = limit;
 
     return optsBuff;
   }

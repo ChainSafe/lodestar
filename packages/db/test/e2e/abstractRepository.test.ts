@@ -41,6 +41,47 @@ describe("abstractRepository", () => {
     await db.clear();
   });
 
+  it("captures repository read policy once without losing the requested source bound", async () => {
+    const id = Buffer.from([1]);
+    await repo.put(id, "12345678");
+    for (const mode of ["get", "getBinary"] as const) {
+      let calls = 0;
+      const opts = {
+        get readLimits() {
+          return calls++ === 0 ? {maxKeyBytes: 2, maxValueBytes: 7, maxTotalBytes: 8, maxEntries: 1} : undefined;
+        },
+      };
+      const pending = mode === "get" ? repo.get(id, opts) : repo.getBinary(id, opts);
+      await expect(pending).rejects.toMatchObject({code: "LEVEL_READ_LIMIT"});
+      expect(calls).toBe(1);
+    }
+  });
+
+  it("captures repository filter keys and finite limits once", async () => {
+    const id = Buffer.from([1]);
+    await repo.put(id, "hello");
+    await repo.put(Buffer.from([2]), "world");
+    let rangeCalls = 0,
+      limitCalls = 0,
+      policyCalls = 0;
+    const rows = await Array.fromAsync(
+      repo.binaryEntriesStream({
+        get gte() {
+          rangeCalls++;
+          return id;
+        },
+        get limit() {
+          return limitCalls++ === 0 ? 2 : 0;
+        },
+        get readLimits() {
+          return policyCalls++ === 0 ? {maxKeyBytes: 2, maxValueBytes: 5, maxTotalBytes: 5, maxEntries: 1} : undefined;
+        },
+      })
+    );
+    expect(rows).toHaveLength(2);
+    expect([rangeCalls, limitCalls, policyCalls]).toEqual([1, 1, 1]);
+  });
+
   it("forwards bounded binary and decoded reads with bucket metrics and stream boundaries", async () => {
     const id = Buffer.from([1]);
     const readLimits = {maxKeyBytes: 2, maxValueBytes: 5, maxTotalBytes: 5, maxEntries: 1};

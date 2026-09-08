@@ -1,5 +1,5 @@
 diff --git a/binding.cc b/binding.cc
-index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45b5b4aa2c 100644
+index 015b283fc599ac06bfc12d167a476ca5b7c8f651..559217f38fb66f11a121f9bb8a07e5f711337841 100644
 --- a/binding.cc
 +++ b/binding.cc
 @@ -1,4 +1,4 @@
@@ -19,7 +19,51 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  
  /**
   * Forward declarations.
-@@ -332,6 +336,167 @@ enum Mode {
+@@ -38,6 +42,25 @@ static std::mutex handles_mutex;
+ // only access this when protected by the handles_mutex!
+ static std::map<std::string, LevelDbHandle> db_handles;
+ 
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++static std::atomic<size_t> inputCopyCalls(0), inputCopyBytes(0), nullInputCopyOperands(0), emptyInputCopiesSkipped(0);
++#endif
++
++static void CopyInputBytes (char* target, const char* source, size_t size) {
++  if (size == 0) {
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    emptyInputCopiesSkipped.fetch_add(1);
++#endif
++    return;
++  }
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  inputCopyCalls.fetch_add(1);
++  inputCopyBytes.fetch_add(size);
++  if (target == NULL || source == NULL) nullInputCopyOperands.fetch_add(1);
++#endif
++  memcpy(target, source, size);
++}
++
+ /**
+  * Macros.
+  */
+@@ -79,7 +102,7 @@ static std::map<std::string, LevelDbHandle> db_handles;
+     char* buf = 0;                                                      \
+     napi_get_buffer_info(env, from, (void **)&buf, &to##Sz_);           \
+     to##Ch_ = new char[to##Sz_];                                        \
+-    memcpy(to##Ch_, buf, to##Sz_);                                      \
++    CopyInputBytes(to##Ch_, buf, to##Sz_);                                      \
+   } else {                                                              \
+     char* buf = 0;                                                      \
+     napi_typedarray_type type;                                          \
+@@ -90,7 +113,7 @@ static std::map<std::string, LevelDbHandle> db_handles;
+       to##Ch_ = new char[to##Sz_];                                      \
+     } else {                                                            \
+       to##Ch_ = new char[to##Sz_];                                      \
+-      memcpy(to##Ch_, buf, to##Sz_);                                    \
++      CopyInputBytes(to##Ch_, buf, to##Sz_);                                    \
+     }                                                                   \
+   }
+ 
+@@ -332,6 +355,167 @@ enum Mode {
    values
  };
  
@@ -187,7 +231,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  /**
   * Helper struct for caching and converting a key-value pair to napi_values.
   */
-@@ -388,8 +553,35 @@ struct BaseWorker {
+@@ -388,8 +572,35 @@ struct BaseWorker {
    BaseWorker (napi_env env,
                Database* database,
                napi_value callback,
@@ -225,7 +269,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      NAPI_STATUS_THROWS_VOID(napi_create_reference(env, callback, 1, &callbackRef_));
      napi_value asyncResourceName;
      NAPI_STATUS_THROWS_VOID(napi_create_string_utf8(env, resourceName,
-@@ -479,14 +671,51 @@ struct BaseWorker {
+@@ -479,14 +690,51 @@ struct BaseWorker {
    }
  
    virtual void DoFinally (napi_env env) {
@@ -281,7 +325,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    }
  
    Database* database_;
-@@ -496,6 +725,9 @@ private:
+@@ -496,6 +744,9 @@ private:
    napi_async_work asyncWork_;
    leveldb::Status status_;
    char *errMsg_;
@@ -291,7 +335,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  };
  
  /**
-@@ -610,6 +842,7 @@ struct Database {
+@@ -610,6 +861,7 @@ struct Database {
      return priorityWork_ > 0;
    }
  
@@ -299,7 +343,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    leveldb::DB* db_;
    leveldb::Cache* blockCache_;
    const leveldb::FilterPolicy* filterPolicy_;
-@@ -697,6 +930,180 @@ struct PriorityWorker : public BaseWorker {
+@@ -697,6 +949,180 @@ struct PriorityWorker : public BaseWorker {
    }
  };
  
@@ -480,7 +524,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  /**
   * Owns a leveldb iterator.
   */
-@@ -811,6 +1218,11 @@ struct BaseIterator {
+@@ -811,6 +1237,11 @@ struct BaseIterator {
        delete dbIterator_;
        dbIterator_ = NULL;
        database_->ReleaseSnapshot(options_->snapshot);
@@ -492,7 +536,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      }
    }
  
-@@ -917,13 +1329,16 @@ struct Iterator final : public BaseIterator {
+@@ -917,13 +1348,16 @@ struct Iterator final : public BaseIterator {
        isClosing_(false),
        closeWorker_(NULL),
        ref_(NULL) {
@@ -512,7 +556,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    }
  
    void Detach (napi_env env) {
-@@ -931,7 +1346,52 @@ struct Iterator final : public BaseIterator {
+@@ -931,7 +1365,52 @@ struct Iterator final : public BaseIterator {
      if (ref_ != NULL) napi_delete_reference(env, ref_);
    }
  
@@ -565,7 +609,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      cache_.clear();
      cache_.reserve(size);
      size_t bytesRead = 0;
-@@ -975,8 +1435,14 @@ struct Iterator final : public BaseIterator {
+@@ -975,8 +1454,14 @@ struct Iterator final : public BaseIterator {
    bool first_;
    bool nexting_;
    bool isClosing_;
@@ -580,7 +624,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  
  private:
    napi_ref ref_;
-@@ -1092,6 +1558,7 @@ struct OpenWorker final : public BaseWorker {
+@@ -1092,6 +1577,7 @@ struct OpenWorker final : public BaseWorker {
  NAPI_METHOD(db_open) {
    NAPI_ARGV(4);
    NAPI_DB_CONTEXT();
@@ -588,7 +632,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    NAPI_ARGV_UTF8_NEW(location, 1);
  
    napi_value options = argv[2];
-@@ -1149,6 +1616,7 @@ napi_value noop_callback (napi_env env, napi_callback_info info) {
+@@ -1149,6 +1635,7 @@ napi_value noop_callback (napi_env env, napi_callback_info info) {
  NAPI_METHOD(db_close) {
    NAPI_ARGV(2);
    NAPI_DB_CONTEXT();
@@ -596,7 +640,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  
    napi_value callback = argv[1];
    CloseWorker* worker = new CloseWorker(env, database, callback);
-@@ -1697,8 +2165,49 @@ static void FinalizeIterator (napi_env env, void* data, void* hint) {
+@@ -1697,8 +2184,49 @@ static void FinalizeIterator (napi_env env, void* data, void* hint) {
  NAPI_METHOD(iterator_init) {
    NAPI_ARGV(2);
    NAPI_DB_CONTEXT();
@@ -646,7 +690,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    const bool reverse = BooleanProperty(env, options, "reverse", false);
    const bool keys = BooleanProperty(env, options, "keys", true);
    const bool values = BooleanProperty(env, options, "values", true);
-@@ -1708,6 +2217,9 @@ NAPI_METHOD(iterator_init) {
+@@ -1708,6 +2236,9 @@ NAPI_METHOD(iterator_init) {
    const int limit = Int32Property(env, options, "limit", -1);
    const uint32_t highWaterMarkBytes = Uint32Property(env, options, "highWaterMarkBytes", 16 * 1024);
  
@@ -656,7 +700,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    std::string* lt = RangeOption(env, options, "lt");
    std::string* lte = RangeOption(env, options, "lte");
    std::string* gt = RangeOption(env, options, "gt");
-@@ -1717,15 +2229,31 @@ NAPI_METHOD(iterator_init) {
+@@ -1717,15 +2248,31 @@ NAPI_METHOD(iterator_init) {
    Iterator* iterator = new Iterator(database, id, reverse, keys,
                                      values, limit, lt, lte, gt, gte, fillCache,
                                      keyEncoding, valueEncoding, highWaterMarkBytes);
@@ -692,7 +736,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  
    return result;
  }
-@@ -1741,6 +2269,9 @@ NAPI_METHOD(iterator_seek) {
+@@ -1741,6 +2288,9 @@ NAPI_METHOD(iterator_seek) {
      NAPI_RETURN_UNDEFINED();
    }
  
@@ -702,7 +746,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    leveldb::Slice target = ToSlice(env, argv[1]);
    iterator->first_ = true;
    iterator->Seek(target);
-@@ -1756,7 +2287,7 @@ struct CloseIteratorWorker final : public BaseWorker {
+@@ -1756,7 +2306,7 @@ struct CloseIteratorWorker final : public BaseWorker {
    CloseIteratorWorker (napi_env env,
               Iterator* iterator,
               napi_value callback)
@@ -711,7 +755,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
        iterator_(iterator) {}
  
    ~CloseIteratorWorker () {}
-@@ -1765,8 +2296,13 @@ struct CloseIteratorWorker final : public BaseWorker {
+@@ -1765,8 +2315,13 @@ struct CloseIteratorWorker final : public BaseWorker {
      iterator_->Close();
    }
  
@@ -726,7 +770,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      BaseWorker::DoFinally(env);
    }
  
-@@ -1780,11 +2316,22 @@ private:
+@@ -1780,11 +2335,22 @@ private:
   */
  static void iterator_close_do (napi_env env, Iterator* iterator, napi_value cb) {
    if (!iterator->isClosing_ && !iterator->hasClosed_) {
@@ -751,7 +795,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      } else {
        worker->Queue(env);
      }
-@@ -1812,7 +2359,7 @@ struct NextWorker final : public BaseWorker {
+@@ -1812,7 +2378,7 @@ struct NextWorker final : public BaseWorker {
                uint32_t size,
                napi_value callback)
      : BaseWorker(env, iterator->database_, callback,
@@ -760,7 +804,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
        iterator_(iterator), size_(size), ok_() {}
  
    ~NextWorker () {}
-@@ -1830,6 +2377,28 @@ struct NextWorker final : public BaseWorker {
+@@ -1830,6 +2396,28 @@ struct NextWorker final : public BaseWorker {
    }
  
    void HandleOKCallback (napi_env env, napi_value callback) override {
@@ -789,7 +833,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      size_t size = iterator_->cache_.size();
      napi_value jsArray;
      napi_create_array_with_length(env, size, &jsArray);
-@@ -1843,6 +2412,8 @@ struct NextWorker final : public BaseWorker {
+@@ -1843,6 +2431,8 @@ struct NextWorker final : public BaseWorker {
        napi_set_element(env, jsArray, idx, element);
      }
  
@@ -798,7 +842,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
      napi_value argv[3];
      napi_get_null(env, &argv[0]);
      argv[1] = jsArray;
-@@ -1850,9 +2421,19 @@ struct NextWorker final : public BaseWorker {
+@@ -1850,9 +2440,19 @@ struct NextWorker final : public BaseWorker {
      CallFunction(env, callback, 3, argv);
    }
  
@@ -818,7 +862,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
  
      if (iterator_->closeWorker_ != NULL) {
        iterator_->closeWorker_->Queue(env);
-@@ -1875,6 +2456,15 @@ NAPI_METHOD(iterator_nextv) {
+@@ -1875,6 +2475,15 @@ NAPI_METHOD(iterator_nextv) {
    NAPI_ARGV(3);
    NAPI_ITERATOR_CONTEXT();
  
@@ -834,7 +878,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    uint32_t size;
    NAPI_STATUS_THROWS(napi_get_value_uint32(env, argv[1], &size));
    if (size == 0) size = 1;
-@@ -1887,7 +2477,8 @@ NAPI_METHOD(iterator_nextv) {
+@@ -1887,7 +2496,8 @@ NAPI_METHOD(iterator_nextv) {
      NAPI_RETURN_UNDEFINED();
    }
  
@@ -844,7 +888,7 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
    iterator->nexting_ = true;
    worker->Queue(env);
  
-@@ -2137,10 +2728,43 @@ NAPI_METHOD(batch_write) {
+@@ -2137,10 +2747,44 @@ NAPI_METHOD(batch_write) {
    NAPI_RETURN_UNDEFINED();
  }
  
@@ -860,13 +904,14 @@ index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45
 +    if (argc >= 2) napi_get_value_int32(env, argv[1], &fault);
 +    boundedWorkerFault.store(fault);
 +    boundedWorkerFailures.store(0);
++    inputCopyCalls.store(0); inputCopyBytes.store(0); nullInputCopyOperands.store(0); emptyInputCopiesSkipped.store(0);
 +    boundedCopiedKeys.store(0); boundedCopiedValues.store(0); boundedKeyCapacity.store(0); boundedValueCapacity.store(0); boundedRowCapacity.store(0);
 +  }
 +  napi_value result;
 +  napi_create_object(env, &result);
-+  const char* names[] = {"liveArenaBytes", "peakArenaBytes", "copiedBytes", "convertedValues", "copiedKeyBytes", "copiedValueBytes", "allocatedKeyBytes", "allocatedValueBytes", "pointMetadataBytes", "iteratorRowMetadataBytes", "liveWorkerRefs", "liveAsyncWorks", "liveSnapshots", "workerFailureCallbacks", "allocatedRowArenaBytes"};
-+  size_t counts[] = {boundedLive.load(), boundedPeak.load(), boundedCopied.load(), boundedConverted.load(), boundedCopiedKeys.load(), boundedCopiedValues.load(), boundedKeyCapacity.load(), boundedValueCapacity.load(), sizeof(BoundedGetWorker), sizeof(BoundedRecord), boundedWorkerRefs.load(), boundedAsyncWorks.load(), boundedSnapshots.load(), boundedWorkerFailures.load(), boundedRowCapacity.load()};
-+  for (size_t i = 0; i < 15; i++) {
++  const char* names[] = {"liveArenaBytes", "peakArenaBytes", "copiedBytes", "convertedValues", "copiedKeyBytes", "copiedValueBytes", "allocatedKeyBytes", "allocatedValueBytes", "pointMetadataBytes", "iteratorRowMetadataBytes", "liveWorkerRefs", "liveAsyncWorks", "liveSnapshots", "workerFailureCallbacks", "allocatedRowArenaBytes", "inputCopyCalls", "inputCopyBytes", "nullInputCopyOperands", "emptyInputCopiesSkipped"};
++  size_t counts[] = {boundedLive.load(), boundedPeak.load(), boundedCopied.load(), boundedConverted.load(), boundedCopiedKeys.load(), boundedCopiedValues.load(), boundedKeyCapacity.load(), boundedValueCapacity.load(), sizeof(BoundedGetWorker), sizeof(BoundedRecord), boundedWorkerRefs.load(), boundedAsyncWorks.load(), boundedSnapshots.load(), boundedWorkerFailures.load(), boundedRowCapacity.load(), inputCopyCalls.load(), inputCopyBytes.load(), nullInputCopyOperands.load(), emptyInputCopiesSkipped.load()};
++  for (size_t i = 0; i < 19; i++) {
 +    napi_value value; napi_create_double(env, counts[i], &value); napi_set_named_property(env, result, names[i], value);
 +  }
 +  return result;

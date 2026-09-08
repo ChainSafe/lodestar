@@ -46,6 +46,24 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     return this.db.boundedReadVersion === 1 ? 1 : undefined;
   }
 
+  private captureReadOptions(opts?: DbReqOpts): DbReqOpts {
+    const {readLimits, bucketId} = opts ?? {};
+    return readLimits === undefined ? {bucketId} : {readLimits, bucketId};
+  }
+
+  private captureFilterOptions(opts: FilterOptions<Uint8Array>): FilterOptions<Uint8Array> {
+    const {readLimits, bucketId, gt, gte, lt, lte, reverse, limit} = opts;
+    return {
+      ...this.captureReadOptions({readLimits, bucketId}),
+      ...(gt === undefined ? {} : {gt}),
+      ...(gte === undefined ? {} : {gte}),
+      ...(lt === undefined ? {} : {lt}),
+      ...(lte === undefined ? {} : {lte}),
+      ...(reverse === undefined ? {} : {reverse}),
+      ...(limit === undefined ? {} : {limit}),
+    };
+  }
+
   private checkReadLimits(opts?: DbReqOpts): void {
     if (opts?.readLimits !== undefined && this.boundedReadVersion !== 1) {
       throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
@@ -101,6 +119,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async get(key: Uint8Array, opts?: DbReqOpts): Promise<Uint8Array | null> {
+    opts = this.captureReadOptions(opts);
     this.checkReadLimits(opts);
     try {
       this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
@@ -124,6 +143,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
    * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
    */
   async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
+    opts = this.captureReadOptions(opts);
     this.checkReadLimits(opts);
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
@@ -166,43 +186,37 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+    opts = this.captureFilterOptions(opts);
     this.checkReadLimits(opts);
-    return this.metricsIterator(
-      this.readIterator(this.db.keys(opts), opts),
-      (key) => key,
-      opts.bucketId ?? BUCKET_ID_UNKNOWN
-    );
+    return this.readIterator(this.db.keys(opts), opts, (key) => key);
   }
 
   valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+    opts = this.captureFilterOptions(opts);
     this.checkReadLimits(opts);
-    return this.metricsIterator(
-      this.readIterator(this.db.values(opts), opts),
-      (value) => value,
-      opts.bucketId ?? BUCKET_ID_UNKNOWN
-    );
+    return this.readIterator(this.db.values(opts), opts, (value) => value);
   }
 
   entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
+    opts = this.captureFilterOptions(opts);
     this.checkReadLimits(opts);
-    return this.metricsIterator(
-      this.readIterator(this.db.iterator(opts), opts),
-      (entry) => ({key: entry[0], value: entry[1]}),
-      opts.bucketId ?? BUCKET_ID_UNKNOWN
-    );
+    return this.readIterator(this.db.iterator(opts), opts, (entry) => ({key: entry[0], value: entry[1]}));
   }
 
   keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    opts = this.captureFilterOptions(opts);
     if (opts.readLimits !== undefined) return Array.fromAsync(this.keysStream(opts));
     return this.metricsAll(this.db.keys(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    opts = this.captureFilterOptions(opts);
     if (opts.readLimits !== undefined) return Array.fromAsync(this.valuesStream(opts));
     return this.metricsAll(this.db.values(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
+    opts = this.captureFilterOptions(opts);
     if (opts.readLimits !== undefined) return Array.fromAsync(this.entriesStream(opts));
     const entries = await this.metricsAll(this.db.iterator(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
     return entries.map((entry) => ({key: entry[0], value: entry[1]}));
@@ -223,17 +237,49 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     return this.db.compactRange(start, end);
   }
 
-  private readIterator<T>(
+  private readIterator<T, K>(
     iterator: AsyncIterable<T> & {nextv(size: number): Promise<T[]>; close(): Promise<void>},
-    opts: FilterOptions<Uint8Array>
-  ): AsyncIterable<T> {
-    if (opts.readLimits === undefined) return iterator;
-    return this.boundedIterator(iterator, opts.limit ?? 0);
+    opts: FilterOptions<Uint8Array>,
+    getValue: (item: T) => K
+  ): AsyncIterable<K> {
+    const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
+    if (opts.readLimits === undefined) return this.metricsIterator(iterator, getValue, bucket);
+    let closing: Promise<void> | undefined;
+    const close = (): Promise<void> => {
+      closing ??= iterator.close();
+      return closing;
+    };
+    const rows = this.boundedIterator(iterator, opts.limit ?? 0, close);
+    const measured = this.metricsIterator(rows, getValue, bucket)[Symbol.asyncIterator]();
+    // The snapshot already exists even if neither generator has started.
+    const stream: AsyncIterableIterator<K> = {
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+      next: () => measured.next(),
+      return: async () => {
+        try {
+          return (await measured.return?.()) ?? {done: true, value: undefined};
+        } finally {
+          await close();
+        }
+      },
+      throw: async (error: unknown) => {
+        try {
+          if (measured.throw) return await measured.throw(error);
+          throw error;
+        } finally {
+          await close();
+        }
+      },
+    };
+    return stream;
   }
 
   private async *boundedIterator<T>(
-    iterator: {nextv(size: number): Promise<T[]>; close(): Promise<void>},
-    limit: number
+    iterator: {nextv(size: number): Promise<T[]>},
+    limit: number,
+    close: () => Promise<void>
   ): AsyncIterable<T> {
     try {
       for (let i = 0; i < limit; i++) {
@@ -242,7 +288,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
         yield rows[0];
       }
     } finally {
-      await iterator.close();
+      await close();
     }
   }
 

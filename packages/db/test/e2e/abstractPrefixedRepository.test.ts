@@ -85,6 +85,58 @@ describe("abstractPrefixedRepository", () => {
     await db.clear();
   });
 
+  it("captures repository read policy once without losing the requested source bound", async () => {
+    const prefix = 3;
+    const value = testData[prefix][1];
+    await repo.put(prefix, value);
+    const length = testPrefixedType.serialize(value).length;
+    for (const mode of ["get", "getBinary", "getMany", "getManyBinary"] as const) {
+      let calls = 0;
+      const opts = {
+        get readLimits() {
+          return calls++ === 0
+            ? {maxKeyBytes: 5, maxValueBytes: length - 1, maxTotalBytes: length, maxEntries: 1}
+            : undefined;
+        },
+      };
+      const pending =
+        mode === "get"
+          ? repo.get(prefix, 1, opts)
+          : mode === "getBinary"
+            ? repo.getBinary(prefix, 1, opts)
+            : mode === "getMany"
+              ? repo.getMany(prefix, [1], opts)
+              : repo.getManyBinary(prefix, [1], opts);
+      await expect(pending).rejects.toMatchObject({code: "LEVEL_READ_LIMIT"});
+      expect(calls).toBe(1);
+    }
+  });
+
+  it("captures prefixed key filters and finite limits once", async () => {
+    await repo.put(3, testData[3][1]);
+    await repo.put(3, testData[3][2]);
+    let rangeCalls = 0,
+      limitCalls = 0,
+      policyCalls = 0;
+    const rows = await repo.keys({
+      get gte() {
+        rangeCalls++;
+        return {prefix: 3, id: 1};
+      },
+      get limit() {
+        return limitCalls++ === 0 ? 2 : 0;
+      },
+      get readLimits() {
+        return policyCalls++ === 0 ? {maxKeyBytes: 5, maxValueBytes: 1, maxTotalBytes: 1, maxEntries: 1} : undefined;
+      },
+    });
+    expect(rows).toEqual([
+      {prefix: 3, id: 1},
+      {prefix: 3, id: 2},
+    ]);
+    expect([rangeCalls, limitCalls, policyCalls]).toEqual([1, 1, 1]);
+  });
+
   it("forwards bounded prefixed reads with duplicate positions and bucket metrics", async () => {
     const prefix = 3;
     const value = testData[prefix][1];
