@@ -44,10 +44,7 @@ export class RateLimiterGRCA<Key> {
   }
 
   allows(key: Key, tokens: number): boolean {
-    // Defense in depth: a request must never cost less than one token. Callers floor the count at
-    // the source, but if a non-positive count (e.g. a zero-length request body) still reaches here
-    // we clamp to 1 rather than throwing, so it is charged and counted instead of unwinding out of
-    // the accounting path — an uncaught throw here would let the request escape the quota and ban.
+    // Defense in depth: clamp to >=1 so a non-positive count is still charged, not skipped.
     const chargedTokens = Math.max(1, tokens);
 
     const msSinceStart = Date.now() - this.startTimeMs;
