@@ -674,6 +674,11 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    // protoArray's finalized root just moved, a confirmed root it passed no longer resolves
+    if (this.fastConfirmationRule !== undefined && this.getBlockHexDefaultStatus(this.fcStore.confirmedRoot) === null) {
+      this.pinConfirmedRootToFinalized();
+    }
+
     // findHead returns the ProtoNode representing the head
     const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
 
@@ -1924,8 +1929,6 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.justifiedProposerBoostScore = null;
       updated = true;
-      // Finality advances on every on_block, hold the pin in between slot ticks
-      if (this.fastConfirmationPaused) this.pinConfirmedRootToFinalized();
     }
 
     return updated;
