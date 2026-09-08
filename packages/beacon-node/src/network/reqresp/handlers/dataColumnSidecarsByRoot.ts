@@ -4,6 +4,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ServingContext, servingRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -17,7 +18,8 @@ export async function* onDataColumnSidecarsByRoot(
   chain: IBeaconChain,
   db: IBeaconDb,
   peerId: PeerId,
-  peerClient: string
+  peerClient: string,
+  context?: ServingContext
 ): AsyncIterable<ResponseOutgoing> {
   // SPEC: minimum_request_epoch = max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
@@ -34,9 +36,9 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    const knownSlot = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex)?.slot;
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
-    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
+    const slot = knownSlot ?? (await servingRead(context, (opts) => db.blockArchive.getSlotByRoot(blockRoot, opts), 8));
 
     if (slot === null) {
       // We haven't seen the block
@@ -61,8 +63,9 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
+    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns, context);
 
+    context?.checkBatch(dataColumns, context.limits.sourceBytes, context.limits.columnBytes);
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumns.length; i++) {
       const dataColumnBytes = dataColumns[i];
@@ -83,6 +86,7 @@ export async function* onDataColumnSidecarsByRoot(
     if (unavailableColumnIndices.length) {
       await handleColumnSidecarUnavailability({
         chain,
+        context,
         db,
         metrics: chain.metrics,
         slot,

@@ -30,6 +30,10 @@ export type BeaconDbModules = {
 };
 
 export class BeaconDb implements IBeaconDb {
+  get boundedReadVersion(): 1 | undefined {
+    return this.db.boundedReadVersion;
+  }
+
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
 

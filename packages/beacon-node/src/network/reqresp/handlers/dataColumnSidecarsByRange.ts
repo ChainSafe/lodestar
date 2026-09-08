@@ -7,19 +7,22 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ServingContext, servingRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
 } from "../utils/dataColumnResponseValidation.js";
+import {collectServingHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb,
   peerId: PeerId,
-  peerClient: string
+  peerClient: string,
+  context?: ServingContext
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
   const {
@@ -65,8 +68,14 @@ export async function* onDataColumnSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
     for (let slot = startSlot; slot < archiveEnd; slot++) {
-      const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
+      const dataColumnSidecars = await servingRead(
+        context,
+        (opts) => finalized.getManyBinary(slot, availableColumns, opts),
+        context?.limits.sourceBytes,
+        availableColumns.length
+      );
 
+      context?.checkBatch(dataColumnSidecars, context.limits.sourceBytes, context.limits.columnBytes);
       const unavailableColumnIndices: ColumnIndex[] = [];
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         const dataColumnSidecarBytes = dataColumnSidecars[i];
@@ -87,6 +96,7 @@ export async function* onDataColumnSidecarsByRange(
       if (unavailableColumnIndices.length) {
         await handleColumnSidecarUnavailability({
           chain,
+          context,
           db,
           metrics: chain.metrics,
           unavailableColumnIndices,
@@ -100,17 +110,8 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of columns
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
-    // getAllAncestorBlocks includes the last finalized block as its final element.
-    // Skip anything the archive loop above already served via the block.slot > archiveMaxSlot
-    // filter below (pre-gloas this skips finalizedSlot, post-gloas it keeps it).
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
-
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
-
+    const headChain = collectServingHeadRange(chain, startSlot, endSlot, archiveMaxSlot, context);
+    for (const block of headChain) {
       // Must include only columns in the range requested
       if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Post-gloas, columns exist only for FULL blocks (pre-gloas blocks are always FULL)
@@ -119,15 +120,17 @@ export async function* onDataColumnSidecarsByRange(
         }
 
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
+        // after the archive reads. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
         const dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
           block.slot,
           block.blockRoot,
-          availableColumns
+          availableColumns,
+          context
         );
 
+        context?.checkBatch(dataColumnSidecars, context.limits.sourceBytes, context.limits.columnBytes);
         const unavailableColumnIndices: ColumnIndex[] = [];
         for (let i = 0; i < dataColumnSidecars.length; i++) {
           const dataColumnSidecarBytes = dataColumnSidecars[i];
@@ -148,6 +151,7 @@ export async function* onDataColumnSidecarsByRange(
         if (unavailableColumnIndices.length) {
           await handleColumnSidecarUnavailability({
             chain,
+            context,
             db,
             metrics: chain.metrics,
             unavailableColumnIndices,

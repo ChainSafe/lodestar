@@ -2,18 +2,20 @@ import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ServingContext} from "../../../chain/serving/context.js";
 import {BeaconBlocksByRootRequest} from "../../../util/types.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: BeaconBlocksByRootRequest,
-  chain: IBeaconChain
+  chain: IBeaconChain,
+  context?: ServingContext
 ): AsyncIterable<ResponseOutgoing> {
   // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained blocks to allow genesis sync.
 
   for (const blockRoot of requestBody) {
     const root = blockRoot;
-    const block = await chain.getSerializedBlockByRoot(toRootHex(root));
+    const block = await chain.getSerializedBlockByRoot(toRootHex(root), context);
 
     if (block) {
       yield {

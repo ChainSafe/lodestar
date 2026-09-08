@@ -4,11 +4,13 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ServingContext} from "../../../chain/serving/context.js";
 import {BlobSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onBlobSidecarsByRoot(
   requestBody: BlobSidecarsByRootRequest,
-  chain: IBeaconChain
+  chain: IBeaconChain,
+  context?: ServingContext
 ): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
@@ -27,30 +29,31 @@ export async function* onBlobSidecarsByRoot(
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    const blockSlot = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex)?.slot;
 
     // NOTE: Only support non-finalized blocks.
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.
     // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
-    if (!block || block.slot <= finalizedSlot) {
+    if (blockSlot === undefined || blockSlot <= finalizedSlot) {
       continue;
     }
 
-    if (computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
+    if (computeEpochAtSlot(blockSlot) < minimumRequestEpoch) {
       continue;
     }
 
     // Check if we need to load sidecars for a new block root
     if (lastFetchedSideCars === null || lastFetchedSideCars.blockRoot !== blockRootHex) {
-      const blobSidecarsBytes = await chain.getSerializedBlobSidecars(block.slot, blockRootHex);
+      const blobSidecarsBytes = await chain.getSerializedBlobSidecars(blockSlot, blockRootHex, context);
       if (!blobSidecarsBytes) {
         // Handle the same to onBeaconBlocksByRange
-        throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+        throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${blockRootHex} slot ${blockSlot}`);
       }
 
       lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSidecarsBytes};
     }
 
+    context?.checkBacking(lastFetchedSideCars.bytes);
     const blobSidecarBytes = lastFetchedSideCars.bytes.slice(
       index * BLOB_SIDECAR_FIXED_SIZE,
       (index + 1) * BLOB_SIDECAR_FIXED_SIZE
@@ -63,7 +66,7 @@ export async function* onBlobSidecarsByRoot(
 
     yield {
       data: blobSidecarBytes,
-      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot)),
     };
   }
 }

@@ -27,6 +27,7 @@ import {
  * but instead expose relevant beacon chain objects
  */
 export interface IBeaconDb {
+  readonly boundedReadVersion?: 1;
   // unfinalized blocks
   block: BlockRepository;
   // finalized blocks

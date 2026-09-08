@@ -52,6 +52,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
+import {ServingContext, servingRead} from "../serving/context.js";
 import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
 
 export type LightClientServerOpts = {
@@ -306,8 +307,12 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array): Promise<LightClientBootstrap> {
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+  async getBootstrap(blockRoot: Uint8Array, context?: ServingContext): Promise<LightClientBootstrap> {
+    const syncCommitteeWitness = await servingRead(
+      context,
+      (opts) => this.db.syncCommitteeWitness.get(blockRoot, opts),
+      context?.limits.lightClient.witness
+    );
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -316,8 +321,16 @@ export class LightClientServer {
     }
 
     const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
-      this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot),
-      this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
+      servingRead(
+        context,
+        (opts) => this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot, opts),
+        context?.limits.lightClient.committee
+      ),
+      servingRead(
+        context,
+        (opts) => this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, opts),
+        context?.limits.lightClient.committee
+      ),
     ]);
     if (!currentSyncCommittee) {
       throw new LightClientServerError(
@@ -332,7 +345,11 @@ export class LightClientServer {
       );
     }
 
-    const header = await this.db.checkpointHeader.get(blockRoot);
+    const header = await servingRead(
+      context,
+      (opts) => this.db.checkpointHeader.get(blockRoot, opts),
+      context?.limits.lightClient.header
+    );
     if (!header) {
       throw new LightClientServerError({code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE}, "header not available");
     }
@@ -351,9 +368,13 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdate(period: number): Promise<LightClientUpdate> {
+  async getUpdate(period: number, context?: ServingContext): Promise<LightClientUpdate> {
     // Signature data
-    const update = await this.db.bestLightClientUpdate.get(period);
+    const update = await servingRead(
+      context,
+      (opts) => this.db.bestLightClientUpdate.get(period, opts),
+      context?.limits.lightClient.update
+    );
     if (!update) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
