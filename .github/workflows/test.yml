@@ -247,3 +247,37 @@ jobs:
       - name: Spec tests validator
         run: pnpm test:spec
         working-directory: packages/validator
+
+  spec-tests-native:
+    name: Spec tests (native)
+    needs: build
+    runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24]
+        preset: [minimal, mainnet]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: "./.github/actions/setup-and-build"
+        env:
+          LODESTAR_PRESET: ${{ matrix.preset }}
+        with:
+          node: ${{ matrix.node }}
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: packages/beacon-node/spec-tests
+          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
+      - name: Download spec tests
+        run: pnpm download-spec-tests
+      - name: Rebuild lodestar-z with deps
+        run: LODESTAR_PRESET=${{ matrix.preset }} pnpm install --force @chainsafe/lodestar-z
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests ${{ matrix.preset }}
+        run: LODESTAR_NATIVE_STF=true NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:${{ matrix.preset }}
+        working-directory: packages/beacon-node

@@ -3,6 +3,7 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  StateHashTreeRootSource,
   createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
@@ -25,9 +26,7 @@ export async function getNearestState(
   }
 
   const stateBytes = stateBytesArr[0];
-  return nativeStateView
-    ? createBeaconStateViewForHistoricalRegen({useNative: true, stateBytes})
-    : createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes});
+  return createBeaconStateViewForHistoricalRegen({useNative: nativeStateView, config, stateBytes});
 }
 
 /**
@@ -54,6 +53,7 @@ export async function getHistoricalState(
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     try {
       state = state.stateTransition(
+        config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
         block,
         {
           verifyProposer: false,
@@ -69,7 +69,10 @@ export async function getHistoricalState(
       throw e;
     }
     blockCount++;
-    if (!byteArrayEquals(state.hashTreeRoot(), block.message.stateRoot)) {
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: StateHashTreeRootSource.regenState});
+    const stateRoot = state.hashTreeRoot();
+    hashTreeRootTimer?.();
+    if (!byteArrayEquals(stateRoot, block.message.stateRoot)) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }

@@ -3,6 +3,7 @@ import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {initNativeStateTransitionMetrics, scrapeNativeStateTransitionMetrics} from "@lodestar/state-transition";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
@@ -33,6 +34,7 @@ const abortController = new AbortController();
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
+let nativeStateTransitionMetricsEnabled = false;
 
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
@@ -40,6 +42,15 @@ if (metricsRegister) {
 
   historicalStateRegenMetrics = createHistoricalStateRegenMetrics(metricsRegister);
   queueMetrics = createHistoricalStateQueueMetrics(metricsRegister);
+
+  if (workerData.useNativeStateView) {
+    try {
+      await initNativeStateTransitionMetrics();
+      nativeStateTransitionMetricsEnabled = true;
+    } catch (e) {
+      logger.warn("Failed to initialize native state-transition metrics", {}, e as Error);
+    }
+  }
 }
 
 const queue = new JobFnQueue(
@@ -56,13 +67,24 @@ const api: HistoricalStateWorkerApi = {
     abortController.abort();
   },
   async scrapeMetrics() {
-    return metricsRegister?.metrics() ?? "";
+    if (!metricsRegister) return "";
+
+    const metrics = [await metricsRegister.metrics()];
+    if (nativeStateTransitionMetricsEnabled) {
+      try {
+        metrics.push(await scrapeNativeStateTransitionMetrics());
+      } catch (e) {
+        logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+      }
+    }
+
+    return metrics.filter(Boolean).join("\n\n");
   },
   async getHistoricalState(slot) {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, workerData.nativeStateView, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, workerData.useNativeStateView, historicalStateRegenMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

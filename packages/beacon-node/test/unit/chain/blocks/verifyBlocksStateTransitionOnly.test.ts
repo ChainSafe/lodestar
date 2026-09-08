@@ -5,6 +5,7 @@ import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transiti
 import {ssz} from "@lodestar/types";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {MockBlockInput} from "../../../utils/blockInput.js";
 
 describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
@@ -19,6 +20,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
         throw new Error("invalid attestation");
       },
     } as unknown as IBeaconStateView;
+    const serializedCache = new SerializedCache();
 
     const blockInput = new MockBlockInput({forkName: ForkName.deneb, slot: 1, blockRootHex});
     blockInput._block = ssz.deneb.SignedBeaconBlock.defaultValue();
@@ -30,6 +32,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       testLogger(),
       null,
       null,
+      serializedCache,
       new AbortController().signal,
       {}
     ).then(
