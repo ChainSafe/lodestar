@@ -87,7 +87,7 @@ export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>>
 /**
  * Track the forwarded peers we already emit to UnknownBlockInput sync.
  */
-type UnknownRootEntry = {blockPeerIds?: Set<PeerIdStr>; envelopePeerIds?: Set<PeerIdStr>};
+type SearchedRootEntry = {blockPeerIds?: Set<PeerIdStr>; envelopePeerIds?: Set<PeerIdStr>};
 
 /**
  * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
@@ -234,9 +234,10 @@ export class NetworkProcessor {
     MapDef<GossipType, Set<PendingGossipsubMessage>>
   >;
   private awaitingPayloadMessageCount = 0;
-  private unknownRootsBySlot = new MapDef<Slot, MapDef<RootHex, UnknownRootEntry>>(
-    () => new MapDef<RootHex, UnknownRootEntry>(() => ({}))
+  private searchedRootsBySlot = new MapDef<Slot, MapDef<RootHex, SearchedRootEntry>>(
+    () => new MapDef<RootHex, SearchedRootEntry>(() => ({}))
   );
+  private bufferedRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(
     modules: NetworkProcessorModules,
@@ -326,7 +327,7 @@ export class NetworkProcessor {
     if (this.chain.seenBlock(root)) {
       return;
     }
-    const entry = this.unknownRootsBySlot.getOrDefault(slot).getOrDefault(root);
+    const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
     const alreadySearching = entry.blockPeerIds !== undefined;
     if (entry.blockPeerIds === undefined) {
       entry.blockPeerIds = new Set();
@@ -355,7 +356,7 @@ export class NetworkProcessor {
     if (this.chain.seenPayloadEnvelope(root)) {
       return;
     }
-    const entry = this.unknownRootsBySlot.getOrDefault(slot).getOrDefault(root);
+    const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
     const alreadySearching = entry.envelopePeerIds !== undefined;
     if (entry.envelopePeerIds === undefined) {
       entry.envelopePeerIds = new Set();
@@ -584,11 +585,6 @@ export class NetworkProcessor {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
       return;
     }
-    // buffer budget: the awaited root itself must fit this slot's distinct buffered-root budget
-    if (this.tooManyUnknownRoots(slot, root, MAX_BUFFERED_ROOTS_PER_SLOT)) {
-      metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
-      return;
-    }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
     if (
@@ -596,6 +592,10 @@ export class NetworkProcessor {
       (this.awaitingMessagesByBlockRoot.get(root)?.get(topicType)?.size ?? 0) >= perRootCap
     ) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
+      return;
+    }
+    if (!this.tryReserveBufferedRoot(slot, root)) {
+      metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
       return;
     }
 
@@ -611,16 +611,16 @@ export class NetworkProcessor {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
       return;
     }
-    if (this.tooManyUnknownRoots(slot, root, MAX_BUFFERED_ROOTS_PER_SLOT)) {
-      metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
-      return;
-    }
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
     if (
       perRootCap !== undefined &&
       (this.awaitingMessagesByPayloadBlockRoot.get(root)?.get(topicType)?.size ?? 0) >= perRootCap
     ) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
+      return;
+    }
+    if (!this.tryReserveBufferedRoot(slot, root)) {
+      metric?.reject.inc({reason: ReprocessRejectReason.reached_root_limit, topic: topicType});
       return;
     }
 
@@ -630,16 +630,23 @@ export class NetworkProcessor {
   }
 
   /**
-   * Cap distinct unknown roots per slot against `max`. Two budgets share `unknownRootsBySlot`:
-   * - buffer (memory): MAX_BUFFERED_ROOTS_PER_SLOT, gates maybeAwait* so a few fake roots can't OOM us
-   * - search (recovery): MAX_SEARCHED_ROOTS_PER_SLOT (higher), gates searchUnknownRoot so the real block
-   *   past the buffer cap still gets its by-root fetch.
-   * An already-tracked root (dedup) never counts as "too many".
+   * Cap distinct roots we emit an unknown-root search for, an already-tracked root (dedup) never counts as "too many".
    */
-  private tooManyUnknownRoots(slot: Slot, root: RootHex, max: number): boolean {
-    const roots = this.unknownRootsBySlot.get(slot);
+  private tooManySearchedRoots(slot: Slot, root: RootHex): boolean {
+    const roots = this.searchedRootsBySlot.get(slot);
     if (roots === undefined) return false;
-    return !roots.has(root) && roots.size >= max;
+    return !roots.has(root) && roots.size >= MAX_SEARCHED_ROOTS_PER_SLOT;
+  }
+
+  /**
+   * Cap distinct roots we buffer per slot.
+   */
+  tryReserveBufferedRoot(slot: Slot, root: RootHex): boolean {
+    const roots = this.bufferedRootsBySlot.get(slot);
+    if (roots?.has(root)) return true;
+    if ((roots?.size ?? 0) >= MAX_BUFFERED_ROOTS_PER_SLOT) return false;
+    this.bufferedRootsBySlot.getOrDefault(slot).add(root);
+    return true;
   }
 
   private searchUnknownRoot(
@@ -649,7 +656,7 @@ export class NetworkProcessor {
     peerId: PeerIdStr
   ): void {
     if (!searchBlock && !searchEnvelope) return;
-    if (this.tooManyUnknownRoots(slotRoot.slot, slotRoot.root, MAX_SEARCHED_ROOTS_PER_SLOT)) return;
+    if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
     if (searchBlock) this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
     if (searchEnvelope) this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId);
   }
@@ -752,11 +759,14 @@ export class NetworkProcessor {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
 
-    for (const [slot, unknownEntries] of this.unknownRootsBySlot) {
+    for (const [slot, searchedRoots] of this.searchedRootsBySlot) {
       if (slot > minSlot) continue;
 
-      // expire messages awaiting an unknown block for these roots
-      for (const rootHex of unknownEntries.keys()) {
+      // expire messages awaiting an unknown block for these roots. Only roots this slot did a BLOCK search
+      // for (blockPeerIds set) have block waits keyed here; skipping the rest avoids deleting a payload wait
+      // that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
+      for (const [rootHex, entry] of searchedRoots) {
+        if (entry.blockPeerIds === undefined) continue;
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;
@@ -780,8 +790,10 @@ export class NetworkProcessor {
         }
       }
 
-      // expire messages awaiting an unknown payload envelope for these roots
-      for (const rootHex of unknownEntries.keys()) {
+      // expire messages awaiting an unknown payload envelope for these roots. Symmetric to the block pass:
+      // only roots this slot did an ENVELOPE search for (envelopePeerIds set) have payload waits keyed here.
+      for (const [rootHex, entry] of searchedRoots) {
+        if (entry.envelopePeerIds === undefined) continue;
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;
@@ -805,7 +817,11 @@ export class NetworkProcessor {
         }
       }
 
-      this.unknownRootsBySlot.delete(slot);
+      this.searchedRootsBySlot.delete(slot);
+    }
+
+    for (const slot of this.bufferedRootsBySlot.keys()) {
+      if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
     }
   };
 

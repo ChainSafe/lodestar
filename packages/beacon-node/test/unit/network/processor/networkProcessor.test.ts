@@ -2,6 +2,7 @@ import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {MapDef} from "@lodestar/utils";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {IBeaconDb} from "../../../../src/db/interface.js";
@@ -123,6 +124,11 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     return (processor as unknown as {awaitingBlockMessageCount: number}).awaitingBlockMessageCount;
   }
 
+  /** number of distinct block roots we currently hold messages for */
+  function distinctBlockRoots(): number {
+    return (processor as unknown as {awaitingMessagesByBlockRoot: {size: number}}).awaitingMessagesByBlockRoot.size;
+  }
+
   describe("how many unknown blocks we hold messages for, per slot", () => {
     it("stops holding messages once too many different blocks are unknown in the same slot", () => {
       for (let i = 1; i <= MAX_BUFFERED_ROOTS_PER_SLOT + 1; i++) {
@@ -151,6 +157,19 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       // an attacker can fill the 5 hold slots with fake blocks first; the 6th (real) block is no longer
       // held, but we still look it up by root, so it can be fetched and the node recovers
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(MAX_BUFFERED_ROOTS_PER_SLOT + 1);
+    });
+
+    it("does not let a repeated block sneak past the hold limit (sending each block twice)", () => {
+      // an over-limit block's first message is looked up but not held, which leaves it "tracked". The bug:
+      // a second message for that same block would then be treated as already-held and slip into the buffer,
+      // letting an attacker hold messages for far more than 5 blocks by sending each one twice.
+      const blocks = 10;
+      for (let i = 1; i <= blocks; i++) {
+        processAggregate(i);
+        processAggregate(i); // same block again
+      }
+      // still only 5 distinct blocks are held, no matter how many times each is repeated
+      expect(distinctBlockRoots()).toBe(MAX_BUFFERED_ROOTS_PER_SLOT);
     });
   });
 
@@ -198,6 +217,92 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(1);
       // the repeated message triggers no extra lookup, but is still held
       expect(bufferedBlockCount()).toBe(2);
+    });
+  });
+
+  describe("expiring old unknown blocks", () => {
+    type Entry = {blockPeerIds?: Set<string>; envelopePeerIds?: Set<string>};
+    type Internals = {
+      searchedRootsBySlot: MapDef<number, MapDef<string, Entry>>;
+      awaitingMessagesByBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
+      awaitingMessagesByPayloadBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
+      awaitingBlockMessageCount: number;
+      awaitingPayloadMessageCount: number;
+      onClockSlot: (slot: number) => void;
+    };
+
+    it("expiring a block wait for one block does not drop a newer payload wait for the same block", () => {
+      // block lookups and payload lookups for a block are tracked together per slot. A block may be looked
+      // up at one slot and, later (after the block arrives), its payload waited on from a newer slot. Expiring
+      // the old slot must not also drop the newer payload wait just because they share the same block.
+      const p = processor as unknown as Internals;
+      const root = `0x${"ab".repeat(32)}`;
+      const oldSlot = clockSlot - 4; // expires this tick (<= clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE)
+      const newSlot = clockSlot; //     must survive
+      const message = (): PendingGossipsubMessage =>
+        ({
+          topic: {type: GossipType.beacon_aggregate_and_proof},
+          seenTimestampSec: 0,
+        }) as unknown as PendingGossipsubMessage;
+
+      // old slot: a block lookup for `root`, with a message waiting for that block
+      p.searchedRootsBySlot.getOrDefault(oldSlot).getOrDefault(root).blockPeerIds = new Set();
+      p.awaitingMessagesByBlockRoot
+        .getOrDefault(root)
+        .getOrDefault(GossipType.beacon_aggregate_and_proof)
+        .add(message());
+      p.awaitingBlockMessageCount++;
+
+      // newer slot: a payload lookup for the SAME `root`, with a message waiting for that payload
+      p.searchedRootsBySlot.getOrDefault(newSlot).getOrDefault(root).envelopePeerIds = new Set();
+      p.awaitingMessagesByPayloadBlockRoot
+        .getOrDefault(root)
+        .getOrDefault(GossipType.beacon_aggregate_and_proof)
+        .add(message());
+      p.awaitingPayloadMessageCount++;
+
+      p.onClockSlot(clockSlot);
+
+      // the old block wait is expired
+      expect(p.awaitingMessagesByBlockRoot.has(root)).toBe(false);
+      // the newer payload wait survives - it belongs to a slot that hasn't expired
+      expect(p.awaitingMessagesByPayloadBlockRoot.has(root)).toBe(true);
+    });
+  });
+
+  describe("tryReserveBufferedRoot", () => {
+    function reserve(slot: number, root: string): boolean {
+      return (
+        processor as unknown as {tryReserveBufferedRoot: (slot: number, root: string) => boolean}
+      ).tryReserveBufferedRoot(slot, root);
+    }
+
+    it("reserves up to MAX_BUFFERED_ROOTS_PER_SLOT distinct roots per slot, then refuses new ones", () => {
+      for (let i = 0; i < MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+        expect(reserve(clockSlot, `0x0${i}`)).toBe(true);
+      }
+      // budget full -> a new root is refused
+      expect(reserve(clockSlot, "0xnew")).toBe(false);
+    });
+
+    it("is idempotent: an already-reserved root stays allowed and never consumes a second slot", () => {
+      for (let i = 0; i < MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+        expect(reserve(clockSlot, `0x0${i}`)).toBe(true);
+      }
+      // re-reserving existing roots any number of times is still allowed and doesn't overflow the budget
+      expect(reserve(clockSlot, "0x00")).toBe(true);
+      expect(reserve(clockSlot, "0x00")).toBe(true);
+      // ...and a genuinely new root is still refused (the repeats didn't free or take extra slots)
+      expect(reserve(clockSlot, "0xnew")).toBe(false);
+    });
+
+    it("budgets each slot independently", () => {
+      for (let i = 0; i < MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+        expect(reserve(clockSlot, `0x0${i}`)).toBe(true);
+      }
+      expect(reserve(clockSlot, "0xover")).toBe(false);
+      // a different slot has its own budget
+      expect(reserve(clockSlot + 1, "0xover")).toBe(true);
     });
   });
 });
