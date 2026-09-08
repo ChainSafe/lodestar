@@ -68,8 +68,15 @@ export abstract class BinaryRepository<I extends Id> {
     return key.slice(BUCKET_LENGTH) as I;
   }
 
-  async getBinary(id: I): Promise<Uint8Array | null> {
-    const value = await this.db.get(this.encodeKey(id), this.dbReqOpts);
+  protected readOptions(opts?: DbReqOpts): DbReqOpts {
+    if (opts?.readLimits !== undefined && this.db.boundedReadVersion !== 1) {
+      throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
+    }
+    return opts?.readLimits === undefined ? this.dbReqOpts : {bucketId: this.bucketId, readLimits: opts.readLimits};
+  }
+
+  async getBinary(id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
+    const value = await this.db.get(this.encodeKey(id), this.readOptions(opts));
     if (!value) return null;
     return value;
   }
@@ -164,6 +171,7 @@ export abstract class BinaryRepository<I extends Id> {
       optsBuff.gte = this.minKey;
     }
 
+    if (opts?.readLimits !== undefined) optsBuff.readLimits = this.readOptions(opts).readLimits;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
@@ -199,8 +207,8 @@ export abstract class Repository<I extends Id, T> extends BinaryRepository<I> {
     return this.type.deserialize(data);
   }
 
-  async get(id: I): Promise<T | null> {
-    const value = await this.db.get(this.encodeKey(id), this.dbReqOpts);
+  async get(id: I, opts?: DbReqOpts): Promise<T | null> {
+    const value = await this.db.get(this.encodeKey(id), this.readOptions(opts));
     if (!value) return null;
     return this.decodeValue(value);
   }

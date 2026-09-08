@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {fromAsync} from "@lodestar/utils";
 import {
@@ -83,6 +83,33 @@ describe("abstractPrefixedRepository", () => {
 
   beforeEach(async () => {
     await db.clear();
+  });
+
+  it("forwards bounded prefixed reads with duplicate positions and bucket metrics", async () => {
+    const prefix = 3;
+    const value = testData[prefix][1];
+    const binary = testPrefixedType.serialize(value);
+    const readLimits = {maxKeyBytes: 5, maxValueBytes: binary.length, maxTotalBytes: binary.length * 2, maxEntries: 3};
+    await repo.put(prefix, value);
+    const read = vi.spyOn(db, "getMany");
+    try {
+      expect(await repo.getMany(prefix, [1, 2, 1], {readLimits, bucketId: "ignored"})).toEqual([
+        value,
+        undefined,
+        value,
+      ]);
+      expect(read.mock.calls.at(-1)?.[1]).toEqual({readLimits, bucketId});
+      expect(await repo.getManyBinary(prefix, [1, 2, 1], {readLimits})).toEqual([binary, undefined, binary]);
+      const single = {...readLimits, maxEntries: 1};
+      expect(await repo.get(prefix, 1, {readLimits: single})).toEqual(value);
+      expect(await repo.getBinary(prefix, 1, {readLimits: single})).toEqual(binary);
+      await expect(
+        repo.getMany(prefix, [1, 1], {readLimits: {...readLimits, maxTotalBytes: binary.length * 2 - 1}})
+      ).rejects.toMatchObject({code: "LEVEL_READ_LIMIT"});
+      expect(await repo.getMany(prefix + 1, [1], {readLimits})).toEqual([undefined]);
+    } finally {
+      read.mockRestore();
+    }
   });
 
   it("put/get/getBinary/delete per prefix", async () => {

@@ -7,7 +7,23 @@ export type DatabaseOptions = {
   name: string;
 };
 
+export type DbReadLimits = {
+  maxKeyBytes: number;
+  maxValueBytes: number;
+  maxTotalBytes: number;
+  maxEntries: number;
+};
+
+export const DB_READ_LIMITS_V1 = Object.freeze({
+  maxKeyBytes: 1024,
+  maxValueBytes: 128 * 1024 * 1024,
+  maxTotalBytes: 128 * 1024 * 1024,
+  maxEntries: 1024,
+  maxIteratorRows: 16384,
+});
+
 export interface FilterOptions<K> {
+  readLimits?: DbReadLimits;
   gt?: K;
   gte?: K;
   lt?: K;
@@ -19,6 +35,7 @@ export interface FilterOptions<K> {
 }
 
 export type DbReqOpts = {
+  readLimits?: DbReadLimits;
   /** For metrics */
   bucketId?: string;
 };
@@ -32,6 +49,7 @@ export type DbBatchOperation<K, V> = {type: "del"; key: K} | {type: "put"; key: 
 export type DbBatch<K, V> = DbBatchOperation<K, V>[];
 
 export interface DatabaseController<K, V> {
+  readonly boundedReadVersion?: 1;
   // service start / stop
 
   close(): Promise<void>;

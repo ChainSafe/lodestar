@@ -30,6 +30,7 @@ overrides:
   sigstore: 4.0.0
 
 patchedDependencies:
+  classic-level@1.4.1: 9a0071198a33069627412d13bb1d02c597b4aeb51fd84f10fa608aa660bcb57a
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
@@ -598,7 +599,7 @@ importers:
         version: link:../utils
       classic-level:
         specifier: ^1.4.1
-        version: 1.4.1
+        version: 1.4.1(patch_hash=9a0071198a33069627412d13bb1d02c597b4aeb51fd84f10fa608aa660bcb57a)
     devDependencies:
       '@lodestar/logger':
         specifier: workspace:^
@@ -9275,7 +9276,7 @@ snapshots:
       inherits: 2.0.4
       safe-buffer: 5.2.1
 
-  classic-level@1.4.1:
+  classic-level@1.4.1(patch_hash=9a0071198a33069627412d13bb1d02c597b4aeb51fd84f10fa608aa660bcb57a):
     dependencies:
       abstract-level: 1.0.4
       catering: 2.1.1

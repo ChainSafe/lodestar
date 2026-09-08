@@ -1,0 +1,1167 @@
+diff --git a/binding.cc b/binding.cc
+index 015b283fc599ac06bfc12d167a476ca5b7c8f651..027c0fd5969912550d6be800ee173e45b5b4aa2c 100644
+--- a/binding.cc
++++ b/binding.cc
+@@ -1,4 +1,4 @@
+-#define NAPI_VERSION 3
++#define NAPI_VERSION 7
+ 
+ #include <napi-macros.h>
+ #include <node_api.h>
+@@ -12,6 +12,10 @@
+ #include <map>
+ #include <vector>
+ #include <mutex>
++#include <cmath>
++#include <cstdlib>
++#include <new>
++#include <atomic>
+ 
+ /**
+  * Forward declarations.
+@@ -332,6 +336,167 @@ enum Mode {
+   values
+ };
+ 
++
++static const size_t boundedMaxBytes = 128 * 1024 * 1024;
++static const size_t boundedMaxKeys = 1024;
++static const size_t boundedMaxKeyBytes = 1024;
++static const size_t boundedMaxRows = 16384;
++
++struct ReadLimits {
++  size_t key = 0, value = 0, total = 0, entries = 0;
++};
++
++static const char* InvalidLimits = "LEVEL_INVALID_READ_LIMITS";
++static const char* ReadLimit = "LEVEL_READ_LIMIT";
++static const char* AllocationFailure = "LEVEL_ALLOCATION_FAILED";
++
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++static std::atomic<size_t> boundedLive(0), boundedPeak(0), boundedCopied(0), boundedConverted(0);
++static std::atomic<int> boundedFailAfter(-1), boundedWorkerFault(0);
++static std::atomic<size_t> boundedWorkerRefs(0), boundedAsyncWorks(0), boundedSnapshots(0), boundedWorkerFailures(0);
++static std::atomic<size_t> boundedCopiedKeys(0), boundedCopiedValues(0), boundedKeyCapacity(0), boundedValueCapacity(0), boundedRowCapacity(0);
++static std::mutex boundedStatsMutex;
++static void TrackAllocation (size_t bytes) {
++  size_t live = boundedLive.fetch_add(bytes) + bytes;
++  std::lock_guard<std::mutex> lock(boundedStatsMutex);
++  if (live > boundedPeak.load()) boundedPeak.store(live);
++}
++#else
++static void TrackAllocation (size_t) {}
++#endif
++
++struct BoundedArena {
++  char* data = NULL;
++  size_t capacity = 0;
++  bool isKey = false;
++  bool isRows = false;
++  ~BoundedArena () { Clear(); }
++  bool Allocate (size_t bytes) {
++    assert(data == NULL);
++    if (bytes == 0) return true;
++    data = static_cast<char*>(malloc(bytes));
++    if (data == NULL) return false;
++    capacity = bytes;
++    TrackAllocation(bytes);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    (isKey ? boundedKeyCapacity : isRows ? boundedRowCapacity : boundedValueCapacity).fetch_add(bytes);
++#endif
++    return true;
++  }
++  void Clear () {
++    if (data != NULL) {
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      boundedLive.fetch_sub(capacity);
++#endif
++      free(data);
++      data = NULL;
++      capacity = 0;
++    }
++  }
++  void Copy (size_t offset, const leveldb::Slice& slice, bool keyCopy = false) {
++    assert(offset <= capacity && slice.size() <= capacity - offset);
++    if (slice.size() != 0) memcpy(data + offset, slice.data(), slice.size());
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    boundedCopied.fetch_add(slice.size());
++    (isKey || keyCopy ? boundedCopiedKeys : boundedCopiedValues).fetch_add(slice.size());
++#endif
++  }
++};
++
++static bool ExactPositive (napi_env env, napi_value value, size_t cap, size_t& result) {
++  double number;
++  if (napi_get_value_double(env, value, &number) != napi_ok || !std::isfinite(number) ||
++      number <= 0 || number > cap || std::floor(number) != number) return false;
++  result = static_cast<size_t>(number);
++  return true;
++}
++
++static bool ParseReadLimits (napi_env env, napi_value options, ReadLimits& limits) {
++  napi_value object, value;
++  if (napi_get_named_property(env, options, "readLimits", &object) != napi_ok) return false;
++  napi_valuetype type;
++  napi_value nullValue;
++  bool isNull;
++  if (napi_typeof(env, object, &type) != napi_ok || type != napi_object ||
++      napi_get_null(env, &nullValue) != napi_ok || napi_strict_equals(env, object, nullValue, &isNull) != napi_ok || isNull) return false;
++  const char* names[] = {"maxKeyBytes", "maxValueBytes", "maxTotalBytes", "maxEntries"};
++  size_t caps[] = {boundedMaxKeyBytes, boundedMaxBytes, boundedMaxBytes, boundedMaxKeys};
++  size_t* fields[] = {&limits.key, &limits.value, &limits.total, &limits.entries};
++  for (size_t i = 0; i < 4; i++) {
++    if (napi_get_named_property(env, object, names[i], &value) != napi_ok ||
++        !ExactPositive(env, value, caps[i], *fields[i])) return false;
++  }
++  return limits.entries <= SIZE_MAX / limits.key &&
++    limits.total <= SIZE_MAX - limits.entries * limits.key;
++}
++
++static bool BoundedEncoding (napi_env env, napi_value options, const char* name) {
++  napi_value value;
++  char text[8];
++  size_t size;
++  return napi_get_named_property(env, options, name, &value) == napi_ok &&
++    napi_get_value_string_utf8(env, value, text, sizeof(text), &size) == napi_ok &&
++    ((size == 6 && memcmp(text, "buffer", 7) == 0) || (size == 4 && memcmp(text, "view", 5) == 0));
++}
++
++static bool FiniteRows (napi_env env, napi_value value) {
++  double rows;
++  return napi_get_value_double(env, value, &rows) == napi_ok && std::isfinite(rows) &&
++    rows >= 0 && rows <= boundedMaxRows && std::floor(rows) == rows;
++}
++
++static bool BoundedKey (napi_env env, napi_value value, leveldb::Slice& slice) {
++  napi_typedarray_type type;
++  size_t size, offset;
++  void* data;
++  napi_value backing;
++  if (napi_get_typedarray_info(env, value, &type, &size, &data, &backing, &offset) != napi_ok ||
++      type != napi_uint8_array) return false;
++  bool isArrayBuffer, detached;
++  if (napi_is_arraybuffer(env, backing, &isArrayBuffer) != napi_ok || !isArrayBuffer ||
++      napi_is_detached_arraybuffer(env, backing, &detached) != napi_ok || detached) return false;
++  void* backingData;
++  size_t backingSize;
++  if (napi_get_arraybuffer_info(env, backing, &backingData, &backingSize) != napi_ok ||
++      offset > backingSize || size > backingSize - offset) return false;
++  if (size != 0 && data == NULL) return false;
++  slice = leveldb::Slice(size == 0 ? "" : static_cast<char*>(data), size);
++  return true;
++}
++
++static napi_status BoundedConvert (napi_env env, const char* data, size_t size, napi_value& result) {
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  int remaining = boundedFailAfter.load();
++  if (remaining == 0) return napi_generic_failure;
++  if (remaining > 0) boundedFailAfter.fetch_sub(1);
++#endif
++  napi_status status = napi_create_buffer_copy(env, size, size == 0 ? "" : data, NULL, &result);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  if (status == napi_ok) boundedConverted.fetch_add(1);
++#endif
++  return status;
++}
++
++static void BoundedCallbackError (napi_env env, napi_value callback, const char* code) {
++  bool pending = false;
++  napi_is_exception_pending(env, &pending);
++  napi_value error;
++  if (pending) napi_get_and_clear_last_exception(env, &error);
++  else error = CreateCodeError(env, code, code);
++  CallFunction(env, callback, 1, &error);
++}
++
++static void ThrowBoundedError (napi_env env, const char* code, const char* message) {
++  bool pending = false;
++  napi_is_exception_pending(env, &pending);
++  if (!pending) napi_throw(env, CreateCodeError(env, code, message));
++}
++
++struct BoundedRecord {
++  size_t keyOffset = 0, keySize = 0, valueOffset = 0, valueSize = 0;
++  bool found = false;
++};
++
+ /**
+  * Helper struct for caching and converting a key-value pair to napi_values.
+  */
+@@ -388,8 +553,35 @@ struct BaseWorker {
+   BaseWorker (napi_env env,
+               Database* database,
+               napi_value callback,
+-              const char* resourceName)
+-    : database_(database), errMsg_(NULL) {
++              const char* resourceName, bool checked = false)
++    : database_(database), callbackRef_(NULL), asyncWork_(NULL), errMsg_(NULL),
++      checked_(checked), initialCallback_(callback), setupStatus_(napi_ok) {
++    if (checked_) {
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      if (boundedWorkerFault.load() == 4 && strcmp(resourceName, "classic_level.iterator.close") == 0) {
++        boundedWorkerFault.store(0); setupStatus_ = napi_generic_failure; return;
++      }
++#endif
++      setupStatus_ = napi_create_reference(env, callback, 1, &callbackRef_);
++      if (setupStatus_ != napi_ok) return;
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      boundedWorkerRefs.fetch_add(1);
++      if (boundedWorkerFault.load() == 1 || (boundedWorkerFault.load() == 5 && strcmp(resourceName, "classic_level.iterator.close") == 0)) {
++        boundedWorkerFault.store(0); setupStatus_ = napi_generic_failure; return;
++      }
++#endif
++      napi_value name;
++      setupStatus_ = napi_create_string_utf8(env, resourceName, NAPI_AUTO_LENGTH, &name);
++      if (setupStatus_ != napi_ok) return;
++      setupStatus_ = napi_create_async_work(env, callback, name, BaseWorker::Execute, BaseWorker::Complete, this, &asyncWork_);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      if (setupStatus_ == napi_ok) boundedAsyncWorks.fetch_add(1);
++      if (setupStatus_ == napi_ok && boundedWorkerFault.load() == 2) {
++        boundedWorkerFault.store(0); setupStatus_ = napi_generic_failure;
++      }
++#endif
++      return;
++    }
+     NAPI_STATUS_THROWS_VOID(napi_create_reference(env, callback, 1, &callbackRef_));
+     napi_value asyncResourceName;
+     NAPI_STATUS_THROWS_VOID(napi_create_string_utf8(env, resourceName,
+@@ -479,14 +671,51 @@ struct BaseWorker {
+   }
+ 
+   virtual void DoFinally (napi_env env) {
+-    napi_delete_reference(env, callbackRef_);
+-    napi_delete_async_work(env, asyncWork_);
+-
++    if (callbackRef_ != NULL) {
++      napi_delete_reference(env, callbackRef_);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      if (checked_) boundedWorkerRefs.fetch_sub(1);
++#endif
++    }
++    if (asyncWork_ != NULL) {
++      napi_delete_async_work(env, asyncWork_);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++      if (checked_) boundedAsyncWorks.fetch_sub(1);
++#endif
++    }
+     delete this;
+   }
+ 
++  bool HasCallbackReference () const { return callbackRef_ != NULL; }
++
++  void RejectUnretainedClose (napi_env env) {
++    BeforeQueueFailure(env);
++    DoFinally(env);
++    bool pending = false;
++    napi_is_exception_pending(env, &pending);
++    if (!pending) ThrowBoundedError(env, AllocationFailure, AllocationFailure);
++  }
++
++  virtual void BeforeQueueFailure (napi_env) {}
++
+   void Queue (napi_env env) {
+-    napi_queue_async_work(env, asyncWork_);
++    if (!checked_) { napi_queue_async_work(env, asyncWork_); return; }
++    napi_status status = setupStatus_;
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    if (boundedWorkerFault.load() == 3) {
++      boundedWorkerFault.store(0); status = napi_generic_failure;
++    }
++#endif
++    if (status == napi_ok) status = napi_queue_async_work(env, asyncWork_);
++    if (status == napi_ok) return;
++    napi_value callback = initialCallback_;
++    if (callbackRef_ != NULL) napi_get_reference_value(env, callbackRef_, &callback);
++    BeforeQueueFailure(env);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    boundedWorkerFailures.fetch_add(1);
++#endif
++    BoundedCallbackError(env, callback, AllocationFailure);
++    DoFinally(env);
+   }
+ 
+   Database* database_;
+@@ -496,6 +725,9 @@ private:
+   napi_async_work asyncWork_;
+   leveldb::Status status_;
+   char *errMsg_;
++  bool checked_;
++  napi_value initialCallback_;
++  napi_status setupStatus_;
+ };
+ 
+ /**
+@@ -610,6 +842,7 @@ struct Database {
+     return priorityWork_ > 0;
+   }
+ 
++  bool closing_ = false;
+   leveldb::DB* db_;
+   leveldb::Cache* blockCache_;
+   const leveldb::FilterPolicy* filterPolicy_;
+@@ -697,6 +930,180 @@ struct PriorityWorker : public BaseWorker {
+   }
+ };
+ 
++
++struct ScopedReadPriority {
++  napi_env env;
++  Database* database;
++  ScopedReadPriority (napi_env env, Database* database) : env(env), database(database) {
++    database->IncrementPriorityWork(env);
++  }
++  ~ScopedReadPriority () { database->DecrementPriorityWork(env); }
++};
++
++struct BoundedGetWorker {
++  BoundedGetWorker () { keys.isKey = true; }
++  Database* database;
++  ReadLimits limits;
++  BoundedArena keys, values;
++  BoundedRecord records[boundedMaxKeys];
++  size_t count = 0;
++  bool single = false;
++  const char* error = NULL;
++  napi_ref callback = NULL;
++  napi_async_work work = NULL;
++  leveldb::ReadOptions options;
++
++  static void Execute (napi_env, void* data) {
++    BoundedGetWorker* self = static_cast<BoundedGetWorker*>(data);
++    leveldb::Iterator* iterator = self->database->NewIterator(&self->options);
++    size_t total = 0;
++    for (size_t i = 0; i < self->count; i++) {
++      BoundedRecord& row = self->records[i];
++      leveldb::Slice key(row.keySize == 0 ? "" : self->keys.data + row.keyOffset, row.keySize);
++      iterator->Seek(key);
++      if (!iterator->status().ok()) { self->error = iterator->status().IsCorruption() ? "LEVEL_CORRUPTION" : "LEVEL_IO_ERROR"; break; }
++      if (!iterator->Valid() || iterator->key().compare(key) != 0) continue;
++      size_t size = iterator->value().size();
++      if (size > self->limits.value || size > self->limits.total - total) {
++        self->error = ReadLimit; break;
++      }
++      row.found = true;
++      row.valueOffset = total;
++      row.valueSize = size;
++      total += size;
++    }
++    if (self->error == NULL && !self->values.Allocate(total)) self->error = AllocationFailure;
++    if (self->error == NULL) {
++      for (size_t i = 0; i < self->count; i++) {
++        BoundedRecord& row = self->records[i];
++        if (!row.found) continue;
++        leveldb::Slice key(row.keySize == 0 ? "" : self->keys.data + row.keyOffset, row.keySize);
++        iterator->Seek(key);
++        if (!iterator->status().ok()) { self->error = iterator->status().IsCorruption() ? "LEVEL_CORRUPTION" : "LEVEL_IO_ERROR"; break; }
++        if (!iterator->Valid() || iterator->key().compare(key) != 0 || iterator->value().size() != row.valueSize) {
++          self->error = "LEVEL_CORRUPTION"; break;
++        }
++        self->values.Copy(row.valueOffset, iterator->value());
++      }
++    }
++    delete iterator;
++  }
++
++  static void Complete (napi_env env, napi_status status, void* data) {
++    BoundedGetWorker* self = static_cast<BoundedGetWorker*>(data);
++    napi_value callback, array;
++    napi_get_reference_value(env, self->callback, &callback);
++    if (status != napi_ok) self->error = AllocationFailure;
++    if (self->single && !self->records[0].found && self->error == NULL) self->error = "LEVEL_NOT_FOUND";
++    if (self->error == NULL && napi_create_array_with_length(env, self->count, &array) != napi_ok) self->error = AllocationFailure;
++    for (size_t i = 0; self->error == NULL && i < self->count; i++) {
++      BoundedRecord& row = self->records[i];
++      napi_value value;
++      napi_status conversion = row.found
++        ? BoundedConvert(env, row.valueSize == 0 ? "" : self->values.data + row.valueOffset, row.valueSize, value)
++        : napi_get_undefined(env, &value);
++      if (conversion != napi_ok || napi_set_element(env, array, i, value) != napi_ok) self->error = AllocationFailure;
++    }
++    self->keys.Clear();
++    self->values.Clear();
++    self->database->ReleaseSnapshot(self->options.snapshot);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    boundedSnapshots.fetch_sub(1);
++#endif
++    if (self->error != NULL) BoundedCallbackError(env, callback, self->error);
++    else {
++      napi_value argv[2];
++      napi_get_null(env, &argv[0]);
++      argv[1] = array;
++      if (self->single) napi_get_element(env, array, 0, &argv[1]);
++      CallFunction(env, callback, 2, argv);
++    }
++    self->database->DecrementPriorityWork(env);
++    napi_delete_reference(env, self->callback);
++    napi_delete_async_work(env, self->work);
++    delete self;
++  }
++};
++
++NAPI_METHOD(db_get_bounded) {
++  NAPI_ARGV(5);
++  NAPI_DB_CONTEXT();
++  if (database->closing_ || database->db_ == NULL) {
++    BoundedCallbackError(env, argv[3], "LEVEL_DATABASE_NOT_OPEN"); return NULL;
++  }
++  ScopedReadPriority priority(env, database);
++  ReadLimits limits;
++  bool single = false;
++  napi_get_value_bool(env, argv[4], &single);
++  uint32_t count;
++  bool array;
++  if (!ParseReadLimits(env, argv[2], limits) || !BoundedEncoding(env, argv[2], "valueEncoding") ||
++      napi_is_array(env, argv[1], &array) != napi_ok || !array ||
++      napi_get_array_length(env, argv[1], &count) != napi_ok || (single && (limits.entries != 1 || count != 1))) {
++    BoundedCallbackError(env, argv[3], InvalidLimits); return NULL;
++  }
++  if (count > limits.entries) { BoundedCallbackError(env, argv[3], ReadLimit); return NULL; }
++  napi_value handles[boundedMaxKeys];
++  leveldb::Slice slices[boundedMaxKeys];
++  for (uint32_t i = 0; i < count; i++) {
++    bool present;
++    char index[16];
++    snprintf(index, sizeof(index), "%u", i);
++    napi_value property;
++    if (napi_create_string_utf8(env, index, NAPI_AUTO_LENGTH, &property) != napi_ok ||
++        napi_has_own_property(env, argv[1], property, &present) != napi_ok || !present ||
++        napi_get_element(env, argv[1], i, &handles[i]) != napi_ok) {
++      BoundedCallbackError(env, argv[3], InvalidLimits); return NULL;
++    }
++  }
++  // Resolve every JS property before borrowing buffer pointers: later getters can detach earlier buffers.
++  size_t keyBytes = 0;
++  for (uint32_t i = 0; i < count; i++) {
++    if (!BoundedKey(env, handles[i], slices[i])) { BoundedCallbackError(env, argv[3], InvalidLimits); return NULL; }
++    if (slices[i].size() > limits.key) { BoundedCallbackError(env, argv[3], ReadLimit); return NULL; }
++    keyBytes += slices[i].size();
++  }
++  if (database->closing_) { BoundedCallbackError(env, argv[3], "LEVEL_DATABASE_NOT_OPEN"); return NULL; }
++  BoundedGetWorker* worker = new (std::nothrow) BoundedGetWorker();
++  if (worker == NULL) { BoundedCallbackError(env, argv[3], AllocationFailure); return NULL; }
++  if (!worker->keys.Allocate(keyBytes)) { delete worker; BoundedCallbackError(env, argv[3], AllocationFailure); return NULL; }
++  worker->database = database;
++  worker->limits = limits;
++  worker->count = count;
++  worker->single = single;
++  size_t offset = 0;
++  for (uint32_t i = 0; i < count; i++) {
++    worker->records[i].keyOffset = offset;
++    worker->records[i].keySize = slices[i].size();
++    worker->keys.Copy(offset, slices[i]);
++    offset += slices[i].size();
++  }
++  napi_value name;
++  if (napi_create_reference(env, argv[3], 1, &worker->callback) != napi_ok ||
++      napi_create_string_utf8(env, "classic_level.get.bounded", NAPI_AUTO_LENGTH, &name) != napi_ok ||
++      napi_create_async_work(env, argv[3], name, BoundedGetWorker::Execute, BoundedGetWorker::Complete, worker, &worker->work) != napi_ok) {
++    if (worker->callback != NULL) napi_delete_reference(env, worker->callback);
++    delete worker; BoundedCallbackError(env, argv[3], AllocationFailure); return NULL;
++  }
++  worker->options.fill_cache = false;
++  database->IncrementPriorityWork(env);
++  worker->options.snapshot = database->NewSnapshot();
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  boundedSnapshots.fetch_add(1);
++#endif
++  if (napi_queue_async_work(env, worker->work) != napi_ok) {
++    database->ReleaseSnapshot(worker->options.snapshot);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    boundedSnapshots.fetch_sub(1);
++#endif
++    database->DecrementPriorityWork(env);
++    napi_delete_reference(env, worker->callback);
++    napi_delete_async_work(env, worker->work);
++    delete worker; BoundedCallbackError(env, argv[3], AllocationFailure);
++  }
++  return NULL;
++}
++
+ /**
+  * Owns a leveldb iterator.
+  */
+@@ -811,6 +1218,11 @@ struct BaseIterator {
+       delete dbIterator_;
+       dbIterator_ = NULL;
+       database_->ReleaseSnapshot(options_->snapshot);
++      delete lt_; lt_ = NULL;
++      delete lte_; lte_ = NULL;
++      delete gt_; gt_ = NULL;
++      delete gte_; gte_ = NULL;
++      delete options_; options_ = NULL;
+     }
+   }
+ 
+@@ -917,13 +1329,16 @@ struct Iterator final : public BaseIterator {
+       isClosing_(false),
+       closeWorker_(NULL),
+       ref_(NULL) {
++    boundedArena_.isRows = true;
+   }
+ 
+-  ~Iterator () {}
++  ~Iterator () { delete [] boundedRows_; }
+ 
+-  void Attach (napi_env env, napi_value context) {
+-    napi_create_reference(env, context, 1, &ref_);
++  napi_status Attach (napi_env env, napi_value context) {
++    napi_status status = napi_create_reference(env, context, 1, &ref_);
++    if (status != napi_ok) return status;
+     database_->AttachIterator(env, id_, this);
++    return napi_ok;
+   }
+ 
+   void Detach (napi_env env) {
+@@ -931,7 +1346,52 @@ struct Iterator final : public BaseIterator {
+     if (ref_ != NULL) napi_delete_reference(env, ref_);
+   }
+ 
++  void ClearBounded () {
++    boundedArena_.Clear();
++    boundedCount_ = 0;
++  }
++
++  void Close () {
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++    if (limits_.entries != 0 && !hasClosed_) boundedSnapshots.fetch_sub(1);
++#endif
++    ClearBounded();
++    delete [] boundedRows_; boundedRows_ = NULL;
++    std::vector<Entry>().swap(cache_);
++    BaseIterator::Close();
++  }
++
++  bool ReadBounded (uint32_t size) {
++    ClearBounded();
++    if (boundedError_ != NULL) return false;
++    size_t keyBytes = 0, valueBytes = 0;
++    for (uint32_t i = 0; i < size; i++) {
++      if (!first_) Next();
++      else first_ = false;
++      if (!Valid() || !Increment()) return false;
++      leveldb::Slice key = CurrentKey(), value = CurrentValue();
++      if ((keys_ && key.size() > limits_.key) || (values_ &&
++          (value.size() > limits_.value || value.size() > limits_.total - valueBytes))) {
++        boundedError_ = ReadLimit; ClearBounded(); return false;
++      }
++      if (boundedArena_.data == NULL && !boundedArena_.Allocate(limits_.total + limits_.key * size)) {
++        boundedError_ = AllocationFailure; return false;
++      }
++      BoundedRecord& row = boundedRows_[boundedCount_++];
++      row.keyOffset = keyBytes;
++      row.keySize = keys_ ? key.size() : 0;
++      row.valueOffset = limits_.key * size + valueBytes;
++      row.valueSize = values_ ? value.size() : 0;
++      if (keys_) boundedArena_.Copy(row.keyOffset, key, true);
++      if (values_) boundedArena_.Copy(row.valueOffset, value);
++      keyBytes += row.keySize;
++      valueBytes += row.valueSize;
++    }
++    return true;
++  }
++
+   bool ReadMany (uint32_t size) {
++    if (limits_.entries != 0) return ReadBounded(size);
+     cache_.clear();
+     cache_.reserve(size);
+     size_t bytesRead = 0;
+@@ -975,8 +1435,14 @@ struct Iterator final : public BaseIterator {
+   bool first_;
+   bool nexting_;
+   bool isClosing_;
++  bool closeAfterNextFailure_ = false;
+   BaseWorker* closeWorker_;
+   std::vector<Entry> cache_;
++  ReadLimits limits_;
++  BoundedArena boundedArena_;
++  BoundedRecord* boundedRows_ = NULL;
++  size_t boundedCount_ = 0;
++  const char* boundedError_ = NULL;
+ 
+ private:
+   napi_ref ref_;
+@@ -1092,6 +1558,7 @@ struct OpenWorker final : public BaseWorker {
+ NAPI_METHOD(db_open) {
+   NAPI_ARGV(4);
+   NAPI_DB_CONTEXT();
++  database->closing_ = false;
+   NAPI_ARGV_UTF8_NEW(location, 1);
+ 
+   napi_value options = argv[2];
+@@ -1149,6 +1616,7 @@ napi_value noop_callback (napi_env env, napi_callback_info info) {
+ NAPI_METHOD(db_close) {
+   NAPI_ARGV(2);
+   NAPI_DB_CONTEXT();
++  database->closing_ = true;
+ 
+   napi_value callback = argv[1];
+   CloseWorker* worker = new CloseWorker(env, database, callback);
+@@ -1697,8 +2165,49 @@ static void FinalizeIterator (napi_env env, void* data, void* hint) {
+ NAPI_METHOD(iterator_init) {
+   NAPI_ARGV(2);
+   NAPI_DB_CONTEXT();
++  if (database->closing_ || database->db_ == NULL) {
++    ThrowBoundedError(env, "LEVEL_DATABASE_NOT_OPEN", "Database is not open"); return NULL;
++  }
++  ScopedReadPriority priority(env, database);
+ 
+   napi_value options = argv[1];
++  ReadLimits readLimits;
++  if (HasProperty(env, options, "readLimits") && !ParseReadLimits(env, options, readLimits)) {
++    ThrowBoundedError(env, InvalidLimits, InvalidLimits); return NULL;
++  }
++  if (readLimits.entries != 0) {
++    const char* names[] = {"limit", "reverse", "keys", "values", "fillCache", "keyEncoding", "valueEncoding", "highWaterMarkBytes", "lt", "lte", "gt", "gte"};
++    napi_value values[12];
++    bool present[12];
++    for (size_t i = 0; i < 12; i++) {
++      present[i] = HasProperty(env, options, names[i]);
++      if (present[i] && napi_get_named_property(env, options, names[i], &values[i]) != napi_ok) return NULL;
++    }
++    napi_value normalized;
++    NAPI_STATUS_THROWS(napi_create_object(env, &normalized));
++    for (size_t i = 0; i < 12; i++) {
++      if (present[i]) NAPI_STATUS_THROWS(napi_set_named_property(env, normalized, names[i], values[i]));
++    }
++    options = normalized;
++    bool valid = FiniteRows(env, GetProperty(env, options, "limit")) &&
++      BoundedEncoding(env, options, "keyEncoding") && BoundedEncoding(env, options, "valueEncoding");
++    for (size_t i = 1; i <= 4; i++) {
++      bool boolean = false;
++      if (present[i] && napi_get_value_bool(env, values[i], &boolean) != napi_ok) valid = false;
++      if (i == 1 && present[i] && boolean) valid = false;
++    }
++    if (!valid) { ThrowBoundedError(env, InvalidLimits, InvalidLimits); return NULL; }
++    for (size_t i = 8; i < 12; i++) {
++      if (!present[i]) continue;
++      leveldb::Slice slice;
++      if (!BoundedKey(env, values[i], slice)) {
++        ThrowBoundedError(env, InvalidLimits, InvalidLimits); return NULL;
++      }
++      if (slice.size() > readLimits.key) {
++        ThrowBoundedError(env, ReadLimit, ReadLimit); return NULL;
++      }
++    }
++  }
+   const bool reverse = BooleanProperty(env, options, "reverse", false);
+   const bool keys = BooleanProperty(env, options, "keys", true);
+   const bool values = BooleanProperty(env, options, "values", true);
+@@ -1708,6 +2217,9 @@ NAPI_METHOD(iterator_init) {
+   const int limit = Int32Property(env, options, "limit", -1);
+   const uint32_t highWaterMarkBytes = Uint32Property(env, options, "highWaterMarkBytes", 16 * 1024);
+ 
++  if (database->closing_) {
++    ThrowBoundedError(env, "LEVEL_DATABASE_NOT_OPEN", "Database closed during read validation"); return NULL;
++  }
+   std::string* lt = RangeOption(env, options, "lt");
+   std::string* lte = RangeOption(env, options, "lte");
+   std::string* gt = RangeOption(env, options, "gt");
+@@ -1717,15 +2229,31 @@ NAPI_METHOD(iterator_init) {
+   Iterator* iterator = new Iterator(database, id, reverse, keys,
+                                     values, limit, lt, lte, gt, gte, fillCache,
+                                     keyEncoding, valueEncoding, highWaterMarkBytes);
++  iterator->limits_ = readLimits;
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  if (readLimits.entries != 0) boundedSnapshots.fetch_add(1);
++#endif
++  if (readLimits.entries != 0) {
++    iterator->boundedRows_ = new (std::nothrow) BoundedRecord[readLimits.entries];
++    if (iterator->boundedRows_ == NULL) {
++      iterator->Close(); delete iterator;
++      ThrowBoundedError(env, AllocationFailure, AllocationFailure); return NULL;
++    }
++  }
+   napi_value result;
+ 
+-  NAPI_STATUS_THROWS(napi_create_external(env, iterator,
+-                                          FinalizeIterator,
+-                                          NULL, &result));
++  if (napi_create_external(env, iterator, FinalizeIterator, NULL, &result) != napi_ok) {
++    iterator->Close(); delete iterator;
++    ThrowBoundedError(env, AllocationFailure, AllocationFailure); return NULL;
++  }
+ 
+   // Prevent GC of JS object before the iterator is closed (explicitly or on
+   // db close) and keep track of non-closed iterators to close them on db close.
+-  iterator->Attach(env, result);
++  if (iterator->Attach(env, result) != napi_ok) {
++    iterator->Close();
++    // The external owns deletion after successful creation, including this failure.
++    ThrowBoundedError(env, AllocationFailure, AllocationFailure); return NULL;
++  }
+ 
+   return result;
+ }
+@@ -1741,6 +2269,9 @@ NAPI_METHOD(iterator_seek) {
+     NAPI_RETURN_UNDEFINED();
+   }
+ 
++  if (iterator->limits_.entries != 0) {
++    ThrowBoundedError(env, InvalidLimits, "Bounded iterator seek is unsupported"); return NULL;
++  }
+   leveldb::Slice target = ToSlice(env, argv[1]);
+   iterator->first_ = true;
+   iterator->Seek(target);
+@@ -1756,7 +2287,7 @@ struct CloseIteratorWorker final : public BaseWorker {
+   CloseIteratorWorker (napi_env env,
+              Iterator* iterator,
+              napi_value callback)
+-    : BaseWorker(env, iterator->database_, callback, "classic_level.iterator.close"),
++    : BaseWorker(env, iterator->database_, callback, "classic_level.iterator.close", iterator->limits_.entries != 0),
+       iterator_(iterator) {}
+ 
+   ~CloseIteratorWorker () {}
+@@ -1765,8 +2296,13 @@ struct CloseIteratorWorker final : public BaseWorker {
+     iterator_->Close();
+   }
+ 
++  void BeforeQueueFailure (napi_env) override {
++    if (iterator_->nexting_) iterator_->closeAfterNextFailure_ = true;
++    else iterator_->Close();
++  }
++
+   void DoFinally (napi_env env) override {
+-    iterator_->Detach(env);
++    if (iterator_->hasClosed_) iterator_->Detach(env);
+     BaseWorker::DoFinally(env);
+   }
+ 
+@@ -1780,11 +2316,22 @@ private:
+  */
+ static void iterator_close_do (napi_env env, Iterator* iterator, napi_value cb) {
+   if (!iterator->isClosing_ && !iterator->hasClosed_) {
+-    CloseIteratorWorker* worker = new CloseIteratorWorker(env, iterator, cb);
++    CloseIteratorWorker* worker = new (std::nothrow) CloseIteratorWorker(env, iterator, cb);
++    if (worker == NULL) {
++      iterator->isClosing_ = true;
++      if (iterator->nexting_) {
++        iterator->closeAfterNextFailure_ = true;
++        ThrowBoundedError(env, AllocationFailure, AllocationFailure); return;
++      }
++      iterator->Close(); iterator->Detach(env);
++      BoundedCallbackError(env, cb, AllocationFailure); return;
++    }
+     iterator->isClosing_ = true;
+ 
+-    if (iterator->nexting_) {
++    if (iterator->nexting_ && worker->HasCallbackReference()) {
+       iterator->closeWorker_ = worker;
++    } else if (iterator->nexting_) {
++      worker->RejectUnretainedClose(env);
+     } else {
+       worker->Queue(env);
+     }
+@@ -1812,7 +2359,7 @@ struct NextWorker final : public BaseWorker {
+               uint32_t size,
+               napi_value callback)
+     : BaseWorker(env, iterator->database_, callback,
+-                 "classic_level.iterator.next"),
++                 "classic_level.iterator.next", iterator->limits_.entries != 0),
+       iterator_(iterator), size_(size), ok_() {}
+ 
+   ~NextWorker () {}
+@@ -1830,6 +2377,28 @@ struct NextWorker final : public BaseWorker {
+   }
+ 
+   void HandleOKCallback (napi_env env, napi_value callback) override {
++    if (iterator_->limits_.entries != 0) {
++      napi_value array;
++      const char* error = iterator_->boundedError_;
++      if (error == NULL && napi_create_array_with_length(env, iterator_->boundedCount_, &array) != napi_ok) error = AllocationFailure;
++      for (size_t i = 0; error == NULL && i < iterator_->boundedCount_; i++) {
++        const BoundedRecord& row = iterator_->boundedRows_[i];
++        napi_value pair, key, value;
++        const char* data = iterator_->boundedArena_.data;
++        if (napi_create_array_with_length(env, 2, &pair) != napi_ok ||
++            BoundedConvert(env, data + row.keyOffset, row.keySize, key) != napi_ok ||
++            BoundedConvert(env, data + row.valueOffset, row.valueSize, value) != napi_ok ||
++            napi_set_element(env, pair, 0, key) != napi_ok || napi_set_element(env, pair, 1, value) != napi_ok ||
++            napi_set_element(env, array, i, pair) != napi_ok) error = AllocationFailure;
++      }
++      iterator_->ClearBounded();
++      if (error != NULL) { iterator_->boundedError_ = error; BoundedCallbackError(env, callback, error); return; }
++      napi_value argv[3];
++      napi_get_null(env, &argv[0]); argv[1] = array;
++      napi_get_boolean(env, !ok_, &argv[2]);
++      CallFunction(env, callback, 3, argv);
++      return;
++    }
+     size_t size = iterator_->cache_.size();
+     napi_value jsArray;
+     napi_create_array_with_length(env, size, &jsArray);
+@@ -1843,6 +2412,8 @@ struct NextWorker final : public BaseWorker {
+       napi_set_element(env, jsArray, idx, element);
+     }
+ 
++    std::vector<Entry>().swap(iterator_->cache_);
++
+     napi_value argv[3];
+     napi_get_null(env, &argv[0]);
+     argv[1] = jsArray;
+@@ -1850,9 +2421,19 @@ struct NextWorker final : public BaseWorker {
+     CallFunction(env, callback, 3, argv);
+   }
+ 
++  void HandleErrorCallback (napi_env env, napi_value callback) override {
++    iterator_->ClearBounded();
++    std::vector<Entry>().swap(iterator_->cache_);
++    BaseWorker::HandleErrorCallback(env, callback);
++  }
++
+   void DoFinally (napi_env env) override {
+     // clean up & handle the next/close state
+     iterator_->nexting_ = false;
++    if (iterator_->closeAfterNextFailure_) {
++      iterator_->Close();
++      iterator_->Detach(env);
++    }
+ 
+     if (iterator_->closeWorker_ != NULL) {
+       iterator_->closeWorker_->Queue(env);
+@@ -1875,6 +2456,15 @@ NAPI_METHOD(iterator_nextv) {
+   NAPI_ARGV(3);
+   NAPI_ITERATOR_CONTEXT();
+ 
++  if (iterator->limits_.entries != 0) {
++    size_t size;
++    if (!ExactPositive(env, argv[1], boundedMaxKeys, size)) {
++      BoundedCallbackError(env, argv[2], InvalidLimits); return NULL;
++    }
++    if (size > iterator->limits_.entries) {
++      BoundedCallbackError(env, argv[2], ReadLimit); return NULL;
++    }
++  }
+   uint32_t size;
+   NAPI_STATUS_THROWS(napi_get_value_uint32(env, argv[1], &size));
+   if (size == 0) size = 1;
+@@ -1887,7 +2477,8 @@ NAPI_METHOD(iterator_nextv) {
+     NAPI_RETURN_UNDEFINED();
+   }
+ 
+-  NextWorker* worker = new NextWorker(env, iterator, size, callback);
++  NextWorker* worker = new (std::nothrow) NextWorker(env, iterator, size, callback);
++  if (worker == NULL) { BoundedCallbackError(env, callback, AllocationFailure); return NULL; }
+   iterator->nexting_ = true;
+   worker->Queue(env);
+ 
+@@ -2137,10 +2728,43 @@ NAPI_METHOD(batch_write) {
+   NAPI_RETURN_UNDEFINED();
+ }
+ 
++
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++NAPI_METHOD(bounded_test_stats) {
++  NAPI_ARGV(2);
++  int32_t failAfter;
++  if (argc >= 1 && napi_get_value_int32(env, argv[0], &failAfter) == napi_ok) {
++    if (boundedLive.load() != 0) { napi_throw_error(env, NULL, "Live bounded arena"); return NULL; }
++    boundedPeak.store(0); boundedCopied.store(0); boundedConverted.store(0); boundedFailAfter.store(failAfter);
++    int32_t fault = 0;
++    if (argc >= 2) napi_get_value_int32(env, argv[1], &fault);
++    boundedWorkerFault.store(fault);
++    boundedWorkerFailures.store(0);
++    boundedCopiedKeys.store(0); boundedCopiedValues.store(0); boundedKeyCapacity.store(0); boundedValueCapacity.store(0); boundedRowCapacity.store(0);
++  }
++  napi_value result;
++  napi_create_object(env, &result);
++  const char* names[] = {"liveArenaBytes", "peakArenaBytes", "copiedBytes", "convertedValues", "copiedKeyBytes", "copiedValueBytes", "allocatedKeyBytes", "allocatedValueBytes", "pointMetadataBytes", "iteratorRowMetadataBytes", "liveWorkerRefs", "liveAsyncWorks", "liveSnapshots", "workerFailureCallbacks", "allocatedRowArenaBytes"};
++  size_t counts[] = {boundedLive.load(), boundedPeak.load(), boundedCopied.load(), boundedConverted.load(), boundedCopiedKeys.load(), boundedCopiedValues.load(), boundedKeyCapacity.load(), boundedValueCapacity.load(), sizeof(BoundedGetWorker), sizeof(BoundedRecord), boundedWorkerRefs.load(), boundedAsyncWorks.load(), boundedSnapshots.load(), boundedWorkerFailures.load(), boundedRowCapacity.load()};
++  for (size_t i = 0; i < 15; i++) {
++    napi_value value; napi_create_double(env, counts[i], &value); napi_set_named_property(env, result, names[i], value);
++  }
++  return result;
++}
++#endif
++
+ /**
+  * All exported functions.
+  */
+ NAPI_INIT() {
++  napi_value version;
++  napi_create_uint32(env, 1, &version);
++  napi_property_descriptor capability = {"boundedReadVersion", NULL, NULL, NULL, NULL, version, napi_default, NULL};
++  napi_define_properties(env, exports, 1, &capability);
++  NAPI_EXPORT_FUNCTION(db_get_bounded);
++#ifdef CLASSIC_LEVEL_BOUNDED_TEST
++  NAPI_EXPORT_FUNCTION(bounded_test_stats);
++#endif
+   NAPI_EXPORT_FUNCTION(db_init);
+   NAPI_EXPORT_FUNCTION(db_open);
+   NAPI_EXPORT_FUNCTION(db_close);
+diff --git a/binding.gyp b/binding.gyp
+index 68b4d1ee0708c111abdb684be90e71402555202f..8dfcdcf041461340898fe3161d298d177bc0e34f 100644
+--- a/binding.gyp
++++ b/binding.gyp
+@@ -1,10 +1,12 @@
+ {
+   "variables": {
+-    'openssl_fips': ''
++    'openssl_fips': '',
++    'classic_level_bounded_test%': 0
+   },
+   "targets": [{
+     "target_name": "classic_level",
+     "conditions": [
++      ["classic_level_bounded_test == 1", {"defines": ["CLASSIC_LEVEL_BOUNDED_TEST"]}],
+       ["OS == 'win'", {
+         "defines": [
+           "_HAS_EXCEPTIONS=0"
+diff --git a/index.d.ts b/index.d.ts
+index 4f3cfb01a02c7c12886e3b47f65b885046858259..e6e4be3216a13a31d740c0d9abd6364cac30c234 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -53,6 +53,8 @@ declare class ClassicLevel<KDefault = string, VDefault = string>
+ 
+   get (key: KDefault): Promise<VDefault>
+   get (key: KDefault, callback: NodeCallback<VDefault>): void
++  readonly boundedReadVersion: 0 | 1
++
+   get<K = KDefault, V = VDefault> (key: K, options: GetOptions<K, V>): Promise<V>
+   get<K = KDefault, V = VDefault> (key: K, options: GetOptions<K, V>, callback: NodeCallback<V>): void
+ 
+@@ -227,7 +229,15 @@ export interface OpenOptions extends AbstractOpenOptions {
+  * Additional options for the {@link ClassicLevel.get} and {@link ClassicLevel.getMany}
+  * methods.
+  */
++export interface DbReadLimits {
++  maxKeyBytes: number
++  maxValueBytes: number
++  maxTotalBytes: number
++  maxEntries: number
++}
++
+ declare interface ReadOptions {
++  readLimits?: DbReadLimits
+   /**
+    * Unless set to `false`, LevelDB will fill its in-memory
+    * [LRU](http://en.wikipedia.org/wiki/Least_Recently_Used) cache with data
+@@ -253,6 +263,7 @@ export interface GetManyOptions<K, V> extends AbstractGetManyOptions<K, V>, Read
+  * and {@link ClassicLevel.values} methods.
+  */
+ export interface AdditionalIteratorOptions {
++  readLimits?: DbReadLimits
+   /**
+    * If set to `true`, LevelDB will fill its in-memory
+    * [LRU](http://en.wikipedia.org/wiki/Least_Recently_Used) cache with data
+diff --git a/index.js b/index.js
+index 32a098dce6d80a24b6bc993d511c79a949896da7..b98747fa6ec510fc8d8c61acf8ea55d193c924a0 100644
+--- a/index.js
++++ b/index.js
+@@ -1,12 +1,12 @@
+ 'use strict'
+ 
+-const { AbstractLevel } = require('abstract-level')
++const { AbstractLevel, AbstractIterator } = require('abstract-level')
+ const ModuleError = require('module-error')
+ const { fromCallback } = require('catering')
+ const fs = require('fs')
+ const binding = require('./binding')
+ const { ChainedBatch } = require('./chained-batch')
+-const { Iterator } = require('./iterator')
++const { Iterator, BoundedKeyIterator, BoundedValueIterator } = require('./iterator')
+ 
+ const kPromise = Symbol('promise')
+ const kContext = Symbol('context')
+@@ -48,6 +48,82 @@ class ClassicLevel extends AbstractLevel {
+     return this[kLocation]
+   }
+ 
++  get boundedReadVersion () {
++    return binding.boundedReadVersion === 1 ? 1 : 0
++  }
++
++  get (key, options, callback) {
++    if (options && options.readLimits !== undefined) return this._boundedRead([key], options, callback, true)
++    return super.get(key, options, callback)
++  }
++
++  getMany (keys, options, callback) {
++    if (options && options.readLimits !== undefined) return this._boundedRead(keys, options, callback, false)
++    return super.getMany(keys, options, callback)
++  }
++
++  iterator (options) {
++    const readLimits = options && options.readLimits
++    if (readLimits !== undefined && options) return this._iterator(this._boundedRange(options, readLimits))
++    return super.iterator(options)
++  }
++
++  keys (options) {
++    const readLimits = options && options.readLimits
++    if (readLimits !== undefined && options) return new BoundedKeyIterator(this, this._boundedRange(options, readLimits))
++    return super.keys(options)
++  }
++
++  values (options) {
++    const readLimits = options && options.readLimits
++    if (readLimits !== undefined && options) return new BoundedValueIterator(this, this._boundedRange(options, readLimits))
++    return super.values(options)
++  }
++
++  _boundedRange (options, readLimits) {
++    const normalized = { ...options, readLimits }
++    const keyEncoding = this.keyEncoding(normalized.keyEncoding)
++    const valueEncoding = this.valueEncoding(normalized.valueEncoding)
++    if (!['buffer', 'view'].includes(keyEncoding.name) || !['buffer', 'view'].includes(valueEncoding.name)) {
++      throw new ModuleError('Bounded reads require binary or view encodings', { code: 'LEVEL_INVALID_READ_LIMITS' })
++    }
++    if ('start' in normalized || 'end' in normalized || 'encoding' in normalized) {
++      throw new ModuleError('Legacy range options are unsupported', { code: 'LEVEL_LEGACY' })
++    }
++    normalized[AbstractIterator.keyEncoding] = keyEncoding
++    normalized[AbstractIterator.valueEncoding] = valueEncoding
++    normalized.keyEncoding = keyEncoding.format
++    normalized.valueEncoding = valueEncoding.format
++    return normalized
++  }
++
++  _boundedRead (keys, options, callback, single) {
++    callback = fromCallback(callback, kPromise)
++    if (this.status === 'opening') {
++      this.defer(() => this._boundedRead(keys, options, callback, single))
++    } else if (this.status !== 'open') {
++      this.nextTick(callback, new ModuleError('Database is not open', { code: 'LEVEL_DATABASE_NOT_OPEN' }))
++    } else if (this.boundedReadVersion !== 1) {
++      this.nextTick(callback, new ModuleError('Bounded reads are unsupported', { code: 'LEVEL_BOUNDED_READ_UNSUPPORTED' }))
++    } else {
++      try {
++        const keyEncoding = this.keyEncoding(options.keyEncoding)
++        const valueEncoding = this.valueEncoding(options.valueEncoding)
++        if (!['buffer', 'view'].includes(keyEncoding.name) || !['buffer', 'view'].includes(valueEncoding.name)) {
++          throw new ModuleError('Bounded reads require binary or view encodings', { code: 'LEVEL_INVALID_READ_LIMITS' })
++        }
++        const nativeOptions = { ...options, valueEncoding: valueEncoding.format }
++        if (this.status !== 'open') {
++          throw new ModuleError('Database is not open', { code: 'LEVEL_DATABASE_NOT_OPEN' })
++        }
++        binding.db_get_bounded(this[kContext], keys, nativeOptions, callback, single)
++      } catch (err) {
++        this.nextTick(callback, err)
++      }
++    }
++    return callback[kPromise]
++  }
++
+   _open (options, callback) {
+     if (options.createIfMissing) {
+       fs.mkdir(this[kLocation], { recursive: true }, (err) => {
+diff --git a/iterator.js b/iterator.js
+index 26212c7fcd325eeabfd5d9aa40931d9348b0da9c..491241cac55dd652546f8f4b679594167fd0978a 100644
+--- a/iterator.js
++++ b/iterator.js
+@@ -1,9 +1,12 @@
+ 'use strict'
+ 
+-const { AbstractIterator } = require('abstract-level')
++const { AbstractIterator, AbstractKeyIterator, AbstractValueIterator } = require('abstract-level')
+ const binding = require('./binding')
++const ModuleError = require('module-error')
+ 
+ const kContext = Symbol('context')
++const kInner = Symbol('inner')
++const kBounded = Symbol('bounded')
+ const kCache = Symbol('cache')
+ const kFinished = Symbol('finished')
+ const kFirst = Symbol('first')
+@@ -20,9 +23,31 @@ const empty = []
+ // no performance gain in overriding _all().
+ class Iterator extends AbstractIterator {
+   constructor (db, context, options) {
+-    super(db, options)
++    if (options.readLimits !== undefined && db.boundedReadVersion !== 1) {
++      throw new ModuleError('Bounded reads are unsupported', { code: 'LEVEL_BOUNDED_READ_UNSUPPORTED' })
++    }
++    const bounded = options.readLimits !== undefined
++    if (bounded && db.status !== 'open') {
++      throw new ModuleError('Database is not open', { code: 'LEVEL_DATABASE_NOT_OPEN' })
++    }
++    const boundedContext = bounded ? binding.iterator_init(context, options) : null
++    try {
++      if (bounded && db.status !== 'open') {
++        throw new ModuleError('Database is not open', { code: 'LEVEL_DATABASE_NOT_OPEN' })
++      }
++      super(db, options)
++    } catch (err) {
++      if (bounded) binding.iterator_close(boundedContext, () => {})
++      throw err
++    }
++    this[kBounded] = bounded
+ 
+-    this[kContext] = binding.iterator_init(context, options)
++    try {
++      this[kContext] = bounded ? boundedContext : binding.iterator_init(context, options)
++    } catch (err) {
++      db.detachResource(this)
++      throw err
++    }
+     this[kHandleNext] = this[kHandleNext].bind(this)
+     this[kHandleNextv] = this[kHandleNextv].bind(this)
+     this[kCallback] = null
+@@ -43,14 +68,16 @@ class Iterator extends AbstractIterator {
+ 
+   _next (callback) {
+     if (this[kPosition] < this[kCache].length) {
+-      const entry = this[kCache][this[kPosition]++]
++      const entry = this[kCache][this[kPosition]]
++      if (this[kBounded]) this[kCache][this[kPosition]] = undefined
++      this[kPosition]++
+       process.nextTick(callback, null, entry[0], entry[1])
+     } else if (this[kFinished]) {
+       process.nextTick(callback)
+     } else {
+       this[kCallback] = callback
+ 
+-      if (this[kFirst]) {
++      if (this[kFirst] || this[kBounded]) {
+         // It's common to only want one entry initially or after a seek()
+         this[kFirst] = false
+         binding.iterator_nextv(this[kContext], 1, this[kHandleNext])
+@@ -103,4 +130,48 @@ class Iterator extends AbstractIterator {
+   }
+ }
+ 
++if (binding.bounded_test_stats) {
++  Object.defineProperty(Iterator.prototype, 'boundedTestContext', {
++    get () { return this[kContext] }
++  })
++}
++
+ exports.Iterator = Iterator
++
++function boundedProjection (Base, keys) {
++  return class extends Base {
++    constructor (db, options) {
++      const iterator = db.iterator({ ...options, keys, values: !keys })
++      try {
++        if (db.status !== 'open') throw new ModuleError('Database is not open', { code: 'LEVEL_DATABASE_NOT_OPEN' })
++        super(db, options)
++      } catch (err) {
++        iterator.close(() => {})
++        throw err
++      }
++      this[kInner] = iterator
++    }
++
++    _next (callback) {
++      this[kInner].next((err, key, value) => callback(err, keys ? key : value))
++    }
++
++    _nextv (size, options, callback) {
++      this[kInner].nextv(size, options, (err, rows) => {
++        if (err) callback(err)
++        else callback(null, rows.map(row => row[keys ? 0 : 1]))
++      })
++    }
++
++    _seek (target, options) {
++      this[kInner].seek(target, options)
++    }
++
++    _close (callback) {
++      this[kInner].close(callback)
++    }
++  }
++}
++
++exports.BoundedKeyIterator = boundedProjection(AbstractKeyIterator, true)
++exports.BoundedValueIterator = boundedProjection(AbstractValueIterator, false)

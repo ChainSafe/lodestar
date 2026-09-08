@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {BUCKET_LENGTH, type Db, LevelDbController, Repository, encodeKey} from "../../src/index.js";
 
@@ -39,6 +39,31 @@ describe("abstractRepository", () => {
     // ensure clean DB between tests
     // LevelDbController exposes clear()
     await db.clear();
+  });
+
+  it("forwards bounded binary and decoded reads with bucket metrics and stream boundaries", async () => {
+    const id = Buffer.from([1]);
+    const readLimits = {maxKeyBytes: 2, maxValueBytes: 5, maxTotalBytes: 5, maxEntries: 1};
+    await repo.put(id, "hello");
+    const neighbor = new TestRepository(db, bucket + 1, "neighbor");
+    await neighbor.put(id, "other");
+    const read = vi.spyOn(db, "get");
+    try {
+      expect(await repo.get(id, {readLimits, bucketId: "ignored"})).toBe("hello");
+      expect(read).toHaveBeenLastCalledWith(encodeKey(bucket, id), {readLimits, bucketId});
+      expect(await repo.getBinary(id, {readLimits})).toEqual(Buffer.from("hello"));
+      expect(await Array.fromAsync(repo.binaryEntriesStream({readLimits, limit: 2}))).toEqual([
+        {key: encodeKey(bucket, id), value: Buffer.from("hello")},
+      ]);
+      await expect(repo.get(id, {readLimits: {...readLimits, maxValueBytes: 4}})).rejects.toMatchObject({
+        code: "LEVEL_READ_LIMIT",
+      });
+      await expect(repo.getBinary(id, {readLimits: {...readLimits, maxKeyBytes: 1}})).rejects.toMatchObject({
+        code: "LEVEL_READ_LIMIT",
+      });
+    } finally {
+      read.mockRestore();
+    }
   });
 
   it("put/get/has/delete work end-to-end", async () => {
