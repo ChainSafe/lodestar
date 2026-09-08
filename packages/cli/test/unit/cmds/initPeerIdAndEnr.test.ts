@@ -9,6 +9,16 @@ import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
 
 describe("overwriteEnrWithCliArgs", () => {
+  it("rejects native ENR sequence exhaustion before mutating a persisted identity", async () => {
+    const enr = SignableENR.createFromPrivateKey(await generateKeyPair("secp256k1"));
+    enr.ip = "127.0.0.1";
+    enr.seq = (1n << 64n) - 1n;
+    const before = enr.encodeTxt();
+    expect(() =>
+      overwriteEnrWithCliArgs(enr, {"network.backend": "native", "enr.ip": "127.0.0.2"} as BeaconArgs, testLogger())
+    ).toThrow("Native network ENR sequence exhausted");
+    expect(enr.encodeTxt()).toBe(before);
+  });
   it("should set tcp and quic fields by default", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);

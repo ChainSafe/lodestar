@@ -176,6 +176,7 @@ describe("options / beaconNodeOptions", () => {
         collectSystemStats: true,
       },
       network: {
+        backend: "libp2p",
         discv5: {
           config: {},
           bindAddrs: {
@@ -224,6 +225,24 @@ describe("options / beaconNodeOptions", () => {
 });
 
 describe("options / network / tcp and quic flags", () => {
+  it("keeps stock default and selects native explicitly", () => {
+    expect(parseNetworkArgs({}).backend).toBe("libp2p");
+    expect(parseNetworkArgs({"network.boundedServing": true})).toMatchObject({
+      backend: "libp2p",
+      native: {serving: {}},
+    });
+    expect(parseNetworkArgs({"network.backend": "native", tcp: false, listenAddress: "127.0.0.1"})).toMatchObject({
+      backend: "native",
+      localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1"],
+    });
+  });
+  it.each([
+    {"network.backend": "native", listenAddress: "127.0.0.1"},
+    {"network.backend": "native", tcp: false},
+    {"network.backend": "native", tcp: false, listenAddress: "127.0.0.1", listenAddress6: "::1"},
+  ] satisfies NetworkArgs[])("rejects unsupported native listeners %o", (args) => {
+    expect(() => parseNetworkArgs(args)).toThrow("Native networking requires");
+  });
   it("should include both tcp and quic multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");

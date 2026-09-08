@@ -10,6 +10,8 @@ export const defaultP2pPort = 9000;
 export const defaultQuicPort = 9001;
 
 export type NetworkArgs = {
+  "network.backend"?: "libp2p" | "native";
+  "network.boundedServing"?: boolean;
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -89,6 +91,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     parseListenArgs(args);
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
+
+  if (args["network.backend"] === "native" && (tcp || !quic || Boolean(listenAddress) === Boolean(listenAddress6))) {
+    throw new YargsError("Native networking requires --tcp=false, QUIC and exactly one listen address");
+  }
 
   if (!quic && !tcp) {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
@@ -179,6 +185,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
+    backend: args["network.backend"] ?? defaultOptions.network.backend,
+    ...(args["network.boundedServing"] ? {native: {serving: {}}} : {}),
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -205,6 +213,21 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.boundedServing": {
+    type: "boolean",
+    hidden: true,
+    group: "network",
+    description:
+      "Enable bounded request serving on libp2p for matched native-backend runs. Native always uses bounded serving.",
+  },
+  "network.backend": {
+    type: "string",
+    choices: ["libp2p", "native"],
+    default: "libp2p",
+    group: "network",
+    description:
+      "Networking backend. Native requires TCP disabled, one listen address and an explicit ENR IP for discovery; learned peers are not persisted.",
+  },
   discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type

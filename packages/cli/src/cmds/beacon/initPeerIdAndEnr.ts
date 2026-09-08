@@ -67,6 +67,9 @@ export function overwriteEnrWithCliArgs(
   opts?: {newEnr?: boolean; bootnode?: boolean}
 ): void {
   const preSeq = enr.seq;
+  if (args["network.backend"] === "native" && (preSeq < 0n || preSeq >= (1n << 64n) - 1n)) {
+    throw new Error("Native network ENR sequence exhausted");
+  }
   const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
   const tcp = args.tcp ?? defaultOptions.network.tcp;
   const quic = args.quic ?? defaultOptions.network.quic;
