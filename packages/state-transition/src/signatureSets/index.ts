@@ -1,13 +1,15 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
-import {IBeaconStateView} from "../stateView/interface.js";
+import {IBeaconStateView, isStatePostGloas} from "../stateView/interface.js";
+import {computeEpochAtSlot} from "../util/epoch.js";
 import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
+import {getIndexedPayloadAttestationSignatureSet} from "./indexedPayloadAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
@@ -76,6 +78,27 @@ export function getBlockSignatureSets(
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {
       signatureSets.push(...blsToExecutionChangeSignatureSets);
+    }
+  }
+
+  // only after gloas fork
+  if (fork >= ForkSeq.gloas) {
+    if (!isStatePostGloas(state)) {
+      throw Error("Expected gloas state to verify payload attestation signatures");
+    }
+    for (const payloadAttestation of (signedBlock as gloas.SignedBeaconBlock).message.body.payloadAttestations) {
+      // `process_payload_attestation` asserts `data.slot + 1 == state.slot`, so the committee is
+      // always for the block's previous slot and therefore in the current or next PTC epoch.
+      const {slot} = payloadAttestation.data;
+      const ptc = state.getEpochPTCs(computeEpochAtSlot(slot))[slot % SLOTS_PER_EPOCH];
+      const attestingIndices = payloadAttestation.aggregationBits.intersectValues(ptc);
+      signatureSets.push(
+        getIndexedPayloadAttestationSignatureSet(config, {
+          attestingIndices: attestingIndices.sort((a, b) => a - b),
+          data: payloadAttestation.data,
+          signature: payloadAttestation.signature,
+        })
+      );
     }
   }
 

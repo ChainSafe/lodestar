@@ -511,8 +511,8 @@ export const forkChoiceTestRunner =
                   // (consensus-specs#5495), and a block at or below the finalized slot has been
                   // pruned from fork choice. Both are no-ops for the spec, so ignore rather than
                   // reject to keep re-deliveries (the generator's `multi_route` mutation) passing.
-                  ignoreIfKnown: true,
-                  ignoreIfFinalized: true,
+                  ignoreIfKnown: isValid,
+                  ignoreIfFinalized: isValid,
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
@@ -682,7 +682,7 @@ export const forkChoiceTestRunner =
                   .sort(cmpViableHead);
 
                 if (isGloas) {
-                  // TODO-GLOAS: restore the exact-set comparison below once
+                  // TODO GLOAS: restore the exact-set comparison below once
                   // https://github.com/ethereum/consensus-specs/issues/5496 is resolved. Lodestar
                   // drops FFG-unviable payload-status variants the spec keeps, so assert subset
                   // rather than equality. Pinning the affected cases by name instead would not
