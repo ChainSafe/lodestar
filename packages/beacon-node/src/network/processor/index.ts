@@ -60,13 +60,13 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 
 /**
- * Buffer (memory) budget: max distinct roots we BUFFER messages for, per slot. Kept tight to avoid the OOM
+ * Max distinct roots we BUFFER messages for, per slot. Kept tight to avoid the OOM
  * risk. We don't support super forky condition where there are more than this many roots per slot via gossip.
  */
 export const MAX_BUFFERED_ROOTS_PER_SLOT = 5;
 
 /**
- * Search (recovery) budget: max distinct roots we emit an unknown-root search for, per slot. Higher than
+ * Max distinct roots we emit an unknown-root search for, per slot. Higher than
  * the buffer budget because:
  * - in the attack scenario, the genuine root may comes after the first MAX_BUFFERED_ROOTS_PER_SLOT roots
  * - if we cannot search, we'll penalize peers in UnknownBlockInput, not in NetworkProcessor
@@ -74,11 +74,13 @@ export const MAX_BUFFERED_ROOTS_PER_SLOT = 5;
 export const MAX_SEARCHED_ROOTS_PER_SLOT = 32;
 
 /**
- * Given the same root and topic, we'll ignore messages after the below cap.
+ * Given the same root and topic, we'll ignore messages after the below cap. Each cap is the number of
+ * legitimate messages we expect for one block, plus headroom for some malformed messages that may arrives first
+ * they will be penalized by the gossip handler
  */
 export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>> = {
-  [GossipType.data_column_sidecar]: NUMBER_OF_COLUMNS,
-  [GossipType.execution_payload]: 1,
+  [GossipType.data_column_sidecar]: 2 * NUMBER_OF_COLUMNS,
+  [GossipType.execution_payload]: 2,
   [GossipType.execution_payload_bid]: 8,
 };
 

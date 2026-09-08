@@ -163,19 +163,21 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(bufferedBlockCount()).toBe(MAX_BID_PER_ROOT);
     });
 
-    it("holds at most one data column message per column for one block", () => {
+    it("holds a limited number of data column messages for one block", () => {
       for (let i = 0; i < MAX_DATA_COLUMN_PER_ROOT + 3; i++) {
         processDataColumn(i);
       }
-      // a block has NUMBER_OF_COLUMNS data columns, so we allow that many messages for it and no more
+      // a block has NUMBER_OF_COLUMNS genuine columns; we allow twice that so malformed front-runners
+      // can't push genuine columns out (a missing column would block import), then stop
       expect(bufferedBlockCount()).toBe(MAX_DATA_COLUMN_PER_ROOT);
     });
 
-    it("holds only one execution payload for one block", () => {
-      for (let i = 0; i < 3; i++) {
+    it("holds a limited number of execution payloads for one block", () => {
+      for (let i = 0; i < MAX_EXECUTION_PAYLOAD_PER_ROOT + 2; i++) {
         processExecutionPayload();
       }
-      // a block has exactly one execution payload, so further messages for the same block are dropped
+      // a block has exactly one genuine payload; we keep one extra slot so a malformed front-runner
+      // doesn't push the genuine payload out, then drop further messages
       expect(bufferedBlockCount()).toBe(MAX_EXECUTION_PAYLOAD_PER_ROOT);
     });
   });
