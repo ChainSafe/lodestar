@@ -266,25 +266,18 @@ export class ForkChoice implements IForkChoice {
     this.fastConfirmationPaused = paused;
     if (paused) {
       // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
-      this.pinConfirmedRootToFinalized();
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Callers run in clock/network handler context with no catch above
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
     }
     this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
     this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
       slot: this.fcStore.currentSlot,
     });
-  }
-
-  /**
-   * Pin the confirmed root to finality, the contract while the rule is paused. Callers run in clock,
-   * network and block import context with no catch above, so the notification must not throw out.
-   */
-  private pinConfirmedRootToFinalized(): void {
-    this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-    try {
-      this.notifyConfirmedRoot();
-    } catch (err) {
-      this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
-    }
   }
 
   private notifyConfirmedRoot(): void {
@@ -672,11 +665,6 @@ export class ForkChoice implements IForkChoice {
         proposerBoost: boostedBlock ? this.getProposerBoost() : null,
         ...checkpoints,
       });
-    }
-
-    // protoArray's finalized root just moved, a confirmed root it passed no longer resolves
-    if (this.fastConfirmationRule !== undefined && this.getBlockHexDefaultStatus(this.fcStore.confirmedRoot) === null) {
-      this.pinConfirmedRootToFinalized();
     }
 
     // findHead returns the ProtoNode representing the head
@@ -2312,7 +2300,13 @@ export class ForkChoice implements IForkChoice {
 
     if (this.fastConfirmationPaused) {
       // Keep consumers on a safe, available root while the rule is paused
-      this.pinConfirmedRootToFinalized();
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Runs outside the timed try/catch below; a throw would escape to the clock listener
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
       return false;
     }
 
