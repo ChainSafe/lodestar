@@ -18,10 +18,13 @@ TEMP="./temp/builder-dev"
 # create ./temp/builder-dev
 mkdir -p "$TEMP"
 
-# build image if there isn't one
-if ! docker image inspect "$LODESTAR_IMAGE" >/dev/null 2>&1; then
-  docker build -t "$LODESTAR_IMAGE" .
+DOCKERFILE="${DOCKERFILE:-Dockerfile.dev}"
+
+# build using dockerfile
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
+  docker build -f "$DOCKERFILE" -t "$LODESTAR_IMAGE" . --build-arg COMMIT="$(git rev-parse HEAD)"
 fi
+
 # start devnet, we want to use latest ethereum-package
 kurtosis run --enclave builder-dev --args-file ./scripts/kurtosis/builder-dev.yaml github.com/ethpandaops/ethereum-package
 # last verified against ethereum-package: 4667e182e0459dee043a2f918d2845d6a66c96a1
