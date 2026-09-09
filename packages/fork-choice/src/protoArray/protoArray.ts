@@ -908,6 +908,12 @@ export class ProtoArray {
   }
 
   /**
+   * [New in Heze:EIP7805] Set by ForkChoice. Returns whether the payload for a block root
+   * satisfied its inclusion list constraints. Left null on pre-heze chains.
+   */
+  isPayloadInclusionListSatisfied: ((blockRoot: RootHex) => boolean) | null = null;
+
+  /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
@@ -922,6 +928,13 @@ export class ProtoArray {
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    // [New in Heze:EIP7805] Do not extend a payload that did not satisfy the inclusion list
+    // constraints. Supplied by ForkChoice, which owns both the fork gate and the satisfaction
+    // record; null pre-heze.
+    if (this.isPayloadInclusionListSatisfied !== null && !this.isPayloadInclusionListSatisfied(blockRoot)) {
       return false;
     }
 

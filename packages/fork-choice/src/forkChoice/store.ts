@@ -45,6 +45,11 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  /**
+   * Whether the execution payload for a beacon block root satisfied its inclusion list
+   * constraints, as reported by the execution engine. Only populated post-heze.
+   */
+  payloadInclusionListSatisfaction: Map<RootHex, boolean>;
   notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
 }
 
@@ -57,6 +62,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
+  payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
 

@@ -15,6 +15,7 @@ import {
   type InvalidAttestationData,
   ScannedSlotsTerminationReason,
 } from "../../chain/opPools/aggregatedAttestationPool.js";
+import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListStore.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -1116,7 +1117,28 @@ export function createLodestarMetrics(
       }),
     },
 
+    getInclusionListV1Requests: register.counter({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_requests_total",
+      help: "Total number of engine_getInclusionListV1 requests",
+    }),
+    getInclusionListV1RequestsDuration: register.histogram({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_duration_seconds",
+      help: "Duration of engine_getInclusionListV1 requests",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1],
+    }),
+
     opPool: {
+      inclusionListStore: {
+        size: register.gauge({
+          name: "lodestar_oppool_inclusion_list_store_size",
+          help: "Current number of inclusion lists retained in the InclusionListStore",
+        }),
+        insertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+          name: "lodestar_oppool_inclusion_list_store_insert_outcome_total",
+          help: "Total number of InclusionListStore insertions by outcome",
+          labelNames: ["insertOutcome"],
+        }),
+      },
       aggregatedAttestationPool: {
         size: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_size",

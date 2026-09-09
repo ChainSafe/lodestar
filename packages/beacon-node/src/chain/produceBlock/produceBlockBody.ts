@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
@@ -16,7 +15,6 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
-  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -63,12 +61,12 @@ import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
-import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {ProposerPreferencesPool} from "../opPools/index.js";
+import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -375,8 +373,19 @@ export async function produceBlockBody<T extends BlockType>(
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
-      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+      // [New in Heze:EIP7805] Advertise the inclusion lists we actually observed for the preceding
+      // slot. Left empty, peers applying the `is_inclusion_list_bits_inclusive` bid gossip rule
+      // would ignore this bid as soon as they had seen any timely inclusion list.
+      //
+      // Built from the full view (only_timely=false) rather than the timely-only one: the bits are
+      // a claim about what this node saw, and a superset can only help the receiver's
+      // timely-only check pass.
+      const inclusionListSlot = blockSlot - 1;
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
+        inclusionListSlot,
+        getInclusionListDependentRoot(this.forkChoice, parentBlock, inclusionListSlot),
+        false
+      );
     }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
@@ -728,6 +737,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -829,6 +839,7 @@ export function getPayloadAttributesForSSE(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -878,6 +889,7 @@ function preparePayloadAttributes(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -953,8 +965,25 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+    // The payload built for prepareSlot must satisfy the inclusion lists observed for the
+    // preceding slot, keyed by the shuffling dependent root of that slot on the parent's branch.
+    // Unlike validation, the proposer builds against its full view including untimely lists
+    // (only_timely=False in prepare_execution_payload), so the payload also satisfies the
+    // timely-only subset every validator enforces.
+    const parentBlockRootHex = toRootHex(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+    if (parentBlock === null) {
+      throw new Error(
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex}`
+      );
+    }
+    const inclusionListSlot = prepareSlot - 1;
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      chain.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot),
+        false
+      );
   }
 
   return payloadAttributes;

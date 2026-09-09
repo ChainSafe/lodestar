@@ -17,6 +17,7 @@ export * from "./attesterSlashings.js";
 export * from "./blsToExecutionChange.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
+export * from "./inclusionList.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
 export * from "./proposer.js";
