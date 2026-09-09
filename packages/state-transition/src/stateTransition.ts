@@ -81,15 +81,6 @@ export enum StateHashTreeRootSource {
 }
 
 /**
- * Epoch transition steps tracked in metrics
- */
-export enum StateTransitionStep {
-  stateClone = "stateClone",
-  processSlots = "processSlots",
-  verifyProposerSignature = "verifyProposerSignature",
-}
-
-/**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function stateTransition(
@@ -108,9 +99,7 @@ export function stateTransition(
   const blockSlot = block.slot;
 
   // .clone() before mutating state in state transition
-  const cloneTimer = metrics?.stateTransitionStepTime.startTimer({step: StateTransitionStep.stateClone});
   let postState = state.clone(options.dontTransferCache);
-  cloneTimer?.();
 
   if (metrics) {
     onStateCloneMetrics(postState, metrics, StateCloneSource.stateTransition);
@@ -121,18 +110,11 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  const processSlotsTimer = metrics?.stateTransitionStepTime.startTimer({step: StateTransitionStep.processSlots});
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
-  processSlotsTimer?.();
 
   // Verify proposer signature only
-  if (verifyProposer) {
-    const timer = metrics?.stateTransitionStepTime.startTimer({step: StateTransitionStep.verifyProposerSignature});
-    const isValidProposerSignature = verifyProposerSignature(postState.config, signedBlock);
-    timer?.();
-    if (!isValidProposerSignature) {
-      throw new Error("Invalid block signature");
-    }
+  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
+    throw new Error("Invalid block signature");
   }
 
   // Process block

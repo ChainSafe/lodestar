@@ -5,7 +5,6 @@ import {
   ProposerRewardType,
   StateCloneSource,
   StateHashTreeRootSource,
-  StateTransitionStep,
 } from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/index.js";
@@ -46,12 +45,6 @@ export function createHistoricalStateTransitionMetrics(
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    stateTransitionStepTime: metricsRegister.histogram<{step: StateTransitionStep}>({
-      name: "lodestar_historical_state_stfn_state_transition_step_seconds",
-      help: "Time to call each step of state transition in seconds",
-      labelNames: ["step"],
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5],
     }),
     forkUpgradeTime: metricsRegister.histogram<{fork: ForkName}>({
       name: "lodestar_historical_state_stfn_fork_upgrade_seconds",

@@ -2,7 +2,7 @@ import {ForkName} from "@lodestar/params";
 import {MetricsRegister} from "@lodestar/utils";
 import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
-import {StateCloneSource, StateHashTreeRootSource, StateTransitionStep} from "./stateTransition.js";
+import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {isViewDUNodesPopulated} from "./util/ssz.js";
 
@@ -31,12 +31,6 @@ export function getMetrics(register: MetricsRegister) {
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    stateTransitionStepTime: register.histogram<{step: StateTransitionStep}>({
-      name: "lodestar_stfn_state_transition_step_seconds",
-      help: "Time to call each step of state transition in seconds",
-      labelNames: ["step"],
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5],
     }),
     forkUpgradeTime: register.histogram<{fork: ForkName}>({
       name: "lodestar_stfn_fork_upgrade_seconds",
