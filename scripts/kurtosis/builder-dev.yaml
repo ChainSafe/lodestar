@@ -23,7 +23,6 @@ participants:
 mev_type: buildoor
 buildoor_params:
   image: ethpandaops/buildoor@sha256:501764a3c43e6289fa1b85df9e7489f1d2de24e1efe0a65c4d316bd340166991
-  builder_api: true
   epbs_builder: true
   lifecycle: true
   extra_args:
@@ -33,12 +32,8 @@ network_params:
   preset: minimal
   seconds_per_slot: 6
   gloas_fork_epoch: 0
-  attestation_due_bps_gloas: 2500
   withdrawal_type: "0x01"
-  validator_balance: 32
   builder_count: 1
-  builder_balance: 100
-  deploy_eip8282_contracts: true
 
 additional_services:
   - dora
@@ -53,5 +48,3 @@ port_publisher:
     public_port_start: 37000
   additional_services:
     enabled: true
-
-global_log_level: info
