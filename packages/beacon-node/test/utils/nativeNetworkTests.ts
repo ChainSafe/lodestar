@@ -319,6 +319,16 @@ describe("native Lodestar integration", () => {
           {timeout: 5000}
         );
         expect(left.chain.opPool.hasSeenProposerSlashing(1)).toBe(false);
+        await vi.waitFor(
+          async () => {
+            const metrics = await left.network.scrapeMetrics();
+            expect(metrics).toContain("libp2p_peers 1\n");
+            expect(metrics).toContain('beacon_reqresp_outgoing_requests_total{method="beacon_blocks_by_root"} 1\n');
+            expect(metrics).toContain('beacon_reqresp_incoming_requests_total{method="beacon_blocks_by_root"} 1\n');
+            expect(metrics).toContain("lodestar_native_network_peers 1\n");
+          },
+          {timeout: 5000}
+        );
         expect(worker).not.toHaveBeenCalled();
       } finally {
         const results = await Promise.allSettled([left.close(), right?.close()]);

@@ -331,6 +331,7 @@ export class NativeNetworkCore implements INetworkCore {
       response_chunks_written_total: diagnostics.incoming.chunksWritten,
     };
     return [
+      this.runtime.getMetrics(),
       ...Object.entries(gauges).map(
         ([name, value]) => `# TYPE lodestar_native_${name} gauge\nlodestar_native_${name} ${value}\n`
       ),
