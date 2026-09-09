@@ -1,6 +1,10 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import {
+  registerLocalValidator as registerNativeLocalValidator,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -210,7 +214,13 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            opts.validatorMonitor,
+            nativeStateTransitionMetricsEnabled
+              ? {
+                  registerLocalValidator: registerNativeLocalValidator,
+                  unregisterLocalValidator: unregisterNativeLocalValidator,
+                }
+              : null
           )
         : null;
 

@@ -113,6 +113,11 @@ export type ValidatorMonitorOpts = {
   validatorMonitorLogs?: boolean;
 };
 
+export type NativeValidatorMonitor = {
+  registerLocalValidator(index: ValidatorIndex): void;
+  unregisterLocalValidator(index: ValidatorIndex): void;
+};
+
 export const defaultValidatorMonitorOpts: ValidatorMonitorOpts = {
   validatorMonitorLogs: false,
 };
@@ -286,7 +291,8 @@ export function createValidatorMonitor(
   config: ChainForkConfig,
   genesisTime: number,
   logger: Logger,
-  opts: ValidatorMonitorOpts
+  opts: ValidatorMonitorOpts,
+  nativeValidatorMonitor: NativeValidatorMonitor | null = null
 ): ValidatorMonitor {
   const logLevel = opts.validatorMonitorLogs ? LogLevel.info : LogLevel.debug;
   const log: LogHandler = (message: string, context?: LogData) => {
@@ -330,6 +336,7 @@ export function createValidatorMonitor(
       const isNewValidator = !validators.has(index);
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
       if (isNewValidator) {
+        nativeValidatorMonitor?.registerLocalValidator(index);
         addedValidatorsInEpoch.add(index);
       }
     },
@@ -684,6 +691,7 @@ export function createValidatorMonitor(
       // Prune validators not seen in a while
       for (const [index, validator] of validators.entries()) {
         if (Date.now() - validator.lastRegisteredTimeMs > retainRegisteredValidatorsMs) {
+          nativeValidatorMonitor?.unregisterLocalValidator(index);
           validators.delete(index);
           removedValidatorsInEpoch.add(index);
         }

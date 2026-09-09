@@ -37,7 +37,11 @@ describe("ValidatorMonitor", () => {
 
   describe("registerLocalValidator", () => {
     it("should register new validators and track them", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
+      const nativeValidatorMonitor = {
+        registerLocalValidator: vi.fn(),
+        unregisterLocalValidator: vi.fn(),
+      };
+      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {}, nativeValidatorMonitor);
 
       monitor.registerLocalValidator(1);
       monitor.registerLocalValidator(2);
@@ -48,10 +52,15 @@ describe("ValidatorMonitor", () => {
       expect(indices).toContain(1);
       expect(indices).toContain(2);
       expect(indices).toContain(3);
+      expect(nativeValidatorMonitor.registerLocalValidator.mock.calls).toEqual([[1], [2], [3]]);
     });
 
     it("should not duplicate validators on re-registration", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
+      const nativeValidatorMonitor = {
+        registerLocalValidator: vi.fn(),
+        unregisterLocalValidator: vi.fn(),
+      };
+      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {}, nativeValidatorMonitor);
 
       monitor.registerLocalValidator(1);
       monitor.registerLocalValidator(1); // Register again
@@ -59,12 +68,17 @@ describe("ValidatorMonitor", () => {
       const indices = monitor.getMonitoredValidatorIndices();
       expect(indices).toHaveLength(1);
       expect(indices).toContain(1);
+      expect(nativeValidatorMonitor.registerLocalValidator).toHaveBeenCalledOnce();
     });
   });
 
   describe("onceEveryEndOfEpoch pruning", () => {
     it("should prune validators not seen within retain period", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
+      const nativeValidatorMonitor = {
+        registerLocalValidator: vi.fn(),
+        unregisterLocalValidator: vi.fn(),
+      };
+      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {}, nativeValidatorMonitor);
 
       // Register a validator
       monitor.registerLocalValidator(1);
@@ -84,6 +98,7 @@ describe("ValidatorMonitor", () => {
 
       // Validator should be pruned
       expect(monitor.getMonitoredValidatorIndices()).not.toContain(1);
+      expect(nativeValidatorMonitor.unregisterLocalValidator).toHaveBeenCalledWith(1);
 
       // Restore Date.now
       vi.restoreAllMocks();
