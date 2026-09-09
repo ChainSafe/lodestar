@@ -408,6 +408,16 @@ export const ExecutionPayload = new ProgressiveContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
+export const NewPayloadRequest = new ProgressiveContainerType(
+  {
+    ...electraSsz.NewPayloadRequest.fields,
+    executionPayload: ExecutionPayload,
+    executionRequests: ExecutionRequests,
+  },
+  activeFields(4),
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
   {
     payload: ExecutionPayload,
