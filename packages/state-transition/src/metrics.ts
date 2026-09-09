@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {Histogram, MetricsRegister} from "@lodestar/utils";
+import {MetricsRegister} from "@lodestar/utils";
 import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
@@ -13,7 +13,17 @@ export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
  */
 export function getMetrics(
   register: MetricsRegister,
-  overrides: {stateHashTreeRootTime?: Histogram<{source: StateHashTreeRootSource}>} = {}
+  {
+    /**
+     * Register for `stateHashTreeRootTime`, defaults to `register`.
+     *
+     * The native state transition only observes the `state_transition` source of this histogram,
+     * every other source is timed on the JS side. When the native state transition metrics are
+     * scraped instead of the JS ones, this histogram must stay registered so those sources are kept.
+     * Prometheus accepts the same metric family from both scrapes as long as the label sets are disjoint.
+     */
+    stateHashTreeRootRegister = register,
+  }: {stateHashTreeRootRegister?: MetricsRegister} = {}
 ) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
@@ -69,14 +79,12 @@ export function getMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime:
-      overrides.stateHashTreeRootTime ??
-      register.histogram<{source: StateHashTreeRootSource}>({
-        name: "lodestar_stfn_hash_tree_root_seconds",
-        help: "Time to compute the hash tree root of a post state in seconds",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-        labelNames: ["source"],
-      }),
+    stateHashTreeRootTime: stateHashTreeRootRegister.histogram<{source: StateHashTreeRootSource}>({
+      name: "lodestar_stfn_hash_tree_root_seconds",
+      help: "Time to compute the hash tree root of a post state in seconds",
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
+      labelNames: ["source"],
+    }),
     numEffectiveBalanceUpdates: register.gauge({
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",

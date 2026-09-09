@@ -1,10 +1,6 @@
 import {Counter, Gauge, Histogram, Metric, Registry} from "prom-client";
 import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
-import {
-  BeaconStateTransitionMetrics,
-  createNativeStateHashTreeRootMetric,
-  getMetrics,
-} from "@lodestar/state-transition";
+import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {CounterConfig, GaugeConfig, HistogramConfig, LabelKeys, LabelsGeneric, NoLabels} from "@lodestar/utils";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
@@ -37,11 +33,8 @@ export function createMetrics(
   const beacon = createBeaconMetrics(register);
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const useNativeStateTransitionMetrics = createOpts.includeStateTransitionMetrics === false;
-  const stateTransitionRegister = useNativeStateTransitionMetrics ? unregisteredMetrics : register;
-  const stateTransition = getMetrics(stateTransitionRegister, {
-    stateHashTreeRootTime: useNativeStateTransitionMetrics ? createNativeStateHashTreeRootMetric() : undefined,
-  });
+  const stateTransitionRegister = createOpts.includeStateTransitionMetrics === false ? unregisteredMetrics : register;
+  const stateTransition = getMetrics(stateTransitionRegister, {stateHashTreeRootRegister: register});
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
