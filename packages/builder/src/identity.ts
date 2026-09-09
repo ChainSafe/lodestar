@@ -85,7 +85,7 @@ async function waitForBuilder(
           currentEpoch,
           slot: clock.getCurrentSlot(),
         });
-        await sleep(msToNextEpochPoll(clock), signal);
+        await sleep(msToNextSlotPoll(clock), signal);
         continue;
       }
       throw e;
@@ -99,10 +99,11 @@ async function waitForBuilder(
     }
     if (builder?.status === "pending") {
       logger.info("Waiting for builder deposit to be finalized", {id, slot: clock.getCurrentSlot()});
+      await sleep(msToNextEpochPoll(clock), signal);
     } else {
       logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
+      await sleep(msToNextSlotPoll(clock), signal);
     }
-    await sleep(msToNextEpochPoll(clock), signal);
   }
   throw new ErrorAborted("waitForBuilder");
 }
@@ -147,4 +148,9 @@ async function fetchBuilder(
 function msToNextEpochPoll(clock: IClock): number {
   // wait a slot past the epoch boundary so the BN has processed the transition
   return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1) + 1);
+}
+
+function msToNextSlotPoll(clock: IClock): number {
+  // builder can appear in state any slot once the deposit is processed
+  return clock.msToSlot(clock.getCurrentSlot() + 1);
 }

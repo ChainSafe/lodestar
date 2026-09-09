@@ -99,7 +99,10 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(epochPollMs);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1) - 1);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(1);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -147,7 +150,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(epochPollMs);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -196,7 +199,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(epochPollMs);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
@@ -215,7 +218,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    await vi.advanceTimersByTimeAsync(epochPollMs);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
