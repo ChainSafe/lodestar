@@ -170,6 +170,7 @@ export function makeContext(
     getCurrentSlot: () => currentSlot,
     getHead: () => blocksByRoot.get(headRoot) ?? nullBlock(headRoot),
     getBlock: (root: RootHex) => blocksByRoot.get(root) ?? null,
+    hasBlock: (root: RootHex) => blocksByRoot.has(root),
     getAncestor: (root: RootHex, slot: Slot) => {
       let current = blocksByRoot.get(root);
       while (current && current.slot > slot) {

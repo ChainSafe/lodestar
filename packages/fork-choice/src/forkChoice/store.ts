@@ -45,7 +45,6 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
-  notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
 }
 
 /**
