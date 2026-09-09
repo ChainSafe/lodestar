@@ -238,9 +238,9 @@ export const BuilderPendingWithdrawal = new ContainerType(
 
 export const BuilderPendingPayment = new ContainerType(
   {
-    // weight accumulates one slot's attesting effective balance in gwei (~total_active_balance /
-    // SLOTS_PER_EPOCH); that stays well under Number.MAX_SAFE_INTEGER (2**53) even far beyond mainnet
-    // stake, so UintNum64 (a JS number) represents it exactly.
+    // weight sums attesting validators' effective balances, which are multiples of 1e9 Gwei;
+    // such multiples stay exactly representable as JS numbers far beyond any reachable Ethereum
+    // stake, so UintNum64 is safe here.
     weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
     proposerIndex: ValidatorIndex,
