@@ -44,6 +44,8 @@ export enum DataColumnSidecarErrorCode {
   INCLUSION_PROOF_INVALID = "DATA_COLUMN_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_PROPOSER",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "DATA_COLUMN_SIDECAR_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
+  FINALIZED_NOT_ANCESTOR = "DATA_COLUMN_SIDECAR_ERROR_FINALIZED_NOT_ANCESTOR",
+  ALREADY_SEEN_TUPLE = "DATA_COLUMN_SIDECAR_ERROR_ALREADY_SEEN_TUPLE",
 }
 
 export type DataColumnSidecarErrorType =
@@ -128,7 +130,9 @@ export type DataColumnSidecarErrorType =
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
   | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
-  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex};
+  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex}
+  | {code: DataColumnSidecarErrorCode.FINALIZED_NOT_ANCESTOR; parentRoot: RootHex; finalizedRoot: RootHex}
+  | {code: DataColumnSidecarErrorCode.ALREADY_SEEN_TUPLE; slot: Slot; proposerIndex: number; columnIndex: number};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}
 export class DataColumnSidecarValidationError extends LodestarError<DataColumnSidecarErrorType> {}

@@ -40,6 +40,9 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
+import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipFuluDataColumnSidecar} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
@@ -164,6 +167,8 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_blob_sidecar: GossipType.blob_sidecar,
+  gossip_data_column_sidecar: GossipType.data_column_sidecar,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -715,6 +720,40 @@ async function validateMessageForTopic(
     case GossipType.sync_committee_contribution_and_proof: {
       const signedContributionAndProof = sszDeserialize({type: topic, boundary}, bytes);
       await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
+      break;
+    }
+
+    case GossipType.bls_to_execution_change: {
+      const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
+        ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
+      );
+      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
+      // Mirror gossip handler: insert into opPool so duplicate detection works
+      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.blob_sidecar: {
+      const blobSidecar = rejectOnInvalidSerializedBytes(() => ssz.deneb.BlobSidecar.deserialize(bytes));
+      const parentRootHex = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
+
+      if (rejectedFailedBlockRoots.has(parentRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
+      }
+
+      await validateGossipBlobSidecar(fork, chain, blobSidecar, Number(message.subnet_id ?? 0));
+      break;
+    }
+
+    case GossipType.data_column_sidecar: {
+      const dataColumnSidecar = rejectOnInvalidSerializedBytes(() => ssz.fulu.DataColumnSidecar.deserialize(bytes));
+      const parentRootHex = toRootHex(dataColumnSidecar.signedBlockHeader.message.parentRoot);
+
+      if (rejectedFailedBlockRoots.has(parentRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
+      }
+
+      await validateGossipFuluDataColumnSidecar(chain, dataColumnSidecar, Number(message.subnet_id ?? 0), null);
       break;
     }
 
