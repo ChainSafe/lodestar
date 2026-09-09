@@ -325,6 +325,16 @@ describe("native Lodestar integration", () => {
             expect(metrics).toContain("libp2p_peers 1\n");
             expect(metrics).toContain('beacon_reqresp_outgoing_requests_total{method="beacon_blocks_by_root"} 1\n');
             expect(metrics).toContain('beacon_reqresp_incoming_requests_total{method="beacon_blocks_by_root"} 1\n');
+            expect(metrics).toContain(
+              'beacon_reqresp_outgoing_request_roundtrip_time_seconds_count{method="beacon_blocks_by_root"} 1\n'
+            );
+            expect(metrics).toContain(
+              'beacon_reqresp_incoming_request_handler_time_seconds_count{method="beacon_blocks_by_root"} 1\n'
+            );
+            expect(metrics).toContain('gossipsub_rejected_messages_total{topic="proposer_slashing"} 1\n');
+            expect(metrics).toContain("lodestar_native_gossip_scored_peers 1\n");
+            expect(metrics).toMatch(/lodestar_native_quic_udp_sent_bytes_total [1-9]\d*\n/);
+            expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
             expect(metrics).toContain("lodestar_native_network_peers 1\n");
           },
           {timeout: 5000}
