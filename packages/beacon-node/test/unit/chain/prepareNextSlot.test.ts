@@ -1,15 +1,18 @@
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
+import {generateCachedBellatrixState, generateState, zeroProtoBlock} from "../../utils/state.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const abortController = new AbortController();
@@ -116,18 +119,29 @@ describe("PrepareNextSlot scheduler", () => {
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
-  it("bellatrix - should prepare payload", async () => {
+  it("fulu - should prepare payload and emit payload attributes", async () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
-    getForkStub.mockReturnValue(ForkName.bellatrix);
+    getForkStub.mockReturnValue(ForkName.fulu);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
-    const state = generateCachedBellatrixState();
-    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
+    forkChoiceStub.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
+    const fuluConfig = createBeaconConfig(getConfig(ForkName.fulu), new Uint8Array(32));
+    const makeState = (slot: number) =>
+      new BeaconStateView(
+        createCachedBeaconState(generateState({slot}, fuluConfig, true), {config: fuluConfig, pubkeyCache})
+      );
+    const headState = makeState(SLOTS_PER_EPOCH - 3);
+    vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
+    chainStub.getHeadState.mockReturnValue(headState);
+    regenStub.getBlockSlotState.mockResolvedValue(makeState(SLOTS_PER_EPOCH - 1));
     beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
@@ -141,7 +155,15 @@ describe("PrepareNextSlot scheduler", () => {
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.fulu,
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
+    );
     expect(spy).toHaveBeenCalledTimes(1);
+    expect(loggerStub.error).not.toHaveBeenCalled();
   });
 
   it("post-fulu - should read proposer from head state and dial only the proposer head on reorg", async () => {
