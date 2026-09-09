@@ -42,6 +42,8 @@ concurrency:
 
 jobs:
   reconcile:
+    # Forks inherit this workflow but do not have the project token.
+    if: github.repository_owner == 'ChainSafe'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

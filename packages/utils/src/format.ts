@@ -1,5 +1,5 @@
 import {toRootHex} from "#bytes";
-import {ETH_TO_WEI} from "./ethConversion.js";
+import {ETH_TO_WEI, GWEI_TO_WEI} from "./ethConversion.js";
 
 /**
  * Format bytes as `0x1234…1234`
@@ -56,6 +56,13 @@ export function formatWeiToEth(wei: bigint): string {
  */
 export function prettyWeiToEth(wei: bigint): string {
   return `${formatWeiToEth(wei)} ETH`;
+}
+
+/**
+ * Format gwei as ETH, with up to 5 decimals and append ' ETH'
+ */
+export function prettyGweiToEth(gwei: number | bigint): string {
+  return prettyWeiToEth(BigInt(gwei) * GWEI_TO_WEI);
 }
 
 /**

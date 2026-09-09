@@ -1,6 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
+import {ensureInteropPubkeyCache} from "../../../../src/testUtils/interopPubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 
@@ -20,6 +21,7 @@ describe("loadState", () => {
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
+        ensureInteropPubkeyCache(seedValidators + numNewValidators);
         // Only read the appended keys directly from the pubkey cache. Requesting the full
         // `seedValidators + numNewValidators` set would materialize a second ~seedValidators-sized
         // array (the seed set is already cached at `seedValidators`) and spike peak memory.

@@ -13,6 +13,7 @@ import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lod
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
@@ -122,7 +123,8 @@ export async function downloadByRoot({
       forkName: blockInput.forkName,
       sampledColumns: chain.custodyConfig.sampledColumns,
       custodyColumns: chain.custodyConfig.custodyColumns,
-      timeCreatedSec: Date.now() / 1000,
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.byRoot,
     });
   }
 

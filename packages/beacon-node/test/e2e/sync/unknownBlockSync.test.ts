@@ -7,6 +7,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {INTEROP_BLOCK_HASH} from "../../../src/node/utils/interop/state.js";
@@ -187,7 +188,8 @@ describe("sync / unknown block sync thru gloas", () => {
           forkName: headInput.forkName,
           sampledColumns: bn2.chain.custodyConfig.sampledColumns,
           custodyColumns: bn2.chain.custodyConfig.custodyColumns,
-          timeCreatedSec: headInput.getTimeComplete(),
+          seenTimestampSec: headInput.getTimeComplete(),
+          source: PayloadEnvelopeInputSource.gossip,
         });
       }
       const waitForPayloadImported = expectsPayloadImport

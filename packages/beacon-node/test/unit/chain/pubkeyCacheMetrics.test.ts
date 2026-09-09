@@ -13,6 +13,7 @@ describe("BeaconChain pubkey cache metrics", () => {
       opPool: {
         attestationPool: {size: {set}},
         attesterSlashingPoolSize: {set},
+        deferredVoluntaryExitPool: {size: {set}},
         proposerSlashingPoolSize: {set},
         voluntaryExitPoolSize: {set},
         syncCommitteeMessagePoolSize: {set},
@@ -33,6 +34,7 @@ describe("BeaconChain pubkey cache metrics", () => {
       syncCommitteeMessagePool: {size: 0},
       payloadAttestationPool: {size: 0},
       executionPayloadBidPool: {size: 0},
+      deferredVoluntaryExitPool: {size: () => 0},
       blacklistedBlocks: new Map(),
       pubkeyCache: {size: 123, capacity: 456},
       getHeadState: () => ({forkName: ForkName.phase0}),

@@ -2,9 +2,13 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInputPruneReason,
+  PayloadEnvelopeInputSource,
+} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -21,7 +25,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/types.js";
+import {DroppedItemReason, PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -80,15 +84,15 @@ export function createLodestarMetrics(
       }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
-        help: "Time to process gossip validation queue job in seconds",
+        help: "Time to process gossip validation queue job in seconds (accepted messages only)",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       jobWaitTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
         labelNames: ["topic"],
-        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       concurrency: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_concurrency",
@@ -101,9 +105,10 @@ export function createLodestarMetrics(
         help: "Age of the first item of each key in the indexed queues in seconds",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
-      queueTime: register.histogram({
+      queueTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_time_seconds",
         help: "Total time an item stays in queue until it is processed in seconds",
+        labelNames: ["topic"],
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
     },
@@ -677,9 +682,15 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
         help: "Total number of downloaded blocks errors in UnknownBlockSync",
       }),
-      removedBlocks: register.gauge({
+      removedBlocks: register.gauge<{reason: DroppedItemReason}>({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
-        help: "Total number of removed bad blocks in UnknownBlockSync",
+        help: "Total pending blocks dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
+      }),
+      removedPayloads: register.gauge<{reason: DroppedItemReason}>({
+        name: "lodestar_sync_unknown_block_removed_payloads_total",
+        help: "Total pending payloads dropped from BlockInputSync without completing, by reason",
+        labelNames: ["reason"],
       }),
       elapsedTimeTillReceived: register.histogram({
         name: "lodestar_sync_unknown_block_elapsed_time_till_received",
@@ -911,6 +922,12 @@ export function createLodestarMetrics(
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
       }),
+
+      preStateSource: register.counter<{source: "parentState" | "fallbackPreState" | "preState"}>({
+        name: "lodestar_gossip_block_validation_pre_state_source_total",
+        help: "Source of the pre-state used for gossip block validation",
+        labelNames: ["source"],
+      }),
     },
     gossipBlob: {
       recvToValidation: register.histogram({
@@ -1030,6 +1047,11 @@ export function createLodestarMetrics(
       setHeadAfterCutoff: register.gauge({
         name: "lodestar_import_block_set_head_after_cutoff_total",
         help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
+      }),
+      lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
+        name: "lodestar_import_block_late_canonical_total",
+        help: "Total finalized-canonical blocks this node imported after the attestation cutoff; reason distinguishes this node's processing lag (slow_import) from late reception (late_receive)",
+        labelNames: ["reason"],
       }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
@@ -1225,6 +1247,12 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_attester_slashing_pool_size",
         help: "Current size of the AttesterSlashingPool",
       }),
+      deferredVoluntaryExitPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_deferred_voluntary_exit_pool_size",
+          help: "Current size of the DeferredVoluntaryExitPool",
+        }),
+      },
       proposerSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_proposer_slashing_pool_size",
         help: "Current size of the ProposerSlashingPool",
@@ -1330,10 +1358,10 @@ export function createLodestarMetrics(
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
           labelNames: ["insertOutcome"],
         }),
-        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
-          labelNames: ["insertOutcome"],
+        apiValidationTime: register.histogram({
+          name: "lodestar_api_execution_payload_bid_validation_time_seconds",
+          help: "Time elapsed for signed execution payload bid validation - api path",
+          buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
         }),
       },
     },
@@ -1428,6 +1456,16 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
         labelNames: ["type"],
+      }),
+      persistentTierEpochs: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_epochs",
+        help: "Number of epoch keys retained in each on-disk checkpoint state retention tier",
+        labelNames: ["tier"],
+      }),
+      persistentTierStates: register.gauge<{tier: number}>({
+        name: "lodestar_cp_state_cache_persistent_tier_states",
+        help: "Number of persisted checkpoint states retained in each on-disk retention tier",
+        labelNames: ["tier"],
       }),
       reads: register.avgMinMax({
         name: "lodestar_cp_state_epoch_reads",
@@ -1643,9 +1681,15 @@ export function createLodestarMetrics(
           name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
           help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
         }),
-        created: register.counter({
+        created: register.counter<{source: PayloadEnvelopeInputSource}>({
           name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
-          help: "Number of PayloadEnvelopeInputs created",
+          help: "Number of PayloadEnvelopeInputs created by source",
+          labelNames: ["source"],
+        }),
+        pruned: register.counter<{reason: PayloadEnvelopeInputPruneReason}>({
+          name: "lodestar_seen_payload_envelope_input_cache_items_pruned_total",
+          help: "Number of PayloadEnvelopeInputs evicted by reason",
+          labelNames: ["reason"],
         }),
       },
     },
@@ -1754,6 +1798,10 @@ export function createLodestarMetrics(
       waste: register.counter({
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
+      }),
+      predictedReorg: register.counter({
+        name: "lodestar_precompute_next_epoch_transition_predicted_reorg_total",
+        help: "Predicted epoch-boundary reorgs where the strong parent was dialed instead of the weak head",
       }),
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
@@ -1991,6 +2039,40 @@ export function createLodestarMetrics(
         name: "lodestar_builder_http_client_urls_score",
         help: "Current score of builder http URLs by url index",
         labelNames: ["urlIndex", "baseUrl"],
+      }),
+    },
+
+    builderApi: {
+      statusChecks: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_status_checks_total",
+        help: "Total count of status checks sent to external builders ahead of a proposal",
+        labelNames: ["status"],
+      }),
+      bidRequests: register.counter({
+        name: "lodestar_builder_api_bid_requests_total",
+        help: "Total count of execution payload bid requests sent to external builders",
+      }),
+      bidRequestErrors: register.counter({
+        name: "lodestar_builder_api_bid_request_errors_total",
+        help: "Total count of failed execution payload bid requests to external builders",
+      }),
+      bidsReceived: register.counter({
+        name: "lodestar_builder_api_bids_received_total",
+        help: "Total count of execution payload bids received from external builders",
+      }),
+      bidsDiscarded: register.counter({
+        name: "lodestar_builder_api_bids_discarded_total",
+        help: "Total count of execution payload bids from external builders discarded due to failed validation",
+      }),
+      blockSubmissions: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_block_submissions_total",
+        help: "Total count of signed beacon blocks submitted to external builders",
+        labelNames: ["status"],
+      }),
+      preferencesForwarded: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_preferences_forwarded_total",
+        help: "Total count of builder preferences forwarded to external builders",
+        labelNames: ["status"],
       }),
     },
 

@@ -51,6 +51,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -397,7 +398,8 @@ export const forkChoiceTestRunner =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: Date.now() / 1000,
+                    seenTimestampSec: Date.now() / 1000,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {

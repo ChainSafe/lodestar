@@ -22,6 +22,7 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
+import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -259,6 +260,11 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      builderApiClientOpts: {
+        timeout: opts.executionBuilder.timeout,
+        // Sent with all builder api requests, unless the node runs in private mode
+        userAgent: opts.executionBuilder.userAgent,
+      },
     });
 
     // Load persisted data from disk to in-memory caches
@@ -334,6 +340,8 @@ export class BeaconNode {
     }
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
+
+    startDeferredVoluntaryExitPublisher({chain, network, logger, signal});
 
     return new BeaconNode({
       opts,

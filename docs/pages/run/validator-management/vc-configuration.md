@@ -110,6 +110,17 @@ Example 2: Setting a `--builder.boostFactor=0` will always prefer the local exec
 
 Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
 
+### Configure external builders (Gloas)
+
+Starting with Gloas, external builders are configured on the validator client and the beacon node requests bids on its behalf. Use [`--builder.urls`](./validator-cli.md#--builderurls) to name the builders to request bids from. Viable bids received over p2p are considered alongside them unless the builder circuit breaker is active, governed by the same selection settings. These are additional settings, the pre-Gloas builder flags still apply.
+
+Every bid request is authenticated with data the builder expects, by default the UTF-8 bytes of the builder URL exactly as configured. If a builder requires different auth data agreed out of band, append it as a hex fragment to its URL, e.g. `--builder.urls https://builder.example.com#0x0123`. The fragment is stripped before the URL is used and never sent to the builder. Auth data that must stay secret is better kept in the [proposer configuration file](./proposer-config.md), as command line arguments are visible to other processes.
+
+- [`--builder.minBid`](./validator-cli.md#--builderminbid): minimum counted total payment in Gwei accepted from a builder bid. The total is `value + min(execution_payment, max_execution_payment)`, capped at max uint64. Bids below the floor are discarded.
+- [`--builder.maxExecutionPayment`](./validator-cli.md#--buildermaxexecutionpayment): maximum execution layer payment in Gwei counted from a builder bid, any payment above it adds nothing to the bid when comparing it with other bids. The default of `0` only counts trustless payments backed by the builder's staked collateral. An execution layer payment is only a promise by the builder to pay as part of the block, so values above `0` require the explicit [`--allowDangerousTrustedPayments`](./validator-cli.md#--allowdangeroustrustedpayments) opt-in.
+
+Builders can also be configured per validator key with per-builder overrides via the [builder config keymanager endpoint](https://ethereum.github.io/keymanager-APIs/#/Builder%20Config) or the [proposer configuration file](./proposer-config.md).
+
 ### Submit a validator deposit
 
 Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address on the correct network.

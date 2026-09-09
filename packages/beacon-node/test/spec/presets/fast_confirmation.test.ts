@@ -49,6 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -289,7 +290,8 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: tickTime,
+                    seenTimestampSec: tickTime,
+                    source: PayloadEnvelopeInputSource.gossip,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
