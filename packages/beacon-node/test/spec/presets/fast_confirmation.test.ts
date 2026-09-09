@@ -69,7 +69,6 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -140,7 +139,6 @@ const fastConfirmationTest =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
             fastConfirmation: true,

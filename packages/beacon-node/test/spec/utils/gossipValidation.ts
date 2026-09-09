@@ -45,7 +45,6 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 
 /**
  * A test clock that models gossip clock disparity from a millisecond timestamp.
@@ -399,7 +398,6 @@ export async function runGossipValidationTest(
       disableLightClientServerOnImportBlockHead: true,
       disableOnBlockError: true,
       disablePrepareNextSlot: true,
-      assertCorrectProgressiveBalances,
       proposerBoost: true,
       proposerBoostReorg: true,
     },

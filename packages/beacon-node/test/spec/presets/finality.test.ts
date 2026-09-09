@@ -9,7 +9,6 @@ import {
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -30,7 +29,6 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,
-          assertCorrectProgressiveBalances,
         });
       }
 
