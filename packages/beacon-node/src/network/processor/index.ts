@@ -425,16 +425,13 @@ export class NetworkProcessor {
     message.msgSlot = slot;
     const peerId = message.propagationSource.toString();
 
-    let pendingSearchBlock = false;
-    let pendingSearchEnvelope = false;
-
     // this determines whether this message needs to wait for a Block or Envelope
-    // a message should only wait for what it voted for, hence we don't want to put it on both queues
+    // a message should only wait for what it voted for, hence we don't want to put it on both queues.
     let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
-      pendingSearchBlock = true;
+      this.searchUnknownRoot({slot, root}, true, false, peerId);
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
       // if "index = 1" we need to await for the Envelope instead
       preprocessResult = {action: PreprocessAction.AwaitBlock, root};
@@ -488,7 +485,7 @@ export class NetworkProcessor {
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
-            pendingSearchEnvelope = true;
+            this.searchUnknownRoot({slot, root}, false, true, peerId);
             preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
@@ -498,7 +495,7 @@ export class NetworkProcessor {
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // payload attestation votes that the payload is available but it is not yet known
-            pendingSearchEnvelope = true;
+            this.searchUnknownRoot({slot, root}, false, true, peerId);
             // do not await the envelope, payload attestation processing only requires that the block is known
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -507,7 +504,7 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            pendingSearchEnvelope = true;
+            this.searchUnknownRoot({slot, root}, false, true, peerId);
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -518,7 +515,7 @@ export class NetworkProcessor {
           // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
           if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
-            pendingSearchBlock = true;
+            this.searchUnknownRoot({slot, root: blockRoot}, true, false, peerId);
             // We always want to await the block
             // This allows us to properly forward the payload envelope
             preprocessResult = {action: PreprocessAction.AwaitBlock, root: blockRoot};
@@ -537,13 +534,13 @@ export class NetworkProcessor {
           ) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
             if (protoBlock === null) {
-              pendingSearchBlock = true;
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, true, false, peerId);
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
             } else if (
               protoBlock.executionPayloadBlockHash &&
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
-              pendingSearchEnvelope = true;
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, false, true, peerId);
               preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
             }
           }
@@ -555,17 +552,12 @@ export class NetworkProcessor {
     switch (preprocessResult.action) {
       case PreprocessAction.PushToQueue:
         this.pushPendingGossipsubMessageToQueue(message);
-        if ((pendingSearchBlock || pendingSearchEnvelope) && root != null) {
-          this.searchUnknownRoot({slot, root}, pendingSearchBlock, pendingSearchEnvelope, peerId);
-        }
         break;
       case PreprocessAction.AwaitBlock:
         this.maybeAwaitBlock(preprocessResult.root, topicType, slot, message);
-        this.searchUnknownRoot({slot, root: preprocessResult.root}, pendingSearchBlock, pendingSearchEnvelope, peerId);
         break;
       case PreprocessAction.AwaitEnvelope:
         this.maybeAwaitPayload(preprocessResult.root, topicType, slot, message);
-        this.searchUnknownRoot({slot, root: preprocessResult.root}, pendingSearchBlock, pendingSearchEnvelope, peerId);
         break;
     }
   };
