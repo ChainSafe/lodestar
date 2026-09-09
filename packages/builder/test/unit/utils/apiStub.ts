@@ -7,6 +7,7 @@ export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
       getBlockV2: vi.fn(),
+      getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
     },
     events: {
@@ -14,6 +15,7 @@ export function getApiClientStub(): ApiClientStub {
     },
     node: {
       getSyncingStatus: vi.fn(),
+      getNodeVersionV2: vi.fn(),
     },
   } as unknown as ApiClientStub;
 }
