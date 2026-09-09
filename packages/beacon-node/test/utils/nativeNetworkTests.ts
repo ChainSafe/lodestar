@@ -269,6 +269,9 @@ describe("native Lodestar integration", () => {
         right = await nativeNetworkFixture(config, backend);
         const remote = await right.network.getNetworkIdentity();
         await left.network.connectToPeer(remote.peerId, remote.p2pAddresses);
+        expect(await left.network.dumpPeer(remote.peerId)).toMatchObject({peerId: remote.peerId, state: "connected"});
+        expect(await left.network.dumpPeers()).toMatchObject([{peerId: remote.peerId, state: "connected"}]);
+        expect(await left.network.dumpPeer(left.network.peerId.toString())).toBeUndefined();
         const leftBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
         leftBlock.message.proposerIndex = 1;
         const rightBlock = ssz.fulu.SignedBeaconBlock.defaultValue();

@@ -22,7 +22,7 @@ import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./error
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
-import {NativePeers} from "./peers.js";
+import {NativePeers, formatNativePeer} from "./peers.js";
 import {nativeProtocols} from "./protocols.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
 
@@ -342,11 +342,14 @@ export class NativeNetworkCore implements INetworkCore {
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));
   }
-  dumpPeers(): Promise<never> {
-    return this.unavailable("peer wall-clock message timestamps");
+  async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
+    const snapshot = await this.runtime.getPeers();
+    return snapshot.peers.filter((peer) => peer.connection !== null).map(formatNativePeer);
   }
-  dumpPeer(_peer: string): Promise<never> {
-    return this.unavailable("peer wall-clock message timestamps");
+  async dumpPeer(peerId: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
+    const snapshot = await this.runtime.getPeers();
+    const peer = snapshot.peers.find((peer) => peer.connection !== null && hostPeerId(peer.identity) === peerId);
+    return peer ? formatNativePeer(peer) : undefined;
   }
   dumpPeerScoreStats(): Promise<never> {
     return this.unavailable("RPC and gossip score breakdown");

@@ -4,12 +4,14 @@ import {
   NativePeerState,
   NetworkStatus,
 } from "@chainsafe/lodestar-z/network";
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {Status} from "@lodestar/types";
 import {computeColumnsForCustodyGroup} from "../../../util/dataColumns.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {getKnownClientFromAgentVersion} from "../../peers/client.js";
-import {hostPeerId} from "./addresses.js";
+import {hostPeerId, nativeMultiaddr} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 function hostInteger(value: bigint): number {
@@ -29,6 +31,45 @@ export function hostStatus(status: NetworkStatus): Status {
   return status.earliestAvailableSlot === null
     ? common
     : {...common, earliestAvailableSlot: hostInteger(status.earliestAvailableSlot)};
+}
+
+export function formatNativePeer(peer: NativePeerState): routes.lodestar.LodestarNodePeer {
+  const peerId = hostPeerId(peer.identity);
+  const status = peer.status;
+  const metadata = peer.metadata;
+  return {
+    peerId,
+    enr: null,
+    lastSeenP2pAddress: `${nativeMultiaddr(peer.endpoint)}/p2p/${peerId}`,
+    state: peer.connection === null ? "disconnected" : peer.disconnectReason === null ? "connected" : "disconnecting",
+    direction: peer.connection === null ? null : peer.direction,
+    agentVersion: peer.identify?.agent ?? "NA",
+    agentClient: String(getKnownClientFromAgentVersion(peer.identify?.agent ?? "") ?? "Unknown"),
+    status: status
+      ? {
+          fork_digest: toHexString(status.forkDigest),
+          finalized_root: toHexString(status.finalizedRoot),
+          finalized_epoch: status.finalizedEpoch.toString(),
+          head_root: toHexString(status.headRoot),
+          head_slot: status.headSlot.toString(),
+          ...(status.earliestAvailableSlot === null
+            ? {}
+            : {earliest_available_slot: status.earliestAvailableSlot.toString()}),
+        }
+      : null,
+    metadata: metadata
+      ? {
+          seq_number: metadata.sequenceNumber.toString(),
+          attnets: toHexString(metadata.attnets),
+          syncnets: toHexString(Uint8Array.of(metadata.syncnets)),
+          ...(metadata.custodyGroupCount === null ? {} : {custody_group_count: metadata.custodyGroupCount.toString()}),
+        }
+      : null,
+    // Native snapshots use monotonic time; zero denotes an unavailable wall-clock timestamp.
+    lastReceivedMsgUnixTsMs: 0,
+    lastStatusUnixTsMs: 0,
+    connectedUnixTsMs: 0,
+  };
 }
 
 function sameConnection(
