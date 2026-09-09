@@ -105,7 +105,7 @@ describe("computePayloadTimelinessCommitteeIndices", () => {
     const epochIndices = Uint32Array.from({length: epochValidatorCount}, (_, i) => i);
     const epochEffectiveBalanceIncrements = new Uint16Array(epochValidatorCount).fill(32);
     const state = generateState();
-    const epoch = 0;
+    const epoch = 1;
     const shuffling = computeEpochShuffling(state, epochIndices, epoch);
     const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
     const slotSeedInput = new Uint8Array(epochSeed.length + 8);
@@ -113,7 +113,7 @@ describe("computePayloadTimelinessCommitteeIndices", () => {
     const slotSeedView = new DataView(slotSeedInput.buffer);
     const expected = new Array<Uint32Array>(SLOTS_PER_EPOCH);
     for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-      slotSeedView.setUint32(epochSeed.length, i, true);
+      slotSeedView.setUint32(epochSeed.length, epoch * SLOTS_PER_EPOCH + i, true);
       slotSeedView.setUint32(epochSeed.length + 4, 0, true);
       expected[i] = computePayloadTimelinessCommitteeForSlot(
         digest(slotSeedInput),
@@ -122,15 +122,6 @@ describe("computePayloadTimelinessCommitteeIndices", () => {
       );
     }
 
-    expect(
-      computePayloadTimelinessCommitteesForEpoch(
-        state,
-        epoch,
-        shuffling.committees,
-        epochEffectiveBalanceIncrements,
-        shuffling.shuffling
-      )
-    ).toEqual(expected);
     expect(
       computePayloadTimelinessCommitteesForEpoch(state, epoch, shuffling.committees, epochEffectiveBalanceIncrements)
     ).toEqual(expected);

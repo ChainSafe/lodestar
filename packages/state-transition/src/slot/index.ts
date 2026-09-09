@@ -1,4 +1,3 @@
-import {HashComputationGroup} from "@chainsafe/persistent-merkle-tree";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {byteArrayEquals} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
@@ -13,14 +12,13 @@ export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
 export {upgradeStateToGloas} from "./upgradeStateToGloas.js";
 export {upgradeStateToHeze} from "./upgradeStateToHeze.js";
 
-const slotHcGroup = new HashComputationGroup();
-
 /**
  * Dial state to next slot. Common for all forks
  */
 export function processSlot(fork: ForkSeq, state: CachedBeaconStateAllForks): void {
   // Cache state root
-  const previousStateRoot = fork >= ForkSeq.gloas ? state.batchHashTreeRoot(slotHcGroup) : state.hashTreeRoot();
+  // Note: .hashTreeRoot() automatically commits() pending changes
+  const previousStateRoot = state.hashTreeRoot();
   state.stateRoots.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, previousStateRoot);
 
   // Cache latest block header state root
