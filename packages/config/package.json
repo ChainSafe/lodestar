@@ -66,6 +66,7 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.5",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/ssz": "^1.6.3",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",

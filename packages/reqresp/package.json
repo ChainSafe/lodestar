@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@libp2p/interface": "^3.3.0",
     "@libp2p/utils": "^7.4.0",
     "@lodestar/config": "workspace:^",

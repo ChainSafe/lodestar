@@ -67,6 +67,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
+    "@chainsafe/lodestar-z": "catalog:",
     "@lodestar/utils": "workspace:^",
     "triple-beam": "^1.3.0",
     "winston": "^3.8.2",

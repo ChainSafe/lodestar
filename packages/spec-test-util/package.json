@@ -59,6 +59,7 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/lodestar-z": "catalog:",
     "@lodestar/utils": "workspace:^",
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
