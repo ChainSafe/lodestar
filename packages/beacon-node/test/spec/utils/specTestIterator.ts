@@ -80,11 +80,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
-    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
-    // handling is not yet implemented in Lodestar.
-    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
-    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
