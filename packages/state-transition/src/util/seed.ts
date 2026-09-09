@@ -1,8 +1,5 @@
 import {digest} from "@chainsafe/as-sha256";
-import {
-  computeProposerIndex as nativeComputeProposerIndex,
-  computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
-} from "@chainsafe/swap-or-not-shuffle";
+import bindings from "@chainsafe/lodestar-z";
 import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_PTC_ATTESTER,
@@ -23,6 +20,11 @@ import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+
+const {
+  computeProposerIndex: nativeComputeProposerIndex,
+  computeSyncCommitteeIndices: nativeComputeSyncCommitteeIndices,
+} = bindings.shuffle;
 
 /**
  * Compute proposer indices for an epoch
@@ -117,7 +119,7 @@ export function computeProposerIndex(
   }
 
   let maxEffectiveBalance: number;
-  let randByteCount: number;
+  let randByteCount: 1 | 2;
   if (fork >= ForkSeq.electra) {
     maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;
     randByteCount = 2;
@@ -244,7 +246,7 @@ export function getNextSyncCommitteeIndices(
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array {
   let maxEffectiveBalance: number;
-  let randByteCount: number;
+  let randByteCount: 1 | 2;
 
   if (fork >= ForkSeq.electra) {
     maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;

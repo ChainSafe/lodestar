@@ -1,8 +1,10 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
+import bindings from "@chainsafe/lodestar-z";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../src/testUtils/util.js";
+
+const {unshuffleList} = bindings.shuffle;
 
 // Test cost of hashing state after some modifications
 

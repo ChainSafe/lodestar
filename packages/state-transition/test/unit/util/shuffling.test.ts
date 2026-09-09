@@ -1,11 +1,12 @@
 import {describe, expect, it} from "vitest";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "../../../src/index.js";
 import {generateState} from "../../../src/testUtils/state.js";
-import {computeEpochShuffling, computeEpochShufflingAsync} from "../../../src/util/epochShuffling.js";
+import {computeEpochShuffling} from "../../../src/util/epochShuffling.js";
 
 describe("EpochShuffling", () => {
-  it("async and sync versions should be identical", async () => {
+  it("should shuffle active indices into a permutation split into committees", () => {
     const numberOfValidators = 1000;
     const activeIndices = Uint32Array.from(Array.from({length: numberOfValidators}, (_, i) => i));
     const state = generateState();
@@ -24,9 +25,16 @@ describe("EpochShuffling", () => {
     );
     const epoch = computeEpochAtSlot(state.slot);
 
-    const sync = computeEpochShuffling(state, activeIndices, epoch);
-    const async = await computeEpochShufflingAsync(state, activeIndices, epoch);
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
 
-    expect(sync).toStrictEqual(async);
+    expect(shuffling.epoch).toBe(epoch);
+    expect(shuffling.activeIndices).toBe(activeIndices);
+    expect(Array.from(shuffling.shuffling).sort((a, b) => a - b)).toEqual(Array.from(activeIndices));
+    expect(shuffling.committees.length).toBe(SLOTS_PER_EPOCH);
+    const committeeSize = shuffling.committees.flat().reduce((sum, c) => sum + c.length, 0);
+    expect(committeeSize).toBe(numberOfValidators);
+
+    // deterministic for the same state and epoch
+    expect(computeEpochShuffling(state, activeIndices, epoch)).toStrictEqual(shuffling);
   });
 });
