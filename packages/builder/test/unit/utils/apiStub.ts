@@ -6,9 +6,9 @@ export {type ApiClientStub, mockApiErrorResponse, mockApiResponse} from "@lodest
 export function getApiClientStub(): ApiClientStub {
   return {
     beacon: {
-      getBlockV2: vi.fn(),
       getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
+      getBlockV2: vi.fn(),
     },
     events: {
       eventstream: vi.fn(),
