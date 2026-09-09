@@ -87,7 +87,7 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     ),
   },
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
-    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(
       fork,
       config,

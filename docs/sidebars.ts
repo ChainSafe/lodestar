@@ -26,9 +26,11 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
+            "run/beacon-management/fast-confirmation",
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
+            "run/beacon-management/historical-fork-support",
           ],
         },
         {
@@ -70,7 +72,7 @@ const sidebars: SidebarsConfig = {
             {
               type: "link",
               label: "Documentation",
-              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/light-client",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/light-client",
             },
           ],
         },
@@ -81,7 +83,7 @@ const sidebars: SidebarsConfig = {
             {
               type: "link",
               label: "Documentation",
-              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/prover",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/prover",
             },
           ],
         },
@@ -101,7 +103,9 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Advanced Topics",
-          items: ["contribution/advanced-topics/setting-up-a-testnet"],
+          items: [
+            "contribution/advanced-topics/setting-up-a-testnet",
+          ],
         },
         "contribution/depgraph",
         {

@@ -469,7 +469,7 @@ export function createValidatorMonitor(
         proposerIndex,
         src,
         builderIndex: bid.builderIndex,
-        gasLimit: bid.gasLimit,
+        gasLimit: Number(bid.gasLimit),
         value: bid.value.toString(),
         parentBlockRoot: toRootHex(bid.parentBlockRoot),
         parentBlockHash: toRootHex(bid.parentBlockHash),

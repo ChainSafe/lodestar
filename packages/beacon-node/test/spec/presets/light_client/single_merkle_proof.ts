@@ -1,6 +1,6 @@
 import {expect} from "vitest";
-import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {TreeViewDU, Type} from "@chainsafe/ssz";
+import {type Node, Tree} from "@chainsafe/persistent-merkle-tree";
+import {CompositeType, Type} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {RootHex, ssz} from "@lodestar/types";
@@ -10,7 +10,7 @@ import {TestRunnerFn} from "../../utils/types.js";
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SingleMerkleProofTestCase = {
   meta?: any;
-  object: TreeViewDU<any>;
+  object: unknown;
   // leaf: Bytes32            # string, hex encoded, with 0x prefix
   // leaf_index: int          # integer, decimal
   // branch: list of Bytes32  # list, each element is a string, hex encoded, with 0x prefix
@@ -29,7 +29,11 @@ export const singleMerkleProof: TestRunnerFn<SingleMerkleProofTestCase, RootHex[
   return {
     testFunction: (testcase) => {
       // Assert correct proof generation
-      const branch = new Tree(testcase.object.node).getSingleProof(testcase.proof.leaf_index);
+      const objectType = getObjectType(fork, testSuite);
+      const node = isTreeBackedObject(testcase.object)
+        ? testcase.object.node
+        : toCompositeType(objectType).toViewDU(testcase.object).node;
+      const branch = new Tree(node).getSingleProof(testcase.proof.leaf_index);
       return branch.map(toHex);
     },
     options: {
@@ -58,4 +62,16 @@ function getObjectType(fork: ForkName, objectName: string): Type<unknown> {
     default:
       throw Error(`Unknown objectName ${objectName}`);
   }
+}
+
+type TreeBackedObject = {
+  node: Node;
+};
+
+function isTreeBackedObject(object: unknown): object is TreeBackedObject {
+  return typeof object === "object" && object !== null && "node" in object;
+}
+
+function toCompositeType(type: Type<unknown>): CompositeType<unknown, unknown, TreeBackedObject> {
+  return type as CompositeType<unknown, unknown, TreeBackedObject>;
 }

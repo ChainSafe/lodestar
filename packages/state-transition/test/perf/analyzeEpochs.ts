@@ -20,7 +20,7 @@ import {csvAppend, readCsv} from "./csv.js";
 // To run do:
 //
 // ```
-// NETWORK=mainnet node_modules/.bin/ts-node packages/state-transition/test/perf/analyzeEpochs.ts
+// NETWORK=mainnet node_modules/.bin/tsx packages/state-transition/test/perf/analyzeEpochs.ts
 // ```
 //
 // Example of output CSV

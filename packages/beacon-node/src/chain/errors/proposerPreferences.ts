@@ -1,16 +1,25 @@
-import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum ProposerPreferencesErrorCode {
+  PRE_GLOAS_PROPOSAL_SLOT = "PROPOSER_PREFERENCES_ERROR_PRE_GLOAS_PROPOSAL_SLOT",
   INVALID_EPOCH = "PROPOSER_PREFERENCES_ERROR_INVALID_EPOCH",
   PROPOSAL_SLOT_PASSED = "PROPOSER_PREFERENCES_ERROR_PROPOSAL_SLOT_PASSED",
   UNKNOWN_DEPENDENT_ROOT = "PROPOSER_PREFERENCES_ERROR_UNKNOWN_DEPENDENT_ROOT",
+  INVALID_DEPENDENT_ROOT_SLOT = "PROPOSER_PREFERENCES_ERROR_INVALID_DEPENDENT_ROOT_SLOT",
+  INVALID_DEPENDENT_ROOT = "PROPOSER_PREFERENCES_ERROR_INVALID_DEPENDENT_ROOT",
   INVALID_PROPOSER = "PROPOSER_PREFERENCES_ERROR_INVALID_PROPOSER",
   ALREADY_KNOWN = "PROPOSER_PREFERENCES_ERROR_ALREADY_KNOWN",
   INVALID_SIGNATURE = "PROPOSER_PREFERENCES_ERROR_INVALID_SIGNATURE",
 }
 
 export type ProposerPreferencesErrorType =
+  | {
+      code: ProposerPreferencesErrorCode.PRE_GLOAS_PROPOSAL_SLOT;
+      proposalSlot: Slot;
+      proposalFork: ForkName;
+    }
   | {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH;
       proposalSlot: Slot;
@@ -25,6 +34,19 @@ export type ProposerPreferencesErrorType =
       code: ProposerPreferencesErrorCode.UNKNOWN_DEPENDENT_ROOT;
       proposalSlot: Slot;
       dependentRoot: RootHex;
+    }
+  | {
+      code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT_SLOT;
+      dependentRoot: RootHex;
+      dependentBlockSlot: Slot;
+      dependentRootSlot: Slot;
+      dependentEpoch: Epoch;
+    }
+  | {
+      code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT;
+      dependentRoot: RootHex;
+      dependentBlockSlot: Slot;
+      dependentEpoch: Epoch;
     }
   | {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER;

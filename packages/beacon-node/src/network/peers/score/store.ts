@@ -32,7 +32,9 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   constructor(opts: PeerRpcScoreOpts = {}, metrics: NetworkCoreMetrics | null = null, logger: Logger | null = null) {
     this.metrics = metrics;
     this.logger = logger;
-    this.scores = opts.disablePeerScoring ? new MapDef(() => new MaxScore()) : new MapDef(() => new RealScore());
+    this.scores = opts.disablePeerScoring
+      ? new MapDef(() => new MaxScore())
+      : new MapDef(() => new RealScore(this.metrics));
   }
 
   getScore(peer: PeerId): number {
@@ -75,6 +77,8 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   update(): void {
+    const timer = this.metrics?.peerManager.scoreUpdateDuration.startTimer();
+
     // Bound size of data structures
     pruneSetToMax(this.scores, MAX_ENTRIES);
 
@@ -86,6 +90,9 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
         this.scores.delete(peerIdStr);
       }
     }
+
+    this.metrics?.peerManager.scoreMapSize.set(this.scores.size);
+    timer?.();
   }
 
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void {

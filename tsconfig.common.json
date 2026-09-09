@@ -3,6 +3,8 @@
     "target": "es2023",
     "lib": [
       "es2023",
+      // Array.fromAsync is supported by Node.js >= 22 but not yet part of an es20xx lib
+      "esnext.array",
       "dom"
     ],
     "module": "nodenext",
@@ -32,7 +34,6 @@
     "skipLibCheck": true,
     "types": [
       "node",
-      "bun",
       "snappyjs",
       "mitt",
       "vitest"

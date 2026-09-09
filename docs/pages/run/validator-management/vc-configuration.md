@@ -80,18 +80,19 @@ If you would like to set unique proposer metadata (e.g. fee recipient address) f
 
 ### Configure your builder selection and/or builder boost factor
 
-If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
+These validator configurations signal whether the beacon node should prefer a builder bid or a local execution payload. Before Gloas, builder bids require configured builder relays. Starting with Gloas, builder bids may be received in-protocol over p2p or out-of-protocol through a builder API.
 
-With produceBlockV3 introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With `produceBlockV3` introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+
+With `produceBlockV4` introduced in Gloas, the validator client converts [`--builder.selection`](./validator-cli.md#--builderselection) aliases to a global `builder_boost_factor`, which applies to viable builder bids regardless of whether they were received over p2p or through a builder API. A value of `0` prefers the local payload but uses a viable builder bid if local production fails or is delayed. A value of `100` selects by profit, and `18446744073709551615` (2\*\*64 - 1) prefers the builder bid with local production as fallback. For more information, see the [produceBlockV4 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV4).
 
 With Lodestar's [`--builder.selection`](./validator-cli.md#--builderselection) validator options, you can select:
 
 - `default`: Default setting for Lodestar set at `--builder.boostFactor=90`. This default setting will have a local block boost of ~10%. Note that this value might change in the future depending on what we think is the most appropriate value to help improve censorship resistance of Ethereum.
 - `maxprofit`: An alias of `--builder.boostFactor=100`, which will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
 - `executionalways`: An alias of `--builder.boostFactor=0`, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.
-- `executiononly`: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.
+- `executiononly`: Pre-Gloas only. The beacon node will produce a local execution block even if builder relays are configured and will error if it cannot produce one. Starting with Gloas, this is treated as `executionalways` so a viable builder bid can prevent a missed proposal when local production fails or is delayed.
 - `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2\*\*64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
-- `builderonly`: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and _no block will be produced_.
 
 #### Calculating builder boost factor with examples
 
@@ -108,6 +109,17 @@ Therefore, `--builder.boostFactor=80`.
 Example 2: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
 
 Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
+
+### Configure external builders (Gloas)
+
+Starting with Gloas, external builders are configured on the validator client and the beacon node requests bids on its behalf. Use [`--builder.urls`](./validator-cli.md#--builderurls) to name the builders to request bids from. Viable bids received over p2p are considered alongside them unless the builder circuit breaker is active, governed by the same selection settings. These are additional settings, the pre-Gloas builder flags still apply.
+
+Every bid request is authenticated with data the builder expects, by default the UTF-8 bytes of the builder URL exactly as configured. If a builder requires different auth data agreed out of band, append it as a hex fragment to its URL, e.g. `--builder.urls https://builder.example.com#0x0123`. The fragment is stripped before the URL is used and never sent to the builder. Auth data that must stay secret is better kept in the [proposer configuration file](./proposer-config.md), as command line arguments are visible to other processes.
+
+- [`--builder.minBid`](./validator-cli.md#--builderminbid): minimum counted total payment in Gwei accepted from a builder bid. The total is `value + min(execution_payment, max_execution_payment)`, capped at max uint64. Bids below the floor are discarded.
+- [`--builder.maxExecutionPayment`](./validator-cli.md#--buildermaxexecutionpayment): maximum execution layer payment in Gwei counted from a builder bid, any payment above it adds nothing to the bid when comparing it with other bids. The default of `0` only counts trustless payments backed by the builder's staked collateral. An execution layer payment is only a promise by the builder to pay as part of the block, so values above `0` require the explicit [`--allowDangerousTrustedPayments`](./validator-cli.md#--allowdangeroustrustedpayments) opt-in.
+
+Builders can also be configured per validator key with per-builder overrides via the [builder config keymanager endpoint](https://ethereum.github.io/keymanager-APIs/#/Builder%20Config) or the [proposer configuration file](./proposer-config.md).
 
 ### Submit a validator deposit
 

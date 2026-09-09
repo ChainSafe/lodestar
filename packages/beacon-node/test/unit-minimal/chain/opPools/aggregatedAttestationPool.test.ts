@@ -1,5 +1,5 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/blst";
+import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
@@ -269,6 +269,20 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       }
     });
   }
+});
+
+describe("AggregatedAttestationPool.getAll", () => {
+  const config = createBeaconConfig(chainConfigDefault, Buffer.alloc(32, 0xaa));
+
+  it("returns empty array for a slot with no attestations", () => {
+    const pool = new AggregatedAttestationPool(config);
+    expect(pool.getAll(123)).toEqual([]);
+  });
+
+  it("returns empty array when called without slot filter on empty pool", () => {
+    const pool = new AggregatedAttestationPool(config);
+    expect(pool.getAll()).toEqual([]);
+  });
 });
 
 describe("MatchingDataAttestationGroup.add()", () => {
@@ -541,7 +555,7 @@ describe("MatchingDataAttestationGroup aggregateInto", () => {
   const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
   const mergedBitArray = BitArray.fromBoolArray([true, true]); // = [false, true] + [true, false]
-  const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
+  const attestationDataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestationSeed.data);
   let sk1: SecretKey;
   let sk2: SecretKey;
 

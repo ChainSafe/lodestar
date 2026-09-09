@@ -1,14 +1,6 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  MAX_PAYLOAD_ATTESTATIONS,
-  PTC_SIZE,
-  SLOTS_PER_EPOCH,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -45,14 +37,7 @@ const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
-const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
-// 2 * SLOTS_PER_EPOCH max normally; getAll() may return up to 3 * SLOTS_PER_EPOCH during non-finality
-const MAX_PROPOSER_PREFERENCES_PER_REQUEST = 3 * SLOTS_PER_EPOCH;
-const SignedProposerPreferencesListType = ArrayOf(
-  ssz.gloas.SignedProposerPreferences,
-  MAX_PROPOSER_PREFERENCES_PER_REQUEST
-);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -66,23 +51,10 @@ type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
-type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
+type PayloadAttestationList = ValueOf<typeof ssz.gloas.PayloadAttestations>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
-type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
 
 export type Endpoints = {
-  /**
-   * Get Attestations from operations pool
-   * Retrieves attestations known by the node but not necessarily incorporated into any block
-   */
-  getPoolAttestations: Endpoint<
-    "GET",
-    {slot?: Slot; committeeIndex?: CommitteeIndex},
-    {query: {slot?: number; committee_index?: number}},
-    AttestationListPhase0,
-    EmptyMeta
-  >;
-
   /**
    * Get Attestations from operations pool
    * Retrieves attestations known by the node but not necessarily incorporated into any block
@@ -105,31 +77,6 @@ export type Endpoints = {
     {query: {slot?: number}},
     PayloadAttestationList,
     VersionMeta
-  >;
-
-  /**
-   * Get signed proposer preferences from operations pool
-   * Retrieves proposer preferences known by the node but not necessarily incorporated into any block.
-   */
-  getPoolProposerPreferences: Endpoint<
-    "GET",
-    {slot?: Slot},
-    {query: {slot?: number}},
-    SignedProposerPreferencesList,
-    VersionMeta
-  >;
-
-  /**
-   * Get AttesterSlashings from operations pool
-   * Retrieves attester slashings known by the node but not necessarily incorporated into any block
-   */
-  getPoolAttesterSlashings: Endpoint<
-    // ⏎
-    "GET",
-    EmptyArgs,
-    EmptyRequest,
-    AttesterSlashingListPhase0,
-    EmptyMeta
   >;
 
   /**
@@ -192,38 +139,10 @@ export type Endpoints = {
    *
    * If one or more attestations fail validation the node MUST return a 400 error with details of which attestations have failed, and why.
    */
-  submitPoolAttestations: Endpoint<
-    "POST",
-    {signedAttestations: SingleAttestation<ForkPreElectra>[]},
-    {body: unknown},
-    EmptyResponseData,
-    EmptyMeta
-  >;
-
-  /**
-   * Submit Attestation objects to node
-   * Submits Attestation objects to the node.  Each attestation in the request body is processed individually.
-   *
-   * If an attestation is validated successfully the node MUST publish that attestation on the appropriate subnet.
-   *
-   * If one or more attestations fail validation the node MUST return a 400 error with details of which attestations have failed, and why.
-   */
   submitPoolAttestationsV2: Endpoint<
     "POST",
     {signedAttestations: SingleAttestation[]},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
-    EmptyResponseData,
-    EmptyMeta
-  >;
-
-  /**
-   * Submit AttesterSlashing object to node's pool
-   * Submits AttesterSlashing object to node's pool and if passes validation node MUST broadcast it to network.
-   */
-  submitPoolAttesterSlashings: Endpoint<
-    "POST",
-    {attesterSlashing: phase0.AttesterSlashing},
-    {body: unknown},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -299,35 +218,10 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
-
-  /**
-   * Submit signed proposer preferences
-   * Submits signed proposer preferences to the beacon node.
-   */
-  submitSignedProposerPreferences: Endpoint<
-    "POST",
-    {signedProposerPreferences: SignedProposerPreferencesList},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
-    EmptyResponseData,
-    EmptyMeta
-  >;
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getPoolAttestations: {
-      url: "/eth/v1/beacon/pool/attestations",
-      method: "GET",
-      req: {
-        writeReq: ({slot, committeeIndex}) => ({query: {slot, committee_index: committeeIndex}}),
-        parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
-        schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
-      },
-      resp: {
-        data: AttestationListTypePhase0,
-        meta: EmptyMetaCodec,
-      },
-    },
     getPoolAttestationsV2: {
       url: "/eth/v2/beacon/pool/attestations",
       method: "GET",
@@ -350,30 +244,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {query: {slot: Schema.Uint}},
       },
       resp: {
-        data: PayloadAttestationListType,
+        data: ssz.gloas.PayloadAttestations,
         meta: VersionCodec,
-      },
-    },
-    getPoolProposerPreferences: {
-      url: "/eth/v1/beacon/pool/proposer_preferences",
-      method: "GET",
-      req: {
-        writeReq: ({slot}) => ({query: {slot}}),
-        parseReq: ({query}) => ({slot: query.slot}),
-        schema: {query: {slot: Schema.Uint}},
-      },
-      resp: {
-        data: SignedProposerPreferencesListType,
-        meta: VersionCodec,
-      },
-    },
-    getPoolAttesterSlashings: {
-      url: "/eth/v1/beacon/pool/attester_slashings",
-      method: "GET",
-      req: EmptyRequestCodec,
-      resp: {
-        data: AttesterSlashingListTypePhase0,
-        meta: EmptyMetaCodec,
       },
     },
     getPoolAttesterSlashingsV2: {
@@ -413,20 +285,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: SignedBLSToExecutionChangeListType,
         meta: EmptyMetaCodec,
       },
-    },
-    submitPoolAttestations: {
-      url: "/eth/v1/beacon/pool/attestations",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.toJson(signedAttestations)}),
-        parseReqJson: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.fromJson(body)}),
-        writeReqSsz: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.serialize(signedAttestations)}),
-        parseReqSsz: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.deserialize(body)}),
-        schema: {
-          body: Schema.ObjectArray,
-        },
-      },
-      resp: EmptyResponseCodec,
     },
     submitPoolAttestationsV2: {
       url: "/eth/v2/beacon/pool/attestations",
@@ -469,20 +327,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {
           body: Schema.ObjectArray,
           headers: {[MetaHeader.Version]: Schema.String},
-        },
-      },
-      resp: EmptyResponseCodec,
-    },
-    submitPoolAttesterSlashings: {
-      url: "/eth/v1/beacon/pool/attester_slashings",
-      method: "POST",
-      req: {
-        writeReqJson: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.toJson(attesterSlashing)}),
-        parseReqJson: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.fromJson(body)}),
-        writeReqSsz: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.serialize(attesterSlashing)}),
-        parseReqSsz: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.deserialize(body)}),
-        schema: {
-          body: Schema.Object,
         },
       },
       resp: EmptyResponseCodec,
@@ -611,33 +455,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           toForkName(fromHeaders(headers, MetaHeader.Version));
           return {payloadAttestationMessages: PayloadAttestationMessageListType.deserialize(body)};
-        },
-        schema: {
-          body: Schema.ObjectArray,
-          headers: {[MetaHeader.Version]: Schema.String},
-        },
-      },
-      resp: EmptyResponseCodec,
-    },
-    submitSignedProposerPreferences: {
-      url: "/eth/v1/beacon/pool/proposer_preferences",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.toJson(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
-        parseReqJson: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.fromJson(body)};
-        },
-        writeReqSsz: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.serialize(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
-        parseReqSsz: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.deserialize(body)};
         },
         schema: {
           body: Schema.ObjectArray,

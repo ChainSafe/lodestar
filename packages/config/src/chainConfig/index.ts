@@ -3,7 +3,14 @@ import {defaultChainConfig} from "./default.js";
 import {ChainConfig} from "./types.js";
 
 export * from "./default.js";
-export {chainConfigFromJson, chainConfigToJson, deserializeBlobSchedule, specValuesToJson} from "./json.js";
+export {
+  chainConfigFromJson,
+  chainConfigToJson,
+  deserializeBlobSchedule,
+  deserializeGasLimitSchedule,
+  specValuesToJson,
+} from "./json.js";
+export {NotEqualParamsError, assertEqualParams} from "./params.js";
 export * from "./types.js";
 
 /**
@@ -29,5 +36,14 @@ export function createChainConfig(input: Partial<ChainConfig>): ChainConfig {
       `Can only create a config for the active preset: ACTIVE_PRESET=${ACTIVE_PRESET} PRESET_BASE=${config.PRESET_BASE}`
     );
   }
+
+  for (const [i, entry] of config.GAS_LIMIT_SCHEDULE.entries()) {
+    if (entry.EPOCH < config.GLOAS_FORK_EPOCH) {
+      throw Error(
+        `Invalid GAS_LIMIT_SCHEDULE[${i}].EPOCH ${entry.EPOCH} must be greater than or equal to GLOAS_FORK_EPOCH ${config.GLOAS_FORK_EPOCH}`
+      );
+    }
+  }
+
   return config;
 }

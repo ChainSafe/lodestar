@@ -1,4 +1,4 @@
-import {Signature} from "@chainsafe/blst";
+import {Signature} from "@chainsafe/lodestar-z/blst";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";

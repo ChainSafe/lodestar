@@ -67,9 +67,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }
 
-  dropCache(): void {
+  async dropCache(): Promise<void> {
     this.blockStateCache.clear();
-    this.checkpointStateCache.clear();
+    await this.checkpointStateCache.clear();
   }
 
   dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
@@ -138,14 +138,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.blockStateCache.get(head.stateRoot);
   }
 
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
-    this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
-    this.blockStateCache.prune(headStateRoot);
-  }
-
-  pruneOnFinalized(finalizedEpoch: number): void {
-    this.checkpointStateCache.pruneFinalized(finalizedEpoch);
-    this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
+  onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
+    this.checkpointStateCache.onCheckpoint(finalizedEpoch, justifiedEpoch);
+    this.blockStateCache.onCheckpoint(headStateRoot);
   }
 
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void {

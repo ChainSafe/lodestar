@@ -1,3 +1,4 @@
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -10,7 +11,6 @@ import {IBeaconChain} from "../../chain/interface.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
@@ -30,6 +30,7 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
+import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
@@ -186,11 +187,17 @@ export class NetworkProcessor {
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingMessagesByBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
+  private awaitingBlockMessageCount = 0;
   // we may not receive the payload for messages that require the FULL payload variant to be processed,
   // in that case PendingGossipsubMessage needs to be stored in this Map and reprocessed once the payload comes
   private readonly awaitingMessagesByPayloadBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
-  private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
-  private unknownEnvelopesBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  private awaitingPayloadMessageCount = 0;
+  private unknownBlocksBySlot = new MapDef<Slot, MapDef<RootHex, Set<PeerIdStr>>>(
+    () => new MapDef<RootHex, Set<PeerIdStr>>(() => new Set())
+  );
+  private unknownEnvelopesBySlot = new MapDef<Slot, MapDef<RootHex, Set<PeerIdStr>>>(
+    () => new MapDef<RootHex, Set<PeerIdStr>>(() => new Set())
+  );
 
   constructor(
     modules: NetworkProcessorModules,
@@ -228,8 +235,8 @@ export class NetworkProcessor {
           metrics.gossipValidationQueue.keySize.set({topic}, this.gossipQueues[topic].keySize);
           metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
-        metrics.awaitingBlockGossipMessages.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
-        metrics.awaitingPayloadGossipMessages.countPerSlot.set(this.unknownPayloadGossipsubMessagesCount);
+        metrics.awaitingBlockGossipMessages.countPerSlot.set(this.awaitingBlockMessageCount);
+        metrics.awaitingPayloadGossipMessages.countPerSlot.set(this.awaitingPayloadMessageCount);
         // specific metric for beacon_attestation topic
         metrics.gossipValidationQueue.keyAge.reset();
         for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
@@ -269,35 +276,53 @@ export class NetworkProcessor {
    * Search block via `ChainEvent.unknownBlockRoot` event
    * Slot is the message slot, which is not necessarily the same as the block's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
+   * We forward every distinct peer that gossiped this root (not just the first) so BlockInputSync can
+   * prefer them as by-root download candidates.
    */
   searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    if (
-      this.chain.seenBlock(root) ||
-      this.awaitingMessagesByBlockRoot.has(root) ||
-      this.unknownBlocksBySlot.getOrDefault(slot).has(root)
-    ) {
+    if (this.chain.seenBlock(root)) {
       return;
     }
-    // Search for the unknown block
-    this.unknownBlocksBySlot.getOrDefault(slot).add(root);
-    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
+    const peersForRoot = this.unknownBlocksBySlot.getOrDefault(slot);
+    const alreadySearching = peersForRoot.has(root) || this.awaitingMessagesByBlockRoot.has(root);
+    const forwardedPeers = peersForRoot.getOrDefault(root);
+
+    // brand-new search always emits (peer may be undefined)
+    let shouldEmit = !alreadySearching;
+    if (peer !== undefined && !forwardedPeers.has(peer) && forwardedPeers.size < MAX_PEERS_PER_ROOT) {
+      // First time we forward THIS peer for THIS root: emit so BlockInputSync accumulates it.
+      forwardedPeers.add(peer);
+      shouldEmit = true;
+    }
+    if (shouldEmit) {
+      this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
+    }
   }
 
   /**
    * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` event
    * Slot is the message slot, which is not necessarily the same as the envelope's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
+   * Same peer-forwarding + dedup behavior as searchUnknownBlock.
    */
   searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    if (
-      this.chain.seenPayloadEnvelope(root) ||
-      this.awaitingMessagesByPayloadBlockRoot.has(root) ||
-      this.unknownEnvelopesBySlot.getOrDefault(slot).has(root)
-    ) {
+    if (this.chain.seenPayloadEnvelope(root)) {
       return;
     }
-    this.unknownEnvelopesBySlot.getOrDefault(slot).add(root);
-    this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
+    const peersForRoot = this.unknownEnvelopesBySlot.getOrDefault(slot);
+    // capture "already searching" BEFORE getOrDefault(root) creates the entry
+    const alreadySearching = peersForRoot.has(root) || this.awaitingMessagesByPayloadBlockRoot.has(root);
+    const forwardedPeers = peersForRoot.getOrDefault(root);
+
+    let shouldEmit = !alreadySearching; // brand-new search always emits (peer may be undefined)
+    if (peer !== undefined && !forwardedPeers.has(peer) && forwardedPeers.size < MAX_PEERS_PER_ROOT) {
+      // First time we forward THIS peer for THIS root: emit so BlockInputSync accumulates it.
+      forwardedPeers.add(peer);
+      shouldEmit = true;
+    }
+    if (shouldEmit) {
+      this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, slot, peer, source});
+    }
   }
 
   private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
@@ -459,7 +484,8 @@ export class NetworkProcessor {
           break;
         }
         case GossipType.execution_payload_bid: {
-          // instead of searching for the message root, this searches for the parent root
+          // Search for the parent independently of current head compatibility. A bid may arrive
+          // before its parent block, so compatibility is checked later during gossip validation.
           const parentBlockRoot = getParentBlockRootFromSignedExecutionPayloadBidSerialized(message.msg.data);
           const parentBlockHash = getParentBlockHashFromSignedExecutionPayloadBidSerialized(message.msg.data);
           if (
@@ -497,7 +523,7 @@ export class NetworkProcessor {
         this.pushPendingGossipsubMessageToQueue(message);
         break;
       case PreprocessAction.AwaitBlock: {
-        if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
+        if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
           // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           this.metrics?.awaitingBlockGossipMessages.reject.inc({
             reason: ReprocessRejectReason.reached_limit,
@@ -509,10 +535,11 @@ export class NetworkProcessor {
         this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
         const awaitingGossipsubMessages = this.awaitingMessagesByBlockRoot.getOrDefault(preprocessResult.root);
         awaitingGossipsubMessages.add(message);
+        this.awaitingBlockMessageCount++;
         break;
       }
       case PreprocessAction.AwaitEnvelope: {
-        if (this.unknownPayloadGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
+        if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
           this.metrics?.awaitingPayloadGossipMessages.reject.inc({
             reason: ReprocessRejectReason.reached_limit,
             topic: topicType,
@@ -525,6 +552,7 @@ export class NetworkProcessor {
           preprocessResult.root
         );
         awaitingPayloadGossipsubMessages.add(message);
+        this.awaitingPayloadMessageCount++;
         break;
       }
     }
@@ -532,6 +560,7 @@ export class NetworkProcessor {
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
+    message.queueAddedMs = Date.now();
     const droppedCount = this.gossipQueues[topicType].add(message);
     if (droppedCount) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
@@ -546,6 +575,12 @@ export class NetworkProcessor {
     const waitingGossipsubMessages = this.awaitingMessagesByBlockRoot.get(rootHex);
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
+    }
+
+    // Atomically remove from map and update counter before async iteration to
+    // prevent double-decrement race with onClockSlot during yield points below
+    if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
+      this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
     }
 
     const nowSec = Date.now() / 1000;
@@ -567,14 +602,18 @@ export class NetworkProcessor {
         await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
       }
     }
-
-    this.awaitingMessagesByBlockRoot.delete(rootHex);
   };
 
   private onPayloadEnvelopeProcessed = async ({blockRoot: rootHex}: {blockRoot: RootHex}): Promise<void> => {
     const waitingGossipsubMessages = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
+    }
+
+    // Atomically remove from map and update counter before async iteration to
+    // prevent double-decrement race with onClockSlot during yield points below
+    if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
+      this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
     }
 
     const nowSec = Date.now() / 1000;
@@ -593,8 +632,6 @@ export class NetworkProcessor {
         await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
       }
     }
-
-    this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
   };
 
   private onClockSlot = (clockSlot: Slot): void => {
@@ -603,7 +640,7 @@ export class NetworkProcessor {
 
     for (const [slot, roots] of this.unknownBlocksBySlot) {
       if (slot > minSlot) continue;
-      for (const rootHex of roots) {
+      for (const rootHex of roots.keys()) {
         const gossipMessages = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (gossipMessages !== undefined) {
           for (const message of gossipMessages) {
@@ -618,7 +655,9 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.awaitingMessagesByBlockRoot.delete(rootHex);
+          if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
+            this.awaitingBlockMessageCount -= gossipMessages.size;
+          }
         }
       }
       this.unknownBlocksBySlot.delete(slot);
@@ -626,7 +665,7 @@ export class NetworkProcessor {
 
     for (const [slot, roots] of this.unknownEnvelopesBySlot) {
       if (slot > minSlot) continue;
-      for (const rootHex of roots) {
+      for (const rootHex of roots.keys()) {
         const gossipMessages = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (gossipMessages !== undefined) {
           for (const message of gossipMessages) {
@@ -641,7 +680,9 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
+          if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
+            this.awaitingPayloadMessageCount -= gossipMessages.size;
+          }
         }
       }
       this.unknownEnvelopesBySlot.delete(slot);
@@ -706,12 +747,20 @@ export class NetworkProcessor {
       for (const msg of messageOrArray) {
         msg.startProcessUnixSec = nowSec;
         if (msg.queueAddedMs !== undefined) {
-          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+          this.metrics?.gossipValidationQueue.queueTime.observe(
+            {topic: msg.topic.type},
+            nowSec - msg.queueAddedMs / 1000
+          );
         }
       }
     } else {
-      // indexed queue is not used here
       messageOrArray.startProcessUnixSec = nowSec;
+      if (messageOrArray.queueAddedMs !== undefined) {
+        this.metrics?.gossipValidationQueue.queueTime.observe(
+          {topic: messageOrArray.topic.type},
+          nowSec - messageOrArray.queueAddedMs / 1000
+        );
+      }
     }
 
     const acceptanceArr = Array.isArray(messageOrArray)
@@ -724,49 +773,48 @@ export class NetworkProcessor {
         ];
 
     if (Array.isArray(messageOrArray)) {
-      for (const msg of messageOrArray) {
-        this.trackJobTime(msg, messageOrArray.length);
+      for (const [i, msg] of messageOrArray.entries()) {
+        this.trackJobTime(msg, messageOrArray.length, acceptanceArr[i]);
       }
     } else {
-      this.trackJobTime(messageOrArray, 1);
+      this.trackJobTime(messageOrArray, 1, acceptanceArr[0]);
     }
 
-    // Use setTimeout to yield to the macro queue
-    // This is mostly due to too many attestation messages, and a gossipsub RPC may
-    // contain multiple of them. This helps avoid the I/O lag issue.
-
+    // Report the validation verdict synchronously so it reaches the network worker before any deferred
+    // handler (e.g. block import) runs on the next event loop. At network thread side, gossipsub onValidationResult()
+    // has its own callInNextEventLoop
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        callInNextEventLoop(() => {
-          this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-            msgId: msg.msgId,
-            propagationSource: msg.propagationSource,
-            acceptance: acceptanceArr[i],
-          });
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: msg.msgId,
+          propagationSource: msg.propagationSource,
+          acceptance: acceptanceArr[i],
         });
       }
     } else {
-      callInNextEventLoop(() => {
-        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: messageOrArray.msgId,
-          propagationSource: messageOrArray.propagationSource,
-          acceptance: acceptanceArr[0],
-        });
+      this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+        msgId: messageOrArray.msgId,
+        propagationSource: messageOrArray.propagationSource,
+        acceptance: acceptanceArr[0],
       });
     }
   }
 
-  private trackJobTime(message: PendingGossipsubMessage, numJob: number): void {
+  private trackJobTime(message: PendingGossipsubMessage, numJob: number, acceptance: TopicValidatorResult): void {
     if (message.startProcessUnixSec !== null) {
+      // record job wait time for all messages
       this.metrics?.gossipValidationQueue.jobWaitTime.observe(
         {topic: message.topic.type},
         message.startProcessUnixSec - message.seenTimestampSec
       );
-      // if it takes 64ms to process 64 jobs, the average job time is 1ms
-      this.metrics?.gossipValidationQueue.jobTime.observe(
-        {topic: message.topic.type},
-        (Date.now() / 1000 - message.startProcessUnixSec) / numJob
-      );
+      // but only record job time for ACCEPT messages
+      if (acceptance === TopicValidatorResult.Accept) {
+        // if it takes 64ms to process 64 jobs, the average job time is 1ms
+        this.metrics?.gossipValidationQueue.jobTime.observe(
+          {topic: message.topic.type},
+          (Date.now() / 1000 - message.startProcessUnixSec) / numJob
+        );
+      }
     }
   }
 
@@ -783,21 +831,5 @@ export class NetworkProcessor {
     }
 
     return null;
-  }
-
-  private get unknownBlockGossipsubMessagesCount(): number {
-    let count = 0;
-    for (const messages of this.awaitingMessagesByBlockRoot.values()) {
-      count += messages.size;
-    }
-    return count;
-  }
-
-  private get unknownPayloadGossipsubMessagesCount(): number {
-    let count = 0;
-    for (const messages of this.awaitingMessagesByPayloadBlockRoot.values()) {
-      count += messages.size;
-    }
-    return count;
   }
 }

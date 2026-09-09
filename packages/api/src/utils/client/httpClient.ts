@@ -25,10 +25,6 @@ import {
 } from "./request.js";
 import {ApiResponse} from "./response.js";
 
-// TODO: Workaround for tsgo import-elision bug: ensure this is treated as a runtime value.
-// https://github.com/microsoft/typescript-go/issues/2212
-void HttpStatusCode;
-
 /** A higher default timeout, validator will set its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 0;
@@ -371,8 +367,8 @@ export class HttpClient implements IHttpClient {
 
     try {
       this.logger?.debug("API request", {routeId, requestWireFormat, responseWireFormat});
-      const request = createApiRequest(definition, args, init);
-      const response = await this.fetch(request.url, request);
+      const {url, requestInit} = createApiRequest(definition, args, init);
+      const response = await this.fetch(url, requestInit);
       const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {

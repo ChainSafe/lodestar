@@ -8,7 +8,7 @@ import {renderCommandPage} from "./markdown.js";
 // Outputs a markdown format ready to be consumed
 //
 // Usage:
-// ts-node packages/cli/docsgen
+// tsx packages/cli/docsgen
 //
 // After generation the resulting .md files, they are written to the path expected
 // by the docusaurus index and other existing paths in the documentation

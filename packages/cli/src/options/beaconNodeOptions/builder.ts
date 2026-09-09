@@ -10,6 +10,9 @@ export type ExecutionBuilderArgs = {
   "builder.allowedFaults"?: number;
 };
 
+/** Circuit breaker thresholds, also consumed by the chain options for the post-gloas breaker */
+export type CircuitBreakerArgs = Pick<ExecutionBuilderArgs, "builder.faultInspectionWindow" | "builder.allowedFaults">;
+
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
   if (Array.isArray(args["builder.url"]) || args["builder.url"]?.includes(",http")) {
     throw new YargsError(
@@ -28,7 +31,8 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
 
 export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
-    description: "Enable external builder",
+    description:
+      "Enable external builder. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     type: "boolean",
     default: defaultExecutionBuilderHttpOpts.enabled,
     group: "builder",
@@ -36,7 +40,8 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.url": {
     alias: ["builder.urls"],
-    description: "Url hosting the builder API",
+    description:
+      "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
     defaultDescription: defaultExecutionBuilderHttpOpts.url,
     type: "string",
     group: "builder",
@@ -51,13 +56,15 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.faultInspectionWindow": {
     type: "number",
-    description: "Window to inspect missed slots for enabling/disabling builder circuit breaker",
+    description:
+      "Window used to inspect missed slots (pre-gloas) or calculate the canonical EMPTY block rate (post-gloas) for enabling/disabling the builder circuit breaker",
     group: "builder",
   },
 
   "builder.allowedFaults": {
     type: "number",
-    description: "Number of missed slots allowed in the `faultInspectionWindow` for builder circuit",
+    description:
+      "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of canonical EMPTY blocks, defined as `allowedFaults` out of `faultInspectionWindow` and applied to canonical blocks in the window",
     group: "builder",
   },
 };

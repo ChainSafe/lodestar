@@ -6,17 +6,6 @@ import {streamPair} from "@libp2p/utils";
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
-// Suppress StreamStateError from noise drain events firing after stream close.
-// This is a known race in @chainsafe/libp2p-noise where the encrypted stream's
-// drain handler fires after the underlying mock stream has started closing.
-// Without this handler the uncaught exception crashes the benchmark process.
-// Installed at module scope because the errors can fire during file loading
-// before any beforeAll hook has a chance to run.
-process.on("uncaughtException", (err: unknown): void => {
-  if (err instanceof Error && err.name === "StreamStateError") return;
-  throw err;
-});
-
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;
 
@@ -51,21 +40,39 @@ describe("network / noise / sendData", () => {
         return {connA: outbound.connection, connB: inbound.connection, data: new Uint8Array(messageLength)};
       },
       fn: async ({connA, connB, data}) => {
-        await Promise.all([
-          (async () => {
-            for (let i = 0; i < numberOfMessages; i++) {
-              if (!connA.send(data)) {
-                await connA.onDrain();
-              }
+        const expectedBytes = numberOfMessages * messageLength;
+
+        // Receiver: drain decrypted plaintext until every expected byte has arrived, then stop
+        // reading. Breaking out *before* teardown is what keeps this race-free: @libp2p/utils@7.2.x
+        // surfaces connA.close() to the peer as a reset (StreamResetError) and discards in-flight
+        // data, so the consumer must finish reading before the stream is closed, not race it.
+        const received = (async () => {
+          let bytesReceived = 0;
+          for await (const chunk of connB) {
+            bytesReceived += chunk.byteLength;
+            if (bytesReceived >= expectedBytes) {
+              break;
             }
-            await connA.close();
-          })(),
-          (async () => {
-            for await (const _chunk of connB) {
-              // Drain inbound messages
-            }
-          })(),
-        ]);
+          }
+          return bytesReceived;
+        })();
+
+        // Sender: the work being measured.
+        for (let i = 0; i < numberOfMessages; i++) {
+          if (!connA.send(data)) {
+            await connA.onDrain();
+          }
+        }
+
+        // Assert full delivery before tearing down. This preserves a real correctness signal
+        // (a send-path regression that drops data fails here) without suppressing any error, and
+        // only then closes — so the close-as-reset can no longer race the reader.
+        const bytesReceived = await received;
+        if (bytesReceived !== expectedBytes) {
+          throw new Error(`noise sendData: expected ${expectedBytes} bytes, received ${bytesReceived}`);
+        }
+
+        await connA.close();
       },
     });
   }

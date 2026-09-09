@@ -415,8 +415,10 @@ export class PeerManager {
       );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
+        this.metrics?.peerManager.relevanceCheck.inc({result: "relevant"});
       } else {
         isIrrelevant = true;
+        this.metrics?.peerManager.relevanceCheck.inc({result: irrelevantReasonType.code});
         this.logger.debug("Irrelevant peer", {
           peer: prettyPrintPeerId(peer),
           reason: renderIrrelevantPeerType(irrelevantReasonType),
@@ -424,6 +426,7 @@ export class PeerManager {
       }
     } catch (e) {
       this.logger.error("Irrelevant peer - unexpected error", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.metrics?.peerManager.relevanceCheck.inc({result: "error"});
       isIrrelevant = true;
     }
 
@@ -552,15 +555,18 @@ export class PeerManager {
     for (const peer of connectedPeers) {
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
+          this.metrics?.peerManager.peersPruned.inc({reason: "banned"});
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
           break;
         case ScoreState.Disconnected:
+          this.metrics?.peerManager.peersPruned.inc({reason: "score_too_low"});
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.SCORE_TOO_LOW);
           break;
         case ScoreState.Healthy:
           connectedHealthyPeers.push(peer);
       }
     }
+    this.metrics?.peerManager.peersEvaluated.observe(connectedHealthyPeers.length);
 
     const status = this.statusCache.get();
     const starved =
@@ -572,6 +578,7 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
 
+    const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
@@ -601,6 +608,7 @@ export class PeerManager {
       this.config,
       this.metrics
     );
+    prioritizeTimer?.();
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
     for (const {type, queries} of [
@@ -632,6 +640,7 @@ export class PeerManager {
     // disconnect first to have more slots before we dial new peers
     for (const [reason, peers] of peersToDisconnect) {
       this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      this.metrics?.peerManager.peersPruned.inc({reason}, peers.length);
       for (const peer of peers) {
         void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
       }
@@ -658,6 +667,8 @@ export class PeerManager {
         }
       }
     }
+
+    this.metrics?.peerManager.connectedPeersMapSize.set(this.connectedPeers.size);
 
     timer?.();
 

@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {
   BeaconStateTransitionMetrics,
   EpochTransitionStep,
@@ -44,6 +45,27 @@ export function createHistoricalStateTransitionMetrics(
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
+    forkUpgradeTime: metricsRegister.histogram<{fork: ForkName}>({
+      name: "lodestar_historical_state_stfn_fork_upgrade_seconds",
+      help: "Time to upgrade the state at a fork boundary in seconds",
+      labelNames: ["fork"],
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_seconds",
+      help: "Time spent in onboardBuildersFromPendingDeposits at the gloas fork transition",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersDeposits: metricsRegister.gauge<{outcome: "onboarded" | "topup" | "kept" | "dropped"}>({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_deposits",
+      help: "Pending deposits handled at the gloas fork transition, by outcome",
+      labelNames: ["outcome"],
+    }),
+    onboardBuildersSignatureChecks: metricsRegister.gauge<{source: "cache" | "verified"}>({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_signature_checks",
+      help: "Builder deposit signature checks at the gloas fork transition, by whether the pre-verify cache served them",
+      labelNames: ["source"],
     }),
     processBlockTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_seconds",

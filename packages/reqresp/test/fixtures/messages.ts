@@ -109,7 +109,7 @@ const signedBeaconBlockPhase0Data = {
       eth1Data: {
         depositRoot: Buffer.alloc(32, 0xda),
         blockHash: Buffer.alloc(32, 0xda),
-        depositCount: 9,
+        depositCount: 9n,
       },
       graffiti: Buffer.alloc(32, 0xda),
       proposerSlashings: [],

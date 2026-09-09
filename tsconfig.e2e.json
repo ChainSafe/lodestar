@@ -24,8 +24,5 @@
     "declarationMap": true,
     "incremental": true,
     "preserveWatchOutput": true
-  },
-  "ts-node": {
-    "transpileOnly": true
   }
 }

@@ -44,22 +44,31 @@ export async function verifyBlocksStateTransitionOnly(
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = preState.stateTransition(
-      block,
-      {
-        // NOTE: Assume valid for now while sending payload to execution engine in parallel
-        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus,
-        // false because it's verified below with better error typing
-        verifyStateRoot: false,
-        // if block is trusted don't verify proposer or op signature
-        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-        verifySignatures: !useBlsBatchVerify && !validSignatures,
-        dontTransferCache: false,
-      },
-      {metrics, validatorMonitor}
-    );
+    let postState: IBeaconStateView;
+    try {
+      postState = preState.stateTransition(
+        block,
+        {
+          // NOTE: Assume valid for now while sending payload to execution engine in parallel
+          // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus,
+          // false because it's verified below with better error typing
+          verifyStateRoot: false,
+          // if block is trusted don't verify proposer or op signature
+          verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+          verifySignatures: !useBlsBatchVerify && !validSignatures,
+          dontTransferCache: false,
+        },
+        {metrics, validatorMonitor}
+      );
+    } catch (e) {
+      throw new BlockError(block, {
+        code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+        blockRoot: blocks[i].blockRootHex,
+        error: e as Error,
+      });
+    }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,

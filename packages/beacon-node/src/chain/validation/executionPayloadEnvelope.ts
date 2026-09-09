@@ -1,5 +1,12 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+} from "@lodestar/params";
+import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
@@ -35,8 +42,6 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  // TODO GLOAS: Need to review this, we should queue the envelope for later
-  // processing if the block is not yet known, otherwise we would ignore it here
   const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -108,12 +113,42 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+    });
+  }
+
+  // [REJECT] The counts of `execution_requests` are within their respective limits.
+  // New in Gloas:EIP7688 — progressive lists are unbounded at the type level, so bounds
+  // are enforced here in gossip validation.
+  const {executionRequests} = envelope;
+  const requestCountLimits: [string, number, number][] = [
+    ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
+    ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
+    ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
+    ["builderExits", executionRequests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
+  ];
+  for (const [name, count, limit] of requestCountLimits) {
+    if (count > limit) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_COUNT_EXCEEDED,
+        name,
+        count,
+        limit,
+      });
+    }
+  }
+
+  // [REJECT] The number of withdrawals is within the limit.
+  if (payload.withdrawals.length > MAX_WITHDRAWALS_PER_PAYLOAD) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_COUNT_EXCEEDED,
+      count: payload.withdrawals.length,
+      limit: MAX_WITHDRAWALS_PER_PAYLOAD,
     });
   }
 
@@ -135,7 +170,6 @@ async function validateExecutionPayloadEnvelope(
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    chain.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     payloadInput.proposerIndex

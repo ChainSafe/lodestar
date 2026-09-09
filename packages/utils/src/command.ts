@@ -8,7 +8,8 @@ export interface CliExample {
 
 // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export interface CliOptionDefinition<T = any> extends Options {
-  example?: Omit<CliExample, "title">;
+  // Option examples are a description block only (e.g. an rc config snippet); no command line
+  example?: Omit<CliExample, "title" | "command">;
   // Ensure `type` property matches type of `T`
   type: T extends string
     ? "string"

@@ -2,15 +2,16 @@ import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
+  MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSetByHeaderSlot,
-  getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, Root, RootHex, Slot, SubnetID, fulu, gloas, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, RootHex, Slot, SubnetID, ValidatorIndex, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -141,15 +142,22 @@ export async function validateGossipFuluDataColumnSidecar(
   }
 
   // 7) [REJECT] The sidecar's block's parent passes validation.
-  const blockState = await chain.regen
-    .getBlockSlotState(parentBlock, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
-    .catch(() => {
-      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-        code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
-        parentRoot,
-        slot: blockHeader.slot,
-      });
-    });
+  // Post-fulu, we can use parent state to get expected proposer index thanks to proposer lookahead
+  const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+  const blockEpoch = computeEpochAtSlot(blockHeader.slot);
+  const getProposerIndex = async (): Promise<ValidatorIndex> => {
+    if (isForkPostFulu(chain.config.getForkName(parentBlock.slot)) && blockEpoch - parentEpoch <= MIN_SEED_LOOKAHEAD) {
+      const parentState = await chain.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipDataColumn);
+      return parentState.getBeaconProposer(blockHeader.slot);
+    }
+    const blockState = await chain.regen.getBlockSlotState(
+      parentBlock,
+      blockHeader.slot,
+      {dontTransferCache: true},
+      RegenCaller.validateGossipDataColumn
+    );
+    return blockState.getBeaconProposer(blockHeader.slot);
+  };
 
   // 13) [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot in the context of the current
   //              shuffling (defined by block_header.parent_root/block_header.slot). If the proposer_index cannot
@@ -157,7 +165,13 @@ export async function validateGossipFuluDataColumnSidecar(
   //              while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE
   //              this message.
   const proposerIndex = blockHeader.proposerIndex;
-  const expectedProposerIndex = blockState.getBeaconProposer(blockHeader.slot);
+  const expectedProposerIndex = await getProposerIndex().catch(() => {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
+      parentRoot,
+      slot: blockHeader.slot,
+    });
+  });
 
   if (proposerIndex !== expectedProposerIndex) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
@@ -170,9 +184,8 @@ export async function validateGossipFuluDataColumnSidecar(
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
   const signature = dataColumnSidecar.signedBlockHeader.signature;
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
-    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+    const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
       chain.config,
-      blockState.slot,
       dataColumnSidecar.signedBlockHeader
     );
 

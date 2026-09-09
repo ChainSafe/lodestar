@@ -8,6 +8,7 @@ import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
@@ -19,6 +20,16 @@ const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
+
+/**
+ * Why a finalized-canonical block was imported after the attestation cutoff.
+ */
+export enum LateCanonicalBlockReason {
+  // received on time, but finished importing after the attestation cutoff
+  SlowImport = "slow_import",
+  // block reached this node late on the network thread
+  LateReceive = "late_receive",
+}
 
 /**
  * Persist orphaned block to disk
@@ -54,6 +65,8 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
+  metrics: Metrics | null,
+  isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
@@ -75,6 +88,29 @@ export async function archiveBlocks(
   }));
 
   const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
+
+  // `finalizedCanonicalBlocks` is newest -> oldest; its LAST element is the previous-finalized
+  // boundary block, already audited on the prior run, so exclude it to avoid double counting.
+  if (isNodeSynced && finalizedCanonicalBlocks.length > 1) {
+    const lateBlocks = finalizedCanonicalBlocks.slice(0, -1).filter((block) => !block.importedTimely);
+    if (lateBlocks.length > 0) {
+      let slowImport = 0;
+      for (const block of lateBlocks) {
+        // received late => late_receive; otherwise we had it on time but were slow to import => slow_import
+        const reason = block.timeliness ? LateCanonicalBlockReason.SlowImport : LateCanonicalBlockReason.LateReceive;
+        if (block.timeliness) slowImport++;
+        metrics?.importBlock.lateCanonicalBlock.inc({reason});
+      }
+      const lateSlots = lateBlocks.map((block) => block.slot).sort((a, b) => a - b);
+      logger.verbose("Late imported canonical blocks", {
+        ...logCtx,
+        count: lateBlocks.length,
+        slowImport,
+        lateReceive: lateBlocks.length - slowImport,
+        slotRange: prettyPrintIndices(lateSlots),
+      });
+    }
+  }
 
   if (finalizedCanonicalBlockRoots.length > 0) {
     const migratedSlots = await migrateBlocksFromHotToColdDb(db, logger, finalizedCanonicalBlockRoots);
@@ -298,7 +334,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
     ]);
     for (const entry of canonicalBlockEntries) migratedSlots.push(entry.slot);
   }
-  // Ancestor walk is newest → oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
 }
 
@@ -437,7 +473,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
     await Promise.all(promises);
   }
 
-  // Ancestor walk is newest → oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
 }
 
@@ -485,7 +521,7 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   ]);
 
   // Slots are ascending in hot-db key order — sort to guarantee `prettyPrintIndices` output is clean
-  // regardless of ancestor-walk order (newest → oldest).
+  // regardless of ancestor-walk order (newest to oldest).
   return envelopeEntries.map((entry) => entry.key).sort((a, b) => a - b);
 }
 

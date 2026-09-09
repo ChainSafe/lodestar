@@ -25,7 +25,11 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
-        boostFactor: 18446744073709551616n,
+        boostFactor: 18446744073709551615n,
+        builders: [
+          {url: "https://builder-a.example.com", minBid: 1000n},
+          {url: "https://builder-a.example.com", authData: "0x0123", builderBoostFactor: 200n},
+        ],
       },
     },
   },
@@ -50,5 +54,11 @@ describe("validator / valid Proposer", () => {
 describe("validator / invalid Proposer", () => {
   it("should throw error", () => {
     expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).toThrow();
+  });
+
+  it("should throw on duplicate builder entries", () => {
+    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/duplicateBuilders.yaml"))).toThrow(
+      /Duplicate builder entry/
+    );
   });
 });

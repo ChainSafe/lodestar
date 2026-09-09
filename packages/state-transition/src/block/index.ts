@@ -1,5 +1,5 @@
 import {ForkPostGloas, ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, Slot, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -38,6 +38,8 @@ export {
 export * from "./externalData.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
+export * from "./processBuilderDepositRequest.js";
+export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
 
@@ -50,6 +52,10 @@ export function processBlock(
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {verifySignatures = true} = opts ?? {};
+
+  // Capture the parent block's slot before processBlockHeader overwrites latestBlockHeader
+  const parentSlot: Slot | null =
+    fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null;
 
   // Apply the parent's deferred payload effects before everything else. Must run before
   // processBlockHeader and processExecutionPayloadBid so subsequent steps see the updated state.
@@ -85,12 +91,15 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.gloas) {
-    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+    processExecutionPayloadBid(
+      state as CachedBeaconStateGloas,
+      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
+    );
   }
 
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, opts, metrics);
+  processOperations(fork, state, block.body, parentSlot, opts, metrics);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }

@@ -12,6 +12,7 @@ export const e2eMinimalProject = defineProject({
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/pubkeyCache.ts"),
     ],
     env: {
       LODESTAR_PRESET: "minimal",
@@ -35,6 +36,7 @@ export const e2eMainnetProject = defineProject({
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/pubkeyCache.ts"),
     ],
     env: {
       LODESTAR_PRESET: "mainnet",

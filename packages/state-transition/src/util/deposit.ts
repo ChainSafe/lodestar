@@ -4,19 +4,21 @@ import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
   const eth1DataToUse = eth1Data ?? state.eth1Data;
+  // Proposer can set any value, use in bigint until the result is bounded by MAX_DEPOSITS
+  const depositCount = eth1DataToUse.depositCount;
+  const eth1DepositIndex = BigInt(state.eth1DepositIndex);
+  const maxDeposits = BigInt(MAX_DEPOSITS);
   if (state.config.getForkSeq(state.slot) >= ForkSeq.electra) {
     const electraState = state as CachedBeaconStateElectra;
-    // eth1DataIndexLimit = min(UintNum64, UintBn64) can be safely casted as UintNum64
-    // since the result lies within upper and lower bound of UintNum64
-    const eth1DataIndexLimit: UintNum64 =
-      eth1DataToUse.depositCount < electraState.depositRequestsStartIndex
-        ? eth1DataToUse.depositCount
-        : Number(electraState.depositRequestsStartIndex);
+    const eth1DataIndexLimit =
+      depositCount < electraState.depositRequestsStartIndex ? depositCount : electraState.depositRequestsStartIndex;
 
-    if (state.eth1DepositIndex < eth1DataIndexLimit) {
-      return Math.min(MAX_DEPOSITS, eth1DataIndexLimit - state.eth1DepositIndex);
+    if (eth1DepositIndex < eth1DataIndexLimit) {
+      const available = eth1DataIndexLimit - eth1DepositIndex;
+      return Number(available < maxDeposits ? available : maxDeposits);
     }
     return 0;
   }
-  return Math.min(MAX_DEPOSITS, eth1DataToUse.depositCount - state.eth1DepositIndex);
+  const available = depositCount - eth1DepositIndex;
+  return Number(available < maxDeposits ? available : maxDeposits);
 }

@@ -111,6 +111,12 @@ export function wireEventsOnMainThread<EventData>(
   }
 }
 
+/**
+ * Terminate a worker thread, bounded to `retryCount * retryMs`.
+ *
+ * @returns `false` if it could not be terminated, the worker thread is then still running and the
+ * caller has to decide how to proceed without it.
+ */
 export async function terminateWorkerThread({
   worker,
   retryMs,
@@ -121,7 +127,7 @@ export async function terminateWorkerThread({
   retryMs: number;
   retryCount: number;
   logger?: Logger;
-}): Promise<void> {
+}): Promise<boolean> {
   const terminated = new Promise((resolve) => {
     Thread.events(worker).subscribe((event) => {
       if (event.type === "termination") {
@@ -131,13 +137,19 @@ export async function terminateWorkerThread({
   });
 
   for (let i = 0; i < retryCount; i++) {
-    await Thread.terminate(worker);
-    const result = await Promise.race([terminated, sleep(retryMs).then(() => false)]);
+    // `Worker.terminate()` resolves only once the worker thread exits, and the thread can spin
+    // forever in `Environment::CleanupHandles()` when a libuv handle on its loop never closes, so
+    // it has to be raced too, otherwise `retryCount * retryMs` never applies.
+    const result = await Promise.race([
+      Thread.terminate(worker).then(() => terminated),
+      sleep(retryMs).then(() => false),
+    ]);
 
-    if (result) return;
+    if (result) return true;
 
-    logger?.warn("Worker thread failed to terminate, retrying...");
+    logger?.debug("Worker thread failed to terminate, retrying...");
   }
 
-  throw new Error(`Worker thread failed to terminate in ${retryCount * retryMs}ms.`);
+  logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
+  return false;
 }

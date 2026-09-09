@@ -37,7 +37,9 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
     for (const deposit of deposits) {
       // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
+      // The eth1 bridge deposit mechanism was removed in Fulu, so this gate only applies pre-Fulu.
       if (
+        fork < ForkSeq.fulu &&
         // Is deposit request
         deposit.slot > GENESIS_SLOT &&
         // There are pending Eth1 bridge deposits

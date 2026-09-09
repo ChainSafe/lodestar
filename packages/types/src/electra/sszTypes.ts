@@ -1,6 +1,7 @@
 import {
   BitListType,
   BitVectorType,
+  ContainerNodeStructType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -270,7 +271,7 @@ export const SignedBuilderBid = new ContainerType(
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
-export const PendingDeposit = new ContainerType(
+export const PendingDeposit = new ContainerNodeStructType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,

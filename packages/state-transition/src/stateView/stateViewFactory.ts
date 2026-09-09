@@ -1,5 +1,5 @@
+import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
-import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
@@ -31,6 +31,7 @@ type NativeOpts = {
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
     throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    // TODO: return a new instance of NativeBeaconStateView
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -38,17 +39,6 @@ export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconSta
 }
 
 // ---- createBeaconStateViewForHistoricalRegen (regen path) ----
-
-// Reused across all historical state regen calls in the worker thread
-const pubkeyCacheRegen = createPubkeyCache();
-
-function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
-  const newCount = state.validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    const pubkey = state.validators.getReadonly(i).pubkey;
-    pubkeyCache.set(i, pubkey);
-  }
-}
 
 type RegenNodeJSOpts = {
   useNative: false;
@@ -69,10 +59,10 @@ type RegenNativeOpts = {
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
     throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    // TODO: return a new instance of NativeBeaconStateView
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  syncPubkeyCache(state, pubkeyCacheRegen);
-  const cachedState = createCachedBeaconState(state, {config, pubkeyCache: pubkeyCacheRegen}, {skipSyncPubkeys: true});
+  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
   return new BeaconStateView(cachedState);
 }

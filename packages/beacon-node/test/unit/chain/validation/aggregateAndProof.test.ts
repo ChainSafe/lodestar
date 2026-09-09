@@ -1,11 +1,15 @@
-import {describe, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {createBeaconConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {DOMAIN_AGGREGATE_AND_PROOF, ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
+import {computeSigningRoot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {getAggregateAndProofSigningRoot} from "../../../../src/chain/validation/signatureSets/index.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {
@@ -109,6 +113,13 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
   });
 
+  it("ignores an aggregate on a conflicting finalized branch before pruning", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    const ancestor = chain.forkChoice.getAncestor("", 0);
+    vi.spyOn(chain.forkChoice, "getAncestor").mockReturnValue({...ancestor, blockRoot: "conflicting-root"});
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.NOT_FINALIZED_DESCENDANT);
+  });
+
   it("EMPTY_AGGREGATION_BITFIELD", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
     // Unset all aggregationBits
@@ -152,8 +163,19 @@ describe("chain / validation / aggregateAndProof", () => {
   it("INVALID_SIGNATURE - selection proof sig", async () => {
     const bitIndex = 126;
     const {chain, signedAggregateAndProof} = getValidData({bitIndex});
-    // Swap the selectionProof signature with the overall sig of the object
-    signedAggregateAndProof.message.selectionProof = signedAggregateAndProof.signature;
+    // Corrupt the proof while preserving the aggregator modulo check, so validation reaches the signature check.
+    const invalidProof = signedAggregateAndProof.message.selectionProof.slice();
+    const committeeLength = getState().epochCtx.getBeaconCommittee(
+      signedAggregateAndProof.message.aggregate.data.slot,
+      1
+    ).length;
+    const originalFirstByte = invalidProof[0];
+    for (let value = 0; value <= 0xff; value++) {
+      if (value === originalFirstByte) continue;
+      invalidProof[0] = value;
+      if (isAggregatorFromCommitteeLength(committeeLength, invalidProof)) break;
+    }
+    signedAggregateAndProof.message.selectionProof = invalidProof;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
@@ -175,6 +197,25 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
+  });
+
+  it("uses the fork-specific AggregateAndProof signing root", () => {
+    const config = createBeaconConfig({...defaultConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1}, ZERO_HASH);
+    const slot = SLOTS_PER_EPOCH;
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregatorIndex = 1;
+    signedAggregateAndProof.message.selectionProof[0] = 1;
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
+    signedAggregateAndProof.message.aggregate.data.target.epoch = 1;
+    signedAggregateAndProof.message.aggregate.signature[0] = 2;
+    signedAggregateAndProof.message.aggregate.aggregationBits = BitArray.fromSingleBit(4, 0);
+    signedAggregateAndProof.message.aggregate.committeeBits.set(0, true);
+
+    const domain = config.getDomainAtFork(ForkName.gloas, DOMAIN_AGGREGATE_AND_PROOF);
+    const expectedRoot = computeSigningRoot(ssz.gloas.AggregateAndProof, signedAggregateAndProof.message, domain);
+
+    expect(config.getForkTypes(slot).AggregateAndProof).toBe(ssz.gloas.AggregateAndProof);
+    expect(getAggregateAndProofSigningRoot(config, 1, signedAggregateAndProof)).toEqual(expectedRoot);
   });
 
   /** Alias to reduce code duplication */

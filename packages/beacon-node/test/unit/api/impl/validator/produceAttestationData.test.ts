@@ -65,7 +65,7 @@ describe("api - validator - produceAttestationData", () => {
       modules.config = gloasConfig;
       api = getValidatorApi(defaultApiOptions, modules);
 
-      modules.forkChoice.getCanonicalBlockClosestLteSlot.mockReturnValue({
+      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue({
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
@@ -77,7 +77,7 @@ describe("api - validator - produceAttestationData", () => {
       } as PayloadEnvelopeInput);
 
       const res = await api.producePayloadAttestationData({slot: 0});
-      if (res.data instanceof Uint8Array) {
+      if (res.data === undefined || res.data instanceof Uint8Array) {
         throw Error("Expected payload attestation data object");
       }
 
@@ -85,6 +85,27 @@ describe("api - validator - produceAttestationData", () => {
       expect(res.data.slot).toBe(0);
       expect(res.data.payloadPresent).toBe(true);
       expect(res.data.blobDataAvailable).toBe(true);
+    });
+
+    it("Should return no data when no canonical block has been seen for the assigned slot", async () => {
+      const gloasConfig = createChainForkConfig({
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+      });
+      modules = getApiTestModules({config: gloasConfig});
+      modules.config = gloasConfig;
+      api = getValidatorApi(defaultApiOptions, modules);
+
+      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
+
+      const res = await api.producePayloadAttestationData({slot: 1});
+      expect(res.data).toBeUndefined();
     });
   });
 });

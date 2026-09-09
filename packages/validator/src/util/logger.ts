@@ -1,6 +1,6 @@
 import {ApiError} from "@lodestar/api";
+import {IClock} from "@lodestar/state-transition";
 import {LogData, Logger, isErrorAborted} from "@lodestar/utils";
-import {IClock} from "./clock.js";
 
 export type LoggerVc = Logger & {
   isSyncing(e: Error): void;

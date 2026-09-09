@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -51,6 +51,11 @@ export enum ChainEvent {
    */
   publishBlobSidecars = "publishBlobSidecars",
   /**
+   * This event signals that a proposer slashing has been produced from an observed equivocation
+   * and is ready to be published.
+   */
+  publishProposerSlashing = "publishProposerSlashing",
+  /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
   updateStatus = "updateStatus",
@@ -94,7 +99,8 @@ export type ChainEventData = {
     peer: PeerIdStr;
     source: BlockInputSource;
   };
-  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  // slot is the message slot, not necessarily the envelope's slot, but useful as a logging/prune hint
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -108,6 +114,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
+
+  [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
 
   [ChainEvent.updateStatus]: () => void;
 

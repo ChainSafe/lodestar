@@ -1,0 +1,359 @@
+import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
+import {chainConfigToJson, deserializeBlobSchedule} from "./json.js";
+import {BlobScheduleEntry, ChainConfig, SpecJson} from "./types.js";
+
+export class NotEqualParamsError extends Error {}
+
+type ConfigWithPreset = ChainConfig & BeaconPreset;
+
+/**
+ * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
+ *
+ * This check ensures that the validator is connected to a beacon node of the exact same network and params.
+ * Otherwise, signatures may be rejected, time may be un-equal and other bugs that are harder to debug caused
+ * by different parameters.
+ *
+ * This check however can't compare the full config as is, since some parameters are not critical to the spec and
+ * can be changed un-expectedly. Also, fork parameters can change un-expectedly, like their _FORK_VERSION or _EPOCH.
+ * Note that the config API endpoint is not precisely specified, so each clients can return a different set of
+ * parameters.
+ *
+ * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
+ * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
+ */
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
+  // Before comparing, add preset which is bundled in api impl config route.
+  // config and preset must be serialized to JSON for safe comparisions.
+  const localSpecJson = {
+    ...chainConfigToJson(localConfig),
+    ...presetToJson(activePreset),
+  };
+
+  // Get list of keys to check, and keys to ignore. Otherwise this function throws for false positives
+  const criticalParams = getSpecCriticalParams(localConfig);
+
+  // Accumulate errors first and print all of them at once
+  const errors: string[] = [];
+
+  for (const key of Object.keys(criticalParams) as (keyof typeof criticalParams)[]) {
+    if (
+      // Ignore non-critical params
+      !criticalParams[key] ||
+      // This condition should never be true, but just in case
+      localSpecJson[key] === undefined ||
+      // The config/spec endpoint is poorly specified, so in practice each client returns a custom selection of keys.
+      // For example Lighthouse returns a manually selected list of keys that may be updated at any time.
+      // https://github.com/sigp/lighthouse/blob/bac7c3fa544495a257722aaad9cd8f72fee2f2b4/consensus/types/src/chain_spec.rs#L941
+      //
+      // So if we assert that spec critical keys are present in the spec we may break interoperability unexpectedly.
+      // So it's best to ignore keys are not defined in both specs and trust that the ones defined are sufficient
+      // to detect spec discrepancies in all cases.
+      externalSpecJson[key] === undefined
+    ) {
+      continue;
+    }
+
+    if (key === "BLOB_SCHEDULE") {
+      const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+
+      if (localBlobSchedule.length !== remoteBlobSchedule.length) {
+        errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
+
+        // Skip per entry comparison
+        continue;
+      }
+
+      for (let i = 0; i < localBlobSchedule.length; i++) {
+        const localEntry = localBlobSchedule[i];
+        const remoteEntry = remoteBlobSchedule[i];
+
+        for (const entryKey of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+          const localValue = String(localEntry[entryKey]);
+          const remoteValue = String(remoteEntry[entryKey]);
+
+          if (localValue !== remoteValue) {
+            errors.push(`BLOB_SCHEDULE[${i}].${entryKey} different value: ${localValue} != ${remoteValue}`);
+          }
+        }
+      }
+
+      // Skip generic string comparison
+      continue;
+    }
+
+    // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
+    // Must compare as lowercase to ensure checksum addresses and names have same capilatization
+    const localValue = String(localSpecJson[key]).toLocaleLowerCase();
+    const remoteValue = String(externalSpecJson[key]).toLocaleLowerCase();
+    if (localValue !== remoteValue) {
+      errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new NotEqualParamsError("Local and remote configs are different\n" + errors.join("\n"));
+  }
+}
+
+function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWithPreset, boolean> {
+  const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
+  const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
+  const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
+  const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
+  const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
+  const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
+
+  return {
+    // # Config
+    ///////////
+
+    PRESET_BASE: false, // Not relevant, each preset value is checked below
+    CONFIG_NAME: false, // Arbitrary string, not relevant
+
+    // Deprecated - All networks have completed the merge transition
+    TERMINAL_TOTAL_DIFFICULTY: false,
+    TERMINAL_BLOCK_HASH: false,
+    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: false,
+
+    // Genesis
+    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: true,
+    MIN_GENESIS_TIME: true,
+    GENESIS_FORK_VERSION: true,
+    GENESIS_DELAY: true,
+
+    // Forking
+    // Altair
+    ALTAIR_FORK_VERSION: altairForkRelevant,
+    ALTAIR_FORK_EPOCH: altairForkRelevant,
+    // Bellatrix
+    BELLATRIX_FORK_VERSION: bellatrixForkRelevant,
+    BELLATRIX_FORK_EPOCH: bellatrixForkRelevant,
+    // Capella
+    CAPELLA_FORK_VERSION: capellaForkRelevant,
+    CAPELLA_FORK_EPOCH: capellaForkRelevant,
+    // Deneb
+    DENEB_FORK_VERSION: denebForkRelevant,
+    DENEB_FORK_EPOCH: denebForkRelevant,
+    // electra
+    ELECTRA_FORK_VERSION: electraForkRelevant,
+    ELECTRA_FORK_EPOCH: electraForkRelevant,
+    // fulu
+    FULU_FORK_VERSION: fuluForkRelevant,
+    FULU_FORK_EPOCH: fuluForkRelevant,
+    // gloas
+    GLOAS_FORK_VERSION: gloasForkRelevant,
+    GLOAS_FORK_EPOCH: gloasForkRelevant,
+    // heze
+    HEZE_FORK_VERSION: hezeForkRelevant,
+    HEZE_FORK_EPOCH: hezeForkRelevant,
+
+    // Time parameters
+    SECONDS_PER_SLOT: false, // Deprecated
+    SLOT_DURATION_MS: true,
+    SECONDS_PER_ETH1_BLOCK: false, // Legacy
+    MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
+    SHARD_COMMITTEE_PERIOD: true,
+    ETH1_FOLLOW_DISTANCE: true,
+    PROPOSER_REORG_CUTOFF_BPS: true,
+    ATTESTATION_DUE_BPS: true,
+    AGGREGATE_DUE_BPS: true,
+    // Altair
+    SYNC_MESSAGE_DUE_BPS: altairForkRelevant,
+    CONTRIBUTION_DUE_BPS: altairForkRelevant,
+
+    // Validator cycle
+    INACTIVITY_SCORE_BIAS: true,
+    INACTIVITY_SCORE_RECOVERY_RATE: true,
+    EJECTION_BALANCE: true,
+    MIN_PER_EPOCH_CHURN_LIMIT: true,
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: denebForkRelevant,
+    CHURN_LIMIT_QUOTIENT: true,
+
+    // Fork choice
+    PROPOSER_SCORE_BOOST: false, // Ignored as it's changing https://github.com/ethereum/consensus-specs/pull/2895
+    REORG_HEAD_WEIGHT_THRESHOLD: false, // Non-critical since proposer boost reorg is optional feature
+    REORG_PARENT_WEIGHT_THRESHOLD: false, // Non-critical since proposer boost reorg is optional feature
+    REORG_MAX_EPOCHS_SINCE_FINALIZATION: false, // Non-critical since proposer boost reorg is optional feature
+
+    // Deposit contract
+    DEPOSIT_CHAIN_ID: false, // Non-critical
+    DEPOSIT_NETWORK_ID: false, // Non-critical
+    DEPOSIT_CONTRACT_ADDRESS: true,
+
+    // Networking (non-critical as those do not affect consensus)
+    MAX_PAYLOAD_SIZE: false,
+    EPOCHS_PER_SUBNET_SUBSCRIPTION: false,
+    ATTESTATION_PROPAGATION_SLOT_RANGE: false,
+    MAXIMUM_GOSSIP_CLOCK_DISPARITY: false,
+    MESSAGE_DOMAIN_INVALID_SNAPPY: false,
+    MESSAGE_DOMAIN_VALID_SNAPPY: false,
+    SUBNETS_PER_NODE: false,
+    MAX_REQUEST_BLOCKS: false,
+    MAX_REQUEST_BLOCKS_DENEB: false,
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
+    MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
+    BLOB_SIDECAR_SUBNET_COUNT: false,
+    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
+    MAX_REQUEST_BLOB_SIDECARS: false,
+    MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
+    MAX_REQUEST_PAYLOADS: false,
+
+    // # Phase0Preset
+    /////////////////
+
+    MAX_COMMITTEES_PER_SLOT: true,
+    TARGET_COMMITTEE_SIZE: true,
+    MAX_VALIDATORS_PER_COMMITTEE: true,
+
+    SHUFFLE_ROUND_COUNT: true,
+
+    HYSTERESIS_QUOTIENT: true,
+    HYSTERESIS_DOWNWARD_MULTIPLIER: true,
+    HYSTERESIS_UPWARD_MULTIPLIER: true,
+
+    // Gwei Values
+    MIN_DEPOSIT_AMOUNT: true,
+    MAX_EFFECTIVE_BALANCE: true,
+    EFFECTIVE_BALANCE_INCREMENT: true,
+
+    // Time parameters
+    MIN_ATTESTATION_INCLUSION_DELAY: true,
+    SLOTS_PER_EPOCH: true,
+    MIN_SEED_LOOKAHEAD: true,
+    MAX_SEED_LOOKAHEAD: true,
+    EPOCHS_PER_ETH1_VOTING_PERIOD: true,
+    SLOTS_PER_HISTORICAL_ROOT: true,
+    MIN_EPOCHS_TO_INACTIVITY_PENALTY: true,
+
+    // State vector lengths
+    EPOCHS_PER_HISTORICAL_VECTOR: true,
+    EPOCHS_PER_SLASHINGS_VECTOR: true,
+    HISTORICAL_ROOTS_LIMIT: true,
+    VALIDATOR_REGISTRY_LIMIT: true,
+
+    // Reward and penalty quotients
+    BASE_REWARD_FACTOR: true,
+    WHISTLEBLOWER_REWARD_QUOTIENT: true,
+    PROPOSER_REWARD_QUOTIENT: true,
+    INACTIVITY_PENALTY_QUOTIENT: true,
+    MIN_SLASHING_PENALTY_QUOTIENT: true,
+    PROPORTIONAL_SLASHING_MULTIPLIER: true,
+
+    // Max operations per block
+    MAX_PROPOSER_SLASHINGS: true,
+    MAX_ATTESTER_SLASHINGS: true,
+    MAX_ATTESTATIONS: true,
+    MAX_DEPOSITS: true,
+    MAX_VOLUNTARY_EXITS: true,
+
+    // # AltairPreset
+    /////////////////
+
+    SYNC_COMMITTEE_SIZE: altairForkRelevant,
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: altairForkRelevant,
+    INACTIVITY_PENALTY_QUOTIENT_ALTAIR: altairForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: altairForkRelevant,
+    PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: altairForkRelevant,
+    MIN_SYNC_COMMITTEE_PARTICIPANTS: false, // Only relevant for lightclients
+    UPDATE_TIMEOUT: false, // Only relevant for lightclients
+
+    // # BellatrixPreset
+    /////////////////
+
+    INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: bellatrixForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: bellatrixForkRelevant,
+    PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: bellatrixForkRelevant,
+    MAX_BYTES_PER_TRANSACTION: bellatrixForkRelevant,
+    MAX_TRANSACTIONS_PER_PAYLOAD: bellatrixForkRelevant,
+    BYTES_PER_LOGS_BLOOM: bellatrixForkRelevant,
+    MAX_EXTRA_DATA_BYTES: bellatrixForkRelevant,
+
+    // # CapellaPreset
+    /////////////////
+    MAX_BLS_TO_EXECUTION_CHANGES: capellaForkRelevant,
+    MAX_WITHDRAWALS_PER_PAYLOAD: capellaForkRelevant,
+    MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: capellaForkRelevant,
+
+    // # DenebPreset
+    /////////////////
+    FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
+    MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
+    KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
+
+    // ELECTRA
+    MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
+    MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
+    MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: electraForkRelevant,
+    MAX_PENDING_DEPOSITS_PER_EPOCH: electraForkRelevant,
+    MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
+    MIN_ACTIVATION_BALANCE: electraForkRelevant,
+    PENDING_DEPOSITS_LIMIT: electraForkRelevant,
+    PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
+    PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
+    MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
+    WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
+    MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
+    MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
+
+    // FULU
+    /////////////////
+    CELLS_PER_EXT_BLOB: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
+    KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    NUMBER_OF_CUSTODY_GROUPS: fuluForkRelevant,
+    SAMPLES_PER_SLOT: fuluForkRelevant,
+    CUSTODY_REQUIREMENT: fuluForkRelevant,
+    VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
+    BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
+    BLOB_SCHEDULE: fuluForkRelevant,
+
+    // GLOAS
+    ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,
+    AGGREGATE_DUE_BPS_GLOAS: gloasForkRelevant,
+    SYNC_MESSAGE_DUE_BPS_GLOAS: gloasForkRelevant,
+    CONTRIBUTION_DUE_BPS_GLOAS: gloasForkRelevant,
+    PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
+    PAYLOAD_DUE_BPS: gloasForkRelevant,
+    PTC_SIZE: gloasForkRelevant,
+    MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
+    MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
+    MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
+    MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
+    MAX_ATTESTER_SLASHING_SIZE: false,
+    MAX_DATA_COLUMN_SIDECAR_SIZE: false,
+    MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
+    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+    GAS_LIMIT_SCHEDULE: false,
+
+    // HEZE
+    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
+    MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: false,
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
+    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
+    MAX_SIGNED_INCLUSION_LIST_SIZE: false,
+
+    // FastConfirmationRule
+    CONFIRMATION_BYZANTINE_THRESHOLD: false,
+
+    CHURN_LIMIT_QUOTIENT_GLOAS: gloasForkRelevant,
+    CONSOLIDATION_CHURN_LIMIT_QUOTIENT: gloasForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: gloasForkRelevant,
+  };
+}

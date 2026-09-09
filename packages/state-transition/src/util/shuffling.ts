@@ -21,8 +21,8 @@ import {EpochShuffling} from "./epochShuffling.js";
  * Computed for the requested epoch, not `state.epoch`, so it is correct when `state` is one
  * epoch off the requested epoch (e.g. serving next-epoch duties from the current state).
  *
- * Returns `null` when the genesis block decides its own shuffling (caller falls back to the
- * genesis block root).
+ * Returns `null` when the decision block is not in the state's past (the genesis block decides
+ * its own shuffling, or it has not been produced yet); caller supplies the fallback.
  */
 export function proposerShufflingDecisionRoot(
   fork: ForkName,
@@ -30,7 +30,8 @@ export function proposerShufflingDecisionRoot(
   proposalEpoch: Epoch
 ): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(fork, proposalEpoch);
-  if (state.slot === decisionSlot) {
+  // Return null when the decision block is not in the state's past or the getBlockRootAtSlot() api will throw
+  if (decisionSlot >= state.slot) {
     return null;
   }
   return state.getBlockRootAtSlot(decisionSlot);

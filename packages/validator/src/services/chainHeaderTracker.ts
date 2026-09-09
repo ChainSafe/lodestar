@@ -19,6 +19,11 @@ export type ExecutionPayloadAvailableEventData = {
   blockRoot: RootHex;
 };
 
+type ChainHead = {
+  root: Root;
+  executionOptimistic: boolean;
+};
+
 type RunEveryFn = (event: HeadEventData) => Promise<void>;
 
 /**
@@ -27,6 +32,7 @@ type RunEveryFn = (event: HeadEventData) => Promise<void>;
 export class ChainHeaderTracker {
   private headBlockSlot: Slot = GENESIS_SLOT;
   private headBlockRoot: Root | null = null;
+  private headBlockExecutionOptimistic = false;
   private readonly fns: RunEveryFn[] = [];
 
   constructor(
@@ -62,8 +68,14 @@ export class ChainHeaderTracker {
   }
 
   getCurrentChainHead(slot: Slot): Root | null {
+    return this.getCurrentChainHeadData(slot)?.root ?? null;
+  }
+
+  getCurrentChainHeadData(slot: Slot): ChainHead | null {
     if (slot >= this.headBlockSlot) {
-      return this.headBlockRoot;
+      return this.headBlockRoot
+        ? {root: this.headBlockRoot, executionOptimistic: this.headBlockExecutionOptimistic}
+        : null;
     }
     // We don't know head of an old block
     return null;
@@ -76,9 +88,10 @@ export class ChainHeaderTracker {
   private onEvent = (event: routes.events.BeaconEvent): void => {
     if (event.type === EventType.head) {
       const {message} = event;
-      const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
+      const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot, executionOptimistic} = message;
       this.headBlockSlot = slot;
       this.headBlockRoot = fromHex(block);
+      this.headBlockExecutionOptimistic = executionOptimistic;
 
       const headEventData = {
         slot: this.headBlockSlot,

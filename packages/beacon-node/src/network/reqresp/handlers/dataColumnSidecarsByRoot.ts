@@ -30,7 +30,7 @@ export async function* onDataColumnSidecarsByRoot(
     const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
     const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
     if (availableColumns.length === 0) {
-      return;
+      continue;
     }
 
     const blockRootHex = toRootHex(blockRoot);

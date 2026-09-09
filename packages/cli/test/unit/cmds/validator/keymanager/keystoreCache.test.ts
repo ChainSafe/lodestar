@@ -3,7 +3,7 @@ import fs from "node:fs";
 import tmp from "tmp";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymanager/interface.js";

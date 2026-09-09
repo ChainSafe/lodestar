@@ -30,6 +30,7 @@ RUN corepack enable
 # Only changes to package.json or lockfile will invalidate the install layer,
 # source code changes will only invalidate the build layer.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY packages/api/package.json packages/api/
 COPY packages/beacon-node/package.json packages/beacon-node/
 COPY packages/cli/package.json packages/cli/
