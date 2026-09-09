@@ -44,9 +44,7 @@ export class NativeLogs {
         const now = Date.now();
         if (
           now - this.lastWarning >= 30000 &&
-          (batch.dropped > this.reportedDropped ||
-            batch.suppressed > this.reportedSuppressed ||
-            batch.truncated > this.reportedTruncated)
+          (batch.dropped > this.reportedDropped || batch.truncated > this.reportedTruncated)
         ) {
           const loss = {
             dropped: (batch.dropped - this.reportedDropped).toString(),
