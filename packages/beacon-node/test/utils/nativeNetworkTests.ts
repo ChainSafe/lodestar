@@ -336,6 +336,11 @@ describe("native Lodestar integration", () => {
             expect(metrics).toMatch(/lodestar_native_quic_udp_sent_bytes_total [1-9]\d*\n/);
             expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
             expect(metrics).toContain("lodestar_native_network_peers 1\n");
+            expect(metrics).toMatch(
+              /lodestar_native_logs_emitted_total\{scope="network_reqresp",level="debug"\} [1-9]\d*\n/
+            );
+            expect(metrics).toContain("# TYPE lodestar_native_log_delivery_errors_total counter\n");
+            expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
           },
           {timeout: 5000}
         );

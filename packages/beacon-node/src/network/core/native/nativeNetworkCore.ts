@@ -21,6 +21,7 @@ import {createNativeConfig} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
+import {NativeLogs} from "./logs.js";
 import {NativePeers} from "./peers.js";
 import {nativeProtocols} from "./protocols.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
@@ -38,6 +39,7 @@ export class NativeNetworkCore implements INetworkCore {
   private peers!: NativePeers;
   private requests!: NativeRequests;
   private runtime!: NativeNetworkApplicationRuntime;
+  private logs: NativeLogs | undefined;
   private scheduled: NodeJS.Immediate | undefined;
   private closed = false;
   private closePromise: Promise<void> | undefined;
@@ -72,6 +74,7 @@ export class NativeNetworkCore implements INetworkCore {
     });
     try {
       core.runtime = createNativeNetworkApplicationRuntime(application, core.onReadable);
+      core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
       await core.runtime.ready;
       const diagnostics = core.runtime.diagnostics();
       core.intent = new NativeIntent(
@@ -148,16 +151,6 @@ export class NativeNetworkCore implements INetworkCore {
         const requests = this.requests.drain(8);
         const gossip = this.gossip.drain();
         const diagnostics = this.runtime.drain(16);
-        for (const event of diagnostics.events) {
-          if (event.type === "operationalError") {
-            this.modules.logger.debug("Native network operation failed", {
-              code: event.code,
-              count: String(event.count),
-            });
-          } else if (event.type === "peerClosed") {
-            this.modules.logger.debug("Native peer closed", {peer: hostPeerId(event.peerId), reason: event.reason});
-          }
-        }
         if (peers || requests || gossip || diagnostics.more) this.onReadable();
       } catch (error) {
         this.onFailure(error);
@@ -185,9 +178,14 @@ export class NativeNetworkCore implements INetworkCore {
     this.peers?.close();
     this.intent?.close();
     try {
-      if (this.runtime) void this.runtime.close().then(() => completion.resolve(), completion.reject);
+      if (this.runtime)
+        void this.runtime
+          .close()
+          .finally(() => this.logs?.close())
+          .then(() => completion.resolve(), completion.reject);
       else completion.resolve();
     } catch (error) {
+      this.logs?.close();
       completion.reject(error);
     }
     return this.closePromise;
@@ -320,6 +318,7 @@ export class NativeNetworkCore implements INetworkCore {
       incoming_occupied: diagnostics.incoming.occupied,
     };
     const counters = {
+      log_delivery_errors_total: this.logs?.deliveryErrors ?? 0,
       peer_status_range_refusals_total: this.peers.statusRefusals,
       host_gossip_capacity_refusals_total: gossip.refused,
       gossip_messages_copied_total: diagnostics.gossip.messagesCopied,
