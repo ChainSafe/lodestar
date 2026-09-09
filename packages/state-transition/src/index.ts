@@ -40,8 +40,8 @@ export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 export {
   initNativeStateTransitionMetrics,
+  scrapeNativeMetrics,
   scrapeNativeStateTransitionMetrics,
-  scrapeNativeValidatorMonitorMetrics,
 } from "./nativeMetrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";

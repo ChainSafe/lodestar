@@ -17,20 +17,20 @@ vi.mock("@chainsafe/lodestar-z", () => ({default: {metrics}}));
 
 import {
   initNativeStateTransitionMetrics,
+  scrapeNativeMetrics,
   scrapeNativeStateTransitionMetrics,
-  scrapeNativeValidatorMonitorMetrics,
 } from "../../src/nativeMetrics.js";
 
 describe("native metrics", () => {
-  it("separates state transition and validator monitor metrics", () => {
+  it("can scrape state transition metrics without validator monitor metrics", () => {
     initNativeStateTransitionMetrics();
 
+    const allMetrics = scrapeNativeMetrics();
     const stateTransitionMetrics = scrapeNativeStateTransitionMetrics();
-    const validatorMonitorMetrics = scrapeNativeValidatorMonitorMetrics();
 
+    expect(allMetrics).toContain("lodestar_stfn_epoch_transition_seconds");
+    expect(allMetrics).toContain("validator_monitor_prev_epoch_on_chain_balance");
     expect(stateTransitionMetrics).toContain("lodestar_stfn_epoch_transition_seconds");
     expect(stateTransitionMetrics).not.toContain("validator_monitor_");
-    expect(validatorMonitorMetrics).toContain("validator_monitor_prev_epoch_on_chain_balance");
-    expect(validatorMonitorMetrics).not.toContain("lodestar_stfn_");
   });
 });

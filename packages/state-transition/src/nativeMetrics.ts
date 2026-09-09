@@ -2,7 +2,6 @@ import bindings from "@chainsafe/lodestar-z";
 
 type SplitNativeMetrics = typeof bindings.metrics & {
   scrapeStateTransitionMetrics?: () => string;
-  scrapeValidatorMonitorMetrics?: () => string;
 };
 
 const nativeMetrics = bindings.metrics as SplitNativeMetrics;
@@ -16,6 +15,11 @@ export function initNativeStateTransitionMetrics(): void {
   initialized = true;
 }
 
+export function scrapeNativeMetrics(): string {
+  if (!initialized) return "";
+  return nativeMetrics.scrapeMetrics();
+}
+
 export function scrapeNativeStateTransitionMetrics(): string {
   if (!initialized) return "";
   return (
@@ -24,18 +28,6 @@ export function scrapeNativeStateTransitionMetrics(): string {
       .scrapeMetrics()
       .split("\n")
       .filter((line) => !validatorMonitorMetricLine.test(line))
-      .join("\n")
-  );
-}
-
-export function scrapeNativeValidatorMonitorMetrics(): string {
-  if (!initialized) return "";
-  return (
-    nativeMetrics.scrapeValidatorMonitorMetrics?.() ??
-    nativeMetrics
-      .scrapeMetrics()
-      .split("\n")
-      .filter((line) => line.length === 0 || validatorMonitorMetricLine.test(line))
       .join("\n")
   );
 }
