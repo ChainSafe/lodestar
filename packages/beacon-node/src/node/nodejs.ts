@@ -17,6 +17,7 @@ import {
   isStatePostBellatrix,
   isStatePostGloas,
   scrapeNativeStateTransitionMetrics,
+  scrapeNativeValidatorMonitorMetrics,
 } from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
@@ -355,7 +356,7 @@ export class BeaconNode {
             const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
             if (nativeStateTransitionMetricsEnabled) {
               try {
-                otherMetrics.push(scrapeNativeStateTransitionMetrics());
+                otherMetrics.push(scrapeNativeStateTransitionMetrics(), scrapeNativeValidatorMonitorMetrics());
               } catch (e) {
                 logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
               }

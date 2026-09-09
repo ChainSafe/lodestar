@@ -120,6 +120,29 @@ describe("NativeBeaconStateView", () => {
     expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
   });
 
+  it("enables native validator monitoring only when the module is provided", () => {
+    const block = ssz.bellatrix.SignedBeaconBlock.defaultValue();
+    const blockBytes = new Uint8Array([1, 2, 3]);
+    const options: StateTransitionOpts = {
+      verifyStateRoot: false,
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+    };
+    const postBinding = {} as IBeaconStateViewNative;
+    const binding = {
+      stateTransition: vi.fn(() => postBinding),
+      processSlots: vi.fn(() => postBinding),
+    } as unknown as IBeaconStateViewNative;
+    const validatorMonitor = {registerValidatorStatuses: vi.fn()};
+    const view = new NativeBeaconStateView(binding, config);
+
+    view.stateTransition(blockBytes, block, options, {validatorMonitor});
+    view.processSlots(32, undefined, {validatorMonitor});
+
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, false, {...options, validatorMonitor: true});
+    expect(binding.processSlots).toHaveBeenCalledWith(32, {validatorMonitor: true});
+  });
+
   it.each([
     {
       blockType: "full",
