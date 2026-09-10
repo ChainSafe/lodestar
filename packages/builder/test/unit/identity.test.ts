@@ -21,8 +21,7 @@ describe("Identity", () => {
   const version = PAYLOAD_BUILDER_VERSION;
   // ClockMock reports currentEpoch=0, use GLOAS_FORK_EPOCH=0 so tests query the beacon node without waiting for the fork
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
-  // waitForBuilder polls one slot past the next epoch boundary
-  const epochPollMs = clock.msToSlot(computeStartSlotAtEpoch(1) + 1);
+  const epochPollMs = clock.msToSlot(computeStartSlotAtEpoch(1));
 
   let abortController: AbortController;
 
@@ -117,7 +116,7 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
 
-    // Does not re-poll before one slot past the next epoch boundary
+    // Does not re-poll before the next epoch boundary
     await vi.advanceTimersByTimeAsync(epochPollMs - 1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
@@ -165,8 +164,7 @@ describe("Identity", () => {
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, forkClock, forkConfig);
 
     // Pre-fork: the builder waits without querying the beacon node
-    const pollMs = forkClock.msToSlot(computeStartSlotAtEpoch(1) + 1);
-    await vi.advanceTimersByTimeAsync(pollMs - 1);
+    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
 
     // Gloas fork reached: the builder queries the beacon node and resolves
