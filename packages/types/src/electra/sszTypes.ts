@@ -181,6 +181,14 @@ export const ExecutionRequests = new ContainerType(
 export const ExecutionPayloadHeader = denebSsz.ExecutionPayloadHeader;
 export const ExecutionPayload = denebSsz.ExecutionPayload;
 
+export const NewPayloadRequest = new ContainerType(
+  {
+    ...denebSsz.NewPayloadRequest.fields,
+    executionRequests: ExecutionRequests,
+  },
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
+);
+
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
 export const BeaconBlockBody = new ContainerType(
   {

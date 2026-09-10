@@ -7,8 +7,10 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Builder, BuilderOptions} from "../../src/builder.js";
+import {BlockObserver} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
@@ -26,7 +28,9 @@ describe("Builder preference tracking", () => {
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
     const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
+    const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
+    const store = new PayloadStore();
     const opts: BuilderOptions = {
       logger,
       config,
@@ -40,14 +44,22 @@ describe("Builder preference tracking", () => {
     const builder = new Builder({
       opts,
       builderSigner,
+      blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
       clock,
       index: 1,
+      store,
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
-    const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+    expect(api.events.eventstream).toHaveBeenCalledTimes(2);
+    const subscription = api.events.eventstream.mock.calls.find(([{topics}]) =>
+      topics.includes(routes.events.EventType.proposerPreferences)
+    );
+    expect(subscription).toBeDefined();
+    if (subscription === undefined) throw Error("Missing proposer preferences subscription");
+    const [{onEvent, signal}] = subscription;
     expect(signal).toBe(controller.signal);
     const signed = ssz.gloas.SignedProposerPreferences.defaultValue();
     signed.message.proposalSlot = 4;

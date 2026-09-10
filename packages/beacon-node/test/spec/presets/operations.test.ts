@@ -42,7 +42,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       fork,
       state,
       [testCase.attestation],
-      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.slot : null
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null
     );
   },
 
@@ -199,6 +199,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         builder_exit_request: ssz.gloas.BuilderExitRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
+      // Only an ssz list limit violation is an expected input error, anything else is a decode bug
+      shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+        !inputNames.has("post") && /over limit/.test(error.message),
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);

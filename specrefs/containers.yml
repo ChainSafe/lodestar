@@ -28,12 +28,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const CommitteeBits ="
   spec: |
-    <spec container="AggregationBits" fork="phase0" hash="0d694176">
-    class AggregationBits(BitList[MAX_VALIDATORS_PER_COMMITTEE]):
+    <spec container="AggregationBits" fork="phase0" hash="5c80e433">
+    class AggregationBits(BitList):
         """
         The participation bits of a single committee, one bit per member in
         committee order.
         """
+
+        LIMIT = MAX_VALIDATORS_PER_COMMITTEE
     </spec>
 
 - name: AggregationBits#electra
@@ -41,12 +43,14 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const AggregationBits =
   spec: |
-    <spec container="AggregationBits" fork="electra" hash="c5f4e568">
-    class AggregationBits(BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]):  # type: ignore
+    <spec container="AggregationBits" fork="electra" hash="c99d5c6c">
+    class AggregationBits(BitList):
         """
         The participation bits of all committees participating in an attestation,
         concatenated in committee order.
         """
+
+        LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
     </spec>
 
 - name: AggregationBits#gloas
@@ -94,8 +98,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const Attestation =
   spec: |
-    <spec container="Attestation" fork="gloas" hash="a9dc4cfa">
-    class Attestation(ProgressiveContainer(active_fields=[1] * 4)):  # type: ignore
+    <spec container="Attestation" fork="gloas" hash="a67cf33f">
+    class Attestation(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=4)
+
         aggregation_bits: AggregationBits
         data: AttestationData
         signature: BLSSignature
@@ -121,11 +127,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "attestations: new ListCompositeType(Attestation, MAX_ATTESTATIONS),"
   spec: |
-    <spec container="Attestations" fork="phase0" hash="7301ff8e">
-    class Attestations(List[Attestation, MAX_ATTESTATIONS]):
+    <spec container="Attestations" fork="phase0" hash="df017725">
+    class Attestations(List[Attestation]):
         """
         The attestations included in a beacon block.
         """
+
+        LIMIT = MAX_ATTESTATIONS
     </spec>
 
 - name: Attestations#electra
@@ -133,11 +141,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: "export const BeaconBlockBody = new ContainerType("
   spec: |
-    <spec container="Attestations" fork="electra" hash="a7794510">
-    class Attestations(List[Attestation, MAX_ATTESTATIONS_ELECTRA]):
+    <spec container="Attestations" fork="electra" hash="85432fec">
+    class Attestations(List[Attestation]):
         """
         The attestations included in a beacon block.
         """
+
+        LIMIT = MAX_ATTESTATIONS_ELECTRA
     </spec>
 
 - name: Attestations#gloas
@@ -181,11 +191,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "attesterSlashings: new ListCompositeType(AttesterSlashing, MAX_ATTESTER_SLASHINGS),"
   spec: |
-    <spec container="AttesterSlashings" fork="phase0" hash="d9a14f15">
-    class AttesterSlashings(List[AttesterSlashing, MAX_ATTESTER_SLASHINGS]):
+    <spec container="AttesterSlashings" fork="phase0" hash="5c73207a">
+    class AttesterSlashings(List[AttesterSlashing]):
         """
         The attester slashings included in a beacon block.
         """
+
+        LIMIT = MAX_ATTESTER_SLASHINGS
     </spec>
 
 - name: AttesterSlashings#electra
@@ -193,11 +205,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: "export const BeaconBlockBody = new ContainerType("
   spec: |
-    <spec container="AttesterSlashings" fork="electra" hash="a6633253">
-    class AttesterSlashings(List[AttesterSlashing, MAX_ATTESTER_SLASHINGS_ELECTRA]):
+    <spec container="AttesterSlashings" fork="electra" hash="488f02dc">
+    class AttesterSlashings(List[AttesterSlashing]):
         """
         The attester slashings included in a beacon block.
         """
+
+        LIMIT = MAX_ATTESTER_SLASHINGS_ELECTRA
     </spec>
 
 - name: AttesterSlashings#gloas
@@ -217,11 +231,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const CommitteeIndices ="
   spec: |
-    <spec container="AttestingIndices" fork="phase0" hash="fd953ae2">
-    class AttestingIndices(List[ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE]):
+    <spec container="AttestingIndices" fork="phase0" hash="920247bb">
+    class AttestingIndices(List[ValidatorIndex]):
         """
         The indices of the validators participating in an attestation.
         """
+
+        LIMIT = MAX_VALIDATORS_PER_COMMITTEE
     </spec>
 
 - name: AttestingIndices#electra
@@ -229,13 +245,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const AttestingIndices =
   spec: |
-    <spec container="AttestingIndices" fork="electra" hash="bb457dd4">
-    class AttestingIndices(
-        List[ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]  # type: ignore
-    ):
+    <spec container="AttestingIndices" fork="electra" hash="8b17ae2f">
+    class AttestingIndices(List[ValidatorIndex]):
         """
         The indices of the validators participating in an attestation.
         """
+
+        LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
     </spec>
 
 - name: AttestingIndices#gloas
@@ -255,11 +271,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const AttestationSubnets ="
   spec: |
-    <spec container="Attnets" fork="phase0" hash="a1051379">
-    class Attnets(BitVector[ATTESTATION_SUBNET_COUNT]):  # type: ignore
+    <spec container="Attnets" fork="phase0" hash="a91bcc88">
+    class Attnets(BitVector):
         """
         The attestation subnets a node is subscribed to, one bit per subnet.
         """
+
+        LENGTH = ATTESTATION_SUBNET_COUNT
     </spec>
 
 - name: BLSToExecutionChange#capella
@@ -279,12 +297,14 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const BLSToExecutionChanges =
   spec: |
-    <spec container="BLSToExecutionChanges" fork="capella" hash="f502a79d">
-    class BLSToExecutionChanges(List[SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES]):
+    <spec container="BLSToExecutionChanges" fork="capella" hash="59f893a2">
+    class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
         """
         The signed BLS-to-execution credential changes included in a beacon
         block.
         """
+
+        LIMIT = MAX_BLS_TO_EXECUTION_CHANGES
     </spec>
 
 - name: BLSToExecutionChanges#gloas
@@ -305,11 +325,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Balances =
   spec: |
-    <spec container="Balances" fork="phase0" hash="29aef611">
-    class Balances(List[Gwei, VALIDATOR_REGISTRY_LIMIT]):
+    <spec container="Balances" fork="phase0" hash="b76054b3">
+    class Balances(List[Gwei]):
         """
         The balances of all validators.
         """
+
+        LIMIT = VALIDATOR_REGISTRY_LIMIT
     </spec>
 
 - name: Balances#gloas
@@ -468,8 +490,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BeaconBlockBody =
   spec: |
-    <spec container="BeaconBlockBody" fork="gloas" hash="58b93a4e">
-    class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):  # type: ignore
+    <spec container="BeaconBlockBody" fork="gloas" hash="866d659a">
+    class BeaconBlockBody(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=13)
+
         randao_reveal: BLSSignature
         eth1_data: Eth1Data
         graffiti: Bytes32
@@ -519,11 +543,13 @@
     - file: packages/beacon-node/src/util/types.ts
       search: "export const BeaconBlocksByRootRequestType ="
   spec: |
-    <spec container="BeaconBlockRoots" fork="phase0" hash="962c9d1c">
-    class BeaconBlockRoots(List[Root, MAX_REQUEST_BLOCKS]):  # type: ignore
+    <spec container="BeaconBlockRoots" fork="phase0" hash="f4001566">
+    class BeaconBlockRoots(List[Root]):
         """
         Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
         """
+
+        LIMIT = MAX_REQUEST_BLOCKS
     </spec>
 
 - name: BeaconBlockRoots#deneb
@@ -531,11 +557,13 @@
     - file: packages/beacon-node/src/util/types.ts
       search: "export const BeaconBlocksByRootRequestType ="
   spec: |
-    <spec container="BeaconBlockRoots" fork="deneb" hash="adc6d62a">
-    class BeaconBlockRoots(List[Root, MAX_REQUEST_BLOCKS_DENEB]):  # type: ignore
+    <spec container="BeaconBlockRoots" fork="deneb" hash="3a4b6975">
+    class BeaconBlockRoots(List[Root]):
         """
         Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
         """
+
+        LIMIT = MAX_REQUEST_BLOCKS_DENEB
     </spec>
 
 - name: BeaconState#phase0
@@ -828,8 +856,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="gloas" hash="38539935">
-    class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
+    <spec container="BeaconState" fork="gloas" hash="f52b370d">
+    class BeaconState(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=46)
+
         genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
@@ -894,7 +924,7 @@
         # [New in Gloas:EIP7732]
         payload_expected_withdrawals: Withdrawals
         # [New in Gloas:EIP7732]
-        ptc_window: PTCWindow
+        ptc_window: PayloadTimelinessCommitteeWindow
     </spec>
 
 - name: BeaconState#heze
@@ -902,8 +932,10 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="heze" hash="61c0f802">
-    class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
+    <spec container="BeaconState" fork="heze" hash="1011120d">
+    class BeaconState(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=46)
+
         genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
@@ -950,7 +982,7 @@
         # [Modified in Heze:EIP7805]
         latest_execution_payload_bid: ExecutionPayloadBid
         payload_expected_withdrawals: Withdrawals
-        ptc_window: PTCWindow
+        ptc_window: PayloadTimelinessCommitteeWindow
     </spec>
 
 - name: Blob#deneb
@@ -958,11 +990,13 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const Blob =
   spec: |
-    <spec container="Blob" fork="deneb" hash="b10cdd2e">
-    class Blob(ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]):  # type: ignore
+    <spec container="Blob" fork="deneb" hash="03a38f58">
+    class Blob(ByteVector):
         """
         A blob of data, encoded as a sequence of BLS scalar field elements.
         """
+
+        LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
     </spec>
 
 - name: BlobIdentifier#deneb
@@ -981,11 +1015,13 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: "export const BlobKzgCommitments ="
   spec: |
-    <spec container="BlobKZGCommitments" fork="deneb" hash="4e091520">
-    class BlobKZGCommitments(List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+    <spec container="BlobKZGCommitments" fork="deneb" hash="509b79a9">
+    class BlobKZGCommitments(List[KZGCommitment]):
         """
         The KZG commitments to the blobs of a beacon block.
         """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: BlobKZGCommitments#gloas
@@ -1020,11 +1056,13 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const Blobs =
   spec: |
-    <spec container="Blobs" fork="deneb" hash="4c863507">
-    class Blobs(List[Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+    <spec container="Blobs" fork="deneb" hash="5368a98c">
+    class Blobs(List[Blob]):
         """
         The blobs of a single beacon block.
         """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: BlockAccessList#gloas
@@ -1032,8 +1070,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BlockAccessList =
   spec: |
-    <spec container="BlockAccessList" fork="gloas" hash="d934028a">
-    class BlockAccessList(ProgressiveByteList):
+    <spec container="BlockAccessList" fork="gloas" hash="af22400c">
+    class BlockAccessList(ProgressiveList[Byte]):
         """
         The serialized block access list of an execution payload.
         """
@@ -1044,12 +1082,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const HistoricalBlockRoots ="
   spec: |
-    <spec container="BlockRoots" fork="phase0" hash="196c676c">
-    class BlockRoots(Vector[Root, SLOTS_PER_HISTORICAL_ROOT]):
+    <spec container="BlockRoots" fork="phase0" hash="d7b85dc7">
+    class BlockRoots(Vector[Root]):
         """
         A rolling window of recent block roots, indexed by slot modulo
         ``SLOTS_PER_HISTORICAL_ROOT``.
         """
+
+        LENGTH = SLOTS_PER_HISTORICAL_ROOT
     </spec>
 
 - name: Builder#gloas
@@ -1132,11 +1172,13 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: "builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH),"
   spec: |
-    <spec container="BuilderPendingPayments" fork="gloas" hash="4287d317">
-    class BuilderPendingPayments(Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]):  # type: ignore
+    <spec container="BuilderPendingPayments" fork="gloas" hash="862b4264">
+    class BuilderPendingPayments(Vector[BuilderPendingPayment]):
         """
         The pending builder payments of the previous and current epoch.
         """
+
+        LENGTH = 2 * SLOTS_PER_EPOCH
     </spec>
 
 - name: BuilderPendingWithdrawal#gloas
@@ -1180,11 +1222,13 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const Cell =
   spec: |
-    <spec container="Cell" fork="fulu" hash="fdb37a6c">
-    class Cell(ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]):  # type: ignore
+    <spec container="Cell" fork="fulu" hash="6e5ae9ab">
+    class Cell(ByteVector):
         """
         The unit of extended blob data that has its own ``KZGProof``.
         """
+
+        LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
     </spec>
 
 - name: CellKZGProofs#fulu
@@ -1192,11 +1236,13 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: "export const KZGProofs ="
   spec: |
-    <spec container="CellKZGProofs" fork="fulu" hash="b1c99154">
-    class CellKZGProofs(List[KZGProof, FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK]):  # type: ignore
+    <spec container="CellKZGProofs" fork="fulu" hash="d1030e89">
+    class CellKZGProofs(List[KZGProof]):
         """
         The KZG cell proofs for every blob in a block, one proof per cell.
         """
+
+        LIMIT = FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: Cells#fulu
@@ -1204,21 +1250,25 @@
     - file: packages/beacon-node/src/util/blobs.ts
       search: "function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {"
   spec: |
-    <spec container="Cells" fork="fulu" hash="39e61657">
-    class Cells(Vector[Cell, CELLS_PER_EXT_BLOB]):
+    <spec container="Cells" fork="fulu" hash="2ac5f6f5">
+    class Cells(Vector[Cell]):
         """
         The cells of a single extended blob.
         """
+
+        LENGTH = CELLS_PER_EXT_BLOB
     </spec>
 
 - name: CellsBitList#fulu
   sources: []
   spec: |
-    <spec container="CellsBitList" fork="fulu" hash="a8c28de7">
-    class CellsBitList(BitList[MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+    <spec container="CellsBitList" fork="fulu" hash="60babb90">
+    class CellsBitList(BitList):
         """
         A bitfield over the cells of a column, one bit per blob.
         """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: CellsBitList#gloas
@@ -1247,11 +1297,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: "export const CommitteeBits ="
   spec: |
-    <spec container="CommitteeBits" fork="electra" hash="6130444a">
-    class CommitteeBits(BitVector[MAX_COMMITTEES_PER_SLOT]):
+    <spec container="CommitteeBits" fork="electra" hash="8f33ddbc">
+    class CommitteeBits(BitVector):
         """
         Bits marking which committees of a slot participate in an attestation.
         """
+
+        LENGTH = MAX_COMMITTEES_PER_SLOT
     </spec>
 
 - name: ConsolidationRequest#electra
@@ -1271,11 +1323,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const ConsolidationRequests =
   spec: |
-    <spec container="ConsolidationRequests" fork="electra" hash="4f33783d">
-    class ConsolidationRequests(List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]):
+    <spec container="ConsolidationRequests" fork="electra" hash="239bea5d">
+    class ConsolidationRequests(List[ConsolidationRequest]):
         """
         The consolidation requests pertaining to a single execution payload.
         """
+
+        LIMIT = MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
     </spec>
 
 - name: ConsolidationRequests#gloas
@@ -1307,11 +1361,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const CurrentSyncCommitteeBranch =
   spec: |
-    <spec container="CurrentSyncCommitteeBranch" fork="altair" hash="2cc7c29c">
-    class CurrentSyncCommitteeBranch(Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)]):  # type: ignore
+    <spec container="CurrentSyncCommitteeBranch" fork="altair" hash="e6312ca6">
+    class CurrentSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)
     </spec>
 
 - name: CurrentSyncCommitteeBranch#electra
@@ -1319,11 +1375,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const CurrentSyncCommitteeBranch =
   spec: |
-    <spec container="CurrentSyncCommitteeBranch" fork="electra" hash="e6355296">
-    class CurrentSyncCommitteeBranch(Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)]):  # type: ignore
+    <spec container="CurrentSyncCommitteeBranch" fork="electra" hash="ee15d206">
+    class CurrentSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)
     </spec>
 
 - name: CurrentSyncCommitteeBranch#gloas
@@ -1331,11 +1389,13 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const CurrentSyncCommitteeBranch =
   spec: |
-    <spec container="CurrentSyncCommitteeBranch" fork="gloas" hash="cbd3b46f">
-    class CurrentSyncCommitteeBranch(Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS)]):  # type: ignore
+    <spec container="CurrentSyncCommitteeBranch" fork="gloas" hash="7e823495">
+    class CurrentSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS)
     </spec>
 
 - name: CustodyColumnBits#gloas
@@ -1343,11 +1403,13 @@
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: "private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {"
   spec: |
-    <spec container="CustodyColumnBits" fork="gloas" hash="78c70e93">
-    class CustodyColumnBits(BitVector[NUMBER_OF_COLUMNS]):
+    <spec container="CustodyColumnBits" fork="gloas" hash="b35abdb2">
+    class CustodyColumnBits(BitVector):
         """
         Bits marking the data columns custodied by a node, one bit per column.
         """
+
+        LENGTH = NUMBER_OF_COLUMNS
     </spec>
 
 - name: DataColumn#fulu
@@ -1355,11 +1417,13 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const DataColumn =
   spec: |
-    <spec container="DataColumn" fork="fulu" hash="38c96fb5">
-    class DataColumn(List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+    <spec container="DataColumn" fork="fulu" hash="a770de8a">
+    class DataColumn(List[Cell]):
         """
         A column of the extended blob data matrix, with at most one cell per blob.
         """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: DataColumn#gloas
@@ -1379,11 +1443,13 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: "export const DataColumnsByRootIdentifier ="
   spec: |
-    <spec container="DataColumnIndices" fork="fulu" hash="ea49b569">
-    class DataColumnIndices(List[ColumnIndex, NUMBER_OF_COLUMNS]):
+    <spec container="DataColumnIndices" fork="fulu" hash="fc211b32">
+    class DataColumnIndices(List[ColumnIndex]):
         """
         The indices of the data columns being requested.
         """
+
+        LIMIT = NUMBER_OF_COLUMNS
     </spec>
 
 - name: DataColumnSidecar#fulu
@@ -1441,12 +1507,14 @@
     - file: packages/beacon-node/src/util/types.ts
       search: "export const DataColumnSidecarsByRootRequestType ="
   spec: |
-    <spec container="DataColumnsByRootIdentifiers" fork="fulu" hash="f41940f2">
-    class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier, MAX_REQUEST_BLOCKS_DENEB]):  # type: ignore
+    <spec container="DataColumnsByRootIdentifiers" fork="fulu" hash="9c6ec357">
+    class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier]):
         """
         The identifiers of the data column sidecars requested in a
         ``DataColumnSidecarsByRoot`` request.
         """
+
+        LIMIT = MAX_REQUEST_BLOCKS_DENEB
     </spec>
 
 - name: Deposit#phase0
@@ -1478,11 +1546,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const DepositDataRootList ="
   spec: |
-    <spec container="DepositDataList" fork="phase0" hash="8be91f3d">
-    class DepositDataList(List[DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH]):  # type: ignore
+    <spec container="DepositDataList" fork="phase0" hash="b5a046ce">
+    class DepositDataList(List[DepositData]):
         """
         The ``DepositData`` of deposits made to the deposit contract.
         """
+
+        LIMIT = 2**DEPOSIT_CONTRACT_TREE_DEPTH
     </spec>
 
 - name: DepositMessage#phase0
@@ -1502,12 +1572,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "proof: new VectorCompositeType(Bytes32, DEPOSIT_CONTRACT_TREE_DEPTH + 1),"
   spec: |
-    <spec container="DepositProof" fork="phase0" hash="668dd08f">
-    class DepositProof(Vector[Bytes32, DEPOSIT_CONTRACT_TREE_DEPTH + 1]):  # type: ignore
+    <spec container="DepositProof" fork="phase0" hash="c8345b0f">
+    class DepositProof(Vector[Bytes32]):
         """
         A Merkle proof of a deposit in the deposit contract's tree. The node
         beyond the tree depth accounts for the deposit count mix-in.
         """
+
+        LENGTH = DEPOSIT_CONTRACT_TREE_DEPTH + 1
     </spec>
 
 - name: DepositRequest#electra
@@ -1529,11 +1601,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const DepositRequests =
   spec: |
-    <spec container="DepositRequests" fork="electra" hash="7adac1d8">
-    class DepositRequests(List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]):
+    <spec container="DepositRequests" fork="electra" hash="1b6bbbdb">
+    class DepositRequests(List[DepositRequest]):
         """
         The deposit requests pertaining to a single execution payload.
         """
+
+        LIMIT = MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
     </spec>
 
 - name: DepositRequests#gloas
@@ -1553,11 +1627,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "deposits: new ListCompositeType(Deposit, MAX_DEPOSITS),"
   spec: |
-    <spec container="Deposits" fork="phase0" hash="471e25ca">
-    class Deposits(List[Deposit, MAX_DEPOSITS]):
+    <spec container="Deposits" fork="phase0" hash="171172c8">
+    class Deposits(List[Deposit]):
         """
         The deposits included in a beacon block.
         """
+
+        LIMIT = MAX_DEPOSITS
     </spec>
 
 - name: Deposits#gloas
@@ -1577,11 +1653,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const EpochParticipation =
   spec: |
-    <spec container="EpochParticipation" fork="altair" hash="c280fe2f">
-    class EpochParticipation(List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]):
+    <spec container="EpochParticipation" fork="altair" hash="28cfe0ee">
+    class EpochParticipation(List[ParticipationFlags]):
         """
         The participation flags of each validator for an epoch.
         """
+
+        LIMIT = VALIDATOR_REGISTRY_LIMIT
     </spec>
 
 - name: EpochParticipation#gloas
@@ -1601,11 +1679,13 @@
     - file: packages/reqresp/src/encoders/responseDecode.ts
       search: "export async function readErrorMessage("
   spec: |
-    <spec container="ErrorMessage" fork="phase0" hash="f7d2e797">
-    class ErrorMessage(List[Byte, 256]):
+    <spec container="ErrorMessage" fork="phase0" hash="93175f34">
+    class ErrorMessage(List[Byte]):
         """
         The error message of an unsuccessful response chunk.
         """
+
+        LIMIT = 256
     </spec>
 
 - name: Eth1Block#phase0
@@ -1637,11 +1717,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Eth1DataVotes =
   spec: |
-    <spec container="Eth1DataVotes" fork="phase0" hash="6a8f99f0">
-    class Eth1DataVotes(List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]):  # type: ignore
+    <spec container="Eth1DataVotes" fork="phase0" hash="e9263e27">
+    class Eth1DataVotes(List[Eth1Data]):
         """
         The ``Eth1Data`` votes of the current voting period.
         """
+
+        LIMIT = Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH)
     </spec>
 
 - name: ExecutionBranch#capella
@@ -1649,11 +1731,13 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const ExecutionBranch =
   spec: |
-    <spec container="ExecutionBranch" fork="capella" hash="80d7e50b">
-    class ExecutionBranch(Vector[Bytes32, floorlog2(EXECUTION_PAYLOAD_GINDEX)]):  # type: ignore
+    <spec container="ExecutionBranch" fork="capella" hash="0b01336f">
+    class ExecutionBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``execution_payload`` within ``BeaconBlockBody``.
         """
+
+        LENGTH = floorlog2(EXECUTION_PAYLOAD_GINDEX)
     </spec>
 
 - name: ExecutionBranch#gloas
@@ -1661,12 +1745,14 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionBranch =
   spec: |
-    <spec container="ExecutionBranch" fork="gloas" hash="b18317f2">
-    class ExecutionBranch(Vector[Bytes32, floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)]):  # type: ignore
+    <spec container="ExecutionBranch" fork="gloas" hash="6c449965">
+    class ExecutionBranch(Vector[Bytes32]):
         """
         A Merkle branch proving the execution block hash within
         ``BeaconBlockBody``.
         """
+
+        LENGTH = floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)
     </spec>
 
 - name: ExecutionPayload#bellatrix
@@ -1750,8 +1836,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="gloas" hash="ddd47b62">
-    class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):  # type: ignore
+    <spec container="ExecutionPayload" fork="gloas" hash="6b162d36">
+    class ExecutionPayload(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=19)
+
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
         state_root: Bytes32
@@ -1782,12 +1870,14 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: "executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT),"
   spec: |
-    <spec container="ExecutionPayloadAvailability" fork="gloas" hash="74d830bf">
-    class ExecutionPayloadAvailability(BitVector[SLOTS_PER_HISTORICAL_ROOT]):
+    <spec container="ExecutionPayloadAvailability" fork="gloas" hash="601b84e7">
+    class ExecutionPayloadAvailability(BitVector):
         """
         Bits tracking payload availability for recent slots, indexed by slot
         modulo ``SLOTS_PER_HISTORICAL_ROOT``.
         """
+
+        LENGTH = SLOTS_PER_HISTORICAL_ROOT
     </spec>
 
 - name: ExecutionPayloadBid#gloas
@@ -1795,8 +1885,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadBid =
   spec: |
-    <spec container="ExecutionPayloadBid" fork="gloas" hash="9ebe1457">
-    class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 12)):  # type: ignore
+    <spec container="ExecutionPayloadBid" fork="gloas" hash="d1bb5b22">
+    class ExecutionPayloadBid(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=12)
+
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
@@ -1816,8 +1908,10 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const ExecutionPayloadBid =
   spec: |
-    <spec container="ExecutionPayloadBid" fork="heze" hash="51303fe1">
-    class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 13)):  # type: ignore
+    <spec container="ExecutionPayloadBid" fork="heze" hash="b8244b40">
+    class ExecutionPayloadBid(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=13)
+
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
@@ -1839,8 +1933,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadEnvelope =
   spec: |
-    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="be1e70fd">
-    class ExecutionPayloadEnvelope(ProgressiveContainer(active_fields=[1] * 5)):  # type: ignore
+    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="938932ad">
+    class ExecutionPayloadEnvelope(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=5)
+
         payload: ExecutionPayload
         execution_requests: ExecutionRequests
         builder_index: BuilderIndex
@@ -1853,12 +1949,14 @@
     - file: packages/beacon-node/src/util/types.ts
       search: "export const ExecutionPayloadEnvelopesByRootRequestType ="
   spec: |
-    <spec container="ExecutionPayloadEnvelopeRoots" fork="gloas" hash="299d6842">
-    class ExecutionPayloadEnvelopeRoots(List[Root, MAX_REQUEST_PAYLOADS]):  # type: ignore
+    <spec container="ExecutionPayloadEnvelopeRoots" fork="gloas" hash="daccb10b">
+    class ExecutionPayloadEnvelopeRoots(List[Root]):
         """
         The beacon block roots of the payload envelopes requested in an
         ``ExecutionPayloadEnvelopesByRoot`` request.
         """
+
+        LIMIT = MAX_REQUEST_PAYLOADS
     </spec>
 
 - name: ExecutionPayloadHeader#bellatrix
@@ -1957,8 +2055,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionRequests =
   spec: |
-    <spec container="ExecutionRequests" fork="gloas" hash="70af6a68">
-    class ExecutionRequests(ProgressiveContainer(active_fields=[1] * 5)):  # type: ignore
+    <spec container="ExecutionRequests" fork="gloas" hash="93f338b8">
+    class ExecutionRequests(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=5)
+
         deposits: DepositRequests
         withdrawals: WithdrawalRequests
         consolidations: ConsolidationRequests
@@ -1973,11 +2073,13 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: "extraData: new ByteListType(MAX_EXTRA_DATA_BYTES),"
   spec: |
-    <spec container="ExtraData" fork="bellatrix" hash="9f5bb1de">
-    class ExtraData(ByteList[MAX_EXTRA_DATA_BYTES]):
+    <spec container="ExtraData" fork="bellatrix" hash="de72a1ca">
+    class ExtraData(ByteList):
         """
         Arbitrary extra data included in an execution payload.
         """
+
+        LIMIT = MAX_EXTRA_DATA_BYTES
     </spec>
 
 - name: FinalityBranch#altair
@@ -1985,12 +2087,14 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const FinalityBranch =
   spec: |
-    <spec container="FinalityBranch" fork="altair" hash="21164d98">
-    class FinalityBranch(Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX)]):  # type: ignore
+    <spec container="FinalityBranch" fork="altair" hash="1fc13c88">
+    class FinalityBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``finalized_checkpoint.root`` within
         ``BeaconState``.
         """
+
+        LENGTH = floorlog2(FINALIZED_ROOT_GINDEX)
     </spec>
 
 - name: FinalityBranch#electra
@@ -1998,12 +2102,14 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const FinalityBranch =
   spec: |
-    <spec container="FinalityBranch" fork="electra" hash="f22a787c">
-    class FinalityBranch(Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)]):  # type: ignore
+    <spec container="FinalityBranch" fork="electra" hash="5221c6ed">
+    class FinalityBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``finalized_checkpoint.root`` within
         ``BeaconState``.
         """
+
+        LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)
     </spec>
 
 - name: FinalityBranch#gloas
@@ -2011,12 +2117,14 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const FinalityBranch =
   spec: |
-    <spec container="FinalityBranch" fork="gloas" hash="7a001e91">
-    class FinalityBranch(Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_GLOAS)]):  # type: ignore
+    <spec container="FinalityBranch" fork="gloas" hash="463225e2">
+    class FinalityBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``finalized_checkpoint.root`` within
         ``BeaconState``.
         """
+
+        LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_GLOAS)
     </spec>
 
 - name: Fork#phase0
@@ -2058,11 +2166,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),"
   spec: |
-    <spec container="HistoricalRoots" fork="phase0" hash="c255dc18">
-    class HistoricalRoots(List[Root, HISTORICAL_ROOTS_LIMIT]):
+    <spec container="HistoricalRoots" fork="phase0" hash="955fefdf">
+    class HistoricalRoots(List[Root]):
         """
         The roots of ``HistoricalBatch`` objects.
         """
+
+        LIMIT = HISTORICAL_ROOTS_LIMIT
     </spec>
 
 - name: HistoricalSummaries#capella
@@ -2070,11 +2180,13 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const HistoricalSummaries =
   spec: |
-    <spec container="HistoricalSummaries" fork="capella" hash="10e90a67">
-    class HistoricalSummaries(List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]):
+    <spec container="HistoricalSummaries" fork="capella" hash="852c1d04">
+    class HistoricalSummaries(List[HistoricalSummary]):
         """
         Summaries of the chain's block and state root history.
         """
+
+        LIMIT = HISTORICAL_ROOTS_LIMIT
     </spec>
 
 - name: HistoricalSummary#capella
@@ -2093,11 +2205,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const InactivityScores =
   spec: |
-    <spec container="InactivityScores" fork="altair" hash="5fe95147">
-    class InactivityScores(List[Uint64, VALIDATOR_REGISTRY_LIMIT]):
+    <spec container="InactivityScores" fork="altair" hash="ce239274">
+    class InactivityScores(List[Uint64]):
         """
         Each validator's inactivity score, tracking missed timely target votes.
         """
+
+        LIMIT = VALIDATOR_REGISTRY_LIMIT
     </spec>
 
 - name: InactivityScores#gloas
@@ -2130,12 +2244,14 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const InclusionListBits =
   spec: |
-    <spec container="InclusionListBits" fork="heze" hash="201961a9">
-    class InclusionListBits(BitVector[INCLUSION_LIST_COMMITTEE_SIZE]):
+    <spec container="InclusionListBits" fork="heze" hash="c3296dc8">
+    class InclusionListBits(BitVector):
         """
         A bitfield over the inclusion list committee, one bit per member in
         committee order.
         """
+
+        LENGTH = INCLUSION_LIST_COMMITTEE_SIZE
     </spec>
 
 - name: InclusionListCommittee#heze
@@ -2143,11 +2259,13 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const InclusionListCommittee =
   spec: |
-    <spec container="InclusionListCommittee" fork="heze" hash="cee5c8bc">
-    class InclusionListCommittee(Vector[ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE]):
+    <spec container="InclusionListCommittee" fork="heze" hash="8eb55a4c">
+    class InclusionListCommittee(Vector[ValidatorIndex]):
         """
         The inclusion list committee of a slot.
         """
+
+        LENGTH = INCLUSION_LIST_COMMITTEE_SIZE
     </spec>
 
 - name: IndexedAttestation#phase0
@@ -2180,8 +2298,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const IndexedAttestation =
   spec: |
-    <spec container="IndexedAttestation" fork="gloas" hash="8eb640da">
-    class IndexedAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
+    <spec container="IndexedAttestation" fork="gloas" hash="f8e8c5fc">
+    class IndexedAttestation(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=3)
+
         attesting_indices: AttestingIndices
         data: AttestationData
         signature: BLSSignature
@@ -2192,9 +2312,11 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const IndexedPayloadAttestation =
   spec: |
-    <spec container="IndexedPayloadAttestation" fork="gloas" hash="940bfcab">
-    class IndexedPayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
-        attesting_indices: PTCAttestingIndices
+    <spec container="IndexedPayloadAttestation" fork="gloas" hash="cf8284f6">
+    class IndexedPayloadAttestation(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=3)
+
+        attesting_indices: PayloadTimelinessCommitteeIndices
         data: PayloadAttestationData
         signature: BLSSignature
     </spec>
@@ -2204,11 +2326,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const JustificationBits =
   spec: |
-    <spec container="JustificationBits" fork="phase0" hash="3ed292d2">
-    class JustificationBits(BitVector[JUSTIFICATION_BITS_LENGTH]):
+    <spec container="JustificationBits" fork="phase0" hash="af1e9782">
+    class JustificationBits(BitVector):
         """
         The justification status of the last ``JUSTIFICATION_BITS_LENGTH`` epochs.
         """
+
+        LENGTH = JUSTIFICATION_BITS_LENGTH
     </spec>
 
 - name: KZGCommitmentInclusionProof#deneb
@@ -2216,12 +2340,14 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: "export const KzgCommitmentInclusionProof ="
   spec: |
-    <spec container="KZGCommitmentInclusionProof" fork="deneb" hash="4c82f6b2">
-    class KZGCommitmentInclusionProof(Vector[Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH]):
+    <spec container="KZGCommitmentInclusionProof" fork="deneb" hash="d59f4dbe">
+    class KZGCommitmentInclusionProof(Vector[Bytes32]):
         """
         A Merkle branch proving a blob's KZG commitment within
         ``BeaconBlockBody``.
         """
+
+        LENGTH = KZG_COMMITMENT_INCLUSION_PROOF_DEPTH
     </spec>
 
 - name: KZGCommitmentsInclusionProof#fulu
@@ -2229,12 +2355,14 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: "export const KzgCommitmentsInclusionProof ="
   spec: |
-    <spec container="KZGCommitmentsInclusionProof" fork="fulu" hash="2eabcb42">
-    class KZGCommitmentsInclusionProof(Vector[Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH]):
+    <spec container="KZGCommitmentsInclusionProof" fork="fulu" hash="04811959">
+    class KZGCommitmentsInclusionProof(Vector[Bytes32]):
         """
         A Merkle branch proving a block's blob KZG commitments within
         ``BeaconBlockBody``.
         """
+
+        LENGTH = KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH
     </spec>
 
 - name: KZGProofs#deneb
@@ -2242,11 +2370,13 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: "export const KZGProofs ="
   spec: |
-    <spec container="KZGProofs" fork="deneb" hash="7ced0c3c">
-    class KZGProofs(List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+    <spec container="KZGProofs" fork="deneb" hash="8e163ed4">
+    class KZGProofs(List[KZGProof]):
         """
         A list of KZG proofs, one for each blob or cell being proven.
         """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: KZGProofs#gloas
@@ -2432,11 +2562,13 @@
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendLightClientUpdatesByRange("
   spec: |
-    <spec container="LightClientUpdates" fork="altair" hash="e7ff6e37">
-    class LightClientUpdates(List[LightClientUpdate, MAX_REQUEST_LIGHT_CLIENT_UPDATES]):
+    <spec container="LightClientUpdates" fork="altair" hash="ac9ec826">
+    class LightClientUpdates(List[LightClientUpdate]):
         """
         Light client updates returned in a ``LightClientUpdatesByRange`` response.
         """
+
+        LIMIT = MAX_REQUEST_LIGHT_CLIENT_UPDATES
     </spec>
 
 - name: LogsBloom#bellatrix
@@ -2444,11 +2576,13 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: "logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),"
   spec: |
-    <spec container="LogsBloom" fork="bellatrix" hash="99b65092">
-    class LogsBloom(ByteVector[BYTES_PER_LOGS_BLOOM]):
+    <spec container="LogsBloom" fork="bellatrix" hash="b398c7f7">
+    class LogsBloom(ByteVector):
         """
         A Bloom filter aggregating the logs emitted by an execution payload.
         """
+
+        LENGTH = BYTES_PER_LOGS_BLOOM
     </spec>
 
 - name: MatrixEntry#fulu
@@ -2469,11 +2603,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const NextSyncCommitteeBranch =
   spec: |
-    <spec container="NextSyncCommitteeBranch" fork="altair" hash="419dde2d">
-    class NextSyncCommitteeBranch(Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)]):  # type: ignore
+    <spec container="NextSyncCommitteeBranch" fork="altair" hash="13ec9ae2">
+    class NextSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)
     </spec>
 
 - name: NextSyncCommitteeBranch#electra
@@ -2481,11 +2617,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const NextSyncCommitteeBranch =
   spec: |
-    <spec container="NextSyncCommitteeBranch" fork="electra" hash="3b6c578a">
-    class NextSyncCommitteeBranch(Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)]):  # type: ignore
+    <spec container="NextSyncCommitteeBranch" fork="electra" hash="55073fa9">
+    class NextSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)
     </spec>
 
 - name: NextSyncCommitteeBranch#gloas
@@ -2493,72 +2631,26 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const NextSyncCommitteeBranch =
   spec: |
-    <spec container="NextSyncCommitteeBranch" fork="gloas" hash="e5bc4725">
-    class NextSyncCommitteeBranch(Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS)]):  # type: ignore
+    <spec container="NextSyncCommitteeBranch" fork="gloas" hash="e48587bc">
+    class NextSyncCommitteeBranch(Vector[Bytes32]):
         """
         A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
         """
+
+        LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS)
     </spec>
 
 - name: OptionalPartialDataColumnHeader#fulu
   sources: []
   spec: |
-    <spec container="OptionalPartialDataColumnHeader" fork="fulu" hash="67b3756a">
-    class OptionalPartialDataColumnHeader(List[PartialDataColumnHeader, 1]):
+    <spec container="OptionalPartialDataColumnHeader" fork="fulu" hash="fd837e0d">
+    class OptionalPartialDataColumnHeader(List[PartialDataColumnHeader]):
         """
         A header that may or may not be present, encoded as a list of length zero
         or one.
         """
-    </spec>
 
-- name: PTC#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: "export const PayloadTimelinessCommittee ="
-  spec: |
-    <spec container="PTC" fork="gloas" hash="6dbe4f6f">
-    class PTC(Vector[ValidatorIndex, PTC_SIZE]):
-        """
-        The payload timeliness committee of a slot.
-        """
-    </spec>
-
-- name: PTCAttestingIndices#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: "attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),"
-  spec: |
-    <spec container="PTCAttestingIndices" fork="gloas" hash="0a6cc1e3">
-    class PTCAttestingIndices(List[ValidatorIndex, PTC_SIZE]):
-        """
-        The indices of the PTC members participating in a payload attestation.
-        """
-    </spec>
-
-- name: PTCBits#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: "aggregationBits: new BitVectorType(PTC_SIZE),"
-  spec: |
-    <spec container="PTCBits" fork="gloas" hash="cdede459">
-    class PTCBits(BitVector[PTC_SIZE]):
-        """
-        The participation bits of the payload timeliness committee, one bit per
-        member in committee order.
-        """
-    </spec>
-
-- name: PTCWindow#gloas
-  sources:
-    - file: packages/types/src/gloas/sszTypes.ts
-      search: "export const PtcWindow ="
-  spec: |
-    <spec container="PTCWindow" fork="gloas" hash="b4036da3">
-    class PTCWindow(Vector[PTC, (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]):  # type: ignore
-        """
-        A rolling window of payload timeliness committees for the previous,
-        current, and lookahead epochs.
-        """
+        LIMIT = 1
     </spec>
 
 - name: PartialDataColumnGroupID#fulu
@@ -2605,9 +2697,11 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestation =
   spec: |
-    <spec container="PayloadAttestation" fork="gloas" hash="44b1d5c4">
-    class PayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
-        aggregation_bits: PTCBits
+    <spec container="PayloadAttestation" fork="gloas" hash="347d5e08">
+    class PayloadAttestation(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=3)
+
+        aggregation_bits: PayloadTimelinessCommitteeBits
         data: PayloadAttestationData
         signature: BLSSignature
     </spec>
@@ -2649,6 +2743,65 @@
         """
     </spec>
 
+- name: PayloadTimelinessCommittee#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const PayloadTimelinessCommittee ="
+  spec: |
+    <spec container="PayloadTimelinessCommittee" fork="gloas" hash="1969c5a9">
+    class PayloadTimelinessCommittee(Vector[ValidatorIndex]):
+        """
+        The payload timeliness committee of a slot.
+        """
+
+        LENGTH = PTC_SIZE
+    </spec>
+
+- name: PayloadTimelinessCommitteeBits#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const PayloadTimelinessCommitteeBits ="
+  spec: |
+    <spec container="PayloadTimelinessCommitteeBits" fork="gloas" hash="0ca24ef4">
+    class PayloadTimelinessCommitteeBits(BitVector):
+        """
+        The participation bits of the payload timeliness committee, one bit per
+        member in committee order.
+        """
+
+        LENGTH = PTC_SIZE
+    </spec>
+
+- name: PayloadTimelinessCommitteeIndices#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const PayloadTimelinessCommitteeIndices ="
+  spec: |
+    <spec container="PayloadTimelinessCommitteeIndices" fork="gloas" hash="16b62702">
+    class PayloadTimelinessCommitteeIndices(List[ValidatorIndex]):
+        """
+        The indices of payload timeliness committee members, as a list limited
+        by the size of the committee.
+        """
+
+        LIMIT = PTC_SIZE
+    </spec>
+
+- name: PayloadTimelinessCommitteeWindow#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const PayloadTimelinessCommitteeWindow ="
+  spec: |
+    <spec container="PayloadTimelinessCommitteeWindow" fork="gloas" hash="723b7f4c">
+    class PayloadTimelinessCommitteeWindow(Vector[PayloadTimelinessCommittee]):
+        """
+        A rolling window of payload timeliness committees for the previous,
+        current, and lookahead epochs.
+        """
+
+        LENGTH = Uint64(MIN_SEED_LOOKAHEAD + 2) * Uint64(SLOTS_PER_EPOCH)
+    </spec>
+
 - name: PendingAttestation#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
@@ -2667,11 +2820,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const EpochAttestations ="
   spec: |
-    <spec container="PendingAttestations" fork="phase0" hash="77110d55">
-    class PendingAttestations(List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]):  # type: ignore
+    <spec container="PendingAttestations" fork="phase0" hash="3372c1f9">
+    class PendingAttestations(List[PendingAttestation]):
         """
         The attestations included in blocks during an epoch.
         """
+
+        LIMIT = MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     </spec>
 
 - name: PendingConsolidation#electra
@@ -2690,11 +2845,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingConsolidations =
   spec: |
-    <spec container="PendingConsolidations" fork="electra" hash="68ab1d82">
-    class PendingConsolidations(List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]):
+    <spec container="PendingConsolidations" fork="electra" hash="989231bc">
+    class PendingConsolidations(List[PendingConsolidation]):
         """
         The queue of consolidations awaiting processing.
         """
+
+        LIMIT = PENDING_CONSOLIDATIONS_LIMIT
     </spec>
 
 - name: PendingConsolidations#gloas
@@ -2728,11 +2885,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingDeposits =
   spec: |
-    <spec container="PendingDeposits" fork="electra" hash="3256ff43">
-    class PendingDeposits(List[PendingDeposit, PENDING_DEPOSITS_LIMIT]):
+    <spec container="PendingDeposits" fork="electra" hash="11aa9136">
+    class PendingDeposits(List[PendingDeposit]):
         """
         The queue of deposits awaiting processing.
         """
+
+        LIMIT = PENDING_DEPOSITS_LIMIT
     </spec>
 
 - name: PendingDeposits#gloas
@@ -2764,11 +2923,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingPartialWithdrawals =
   spec: |
-    <spec container="PendingPartialWithdrawals" fork="electra" hash="8466ddd3">
-    class PendingPartialWithdrawals(List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]):
+    <spec container="PendingPartialWithdrawals" fork="electra" hash="96ebf8cc">
+    class PendingPartialWithdrawals(List[PendingPartialWithdrawal]):
         """
         The queue of partial withdrawals awaiting processing.
         """
+
+        LIMIT = PENDING_PARTIAL_WITHDRAWALS_LIMIT
     </spec>
 
 - name: PendingPartialWithdrawals#gloas
@@ -2800,11 +2961,13 @@
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: "if (data.proofs.length !== CELLS_PER_EXT_BLOB) {"
   spec: |
-    <spec container="Proofs" fork="fulu" hash="1a6f1e52">
-    class Proofs(Vector[KZGProof, CELLS_PER_EXT_BLOB]):
+    <spec container="Proofs" fork="fulu" hash="679d6e1b">
+    class Proofs(Vector[KZGProof]):
         """
         The KZG proofs for the cells of a single extended blob.
         """
+
+        LENGTH = CELLS_PER_EXT_BLOB
     </spec>
 
 - name: ProposerIndices#fulu
@@ -2812,11 +2975,13 @@
     - file: packages/state-transition/src/util/seed.ts
       search: export function computeProposerIndices(
   spec: |
-    <spec container="ProposerIndices" fork="fulu" hash="8093708b">
-    class ProposerIndices(Vector[ValidatorIndex, SLOTS_PER_EPOCH]):
+    <spec container="ProposerIndices" fork="fulu" hash="1e50ccfe">
+    class ProposerIndices(Vector[ValidatorIndex]):
         """
         The proposer indices for every slot of a single epoch.
         """
+
+        LENGTH = SLOTS_PER_EPOCH
     </spec>
 
 - name: ProposerLookahead#fulu
@@ -2824,12 +2989,14 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const ProposerLookahead =
   spec: |
-    <spec container="ProposerLookahead" fork="fulu" hash="0143c9d5">
-    class ProposerLookahead(Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]):  # type: ignore
+    <spec container="ProposerLookahead" fork="fulu" hash="f3625814">
+    class ProposerLookahead(Vector[ValidatorIndex]):
         """
         The precomputed proposer indices for the current and next
         ``MIN_SEED_LOOKAHEAD`` epochs.
         """
+
+        LENGTH = Uint64(MIN_SEED_LOOKAHEAD + 1) * Uint64(SLOTS_PER_EPOCH)
     </spec>
 
 - name: ProposerPreferences#gloas
@@ -2862,11 +3029,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "proposerSlashings: new ListCompositeType(ProposerSlashing, MAX_PROPOSER_SLASHINGS),"
   spec: |
-    <spec container="ProposerSlashings" fork="phase0" hash="e6e26c08">
-    class ProposerSlashings(List[ProposerSlashing, MAX_PROPOSER_SLASHINGS]):
+    <spec container="ProposerSlashings" fork="phase0" hash="d930815f">
+    class ProposerSlashings(List[ProposerSlashing]):
         """
         The proposer slashings included in a beacon block.
         """
+
+        LIMIT = MAX_PROPOSER_SLASHINGS
     </spec>
 
 - name: ProposerSlashings#gloas
@@ -2886,12 +3055,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const RandaoMixes =
   spec: |
-    <spec container="RandaoMixes" fork="phase0" hash="f7381c81">
-    class RandaoMixes(Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]):
+    <spec container="RandaoMixes" fork="phase0" hash="52d8ceec">
+    class RandaoMixes(Vector[Bytes32]):
         """
         A rolling window of accumulated RANDAO mixes, indexed by epoch modulo
         ``EPOCHS_PER_HISTORICAL_VECTOR``.
         """
+
+        LENGTH = EPOCHS_PER_HISTORICAL_VECTOR
     </spec>
 
 - name: SignedAggregateAndProof#phase0
@@ -2955,12 +3126,14 @@
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
   spec: |
-    <spec container="SignedBeaconBlocks" fork="phase0" hash="1eee87ae">
-    class SignedBeaconBlocks(List[SignedBeaconBlock, MAX_REQUEST_BLOCKS]):  # type: ignore
+    <spec container="SignedBeaconBlocks" fork="phase0" hash="55c94960">
+    class SignedBeaconBlocks(List[SignedBeaconBlock]):
         """
         Signed beacon blocks returned in a ``BeaconBlocksByRange`` or
         ``BeaconBlocksByRoot`` response.
         """
+
+        LIMIT = MAX_REQUEST_BLOCKS
     </spec>
 
 - name: SignedBeaconBlocks#deneb
@@ -2968,12 +3141,14 @@
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
   spec: |
-    <spec container="SignedBeaconBlocks" fork="deneb" hash="30aa0fd7">
-    class SignedBeaconBlocks(List[SignedBeaconBlock, MAX_REQUEST_BLOCKS_DENEB]):  # type: ignore
+    <spec container="SignedBeaconBlocks" fork="deneb" hash="363a3db0">
+    class SignedBeaconBlocks(List[SignedBeaconBlock]):
         """
         Signed beacon blocks returned in a ``BeaconBlocksByRange`` or
         ``BeaconBlocksByRoot`` response.
         """
+
+        LIMIT = MAX_REQUEST_BLOCKS_DENEB
     </spec>
 
 - name: SignedContributionAndProof#altair
@@ -3026,13 +3201,15 @@
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendExecutionPayloadEnvelopesByRange("
   spec: |
-    <spec container="SignedExecutionPayloadEnvelopes" fork="gloas" hash="be7e5f39">
-    class SignedExecutionPayloadEnvelopes(List[SignedExecutionPayloadEnvelope, MAX_REQUEST_PAYLOADS]):  # type: ignore
+    <spec container="SignedExecutionPayloadEnvelopes" fork="gloas" hash="826dc65b">
+    class SignedExecutionPayloadEnvelopes(List[SignedExecutionPayloadEnvelope]):
         """
         Signed execution payload envelopes returned in an
         ``ExecutionPayloadEnvelopesByRange`` or
         ``ExecutionPayloadEnvelopesByRoot`` response.
         """
+
+        LIMIT = MAX_REQUEST_PAYLOADS
     </spec>
 
 - name: SignedInclusionList#heze
@@ -3049,12 +3226,14 @@
 - name: SignedInclusionLists#heze
   sources: []
   spec: |
-    <spec container="SignedInclusionLists" fork="heze" hash="1a3b31ea">
-    class SignedInclusionLists(List[SignedInclusionList, MAX_REQUEST_INCLUSION_LIST]):  # type: ignore
+    <spec container="SignedInclusionLists" fork="heze" hash="7c8a75df">
+    class SignedInclusionLists(List[SignedInclusionList]):
         """
         Signed inclusion lists returned in an ``InclusionListsByIndices``
         response.
         """
+
+        LIMIT = MAX_REQUEST_INCLUSION_LIST
     </spec>
 
 - name: SignedProposerPreferences#gloas
@@ -3108,12 +3287,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Slashings =
   spec: |
-    <spec container="Slashings" fork="phase0" hash="f6caea6a">
-    class Slashings(Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]):
+    <spec container="Slashings" fork="phase0" hash="11432368">
+    class Slashings(Vector[Gwei]):
         """
         Per-epoch sums of slashed effective balances, indexed by epoch modulo
         ``EPOCHS_PER_SLASHINGS_VECTOR``.
         """
+
+        LENGTH = EPOCHS_PER_SLASHINGS_VECTOR
     </spec>
 
 - name: StateRoots#phase0
@@ -3121,12 +3302,14 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "export const HistoricalStateRoots ="
   spec: |
-    <spec container="StateRoots" fork="phase0" hash="7cf532bc">
-    class StateRoots(Vector[Root, SLOTS_PER_HISTORICAL_ROOT]):
+    <spec container="StateRoots" fork="phase0" hash="0a905c60">
+    class StateRoots(Vector[Root]):
         """
         A rolling window of recent state roots, indexed by slot modulo
         ``SLOTS_PER_HISTORICAL_ROOT``.
         """
+
+        LENGTH = SLOTS_PER_HISTORICAL_ROOT
     </spec>
 
 - name: SyncAggregate#altair
@@ -3167,12 +3350,14 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncCommitteeBits =
   spec: |
-    <spec container="SyncCommitteeBits" fork="altair" hash="63754192">
-    class SyncCommitteeBits(BitVector[SYNC_COMMITTEE_SIZE]):
+    <spec container="SyncCommitteeBits" fork="altair" hash="37237af7">
+    class SyncCommitteeBits(BitVector):
         """
         The participation bits of the sync committee, one bit per member in
         committee order.
         """
+
+        LENGTH = SYNC_COMMITTEE_SIZE
     </spec>
 
 - name: SyncCommitteeContribution#altair
@@ -3207,11 +3392,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: "pubkeys: new VectorCompositeType(BLSPubkey, SYNC_COMMITTEE_SIZE),"
   spec: |
-    <spec container="SyncCommitteePubkeys" fork="altair" hash="07f38259">
-    class SyncCommitteePubkeys(Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]):
+    <spec container="SyncCommitteePubkeys" fork="altair" hash="afe02371">
+    class SyncCommitteePubkeys(Vector[BLSPubkey]):
         """
         The public keys of the sync committee members, in committee order.
         """
+
+        LENGTH = SYNC_COMMITTEE_SIZE
     </spec>
 
 - name: SyncSubcommitteeBits#altair
@@ -3219,12 +3406,14 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: "aggregationBits: new BitVectorType(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT),"
   spec: |
-    <spec container="SyncSubcommitteeBits" fork="altair" hash="50bd8f42">
-    class SyncSubcommitteeBits(BitVector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]):  # type: ignore
+    <spec container="SyncSubcommitteeBits" fork="altair" hash="2a0115ed">
+    class SyncSubcommitteeBits(BitVector):
         """
         The participation bits of a single sync subcommittee, one bit per member
         in subcommittee order.
         """
+
+        LENGTH = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
     </spec>
 
 - name: Syncnets#altair
@@ -3232,11 +3421,13 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: "export const SyncSubnets ="
   spec: |
-    <spec container="Syncnets" fork="altair" hash="84ce1082">
-    class Syncnets(BitVector[SYNC_COMMITTEE_SUBNET_COUNT]):
+    <spec container="Syncnets" fork="altair" hash="7d9fab5a">
+    class Syncnets(BitVector):
         """
         The sync committee subnets a node is subscribed to, one bit per subnet.
         """
+
+        LENGTH = SYNC_COMMITTEE_SUBNET_COUNT
     </spec>
 
 - name: Transaction#bellatrix
@@ -3244,12 +3435,14 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const Transaction =
   spec: |
-    <spec container="Transaction" fork="bellatrix" hash="9eccf41a">
-    class Transaction(ByteList[MAX_BYTES_PER_TRANSACTION]):
+    <spec container="Transaction" fork="bellatrix" hash="9fcd709e">
+    class Transaction(ByteList):
         """
         An opaque execution-layer transaction, either a typed transaction
         envelope or a legacy RLP-encoded transaction.
         """
+
+        LIMIT = MAX_BYTES_PER_TRANSACTION
     </spec>
 
 - name: Transaction#gloas
@@ -3257,8 +3450,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const Transaction =
   spec: |
-    <spec container="Transaction" fork="gloas" hash="4478c825">
-    class Transaction(ProgressiveByteList):
+    <spec container="Transaction" fork="gloas" hash="0416b8e6">
+    class Transaction(ProgressiveList[Byte]):
         """
         An opaque execution-layer transaction, either a typed transaction
         envelope or a legacy RLP-encoded transaction.
@@ -3270,11 +3463,13 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const Transactions =
   spec: |
-    <spec container="Transactions" fork="bellatrix" hash="5b4e9a29">
-    class Transactions(List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]):
+    <spec container="Transactions" fork="bellatrix" hash="f5f59d45">
+    class Transactions(List[Transaction]):
         """
         A list of execution-layer transactions.
         """
+
+        LIMIT = MAX_TRANSACTIONS_PER_PAYLOAD
     </spec>
 
 - name: Transactions#gloas
@@ -3311,11 +3506,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Validators =
   spec: |
-    <spec container="Validators" fork="phase0" hash="c3d0467c">
-    class Validators(List[Validator, VALIDATOR_REGISTRY_LIMIT]):
+    <spec container="Validators" fork="phase0" hash="cecd25af">
+    class Validators(List[Validator]):
         """
         The validator registry.
         """
+
+        LIMIT = VALIDATOR_REGISTRY_LIMIT
     </spec>
 
 - name: Validators#gloas
@@ -3346,11 +3543,13 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: "voluntaryExits: new ListCompositeType(SignedVoluntaryExit, MAX_VOLUNTARY_EXITS),"
   spec: |
-    <spec container="VoluntaryExits" fork="phase0" hash="aaefdbc8">
-    class VoluntaryExits(List[SignedVoluntaryExit, MAX_VOLUNTARY_EXITS]):
+    <spec container="VoluntaryExits" fork="phase0" hash="884272fa">
+    class VoluntaryExits(List[SignedVoluntaryExit]):
         """
         The signed voluntary exits included in a beacon block.
         """
+
+        LIMIT = MAX_VOLUNTARY_EXITS
     </spec>
 
 - name: VoluntaryExits#gloas
@@ -3395,11 +3594,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const WithdrawalRequests =
   spec: |
-    <spec container="WithdrawalRequests" fork="electra" hash="67f70848">
-    class WithdrawalRequests(List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]):
+    <spec container="WithdrawalRequests" fork="electra" hash="760dfc14">
+    class WithdrawalRequests(List[WithdrawalRequest]):
         """
         The withdrawal requests pertaining to a single execution payload.
         """
+
+        LIMIT = MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
     </spec>
 
 - name: WithdrawalRequests#gloas
@@ -3419,11 +3620,13 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const Withdrawals =
   spec: |
-    <spec container="Withdrawals" fork="capella" hash="72abb06d">
-    class Withdrawals(List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]):
+    <spec container="Withdrawals" fork="capella" hash="5e3fb3d0">
+    class Withdrawals(List[Withdrawal]):
         """
         A list of withdrawals.
         """
+
+        LIMIT = MAX_WITHDRAWALS_PER_PAYLOAD
     </spec>
 
 - name: Withdrawals#gloas

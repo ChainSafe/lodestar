@@ -33,7 +33,7 @@ export enum ChainEvent {
   /**
    * This event signals that the fork choice store has been updated.
    *
-   * This event is guaranteed to be triggered whenever the fork choice justified checkpoint is updated. This is in response to a newly processed block.
+   * This event is guaranteed to be triggered whenever the fork choice finalized checkpoint is updated. This is either in response to a newly processed block or a new clock tick.
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
