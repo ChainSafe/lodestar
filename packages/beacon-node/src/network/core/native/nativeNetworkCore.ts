@@ -18,6 +18,7 @@ import {BaseNetworkInit} from "../networkCore.js";
 import {INetworkCore} from "../types.js";
 import {hostPeerId, nativeMultiaddr, nativePeerId, parseNativeEndpoint} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
+import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
@@ -351,17 +352,17 @@ export class NativeNetworkCore implements INetworkCore {
     const peer = snapshot.peers.find((peer) => peer.connection !== null && hostPeerId(peer.identity) === peerId);
     return peer ? formatNativePeer(peer) : undefined;
   }
-  dumpPeerScoreStats(): Promise<never> {
-    return this.unavailable("RPC and gossip score breakdown");
+  dumpPeerScoreStats(): ReturnType<typeof dumpNativePeerScores> {
+    return dumpNativePeerScores(this.runtime);
   }
-  dumpGossipPeerScoreStats(): Promise<never> {
-    return this.unavailable("gossip score breakdown");
+  dumpGossipPeerScoreStats(): ReturnType<typeof dumpNativeGossipScores> {
+    return dumpNativeGossipScores(this.runtime);
   }
   dumpDiscv5KadValues(): Promise<never> {
     return this.unavailable("discovery routing-table snapshot");
   }
-  dumpMeshPeers(): Promise<never> {
-    return this.unavailable("gossip mesh snapshot");
+  dumpMeshPeers(): ReturnType<typeof dumpNativeMeshPeers> {
+    return dumpNativeMeshPeers(this.runtime);
   }
   writeNetworkThreadProfile(_durationMs: number, _dirpath: string): Promise<never> {
     return this.unavailable("native thread CPU profile");

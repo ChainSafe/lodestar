@@ -33,6 +33,7 @@ async function fixture() {
     connectedAtMs: 0n,
     direct: false,
     score: 0,
+    scoreAtMs: 0n,
     banUntilMs: 0n,
     goodbyeUntilMs: 0n,
   };

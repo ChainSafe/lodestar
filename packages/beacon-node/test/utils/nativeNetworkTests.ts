@@ -322,6 +322,17 @@ describe("native Lodestar integration", () => {
           {timeout: 5000}
         );
         expect(left.chain.opPool.hasSeenProposerSlashing(1)).toBe(false);
+        const scores = await left.network.dumpPeerScoreStats();
+        expect(scores).toMatchObject([{peerId: remote.peerId, ignoreNegativeGossipScore: false}]);
+        expect(Number.isFinite(scores[0].gossipScore)).toBe(true);
+        const gossipScores = await left.network.dumpGossipPeerScoreStats();
+        expect(gossipScores[remote.peerId]).toMatchObject({connected: true});
+        expect(
+          Object.values(gossipScores[remote.peerId].topics).some((topic) => topic.invalidMessageDeliveries > 0)
+        ).toBe(true);
+        const meshPeers = await left.network.dumpMeshPeers();
+        expect(Object.keys(meshPeers).length).toBeGreaterThan(0);
+
         await vi.waitFor(
           async () => {
             const metrics = await left.network.scrapeMetrics();
