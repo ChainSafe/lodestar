@@ -133,17 +133,11 @@ export function getGossipSSZType(topic: GossipTopic) {
 }
 
 /**
- * Return the maximum uncompressed SSZ byte length accepted for a gossip object.
+ * Return the maximum uncompressed SSZ byte length accepted for a gossip object, the SSZ type max size
+ * or MAX_PAYLOAD_SIZE, whichever is smaller.
  */
 export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
-  switch (topic.type) {
-    // Blocks and payload envelopes contain unbounded progressive lists, so their SSZ max size is not a useful bound
-    case GossipType.beacon_block:
-    case GossipType.execution_payload:
-      return maxPayloadSize;
-    default:
-      return (sszType ?? getGossipSSZType(topic)).maxSize;
-  }
+  return Math.min((sszType ?? getGossipSSZType(topic)).maxSize, maxPayloadSize);
 }
 
 /**
