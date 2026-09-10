@@ -248,10 +248,13 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
     // parent reference must advance from the envelope so the first-block check passes.
     const grandparentHash = Buffer.alloc(32, 0x11); // anchor's stored (inherited) hash
     const anchorPayloadHash = Buffer.alloc(32, 0x22); // anchor's own revealed payload
-    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(grandparentHash)} as unknown as ProtoBlock;
-
     const anchorInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00), anchorPayloadHash);
     const anchorPayload = payloadInputFor(anchorInput, anchorPayloadHash);
+    const parentBlock = {
+      slot: 9,
+      blockRoot: anchorInput.blockRootHex,
+      executionPayloadBlockHash: toRootHex(grandparentHash),
+    } as unknown as ProtoBlock;
     const bi1 = gloasBlockInput(12, Buffer.alloc(32, 0xaa), anchorPayloadHash);
 
     const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, anchorPayload]]);
@@ -264,10 +267,13 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
     // still serve the envelope by range so it is in the batch but must not become the parent EL head
     const grandparentHash = Buffer.alloc(32, 0x11); // parent's EMPTY variant hash (inherited)
     const orphanedPayloadHash = Buffer.alloc(32, 0x22); // parent's own, orphaned payload
-    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(grandparentHash)} as unknown as ProtoBlock;
-
     const parentInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00), orphanedPayloadHash);
     const parentPayload = payloadInputFor(parentInput, orphanedPayloadHash);
+    const parentBlock = {
+      slot: 9,
+      blockRoot: parentInput.blockRootHex,
+      executionPayloadBlockHash: toRootHex(grandparentHash),
+    } as unknown as ProtoBlock;
     const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), grandparentHash);
 
     const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, parentPayload]]);
@@ -279,16 +285,40 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
     const grandparentHash = Buffer.alloc(32, 0x11);
     const parentPayloadHash = Buffer.alloc(32, 0x22);
     const unknownHash = Buffer.alloc(32, 0x33);
-    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(grandparentHash)} as unknown as ProtoBlock;
-
     const parentInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00), parentPayloadHash);
     const parentPayload = payloadInputFor(parentInput, parentPayloadHash);
+    const parentBlock = {
+      slot: 9,
+      blockRoot: parentInput.blockRootHex,
+      executionPayloadBlockHash: toRootHex(grandparentHash),
+    } as unknown as ProtoBlock;
     const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), unknownHash);
 
     const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, parentPayload]]);
     expectThrowsLodestarError(
       () => assertLinearChainSegment(config, [bi1], envelopes, parentBlock),
       BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+    );
+  });
+
+  it("throws ENVELOPE_BLOCK_ROOT_MISMATCH when the envelope at the parent's slot references another block", () => {
+    const grandparentHash = Buffer.alloc(32, 0x11);
+    const siblingPayloadHash = Buffer.alloc(32, 0x22);
+    const parentInput = gloasBlockInput(9, Buffer.alloc(32, 0xdd), Buffer.alloc(32, 0x00));
+    const parentBlock = {
+      slot: 9,
+      blockRoot: parentInput.blockRootHex,
+      executionPayloadBlockHash: toRootHex(grandparentHash),
+    } as unknown as ProtoBlock;
+    // A different block at the parent's slot, peers serve its envelope for that slot
+    const siblingInput = gloasBlockInput(9, Buffer.alloc(32, 0xee), Buffer.alloc(32, 0x00), siblingPayloadHash);
+    const siblingPayload = payloadInputFor(siblingInput, siblingPayloadHash);
+    const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), grandparentHash);
+
+    const envelopes = new Map<Slot, PayloadEnvelopeInput>([[9, siblingPayload]]);
+    expectThrowsLodestarError(
+      () => assertLinearChainSegment(config, [bi1], envelopes, parentBlock),
+      BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH
     );
   });
 });
