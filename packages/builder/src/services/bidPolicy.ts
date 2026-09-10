@@ -32,11 +32,11 @@ export class ProportionalBidPolicy implements BidPolicy {
     }
 
     if (!Number.isSafeInteger(opts.fixedCostGwei) || opts.fixedCostGwei < 0) {
-      throw Error(`Invalid fixedCostGwei=${opts.fixedCostGwei}, must be a nonnegative safe integer`);
+      throw Error(`Invalid fixedCostGwei=${opts.fixedCostGwei}, must be a non-negative safe integer`);
     }
 
     if (!Number.isSafeInteger(opts.minValueGwei) || opts.minValueGwei < 0) {
-      throw Error(`Invalid minValueGwei=${opts.minValueGwei}, must be a nonnegative safe integer`);
+      throw Error(`Invalid minValueGwei=${opts.minValueGwei}, must be a non-negative safe integer`);
     }
 
     if (
