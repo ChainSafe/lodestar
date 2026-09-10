@@ -15,7 +15,9 @@ import {
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
+import {GENESIS_EPOCH} from "../../../../constants/index.js";
 import {IBeaconSync} from "../../../../sync/index.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {notWhileSyncing} from "../../utils.js";
 
@@ -63,6 +65,19 @@ export async function getStateResponseWithRegen(
   // dashboards, validator client checks) even while syncing; guard only the regen-capable lookups.
   if (inStateId !== "head" && inStateId !== "finalized" && inStateId !== "justified" && inStateId !== "genesis") {
     notWhileSyncing(chain, sync.state);
+  }
+
+  if (inStateId === "head") {
+    const head = chain.forkChoice.getHead();
+    // Head block's post-state is not cached after init from an anchor state at a skipped boundary slot,
+    // it does not exist anywhere and regen has no seed for it, serve the closest head state instead
+    const state = chain.regen.getStateSync(head.stateRoot) ?? chain.getHeadState();
+    const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+    return {
+      state,
+      executionOptimistic: isOptimisticBlock(head),
+      finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+    };
   }
 
   const stateId = resolveStateId(chain.forkChoice, inStateId);
