@@ -10,9 +10,9 @@ import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {BYTES_PER_CELL, ForkSeq, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BYTES_PER_CELL, ForkSeq, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
@@ -30,7 +30,8 @@ import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 /**
  * Complete successful Fulu handler reads, excluding network framing and consensus validation.
- * Uses real LevelDB repositories, archived block decoding/hashing, and flat-file I/O.
+ * Uses real LevelDB repositories, archived root-index lookups, SSZ state blockRoots, and flat-file I/O.
+ * Measures archived slots both inside and outside the head-state history window.
  * Fixtures have eight blobs and 256 KiB of deterministic transaction bytes per block.
  * Databases are reopened after seeding; measurements use warm LevelDB and OS caches.
  * Uses the hashtree hasher configured by the production CLI.
@@ -47,157 +48,175 @@ const config = createChainForkConfig({DENEB_FORK_EPOCH: 0, FULU_FORK_EPOCH: 0, G
 const logger: Logger = {error() {}, warn() {}, info() {}, verbose() {}, debug() {}};
 const peerId = {toString: () => "benchmark-peer"} as PeerId;
 
-describe("finalized data column range / warm cache", () => {
-  let tmpDir: string;
-  let db: BeaconDb;
-  let chain: BeaconChain;
-  let previousHasher = hasher;
-  const expectedColumns = new Map<number, Uint8Array[]>();
+for (const rootSource of ["archive index", "head state"] as const) {
+  describe(`finalized data column range / warm cache / ${rootSource}`, () => {
+    let tmpDir: string;
+    let db: BeaconDb;
+    let chain: BeaconChain;
+    let previousHasher = hasher;
+    const expectedColumns = new Map<number, Uint8Array[]>();
 
-  async function openDb(): Promise<BeaconDb> {
-    const controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
-    const openedDb = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "columns"), logger});
-    await openedDb.init();
-    return openedDb;
-  }
-
-  beforeAll(async () => {
-    previousHasher = hasher;
-    setHasher(hashtreeHasher);
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "lodestar-column-range-bench-"));
-    db = await openDb();
-    for (let slot = startSlot; slot < startSlot + slotCount; slot++) {
-      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-      block.message.slot = slot;
-      block.message.body.executionPayload.transactions = Array.from({length: 256}, (_, index) =>
-        deterministicBytes(1024, slot, index)
-      );
-      block.message.body.blobKzgCommitments = Array.from({length: blobsPerBlock}, (_, index) =>
-        deterministicBytes(48, slot, 256 + index)
-      );
-      const blockRoot = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
-      const bodyRoot = ssz.fulu.BeaconBlockBody.hashTreeRoot(block.message.body);
-      const columns = custodyColumns.map((index) => {
-        const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
-        sidecar.index = index;
-        sidecar.column = Array.from({length: blobsPerBlock}, (_, blob) =>
-          deterministicBytes(BYTES_PER_CELL, slot, 512 + index * blobsPerBlock + blob)
-        );
-        sidecar.kzgCommitments = block.message.body.blobKzgCommitments;
-        sidecar.kzgProofs = Array.from({length: blobsPerBlock}, (_, blob) =>
-          deterministicBytes(48, slot, 2048 + index * blobsPerBlock + blob)
-        );
-        sidecar.signedBlockHeader.message = {
-          slot,
-          proposerIndex: block.message.proposerIndex,
-          parentRoot: block.message.parentRoot,
-          stateRoot: block.message.stateRoot,
-          bodyRoot,
-        };
-        return ssz.fulu.DataColumnSidecar.serialize(sidecar);
-      });
-      expectedColumns.set(slot, columns);
-      await db.blockArchive.put(slot, block);
-      await db.dataColumnSidecarArchive.putManyBinary(
-        slot,
-        columns.map((value, key) => ({key, value}))
-      );
-      await db.dataColumns.putManyBinary(
-        {slot, blockRoot},
-        columns.map((data, index) => ({index, data}))
-      );
+    async function openDb(): Promise<BeaconDb> {
+      const controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
+      const openedDb = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "columns"), logger});
+      await openedDb.init();
+      return openedDb;
     }
-    await db.close();
-    db = await openDb();
 
-    const finalizedSlot = startSlot + slotCount + SLOTS_PER_EPOCH;
-    const headChain = Array.from({length: 65}, (_, index) =>
-      generateProtoBlock({slot: finalizedSlot + 64 - index, payloadStatus: PayloadStatus.FULL})
-    );
-    chain = {
-      config,
-      db,
-      logger,
-      metrics: null,
-      clock: {currentEpoch: Math.ceil(headChain[0].slot / SLOTS_PER_EPOCH)},
-      earliestAvailableSlot: 0,
-      custodyConfig: {custodyColumns, custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
-      forkChoice: {
-        getFinalizedBlock: () => headChain[64],
-        getHead: () => headChain[0],
-        getAllAncestorBlocks: () => headChain,
+    beforeAll(async () => {
+      previousHasher = hasher;
+      setHasher(hashtreeHasher);
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "lodestar-column-range-bench-"));
+      db = await openDb();
+      const state = ssz.fulu.BeaconState.defaultViewDU();
+      for (let slot = startSlot; slot < startSlot + slotCount; slot++) {
+        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        block.message.body.executionPayload.transactions = Array.from({length: 256}, (_, index) =>
+          deterministicBytes(1024, slot, index)
+        );
+        block.message.body.blobKzgCommitments = Array.from({length: blobsPerBlock}, (_, index) =>
+          deterministicBytes(48, slot, 256 + index)
+        );
+        const root = ssz.fulu.BeaconBlock.hashTreeRoot(block.message);
+        state.blockRoots.set(slot % SLOTS_PER_HISTORICAL_ROOT, root);
+        const blockRoot = toRootHex(root);
+        const bodyRoot = ssz.fulu.BeaconBlockBody.hashTreeRoot(block.message.body);
+        const columns = custodyColumns.map((index) => {
+          const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+          sidecar.index = index;
+          sidecar.column = Array.from({length: blobsPerBlock}, (_, blob) =>
+            deterministicBytes(BYTES_PER_CELL, slot, 512 + index * blobsPerBlock + blob)
+          );
+          sidecar.kzgCommitments = block.message.body.blobKzgCommitments;
+          sidecar.kzgProofs = Array.from({length: blobsPerBlock}, (_, blob) =>
+            deterministicBytes(48, slot, 2048 + index * blobsPerBlock + blob)
+          );
+          sidecar.signedBlockHeader.message = {
+            slot,
+            proposerIndex: block.message.proposerIndex,
+            parentRoot: block.message.parentRoot,
+            stateRoot: block.message.stateRoot,
+            bodyRoot,
+          };
+          return ssz.fulu.DataColumnSidecar.serialize(sidecar);
+        });
+        expectedColumns.set(slot, columns);
+        await db.blockArchive.put(slot, block);
+        await db.dataColumnSidecarArchive.putManyBinary(
+          slot,
+          columns.map((value, key) => ({key, value}))
+        );
+        await db.dataColumns.putManyBinary(
+          {slot, blockRoot},
+          columns.map((data, index) => ({index, data}))
+        );
+      }
+      await db.close();
+      db = await openDb();
+
+      const finalizedSlot =
+        startSlot + slotCount + SLOTS_PER_EPOCH + (rootSource === "archive index" ? SLOTS_PER_HISTORICAL_ROOT : 0);
+      const headChain = Array.from({length: 65}, (_, index) =>
+        generateProtoBlock({slot: finalizedSlot + 64 - index, payloadStatus: PayloadStatus.FULL})
+      );
+      state.slot = headChain[0].slot;
+      chain = {
+        config,
+        getHeadState: () => ({slot: state.slot, getBlockRootAtSlot: (slot: number) => getBlockRootAtSlot(state, slot)}),
+        db,
+        logger,
+        metrics: null,
+        clock: {currentEpoch: Math.ceil(headChain[0].slot / SLOTS_PER_EPOCH)},
+        earliestAvailableSlot: 0,
+        custodyConfig: {custodyColumns, custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
+        forkChoice: {
+          getFinalizedBlock: () => headChain[64],
+          getHead: () => headChain[0],
+          getAllAncestorBlocks: () => headChain,
+        },
+        seenBlockInputCache: {get: () => undefined},
+        seenPayloadEnvelopeInputCache: {get: () => undefined},
+        serializedCache: new WeakMap(),
+      } as unknown as BeaconChain;
+      chain.getCanonicalBlockAtSlot = BeaconChain.prototype.getCanonicalBlockAtSlot.bind(chain);
+      chain.getSerializedDataColumnSidecars = BeaconChain.prototype.getSerializedDataColumnSidecars.bind(chain);
+
+      for (const count of [1, slotCount]) {
+        for (const columns of [1, 8, NUMBER_OF_COLUMNS]) {
+          const request = {startSlot, count, columns: custodyColumns.slice(0, columns)};
+          for (const handler of [legacyFinalizedRange, onDataColumnSidecarsByRange]) {
+            let position = 0;
+            for await (const response of handler(request, chain, db, peerId, "benchmark")) {
+              const slot = startSlot + Math.floor(position / columns);
+              const expected = expectedColumns.get(slot)?.[request.columns[position % columns]];
+              assert(expected, `unexpected response ${position} for slot ${slot}`);
+              assert.deepEqual(Buffer.from(response.data), Buffer.from(expected), `wrong response ${position}`);
+              position++;
+            }
+            assert.equal(position, count * columns);
+          }
+        }
+      }
+      console.log(`Baseline ${baselineCommit}; ${process.version}; ${os.cpus()[0]?.model}; hasher=${hasher.name}`);
+      console.log(
+        `Fixture: ${slotCount} slots, 256 KiB transactions/block, ${blobsPerBlock} blobs, ${expectedColumns.get(startSlot)?.[0].length} bytes/column`
+      );
+    }, 120_000);
+
+    afterAll(async () => {
+      try {
+        await db?.close();
+        if (tmpDir) await fs.rm(tmpDir, {recursive: true, force: true});
+      } finally {
+        setHasher(previousHasher);
+      }
+    });
+
+    bench({
+      id: `${rootSource} / 1 slot / archive root index lookup`,
+      minRuns: 25,
+      maxMs: 15_000,
+      fn: async () => {
+        const root = await db.blockArchive.getRootBySlot(startSlot);
+        assert(root);
       },
-      seenBlockInputCache: {get: () => undefined},
-      seenPayloadEnvelopeInputCache: {get: () => undefined},
-      serializedCache: new WeakMap(),
-    } as unknown as BeaconChain;
-    chain.getCanonicalBlockAtSlot = BeaconChain.prototype.getCanonicalBlockAtSlot.bind(chain);
-    chain.getSerializedDataColumnSidecars = BeaconChain.prototype.getSerializedDataColumnSidecars.bind(chain);
+    });
+
+    bench({
+      id: `${rootSource} / 1 slot / archive block lookup, decode and hash`,
+      minRuns: 25,
+      maxMs: 15_000,
+      fn: async () => {
+        const result = await chain.getCanonicalBlockAtSlot(startSlot);
+        assert(result);
+        config.getForkTypes(startSlot).BeaconBlock.hashTreeRoot(result.block.message);
+      },
+    });
 
     for (const count of [1, slotCount]) {
       for (const columns of [1, 8, NUMBER_OF_COLUMNS]) {
-        const request = {startSlot, count, columns: custodyColumns.slice(0, columns)};
-        for (const handler of [legacyFinalizedRange, onDataColumnSidecarsByRange]) {
-          let position = 0;
-          for await (const response of handler(request, chain, db, peerId, "benchmark")) {
-            const slot = startSlot + Math.floor(position / columns);
-            const expected = expectedColumns.get(slot)?.[request.columns[position % columns]];
-            assert(expected, `unexpected response ${position} for slot ${slot}`);
-            assert.deepEqual(Buffer.from(response.data), Buffer.from(expected), `wrong response ${position}`);
-            position++;
-          }
-          assert.equal(position, count * columns);
+        const request: fulu.DataColumnSidecarsByRangeRequest = {
+          startSlot,
+          count,
+          columns: custodyColumns.slice(0, columns),
+        };
+        for (const backend of ["legacy", "flat files"] as const) {
+          bench({
+            id: `${rootSource} / ${count} slots / ${columns} columns / ${backend}`,
+            minRuns: 25,
+            maxMs: 15_000,
+            timeoutBench: 60_000,
+            fn: async () => {
+              const handler = backend === "legacy" ? legacyFinalizedRange : onDataColumnSidecarsByRange;
+              await consume(handler(request, chain, db, peerId, "benchmark"));
+            },
+          });
         }
       }
     }
-    console.log(`Baseline ${baselineCommit}; ${process.version}; ${os.cpus()[0]?.model}; hasher=${hasher.name}`);
-    console.log(
-      `Fixture: ${slotCount} slots, 256 KiB transactions/block, ${blobsPerBlock} blobs, ${expectedColumns.get(startSlot)?.[0].length} bytes/column`
-    );
-  }, 120_000);
-
-  afterAll(async () => {
-    try {
-      await db?.close();
-      if (tmpDir) await fs.rm(tmpDir, {recursive: true, force: true});
-    } finally {
-      setHasher(previousHasher);
-    }
   });
-
-  bench({
-    id: "1 slot / archive block lookup, decode and hash",
-    minRuns: 25,
-    maxMs: 15_000,
-    fn: async () => {
-      const result = await chain.getCanonicalBlockAtSlot(startSlot);
-      assert(result);
-      config.getForkTypes(startSlot).BeaconBlock.hashTreeRoot(result.block.message);
-    },
-  });
-
-  for (const count of [1, slotCount]) {
-    for (const columns of [1, 8, NUMBER_OF_COLUMNS]) {
-      const request: fulu.DataColumnSidecarsByRangeRequest = {
-        startSlot,
-        count,
-        columns: custodyColumns.slice(0, columns),
-      };
-      for (const backend of ["legacy", "flat files"] as const) {
-        bench({
-          id: `${count} slots / ${columns} columns / ${backend}`,
-          minRuns: 25,
-          maxMs: 15_000,
-          timeoutBench: 60_000,
-          fn: async () => {
-            const handler = backend === "legacy" ? legacyFinalizedRange : onDataColumnSidecarsByRange;
-            await consume(handler(request, chain, db, peerId, "benchmark"));
-          },
-        });
-      }
-    }
-  }
-});
+}
 
 function deterministicBytes(length: number, slot: number, index: number): Uint8Array {
   const iv = Buffer.alloc(16);

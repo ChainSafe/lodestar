@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, RootHex, fulu} from "@lodestar/types";
@@ -120,6 +120,7 @@ async function* resolveCanonicalDataColumnBlocks(
   const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
   const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
   const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
+  const recentRoots = getRecentCanonicalRoots(chain, startSlot, Math.min(archiveEnd, oldestForkChoiceSlot));
 
   for (let slot = startSlot; slot < archiveEnd; slot++) {
     if (slot >= oldestForkChoiceSlot) {
@@ -135,9 +136,12 @@ async function* resolveCanonicalDataColumnBlocks(
       continue;
     }
 
-    const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
-    if (!canonicalBlock) continue;
-    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(canonicalBlock.block.message));
+    let blockRoot = recentRoots.get(slot);
+    if (blockRoot === undefined) {
+      const root = await db.blockArchive.getRootBySlot(slot);
+      blockRoot = root === null ? null : toRootHex(root);
+    }
+    if (blockRoot === null) continue;
     if (
       chain.config.getForkSeq(slot) >= ForkSeq.gloas &&
       !(await hasExecutionPayloadEnvelope(chain, db, slot, blockRoot))
@@ -163,6 +167,24 @@ async function* resolveCanonicalDataColumnBlocks(
       finalized: block.slot <= finalizedSlot,
     };
   }
+}
+
+/** Copy roots synchronously so serving a request never retains a head-state reference across I/O. */
+function getRecentCanonicalRoots(chain: IBeaconChain, startSlot: number, endSlot: number): Map<number, RootHex | null> {
+  const roots = new Map<number, RootHex | null>();
+  if (startSlot >= endSlot) return roots;
+  const state = chain.getHeadState();
+  // Skipped slots repeat the prior root. At the oldest ring entry, that prior root is unavailable.
+  const start = Math.max(startSlot, state.slot - SLOTS_PER_HISTORICAL_ROOT + 1, 1);
+  const end = Math.min(endSlot, state.slot);
+  if (start >= end) return roots;
+  let previousRoot = toRootHex(state.getBlockRootAtSlot(start - 1));
+  for (let slot = start; slot < end; slot++) {
+    const root = toRootHex(state.getBlockRootAtSlot(slot));
+    roots.set(slot, root === previousRoot ? null : root);
+    previousRoot = root;
+  }
+  return roots;
 }
 
 async function hasExecutionPayloadEnvelope(

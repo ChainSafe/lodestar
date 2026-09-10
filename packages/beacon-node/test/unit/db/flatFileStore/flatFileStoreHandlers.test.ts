@@ -6,7 +6,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {type ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {NUMBER_OF_COLUMNS, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {DAType} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -107,6 +107,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     function makeMockChainAndDb(opts: {
       config?: ChainForkConfig;
       finalizedSlot: number;
+      headState?: Pick<ReturnType<IBeaconChain["getHeadState"]>, "slot" | "getBlockRootAtSlot">;
       custodyColumns: number[];
       earliestAvailableSlot?: number;
       headChain?: {slot: number; blockRoot: string; payloadStatus?: PayloadStatus}[];
@@ -124,7 +125,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       hotExecutionPayloadEnvelopeBytes?: Uint8Array;
       archivedExecutionPayloadEnvelopeBytes?: Uint8Array;
       hasCachedPayloadEnvelope?: boolean;
-      getCanonicalBlockAtSlot?: IBeaconChain["getCanonicalBlockAtSlot"];
+      getRootBySlot?: IBeaconDb["blockArchive"]["getRootBySlot"];
       missingCustodyColumnsInc?: (value: number) => void;
     }) {
       const config = opts.config ?? fuluConfig;
@@ -135,6 +136,14 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       const archivedSlotsByRoot = new Map(opts.archivedBlockSlotsByRoot);
       const blockArchive = {
+        getRootBySlot:
+          opts.getRootBySlot ??
+          vi.fn(async (slot: number) => {
+            const block = getArchivedBlock(slot);
+            const root = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
+            archivedSlotsByRoot.set(toRootHex(root), slot);
+            return root;
+          }),
         getBinary: vi.fn().mockResolvedValue(opts.archivedBlockBytes ?? null),
         getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
       };
@@ -163,6 +172,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       const chain = {
         config,
+        getHeadState: () => opts.headState ?? {slot: 0},
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
@@ -186,13 +196,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         metrics: opts.missingCustodyColumnsInc
           ? {dataColumns: {missingCustodyColumns: {inc: opts.missingCustodyColumnsInc}}}
           : null,
-        getCanonicalBlockAtSlot:
-          opts.getCanonicalBlockAtSlot ??
-          (async (slot: number) => {
-            const block = getArchivedBlock(slot);
-            archivedSlotsByRoot.set(toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message)), slot);
-            return {block, executionOptimistic: false, finalized: true};
-          }),
+        getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range reads must use the root index")),
         getSerializedDataColumnSidecars:
           opts.getSerializedDataColumnSidecars ??
           ((slot: number, root: string, indices: number[]) =>
@@ -225,6 +229,64 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses.length).toBe(2);
       expect(new Uint8Array(responses[0].data)).toEqual(col0Data);
       expect(new Uint8Array(responses[1].data)).toEqual(col5Data);
+    });
+
+    it("should use head-state roots for recent archived blocks and skip repeated roots", async () => {
+      const column = new Uint8Array([1, 2, 3]);
+      await store.putDataColumnsBinary(10, ROOT_B, [{index: 0, data: column}]);
+      await store.putDataColumnsBinary(11, ROOT_A, [{index: 0, data: new Uint8Array([4])}]);
+      const getRootBySlot = vi.fn().mockRejectedValue(new Error("recent roots must come from the state"));
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        getRootBySlot,
+        headState: {slot: 101, getBlockRootAtSlot: (slot) => fromHex(slot < 10 ? ROOT_A : ROOT_B)},
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 2, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(column);
+      expect(getRootBySlot).not.toHaveBeenCalled();
+      expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
+    });
+
+    it("should use the index at the head-state ring boundary where the previous root is unavailable", async () => {
+      const column = new Uint8Array([1, 2, 3]);
+      await store.putDataColumnsBinary(10, ROOT_B, [{index: 0, data: column}]);
+      const getRootBySlot = vi.fn().mockResolvedValue(fromHex(ROOT_B));
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        getRootBySlot,
+        headState: {
+          slot: 10 + SLOTS_PER_HISTORICAL_ROOT,
+          getBlockRootAtSlot: () => {
+            throw new Error("previous root is outside the ring");
+          },
+        },
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(column);
+      expect(getRootBySlot).toHaveBeenCalledWith(10);
+    });
+
+    it("should not load a block when its archive slot index entry is absent", async () => {
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [{index: 0, data: new Uint8Array([1])}]);
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        getRootBySlot: async () => null,
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+      expect(responses).toEqual([]);
+      expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
+      expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
     });
 
     it("should serve finalized slots from either flat files or the LevelDB archive", async () => {
@@ -695,7 +757,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         finalizedSlot: 11,
         custodyColumns: [0],
         headChain: [{slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL}],
-        getCanonicalBlockAtSlot: async () => ({block, executionOptimistic: false, finalized: true}),
+        getRootBySlot: async () => fromHex(blockRootHex),
       });
       const responses = await collectAsync(
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
@@ -719,7 +781,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         custodyColumns: [0],
         headChain: [{slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL}],
         hotExecutionPayloadEnvelopeBytes: new Uint8Array([1]),
-        getCanonicalBlockAtSlot: async () => ({block, executionOptimistic: false, finalized: true}),
+        getRootBySlot: async () => fromHex(blockRootHex),
       });
       const responses = await collectAsync(
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
