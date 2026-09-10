@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
+import {ContextBytesFactory, ContextBytesType, Encoding, TypeSizes} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 
@@ -151,18 +151,18 @@ function toProtocol(protocol: ProtocolSummary) {
       encoding: Encoding.SSZ_SNAPPY,
       contextBytes: toContextBytes(protocol.contextBytesType, config),
       inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
-      // Length-prefix must be within the SSZ type bounds or MAX_PAYLOAD_SIZE, whichever is smaller
-      // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/p2p-interface.md#encoding-strategies
-      requestSizes:
-        requestType === null
-          ? null
-          : {minSize: requestType.minSize, maxSize: Math.min(requestType.maxSize, config.MAX_PAYLOAD_SIZE)},
-      responseSizes: (fork) => {
-        const responseType = responseSszTypeByMethod[protocol.method](fork, protocol.version);
-        return {minSize: responseType.minSize, maxSize: Math.min(responseType.maxSize, config.MAX_PAYLOAD_SIZE)};
-      },
+      requestSizes: requestType === null ? null : clampTypeSizes(requestType, config),
+      responseSizes: (fork) => clampTypeSizes(responseSszTypeByMethod[protocol.method](fork, protocol.version), config),
     };
   };
+}
+
+/**
+ * Length-prefix must be within the SSZ type bounds or MAX_PAYLOAD_SIZE, whichever is smaller
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/p2p-interface.md#encoding-strategies
+ */
+function clampTypeSizes(type: TypeSizes, config: BeaconConfig): TypeSizes {
+  return {minSize: type.minSize, maxSize: Math.min(type.maxSize, config.MAX_PAYLOAD_SIZE)};
 }
 
 function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
