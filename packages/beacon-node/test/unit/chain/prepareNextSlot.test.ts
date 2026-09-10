@@ -122,6 +122,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("fulu - should prepare payload and emit payload attributes", async () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+    const computeStateHashTreeRoot = vi.spyOn(scheduler, "computeStateHashTreeRoot");
     getForkStub.mockReturnValue(ForkName.fulu);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
@@ -163,6 +164,11 @@ describe("PrepareNextSlot scheduler", () => {
       expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
     );
     expect(spy).toHaveBeenCalledTimes(1);
+    // payload_attributes must not wait on the EL round trip or the state root warm-up
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(
+      executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
+    );
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
     expect(loggerStub.error).not.toHaveBeenCalled();
   });
 
