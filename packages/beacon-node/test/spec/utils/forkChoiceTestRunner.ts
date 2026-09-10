@@ -507,10 +507,8 @@ export const forkChoiceTestRunner =
                   validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
-                  // The spec's `on_block` returns early for a block already in the store
-                  // (consensus-specs#5495), and a block at or below the finalized slot has been
-                  // pruned from fork choice. Both are no-ops for the spec, so ignore rather than
-                  // reject to keep re-deliveries (the generator's `multi_route` mutation) passing.
+                  // A block the spec store already has is a no-op for on_block. Lodestar would reject it instead,
+                  // as already known or, once pruned by finalization, for being at or below the finalized slot.
                   ignoreIfKnown: isValid,
                   ignoreIfFinalized: isValid,
                 });
@@ -682,11 +680,8 @@ export const forkChoiceTestRunner =
                   .sort(cmpViableHead);
 
                 if (isGloas) {
-                  // TODO GLOAS: restore the exact-set comparison below once
-                  // https://github.com/ethereum/consensus-specs/issues/5496 is resolved. Lodestar
-                  // drops FFG-unviable payload-status variants the spec keeps, so assert subset
-                  // rather than equality. Pinning the affected cases by name instead would not
-                  // survive a comptests regeneration, since case names embed the generation seed.
+                  // TODO GLOAS: Assert set equality once https://github.com/ethereum/consensus-specs/issues/5496 is
+                  // resolved. Lodestar prunes payload-status variants failing the FFG check while the spec keeps them.
                   expect(actual.length).toBeGreaterThan(0);
                   const expectedByKey = new Map(expected.map((e) => [`${e.root}/${e.payloadStatus}`, e]));
                   for (const act of actual) {
@@ -834,7 +829,8 @@ export const forkChoiceTestRunner =
             payloadAttestationMessages,
           };
         },
-        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
+        // Must exceed BLOB_AVAILABILITY_TIMEOUT for on_block_peerdas__not_available to fail as expected.
+        // Gloas compliance vectors have up to ~650 steps and need the extra headroom.
         timeout: 60000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
