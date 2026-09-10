@@ -9,11 +9,13 @@ import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
+import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
   builderStatusTracker: BuilderStatusTracker;
+  proposerPreferencesTracker: ProposerPreferencesTracker;
   clock: IClock;
   index: BuilderIndex;
 };
@@ -34,6 +36,7 @@ export type BuilderOptions = {
  */
 export class Builder {
   readonly builderSigner: BuilderSigner;
+  readonly proposerPreferencesTracker: ProposerPreferencesTracker;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
   private readonly clock: IClock;
@@ -41,9 +44,10 @@ export class Builder {
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
 
-  constructor({opts, builderSigner, builderStatusTracker, clock, index}: BuilderModules) {
+  constructor({opts, builderSigner, builderStatusTracker, proposerPreferencesTracker, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.builderStatusTracker = builderStatusTracker;
+    this.proposerPreferencesTracker = proposerPreferencesTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
@@ -52,7 +56,11 @@ export class Builder {
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
+    this.clock.runEverySlot(async (slot) => {
+      this.proposerPreferencesTracker.prune(slot);
+    });
     this.clock.start(this.controller.signal);
+    this.proposerPreferencesTracker.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
       index: this.index,
@@ -89,8 +97,9 @@ export class Builder {
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
 
-    return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
+    return new Builder({opts, builderSigner, builderStatusTracker, proposerPreferencesTracker, clock, index});
   }
 
   async close(): Promise<void> {
