@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, DbBatch, FilterOptions, KeyValue, Repository, encodeKey} from "@lodestar/db";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Db, DbBatch, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
-import {Logger, bytesToInt, intToBytes} from "@lodestar/utils";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {
@@ -33,59 +32,6 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     const bucket = Bucket.allForks_blockArchive;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, bucket, type, getBucketNameByValue(bucket));
-  }
-
-  /** Backfill Fulu+ slot roots before starting archive writers or serving data-column requests. */
-  async init(logger: Logger): Promise<void> {
-    // The empty key is metadata; slots always have an eight-byte key.
-    const progressKey = encodeKey(Bucket.index_mainChain, new Uint8Array());
-    const progress = await this.db.get(progressKey);
-    if (progress?.length === 1) return;
-
-    const batchSize = 1000;
-    if (progress === null) {
-      let keys: Uint8Array[] = [];
-      for await (const key of this.db.keysStream({
-        gte: progressKey,
-        lt: encodeKey(Bucket.index_mainChain + 1, new Uint8Array()),
-      })) {
-        keys.push(key);
-        if (keys.length >= batchSize) {
-          await this.db.batchDelete(keys);
-          keys = [];
-        }
-      }
-      if (keys.length > 0) await this.db.batchDelete(keys);
-    }
-
-    const lastIndexedSlot = progress === null ? null : bytesToInt(progress, "be");
-    logger.info("Building archive block root index", {lastIndexedSlot});
-    let batch: DbBatch<Uint8Array, Uint8Array> = [];
-    let indexedSlots = 0;
-    let lastLoggedAt = Date.now();
-    const firstSlot = this.config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH;
-    const entries = Number.isFinite(firstSlot)
-      ? this.binaryEntriesStream({gte: Math.max(firstSlot, lastIndexedSlot === null ? 0 : lastIndexedSlot + 1)})
-      : [];
-    for await (const {key, value} of entries) {
-      const slot = this.decodeKey(key);
-      const block = this.decodeValue(value);
-      const root = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-      batch.push({type: "put", key: getSlotIndexKey(slot), value: root});
-      indexedSlots++;
-      if (batch.length >= batchSize) {
-        batch.push({type: "put", key: progressKey, value: intToBytes(slot, 8, "be")});
-        await this.db.batch(batch);
-        batch = [];
-        if (Date.now() - lastLoggedAt >= 10_000) {
-          logger.info("Building archive block root index", {indexedSlots, lastIndexedSlot: slot});
-          lastLoggedAt = Date.now();
-        }
-      }
-    }
-    batch.push({type: "put", key: progressKey, value: Uint8Array.of(1)});
-    await this.db.batch(batch);
-    logger.info("Archive block root index ready", {indexedSlots});
   }
 
   // Overrides for multi-fork
@@ -249,7 +195,6 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  /** Startup backfills Fulu onward; all subsequent archive writes are indexed. */
   async getRootBySlot(slot: Slot): Promise<Root | null> {
     return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain)});
   }

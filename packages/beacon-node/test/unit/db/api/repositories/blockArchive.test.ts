@@ -6,13 +6,11 @@ import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 
 describe("block archive repository", () => {
-  const migrationConfig = createChainForkConfig({FULU_FORK_EPOCH: 0});
   const testDir = "./.tmp_block_archive_unit_test";
   let blockArchive: BlockArchiveRepository;
   let db: LevelDbController;
@@ -163,101 +161,26 @@ describe("block archive repository", () => {
     expect(await db.get(encodeKey(Bucket.index_mainChain, 0))).toBeNull();
   });
 
-  it("should build the index from archived blocks despite missing or stale legacy indexes", async () => {
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    const blocks = [0, 10, 20].map((slot) => {
-      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-      block.message.slot = slot;
-      return block;
-    });
-    for (const block of blocks) {
-      await db.put(blockArchive.encodeKey(block.message.slot), blockArchive.encodeValue(block));
-    }
-    const roots = blocks.map((block) => ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
-    await db.put(encodeKey(Bucket.index_blockArchiveRootIndex, roots[0]), intToBytes(0, 8, "be"));
-    await db.put(encodeKey(Bucket.index_blockArchiveRootIndex, roots[2]), intToBytes(20, 8, "be"));
-    await db.put(encodeKey(Bucket.index_blockArchiveRootIndex, new Uint8Array(32).fill(1)), intToBytes(20, 8, "be"));
-    await db.put(encodeKey(Bucket.index_blockArchiveRootIndex, new Uint8Array(32).fill(2)), intToBytes(30, 8, "be"));
-    await db.put(encodeKey(Bucket.index_blockArchiveRootIndex, new Uint8Array(32).fill(3)), intToBytes(10, 8, "be"));
-    await db.put(encodeKey(Bucket.index_mainChain, 40), new Uint8Array(32).fill(4));
-    await blockArchive.init(testLogger());
-    for (let i = 0; i < blocks.length; i++) {
-      expect(
-        await blockArchive.getRootBySlot(blocks[i].message.slot),
-        `wrong root for slot ${blocks[i].message.slot}`
-      ).toEqual(Buffer.from(roots[i]));
-    }
-    expect(await blockArchive.getRootBySlot(30)).toBeNull();
-    expect(await blockArchive.getRootBySlot(40)).toBeNull();
-    expect(await blockArchive.getRootBySlot(1)).toBeNull();
-
-    const scan = vi.spyOn(db, "entriesStream");
-    await blockArchive.init(testLogger());
-    expect(scan).not.toHaveBeenCalled();
-  });
-
-  it("should retry an interrupted index build on restart", async () => {
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    await db.put(blockArchive.encodeKey(0), blockArchive.encodeValue(block));
-    const error = Object.assign(new Error("write failed"), {code: "EIO"});
-    vi.spyOn(db, "batch").mockRejectedValueOnce(error);
-    await expect(blockArchive.init(testLogger())).rejects.toThrow(error);
-    await db.close();
-    db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    await blockArchive.init(testLogger());
-    expect(await blockArchive.getRootBySlot(0)).toEqual(Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)));
-  });
-
-  it("should resume a partially persisted index build after reopening the database", async () => {
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    const blocks = Array.from({length: 1001}, (_, slot) => {
-      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-      block.message.slot = slot;
-      return block;
-    });
-    await db.batchPut(
-      blocks.map((block) => ({key: blockArchive.encodeKey(block.message.slot), value: blockArchive.encodeValue(block)}))
-    );
-    const writeBatch = db.batch.bind(db);
-    const error = Object.assign(new Error("write failed"), {code: "EIO"});
-    vi.spyOn(db, "batch").mockImplementationOnce(writeBatch).mockRejectedValueOnce(error);
-    await expect(blockArchive.init(testLogger())).rejects.toThrow(error);
-    expect(await blockArchive.getRootBySlot(0)).not.toBeNull();
-    expect(await blockArchive.getRootBySlot(1000)).toBeNull();
-    await db.close();
-    db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    const decode = vi.spyOn(blockArchive, "decodeValue");
-    await blockArchive.init(testLogger());
-    expect(decode).toHaveBeenCalledTimes(1);
-    expect(await blockArchive.getRootBySlot(1000)).toEqual(
-      Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(blocks[1000].message))
-    );
-  });
-
-  it("should finish indexing existing blocks before BeaconDb initialization returns", async () => {
-    blockArchive = new BlockArchiveRepository(migrationConfig, db);
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    await db.put(blockArchive.encodeKey(0), blockArchive.encodeValue(block));
-    const beaconDb = new BeaconDb(migrationConfig, db, {
+  it("should leave existing unindexed blocks untouched during startup", async () => {
+    const fuluConfig = createChainForkConfig({FULU_FORK_EPOCH: 0});
+    const beaconDb = new BeaconDb(fuluConfig, db, {
       dataColumnDir: `${testDir}/data_columns`,
       logger: testLogger(),
     });
-    await beaconDb.init();
-    expect(await beaconDb.blockArchive.getRootBySlot(0)).toEqual(
-      Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(block.message))
-    );
-  });
+    const existingBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const existingBytes = ssz.fulu.SignedBeaconBlock.serialize(existingBlock);
+    await db.put(beaconDb.blockArchive.encodeKey(0), existingBytes);
+    const newBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    newBlock.message.slot = 1;
+    await beaconDb.blockArchive.put(1, newBlock);
 
-  it("should leave pre-Fulu history out of the startup scan", async () => {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    await db.put(blockArchive.encodeKey(0), blockArchive.encodeValue(block));
-    const decode = vi.spyOn(blockArchive, "decodeValue");
-    await blockArchive.init(testLogger());
-    expect(decode).not.toHaveBeenCalled();
-    expect(await blockArchive.getRootBySlot(0)).toBeNull();
+    await beaconDb.init();
+
+    expect(await beaconDb.blockArchive.getBinary(0)).toEqual(Buffer.from(existingBytes));
+    expect(await beaconDb.blockArchive.getRootBySlot(0)).toBeNull();
+    expect(await beaconDb.blockArchive.getRootBySlot(1)).toEqual(
+      Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(newBlock.message))
+    );
   });
 
   it("should get slot by root", async () => {
