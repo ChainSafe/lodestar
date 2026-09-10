@@ -250,7 +250,7 @@ describe("network / gossip / topic", () => {
     }
   });
 
-  it("should use preset-defined gossip size limits for Gloas progressive objects", () => {
+  it("should match the preset p2p size bounds for Gloas progressive objects", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     expect({
