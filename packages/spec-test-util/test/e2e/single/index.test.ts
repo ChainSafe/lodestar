@@ -79,7 +79,7 @@ describeDirectorySpecTest<SimpleCase, number>(
       input: sampleContainerType,
       output: ssz.UintNum64,
     },
-    shouldErrorOnInput: (_inputNames, name) => name.endsWith("/case1"),
+    shouldErrorOnInput: (_error, _inputNames, name) => name.endsWith("/case1"),
     getExpected: (testCase) => testCase.output,
   }
 );

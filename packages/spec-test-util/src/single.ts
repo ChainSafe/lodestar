@@ -66,8 +66,8 @@ export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
-  /** Determine whether an input deserialization error is expected from the files present in the test case. */
-  shouldErrorOnInput?: (inputNames: Set<string>, name: string, index: number) => boolean;
+  /** Determine whether an input deserialization error is expected from the error and the files present in the test case. */
+  shouldErrorOnInput?: (error: Error, inputNames: Set<string>, name: string, index: number) => boolean;
 
   shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
@@ -128,7 +128,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
               .filter((file) => !isDirectory(path.join(testSubDirPath, file)))
               .map((file) => path.parse(file).name)
           );
-          if (options.shouldErrorOnInput?.(inputNames, testName, 0)) {
+          if (options.shouldErrorOnInput?.(e as Error, inputNames, testName, 0)) {
             return;
           }
           throw e;

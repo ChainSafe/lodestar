@@ -85,7 +85,9 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
       shouldError: (testCase) => testCase.post === undefined,
-      shouldErrorOnInput: (inputNames: Set<string>) => !inputNames.has("post"),
+      // Only an ssz list limit violation is an expected input error, anything else is a decode bug
+      shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+        !inputNames.has("post") && /over limit/.test(error.message),
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
