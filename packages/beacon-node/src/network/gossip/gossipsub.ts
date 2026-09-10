@@ -195,12 +195,19 @@ export class Eth2Gossipsub {
       // handleIWant() may serialize many RPC.Message entries into a single response RPC.
       // See: Lighthouse v8.1.3 security patches for analogous rust-libp2p fixes.
       decodeRpcLimits: {
+        // A peer's full current subscription set on stream attach, plus headroom for topic growth
         maxSubscriptions: 512,
+        // handleIWant() can pack many RPC.Message entries into one response RPC (must stay high for now)
         maxMessages: 5000,
+        // outer ControlIHave[] entries (not nested messageIDs); bounded by topic count in honest use
         maxIhaveMessageIDs: 256,
+        // outer ControlIWant[] entries (not nested messageIDs); js-libp2p normally emits a single one
         maxIwantMessageIDs: 16,
+        // nested messageIDs per ControlIDontWant; honest behavior is tiny (often 1)
         maxIdontwantMessageIDs: 16,
+        // outer GRAFT/PRUNE/IDONTWANT entries; room for multi-topic control bursts
         maxControlMessages: 256,
+        // PX peer infos per ControlPrune; near GossipsubPrunePeers (16) with interop slack
         maxPeerInfos: 32,
       },
     })(modules.libp2p.services.components) as GossipSubInternal;
