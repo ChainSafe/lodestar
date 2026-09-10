@@ -22,6 +22,7 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
     state,
     nextEpoch,
     nextEpochShuffling.committees,
+    nextEpochShuffling.shuffling,
     state.epochCtx.effectiveBalanceIncrements
   );
 

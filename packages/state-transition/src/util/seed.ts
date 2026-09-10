@@ -276,6 +276,7 @@ export function computePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
   committees: Uint32Array[][],
+  shuffling: Uint32Array,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
@@ -290,20 +291,11 @@ export function computePayloadTimelinessCommitteesForEpoch(
   }
   slotOffsets[SLOTS_PER_EPOCH] = shufflingLength;
 
-  const flatShuffling = new Uint32Array(shufflingLength);
-  let offset = 0;
-  for (const slotCommittees of committees) {
-    for (const committee of slotCommittees) {
-      flatShuffling.set(committee, offset);
-      offset += committee.length;
-    }
-  }
-
   const flatResult = lodestarZ.shuffle.computePtcIndicesForEpoch(
     epochSeed,
     startSlot,
     SLOTS_PER_EPOCH,
-    flatShuffling,
+    shuffling,
     slotOffsets,
     effectiveBalanceIncrements,
     PTC_SIZE,
