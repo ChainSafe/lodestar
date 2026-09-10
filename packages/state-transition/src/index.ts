@@ -13,7 +13,7 @@ export {
 } from "./block/processVoluntaryExit.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-export {BlockProcessStep, ProposerRewardType} from "./block/types.js";
+export {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 export {
   type EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsWithLen,

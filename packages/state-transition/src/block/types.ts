@@ -23,3 +23,19 @@ export enum BlockProcessStep {
   processSyncAggregate = "processSyncAggregate",
   processBlobKzgCommitments = "processBlobKzgCommitments",
 }
+
+/**
+ * Steps of `processOperations()` tracked in metrics
+ */
+export enum ProcessOperationsStep {
+  processProposerSlashing = "processProposerSlashing",
+  processAttesterSlashing = "processAttesterSlashing",
+  processAttestations = "processAttestations",
+  processDeposit = "processDeposit",
+  processVoluntaryExit = "processVoluntaryExit",
+  processBlsToExecutionChange = "processBlsToExecutionChange",
+  processDepositRequest = "processDepositRequest",
+  processWithdrawalRequest = "processWithdrawalRequest",
+  processConsolidationRequest = "processConsolidationRequest",
+  processPayloadAttestation = "processPayloadAttestation",
+}
