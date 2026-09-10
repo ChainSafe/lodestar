@@ -58,7 +58,11 @@ export class BlockObserver {
   }
 
   start(signal: AbortSignal): void {
-    this.logger.info("Subscribing to block events");
+    this.logger.info("Subscribing to block events", {
+      retries: this.retries,
+      retryDelay: this.retryDelay,
+      maxSeenBlockRoots: this.maxSeenBlockRoots,
+    });
 
     this.api.events
       .eventstream({
@@ -111,6 +115,7 @@ export class BlockObserver {
 
       const response = await retry(
         async () => {
+          // TODO GLOAS: Remove this lookup once bid-selection notifications provide the required data.
           const result = await this.api.beacon.getBlockV2({blockId: blockRoot}, {signal});
           result.assertOk();
           return result;
@@ -152,12 +157,12 @@ export class BlockObserver {
 
       const block = response.value();
       if (!isGloasBeaconBlock(block.message)) {
-        this.logger.error("Block response version and body do not agree", {slot, blockRoot, fork: version});
+        this.logger.warn("Block response version and body do not agree", {slot, blockRoot, fork: version});
         return;
       }
 
       if (block.message.slot !== slot) {
-        this.logger.error("Block response slot does not match block event", {
+        this.logger.warn("Block response slot does not match block event", {
           slot,
           blockRoot,
           blockSlot: block.message.slot,

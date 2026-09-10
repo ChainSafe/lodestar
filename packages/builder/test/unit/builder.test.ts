@@ -15,7 +15,7 @@ import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 describe("Builder", () => {
-  it("starts long-lived duties with the shared signal and aborts them on close", async () => {
+  it("starts background services with the shared signal and aborts them on close", async () => {
     const config = getConfig(ForkName.gloas);
     const logger = getMockedLogger();
     const api = getApiClientStub();

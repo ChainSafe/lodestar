@@ -54,7 +54,20 @@ describe("BlockObserver", () => {
       onError: expect.any(Function),
       onClose: expect.any(Function),
     });
-    expect(infoLog).toHaveBeenCalledWith("Subscribing to block events");
+    expect(infoLog).toHaveBeenCalledWith("Subscribing to block events", {
+      retries: 5,
+      retryDelay: 200,
+      maxSeenBlockRoots: 256,
+    });
+  });
+
+  it("logs the configured retrieval and deduplication limits", () => {
+    const options = {retries: 2, retryDelay: 50, maxSeenBlockRoots: 8};
+    const observer = new BlockObserver(config, logger, apiStub.api, options);
+
+    observer.start(controller.signal);
+
+    expect(infoLog).toHaveBeenCalledWith("Subscribing to block events", options);
   });
 
   it("ignores an unexpected non-block event defensively", () => {
@@ -321,7 +334,7 @@ describe("BlockObserver", () => {
     expect(onBlock).not.toHaveBeenCalled();
   });
 
-  it("logs a post-Gloas metadata and body-shape mismatch", async () => {
+  it("warns about a post-Gloas metadata and body-shape mismatch", async () => {
     apiStub.getBlockV2.mockResolvedValue(blockResponse(ssz.electra.SignedBeaconBlock.defaultValue()));
     const onBlock = vi.fn(async (_block: ObservedBlock) => {});
     const observer = new BlockObserver(config, logger, apiStub.api);
@@ -329,15 +342,16 @@ describe("BlockObserver", () => {
 
     await observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
 
-    expect(errorLog).toHaveBeenCalledWith("Block response version and body do not agree", {
+    expect(warnLog).toHaveBeenCalledWith("Block response version and body do not agree", {
       slot: 0,
       blockRoot: rootHex(1),
       fork: ForkName.gloas,
     });
+    expect(errorLog).not.toHaveBeenCalled();
     expect(onBlock).not.toHaveBeenCalled();
   });
 
-  it("logs and stops when the returned block slot does not match the event", async () => {
+  it("warns and stops when the returned block slot does not match the event", async () => {
     const block = gloasBlock();
     block.message.slot = 1;
     apiStub.getBlockV2.mockResolvedValue(blockResponse(block));
@@ -350,11 +364,12 @@ describe("BlockObserver", () => {
     await observer.processBlockEvent(event, controller.signal);
 
     expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
-    expect(errorLog).toHaveBeenCalledWith("Block response slot does not match block event", {
+    expect(warnLog).toHaveBeenCalledWith("Block response slot does not match block event", {
       slot: event.slot,
       blockRoot: event.block,
       blockSlot: block.message.slot,
     });
+    expect(errorLog).not.toHaveBeenCalled();
     expect(onBlock).not.toHaveBeenCalled();
   });
 
