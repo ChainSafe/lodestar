@@ -31,13 +31,20 @@ export class ProportionalBidPolicy implements BidPolicy {
       throw Error(`Invalid shareBps=${opts.shareBps}, must be an integer within [0, 10000]`);
     }
 
-    if (opts.minValueGwei < 0) {
-      throw Error(`Invalid minValueGwei=${opts.minValueGwei}, must be a positive number`);
+    if (!Number.isSafeInteger(opts.fixedCostGwei) || opts.fixedCostGwei < 0) {
+      throw Error(`Invalid fixedCostGwei=${opts.fixedCostGwei}, must be a nonnegative safe integer`);
     }
 
-    if (opts.maxValueGwei !== undefined && opts.maxValueGwei < opts.minValueGwei) {
+    if (!Number.isSafeInteger(opts.minValueGwei) || opts.minValueGwei < 0) {
+      throw Error(`Invalid minValueGwei=${opts.minValueGwei}, must be a nonnegative safe integer`);
+    }
+
+    if (
+      opts.maxValueGwei !== undefined &&
+      (!Number.isSafeInteger(opts.maxValueGwei) || opts.maxValueGwei < opts.minValueGwei)
+    ) {
       throw Error(
-        `Invalid maxValueGwei=${opts.maxValueGwei}, must be greater than or equal to minValueGwei=${opts.minValueGwei}`
+        `Invalid maxValueGwei=${opts.maxValueGwei}, must be a safe integer greater than or equal to minValueGwei=${opts.minValueGwei}`
       );
     }
   }

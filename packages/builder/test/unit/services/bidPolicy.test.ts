@@ -42,6 +42,20 @@ describe("ProportionalBidPolicy", () => {
     ).toThrow();
   });
 
+  describe.each(["fixedCostGwei", "minValueGwei", "maxValueGwei"] as const)("%s validation", (option) => {
+    it.each([-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1])("rejects %s", (value) => {
+      expect(
+        () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
+      ).toThrow(`Invalid ${option}=`);
+    });
+
+    it.each([0, Number.MAX_SAFE_INTEGER])("accepts %s", (value) => {
+      expect(
+        () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
+      ).not.toThrow();
+    });
+  });
+
   it("computes a full-value bid without unsafe intermediate arithmetic", () => {
     const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0});
     expect(
