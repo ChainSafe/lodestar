@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
@@ -11,16 +12,16 @@ import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
-import {getApiClientStub} from "./utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
-import {mockBuiltPayload} from "./utils/payload.js";
 
-describe("Builder", () => {
-  it("starts background services with the shared signal and aborts them on close", async () => {
+describe("Builder preference tracking", () => {
+  it("subscribes, retains preferences, prunes on slot ticks and aborts on close", async () => {
     const config = getConfig(ForkName.gloas);
     const logger = getMockedLogger();
     const api = getApiClientStub();
+    api.events.eventstream.mockResolvedValue(mockApiResponse({data: undefined, meta: undefined}));
     const controller = new AbortController();
     const clock = new ClockMock();
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
@@ -29,18 +30,7 @@ describe("Builder", () => {
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
-    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
-    preferences.message.proposalSlot = 2;
-    const dependentRoot = toRootHex(preferences.message.dependentRoot);
-    proposerPreferencesTracker.onProposerPreferences(preferences);
     const store = new PayloadStore();
-    const payload = mockBuiltPayload({slot: 0});
-    const blockHash = toRootHex(payload.executionPayload.blockHash);
-    store.add({slot: 0, parentBlockRoot: Buffer.alloc(32), blockHash, payload});
-    const clockStart = vi.spyOn(clock, "start");
-    const observerStart = vi.spyOn(blockObserver, "start").mockImplementation(() => {});
-    const preferencesStart = vi.spyOn(proposerPreferencesTracker, "start").mockImplementation(() => {});
-
     const opts: BuilderOptions = {
       logger,
       config,
@@ -50,7 +40,7 @@ describe("Builder", () => {
       executionFeeRecipient: Buffer.alloc(20),
       metrics: null,
     };
-
+    const clockStart = vi.spyOn(clock, "start");
     const builder = new Builder({
       opts,
       builderSigner,
@@ -63,20 +53,28 @@ describe("Builder", () => {
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
-    expect(observerStart).toHaveBeenCalledWith(controller.signal);
-    expect(preferencesStart).toHaveBeenCalledWith(controller.signal);
-    expect(clockStart.mock.invocationCallOrder[0]).toBeLessThan(observerStart.mock.invocationCallOrder[0]);
-    expect(clockStart.mock.invocationCallOrder[0]).toBeLessThan(preferencesStart.mock.invocationCallOrder[0]);
-    expect(controller.signal.aborted).toBe(false);
+    expect(api.events.eventstream).toHaveBeenCalledTimes(2);
+    const subscription = api.events.eventstream.mock.calls.find(([{topics}]) =>
+      topics.includes(routes.events.EventType.proposerPreferences)
+    );
+    expect(subscription).toBeDefined();
+    if (subscription === undefined) throw Error("Missing proposer preferences subscription");
+    const [{onEvent, signal}] = subscription;
+    expect(signal).toBe(controller.signal);
+    const signed = ssz.gloas.SignedProposerPreferences.defaultValue();
+    signed.message.proposalSlot = 4;
+    const root = toRootHex(signed.message.dependentRoot);
+    onEvent({type: routes.events.EventType.proposerPreferences, message: {version: ForkName.gloas, data: signed}});
+    expect(builder.proposerPreferencesTracker.get(4, root)).toEqual(signed);
 
-    expect(store.has(blockHash)).toBe(true);
-    expect(proposerPreferencesTracker.get(2, dependentRoot)).toBe(preferences);
-    await clock.tickSlotFns(3, controller.signal);
-    expect(store.has(blockHash)).toBe(false);
-    expect(proposerPreferencesTracker.get(2, dependentRoot)).toBeNull();
+    await clock.tickSlotFns(4, controller.signal);
+    expect(builder.proposerPreferencesTracker.get(4, root)).toEqual(signed);
+    await clock.tickSlotFns(5, controller.signal);
+    expect(builder.proposerPreferencesTracker.get(4, root)).toBeNull();
 
     await builder.close();
-
-    expect(controller.signal.aborted).toBe(true);
+    expect(signal.aborted).toBe(true);
+    onEvent({type: routes.events.EventType.proposerPreferences, message: {version: ForkName.gloas, data: signed}});
+    expect(builder.proposerPreferencesTracker.get(4, root)).toBeNull();
   });
 });
