@@ -64,7 +64,7 @@ describe("LegacyDataColumnStore", () => {
     expect(getArchived).not.toHaveBeenCalled();
   });
 
-  it("should merge complete sidecars by backend priority", async () => {
+  it.each(["flat files", "legacy storage"])("should read complete sidecars from %s", async (source) => {
     const flatColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     flatColumn.index = 0;
     const duplicateHotColumn = ssz.fulu.DataColumnSidecar.defaultValue();
@@ -74,24 +74,41 @@ describe("LegacyDataColumnStore", () => {
     const archivedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     archivedColumn.index = 2;
     const flatFiles = makeFlatFiles();
-    vi.mocked(flatFiles.getDataColumns).mockResolvedValue([flatColumn]);
+    vi.mocked(flatFiles.getDataColumns).mockResolvedValue(source === "flat files" ? [flatColumn] : []);
+    const getHot = vi.fn().mockResolvedValue([hotColumn, duplicateHotColumn]);
+    const getArchived = vi.fn().mockResolvedValue([hotColumn, archivedColumn]);
+    const getSlotByRoot = vi.fn().mockResolvedValue(10);
     const store = new LegacyDataColumnStore(
       flatFiles,
       {
-        values: vi.fn().mockResolvedValue([duplicateHotColumn, hotColumn]),
+        values: getHot,
         getManyBinary: vi.fn(),
         deleteMany: vi.fn(),
       },
       {
-        values: vi.fn().mockResolvedValue([hotColumn, archivedColumn]),
+        values: getArchived,
         getManyBinary: vi.fn(),
         keys: vi.fn().mockResolvedValue([]),
         deleteMany: vi.fn(),
       },
-      {getSlotByRoot: vi.fn().mockResolvedValue(10)}
+      {getSlotByRoot}
     );
 
-    await expect(store.getAll({slot: 10, blockRoot: ROOT})).resolves.toEqual([flatColumn, hotColumn, archivedColumn]);
+    if (source === "flat files") {
+      await expect(store.getAll({slot: 10, blockRoot: ROOT})).resolves.toEqual([flatColumn]);
+      expect(getHot).not.toHaveBeenCalled();
+      expect(getArchived).not.toHaveBeenCalled();
+      expect(getSlotByRoot).not.toHaveBeenCalled();
+    } else {
+      await expect(store.getAll({slot: 10, blockRoot: ROOT})).resolves.toEqual([
+        duplicateHotColumn,
+        hotColumn,
+        archivedColumn,
+      ]);
+      expect(getHot).toHaveBeenCalledWith(fromHex(ROOT));
+      expect(getArchived).toHaveBeenCalledWith(10);
+      expect(getSlotByRoot).toHaveBeenCalledWith(fromHex(ROOT));
+    }
   });
 
   it("should coordinate writes, deletion, and pruning across backends", async () => {

@@ -347,7 +347,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(getArchivedDataColumnSidecars).not.toHaveBeenCalled();
     });
 
-    it("should merge deserialized flat file, hot, and archived LevelDB columns by index", async () => {
+    it("should prefer deserialized flat file columns over legacy columns", async () => {
       const flatColumn = ssz.fulu.DataColumnSidecar.defaultValue();
       flatColumn.index = 0;
       const duplicateHotColumn = ssz.fulu.DataColumnSidecar.defaultValue();
@@ -385,7 +385,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       const dataColumnSidecars = await BeaconChain.prototype.getDataColumnSidecars.call(chain, 10, ROOT_A);
 
-      expect(dataColumnSidecars).toEqual([flatColumn, hotColumn, archivedColumn]);
+      expect(dataColumnSidecars).toEqual([flatColumn]);
     });
 
     it("should serve only requested columns from flat file store", async () => {

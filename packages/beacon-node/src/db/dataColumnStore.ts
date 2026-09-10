@@ -38,11 +38,10 @@ export class LegacyDataColumnStore implements IDataColumnStore {
   ) {}
 
   async getAll({slot, blockRoot}: DataColumnKey): Promise<DataColumnSidecar[]> {
-    const sidecarsByIndex = new Map<ColumnIndex, DataColumnSidecar>();
-    for (const sidecar of await this.flatFiles.getDataColumns(slot, blockRoot)) {
-      sidecarsByIndex.set(sidecar.index, sidecar);
-    }
+    const sidecars = await this.flatFiles.getDataColumns(slot, blockRoot);
+    if (sidecars.length > 0) return sidecars;
 
+    const sidecarsByIndex = new Map<ColumnIndex, DataColumnSidecar>();
     const root = fromHex(blockRoot);
     for (const sidecar of await this.legacyHot.values(root)) {
       if (!sidecarsByIndex.has(sidecar.index)) sidecarsByIndex.set(sidecar.index, sidecar);
