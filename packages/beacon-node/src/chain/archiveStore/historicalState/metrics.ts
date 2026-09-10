@@ -78,7 +78,7 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_process_block_step_seconds",
       help: "Time to call each step of process block in seconds",
       labelNames: ["step"],
-      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
     }),
     processBlockCommitTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_commit_seconds",
