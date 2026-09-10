@@ -146,11 +146,9 @@ async function fetchBuilder(
 }
 
 function msToNextEpochPoll(clock: IClock): number {
-  // wait a slot past the epoch boundary so the BN has processed the transition
   return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1));
 }
 
 function msToNextSlotPoll(clock: IClock): number {
-  // builder can appear in state any slot once the deposit is processed
   return clock.msToSlot(clock.getCurrentSlot() + 1);
 }
