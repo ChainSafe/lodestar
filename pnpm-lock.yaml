@@ -371,7 +371,7 @@ importers:
         version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -504,7 +504,7 @@ importers:
         version: 9.1.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -687,7 +687,7 @@ importers:
         version: 1.13.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
 
   packages/reqresp:
     dependencies:
@@ -861,7 +861,7 @@ importers:
         version: 1.6.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.5
@@ -4539,8 +4539,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@4.3.1:
-    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
+  js-yaml@4.3.2:
+    resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
 
   json-parse-even-better-errors@5.0.0:
@@ -10544,7 +10544,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@4.3.1:
+  js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
 
