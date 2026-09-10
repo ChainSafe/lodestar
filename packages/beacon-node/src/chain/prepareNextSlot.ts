@@ -245,8 +245,6 @@ export class PrepareNextSlotScheduler {
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
         // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-        // Emitted before the EL round trip and the state root warm-up below, neither is needed for the event
-        // and both delay external builders that subscribe to it.
         if (
           (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
