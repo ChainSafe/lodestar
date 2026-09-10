@@ -63,6 +63,7 @@ export class BeaconDb implements IBeaconDb {
   backfilledRanges: BackfilledRanges;
 
   readonly dataColumns: IDataColumnStore;
+  private readonly logger: Logger;
   private readonly flatFileStore: FlatFileStore;
 
   constructor(
@@ -71,6 +72,7 @@ export class BeaconDb implements IBeaconDb {
     opts: BeaconDbOpts
   ) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
+    this.logger = opts.logger;
     this.block = new BlockRepository(config, db);
     this.blockArchive = new BlockArchiveRepository(config, db);
 
@@ -107,6 +109,7 @@ export class BeaconDb implements IBeaconDb {
   }
 
   async init(): Promise<void> {
+    await this.blockArchive.init(this.logger);
     await this.flatFileStore.init();
   }
 
