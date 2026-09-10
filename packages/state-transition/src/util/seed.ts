@@ -1,5 +1,5 @@
 import {digest} from "@chainsafe/as-sha256";
-import lodestarZ from "@chainsafe/lodestar-z";
+import {computePtcIndicesForEpoch} from "@chainsafe/lodestar-z/shuffle";
 import {
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
@@ -292,7 +292,7 @@ export function computePayloadTimelinessCommitteesForEpoch(
   slotOffsets[SLOTS_PER_EPOCH] = shufflingLength;
 
   // Native sampling returns all committees concatenated in slot order, with PTC_SIZE indices per slot.
-  const flatResult = lodestarZ.shuffle.computePtcIndicesForEpoch(
+  const flatResult = computePtcIndicesForEpoch(
     epochSeed,
     startSlot,
     SLOTS_PER_EPOCH,
