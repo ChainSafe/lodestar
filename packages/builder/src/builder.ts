@@ -9,6 +9,7 @@ import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
+import {PayloadStore} from "./services/payloadStore.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -16,6 +17,7 @@ export type BuilderModules = {
   builderStatusTracker: BuilderStatusTracker;
   clock: IClock;
   index: BuilderIndex;
+  store: PayloadStore;
 };
 
 export type BuilderOptions = {
@@ -40,17 +42,20 @@ export class Builder {
   private readonly index: BuilderIndex;
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
+  private readonly store: PayloadStore;
 
-  constructor({opts, builderSigner, builderStatusTracker, clock, index}: BuilderModules) {
+  constructor({opts, builderSigner, builderStatusTracker, clock, index, store}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.builderStatusTracker = builderStatusTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
     this.index = index;
+    this.store = store;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
+    this.clock.runEverySlot(async (slot) => this.onSlot(slot));
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
 
@@ -90,7 +95,13 @@ export class Builder {
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
 
-    return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
+    const store = new PayloadStore();
+
+    return new Builder({opts, builderSigner, builderStatusTracker, clock, index, store});
+  }
+
+  private async onSlot(slot: number): Promise<void> {
+    this.store.prune(slot);
   }
 
   async close(): Promise<void> {
