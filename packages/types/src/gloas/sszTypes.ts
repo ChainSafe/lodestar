@@ -20,22 +20,31 @@ import {
   HISTORICAL_ROOTS_LIMIT,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_BUILDER_AUTH_DATA_SIZE,
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_BYTES_PER_TRANSACTION,
+  MAX_COMMITTEES_PER_SLOT,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
   MAX_PAYLOAD_ATTESTATIONS,
   MAX_PROPOSER_SLASHINGS,
+  MAX_TRANSACTIONS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
+  PENDING_CONSOLIDATIONS_LIMIT,
+  PENDING_DEPOSITS_LIMIT,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
+  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
@@ -78,19 +87,35 @@ export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_DE
 
 export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_GLOAS);
 
-export const AggregationBits = new ProgressiveBitListType({typeName: "AggregationBits"});
-export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {typeName: "AttestingIndices"});
-export const Transaction = new ProgressiveByteListType({typeName: "Transaction"});
-export const Transactions = new ProgressiveListCompositeType(Transaction, {typeName: "Transactions"});
+export const AggregationBits = new ProgressiveBitListType({
+  typeName: "AggregationBits",
+  limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
+});
+export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {
+  typeName: "AttestingIndices",
+  limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
+});
+export const Transaction = new ProgressiveByteListType({typeName: "Transaction", limit: MAX_BYTES_PER_TRANSACTION});
+export const Transactions = new ProgressiveListCompositeType(Transaction, {
+  typeName: "Transactions",
+  limit: MAX_TRANSACTIONS_PER_PAYLOAD,
+});
 export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawal, {
   typeName: "Withdrawals",
   limit: MAX_WITHDRAWALS_PER_PAYLOAD,
 });
 export const BlobKzgCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
   typeName: "BlobKzgCommitments",
+  limit: MAX_BLOB_COMMITMENTS_PER_BLOCK,
 });
-export const KZGProofs = new ProgressiveListCompositeType(denebSsz.KZGProof, {typeName: "KZGProofs"});
-export const DataColumn = new ProgressiveListCompositeType(fuluSsz.Cell, {typeName: "DataColumn"});
+export const KZGProofs = new ProgressiveListCompositeType(denebSsz.KZGProof, {
+  typeName: "KZGProofs",
+  limit: MAX_BLOB_COMMITMENTS_PER_BLOCK,
+});
+export const DataColumn = new ProgressiveListCompositeType(fuluSsz.Cell, {
+  typeName: "DataColumn",
+  limit: MAX_BLOB_COMMITMENTS_PER_BLOCK,
+});
 
 export const Attestation = new ProgressiveContainerType(
   {
@@ -224,20 +249,33 @@ export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz
   limit: MAX_BLS_TO_EXECUTION_CHANGES,
 });
 
-export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {typeName: "Validators"});
-export const Balances = new ProgressiveListBasicType(UintNum64, {typeName: "Balances"});
+export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {
+  typeName: "Validators",
+  limit: VALIDATOR_REGISTRY_LIMIT,
+});
+export const Balances = new ProgressiveListBasicType(UintNum64, {
+  typeName: "Balances",
+  limit: VALIDATOR_REGISTRY_LIMIT,
+});
 export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {
   typeName: "EpochParticipation",
+  limit: VALIDATOR_REGISTRY_LIMIT,
 });
-export const InactivityScores = new ProgressiveListBasicType(UintNum64, {typeName: "InactivityScores"});
+export const InactivityScores = new ProgressiveListBasicType(UintNum64, {
+  typeName: "InactivityScores",
+  limit: VALIDATOR_REGISTRY_LIMIT,
+});
 export const PendingDeposits = new ProgressiveListCompositeType(electraSsz.PendingDeposit, {
   typeName: "PendingDeposits",
+  limit: PENDING_DEPOSITS_LIMIT,
 });
 export const PendingPartialWithdrawals = new ProgressiveListCompositeType(electraSsz.PendingPartialWithdrawal, {
   typeName: "PendingPartialWithdrawals",
+  limit: PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 });
 export const PendingConsolidations = new ProgressiveListCompositeType(electraSsz.PendingConsolidation, {
   typeName: "PendingConsolidations",
+  limit: PENDING_CONSOLIDATIONS_LIMIT,
 });
 
 export const Builder = new ContainerType(
