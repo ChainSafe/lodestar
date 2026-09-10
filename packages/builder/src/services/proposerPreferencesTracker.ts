@@ -55,7 +55,6 @@ export class ProposerPreferencesTracker {
     return true;
   }
 
-  /** Returns retained preferences; callers must not mutate them. */
   get(slot: Slot, dependentRoot: RootHex): gloas.SignedProposerPreferences | null {
     return this.byDependentRootBySlot.get(slot)?.get(dependentRoot) ?? null;
   }
