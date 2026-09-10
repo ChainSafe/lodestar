@@ -3,11 +3,11 @@ import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPos
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {strip0xPrefix} from "@lodestar/utils";
+import {fromHex, strip0xPrefix} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {JobFnQueue} from "../../util/queue/index.js";
 import {
   ClientCode,
   ClientVersion,
@@ -27,6 +27,26 @@ import {
   ReqOpts,
 } from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
+import {SszRestClient, isSszRestNetworkError} from "./sszRestClient.js";
+import {
+  decodeForkchoiceUpdatedResponse,
+  decodeGetBlobsV1Response,
+  decodeGetBlobsV2Response,
+  decodeGetClientVersionResponse,
+  decodeGetPayloadResponse,
+  decodePayloadBodiesV1Response,
+  decodePayloadStatus,
+  encodeForkchoiceUpdatedRequest,
+  encodeGetBlobsRequest,
+  encodeGetClientVersionRequest,
+  encodeGetPayloadBodiesByHashRequest,
+  encodeGetPayloadBodiesByRangeRequest,
+  encodeNewPayloadRequest,
+  forkchoiceUpdatedVersion,
+  getBlobsVersion,
+  getPayloadVersion,
+  newPayloadVersion,
+} from "./sszRestEncoding.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
@@ -80,6 +100,17 @@ export type ExecutionEngineHttpOpts = {
    * Lodestar commit to be used for `ClientVersion`
    */
   commit?: string;
+  /**
+   * EIP-8161 / ethereum/execution-apis#764: opt-in to the binary SSZ-REST
+   * Engine API transport.
+   *
+   * When enabled, the CL negotiates SSZ-REST endpoint support through
+   * engine_exchangeCapabilities, uses binary SSZ for mutually advertised
+   * endpoints, and falls back to JSON-RPC on network errors. Off by default
+   * until the spec stabilises and ELs we test against advertise support
+   * consistently.
+   */
+  sszRest?: boolean;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -116,6 +147,30 @@ const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+const exchangeCapabilitiesOpts: ReqOpts = {routeId: "exchangeCapabilities", retries: 1};
+
+const supportedSszRestEndpoints = [
+  "POST /engine/v1/payloads",
+  "POST /engine/v2/payloads",
+  "POST /engine/v3/payloads",
+  "POST /engine/v4/payloads",
+  "POST /engine/v5/payloads",
+  "GET /engine/v1/payloads/{payload_id}",
+  "GET /engine/v2/payloads/{payload_id}",
+  "GET /engine/v3/payloads/{payload_id}",
+  "GET /engine/v4/payloads/{payload_id}",
+  "GET /engine/v5/payloads/{payload_id}",
+  "GET /engine/v6/payloads/{payload_id}",
+  "POST /engine/v1/payloads/bodies/by-hash",
+  "POST /engine/v1/payloads/bodies/by-range",
+  "POST /engine/v1/forkchoice",
+  "POST /engine/v2/forkchoice",
+  "POST /engine/v3/forkchoice",
+  "POST /engine/v4/forkchoice",
+  "POST /engine/v1/blobs",
+  "POST /engine/v2/blobs",
+  "POST /engine/v1/client/version",
+];
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -139,6 +194,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   clientVersion?: ClientVersion | null;
 
   readonly payloadIdCache = new PayloadIdCache();
+
+  /** EIP-8161: SSZ-REST client, null if not configured */
+  private readonly sszRestClient: SszRestClient | null;
+  private readonly sszRestCapabilities: Promise<Set<string>> | null;
+
   /**
    * A queue to serialize the fcUs and newPayloads calls:
    *
@@ -148,27 +208,38 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * the order of new payloads and fcUs is pretty important to EL, this queue will serialize the calls in the
    * order with which we make them.
    */
-  private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
-
-  private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
-    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {method, params},
-      methodOpts
-    );
-  };
+  private readonly rpcFetchQueue: JobFnQueue;
 
   constructor(
     private readonly rpc: IJsonRpcHttpClient,
     {metrics, signal, logger}: ExecutionEngineModules,
     private readonly opts?: ExecutionEngineHttpOpts
   ) {
-    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
-      this.jobQueueProcessor,
+    this.rpcFetchQueue = new JobFnQueue(
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
     this.metrics = metrics ?? null;
+
+    // EIP-8161: Initialize SSZ-REST client only when the flag is set.
+    // SSZ-REST routes are served on the same port under /engine/* paths.
+    if (opts?.sszRest) {
+      const engineUrl = opts.urls?.[0] ?? "http://localhost:8551";
+      const baseUrl = stripTrailingSlashes(engineUrl);
+      this.sszRestClient = new SszRestClient({
+        baseUrl,
+        jwtSecretHex: opts.jwtSecretHex,
+        jwtId: opts.jwtId,
+        jwtVersion: opts.jwtVersion,
+        timeout: opts.timeout,
+      });
+      this.sszRestCapabilities = this.exchangeSszRestCapabilities();
+      this.logger.info("SSZ-REST Engine API transport enabled (EIP-8161)", {url: baseUrl});
+    } else {
+      this.sszRestClient = null;
+      this.sszRestCapabilities = null;
+    }
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
@@ -184,6 +255,36 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
+  }
+
+  private async exchangeSszRestCapabilities(): Promise<Set<string>> {
+    const method = "engine_exchangeCapabilities";
+    try {
+      const response = await this.rpc.fetchWithRetries<
+        EngineApiRpcReturnTypes[typeof method],
+        EngineApiRpcParamTypes[typeof method]
+      >({method, params: [supportedSszRestEndpoints]}, exchangeCapabilitiesOpts);
+
+      return new Set(response.filter((capability) => supportedSszRestEndpoints.includes(capability)));
+    } catch (e) {
+      this.logger.debug("Unable to exchange SSZ-REST Engine API capabilities", {}, e as Error);
+      return new Set();
+    }
+  }
+
+  private async supportsSszRestEndpoint(endpoint: string): Promise<boolean> {
+    return (await this.sszRestCapabilities)?.has(endpoint) ?? false;
+  }
+
+  private async fetchQueued<K extends EngineRequestKey>(
+    request: EngineRequest<K>
+  ): Promise<EngineApiRpcReturnTypes[K]> {
+    return this.rpcFetchQueue.push(() =>
+      this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[K], EngineApiRpcParamTypes[K]>(
+        {method: request.method, params: request.params},
+        request.methodOpts
+      )
+    );
   }
 
   /**
@@ -215,16 +316,52 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
-    const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_newPayloadV5"
-        : ForkSeq[fork] >= ForkSeq.electra
-          ? "engine_newPayloadV4"
-          : ForkSeq[fork] >= ForkSeq.deneb
-            ? "engine_newPayloadV3"
-            : ForkSeq[fork] >= ForkSeq.capella
-              ? "engine_newPayloadV2"
-              : "engine_newPayloadV1";
+    // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
+    if (this.sszRestClient) {
+      const path = `/engine/v${newPayloadVersion(fork)}/payloads`;
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST newPayload endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeNewPayloadRequest(
+            fork,
+            executionPayload,
+            versionedHashes,
+            parentBlockRoot,
+            executionRequests
+          );
+          const resp = await this.rpcFetchQueue.push<Uint8Array>(async () => {
+            if (!this.sszRestClient) throw Error("SSZ-REST client not configured");
+            return this.sszRestClient.doRequest(path, body);
+          });
+          const {status, latestValidHash, validationError} = decodePayloadStatus(resp);
+          this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
+
+          switch (status) {
+            case ExecutionPayloadStatus.VALID:
+              return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
+            case ExecutionPayloadStatus.INVALID:
+              return {status, latestValidHash, validationError};
+            case ExecutionPayloadStatus.SYNCING:
+            case ExecutionPayloadStatus.ACCEPTED:
+              return {status, latestValidHash: null, validationError: null};
+            default:
+              return {
+                status: ExecutionPayloadStatus.ELERROR,
+                latestValidHash: null,
+                validationError: `Invalid EL status on executePayload: ${status}`,
+              };
+          }
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST newPayload failed, falling back to JSON-RPC", {error: (e as Error).message});
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -272,7 +409,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
+      this.fetchQueued(engineRequest) as Promise<EngineApiRpcReturnTypes["engine_newPayloadV1"]>
     ).catch((e: Error) => {
       if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
         return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
@@ -347,6 +484,75 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
+    // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
+    if (this.sszRestClient) {
+      const path = `/engine/v${forkchoiceUpdatedVersion(fork)}/forkchoice`;
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST forkchoiceUpdate endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeForkchoiceUpdatedRequest(
+            fork,
+            fromHex(headBlockHash),
+            fromHex(safeBlockHash),
+            fromHex(finalizedBlockHash),
+            payloadAttributes
+          );
+          const resp = await this.rpcFetchQueue.push<Uint8Array>(async () => {
+            if (!this.sszRestClient) throw Error("SSZ-REST client not configured");
+            return this.sszRestClient.doRequest(path, body);
+          });
+          const decoded = decodeForkchoiceUpdatedResponse(resp);
+          const {status, validationError} = decoded.payloadStatus;
+
+          this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
+          this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
+
+          const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
+
+          switch (status) {
+            case ExecutionPayloadStatus.VALID:
+              if (payloadAttributesRpc) {
+                if (decoded.payloadId === null) {
+                  throw Error("Received null payloadId when payload attributes were provided");
+                }
+                this.payloadIdCache.add(
+                  {headBlockHash, finalizedBlockHash, ...payloadAttributesRpc},
+                  decoded.payloadId
+                );
+                void this.prunePayloadIdCache();
+              }
+              return decoded.payloadId;
+
+            case ExecutionPayloadStatus.SYNCING:
+              if (payloadAttributes) {
+                throw Error("Execution Layer Syncing");
+              }
+              return null;
+
+            case ExecutionPayloadStatus.INVALID:
+              throw Error(
+                `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
+                  validationError ?? ""
+                }`
+              );
+
+            default:
+              throw Error(`Unknown status ${status}`);
+          }
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST forkchoiceUpdate failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
@@ -363,7 +569,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const fcUReqOpts =
       payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retries: 0};
 
-    const request = this.rpcFetchQueue.push({
+    const request = this.fetchQueued({
       method,
       params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
       methodOpts: fcUReqOpts,
@@ -426,6 +632,33 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
+    // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
+    if (this.sszRestClient) {
+      const pathPrefix = `/engine/v${getPayloadVersion(fork)}/payloads`;
+      const endpoint = `GET ${pathPrefix}/{payload_id}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getPayload endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const resp = await this.sszRestClient.doGetRequest(`${pathPrefix}/${payloadId}`);
+          const decoded = decodeGetPayloadResponse(fork, resp);
+          return {
+            executionPayload: decoded.executionPayload,
+            executionPayloadValue: decoded.blockValue,
+            blobsBundle: decoded.blobsBundle,
+            executionRequests: decoded.executionRequests,
+            shouldOverrideBuilder: decoded.shouldOverrideBuilder,
+          };
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getPayload failed, falling back to JSON-RPC", {error: (e as Error).message});
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
       case ForkName.phase0:
@@ -467,8 +700,31 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
+
+    if (this.sszRestClient) {
+      const path = "/engine/v1/payloads/bodies/by-hash";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getPayloadBodiesByHash endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetPayloadBodiesByHashRequest(blockHashes.map((h) => fromHex(h)));
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodePayloadBodiesV1Response(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getPayloadBodiesByHash failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getPayloadBodiesByHashV1";
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -481,8 +737,31 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
     assertReqSizeLimit(blockCount, 32);
+
+    if (this.sszRestClient) {
+      const path = "/engine/v1/payloads/bodies/by-range";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getPayloadBodiesByRange endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetPayloadBodiesByRangeRequest(startBlockNumber, blockCount);
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodePayloadBodiesV1Response(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getPayloadBodiesByRange failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getPayloadBodiesByRangeV1";
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
     const response = await this.rpc.fetchWithRetries<
@@ -507,6 +786,42 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     versionedHashes: VersionedHashes
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
+
+    // EIP-8161: Try SSZ-REST first for getBlobs, fall back to JSON-RPC on network errors
+    if (this.sszRestClient) {
+      const version = getBlobsVersion(fork);
+      const path = `/engine/v${version}/blobs`;
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getBlobs endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetBlobsRequest(versionedHashes);
+          const resp = await this.sszRestClient.doRequest(path, body);
+          // HTTP 204 (syncing, or any missing blob in v2) maps to null per spec.
+          if (resp.length === 0) {
+            return null;
+          }
+          if (version === 1) {
+            // Spec v1 returns a flat list of found blobs with no per-element
+            // nullability — potentially shorter than the request. Map missing
+            // slots to null to keep the result indexable by request position
+            // (matches the JSON-RPC v1 contract). This assumes ELs return
+            // results in request order with trailing missing entries.
+            const found = decodeGetBlobsV1Response(resp);
+            return versionedHashes.map((_, i) => found[i] ?? null);
+          }
+          return decodeGetBlobsV2Response(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getBlobs failed, falling back to JSON-RPC", {error: (e as Error).message});
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
       return await this.getBlobsV2(versionedHashesHex);
@@ -583,17 +898,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const method = "engine_getClientVersionV1";
-
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
-
-    const clientVersions = response.map((cv) => {
-      const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
-      return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
-    });
+    const clientVersions = (await this.fetchClientVersions(clientVersion)).map((cv) => ({
+      code: cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX,
+      name: cv.name,
+      version: cv.version,
+      commit: strip0xPrefix(cv.commit),
+    }));
 
     if (clientVersions.length === 0) {
       throw Error("Received empty client versions array");
@@ -603,6 +913,38 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.logger.debug("Execution client version updated", this.clientVersion);
 
     return clientVersions;
+  }
+
+  private async fetchClientVersions(
+    clientVersion: ClientVersion
+  ): Promise<{code: string; name: string; version: string; commit: string}[]> {
+    if (this.sszRestClient) {
+      const path = "/engine/v1/client/version";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getClientVersion endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetClientVersionRequest(clientVersion);
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodeGetClientVersionResponse(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getClientVersion failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getClientVersionV1";
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]},
+      getClientVersionOpts
+    );
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {
@@ -636,10 +978,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 }
 
+// Linear-time trailing-slash strip. Avoids /\/+$/ which CodeQL flags as a
+// polynomial-backtracking regex (js/polynomial-redos).
+function stripTrailingSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 0x2f /* '/' */) end--;
+  return end === s.length ? s : s.slice(0, end);
+}
+
 type EngineRequestKey = keyof EngineApiRpcParamTypes;
 type EngineRequestByKey = {
   [K in EngineRequestKey]: {method: K; params: EngineApiRpcParamTypes[K]; methodOpts: ReqOpts};
 };
-type EngineRequest = EngineRequestByKey[EngineRequestKey];
-type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
-type EngineResponse = EngineResponseByKey[EngineRequestKey];
+type EngineRequest<K extends EngineRequestKey = EngineRequestKey> = EngineRequestByKey[K];
