@@ -292,7 +292,7 @@ export function computePayloadTimelinessCommitteesForEpoch(
   slotOffsets[SLOTS_PER_EPOCH] = shufflingLength;
 
   // Native sampling returns all committees concatenated in slot order, with PTC_SIZE indices per slot.
-  const flatResult = computePtcIndicesForEpoch(
+  const flatPtcIndices = computePtcIndicesForEpoch(
     epochSeed,
     startSlot,
     SLOTS_PER_EPOCH,
@@ -305,7 +305,7 @@ export function computePayloadTimelinessCommitteesForEpoch(
   );
   const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-    result[i] = flatResult.subarray(i * PTC_SIZE, (i + 1) * PTC_SIZE);
+    result[i] = flatPtcIndices.subarray(i * PTC_SIZE, (i + 1) * PTC_SIZE);
   }
   return result;
 }
