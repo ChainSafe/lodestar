@@ -12,7 +12,8 @@ export interface IFlatFileStore {
   close(): Promise<void>;
 
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
-  getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]>;
+  /** Returns null if the file is absent, and undefined entries for columns missing from an existing file. */
+  getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[] | null>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
 
   deleteMany(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;

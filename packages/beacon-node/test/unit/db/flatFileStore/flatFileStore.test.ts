@@ -48,9 +48,16 @@ describe("FlatFileStore", () => {
       ]);
 
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0, 5, 10]);
-      expect(new Uint8Array(result[0] ?? [])).toEqual(col0);
-      expect(new Uint8Array(result[1] ?? [])).toEqual(col5);
-      expect(result[2]).toBeUndefined();
+      expect(result).toEqual([col0, col5, undefined]);
+    });
+
+    it("should distinguish missing files from missing column indices", async () => {
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array([1])}]);
+
+      await expect(store.getDataColumnsBinary(1000, ROOT_A, [1, 2])).resolves.toEqual([undefined, undefined]);
+      await expect(store.getDataColumnsBinary(1000, ROOT_A, [])).resolves.toEqual([]);
+      await expect(store.getDataColumnsBinary(1000, ROOT_B, [0])).resolves.toBeNull();
+      await expect(store.getDataColumnsBinary(1001, ROOT_A, [0])).resolves.toBeNull();
     });
 
     it("should derive the column SSZ type from the slot", async () => {
@@ -91,9 +98,7 @@ describe("FlatFileStore", () => {
 
       // All three columns should be present
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0, 1, 2]);
-      expect(new Uint8Array(result[0] ?? [])).toEqual(col0);
-      expect(new Uint8Array(result[1] ?? [])).toEqual(col1);
-      expect(new Uint8Array(result[2] ?? [])).toEqual(col2);
+      expect(result).toEqual([col0, col1, col2]);
     });
 
     it("should not overwrite existing columns when the merge read fails", async () => {
@@ -113,9 +118,7 @@ describe("FlatFileStore", () => {
         readSpy.mockRestore();
       }
 
-      const [storedCol0, storedCol1] = await store.getDataColumnsBinary(1000, ROOT_A, [0, 1]);
-      expect(storedCol0).toEqual(col0);
-      expect(storedCol1).toBeUndefined();
+      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 1])).resolves.toEqual([col0, undefined]);
     });
 
     it("should preserve column data when deletion fails", async () => {
@@ -151,8 +154,8 @@ describe("FlatFileStore", () => {
       await expect(store.pruneBefore(200)).resolves.toEqual([100, 150]);
       await expect(store.pruneBefore(200)).resolves.toEqual([]);
 
-      expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
-      expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).not.toEqual([undefined]);
+      expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toBeNull();
+      expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).toEqual([new Uint8Array(20)]);
     });
 
     it("should prune empty column slot directories retained in the index", async () => {
@@ -219,8 +222,8 @@ describe("FlatFileStore", () => {
 
       await store.deleteMany([{slot: 100, blockRoot: ROOT_ORPHAN}]);
 
-      expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
-      expect(await store.getDataColumnsBinary(100, ROOT_CANONICAL, [0])).not.toEqual([undefined]);
+      expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toBeNull();
+      expect(await store.getDataColumnsBinary(100, ROOT_CANONICAL, [0])).toEqual([new Uint8Array(20)]);
     });
   });
 
@@ -248,7 +251,7 @@ describe("FlatFileStore", () => {
         resumeWrite?.();
 
         await Promise.all([write, prune]);
-        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([undefined]);
+        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toBeNull();
       } finally {
         resumeWrite?.();
         readFileSpy.mockRestore();
@@ -285,7 +288,7 @@ describe("FlatFileStore", () => {
         await expect(write).rejects.toMatchObject({
           type: {code: "DATA_COLUMN_STORE_SLOT_PRUNED", slot: 100, minRetainedSlot: 200},
         });
-        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([undefined]);
+        await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toBeNull();
       } finally {
         resumePrune?.();
         removeSpy.mockRestore();
@@ -311,9 +314,7 @@ describe("FlatFileStore", () => {
       }
 
       const columns = await store2.getDataColumnsBinary(1000, ROOT_B, [0, 5, 1]);
-      expect(columns[0]).toBeDefined();
-      expect(columns[1]).toBeDefined();
-      expect(columns[2]).toBeUndefined();
+      expect(columns).toEqual([new Uint8Array(20), new Uint8Array(20), undefined]);
     });
 
     it("should ignore partial files and retain their slot directories for pruning", async () => {
@@ -324,7 +325,7 @@ describe("FlatFileStore", () => {
 
       const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
       await store2.init();
-      expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
+      expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toBeNull();
       await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
 
       await store2.pruneBefore(200);

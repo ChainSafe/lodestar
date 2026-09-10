@@ -57,18 +57,14 @@ export class LegacyDataColumnStore implements IDataColumnStore {
   }
 
   async getManyBinary({slot, blockRoot}: DataColumnKey, indices: ColumnIndex[]): Promise<(Uint8Array | undefined)[]> {
-    const result = await this.flatFiles.getDataColumnsBinary(slot, blockRoot, indices);
-    let missingPositions = getMissingPositions(result);
-    if (missingPositions.length === 0) return result;
+    const flatFileSidecars = await this.flatFiles.getDataColumnsBinary(slot, blockRoot, indices);
+    if (flatFileSidecars !== null) return flatFileSidecars;
+    if (indices.length === 0) return [];
 
     const root = fromHex(blockRoot);
-    const hotSidecars = await this.legacyHot.getManyBinary(
-      root,
-      missingPositions.map((position) => indices[position])
-    );
-    fillMissing(result, missingPositions, hotSidecars);
+    const result = await this.legacyHot.getManyBinary(root, indices);
 
-    missingPositions = getMissingPositions(result);
+    const missingPositions = getMissingPositions(result);
     if (missingPositions.length === 0 || (await this.blockArchive.getSlotByRoot(root)) !== slot) return result;
 
     const archivedSidecars = await this.legacyArchive.getManyBinary(

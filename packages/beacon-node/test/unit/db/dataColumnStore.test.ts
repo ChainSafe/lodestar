@@ -7,12 +7,10 @@ import type {IFlatFileStore} from "../../../src/db/flatFileStore/interface.js";
 const ROOT: RootHex = `0x${"ab".repeat(32)}`;
 
 describe("LegacyDataColumnStore", () => {
-  it("should fill flat file misses from hot and canonical archive storage", async () => {
-    const flatData = new Uint8Array([1]);
+  it("should read missing flat files from hot and canonical archive storage", async () => {
     const hotData = new Uint8Array([2]);
     const archiveData = new Uint8Array([3]);
     const flatFiles = makeFlatFiles();
-    vi.mocked(flatFiles.getDataColumnsBinary).mockResolvedValue([flatData, undefined, undefined]);
     const getHot = vi.fn(async (_root: Uint8Array, indices: number[]) =>
       indices.map((index) => (index === 1 ? hotData : undefined))
     );
@@ -32,17 +30,51 @@ describe("LegacyDataColumnStore", () => {
     );
 
     await expect(store.getManyBinary({slot: 10, blockRoot: ROOT}, [0, 1, 2])).resolves.toEqual([
-      flatData,
+      undefined,
       hotData,
       archiveData,
     ]);
-    expect(getHot).toHaveBeenCalledWith(fromHex(ROOT), [1, 2]);
-    expect(getArchived).toHaveBeenCalledWith(10, [2]);
+    expect(getHot).toHaveBeenCalledWith(fromHex(ROOT), [0, 1, 2]);
+    expect(getArchived).toHaveBeenCalledWith(10, [0, 2]);
+  });
+
+  it.each([{columns: [new Uint8Array([1]), undefined]}, {columns: [undefined, undefined]}])(
+    "should not read legacy storage for an existing flat file: $columns",
+    async ({columns}) => {
+      const flatFiles = makeFlatFiles();
+      vi.mocked(flatFiles.getDataColumnsBinary).mockResolvedValue([...columns]);
+      const getHot = vi.fn().mockResolvedValue([new Uint8Array([2]), new Uint8Array([3])]);
+      const getArchived = vi.fn().mockResolvedValue([new Uint8Array([4]), new Uint8Array([5])]);
+      const getSlotByRoot = vi.fn().mockResolvedValue(10);
+      const store = new LegacyDataColumnStore(
+        flatFiles,
+        {values: vi.fn(), getManyBinary: getHot, deleteMany: vi.fn()},
+        {values: vi.fn(), getManyBinary: getArchived, keys: vi.fn(), deleteMany: vi.fn()},
+        {getSlotByRoot}
+      );
+
+      await expect(store.getManyBinary({slot: 10, blockRoot: ROOT}, [0, 1])).resolves.toEqual(columns);
+      expect(getHot).not.toHaveBeenCalled();
+      expect(getArchived).not.toHaveBeenCalled();
+      expect(getSlotByRoot).not.toHaveBeenCalled();
+    }
+  );
+
+  it("should skip legacy reads when no column indices are requested", async () => {
+    const getHot = vi.fn();
+    const store = new LegacyDataColumnStore(
+      makeFlatFiles(),
+      {values: vi.fn(), getManyBinary: getHot, deleteMany: vi.fn()},
+      {values: vi.fn(), getManyBinary: vi.fn(), keys: vi.fn(), deleteMany: vi.fn()},
+      {getSlotByRoot: vi.fn()}
+    );
+
+    await expect(store.getManyBinary({slot: 10, blockRoot: ROOT}, [])).resolves.toEqual([]);
+    expect(getHot).not.toHaveBeenCalled();
   });
 
   it("should not read a slot-keyed archive for a non-canonical root", async () => {
     const flatFiles = makeFlatFiles();
-    vi.mocked(flatFiles.getDataColumnsBinary).mockResolvedValue([undefined]);
     const getArchived = vi.fn().mockResolvedValue([new Uint8Array([3])]);
     const store = new LegacyDataColumnStore(
       flatFiles,
@@ -151,7 +183,7 @@ function makeFlatFiles(): IFlatFileStore {
     init: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     getDataColumns: vi.fn().mockResolvedValue([]),
-    getDataColumnsBinary: vi.fn().mockResolvedValue([]),
+    getDataColumnsBinary: vi.fn().mockResolvedValue(null),
     putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     deleteMany: vi.fn().mockResolvedValue(undefined),
     pruneBefore: vi.fn().mockResolvedValue([]),

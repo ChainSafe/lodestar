@@ -98,7 +98,11 @@ export class FlatFileStore implements IFlatFileStore {
     });
   }
 
-  async getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]> {
+  async getDataColumnsBinary(
+    slot: Slot,
+    blockRoot: RootHex,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[] | null> {
     return observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.read, () =>
       this.getColumnsBinaryUninstrumented(slot, blockRoot, indices)
     );
@@ -218,13 +222,13 @@ export class FlatFileStore implements IFlatFileStore {
     slot: Slot,
     rootHex: RootHex,
     indices: number[]
-  ): Promise<(Uint8Array | undefined)[]> {
+  ): Promise<(Uint8Array | undefined)[] | null> {
     let fd: fs.promises.FileHandle;
     try {
       fd = await fs.promises.open(this.filePath(slot, rootHex), "r");
     } catch (e) {
       if (!isFsNotFoundError(e)) throw e;
-      return indices.map(() => undefined);
+      return null;
     }
 
     try {

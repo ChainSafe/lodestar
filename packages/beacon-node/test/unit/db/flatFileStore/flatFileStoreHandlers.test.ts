@@ -227,12 +227,12 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(new Uint8Array(responses[1].data)).toEqual(col5Data);
     });
 
-    it("should fill finalized flat file misses from the LevelDB archive", async () => {
+    it("should serve finalized slots from either flat files or the LevelDB archive", async () => {
       const flatFileData = new Uint8Array(32).fill(0x01);
       const archivedData = new Uint8Array(32).fill(0x02);
-      await store.putDataColumnsBinary(10, getArchivedRoot(10), [{index: 0, data: flatFileData}]);
-      const getArchivedDataColumnSidecars = vi.fn(async (_slot: number, indices: number[]) =>
-        indices.map((index) => (index === 1 ? archivedData : undefined))
+      await store.putDataColumnsBinary(11, getArchivedRoot(11), [{index: 0, data: flatFileData}]);
+      const getArchivedDataColumnSidecars = vi.fn(async (slot: number, indices: number[]) =>
+        indices.map((index) => (slot === 10 && index === 1 ? archivedData : undefined))
       );
 
       const {chain, db} = makeMockChainAndDb({
@@ -241,18 +241,16 @@ describe("FlatFileStore reqresp handler integration", () => {
         getArchivedDataColumnSidecars,
       });
       const responses = await collectAsync(
-        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0, 1]}, chain, db, mockPeerId, "test-client")
+        onDataColumnSidecarsByRange({startSlot: 10, count: 2, columns: [0, 1]}, chain, db, mockPeerId, "test-client")
       );
 
-      expect(responses.map(({data}) => new Uint8Array(data))).toEqual([flatFileData, archivedData]);
-      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [1]);
+      expect(responses.map(({data}) => new Uint8Array(data))).toEqual([archivedData, flatFileData]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledExactlyOnceWith(10, [0, 1]);
     });
 
-    it("should fill root-aware flat file misses from hot then archived LevelDB", async () => {
-      const flatFileData = new Uint8Array(32).fill(0x11);
+    it("should read hot then archived LevelDB when the flat file is absent", async () => {
       const hotData = new Uint8Array(32).fill(0x22);
       const archivedData = new Uint8Array(32).fill(0x33);
-      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: flatFileData}]);
 
       const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
         indices.map((index) => (index === 1 ? hotData : undefined))
@@ -280,47 +278,52 @@ describe("FlatFileStore reqresp handler integration", () => {
         [0, 1, 2]
       );
 
-      expect(dataColumnSidecars).toEqual([flatFileData, hotData, archivedData]);
-      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [1, 2]);
-      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [2]);
+      expect(dataColumnSidecars).toEqual([undefined, hotData, archivedData]);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0, 1, 2]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [0, 2]);
     });
 
-    it("should fill partial cache misses from flat file and LevelDB", async () => {
-      const cachedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
-      cachedColumn.index = 0;
-      const cachedData = ssz.fulu.DataColumnSidecar.serialize(cachedColumn);
-      const flatFileData = new Uint8Array(32).fill(0x52);
-      const hotData = new Uint8Array(32).fill(0x53);
-      await store.putDataColumnsBinary(10, ROOT_A, [{index: 1, data: flatFileData}]);
-      const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
-        indices.map((index) => (index === 2 ? hotData : undefined))
-      );
-      const chain = {
-        config: fuluConfig,
-        seenBlockInputCache: {
-          get: vi.fn().mockReturnValue({
-            type: DAType.Columns,
-            forkName: "fulu",
-            getColumn: (index: number) => (index === cachedColumn.index ? cachedColumn : undefined),
-          }),
-        },
-        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
-        serializedCache: new WeakMap<object, Uint8Array>(),
-        db: {
-          dataColumns: makeDataColumnStore({getHot: getHotDataColumnSidecars}),
-        },
-      } as unknown as BeaconChain;
+    it.each([{indices: [0, 1, 2]}, {indices: [0, 2]}])(
+      "should fill cache misses from an existing flat file without legacy reads: $indices",
+      async ({indices}) => {
+        const cachedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+        cachedColumn.index = 0;
+        const cachedData = ssz.fulu.DataColumnSidecar.serialize(cachedColumn);
+        const flatFileData = new Uint8Array(32).fill(0x52);
+        const hotData = new Uint8Array(32).fill(0x53);
+        await store.putDataColumnsBinary(10, ROOT_A, [{index: 1, data: flatFileData}]);
+        const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
+          indices.map((index) => (index === 2 ? hotData : undefined))
+        );
+        const chain = {
+          config: fuluConfig,
+          seenBlockInputCache: {
+            get: vi.fn().mockReturnValue({
+              type: DAType.Columns,
+              forkName: "fulu",
+              getColumn: (index: number) => (index === cachedColumn.index ? cachedColumn : undefined),
+            }),
+          },
+          seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+          serializedCache: new WeakMap<object, Uint8Array>(),
+          db: {
+            dataColumns: makeDataColumnStore({getHot: getHotDataColumnSidecars}),
+          },
+        } as unknown as BeaconChain;
 
-      const dataColumnSidecars = await BeaconChain.prototype.getSerializedDataColumnSidecars.call(
-        chain,
-        10,
-        ROOT_A,
-        [0, 1, 2]
-      );
+        const dataColumnSidecars = await BeaconChain.prototype.getSerializedDataColumnSidecars.call(
+          chain,
+          10,
+          ROOT_A,
+          indices
+        );
 
-      expect(dataColumnSidecars).toEqual([cachedData, flatFileData, hotData]);
-      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [2]);
-    });
+        expect(dataColumnSidecars).toEqual(
+          indices.length === 3 ? [cachedData, flatFileData, undefined] : [cachedData, undefined]
+        );
+        expect(getHotDataColumnSidecars).not.toHaveBeenCalled();
+      }
+    );
 
     it("should not mix slot-keyed archive columns into a non-canonical root", async () => {
       const getArchivedDataColumnSidecars = vi.fn().mockResolvedValue([new Uint8Array(32).fill(0x44)]);
