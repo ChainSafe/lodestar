@@ -137,9 +137,10 @@ export class FlatFileStore implements IFlatFileStore {
           fileData = encodeDcolFile(rootBytes, slot, columns);
         }
 
+        // The rename can succeed even if syncing its directory fails.
+        this.slotIndex.add(slot);
         await atomicWrite(this.filePath(slot, blockRoot), fileData);
         this.metrics?.writeBytes.inc(fileData.length);
-        this.slotIndex.add(slot);
       } finally {
         release();
       }

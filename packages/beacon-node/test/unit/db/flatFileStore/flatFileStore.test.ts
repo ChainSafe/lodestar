@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {open} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -9,6 +10,11 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu, gloas, ssz} from "@lodestar/types";
 import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {...actual, open: vi.fn(actual.open)};
+});
 
 // Valid 32-byte hex roots for testing
 const ROOT_A = "0x" + "aa".repeat(32);
@@ -119,6 +125,33 @@ describe("FlatFileStore", () => {
       }
 
       await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 1])).resolves.toEqual([col0, undefined]);
+    });
+
+    it("should prune a renamed column file after its directory sync fails", async () => {
+      const slotDir = path.join(tmpDir, "data_columns", "000000000100");
+      const column = new Uint8Array([1, 2, 3]);
+      const syncError = Object.assign(new Error("directory sync failed"), {code: "EIO"});
+      const openMock = vi.mocked(open).mockImplementation(async (...args) => {
+        const fd = await fs.promises.open(...args);
+        if (String(args[0]) === slotDir && args[1] === "r") {
+          vi.spyOn(fd, "sync").mockRejectedValueOnce(syncError);
+        }
+        return fd;
+      });
+
+      try {
+        await expect(store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: column}])).rejects.toMatchObject({
+          type: {code: "DATA_COLUMN_STORE_OPERATION_FAILED", operation: "write"},
+          cause: syncError,
+        });
+      } finally {
+        openMock.mockImplementation(fs.promises.open);
+      }
+
+      await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([column]);
+      await expect(store.pruneBefore(200)).resolves.toEqual([100]);
+      await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
+      await expect(store.pruneBefore(300)).resolves.toEqual([]);
     });
 
     it("should preserve column data when deletion fails", async () => {
