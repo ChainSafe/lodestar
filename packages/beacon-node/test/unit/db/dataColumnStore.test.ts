@@ -96,6 +96,7 @@ describe("LegacyDataColumnStore", () => {
 
   it("should coordinate writes, deletion, and pruning across backends", async () => {
     const flatFiles = makeFlatFiles();
+    vi.mocked(flatFiles.pruneBefore).mockResolvedValue([4, 2]);
     const deleteHot = vi.fn().mockResolvedValue(undefined);
     const deleteArchive = vi.fn().mockResolvedValue(undefined);
     const store = new LegacyDataColumnStore(
@@ -118,7 +119,7 @@ describe("LegacyDataColumnStore", () => {
 
     await store.putManyBinary(key, columns);
     await store.deleteMany([key]);
-    await store.pruneBefore(5);
+    await expect(store.pruneBefore(5)).resolves.toEqual([2, 3, 4]);
 
     expect(flatFiles.putDataColumnsBinary).toHaveBeenCalledWith(10, ROOT, columns);
     expect(flatFiles.deleteMany).toHaveBeenCalledWith([key]);
@@ -136,6 +137,6 @@ function makeFlatFiles(): IFlatFileStore {
     getDataColumnsBinary: vi.fn().mockResolvedValue([]),
     putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     deleteMany: vi.fn().mockResolvedValue(undefined),
-    pruneBefore: vi.fn().mockResolvedValue(undefined),
+    pruneBefore: vi.fn().mockResolvedValue([]),
   };
 }

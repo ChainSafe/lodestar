@@ -1,4 +1,4 @@
-import type {Counter, Histogram} from "@lodestar/utils";
+import type {Counter, GaugeExtra, Histogram} from "@lodestar/utils";
 import {DataColumnStoreError, DataColumnStoreErrorCode} from "./errors.js";
 
 export const FlatFileStoreOperation = {
@@ -18,6 +18,7 @@ export type FlatFileStoreMetrics = {
   readBytes: Counter;
   writeBytes: Counter;
   prunedDirectories: Counter;
+  slotIndexSize: GaugeExtra;
   startupDuration: Histogram;
   startupErrors: Counter;
 };

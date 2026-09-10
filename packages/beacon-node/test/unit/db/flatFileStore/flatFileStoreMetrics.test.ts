@@ -23,6 +23,53 @@ describe("FlatFileStore metrics", () => {
     await fs.promises.rm(tmpDir, {recursive: true, force: true});
   });
 
+  it.each(["constructor", "setMetrics"])("should collect indexed slot counts with %s metrics", async (source) => {
+    const dataColumnDir = path.join(tmpDir, "data_columns");
+    await fs.promises.mkdir(path.join(dataColumnDir, "000000000100"), {recursive: true});
+    await fs.promises.mkdir(path.join(dataColumnDir, "000000000200"));
+    const metrics = createMetricsTest();
+    const store = new FlatFileStore(
+      dataColumnDir,
+      config,
+      logger,
+      source === "constructor" ? metrics.flatFileStore : null
+    );
+    await store.init();
+    if (source === "setMetrics") store.setMetrics(metrics.flatFileStore);
+
+    const name = "lodestar_flat_file_store_indexed_slots";
+    expect(metrics.register.getSingleMetric(name)).toBeDefined();
+    const readDirectories = vi.spyOn(fs.promises, "readdir");
+    try {
+      await expect(metrics.register.getSingleMetricAsString(name)).resolves.toContain(`${name} 2`);
+      expect(readDirectories).not.toHaveBeenCalled();
+    } finally {
+      readDirectories.mockRestore();
+    }
+
+    await store.putDataColumnsBinary(150, ROOT, [{index: 0, data: new Uint8Array(50)}]);
+    await expect(metrics.register.getSingleMetricAsString(name)).resolves.toContain(`${name} 3`);
+    await store.deleteMany([{slot: 150, blockRoot: ROOT}]);
+    await expect(metrics.register.getSingleMetricAsString(name)).resolves.toContain(`${name} 3`);
+    await store.pruneBefore(200);
+    await expect(metrics.register.getSingleMetricAsString(name)).resolves.toContain(`${name} 1`);
+  });
+
+  it("should collect into the registry being scraped after metrics replacement", async () => {
+    const firstMetrics = createMetricsTest();
+    const secondMetrics = createMetricsTest();
+    const store = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger, firstMetrics.flatFileStore);
+    await store.init();
+    store.setMetrics(secondMetrics.flatFileStore);
+    await store.putDataColumnsBinary(100, ROOT, [{index: 0, data: new Uint8Array(50)}]);
+
+    const name = "lodestar_flat_file_store_indexed_slots";
+    for (const [index, metrics] of [firstMetrics, secondMetrics].entries()) {
+      expect(metrics.register.getSingleMetric(name), `registry ${index}`).toBeDefined();
+      await expect(metrics.register.getSingleMetricAsString(name), `registry ${index}`).resolves.toContain(`${name} 1`);
+    }
+  });
+
   it("should record filesystem operations, bytes, pruning, and failures", async () => {
     const metrics = createMetricsTest();
     const store = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger, metrics.flatFileStore);

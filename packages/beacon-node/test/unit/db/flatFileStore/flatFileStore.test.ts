@@ -143,10 +143,13 @@ describe("FlatFileStore", () => {
     });
 
     it("should prune columns before slot", async () => {
+      await store.putDataColumnsBinary(150, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      await store.putDataColumnsBinary(100, ROOT_B, [{index: 0, data: new Uint8Array(20)}]);
       await store.putDataColumnsBinary(200, ROOT_B, [{index: 0, data: new Uint8Array(20)}]);
 
-      await store.pruneBefore(200);
+      await expect(store.pruneBefore(200)).resolves.toEqual([100, 150]);
+      await expect(store.pruneBefore(200)).resolves.toEqual([]);
 
       expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
       expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).not.toEqual([undefined]);
@@ -157,7 +160,7 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       await store.deleteMany([{slot: 100, blockRoot: ROOT_A}]);
 
-      await store.pruneBefore(200);
+      await expect(store.pruneBefore(200)).resolves.toEqual([100]);
 
       await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
     });

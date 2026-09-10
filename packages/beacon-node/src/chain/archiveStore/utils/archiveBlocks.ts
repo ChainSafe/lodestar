@@ -207,9 +207,9 @@ export async function archiveBlocks(
     if (columnItems.length > 0) {
       // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
       await db.dataColumns.deleteMany(columnItems);
-      logger.verbose("Deleted non canonical dataColumnSidecars", {
+      logger.verbose("Deleted non canonical data columns of blocks", {
         ...logCtx,
-        count: columnItems.length,
+        blocks: columnItems.length,
         slotRange: prettyPrintIndices(columnItems.map(({slot}) => slot).sort((a, b) => a - b)),
       });
     }
@@ -260,8 +260,16 @@ export async function archiveBlocks(
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
-        await db.dataColumns.pruneBefore(columnsPruneSlot);
-        logger.verbose(`dataColumnSidecars prune: pruned before slot ${columnsPruneSlot}`, logCtx);
+        const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);
+        if (prunedColumnSlots.length > 0) {
+          logger.verbose("dataColumnSidecars prune", {
+            ...logCtx,
+            slotRange: prettyPrintIndices(prunedColumnSlots),
+            numOfSlots: prunedColumnSlots.length,
+          });
+        } else {
+          logger.verbose("dataColumnSidecars prune: no entries before slot", {...logCtx, slot: columnsPruneSlot});
+        }
       } else {
         logger.verbose(
           `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`,

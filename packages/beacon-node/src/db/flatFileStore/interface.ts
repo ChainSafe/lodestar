@@ -16,5 +16,5 @@ export interface IFlatFileStore {
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
 
   deleteMany(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
-  pruneBefore(slot: Slot): Promise<void>;
+  pruneBefore(slot: Slot): Promise<Slot[]>;
 }

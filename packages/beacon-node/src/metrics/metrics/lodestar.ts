@@ -2149,6 +2149,10 @@ export function createLodestarMetrics(
         name: "lodestar_flat_file_store_pruned_directories_total",
         help: "Total count of slot directories pruned from flat file storage",
       }),
+      slotIndexSize: register.gauge({
+        name: "lodestar_flat_file_store_indexed_slots",
+        help: "Count of indexed flat file slot directories, including empty directories awaiting pruning",
+      }),
       startupDuration: register.histogram({
         name: "lodestar_flat_file_store_startup_duration_seconds",
         help: "Duration of flat file store slot index reconstruction in seconds",

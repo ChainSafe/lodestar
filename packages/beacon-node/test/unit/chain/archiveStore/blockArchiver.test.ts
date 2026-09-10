@@ -6,6 +6,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {LogLevel} from "@lodestar/utils";
 import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
@@ -311,54 +312,70 @@ describe("block archiver task", () => {
     expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
   });
 
-  it("should prune flat file columns by the retained sidecar window", async () => {
-    const config = createChainForkConfig({
-      ...defaultConfig,
-      DENEB_FORK_EPOCH: 0,
-      FULU_FORK_EPOCH: 0,
-      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
-    });
+  it.each([{prunedSlots: []}, {prunedSlots: [96, 98, 99]}])(
+    "should report pruned column slots $prunedSlots for the retained window",
+    async ({prunedSlots}) => {
+      const config = createChainForkConfig({
+        ...defaultConfig,
+        DENEB_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+      });
 
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
-    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+      vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
 
-    const blocks = Array.from({length: 3}, (_, i) =>
-      generateProtoBlock({
-        slot: 100 + i,
-        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
-        payloadStatus: PayloadStatus.FULL,
-      })
-    );
-    const canonicalBlocks = [blocks[2], blocks[1], blocks[0]];
+      const blocks = Array.from({length: 3}, (_, i) =>
+        generateProtoBlock({
+          slot: 100 + i,
+          blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+          payloadStatus: PayloadStatus.FULL,
+        })
+      );
+      const canonicalBlocks = [blocks[2], blocks[1], blocks[0]];
 
-    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
-      ancestors: canonicalBlocks,
-      nonAncestors: [],
-    });
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: canonicalBlocks,
+        nonAncestors: [],
+      });
 
-    const currentEpoch = 10;
-    await archiveBlocks(
-      config,
-      dbStub,
-      forkChoiceStub,
-      lightclientServer,
-      logger,
-      {
-        epoch: currentEpoch,
-        root: fromHexString(ZERO_HASH_HEX),
-        rootHex: ZERO_HASH_HEX,
-      },
-      currentEpoch,
-      null,
-      false
-    );
+      const currentEpoch = 10;
+      const verbose = vi.spyOn(logger, LogLevel.verbose);
+      vi.mocked(dbStub.dataColumns.pruneBefore).mockResolvedValue(prunedSlots);
+      await archiveBlocks(
+        config,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {
+          epoch: currentEpoch,
+          root: fromHexString(ZERO_HASH_HEX),
+          rootHex: ZERO_HASH_HEX,
+        },
+        currentEpoch,
+        null,
+        false
+      );
 
-    const columnsPruneSlot = computeStartSlotAtEpoch(
-      currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
-    );
-    expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
-  });
+      const columnsPruneSlot = computeStartSlotAtEpoch(
+        currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+      );
+      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
+      if (prunedSlots.length > 0) {
+        expect(verbose).toHaveBeenCalledWith(
+          "dataColumnSidecars prune",
+          expect.objectContaining({slotRange: "[96, 98-99]", numOfSlots: 3})
+        );
+      } else {
+        expect(verbose).toHaveBeenCalledWith(
+          "dataColumnSidecars prune: no entries before slot",
+          expect.objectContaining({slot: columnsPruneSlot})
+        );
+      }
+    }
+  );
 
   describe("audit late-imported-but-canonical blocks", () => {
     // newest -> oldest; last element is the previous-finalized boundary (excluded). Late =

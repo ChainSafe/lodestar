@@ -22,7 +22,7 @@ export interface IDataColumnStore {
   getManyBinary(key: DataColumnKey, indices: ColumnIndex[]): Promise<(Uint8Array | undefined)[]>;
   putManyBinary(key: DataColumnKey, columns: IndexedDataColumnBytes[]): Promise<void>;
   deleteMany(keys: DataColumnKey[]): Promise<void>;
-  pruneBefore(slot: Slot): Promise<void>;
+  pruneBefore(slot: Slot): Promise<Slot[]>;
 }
 
 /**
@@ -89,11 +89,12 @@ export class LegacyDataColumnStore implements IDataColumnStore {
     await this.legacyHot.deleteMany(keys.map(({blockRoot}) => fromHex(blockRoot)));
   }
 
-  async pruneBefore(slot: Slot): Promise<void> {
-    await this.flatFiles.pruneBefore(slot);
+  async pruneBefore(slot: Slot): Promise<Slot[]> {
+    const flatFileSlots = await this.flatFiles.pruneBefore(slot);
     const prefixedKeys = await this.legacyArchive.keys({lt: {prefix: slot, id: 0}});
     const slots = [...new Set(prefixedKeys.map(({prefix}) => prefix))];
     if (slots.length > 0) await this.legacyArchive.deleteMany(slots);
+    return [...new Set([...flatFileSlots, ...slots])].sort((a, b) => a - b);
   }
 }
 

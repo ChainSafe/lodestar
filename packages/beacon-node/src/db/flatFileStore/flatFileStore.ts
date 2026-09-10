@@ -34,16 +34,21 @@ export class FlatFileStore implements IFlatFileStore {
   private readonly slotIndex = new SlotIndex();
   private readonly mutationLocks = new Map<Slot, Promise<void>>();
   private minRetainedSlot: Slot = 0;
+  private metrics: FlatFileStoreMetrics | null = null;
 
   constructor(
     private readonly dataColumnDir: string,
     private readonly config: ChainForkConfig,
     private readonly logger: Logger,
-    private metrics: FlatFileStoreMetrics | null = null
-  ) {}
+    metrics: FlatFileStoreMetrics | null = null
+  ) {
+    this.setMetrics(metrics);
+  }
 
   setMetrics(metrics: FlatFileStoreMetrics | null): void {
+    if (metrics === this.metrics) return;
     this.metrics = metrics;
+    metrics?.slotIndexSize.addCollect((metric) => metric.set(this.slotIndex.size));
   }
 
   async init(): Promise<void> {
@@ -151,8 +156,8 @@ export class FlatFileStore implements IFlatFileStore {
     }
   }
 
-  async pruneBefore(minSlot: Slot): Promise<void> {
-    await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.prune, async () => {
+  async pruneBefore(minSlot: Slot): Promise<Slot[]> {
+    return observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.prune, async () => {
       this.minRetainedSlot = Math.max(this.minRetainedSlot, minSlot);
       const slotsToPrune = new Set(this.slotIndex.getBefore(this.minRetainedSlot));
       for (const slot of this.mutationLocks.keys()) {
@@ -169,6 +174,7 @@ export class FlatFileStore implements IFlatFileStore {
           release();
         }
       }
+      return [...slotsToPrune].sort((a, b) => a - b);
     });
   }
 

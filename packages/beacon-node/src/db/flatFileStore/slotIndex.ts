@@ -11,6 +11,10 @@ export type SlotIndexRebuildStats = {
 export class SlotIndex {
   private readonly slots = new Set<Slot>();
 
+  get size(): number {
+    return this.slots.size;
+  }
+
   add(slot: Slot): void {
     this.slots.add(slot);
   }

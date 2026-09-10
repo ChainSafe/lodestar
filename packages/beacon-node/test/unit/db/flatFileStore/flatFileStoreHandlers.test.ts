@@ -364,7 +364,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         getDataColumnsBinary: vi.fn(),
         putDataColumnsBinary: vi.fn(),
         deleteMany: vi.fn(),
-        pruneBefore: vi.fn(),
+        pruneBefore: vi.fn().mockResolvedValue([]),
         init: vi.fn(),
         close: vi.fn(),
       } satisfies IFlatFileStore;

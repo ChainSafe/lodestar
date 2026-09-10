@@ -46,7 +46,7 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       getManyBinary: vi.fn().mockImplementation(async (_key, indices) => indices.map(() => undefined)),
       putManyBinary: vi.fn().mockResolvedValue(undefined),
       deleteMany: vi.fn().mockResolvedValue(undefined),
-      pruneBefore: vi.fn().mockResolvedValue(undefined),
+      pruneBefore: vi.fn().mockResolvedValue([]),
     };
 
     return {
