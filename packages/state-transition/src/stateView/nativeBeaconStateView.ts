@@ -926,6 +926,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
+    return this.binding.getPayloadTimelinessCommittee(slot);
+  }
+
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }

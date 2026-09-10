@@ -1,13 +1,14 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
-import {IBeaconStateView} from "../stateView/interface.js";
-import {ISignatureSet} from "../util/index.js";
+import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
+import {ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
+import {getPayloadAttestationDataSigningRoot} from "./indexedPayloadAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
@@ -76,6 +77,19 @@ export function getBlockSignatureSets(
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {
       signatureSets.push(...blsToExecutionChangeSignatureSets);
+    }
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    for (const payloadAttestation of (signedBlock as gloas.SignedBeaconBlock).message.body.payloadAttestations) {
+      const ptc = (state as IBeaconStateViewGloas).getPayloadTimelinessCommittee(payloadAttestation.data.slot);
+      signatureSets.push(
+        createAggregateSignatureSetFromComponents(
+          payloadAttestation.aggregationBits.intersectValues(ptc),
+          getPayloadAttestationDataSigningRoot(config, payloadAttestation.data),
+          payloadAttestation.signature
+        )
+      );
     }
   }
 
