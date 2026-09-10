@@ -1,4 +1,3 @@
-import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
@@ -9,7 +8,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {BLSPubkey, Gwei, RootHex, Slot, gloas} from "@lodestar/types";
 import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
@@ -36,7 +35,11 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
-    entry: routes.validator.BuilderEntry;
+    entry: {
+      builderPubkeys: BLSPubkey[];
+      minBid: Gwei;
+      maxExecutionPayment: Gwei;
+    };
     getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
   }
 ): Promise<void> {

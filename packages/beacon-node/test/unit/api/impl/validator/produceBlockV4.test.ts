@@ -1,11 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BlockType} from "../../../../../src/chain/produceBlock/index.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
@@ -641,6 +642,210 @@ describe("api/validator - produceBlockV4", () => {
     ).rejects.toThrow("Node is syncing");
 
     expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+  });
+
+  describe("produceBlockV4WithBid", () => {
+    const args = {
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: 100n,
+      signedExecutionPayloadBid: builderBid,
+    };
+
+    beforeEach(() => {
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    });
+
+    it.each([false, true])("uses the supplied bid with includePayload=%s", async (includePayload) => {
+      const {data, meta} = await api.produceBlockV4WithBid({...args, includePayload});
+
+      expect(data).toEqual(bidBlock);
+      expect(meta.executionPayloadIncluded).toBe(false);
+      expect(meta.builderUrl).toBeUndefined();
+      expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
+      expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
+        modules.chain,
+        builderBid,
+        expect.objectContaining({
+          slot,
+          parentBlock,
+          parentBlockHash: parentBlock.executionPayloadBlockHash,
+          parentBlockRoot: parentBlock.blockRoot,
+        })
+      );
+      expect(modules.chain.builderApiClient.getExecutionPayloadBids).not.toHaveBeenCalled();
+      expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {builderBoostFactor: 0n, builderWins: false},
+      {builderBoostFactor: 100n, builderWins: false},
+      {builderBoostFactor: 300n, builderWins: true},
+      {builderBoostFactor: maxBuilderBoostFactor, builderWins: true},
+    ])(
+      "compares against the local payload with boost $builderBoostFactor",
+      async ({builderBoostFactor, builderWins}) => {
+        modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+          block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+          executionPayloadValue: 2_000_000_000n,
+          consensusBlockValue: 0n,
+        }));
+
+        const {data} = await api.produceBlockV4WithBid({...args, builderBoostFactor});
+        expect(data).toEqual(builderWins ? bidBlock : engineBlock);
+      }
+    );
+
+    it("counts the supplied bid's execution payment", async () => {
+      const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.clone(builderBid);
+      signedExecutionPayloadBid.message.executionPayment = 2n;
+      modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+        block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+        executionPayloadValue: attrs.builderBid !== undefined ? 3_000_000_000n : 2_000_000_000n,
+        consensusBlockValue: 0n,
+      }));
+
+      const {data, meta} = await api.produceBlockV4WithBid({...args, signedExecutionPayloadBid});
+      expect(data).toEqual(bidBlock);
+      expect(meta.executionPayloadValue).toBe(3_000_000_000n);
+    });
+
+    it("falls back to the local block when bid validation fails", async () => {
+      vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid signature"));
+      const {data} = await api.produceBlockV4WithBid(args);
+      expect(data).toEqual(engineBlock);
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["slot", "parentBlockHash", "parentBlockRoot"] as const)(
+      "rejects a bid for the wrong %s and builds locally",
+      async (field) => {
+        const {validateBuilderApiExecutionPayloadBid: validateBid} = await vi.importActual<
+          typeof import("../../../../../src/execution/builder/validateBid.js")
+        >("../../../../../src/execution/builder/validateBid.js");
+        vi.mocked(validateBuilderApiExecutionPayloadBid).mockImplementationOnce(validateBid);
+        const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.clone(builderBid);
+        Object.assign(signedExecutionPayloadBid.message, {
+          slot,
+          parentBlockHash: fromHex(parentBlock.executionPayloadBlockHash ?? ""),
+          parentBlockRoot: fromHex(parentBlock.blockRoot),
+        });
+        if (field === "slot") {
+          signedExecutionPayloadBid.message.slot++;
+        } else {
+          signedExecutionPayloadBid.message[field].fill(0);
+        }
+
+        const {data} = await api.produceBlockV4WithBid({...args, signedExecutionPayloadBid});
+        expect(data).toEqual(engineBlock);
+        expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it("discards the supplied bid when the circuit breaker is active", async () => {
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
+      const {data} = await api.produceBlockV4WithBid(args);
+      expect(data).toEqual(engineBlock);
+      expect(validateBuilderApiExecutionPayloadBid).not.toHaveBeenCalled();
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses the supplied bid when local production fails, even with zero boost", async () => {
+      modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => {
+        if (attrs.builderBid === undefined) {
+          throw new Error("Local production failed");
+        }
+        return {block: bidBlock, executionPayloadValue: 1_000_000_000n, consensusBlockValue: 0n};
+      });
+      const {data} = await api.produceBlockV4WithBid({...args, builderBoostFactor: 0n});
+      expect(data).toEqual(bidBlock);
+    });
+
+    it("falls back locally if producing the supplied bid block fails", async () => {
+      modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => {
+        if (attrs.builderBid !== undefined) {
+          throw new Error("Bid block production failed");
+        }
+        return {block: engineBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
+      });
+      const {data} = await api.produceBlockV4WithBid(args);
+      expect(data).toEqual(engineBlock);
+    });
+
+    it("honors the censorship override even with maximum boost", async () => {
+      modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => {
+        if (attrs.builderBid === undefined) {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+        return {
+          block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+          executionPayloadValue: 0n,
+          consensusBlockValue: 0n,
+          shouldOverrideBuilder: attrs.builderBid === undefined,
+        };
+      });
+      const {data} = await api.produceBlockV4WithBid({...args, builderBoostFactor: maxBuilderBoostFactor});
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+      expect(data).toEqual(engineBlock);
+    });
+
+    it("includes cached payload contents when falling back locally", async () => {
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
+      const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
+      const executionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      const parentBlockRoot = fromHex(parentBlock.blockRoot);
+      const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(engineBlock);
+      Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+      modules.chain.blockProductionCache.set(toRootHex(blockRoot), {
+        type: BlockType.Full,
+        fork: ForkName.gloas,
+        executionPayload,
+        executionRequests,
+        parentBlockRoot,
+        blobsBundle: {commitments: [], proofs: [], blobs: []},
+        cells: [],
+      });
+      const {data, meta} = await api.produceBlockV4WithBid({...args, includePayload: true});
+      expect(data).toEqual({
+        block: engineBlock,
+        executionPayloadEnvelope: {
+          payload: executionPayload,
+          executionRequests,
+          builderIndex: BUILDER_INDEX_SELF_BUILD,
+          beaconBlockRoot: blockRoot,
+          parentBeaconBlockRoot: parentBlockRoot,
+        },
+        kzgProofs: [],
+        blobs: [],
+      });
+      expect(meta.executionPayloadIncluded).toBe(true);
+    });
+
+    it("rejects a boost factor above the maximum", async () => {
+      await expect(api.produceBlockV4WithBid({...args, builderBoostFactor: 2n ** 64n})).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    });
+
+    it("rejects pre-Gloas requests", async () => {
+      const preGloasConfig = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: Infinity}, genesisValidatorsRoot);
+      const preGloasApi = getValidatorApi(defaultApiOptions, {...modules, config: preGloasConfig});
+      await expect(preGloasApi.produceBlockV4WithBid(args)).rejects.toMatchObject({statusCode: 400});
+      expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    });
+
+    it("rejects optimistic parents", async () => {
+      modules.chain.getProposerHead.mockReturnValue({
+        ...parentBlock,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+      await expect(api.produceBlockV4WithBid(args)).rejects.toThrow("Node is syncing");
+      expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    });
   });
 
   type MatrixEntry = {

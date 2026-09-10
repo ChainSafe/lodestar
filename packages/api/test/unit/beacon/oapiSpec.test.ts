@@ -61,6 +61,8 @@ const ignoredOperations = [
   // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
   // (GET -> POST with a required BuilderConfig request body)
   "produceBlockV4",
+  // TODO: remove once the pinned beacon-APIs spec includes beacon-APIs#627
+  "produceBlockV4WithBid",
   // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
   "submitBuilderPreferences",
 ];
