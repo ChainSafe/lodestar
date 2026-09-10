@@ -329,8 +329,9 @@ export function createValidatorMonitor(
   const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
   const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
 
+  const shouldRegisterStateDerivedMetrics = nativeValidatorMonitor === null;
   const validatorMonitorMetrics = metricsRegister
-    ? createValidatorMonitorMetrics(metricsRegister, nativeValidatorMonitor === null)
+    ? createValidatorMonitorMetrics(metricsRegister, shouldRegisterStateDerivedMetrics)
     : null;
 
   const validatorMonitor: ValidatorMonitor = {
