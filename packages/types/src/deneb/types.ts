@@ -3,6 +3,7 @@ import * as ssz from "./sszTypes.js";
 
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;
 export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;
+export type VersionedHashes = ValueOf<typeof ssz.VersionedHashes>;
 
 export type Blob = ValueOf<typeof ssz.Blob>;
 export type Blobs = ValueOf<typeof ssz.Blobs>;
@@ -21,6 +22,7 @@ export type BlobSidecarsByRangeRequest = ValueOf<typeof ssz.BlobSidecarsByRangeR
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
+export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;

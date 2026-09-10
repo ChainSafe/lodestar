@@ -555,7 +555,7 @@
         "x": 0,
         "y": 17
       },
-      "id": 10,
+      "id": 65,
       "options": {
         "legend": {
           "calcs": [],
@@ -574,14 +574,28 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": false,
-          "expr": "12 * rate(lodestar_state_cache_adds_total{}[6m])",
-          "interval": "",
-          "legendFormat": "state cache",
+          "editorMode": "code",
+          "expr": "lodestar_cp_state_cache_persistent_tier_epochs",
+          "instant": false,
+          "legendFormat": "tier_{{tier}}_epochs",
+          "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_cp_state_cache_persistent_tier_states",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "tier_{{tier}}_states",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "stateCache add() calls / slot",
+      "title": "Persistent states and epochs by tier",
       "type": "timeseries"
     },
     {
@@ -710,53 +724,7 @@
           },
           "mappings": []
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "min"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "max"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "super-light-blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -764,7 +732,7 @@
         "x": 0,
         "y": 25
       },
-      "id": 14,
+      "id": 10,
       "options": {
         "legend": {
           "calcs": [],
@@ -784,38 +752,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_state_cache_reads_min",
-          "hide": false,
+          "expr": "12 * rate(lodestar_state_cache_adds_total{}[6m])",
           "interval": "",
-          "legendFormat": "min",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_state_cache_reads_avg",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "avg",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_state_cache_reads_max",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "max",
+          "legendFormat": "state cache",
           "refId": "A"
         }
       ],
-      "title": "State cache - reads per state entry",
+      "title": "stateCache add() calls / slot",
       "type": "timeseries"
     },
     {
@@ -1012,8 +955,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unit": "s"
+          "mappings": []
         },
         "overrides": [
           {
@@ -1025,7 +967,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "dark-green",
+                  "fixedColor": "dark-blue",
                   "mode": "fixed"
                 }
               }
@@ -1040,7 +982,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "blue",
                   "mode": "fixed"
                 }
               }
@@ -1055,7 +997,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "super-light-green",
+                  "fixedColor": "super-light-blue",
                   "mode": "fixed"
                 }
               }
@@ -1069,7 +1011,7 @@
         "x": 0,
         "y": 33
       },
-      "id": 18,
+      "id": 14,
       "options": {
         "legend": {
           "calcs": [],
@@ -1089,7 +1031,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_min[$rate_interval])",
+          "expr": "lodestar_state_cache_reads_min",
           "hide": false,
           "interval": "",
           "legendFormat": "min",
@@ -1101,7 +1043,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_avg[$rate_interval])",
+          "expr": "lodestar_state_cache_reads_avg",
           "hide": false,
           "interval": "",
           "legendFormat": "avg",
@@ -1113,14 +1055,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_max[$rate_interval])",
+          "expr": "lodestar_state_cache_reads_max",
           "hide": false,
           "interval": "",
           "legendFormat": "max",
           "refId": "A"
         }
       ],
-      "title": "State cache - seconds since last read per state entry",
+      "title": "State cache - reads per state entry",
       "type": "timeseries"
     },
     {
@@ -1277,12 +1219,165 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_min[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "min",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_avg[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "avg",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg_over_time(lodestar_state_cache_seconds_since_last_read_max[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "max",
+          "refId": "A"
+        }
+      ],
+      "title": "State cache - seconds since last read per state entry",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 49
       },
       "id": 58,
       "panels": [],
@@ -1357,7 +1452,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 50
       },
       "id": 56,
       "options": {
@@ -1507,7 +1602,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 50
       },
       "id": 55,
       "options": {
@@ -1666,7 +1761,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "id": 59,
       "options": {
@@ -1786,7 +1881,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 58
       },
       "id": 57,
       "options": {
@@ -1841,7 +1936,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 66
       },
       "id": 40,
       "panels": [],
@@ -1933,7 +2028,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "id": 24,
       "options": {
@@ -2014,7 +2109,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 67
       },
       "id": 26,
       "options": {
@@ -2096,7 +2191,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 67
+        "y": 75
       },
       "id": 28,
       "options": {
@@ -2178,7 +2273,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 67
+        "y": 75
       },
       "id": 30,
       "options": {
@@ -2262,7 +2357,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 75
+        "y": 83
       },
       "id": 32,
       "options": {
@@ -2346,7 +2441,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 75
+        "y": 83
       },
       "id": 36,
       "options": {
@@ -2430,7 +2525,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 75
+        "y": 83
       },
       "id": 34,
       "options": {
@@ -2514,7 +2609,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 75
+        "y": 83
       },
       "id": 38,
       "options": {
@@ -2551,7 +2646,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 90
       },
       "id": 60,
       "panels": [],
@@ -2609,7 +2704,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 83
+        "y": 91
       },
       "id": 61,
       "options": {
@@ -2692,7 +2787,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 83
+        "y": 91
       },
       "id": 62,
       "options": {
@@ -2800,7 +2895,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 91
+        "y": 99
       },
       "id": 63,
       "options": {
@@ -2907,7 +3002,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 91
+        "y": 99
       },
       "id": 64,
       "options": {
@@ -2949,7 +3044,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 107
       },
       "id": 54,
       "panels": [],
@@ -3017,7 +3112,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 100
+        "y": 108
       },
       "id": 42,
       "options": {
@@ -3102,7 +3197,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 100
+        "y": 108
       },
       "id": 44,
       "options": {
@@ -3186,7 +3281,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 100
+        "y": 108
       },
       "id": 48,
       "options": {
@@ -3270,7 +3365,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 107
+        "y": 115
       },
       "id": 46,
       "options": {
@@ -3354,7 +3449,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 107
+        "y": 115
       },
       "id": 50,
       "options": {
@@ -3438,7 +3533,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 107
+        "y": 115
       },
       "id": 52,
       "options": {
