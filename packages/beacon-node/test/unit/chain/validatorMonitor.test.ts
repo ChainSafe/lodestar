@@ -72,6 +72,58 @@ describe("ValidatorMonitor", () => {
     });
   });
 
+  describe("metric ownership", () => {
+    const stateDerivedMetricNames = [
+      "validator_monitor_prev_epoch_on_chain_balance",
+      "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
+    ];
+    const blockObservedMetricNames = [
+      "validator_monitor_prev_epoch_on_chain_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
+      "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
+      "validator_monitor_prev_epoch_on_chain_inclusion_distance",
+    ];
+
+    it("registers state-derived metrics in TypeScript mode", () => {
+      const register = new RegistryMetricCreator();
+      createValidatorMonitor(register, config, genesisTime, logger, {});
+      const metricNames = new Set(register.getMetricsAsArray().map((metric) => metric.name));
+
+      for (const name of [...stateDerivedMetricNames, ...blockObservedMetricNames]) {
+        expect(metricNames.has(name), `${name} should be registered`).toBe(true);
+      }
+    });
+
+    it("leaves state-derived metrics to the native monitor", () => {
+      const register = new RegistryMetricCreator();
+      createValidatorMonitor(
+        register,
+        config,
+        genesisTime,
+        logger,
+        {},
+        {
+          registerLocalValidator: vi.fn(),
+          unregisterLocalValidator: vi.fn(),
+        }
+      );
+      const metricNames = new Set(register.getMetricsAsArray().map((metric) => metric.name));
+
+      for (const name of stateDerivedMetricNames) {
+        expect(metricNames.has(name), `${name} should not be registered`).toBe(false);
+      }
+      for (const name of blockObservedMetricNames) {
+        expect(metricNames.has(name), `${name} should be registered`).toBe(true);
+      }
+    });
+  });
+
   describe("onceEveryEndOfEpoch pruning", () => {
     it("should prune validators not seen within retain period", () => {
       const nativeValidatorMonitor = {

@@ -329,7 +329,9 @@ export function createValidatorMonitor(
   const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
   const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
 
-  const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
+  const validatorMonitorMetrics = metricsRegister
+    ? createValidatorMonitorMetrics(metricsRegister, nativeValidatorMonitor === null)
+    : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
@@ -378,19 +380,19 @@ export function createValidatorMonitor(
         );
 
         if (summary.isPrevSourceAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterMiss?.inc();
         }
         if (summary.isPrevHeadAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterMiss?.inc();
         }
         if (summary.isPrevTargetAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss?.inc();
         }
 
         const balance = balances?.[index];
@@ -400,7 +402,7 @@ export function createValidatorMonitor(
       }
 
       if (balances !== undefined) {
-        validatorMonitorMetrics?.prevEpochOnChainBalance.set(totalBalance);
+        validatorMonitorMetrics?.prevEpochOnChainBalance?.set(totalBalance);
       }
     },
 
@@ -1184,7 +1186,9 @@ export class RootHexCache {
   }
 }
 
-function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
+function createValidatorMonitorMetrics(register: RegistryMetricCreator, registerStateDerivedMetrics = true) {
+  const stateDerivedRegister = registerStateDerivedMetrics ? register : null;
+
   return {
     validatorsConnected: register.gauge({
       name: "validator_monitor_validators",
@@ -1203,7 +1207,7 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     }),
 
     // Validator Monitor Metrics (per-epoch summaries)
-    prevEpochOnChainBalance: register.gauge({
+    prevEpochOnChainBalance: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_balance",
       help: "Total balance of all monitored validators after an epoch",
     }),
@@ -1215,19 +1219,19 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
       help: "Incremented if validator's submitted attestation is not included in any blocks",
     }),
-    prevEpochOnChainSourceAttesterHit: register.gauge({
+    prevEpochOnChainSourceAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainSourceAttesterMiss: register.gauge({
+    prevEpochOnChainSourceAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterHit: register.gauge({
+    prevEpochOnChainHeadAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterMiss: register.gauge({
+    prevEpochOnChainHeadAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
     }),
@@ -1239,11 +1243,11 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       name: "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
       help: "Total count of times a validator votes incorrect head",
     }),
-    prevEpochOnChainTargetAttesterHit: register.gauge({
+    prevEpochOnChainTargetAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
     }),
-    prevEpochOnChainTargetAttesterMiss: register.gauge({
+    prevEpochOnChainTargetAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
     }),
