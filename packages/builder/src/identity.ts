@@ -147,7 +147,7 @@ async function fetchBuilder(
 
 function msToNextEpochPoll(clock: IClock): number {
   // wait a slot past the epoch boundary so the BN has processed the transition
-  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1) + 1);
+  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1));
 }
 
 function msToNextSlotPoll(clock: IClock): number {
