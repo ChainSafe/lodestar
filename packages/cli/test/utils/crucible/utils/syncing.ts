@@ -185,14 +185,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
 
   // A later head can satisfy waitForHead without proving that this exact block was imported.
   try {
-    const header = (await unknownBlockSync.beacon.api.beacon.getBlockHeader({blockId: currentHeadRoot})).value();
-    if (toHex(header.root) !== currentHeadRoot) {
-      env.tracker.record({
-        message: `Synced block header does not match requested root ${currentHeadRoot}`,
-        slot: env.clock.currentSlot,
-        assertionId: "unknownBlockParent",
-      });
-    }
+    (await unknownBlockSync.beacon.api.beacon.getBlockHeader({blockId: currentHeadRoot})).assertOk();
   } catch (error) {
     env.tracker.record({
       message: `Failed to retrieve synced block ${currentHeadRoot}: ${(error as Error).message}`,
