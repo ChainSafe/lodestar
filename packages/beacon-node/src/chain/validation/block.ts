@@ -134,8 +134,9 @@ export async function validateGossipBlock(
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
       slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
     });
   }
 
@@ -150,6 +151,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -167,6 +170,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -176,6 +181,8 @@ export async function validateGossipBlock(
     if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        slot: blockSlot,
+        root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
       });
@@ -185,6 +192,8 @@ export async function validateGossipBlock(
     if (body.deposits.length !== 0) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.NON_ZERO_DEPOSITS,
+        slot: blockSlot,
+        root: blockRoot,
         count: body.deposits.length,
       });
     }
@@ -249,6 +258,8 @@ export async function validateGossipBlock(
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_TIMESTAMP,
+          slot: blockSlot,
+          root: blockRoot,
           timestamp: executionPayload.timestamp,
           expectedTimestamp,
         });
@@ -258,7 +269,12 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer index is a valid validator index
   if (proposerIndex >= state.validatorCount) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.UNKNOWN_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
@@ -270,7 +286,12 @@ export async function validateGossipBlock(
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
   if (state.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.INCORRECT_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -315,7 +336,8 @@ export async function verifyBlockProposerSignature(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockSlot,
+      slot: blockSlot,
+      root: blockRoot,
     });
   }
 

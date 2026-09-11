@@ -82,6 +82,8 @@ async function validateExecutionPayloadEnvelope(
   if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
@@ -91,6 +93,8 @@ async function validateExecutionPayloadEnvelope(
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
@@ -100,6 +104,8 @@ async function validateExecutionPayloadEnvelope(
   if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
       bidBlockHash: payloadInput.getBlockHashHex(),
     });
@@ -110,6 +116,8 @@ async function validateExecutionPayloadEnvelope(
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
     });
@@ -141,6 +149,8 @@ async function validateExecutionPayloadEnvelope(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot: payload.slotNumber,
+      root: blockRootHex,
     });
   }
 }

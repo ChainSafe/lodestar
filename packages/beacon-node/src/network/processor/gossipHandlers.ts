@@ -27,7 +27,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputColumns,
@@ -157,7 +157,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-    const blockShortHex = prettyBytes(blockRootHex);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -167,6 +166,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const logCtx = {
       slot,
+      root: blockRootHex,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -227,7 +227,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
-        logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
+        logger.debug("Gossip block has error", {slot, root: blockRootHex, code: e.type.code});
         if (
           (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
             e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
@@ -279,7 +279,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader));
-    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -332,7 +331,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
-          logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
+          logger.debug("Gossip blob has error", {slot, root: blockRootHex, code: e.type.code});
           // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
           //
           // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
@@ -696,11 +695,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel](
-          "Error processing block",
-          {slot, peer: peerIdStr, blockRoot: prettyBytes(blockInput.blockRootHex)},
-          e as Error
-        );
+        logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
