@@ -84,15 +84,7 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
-  skippedTests: [
-    /\/heze_fork$/,
-    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
-    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
-    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
-    // so skip rather than raise the timeout and hide the regression.
-    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
-    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
-  ],
+  skippedTests: [/\/heze_fork$/],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
 };
