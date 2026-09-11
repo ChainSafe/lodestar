@@ -2,8 +2,6 @@ import {Uint8ArrayList} from "uint8arraylist";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
-// Singleton decoder, decompresses into a Buffer.alloc() to keep decoded output on the V8 heap.
-// The native snappy Buffer is not tracked by GC and grows RSS unbounded under load.
 const decoder = new snappyWasm.Decoder();
 
 export function parseSnappyFrameHeader(header: Uint8Array): {type: ChunkType; frameSize: number} {
@@ -34,8 +32,8 @@ export function decodeSnappyFrameData(type: ChunkType, frame: Uint8Array): Uint8
 
       const checksum = frame.subarray(0, 4);
       const data = frame.subarray(4);
-      // decompress_len only reads the block header, so validate the declared size before allocating
-      const uncompressedLength = snappyWasm.decompress_len(data);
+      // Snappy's uint32 length occupies at most five bytes; validate it before allocating output.
+      const uncompressedLength = snappyWasm.decompress_len(data.subarray(0, 5));
       if (uncompressedLength > UNCOMPRESSED_CHUNK_SIZE) {
         throw new Error("malformed input: too large");
       }

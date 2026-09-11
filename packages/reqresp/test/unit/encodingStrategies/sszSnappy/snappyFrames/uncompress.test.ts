@@ -14,6 +14,8 @@ import {
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
   const malformedBlocks = [
+    {name: "six-byte length prefix", raw: "808080808000", decoded: ""},
+    {name: "ten-byte length prefix", raw: "818080808080808080000041", decoded: "41"},
     {name: "missing output", raw: "08", decoded: "0000000000000000"},
     {name: "underfilled output", raw: "080041", decoded: "4100000000000000"},
     {name: "overfilled literal", raw: "01044142", decoded: "41"},
