@@ -61,7 +61,7 @@
   "dependencies": {
     "@lodestar/utils": "workspace:^",
     "rimraf": "^4.4.1",
-    "snappyjs": "^0.7.0",
+    "snappy": "^7.2.2",
     "vitest": "catalog:"
   },
   "peerDependencies": {

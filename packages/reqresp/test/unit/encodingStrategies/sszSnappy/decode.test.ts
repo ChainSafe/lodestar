@@ -2,7 +2,10 @@ import {byteStream} from "@libp2p/utils";
 import {encode as varintEncode} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
+import {ssz} from "@lodestar/types";
+import {SszSnappyErrorCode} from "../../../../src/encodingStrategies/sszSnappy/errors.js";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
+import {ChunkType, IDENTIFIER_FRAME, crc} from "../../../../src/utils/snappyIndex.js";
 import {
   encodingStrategiesDecodingErrorCases,
   encodingStrategiesMainnetTestCases,
@@ -12,6 +15,25 @@ import {arrToSource} from "../../../utils/index.js";
 import {createMockStream} from "../../../utils/mockStream.js";
 
 describe("encodingStrategies / sszSnappy / decode", () => {
+  it.each([1, 7, 18])("rejects incomplete compressed Ping data in %i-byte chunks", async (chunkSize) => {
+    const wire = Buffer.concat([
+      Buffer.from(varintEncode(ssz.phase0.Ping.minSize)),
+      IDENTIFIER_FRAME,
+      Buffer.from([ChunkType.COMPRESSED, 5, 0, 0]),
+      crc(Buffer.alloc(ssz.phase0.Ping.minSize)),
+      Buffer.from([ssz.phase0.Ping.minSize]),
+    ]);
+    const chunks: Uint8Array[] = [];
+    for (let offset = 0; offset < wire.length; offset += chunkSize) {
+      chunks.push(wire.subarray(offset, offset + chunkSize));
+    }
+    const {stream} = await createMockStream({source: arrToSource(chunks)});
+    const bytes = byteStream(stream);
+    await expect(readSszSnappyPayload(bytes, ssz.phase0.Ping).finally(() => bytes.unwrap())).rejects.toMatchObject({
+      type: {code: SszSnappyErrorCode.DECOMPRESSOR_ERROR},
+    });
+  });
+
   it.each(encodingStrategiesTestCases)("$id", async ({type, binaryPayload, chunks}) => {
     const {stream} = await createMockStream({source: arrToSource(chunks)});
     const bytes = byteStream(stream);

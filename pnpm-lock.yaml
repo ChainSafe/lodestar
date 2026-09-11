@@ -378,9 +378,6 @@ importers:
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
-      snappyjs:
-        specifier: ^0.7.0
-        version: 0.7.0
       tmp:
         specifier: ^0.2.1
         version: 0.2.7
@@ -712,9 +709,6 @@ importers:
       snappy:
         specifier: ^7.2.2
         version: 7.2.2
-      snappyjs:
-        specifier: ^0.7.0
-        version: 0.7.0
       uint8-varint:
         specifier: ^2.0.2
         version: 2.0.4
@@ -755,9 +749,9 @@ importers:
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
-      snappyjs:
-        specifier: ^0.7.0
-        version: 0.7.0
+      snappy:
+        specifier: ^7.2.2
+        version: 7.2.2
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
@@ -5657,9 +5651,6 @@ packages:
   snappy@7.2.2:
     resolution: {integrity: sha512-iADMq1kY0v3vJmGTuKcFWSXt15qYUz7wFkArOrsSg0IFfI3nJqIJvK2/ZbEIndg7erIJLtAVX2nSOqPz7DcwbA==}
     engines: {node: '>= 10'}
-
-  snappyjs@0.7.0:
-    resolution: {integrity: sha512-u5iEEXkMe2EInQio6Wv9LWHOQYRDbD2O9hzS27GpT/lwfIQhTCnHCTqedqHIHe9ZcvQo+9au6vngQayipz1NYw==}
 
   socks-proxy-agent@7.0.0:
     resolution: {integrity: sha512-Fgl0YPZ902wEsAyiQ+idGd1A7rSFx/ayC1CQVMw5P+EQx2V0SgpGtf6OKFhVjPflPUl9YMmEOnmfjCdMUsygww==}
@@ -11755,8 +11746,6 @@ snapshots:
       '@napi-rs/snappy-win32-arm64-msvc': 7.2.2
       '@napi-rs/snappy-win32-ia32-msvc': 7.2.2
       '@napi-rs/snappy-win32-x64-msvc': 7.2.2
-
-  snappyjs@0.7.0: {}
 
   socks-proxy-agent@7.0.0:
     dependencies:

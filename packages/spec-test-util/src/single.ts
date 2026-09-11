@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {uncompress} from "snappyjs";
+import {uncompressSync} from "snappy";
 import {describe, expect, it, vi} from "vitest";
 import {loadYaml} from "@lodestar/utils";
 
@@ -192,7 +192,7 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
         testCase[`${inputName}_raw`] = fs.readFileSync(file);
         break;
       case InputType.SSZ_SNAPPY:
-        testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
+        testCase[`${inputName}_raw`] = uncompressSync(fs.readFileSync(file), {asBuffer: true}) as Buffer;
         break;
     }
     if (!options.inputProcessing) throw Error("inputProcessing is not defined");
@@ -232,9 +232,9 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");
-    let data = fs.readFileSync(file);
+    let data: Buffer = fs.readFileSync(file);
     if (inputType === InputType.SSZ_SNAPPY) {
-      data = uncompress(data);
+      data = uncompressSync(data, {asBuffer: true}) as Buffer;
     }
 
     let sszType: SszTypeGeneric | undefined;

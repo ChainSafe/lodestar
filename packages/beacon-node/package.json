@@ -166,7 +166,6 @@
     "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "rimraf": "^4.4.1",
-    "snappyjs": "^0.7.0",
     "tmp": "^0.2.1"
   },
   "keywords": [
