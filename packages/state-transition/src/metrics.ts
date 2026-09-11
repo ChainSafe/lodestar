@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {MetricsRegister} from "@lodestar/utils";
-import {ProposerRewardType} from "./block/types.js";
+import {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
@@ -57,9 +57,20 @@ export function getMetrics(register: MetricsRegister) {
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
-      // TODO: Add metrics for each step
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    processBlockStepTime: register.histogram<{step: BlockProcessStep}>({
+      name: "lodestar_stfn_process_block_step_seconds",
+      help: "Time to call each step of process block in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+    }),
+    processOperationsStepTime: register.histogram<{step: ProcessOperationsStep}>({
+      name: "lodestar_stfn_process_operations_step_seconds",
+      help: "Time to call each step of process operations in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
     }),
     processBlockCommitTime: register.histogram({
       name: "lodestar_stfn_process_block_commit_seconds",

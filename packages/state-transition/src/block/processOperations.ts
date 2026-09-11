@@ -18,7 +18,7 @@ import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
-import {ProcessBlockOpts} from "./types.js";
+import {ProcessBlockOpts, ProcessOperationsStep} from "./types.js";
 
 export {
   processProposerSlashing,
@@ -49,49 +49,94 @@ export function processOperations(
     );
   }
 
-  for (const proposerSlashing of body.proposerSlashings) {
-    processProposerSlashing(fork, state, proposerSlashing, opts.verifySignatures);
-  }
-  for (const attesterSlashing of body.attesterSlashings) {
-    processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
-  }
-
-  processAttestations(fork, state, body.attestations, parentSlot, opts.verifySignatures, metrics);
-
-  for (const deposit of body.deposits) {
-    processDeposit(fork, state, deposit);
+  {
+    const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processProposerSlashing});
+    for (const proposerSlashing of body.proposerSlashings) {
+      processProposerSlashing(fork, state, proposerSlashing, opts.verifySignatures);
+    }
+    timer?.();
   }
 
-  for (const voluntaryExit of body.voluntaryExits) {
-    processVoluntaryExit(fork, state, voluntaryExit, opts.verifySignatures);
+  {
+    const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processAttesterSlashing});
+    for (const attesterSlashing of body.attesterSlashings) {
+      processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
+    }
+    timer?.();
+  }
+
+  {
+    const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processAttestations});
+    processAttestations(fork, state, body.attestations, parentSlot, opts.verifySignatures, metrics);
+    timer?.();
+  }
+
+  {
+    const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processDeposit});
+    for (const deposit of body.deposits) {
+      processDeposit(fork, state, deposit);
+    }
+    timer?.();
+  }
+
+  {
+    const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processVoluntaryExit});
+    for (const voluntaryExit of body.voluntaryExits) {
+      processVoluntaryExit(fork, state, voluntaryExit, opts.verifySignatures);
+    }
+    timer?.();
   }
 
   if (fork >= ForkSeq.capella) {
+    const timer = metrics?.processOperationsStepTime.startTimer({
+      step: ProcessOperationsStep.processBlsToExecutionChange,
+    });
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }
+    timer?.();
   }
 
   if (fork >= ForkSeq.electra && fork < ForkSeq.gloas) {
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
-    for (const depositRequest of bodyElectra.executionRequests.deposits) {
-      processDepositRequest(fork, stateElectra, depositRequest);
+    {
+      const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processDepositRequest});
+      for (const depositRequest of bodyElectra.executionRequests.deposits) {
+        processDepositRequest(fork, stateElectra, depositRequest);
+      }
+      timer?.();
     }
 
-    for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
-      processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
+    {
+      const timer = metrics?.processOperationsStepTime.startTimer({
+        step: ProcessOperationsStep.processWithdrawalRequest,
+      });
+      for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
+        processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
+      }
+      timer?.();
     }
 
-    for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
-      processConsolidationRequest(stateElectra, elConsolidationRequest);
+    {
+      const timer = metrics?.processOperationsStepTime.startTimer({
+        step: ProcessOperationsStep.processConsolidationRequest,
+      });
+      for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
+        processConsolidationRequest(stateElectra, elConsolidationRequest);
+      }
+      timer?.();
     }
   }
 
   if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.processOperationsStepTime.startTimer({
+      step: ProcessOperationsStep.processPayloadAttestation,
+    });
     for (const payloadAttestation of (body as gloas.BeaconBlockBody).payloadAttestations) {
       processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation, opts.verifySignatures);
     }
+    timer?.();
   }
 }
