@@ -107,7 +107,7 @@ export class BlockObserver {
         return null;
       });
 
-      if (response === null) {
+      if (response === null || signal.aborted) {
         return;
       }
 

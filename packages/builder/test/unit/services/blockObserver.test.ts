@@ -148,6 +148,23 @@ describe("BlockObserver", () => {
     expect(onBlock).toHaveBeenCalledOnce();
   });
 
+  it("does not dispatch a block returned after shutdown", async () => {
+    const pending = defer<GetBlockV2Response>();
+    api.beacon.getBlockV2.mockReturnValue(pending.promise);
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, api);
+    observer.runOnBlock(onBlock);
+
+    const processing = observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
+    expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+    controller.abort();
+    pending.resolve(blockResponse(gloasBlock()));
+    await processing;
+
+    expect(onBlock).not.toHaveBeenCalled();
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
   it("retries a server error before succeeding", async () => {
     api.beacon.getBlockV2.mockResolvedValueOnce(errorResponse(503)).mockResolvedValueOnce(blockResponse(gloasBlock()));
     const onBlock = vi.fn(async (_block: ObservedBlock) => {});
