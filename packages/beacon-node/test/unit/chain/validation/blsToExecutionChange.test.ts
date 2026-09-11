@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
@@ -14,7 +14,11 @@ import {
 import {BeaconStateView, computeSigningRoot} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
-import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
+import {GossipAction} from "../../../../src/chain/errors/gossipValidation.js";
+import {
+  validateApiBlsToExecutionChange,
+  validateGossipBlsToExecutionChange,
+} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
@@ -84,6 +88,7 @@ describe("validate bls to execution change", () => {
 
   beforeEach(() => {
     chainStub = getMockedBeaconChain({config});
+    vi.spyOn(chainStub.clock, "currentEpoch", "get").mockReturnValue(config.CAPELLA_FORK_EPOCH);
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");
@@ -92,6 +97,16 @@ describe("validate bls to execution change", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("ignores gossip before Capella without rejecting API submissions", async () => {
+    vi.spyOn(chainStub.clock, "currentEpoch", "get").mockReturnValue(config.CAPELLA_FORK_EPOCH - 1);
+    await expect(validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChange)).rejects.toMatchObject({
+      action: GossipAction.IGNORE,
+      type: {code: BlsToExecutionChangeErrorCode.PRE_CAPELLA},
+    });
+    expect(chainStub.getHeadState).not.toHaveBeenCalled();
+    await expect(validateApiBlsToExecutionChange(chainStub, signedBlsToExecChange)).resolves.toBeUndefined();
   });
 
   it("should return invalid bls to execution Change - existing", async () => {

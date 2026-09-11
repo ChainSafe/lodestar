@@ -117,7 +117,7 @@ export type ValidatorFnsModules = {
   metrics: Metrics | null;
   events: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
-  core: INetworkCore;
+  core: Pick<INetworkCore, "reportPeer">;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;

@@ -66,6 +66,12 @@ const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDir
       it(testCaseName, async () => {
         await runGossipValidationTest(fork, testHandler, testCaseDir);
       }, 30_000);
+      // Pyspec retains old blocks; also exercise these finalized branches after production fork-choice pruning.
+      if (testCaseName.endsWith("_finalized_fork")) {
+        it(`${testCaseName} after pruning`, async () => {
+          await runGossipValidationTest(fork, testHandler, testCaseDir, {pruneFinalized: true});
+        }, 30_000);
+      }
     }
   } else if (networkingFns[testHandler] !== undefined) {
     runNetworkingFnTests(testHandler, testSuite, testSuiteDirpath);

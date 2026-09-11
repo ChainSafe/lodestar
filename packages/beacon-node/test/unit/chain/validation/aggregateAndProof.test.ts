@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
@@ -111,6 +111,13 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof.message.aggregate.data.target.root = UNKNOWN_ROOT;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
+  });
+
+  it("ignores an aggregate on a conflicting finalized branch before pruning", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    const ancestor = chain.forkChoice.getAncestor("", 0);
+    vi.spyOn(chain.forkChoice, "getAncestor").mockReturnValue({...ancestor, blockRoot: "conflicting-root"});
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.NOT_FINALIZED_DESCENDANT);
   });
 
   it("EMPTY_AGGREGATION_BITFIELD", async () => {

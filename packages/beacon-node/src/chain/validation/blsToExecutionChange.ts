@@ -16,6 +16,13 @@ export async function validateGossipBlsToExecutionChange(
   chain: IBeaconChain,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
+  // [IGNORE] The current epoch is at or after the Capella fork epoch
+  // (where current_epoch is defined by the current wall-clock time).
+  if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
+    throw new BlsToExecutionChangeError(GossipAction.IGNORE, {
+      code: BlsToExecutionChangeErrorCode.PRE_CAPELLA,
+    });
+  }
   return validateBlsToExecutionChange(chain, blsToExecutionChange);
 }
 

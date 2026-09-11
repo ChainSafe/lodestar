@@ -125,6 +125,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       return headBlock;
     },
     getDependentRoot: () => state.epochCtx.currentDecisionRoot,
+    getFinalizedCheckpoint: () => ({epoch: 0, root: ZERO_HASH, rootHex: ZERO_HASH_HEX}),
+    getAncestor: () => ({...headBlock, slot: 0, blockRoot: ZERO_HASH_HEX, weight: 0n, attestationScore: 0n}),
   } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);
