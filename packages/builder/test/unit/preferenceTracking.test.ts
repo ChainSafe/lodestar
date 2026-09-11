@@ -29,7 +29,7 @@ describe("Builder preference tracking", () => {
     const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
     const blockObserver = new BlockObserver(config, logger, api);
-    const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker();
     const store = new PayloadStore();
     const opts: BuilderOptions = {
       logger,
@@ -53,13 +53,9 @@ describe("Builder preference tracking", () => {
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
-    expect(api.events.eventstream).toHaveBeenCalledTimes(2);
-    const subscription = api.events.eventstream.mock.calls.find(([{topics}]) =>
-      topics.includes(routes.events.EventType.proposerPreferences)
-    );
-    expect(subscription).toBeDefined();
-    if (subscription === undefined) throw Error("Missing proposer preferences subscription");
-    const [{onEvent, signal}] = subscription;
+    expect(api.events.eventstream).toHaveBeenCalledOnce();
+    const [{onEvent, signal, topics}] = api.events.eventstream.mock.calls[0];
+    expect(topics).toEqual([routes.events.EventType.block, routes.events.EventType.proposerPreferences]);
     expect(signal).toBe(controller.signal);
     const signed = ssz.gloas.SignedProposerPreferences.defaultValue();
     signed.message.proposalSlot = 4;

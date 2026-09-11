@@ -47,53 +47,15 @@ export class BlockObserver {
     this.retries = retries;
     this.retryDelay = retryDelay;
     this.maxSeenBlockRoots = maxSeenBlockRoots;
+    this.logger.info("Block observer initialized", {retries, retryDelay, maxSeenBlockRoots});
   }
 
   /**
-   * Register a block consumer. Consumers that require complete observation must register before {@link start}, because
+   * Register a block consumer. Consumers that require complete observation must register before event delivery, because
    * roots observed before registration remain consumed until normal FIFO eviction.
    */
   runOnBlock(fn: RunOnBlockFn): void {
     this.fns.push(fn);
-  }
-
-  start(signal: AbortSignal): void {
-    this.logger.info("Subscribing to block events", {
-      retries: this.retries,
-      retryDelay: this.retryDelay,
-      maxSeenBlockRoots: this.maxSeenBlockRoots,
-    });
-
-    this.api.events
-      .eventstream({
-        topics: [EventType.block],
-        signal,
-        onEvent: (event) => {
-          if (event.type !== EventType.block) {
-            this.logger.debug("Ignoring unexpected beacon event", {eventType: event.type});
-            return;
-          }
-
-          void this.processBlockEvent(event.message, signal);
-        },
-        onError: (error) => {
-          this.logger.error("Failed to receive block event", {}, error);
-        },
-        onClose: () => {
-          if (signal.aborted) {
-            this.logger.debug("Closed stream for block events");
-          } else {
-            this.logger.error("Block event stream closed unexpectedly", {});
-          }
-        },
-      })
-      .catch((error: unknown) => {
-        this.logger.error(
-          "Failed to subscribe to block events",
-          {},
-          error instanceof Error ? error : Error(String(error))
-        );
-      });
   }
 
   async processBlockEvent(event: BlockEvent, signal: AbortSignal): Promise<void> {
