@@ -1387,10 +1387,15 @@ export class BeaconChain implements IBeaconChain {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
       const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
-      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject(
+        "BlindedBeaconBlock",
+        sszType.serialize(data),
+        toRootHex(sszType.hashTreeRoot(data)),
+        suffix
+      );
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
-      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), toRootHex(sszType.hashTreeRoot(data)), suffix);
     }
   }
 
@@ -1411,33 +1416,39 @@ export class BeaconChain implements IBeaconChain {
       this.persistSszObject(
         `SignedBeaconBlock_slot_${blockSlot}`,
         blockType.serialize(block),
-        blockType.hashTreeRoot(block),
+        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
         `${logStr}_block`
       ),
       this.persistSszObject(
         `preState_slot_${preState.slot}_BeaconState`,
         preState.serialize(),
-        preState.hashTreeRoot(),
+        toRootHex(preState.hashTreeRoot()),
         `${logStr}_pre_state`
       ),
       this.persistSszObject(
         `postState_slot_${postState.slot}_BeaconState`,
         postState.serialize(),
-        postState.hashTreeRoot(),
+        toRootHex(postStateRoot),
         `${logStr}_post_state`
       ),
     ]);
   }
 
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(
+        type.typeName,
+        type.serialize(sszObject),
+        // in SignedBeaconBlock case, we want to use BeaconBlock root instead
+        rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
+        suffix
+      );
     }
   }
 
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
+  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
@@ -1568,14 +1579,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, rootHex: RootHex, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${rootHex}.ssz`);
 
     await ensureDir(dirpath);
 
