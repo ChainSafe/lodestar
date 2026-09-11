@@ -1,4 +1,5 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import {Slot} from "@lodestar/types";
 import type {IDataColumnStore} from "./dataColumnStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
@@ -62,6 +63,8 @@ export interface IBeaconDb {
   backfilledRanges: BackfilledRanges;
 
   dataColumns: IDataColumnStore;
+  /** Highest legacy column slot at startup; later archival writes the block-root index first. */
+  readonly lastLegacyArchiveSlot: Slot | null;
   init(): Promise<void>;
 
   pruneHotDb(): Promise<void>;

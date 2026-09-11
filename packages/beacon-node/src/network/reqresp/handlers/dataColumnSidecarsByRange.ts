@@ -67,11 +67,11 @@ export async function* onDataColumnSidecarsByRange(
     archiveMaxSlot,
     finalizedSlot
   )) {
-    const dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
-      block.slot,
-      block.blockRoot,
-      availableColumns
-    );
+    const dataColumnSidecars =
+      block.blockRoot === null
+        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
+        : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns);
+    if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumnSidecars.length; i++) {
       const dataColumnSidecarBytes = dataColumnSidecars[i];
@@ -103,7 +103,7 @@ export async function* onDataColumnSidecarsByRange(
 
 type CanonicalDataColumnBlock = {
   slot: number;
-  blockRoot: RootHex;
+  blockRoot: RootHex | null;
   unavailabilityBlockRoot?: RootHex;
   finalized: boolean;
 };
@@ -137,11 +137,12 @@ async function* resolveCanonicalDataColumnBlocks(
     }
 
     let blockRoot = recentRoots.get(slot);
+    if (blockRoot === null) continue;
     if (blockRoot === undefined) {
       const root = await db.blockArchive.getRootBySlot(slot);
       blockRoot = root === null ? null : toRootHex(root);
     }
-    if (blockRoot === null) continue;
+    if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
     if (
       chain.config.getForkSeq(slot) >= ForkSeq.gloas &&
       !(await hasExecutionPayloadEnvelope(chain, db, slot, blockRoot))
@@ -151,7 +152,7 @@ async function* resolveCanonicalDataColumnBlocks(
     yield {
       slot,
       blockRoot,
-      unavailabilityBlockRoot: chain.config.getForkSeq(slot) >= ForkSeq.gloas ? blockRoot : undefined,
+      unavailabilityBlockRoot: chain.config.getForkSeq(slot) >= ForkSeq.gloas ? (blockRoot ?? undefined) : undefined,
       finalized: true,
     };
   }
@@ -191,14 +192,13 @@ async function hasExecutionPayloadEnvelope(
   chain: IBeaconChain,
   db: IBeaconDb,
   slot: number,
-  blockRoot: RootHex
+  blockRoot: RootHex | null
 ): Promise<boolean> {
-  if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
-  const root = fromHex(blockRoot);
-  return (
-    (await db.executionPayloadEnvelope.getBinary(root)) !== null ||
-    (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null
-  );
+  if (blockRoot !== null) {
+    if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
+    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot))) !== null) return true;
+  }
+  return (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null;
 }
 
 export function validateDataColumnSidecarsByRangeRequest(

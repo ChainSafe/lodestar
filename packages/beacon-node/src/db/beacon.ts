@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
 import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
@@ -63,6 +64,7 @@ export class BeaconDb implements IBeaconDb {
   backfilledRanges: BackfilledRanges;
 
   readonly dataColumns: IDataColumnStore;
+  lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
 
   constructor(
@@ -108,6 +110,8 @@ export class BeaconDb implements IBeaconDb {
 
   async init(): Promise<void> {
     await this.flatFileStore.init();
+    const [lastLegacyKey] = await this.dataColumnSidecarArchive.keys({reverse: true, limit: 1});
+    this.lastLegacyArchiveSlot = lastLegacyKey?.prefix ?? null;
   }
 
   async close(): Promise<void> {

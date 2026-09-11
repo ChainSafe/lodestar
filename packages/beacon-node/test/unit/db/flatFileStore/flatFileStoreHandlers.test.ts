@@ -148,6 +148,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
       };
       const db = {
+        lastLegacyArchiveSlot: null,
         dataColumns: makeDataColumnStore({
           getHot: opts.getHotDataColumnSidecars,
           getArchived: opts.getArchivedDataColumnSidecars,
