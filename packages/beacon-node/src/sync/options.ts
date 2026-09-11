@@ -22,6 +22,12 @@ export type SyncOptions = {
    * allocation to backfill sync. The default of 0 would mean backfill sync will be skipped
    */
   backfillBatchSize: number;
+  /**
+   * If false (default), backfill stops at the weak subjectivity period boundary — enough
+   * for weak subjectivity and the minimum required by the spec. Set true on archival
+   * nodes that need every block back to genesis.
+   */
+  backfillToGenesis: boolean;
   /** For testing only, MAX_PENDING_BLOCKS by default */
   maxPendingBlocks?: number;
 
@@ -41,5 +47,7 @@ export const defaultSyncOptions: SyncOptions = {
   disableProcessAsChainSegment: false,
   /** By default skip the backfill sync */
   backfillBatchSize: 0,
+  /** By default backfill only to the WS period boundary, not all the way to genesis. */
+  backfillToGenesis: false,
   slotImportTolerance: SLOTS_PER_EPOCH,
 };

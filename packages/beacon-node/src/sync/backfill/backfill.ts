@@ -240,13 +240,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       lastBackSyncedBlock: null,
     };
 
-    // Load the previous written to slot for the key  backfillStartFromSlot
-    // in backfilledRanges
+    // TODO: migrate to backfillState
     const backfillStartFromSlot = anchorSlot;
-    const backfillRangeWrittenSlot = await db.backfilledRanges.get(backfillStartFromSlot);
-    const previousBackfilledRanges = await db.backfilledRanges.entries({
-      lte: backfillStartFromSlot,
-    });
+    const backfillRangeWrittenSlot = null as number | null;
+    const previousBackfilledRanges = [] as {key: number; value: number}[];
     modules.logger.info("Initializing from Checkpoint", {
       root: toRootHex(anchorCp.root),
       epoch: anchorCp.epoch,
@@ -393,7 +390,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           this.syncAnchor.lastBackSyncedBlock.slot < this.backfillRangeWrittenSlot
         ) {
           this.backfillRangeWrittenSlot = this.syncAnchor.lastBackSyncedBlock.slot;
-          await this.db.backfilledRanges.put(this.backfillStartFromSlot, this.backfillRangeWrittenSlot);
+          // TODO: migrate to backfillState
+          // await this.db.backfilledRanges.put(this.backfillStartFromSlot, this.backfillRangeWrittenSlot);
           this.logger.debug(
             `Updated the backfill range from=${this.backfillStartFromSlot} till=${this.backfillRangeWrittenSlot}`
           );
@@ -547,105 +545,97 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       throw Error("Backfill ranges can only be used once we have a valid lastBackSyncedBlock as a pivot point");
     }
 
-    let validSequence = false;
+    const validSequence = false;
     if (this.syncAnchor.lastBackSyncedBlock.slot === null) return validSequence;
     const lastBackSyncedSlot = this.syncAnchor.lastBackSyncedBlock.slot;
 
-    const filteredSeqs = await this.db.backfilledRanges.entries({
-      gte: lastBackSyncedSlot,
-    });
-
-    if (filteredSeqs.length > 0) {
-      const jumpBackTo = Math.min(...filteredSeqs.map(({value: justToSlot}) => justToSlot));
-
-      if (jumpBackTo < lastBackSyncedSlot) {
-        validSequence = true;
-        const anchorBlock = await this.db.blockArchive.get(jumpBackTo);
-        if (!anchorBlock) {
-          validSequence = false;
-          this.logger.warn(
-            `Invalid backfill sequence: expected a block at ${jumpBackTo} in blockArchive, ignoring the sequence`
-          );
-        }
-        if (anchorBlock && validSequence && this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
-          this.logger.debug(
-            `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
-            {slot: this.prevFinalizedCheckpointBlock.slot}
-          );
-
-          // Everything saved in db between a backfilled range is a connected sequence
-          // we only need to check if prevFinalizedCheckpointBlock is in db
-          const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
-          if (
-            prevBackfillCpBlock != null &&
-            this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
-          ) {
-            this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
-              root: toRootHex(this.prevFinalizedCheckpointBlock.root),
-              slot: prevBackfillCpBlock.message.slot,
-            });
-          } else {
-            validSequence = false;
-            this.logger.warn(
-              `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
-                this.prevFinalizedCheckpointBlock.root
-              )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
-                prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
-              }, ignoring the sequence`
-            );
-          }
-        }
-
-        if (anchorBlock && validSequence) {
-          // Update the current sequence in DB as we will be cleaning up previous sequences
-          await this.db.backfilledRanges.put(this.backfillStartFromSlot, jumpBackTo);
-          this.backfillRangeWrittenSlot = jumpBackTo;
-          this.logger.verbose(
-            `Jumped and updated the backfilled range ${this.backfillStartFromSlot}, ${this.backfillRangeWrittenSlot}`,
-            {jumpBackTo}
-          );
-
-          const anchorBlockHeader = blockToHeader(this.config, anchorBlock.message);
-          const anchorBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(anchorBlockHeader);
-
-          this.syncAnchor = {
-            anchorBlock,
-            anchorBlockRoot,
-            anchorSlot: jumpBackTo,
-            lastBackSyncedBlock: {root: anchorBlockRoot, slot: jumpBackTo, block: anchorBlock},
-          };
-          if (this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
-            // prevFinalizedCheckpointBlock must have been validated, update to a
-            // new unverified
-            // finalized or wsCheckpoint behind the new lastBackSyncedBlock
-            this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
-              this.config,
-              this.db,
-              jumpBackTo,
-              this.logger
-            );
-          }
-
-          this.metrics?.backfillSync.totalBlocks.inc(
-            {method: BackfillSyncMethod.backfilled_ranges},
-            lastBackSyncedSlot - jumpBackTo
-          );
-        }
-      }
-    }
-
-    // Only delete < backfillStartFromSlot, the keys greater than this would be cleaned
-    // up by the archival process of forward sync
-    const cleanupSeqs = filteredSeqs.filter((entry) => entry.key < this.backfillStartFromSlot);
-    if (cleanupSeqs.length > 0) {
-      await this.db.backfilledRanges.batchDelete(cleanupSeqs.map((entry) => entry.key));
-      this.logger.debug(
-        `Cleaned up the old sequences between ${this.backfillStartFromSlot},${toRootHex(
-          this.syncAnchor.lastBackSyncedBlock.root
-        )}`,
-        {cleanupSeqs: JSON.stringify(cleanupSeqs)}
-      );
-    }
+    // const filteredSeqs = await this.db.backfilledRanges.entries({
+    //   gte: lastBackSyncedSlot,
+    // });
+    //
+    // if (filteredSeqs.length > 0) {
+    //   const jumpBackTo = Math.min(...filteredSeqs.map(({value: justToSlot}) => justToSlot));
+    //
+    //   if (jumpBackTo < lastBackSyncedSlot) {
+    //     validSequence = true;
+    //     const anchorBlock = await this.db.blockArchive.get(jumpBackTo);
+    //     if (!anchorBlock) {
+    //       validSequence = false;
+    //       this.logger.warn(
+    //         `Invalid backfill sequence: expected a block at ${jumpBackTo} in blockArchive, ignoring the sequence`
+    //       );
+    //     }
+    //     if (anchorBlock && validSequence && this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
+    //       this.logger.debug(
+    //         `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
+    //         {slot: this.prevFinalizedCheckpointBlock.slot}
+    //       );
+    //
+    //       const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
+    //       if (
+    //         prevBackfillCpBlock != null &&
+    //         this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
+    //       ) {
+    //         this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
+    //           root: toRootHex(this.prevFinalizedCheckpointBlock.root),
+    //           slot: prevBackfillCpBlock.message.slot,
+    //         });
+    //       } else {
+    //         validSequence = false;
+    //         this.logger.warn(
+    //           `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
+    //             this.prevFinalizedCheckpointBlock.root
+    //           )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
+    //             prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
+    //           }, ignoring the sequence`
+    //         );
+    //       }
+    //     }
+    //
+    //     if (anchorBlock && validSequence) {
+    //       await this.db.backfilledRanges.put(this.backfillStartFromSlot, jumpBackTo);
+    //       this.backfillRangeWrittenSlot = jumpBackTo;
+    //       this.logger.verbose(
+    //         `Jumped and updated the backfilled range ${this.backfillStartFromSlot}, ${this.backfillRangeWrittenSlot}`,
+    //         {jumpBackTo}
+    //       );
+    //
+    //       const anchorBlockHeader = blockToHeader(this.config, anchorBlock.message);
+    //       const anchorBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(anchorBlockHeader);
+    //
+    //       this.syncAnchor = {
+    //         anchorBlock,
+    //         anchorBlockRoot,
+    //         anchorSlot: jumpBackTo,
+    //         lastBackSyncedBlock: {root: anchorBlockRoot, slot: jumpBackTo, block: anchorBlock},
+    //       };
+    //       if (this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
+    //         this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
+    //           this.config,
+    //           this.db,
+    //           jumpBackTo,
+    //           this.logger
+    //         );
+    //       }
+    //
+    //       this.metrics?.backfillSync.totalBlocks.inc(
+    //         {method: BackfillSyncMethod.backfilled_ranges},
+    //         lastBackSyncedSlot - jumpBackTo
+    //       );
+    //     }
+    //   }
+    // }
+    //
+    // const cleanupSeqs = filteredSeqs.filter((entry) => entry.key < this.backfillStartFromSlot);
+    // if (cleanupSeqs.length > 0) {
+    //   await this.db.backfilledRanges.batchDelete(cleanupSeqs.map((entry) => entry.key));
+    //   this.logger.debug(
+    //     `Cleaned up the old sequences between ${this.backfillStartFromSlot},${toRootHex(
+    //       this.syncAnchor.lastBackSyncedBlock.root
+    //     )}`,
+    //     {cleanupSeqs: JSON.stringify(cleanupSeqs)}
+    //   );
+    // }
 
     return validSequence;
   }

@@ -56,7 +56,7 @@ export enum Bucket {
   // altair_lightClientSyncCommitteeProof = 35, // DEPRECATED on v0.32.0
   // index_lightClientInitProof = 36, // DEPRECATED on v0.32.0
 
-  backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
+  backfill_state = 42, // Epoch -> EpochBackfillState
 
   // Buckets to support LightClient server v2
   lightClient_syncCommitteeWitness = 51, // BlockRoot -> SyncCommitteeWitness
