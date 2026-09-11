@@ -249,7 +249,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           throw e;
         }
 
-        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+        chain.persistInvalidSszValue(
+          forkTypes.SignedBeaconBlock,
+          signedBlock,
+          `gossip_reject_slot_${slot}`,
+          blockRootHex
+        );
       }
 
       // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
