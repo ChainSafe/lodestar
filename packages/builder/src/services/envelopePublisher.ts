@@ -1,6 +1,6 @@
 import {type ApiClient, routes} from "@lodestar/api";
 import {type BuilderIndex, type RootHex, type Slot, type gloas, ssz} from "@lodestar/types";
-import {LodestarError, toRootHex} from "@lodestar/utils";
+import {LodestarError, defer, toRootHex} from "@lodestar/utils";
 import type {BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
 
@@ -45,9 +45,15 @@ export type EnvelopePublicationResult =
   | {status: "published"; signedEnvelope: gloas.SignedExecutionPayloadEnvelope}
   | {status: "duplicate"};
 
+type ActivePublication = {
+  controller: AbortController;
+  promise: Promise<EnvelopePublicationResult>;
+  waiters: number;
+};
+
 /** Signs and submits stateless envelope material for an exact recorded local selection. */
 export class EnvelopePublisher {
-  private readonly activePublications = new Map<RootHex, Promise<EnvelopePublicationResult>>();
+  private readonly activePublications = new Map<RootHex, ActivePublication>();
 
   constructor(private readonly modules: EnvelopePublisherModules) {}
 
@@ -87,20 +93,48 @@ export class EnvelopePublisher {
       return {status: "duplicate"};
     }
 
-    const activePublication = this.activePublications.get(identity.blockRoot);
-    if (activePublication !== undefined) {
-      return activePublication;
+    let publication = this.activePublications.get(identity.blockRoot);
+    if (publication === undefined) {
+      const controller = new AbortController();
+      publication = {
+        controller,
+        waiters: 0,
+        promise: this.publishEnvelope(material, identity, envelopeRoot, api, ledger, signer, controller.signal).finally(
+          () => {
+            if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
+              this.activePublications.delete(identity.blockRoot);
+            }
+          }
+        ),
+      };
+      this.activePublications.set(identity.blockRoot, publication);
     }
+    return this.waitForPublication(identity.blockRoot, publication, signal);
+  }
 
-    const publication = this.publishEnvelope(material, identity, envelopeRoot, api, ledger, signer, signal).finally(
-      () => {
-        if (this.activePublications.get(identity.blockRoot) === publication) {
-          this.activePublications.delete(identity.blockRoot);
+  private async waitForPublication(
+    blockRoot: RootHex,
+    publication: ActivePublication,
+    signal: AbortSignal
+  ): Promise<EnvelopePublicationResult> {
+    const aborted = defer<never>();
+    const onAbort = (): void => aborted.reject(signal.reason);
+    publication.waiters++;
+    signal.addEventListener("abort", onAbort, {once: true});
+    if (signal.aborted) onAbort();
+
+    try {
+      return await Promise.race([publication.promise, aborted.promise]);
+    } finally {
+      signal.removeEventListener("abort", onAbort);
+      publication.waiters--;
+      if (publication.waiters === 0 && signal.aborted) {
+        if (this.activePublications.get(blockRoot) === publication) {
+          this.activePublications.delete(blockRoot);
         }
+        publication.controller.abort(signal.reason);
       }
-    );
-    this.activePublications.set(identity.blockRoot, publication);
-    return publication;
+    }
   }
 
   private async publishEnvelope(
@@ -126,6 +160,7 @@ export class EnvelopePublisher {
       {signal}
     );
     response.assertOk();
+    signal.throwIfAborted();
     ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
     return {status: "published", signedEnvelope};
   }
