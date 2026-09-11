@@ -1301,59 +1301,65 @@ export class BeaconChain implements IBeaconChain {
     try {
       const prevHead = this.forkChoice.getHead();
       const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-
-      const headRootChanged = head.blockRoot !== prevHead.blockRoot;
-
-      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
-        return head;
-      }
-
-      try {
-        const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
-        const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
-        const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
-        const executionOptimistic = isOptimisticBlock(head);
-
-        if (headRootChanged) {
-          this.emitter.emit(routes.events.EventType.head, {
-            block: head.blockRoot,
-            epochTransition,
-            slot: head.slot,
-            state: head.stateRoot,
-            previousDutyDependentRoot,
-            currentDutyDependentRoot,
-            executionOptimistic,
-          });
-        }
-
-        this.emitter.emit(routes.events.EventType.headV2, {
-          version: this.config.getForkName(head.slot),
-          data: {
-            slot: head.slot,
-            block: head.blockRoot,
-            state: head.stateRoot,
-            payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-            epochTransition,
-            currentEpochDependentRoot: previousDutyDependentRoot,
-            nextEpochDependentRoot: currentDutyDependentRoot,
-            executionOptimistic,
-          },
-        });
-      } catch (e) {
-        // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-        this.logger.debug(
-          "Error emitting head/head_v2 event",
-          {slot: head.slot, root: head.blockRoot, headRootChanged},
-          e as Error
-        );
-      }
-
+      this.emitHeadEvents(prevHead, head);
       return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
     } finally {
       timer?.();
+    }
+  }
+
+  /**
+   * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
+   * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
+   */
+  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+    const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+
+    if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+      return;
+    }
+
+    try {
+      const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+      const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+      const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+      const executionOptimistic = isOptimisticBlock(head);
+
+      if (headRootChanged) {
+        this.emitter.emit(routes.events.EventType.head, {
+          block: head.blockRoot,
+          epochTransition,
+          slot: head.slot,
+          state: head.stateRoot,
+          previousDutyDependentRoot,
+          currentDutyDependentRoot,
+          executionOptimistic,
+        });
+      }
+
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(head.slot),
+        data: {
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
+          payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+          epochTransition,
+          currentEpochDependentRoot: previousDutyDependentRoot,
+          nextEpochDependentRoot: currentDutyDependentRoot,
+          executionOptimistic,
+        },
+      });
+    } catch (e) {
+      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      this.logger.debug(
+        "Error emitting head/head_v2 event",
+        {slot: head.slot, root: head.blockRoot, headRootChanged},
+        e as Error
+      );
     }
   }
 
@@ -1411,10 +1417,15 @@ export class BeaconChain implements IBeaconChain {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
       const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
-      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject(
+        "BlindedBeaconBlock",
+        sszType.serialize(data),
+        toRootHex(sszType.hashTreeRoot(data)),
+        suffix
+      );
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
-      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), toRootHex(sszType.hashTreeRoot(data)), suffix);
     }
   }
 
@@ -1435,33 +1446,39 @@ export class BeaconChain implements IBeaconChain {
       this.persistSszObject(
         `SignedBeaconBlock_slot_${blockSlot}`,
         blockType.serialize(block),
-        blockType.hashTreeRoot(block),
+        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
         `${logStr}_block`
       ),
       this.persistSszObject(
         `preState_slot_${preState.slot}_BeaconState`,
         preState.serialize(),
-        preState.hashTreeRoot(),
+        toRootHex(preState.hashTreeRoot()),
         `${logStr}_pre_state`
       ),
       this.persistSszObject(
         `postState_slot_${postState.slot}_BeaconState`,
         postState.serialize(),
-        postState.hashTreeRoot(),
+        toRootHex(postStateRoot),
         `${logStr}_post_state`
       ),
     ]);
   }
 
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(
+        type.typeName,
+        type.serialize(sszObject),
+        // in SignedBeaconBlock case, we want to use BeaconBlock root instead
+        rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
+        suffix
+      );
     }
   }
 
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
+  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
@@ -1592,14 +1609,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, rootHex: RootHex, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${rootHex}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1642,7 +1659,10 @@ export class BeaconChain implements IBeaconChain {
       this.processShutdownCallback(this.forkChoice.irrecoverableError);
     }
 
+    // updateTime() recomputes the head on epoch-boundary checkpoint pull-up and under fast confirmation
+    const prevHead = this.forkChoice.getHead();
     this.forkChoice.updateTime(slot);
+    this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
@@ -1700,6 +1720,25 @@ export class BeaconChain implements IBeaconChain {
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
+    this.metrics?.finalizedEpoch.set(cp.epoch);
+    const finalizedBlock = this.forkChoice.getBlockHexDefaultStatus(cp.rootHex);
+    if (finalizedBlock) {
+      // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
+      callInNextEventLoop(() => {
+        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+          block: cp.rootHex,
+          epoch: cp.epoch,
+          state: finalizedBlock.stateRoot,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+        });
+      });
+    } else {
+      this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {
+        epoch: cp.epoch,
+        root: cp.rootHex,
+      });
+    }
+
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
 

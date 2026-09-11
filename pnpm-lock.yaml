@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: ^1.0.0
-      version: 1.0.0
+      specifier: 1.1.0-dev.58a9fcbc13
+      version: 1.1.0-dev.58a9fcbc13
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -41,7 +41,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -149,8 +149,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -202,7 +202,7 @@ importers:
         version: 2.1.3
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -213,8 +213,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -374,7 +374,7 @@ importers:
         version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -389,10 +389,10 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -435,13 +435,13 @@ importers:
         version: 6.0.2
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -504,7 +504,7 @@ importers:
         version: 9.1.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -573,8 +573,8 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -588,8 +588,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -608,7 +608,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -628,8 +628,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -665,8 +665,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -687,7 +687,7 @@ importers:
         version: 1.13.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
 
   packages/reqresp:
     dependencies:
@@ -723,8 +723,8 @@ importers:
         version: 3.0.2
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@libp2p/crypto':
         specifier: ^5.1.23
         version: 5.1.23
@@ -744,8 +744,8 @@ importers:
   packages/spec-test-util:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -769,13 +769,13 @@ importers:
         version: 1.2.5
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -806,7 +806,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -836,8 +836,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -861,7 +861,7 @@ importers:
         version: 1.6.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.1
+        version: 4.3.2
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.5
@@ -877,10 +877,10 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.0.0
+        version: 1.1.0-dev.58a9fcbc13
       '@chainsafe/ssz':
-        specifier: ^1.6.3
-        version: 1.6.3
+        specifier: ^1.7.0
+        version: 1.7.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1229,42 +1229,42 @@ packages:
     resolution: {integrity: sha512-y+diflUZN1hEnGhPnTPk3DUjtPigiGNf6bfXPuRSDwoB2obat0BHW7J2ZncayYTE0TAlel1sr66lLaLEO4VAdQ==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.0.0':
-    resolution: {integrity: sha512-JSnHWAWbzyOIuLb/YXRgk9ok8tlQllglDVXjSrdEYDEJTG6Z4ui7W4II0vxCLBEMA6I3OP2aGRswhcrb97wlpA==}
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-fyuTjjY5GcRajL+tf/sdNHwKiZ2+IKQSa9H7Qdna8HqkIyGcVZen2dj8hCdS7J47eon5YnXQNY4fijgyRpYByg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.0.0':
-    resolution: {integrity: sha512-8P1bd7XExwDbCg6AvzYqW80zRbQ1CNitX5WV4WXPoam+6Mokn2sHjk2PK3X/pw+akeDL6cxAKOLW1ncb5H0+sg==}
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-HU2+VBoF5ckEy3sYHUc9Rn7ftM8VDVt3u7zO99ELlP23bcDxmCUKPJAS59I2z3Ff6pNRWKq/LR7esZeg27piwg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.0.0':
-    resolution: {integrity: sha512-AvK4dZdRlNwH5d7TvAt71ogat2ea+It5Hd9l4ayCAHi4opOdn9XFd8zJCbdLpQbyUV7IYQMdZ6tIg5d4zWeArg==}
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-92lUtZs40oWCysHsI0nv/0AjRYHKNR//TOidXPY8FDDsyGDGIy3IsZ6uf7phVLlCpYfaEpQlVojiAVX2apLJ+g==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.0.0':
-    resolution: {integrity: sha512-NL2iU2aKXO2saxco7VU86Xa5zQ7aJ4ViCOOUtZ4m83kYP0L8fkgGF6SCxOoZnz8sO6pa3FzbE5tsooiCOko1kg==}
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-36tXxQN3IWabe/6NEQvJvZdU1hOpQdZMo/vXiO8bhICO7LvgIX74HwTDcXkmGbAtsi+5oJBjUCqhwj6//+gLyg==}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.0.0':
-    resolution: {integrity: sha512-2ZfLGzOAXmQ2TKCarX3SOW+MEkHmFdGIpyeFfITVLuZgUX9FAuU4oRmiXMSvXpb/YEmHSXojPFXKj8A9QMT5Fg==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-ZH/UEWHhHpmY4/yAILZ97QCmL02yMCOKEvTiR5GN12FXA+KIypn2oaTUJPfe0mJOGAwg4q4oDPKzmJmyio5EKA==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.0.0':
-    resolution: {integrity: sha512-7dMTqdthJvk9CiI78SDpnIqfyi2pen5H/3WYcficAJ7vElIkUsHFDbEJr9iYopudZbzp25tkhlO8r/Ryn37mnw==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-1beWqrDaVBOJ/hQP1vB14IHL+yB9iYTX9np3kFxmI/GVNJqWj2eo6xwmeX+8SHEj45OSNsEhhagObWr+NqoNqw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/lodestar-z@1.0.0':
-    resolution: {integrity: sha512-eMh8raOCZN4/8K5O9AT/4Lr+/3yR5Dwk8NCxarQVwfchLCzWt2/Ae/un1klglEtFS8pl+GN+B9jO8zjKZw6ofg==}
+  '@chainsafe/lodestar-z@1.1.0-dev.58a9fcbc13':
+    resolution: {integrity: sha512-DOn0YA1oLyM+Y2q/2vblUN629/hBx3YCXL6Z3VCJbdrXp1VRO28lNUQvSAAZyqYDB2e2Z/mGuvBhC6n2cMEIFQ==}
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -1281,8 +1281,8 @@ packages:
   '@chainsafe/snappy-wasm@0.5.0':
     resolution: {integrity: sha512-ydXvhr9p+JjvzSSEyi6XExq8pHugFnrk70mk17T6mhDsklPvaXc+8K90G7TJF+u51lxI/fpv7MahrA5ayjFcSA==}
 
-  '@chainsafe/ssz@1.6.3':
-    resolution: {integrity: sha512-1O6N3rc5Uu1nn82lUkYzdr7kskcQGHwSMa7voLq6uBzfp8LroS+pcypYtTH8o2Pb2Zx2k2MYlkDRMo4kx/ckJA==}
+  '@chainsafe/ssz@1.7.0':
+    resolution: {integrity: sha512-Eed+kdc6Esu64yFXhTIBvx/6ZCVJ5RZTJcwX4NcnemoYM6XjDSi59sW2PTTlU+D35tiR3WNdNziw98BbDzVFVA==}
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
@@ -4539,8 +4539,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@4.3.1:
-    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
+  js-yaml@4.3.2:
+    resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
 
   json-parse-even-better-errors@5.0.0:
@@ -6862,34 +6862,34 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.3
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.3
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.0.0':
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.0.0':
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.0.0':
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.0.0':
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.0.0':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.0.0':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.1.0-dev.58a9fcbc13':
     optional: true
 
-  '@chainsafe/lodestar-z@1.0.0':
+  '@chainsafe/lodestar-z@1.1.0-dev.58a9fcbc13':
     dependencies:
       '@chainsafe/zapi': 4.0.0
     optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 1.0.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 1.0.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 1.0.0
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 1.0.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 1.0.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 1.0.0
+      '@chainsafe/lodestar-z-aarch64-apple-darwin': 1.1.0-dev.58a9fcbc13
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 1.1.0-dev.58a9fcbc13
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 1.1.0-dev.58a9fcbc13
+      '@chainsafe/lodestar-z-x86_64-apple-darwin': 1.1.0-dev.58a9fcbc13
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 1.1.0-dev.58a9fcbc13
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 1.1.0-dev.58a9fcbc13
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
@@ -6907,7 +6907,7 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.0': {}
 
-  '@chainsafe/ssz@1.6.3':
+  '@chainsafe/ssz@1.7.0':
     dependencies:
       '@chainsafe/as-sha256': 1.2.5
       '@chainsafe/persistent-merkle-tree': 1.3.1
@@ -10544,7 +10544,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@4.3.1:
+  js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
 

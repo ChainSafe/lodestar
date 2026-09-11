@@ -44,6 +44,7 @@ export type IndexedPayloadAttestation = ValueOf<typeof ssz.IndexedPayloadAttesta
 export type ProposerPreferences = ValueOf<typeof ssz.ProposerPreferences>;
 export type SignedProposerPreferences = ValueOf<typeof ssz.SignedProposerPreferences>;
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
+export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
 export type ExecutionPayloadBid = ValueOf<typeof ssz.ExecutionPayloadBid>;
 export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;
 export type BuilderRequestAuth = ValueOf<typeof ssz.BuilderRequestAuth>;

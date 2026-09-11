@@ -264,6 +264,8 @@
 
 - name: NewPayloadRequest#bellatrix
   sources:
+    - file: packages/types/src/bellatrix/sszTypes.ts
+      search: "export const NewPayloadRequest"
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |
@@ -274,6 +276,8 @@
 
 - name: NewPayloadRequest#deneb
   sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: "export const NewPayloadRequest"
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |
@@ -286,6 +290,8 @@
 
 - name: NewPayloadRequest#electra
   sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: "export const NewPayloadRequest"
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |

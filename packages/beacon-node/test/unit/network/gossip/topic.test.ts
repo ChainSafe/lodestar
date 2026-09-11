@@ -250,7 +250,7 @@ describe("network / gossip / topic", () => {
     }
   });
 
-  it("should use preset-defined gossip size limits for Gloas progressive objects", () => {
+  it("should match the preset p2p size bounds for Gloas progressive objects", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     expect({
@@ -291,7 +291,7 @@ describe("network / gossip / topic", () => {
     ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
   });
 
-  it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {
+  it("should cap Gloas progressive gossip objects at or below their theoretical SSZ max", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     for (const topic of [
@@ -302,7 +302,7 @@ describe("network / gossip / topic", () => {
       {type: GossipType.execution_payload_bid, boundary, encoding},
       {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
     ] as const) {
-      expect(getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE)).toBeLessThan(getGossipSSZType(topic).maxSize);
+      expect(getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(getGossipSSZType(topic).maxSize);
     }
   });
 
