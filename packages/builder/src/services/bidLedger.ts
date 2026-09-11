@@ -65,7 +65,7 @@ export class BidLedgerError extends LodestarError<BidLedgerErrorType> {}
 const RECORD_RETENTION_EPOCHS = 3;
 const KEEP_SLOTS = RECORD_RETENTION_EPOCHS * SLOTS_PER_EPOCH;
 
-/** Tracks one-shot bids and reveal obligations without owning signing, publication, or persistence. */
+/** Tracks at most one bid per (slot, parentBlockHash, parentBlockRoot) and its reveal obligations. */
 export class BidLedger {
   private readonly bidsBySlot = new Map<Slot, Map<string, MutableBidLedgerRecord>>();
   private readonly revealedPayloadByBlockRoot = new Map<RootHex, RevealedPayload>();
