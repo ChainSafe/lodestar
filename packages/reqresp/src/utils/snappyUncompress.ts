@@ -1,6 +1,10 @@
-import {uncompressSync} from "snappy";
 import {Uint8ArrayList} from "uint8arraylist";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
+
+// Singleton decoder, decompresses into a Buffer.alloc() to keep decoded output on the V8 heap.
+// The native snappy Buffer is not tracked by GC and grows RSS unbounded under load.
+const decoder = new snappyWasm.Decoder();
 
 export function parseSnappyFrameHeader(header: Uint8Array): {type: ChunkType; frameSize: number} {
   if (header.length !== 4) {
@@ -30,21 +34,18 @@ export function decodeSnappyFrameData(type: ChunkType, frame: Uint8Array): Uint8
 
       const checksum = frame.subarray(0, 4);
       const data = frame.subarray(4);
-      const uncompressedLength = readSnappyUncompressedLength(data);
+      // decompress_len only reads the block header, so validate the declared size before allocating
+      const uncompressedLength = snappyWasm.decompress_len(data);
       if (uncompressedLength > UNCOMPRESSED_CHUNK_SIZE) {
         throw new Error("malformed input: too large");
       }
 
-      const isBuffer = Buffer.isBuffer(data);
-      const input = isBuffer ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength);
-      const uncompressed = uncompressSync(input, {asBuffer: true}) as Buffer;
-      if (uncompressed.length !== uncompressedLength) {
-        throw new Error("malformed input: unexpected uncompressed length");
-      }
+      const uncompressed = Buffer.alloc(uncompressedLength);
+      decoder.decompress_into(data, uncompressed);
       if (crc(uncompressed).compare(checksum) !== 0) {
         throw new Error("malformed input: bad checksum");
       }
-      return isBuffer
+      return Buffer.isBuffer(data)
         ? uncompressed
         : new Uint8Array(uncompressed.buffer, uncompressed.byteOffset, uncompressed.byteLength);
     }
@@ -121,18 +122,4 @@ function getChunkType(value: number): ChunkType {
       }
       throw new Error("Unsupported snappy chunk type");
   }
-}
-
-// Native Snappy allocates from this uint32 varint, so validate it before decompression.
-function readSnappyUncompressedLength(data: Uint8Array): number {
-  let length = 0;
-  for (let i = 0, multiplier = 1; i < 5; i++, multiplier *= 128) {
-    if (i >= data.length || (i === 4 && data[i] > 0x0f)) {
-      throw new Error("malformed input: invalid snappy length");
-    }
-    const byte = data[i];
-    length += (byte & 0x7f) * multiplier;
-    if ((byte & 0x80) === 0) return length;
-  }
-  throw new Error("malformed input: invalid snappy length");
 }

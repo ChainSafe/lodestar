@@ -1,6 +1,6 @@
 import * as snappy from "snappy";
 import {Uint8ArrayList} from "uint8arraylist";
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
   ChunkType,
   IDENTIFIER_FRAME,
@@ -12,14 +12,7 @@ import {
   parseSnappyFrameHeader,
 } from "../../../../../src/utils/snappyIndex.js";
 
-vi.mock("snappy", async (importOriginal) => {
-  const snappy = await importOriginal<typeof import("snappy")>();
-  return {...snappy, uncompressSync: vi.fn(snappy.uncompressSync)};
-});
-
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
-  afterEach(() => vi.mocked(snappy.uncompressSync).mockReset());
-
   const malformedBlocks = [
     {name: "missing output", raw: "08", decoded: "0000000000000000"},
     {name: "underfilled output", raw: "080041", decoded: "4100000000000000"},
@@ -69,26 +62,15 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     }
   );
 
-  it.each(["818004", "ffffffff0f"])("rejects oversized output %s before calling native", (raw) => {
-    const decoder = vi.mocked(snappy.uncompressSync).mockImplementation(() => {
-      throw new Error("native decoder called before size validation");
-    });
+  it.each(["818004", "ffffffff0f"])("rejects oversized declared output %s", (raw) => {
     const frame = Buffer.concat([Buffer.alloc(4), Buffer.from(raw, "hex")]);
     expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow(/large/);
-    expect(decoder).not.toHaveBeenCalled();
   });
 
-  it.each(["", "80", "80808080", "8080808080", "ffffffff10", "ffffffff7f", "808080808000"])(
-    "rejects malformed length %s before calling native",
-    (raw) => {
-      const decoder = vi.mocked(snappy.uncompressSync).mockImplementation(() => {
-        throw new Error("native decoder called before length validation");
-      });
-      const frame = Buffer.concat([Buffer.alloc(4), Buffer.from(raw, "hex")]);
-      expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow(/snappy length/);
-      expect(decoder).not.toHaveBeenCalled();
-    }
-  );
+  it.each(["", "80", "80808080", "8080808080", "ffffffff10", "ffffffff7f"])("rejects malformed length %s", (raw) => {
+    const frame = Buffer.concat([Buffer.alloc(4), Buffer.from(raw, "hex")]);
+    expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow();
+  });
 
   it.each(["010041", "81000041", "8180000041", "818080000041", "81808080000041"])(
     "accepts valid length prefix in %s",

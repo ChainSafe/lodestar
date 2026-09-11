@@ -691,6 +691,9 @@ importers:
       '@chainsafe/fast-crc32c':
         specifier: ^4.2.0
         version: 4.2.0
+      '@chainsafe/snappy-wasm':
+        specifier: ^0.5.0
+        version: 0.5.0
       '@libp2p/interface':
         specifier: ^3.3.0
         version: 3.3.0
@@ -737,6 +740,9 @@ importers:
 
   packages/spec-test-util:
     dependencies:
+      '@chainsafe/snappy-wasm':
+        specifier: ^0.5.0
+        version: 0.5.0
       '@chainsafe/ssz':
         specifier: ^1.7.0
         version: 1.7.0
@@ -749,9 +755,6 @@ importers:
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
-      snappy:
-        specifier: ^7.2.2
-        version: 7.2.2
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)

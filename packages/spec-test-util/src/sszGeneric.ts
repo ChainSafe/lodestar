@@ -1,7 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import {uncompressSync} from "snappy";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {loadYaml} from "@lodestar/utils";
+
+const decoder = new snappyWasm.Decoder();
+
+// Decompress into a Buffer.alloc() so decoded output stays GC-tracked on the V8 heap.
+// The native snappy Buffer is not tracked by GC and grows RSS unbounded across many fixtures.
+function uncompress(data: Uint8Array): Buffer {
+  const out = Buffer.alloc(snappyWasm.decompress_len(data));
+  decoder.decompress_into(data, out);
+  return out;
+}
 
 export type ValidTestCaseData = {
   root: string;
@@ -19,9 +29,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
   }
 
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompressSync(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")), {
-    asBuffer: true,
-  }) as Buffer;
+  const serialized = uncompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
   const yamlPath = path.join(dirpath, "value.yaml");
@@ -48,9 +56,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
  */
 export function parseSszGenericInvalidTestcase(dirpath: string) {
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompressSync(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")), {
-    asBuffer: true,
-  }) as Buffer<ArrayBuffer>;
+  const serialized = uncompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   return {
     serialized,
