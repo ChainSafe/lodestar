@@ -81,12 +81,14 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (unavailableColumnIndices.length) {
+      const finalized = !block || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
       await handleColumnSidecarUnavailability({
         chain,
         db,
         metrics: chain.metrics,
         slot,
         blockRoot,
+        finalized,
         unavailableColumnIndices,
         requestedColumns,
         availableColumns,

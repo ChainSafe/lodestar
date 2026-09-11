@@ -1,4 +1,4 @@
-import childProcess from "node:child_process";
+import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
 import {FilterOptions} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -6,12 +6,19 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconDb} from "../../src/index.js";
 
 export const TEMP_DB_LOCATION = ".tmpdb";
+const TEMP_DATA_COLUMN_LOCATION = `${TEMP_DB_LOCATION}-data-columns`;
 
 export async function startTmpBeaconDb(config: ChainForkConfig): Promise<BeaconDb> {
-  // Clean-up db first
-  childProcess.execSync(`rm -rf ${TEMP_DB_LOCATION}`);
+  fs.rmSync(TEMP_DB_LOCATION, {recursive: true, force: true});
+  fs.rmSync(TEMP_DATA_COLUMN_LOCATION, {recursive: true, force: true});
 
-  return new BeaconDb(config, await LevelDbController.create({name: TEMP_DB_LOCATION}, {logger: testLogger()}));
+  const logger = testLogger();
+  const db = new BeaconDb(config, await LevelDbController.create({name: TEMP_DB_LOCATION}, {logger}), {
+    dataColumnDir: TEMP_DATA_COLUMN_LOCATION,
+    logger,
+  });
+  await db.init();
+  return db;
 }
 
 /**
