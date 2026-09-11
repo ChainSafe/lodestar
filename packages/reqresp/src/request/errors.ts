@@ -57,7 +57,7 @@ export const REQUEST_ERROR_CLASS_NAME = "RequestError";
 
 export class RequestError extends LodestarError<RequestErrorType> {
   constructor(type: RequestErrorType, message?: string, stack?: string) {
-    super(type, message ?? renderErrorMessage(type), stack);
+    super(withInnerError(type), message ?? renderErrorMessage(type), stack);
   }
 
   static fromObject(obj: LodestarErrorObject): RequestError {
@@ -67,6 +67,39 @@ export class RequestError extends LodestarError<RequestErrorType> {
 
     return new RequestError(obj.type as RequestErrorType, obj.message, obj.stack);
   }
+}
+
+/**
+ * `DIAL_ERROR` and `REQUEST_ERROR` declare `error: Error`, but nothing enforces that at runtime:
+ *  - Bun rejects an aborted dial with an abort `Event` (`{type: "abort", isTrusted, local}`) instead
+ *    of an `AbortError`, so the value reaching `new RequestError()` is not an `Error`.
+ *  - `fromObject` rebuilds the type from a thread-boundary clone, which does not preserve `Error`.
+ *
+ * Consumers trust the declared type and read the inner error directly (peer scoring does
+ * `e.type.error.message.includes(...)`), so a non-`Error` there throws a secondary `TypeError` that
+ * escapes as an uncaught exception. Normalize once in the constructor, the single point every
+ * `RequestError` is built, so the declared type is true for every consumer.
+ *
+ * See https://github.com/ChainSafe/lodestar/issues/9900
+ */
+function withInnerError(type: RequestErrorType): RequestErrorType {
+  if (type.code !== RequestErrorCode.DIAL_ERROR && type.code !== RequestErrorCode.REQUEST_ERROR) {
+    return type;
+  }
+
+  const error = type.error as unknown;
+  return error instanceof Error ? type : {...type, error: toError(error)};
+}
+
+/**
+ * Best-effort `Error` from an unknown thrown value, keeping whatever detail it carries so the
+ * original cause stays greppable in logs. `type` covers `Event`-like values (Bun's abort).
+ */
+function toError(value: unknown): Error {
+  const detail =
+    (value as {message?: unknown; type?: unknown} | null | undefined)?.message ??
+    (value as {type?: unknown} | null | undefined)?.type;
+  return new Error(typeof detail === "string" && detail !== "" ? detail : String(value));
 }
 
 /**
