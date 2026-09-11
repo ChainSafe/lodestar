@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, MAX_DATA_COLUMN_SIDECAR_SIZE, isForkPostGloas} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding, TypeSizes} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
@@ -151,35 +151,18 @@ function toProtocol(protocol: ProtocolSummary) {
       encoding: Encoding.SSZ_SNAPPY,
       contextBytes: toContextBytes(protocol.contextBytesType, config),
       inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
-      requestSizes: requestType === null ? null : clampTypeSizes(requestType, protocol.method, fork, config),
-      responseSizes: (fork) =>
-        clampTypeSizes(responseSszTypeByMethod[protocol.method](fork, protocol.version), protocol.method, fork, config),
+      requestSizes: requestType === null ? null : clampTypeSizes(requestType, config),
+      responseSizes: (fork) => clampTypeSizes(responseSszTypeByMethod[protocol.method](fork, protocol.version), config),
     };
   };
 }
 
 /**
- * Bound the sizes accepted from the ssz-snappy length-prefix. Gloas progressive containers have broad
- * theoretical SSZ max sizes so the preset p2p bounds must be used instead.
- *
- * The length-prefix must be within the size bounds derived from the payload SSZ type or `MAX_PAYLOAD_SIZE`,
- * whichever is smaller, see
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/p2p-interface.md#encoding-strategies.
- * Type-specific SSZ bounds supersede the bounds derived from the SSZ type, see
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/p2p-interface.md#type-specific-ssz-bounds.
+ * Length-prefix must be within the SSZ type bounds or MAX_PAYLOAD_SIZE, whichever is smaller
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/p2p-interface.md#encoding-strategies
  */
-function clampTypeSizes(type: TypeSizes, method: ReqRespMethod, fork: ForkName, config: BeaconConfig): TypeSizes {
-  let typeSpecificBound = config.MAX_PAYLOAD_SIZE;
-  if (isForkPostGloas(fork)) {
-    switch (method) {
-      case ReqRespMethod.DataColumnSidecarsByRange:
-      case ReqRespMethod.DataColumnSidecarsByRoot:
-        typeSpecificBound = MAX_DATA_COLUMN_SIDECAR_SIZE;
-        break;
-    }
-  }
-
-  return {minSize: type.minSize, maxSize: Math.min(type.maxSize, typeSpecificBound)};
+function clampTypeSizes(type: TypeSizes, config: BeaconConfig): TypeSizes {
+  return {minSize: type.minSize, maxSize: Math.min(type.maxSize, config.MAX_PAYLOAD_SIZE)};
 }
 
 function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
