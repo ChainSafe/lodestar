@@ -145,6 +145,17 @@ describe("fromHex and fromHexInto", () => {
       expect(toHex(buffer)).toBe(toHex(output));
     });
   }
+
+  // Both builds must agree here. `Buffer.from(hex, "hex")` decodes up to the first character it
+  // cannot read and returns that prefix, so without an explicit check the nodejs build answered a
+  // short array where the browser build threw. This file runs under both projects.
+  const invalidCases: string[] = ["0xzzzz", "0x0011zz2233", "0xgg", "0x00-1", "zzzz"];
+
+  for (const input of invalidCases) {
+    it(`should reject hex string ${input} with invalid characters`, () => {
+      expect(() => fromHex(input)).toThrow();
+    });
+  }
 });
 
 describe("toHexString", () => {
