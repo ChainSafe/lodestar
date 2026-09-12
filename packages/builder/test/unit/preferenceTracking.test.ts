@@ -30,7 +30,7 @@ describe("Builder preference tracking", () => {
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
-    const store = new PayloadStore();
+    const payloadStore = new PayloadStore();
     const opts: BuilderOptions = {
       logger,
       config,
@@ -49,7 +49,7 @@ describe("Builder preference tracking", () => {
       proposerPreferencesTracker,
       clock,
       index: 1,
-      store,
+      payloadStore,
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);

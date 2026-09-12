@@ -52,7 +52,7 @@ describe("Builder", () => {
       proposerPreferencesTracker: new ProposerPreferencesTracker(),
       clock,
       index: 1,
-      store: new PayloadStore(),
+      payloadStore: new PayloadStore(),
     };
   });
 
@@ -68,7 +68,7 @@ describe("Builder", () => {
     modules.proposerPreferencesTracker.onProposerPreferences(preferences);
     const payload = mockBuiltPayload({slot: 0});
     const blockHash = toRootHex(payload.executionPayload.blockHash);
-    modules.store.add({slot: 0, parentBlockRoot: Buffer.alloc(32), blockHash, payload});
+    modules.payloadStore.add({slot: 0, parentBlockRoot: Buffer.alloc(32), blockHash, payload});
     const clockStart = vi.spyOn(clock, "start");
     const builder = new Builder(modules);
 
@@ -84,10 +84,10 @@ describe("Builder", () => {
     expect(logger.verbose).toHaveBeenCalledWith("Subscribing to builder events", {topics: topics.join(",")});
     expect(controller.signal.aborted).toBe(false);
 
-    expect(modules.store.has(blockHash)).toBe(true);
+    expect(modules.payloadStore.has(blockHash)).toBe(true);
     expect(modules.proposerPreferencesTracker.get(2, dependentRoot)).toBe(preferences);
     await clock.tickSlotFns(3, controller.signal);
-    expect(modules.store.has(blockHash)).toBe(false);
+    expect(modules.payloadStore.has(blockHash)).toBe(false);
     expect(modules.proposerPreferencesTracker.get(2, dependentRoot)).toBeNull();
     expect(api.events.eventstream).toHaveBeenCalledOnce();
 
