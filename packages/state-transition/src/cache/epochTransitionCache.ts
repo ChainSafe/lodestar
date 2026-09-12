@@ -22,13 +22,6 @@ import {
 } from "../util/attesterStatus.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 
-export type EpochTransitionCacheOpts = {
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
-};
-
 /**
  * EpochTransitionCache is the parent object of:
  * - Any data-structures not part of the spec'ed BeaconState
@@ -218,10 +211,7 @@ const isCompoundingValidatorArr = new Array<boolean>();
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
 
-export function beforeProcessEpoch(
-  state: CachedBeaconStateAllForks,
-  opts?: EpochTransitionCacheOpts
-): EpochTransitionCache {
+export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
   const currentEpoch = epochCtx.epoch;
@@ -469,8 +459,7 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (opts?.assertCorrectProgressiveBalances && forkSeq >= ForkSeq.altair) {
-    // TODO: describe issue. Compute progressive target balances
+  if (forkSeq >= ForkSeq.altair) {
     if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
       throw Error(
         `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
