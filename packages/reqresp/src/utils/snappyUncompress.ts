@@ -2,6 +2,7 @@ import {Uint8ArrayList} from "uint8arraylist";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
+// Match gossip's WASM + Buffer.alloc pattern; native snappy's default buffers retained more RSS in local tests.
 const decoder = new snappyWasm.Decoder();
 
 export function parseSnappyFrameHeader(header: Uint8Array): {type: ChunkType; frameSize: number} {
