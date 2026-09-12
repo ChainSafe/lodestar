@@ -253,7 +253,7 @@ describe("Builder", () => {
     await vi.waitFor(() =>
       expect(logger.error).toHaveBeenCalledWith(
         "Failed to subscribe to builder events",
-        {topics: topics.join(",")},
+        {topics: topics.join(","), code: "BUILDER_EVENT_SUBSCRIPTION_FAILED"},
         error
       )
     );
