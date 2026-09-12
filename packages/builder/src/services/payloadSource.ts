@@ -24,7 +24,7 @@ export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = F extends Fo
       fork: F;
       forkchoiceState: ForkchoiceState;
       payloadAttributes: PayloadAttributes<F>;
-      /** Logical custody set. The transport serializes it for Engine API; null means no custody service. */
+      /** CL data-column custody set for EL blobpool sampling; null if the CL provides no custody services. */
       custodyColumns: ColumnIndex[] | null;
     }
   : never;
