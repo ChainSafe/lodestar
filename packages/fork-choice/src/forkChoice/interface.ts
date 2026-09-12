@@ -159,7 +159,9 @@ export interface IForkChoice {
     importDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    /** Delay to evaluate PTC timeliness with, when the block was first seen earlier than it is imported */
+    ptcReceiveDelaySec?: number
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.

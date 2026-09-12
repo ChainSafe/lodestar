@@ -4,6 +4,8 @@ import {MapDef} from "@lodestar/utils";
 
 /** Two distinct block roots signed by the same proposer for the same slot are sufficient to establish an equivocation */
 const MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL = 2;
+/** Far above what a node can deserialize within a slot, so a flood of repeat proposals cannot crowd out a real sibling */
+const MAX_FIRST_SEEN_BLOCK_ROOTS_PER_SLOT = 4096;
 
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.
@@ -16,6 +18,9 @@ const MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL = 2;
  * The signed block header of each observed root is kept so a proposer slashing can be produced from the two
  * conflicting headers once an equivocation is established.
  *
+ * The time a repeat proposal was first seen on gossip is kept even if it is not imported at that point, so a later
+ * import through sync records its PTC timeliness from arrival rather than from the download.
+ *
  * The cache is pruned on finalization and bounds the number of roots stored per proposer and slot
  */
 export class SeenBlockProposers {
@@ -26,6 +31,9 @@ export class SeenBlockProposers {
     Slot,
     MapDef<ValidatorIndex, Map<RootHex, phase0.SignedBeaconBlockHeader>>
   >(() => new MapDef<ValidatorIndex, Map<RootHex, phase0.SignedBeaconBlockHeader>>(() => new Map()));
+  private readonly firstSeenTimestampSecBySlot = new MapDef<Slot, Map<RootHex, number>>(
+    () => new Map<RootHex, number>()
+  );
   private finalizedSlot: Slot = 0;
 
   isKnown(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
@@ -94,6 +102,25 @@ export class SeenBlockProposers {
     }
   }
 
+  /** Record when a block root was first seen on gossip, later sightings keep the first timestamp */
+  observeFirstSeen(blockSlot: Slot, blockRoot: RootHex, seenTimestampSec: number): void {
+    if (blockSlot < this.finalizedSlot) {
+      return;
+    }
+
+    const firstSeenTimestampSecByRoot = this.firstSeenTimestampSecBySlot.getOrDefault(blockSlot);
+    if (
+      firstSeenTimestampSecByRoot.size < MAX_FIRST_SEEN_BLOCK_ROOTS_PER_SLOT &&
+      !firstSeenTimestampSecByRoot.has(blockRoot)
+    ) {
+      firstSeenTimestampSecByRoot.set(blockRoot, seenTimestampSec);
+    }
+  }
+
+  getFirstSeenTimestampSec(blockSlot: Slot, blockRoot: RootHex): number | undefined {
+    return this.firstSeenTimestampSecBySlot.get(blockSlot)?.get(blockRoot);
+  }
+
   /** Mark a block as known from gossip or another block import path */
   add(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): void {
     if (blockSlot < this.finalizedSlot) {
@@ -113,6 +140,11 @@ export class SeenBlockProposers {
     for (const slot of this.signedBlockHeadersBySlot.keys()) {
       if (slot < finalizedSlot) {
         this.signedBlockHeadersBySlot.delete(slot);
+      }
+    }
+    for (const slot of this.firstSeenTimestampSecBySlot.keys()) {
+      if (slot < finalizedSlot) {
+        this.firstSeenTimestampSecBySlot.delete(slot);
       }
     }
   }
