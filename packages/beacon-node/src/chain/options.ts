@@ -67,6 +67,12 @@ export type BlockProcessOpts = {
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
+  /**
+   * Skip pending deposit signature verification during epoch processing, treating every signature as
+   * valid. Used for fast_confirmation spec tests, whose `bls_setting: 2` vectors carry placeholder
+   * deposit signatures; pyspec stubs `bls.Verify` to true for those. MUST stay false on a real node.
+   */
+  dangerouslyAssumeValidDepositSignatures?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -115,6 +121,7 @@ export const defaultChainOptions: IChainOptions = {
   graffitiAppend: true,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
+  dangerouslyAssumeValidDepositSignatures: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,

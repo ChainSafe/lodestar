@@ -141,6 +141,9 @@ const fastConfirmationTest =
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
             assertCorrectProgressiveBalances,
+            // Deposits are applied in epoch processing, past the point where `validSignatures` below
+            // can mark a block trusted, so bls_setting=2 has to be honored separately here
+            dangerouslyAssumeValidDepositSignatures: testcase.meta?.bls_setting !== BigInt(1),
             proposerBoost: true,
             proposerBoostReorg: true,
             fastConfirmation: true,
@@ -713,13 +716,7 @@ const fastConfirmationTest =
           // and these tests are failing until we update our implementation.
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
-          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
-          // be applied. Passing them requires skipping deposit signature verification inside epoch
-          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
-          // real, or if full bls_setting=2 support is ever added.
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
+          name.includes("justified_update_not_realized_finality"),
       },
     };
   };
