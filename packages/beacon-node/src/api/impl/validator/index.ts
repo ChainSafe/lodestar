@@ -875,6 +875,417 @@ export function getValidatorApi(
     throw Error("Unreachable error occurred during the builder and execution block production");
   }
 
+  /**
+   * Gloas block production behind `produceBlockV4`, the local payload build is raced against
+   * the best builder bid
+   */
+  async function produceGloasBlock({
+    slot,
+    randaoReveal,
+    graffiti,
+    feeRecipient,
+    strictFeeRecipientCheck,
+    includePayload,
+    builderConfig,
+  }: {
+    slot: Slot;
+    randaoReveal: BLSSignature;
+    graffiti?: string;
+    feeRecipient?: string;
+    strictFeeRecipientCheck?: boolean;
+    includePayload: boolean;
+    builderConfig: routes.validator.BuilderConfig;
+  }) {
+    const fork = config.getForkName(slot);
+
+    if (!isForkPostGloas(fork)) {
+      throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
+    }
+
+    const builderBoostFactor = builderConfig.builderBoostFactor;
+    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
+    notWhileSyncing(chain, sync.state);
+    await waitForSlot(slot);
+
+    const parentBlock = chain.getProposerHead(slot);
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+    const parentBlockRoot = fromHex(parentBlockRootHex);
+    // An optimistic validator MUST NOT produce a block
+    if (isOptimisticBlock(parentBlock)) {
+      throw new NodeIsSyncing(
+        `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
+      );
+    }
+    notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
+
+    const graffitiBytes = toGraffitiBytes(
+      getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+        private: opts.private,
+        graffitiAppend: chain.opts.graffitiAppend,
+      })
+    );
+
+    const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+    const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+    // Post-gloas every proposal parent has an execution payload hash
+    if (bidParentBlockHash === null) {
+      throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
+    }
+    const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
+
+    // Fire builder API bid requests while the local payload is built, one request per entry.
+    // Any entry failure yields no bid and never fails block production.
+    let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
+    if (builderConfig.builders.length > 0 && !circuitBreakerActive) {
+      try {
+        const proposerIndex = chain.getHeadState().getBeaconProposer(slot);
+        const proposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+        builderApiBidsPromise = chain.builderApiClient.getExecutionPayloadBids(
+          builderConfig.builders,
+          slot,
+          fromHex(bidParentBlockHash),
+          parentBlockRoot,
+          proposerPubkey
+        );
+      } catch (e) {
+        logger.warn("Unable to request builder API bids", {slot}, e as Error);
+      }
+    }
+
+    // A builder bid is expected if builders are configured or a p2p bid was already received.
+    // Used by the censorship override which may run before the bid deadline
+    const builderBidExpected =
+      builderConfig.builders.length > 0 ||
+      (!circuitBreakerActive &&
+        chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
+
+    // Select the p2p bid once builders had time to bid up, matching the deadline advertised
+    // on builder API bid requests, unless the circuit breaker is active
+    const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
+      ? Promise.resolve(null)
+      : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
+          const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+          // Discard p2p bids below the proposer's configured floor on the total payment.
+          // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+          if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+            logger.info("Best p2p bid below configured minimum", {
+              slot,
+              bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+              minBid: prettyGweiToEth(builderConfig.minBid),
+            });
+            return null;
+          }
+          return p2pBid;
+        });
+
+    // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
+    // by the top-level factors and each builder API bid by its own entry. Ties prefer the
+    // earliest received builder API bid, so the signed block can be routed back to its
+    // builder directly.
+    const bestBidPromise: Promise<BidCandidate | null> = (async () => {
+      const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+      let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+
+      const candidates = (
+        await Promise.all(
+          builderApiBids.map(async ({url, entry, signedBid, receivedMs}): Promise<BidCandidate | null> => {
+            try {
+              await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
+                slot,
+                parentBlock,
+                parentBlockHash: bidParentBlockHash,
+                parentBlockRoot: parentBlockRootHex,
+                entry,
+                getParentExecutionRequests: () => {
+                  parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+                  return parentExecutionRequestsPromise;
+                },
+              });
+              return {
+                signedBid,
+                totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
+                boostFactor: entry.builderBoostFactor,
+                url,
+                receivedMs,
+              };
+            } catch (e) {
+              metrics?.builderApi.bidsDiscarded.inc();
+              logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
+              return null;
+            }
+          })
+        )
+      ).filter((candidate): candidate is BidCandidate => candidate !== null);
+
+      if (p2pBid !== null) {
+        candidates.push({
+          signedBid: p2pBid.signedBid,
+          totalGwei: BigInt(p2pBid.signedBid.message.value),
+          boostFactor: builderConfig.builderBoostFactor,
+          receivedMs: p2pBid.receivedMs,
+        });
+      }
+
+      if (candidates.length === 0) {
+        return null;
+      }
+
+      const rankedCandidates = candidates.toSorted(compareBidCandidates);
+      for (const [index, candidate] of rankedCandidates.entries()) {
+        logger.debug("Builder bid candidate", {
+          slot,
+          rank: index + 1,
+          source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
+          builder: candidate.signedBid.message.builderIndex,
+          total: prettyGweiToEth(candidate.totalGwei),
+          boost: candidate.boostFactor,
+          boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
+          receivedMs: candidate.receivedMs,
+        });
+      }
+      return rankedCandidates[0];
+    })();
+
+    const commonBlockBodyPromise = chain.produceCommonBlockBody({
+      slot,
+      parentBlock,
+      randaoReveal,
+      graffiti: graffitiBytes,
+    });
+
+    const baseAttrs = {
+      slot,
+      parentBlock,
+      randaoReveal,
+      graffiti: graffitiBytes,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      commonBlockBodyPromise,
+    };
+
+    metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+
+    const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
+      const t = metrics?.blockProductionTime.startTimer();
+      return fn().finally(() => t?.({source}));
+    };
+
+    // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+    // not delay the proposal when a builder bid block is available (and vice versa)
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+
+    // use abort controller to stop waiting for the bid block if the engine block will be selected
+    const controller = new AbortController();
+
+    const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
+      chain.produceBlock(baseAttrs)
+    ).then((engineBlock) => {
+      // No need to wait for the bid block if the engine block will always be selected, either
+      // due to suspected builder censorship, or because no builders are configured and the
+      // boost factor of 0 always prefers the local block over p2p bids
+      if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
+        controller.abort();
+      }
+      return engineBlock;
+    });
+    const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
+      if (candidate === null) {
+        throw new Error(NO_BID_AVAILABLE);
+      }
+      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
+      return timed(ProducedBlockSource.builder, () =>
+        chain.produceBlock({...baseAttrs, builderBid: candidate.signedBid})
+      );
+    });
+
+    const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
+      resolveTimeoutMs: cutoffMs,
+      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      signal: controller.signal,
+    });
+
+    let bestResult: typeof engineResult | null = null;
+    let source: ProducedBlockSource = ProducedBlockSource.engine;
+
+    // Resolved instantly whenever the bid branch produced a block
+    const bestBid = bidBlockResult.status === "fulfilled" ? await bestBidPromise : null;
+
+    const logCtx = {
+      slot,
+      parentSlot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlock.executionPayloadBlockHash,
+      fork,
+      builderBoostFactor,
+      strictFeeRecipientCheck,
+      circuitBreakerActive,
+      builderEntries: builderConfig.builders.length,
+      ...(bestBid !== null
+        ? {
+            bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
+            bidValue: prettyGweiToEth(bestBid.signedBid.message.value),
+            bidExecutionPayment: prettyGweiToEth(bestBid.signedBid.message.executionPayment),
+            // The full bid total and the counted total used during bid selection
+            bidTotal: prettyGweiToEth(
+              BigInt(bestBid.signedBid.message.value) + bestBid.signedBid.message.executionPayment
+            ),
+            bidCountedTotal: prettyGweiToEth(bestBid.totalGwei),
+            bidBoostFactor: bestBid.boostFactor,
+            builderIndex: bestBid.signedBid.message.builderIndex,
+            bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
+            bidReceivedMs: bestBid.receivedMs,
+          }
+        : {}),
+    };
+
+    // handle shouldOverrideBuilder separately
+    if (
+      engineResult.status === "fulfilled" &&
+      engineResult.value.shouldOverrideBuilder &&
+      (builderBidExpected || bidBlockResult.status === "fulfilled")
+    ) {
+      source = ProducedBlockSource.engine;
+      bestResult = engineResult;
+      metrics?.blockProductionSelectionResults.inc({
+        source: ProducedBlockSource.engine,
+        reason: EngineBlockSelectionReason.BuilderCensorship,
+      });
+      logger.warn("Selected local block: censorship suspected in builder bid", {
+        ...logCtx,
+        durationMs: engineResult.durationMs,
+        ...getBlockValueLogInfo(engineResult.value),
+      });
+    } else if (engineResult.status === "fulfilled" && bidBlockResult.status === "fulfilled") {
+      const result = selectBlockProductionSourceByBoostFactor({
+        builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
+        engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
+        // The bid total payment is its value plus its counted executionPayment, in Gwei
+        builderExecutionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
+      });
+      source = result.source;
+      metrics?.blockProductionSelectionResults.inc(result);
+      logger.info(`Selected ${source} block`, {
+        reason: result.reason,
+        ...logCtx,
+        engineDurationMs: engineResult.durationMs,
+        ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
+        builderDurationMs: bidBlockResult.durationMs,
+      });
+      bestResult = source === ProducedBlockSource.builder ? bidBlockResult : engineResult;
+    } else if (bidBlockResult.status === "fulfilled") {
+      source = ProducedBlockSource.builder;
+      bestResult = bidBlockResult;
+      const reason =
+        engineResult.status === "pending"
+          ? BuilderBlockSelectionReason.EnginePending
+          : BuilderBlockSelectionReason.EngineError;
+      metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.builder, reason});
+      logger.info("Selected builder bid block: no local block produced", {
+        reason,
+        ...logCtx,
+        durationMs: bidBlockResult.durationMs,
+        ...getBlockValueLogInfo(bidBlockResult.value),
+        error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
+      });
+    } else if (engineResult.status === "fulfilled") {
+      source = ProducedBlockSource.engine;
+      bestResult = engineResult;
+      const reason =
+        bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
+          ? EngineBlockSelectionReason.BuilderNoBid
+          : bidBlockResult.status === "pending"
+            ? EngineBlockSelectionReason.BuilderPending
+            : EngineBlockSelectionReason.BuilderError;
+      metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
+      logger.info("Selected local block: no builder bid block produced", {
+        reason,
+        ...logCtx,
+        durationMs: engineResult.durationMs,
+        ...getBlockValueLogInfo(engineResult.value),
+        error: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : undefined,
+      });
+    }
+
+    if (bestResult === null || bestResult.status !== "fulfilled") {
+      const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
+      const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
+      logger.error("Block production failed", {
+        ...logCtx,
+        engineReason: String(engineReason),
+        bidReason: String(bidReason),
+      });
+      throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
+    }
+
+    const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
+
+    metrics?.blockProductionSuccess.inc({source});
+    metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+    metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+    metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+    const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+    logger.verbose("Produced block", {
+      ...logCtx,
+      executionPayloadValue,
+      consensusBlockValue,
+      root: blockRoot,
+    });
+    if (chain.opts.persistProducedBlocks) {
+      void chain.persistBlock(
+        block,
+        source === ProducedBlockSource.builder ? "produced_builder_block" : "produced_engine_block"
+      );
+    }
+
+    // Include the payload for self-builds unless disabled (stateless flow)
+    const isSelfBuild = source === ProducedBlockSource.engine;
+    if (isSelfBuild && includePayload) {
+      const produceResult = chain.blockProductionCache.get(blockRoot);
+      if (
+        produceResult === undefined ||
+        !isForkPostGloas(produceResult.fork) ||
+        produceResult.type !== BlockType.Full
+      ) {
+        throw Error(`Missing cached block production result for produced block slot=${slot} blockRoot=${blockRoot}`);
+      }
+      const {executionPayload, executionRequests, blobsBundle, parentBlockRoot} = produceResult as ProduceFullGloas;
+
+      const blockContents: gloas.BlockContents = {
+        block: block as gloas.BeaconBlock,
+        executionPayloadEnvelope: {
+          payload: executionPayload,
+          executionRequests,
+          builderIndex: BUILDER_INDEX_SELF_BUILD,
+          beaconBlockRoot: fromHex(blockRoot),
+          parentBeaconBlockRoot: parentBlockRoot,
+        },
+        kzgProofs: blobsBundle.proofs,
+        blobs: blobsBundle.blobs,
+      };
+
+      return {
+        data: blockContents,
+        meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: true},
+      };
+    }
+
+    return {
+      data: block as gloas.BeaconBlock,
+      meta: {
+        version: fork,
+        consensusBlockValue,
+        executionPayloadValue,
+        executionPayloadIncluded: false,
+        builderUrl: source === ProducedBlockSource.builder ? bestBid?.url : undefined,
+      },
+    };
+  }
+
   return {
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
       const {data, ...meta} = await produceEngineOrBuilderBlock(
@@ -903,403 +1314,8 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      strictFeeRecipientCheck,
-      includePayload,
-      builderConfig,
-    }) {
-      const fork = config.getForkName(slot);
-
-      if (!isForkPostGloas(fork)) {
-        throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
-      }
-
-      const builderBoostFactor = builderConfig.builderBoostFactor;
-      if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-        throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
-      }
-
-      notWhileSyncing(chain, sync.state);
-      await waitForSlot(slot);
-
-      const parentBlock = chain.getProposerHead(slot);
-      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
-      const parentBlockRoot = fromHex(parentBlockRootHex);
-      // An optimistic validator MUST NOT produce a block
-      if (isOptimisticBlock(parentBlock)) {
-        throw new NodeIsSyncing(
-          `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
-        );
-      }
-      notOnOutOfRangeData(parentBlockRoot);
-      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
-
-      const graffitiBytes = toGraffitiBytes(
-        getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
-          private: opts.private,
-          graffitiAppend: chain.opts.graffitiAppend,
-        })
-      );
-
-      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
-      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // Post-gloas every proposal parent has an execution payload hash
-      if (bidParentBlockHash === null) {
-        throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
-      }
-      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
-
-      // Fire builder API bid requests while the local payload is built, one request per entry.
-      // Any entry failure yields no bid and never fails block production.
-      let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
-      if (builderConfig.builders.length > 0 && !circuitBreakerActive) {
-        try {
-          const proposerIndex = chain.getHeadState().getBeaconProposer(slot);
-          const proposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
-          builderApiBidsPromise = chain.builderApiClient.getExecutionPayloadBids(
-            builderConfig.builders,
-            slot,
-            fromHex(bidParentBlockHash),
-            parentBlockRoot,
-            proposerPubkey
-          );
-        } catch (e) {
-          logger.warn("Unable to request builder API bids", {slot}, e as Error);
-        }
-      }
-
-      // A builder bid is expected if builders are configured or a p2p bid was already received.
-      // Used by the censorship override which may run before the bid deadline
-      const builderBidExpected =
-        builderConfig.builders.length > 0 ||
-        (!circuitBreakerActive &&
-          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
-
-      // Select the p2p bid once builders had time to bid up, matching the deadline advertised
-      // on builder API bid requests, unless the circuit breaker is active
-      const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
-        ? Promise.resolve(null)
-        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
-            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-            // Discard p2p bids below the proposer's configured floor on the total payment.
-            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-              logger.info("Best p2p bid below configured minimum", {
-                slot,
-                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-                minBid: prettyGweiToEth(builderConfig.minBid),
-              });
-              return null;
-            }
-            return p2pBid;
-          });
-
-      // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
-      // by the top-level factors and each builder API bid by its own entry. Ties prefer the
-      // earliest received builder API bid, so the signed block can be routed back to its
-      // builder directly.
-      const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-        const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
-        let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
-
-        const candidates = (
-          await Promise.all(
-            builderApiBids.map(async ({url, entry, signedBid, receivedMs}): Promise<BidCandidate | null> => {
-              try {
-                await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
-                  slot,
-                  parentBlock,
-                  parentBlockHash: bidParentBlockHash,
-                  parentBlockRoot: parentBlockRootHex,
-                  entry,
-                  getParentExecutionRequests: () => {
-                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
-                    return parentExecutionRequestsPromise;
-                  },
-                });
-                return {
-                  signedBid,
-                  totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
-                  boostFactor: entry.builderBoostFactor,
-                  url,
-                  receivedMs,
-                };
-              } catch (e) {
-                metrics?.builderApi.bidsDiscarded.inc();
-                logger.warn("Ignoring invalid builder API bid", {slot, builder: toPrintableUrl(url)}, e as Error);
-                return null;
-              }
-            })
-          )
-        ).filter((candidate): candidate is BidCandidate => candidate !== null);
-
-        if (p2pBid !== null) {
-          candidates.push({
-            signedBid: p2pBid.signedBid,
-            totalGwei: BigInt(p2pBid.signedBid.message.value),
-            boostFactor: builderConfig.builderBoostFactor,
-            receivedMs: p2pBid.receivedMs,
-          });
-        }
-
-        if (candidates.length === 0) {
-          return null;
-        }
-
-        const rankedCandidates = candidates.toSorted(compareBidCandidates);
-        for (const [index, candidate] of rankedCandidates.entries()) {
-          logger.debug("Builder bid candidate", {
-            slot,
-            rank: index + 1,
-            source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
-            builder: candidate.signedBid.message.builderIndex,
-            total: prettyGweiToEth(candidate.totalGwei),
-            boost: candidate.boostFactor,
-            boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
-            receivedMs: candidate.receivedMs,
-          });
-        }
-        return rankedCandidates[0];
-      })();
-
-      const commonBlockBodyPromise = chain.produceCommonBlockBody({
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      });
-
-      const baseAttrs = {
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-        feeRecipient,
-        strictFeeRecipientCheck,
-        commonBlockBodyPromise,
-      };
-
-      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-
-      const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
-        const t = metrics?.blockProductionTime.startTimer();
-        return fn().finally(() => t?.({source}));
-      };
-
-      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-      // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
-
-      // use abort controller to stop waiting for the bid block if the engine block will be selected
-      const controller = new AbortController();
-
-      const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
-        chain.produceBlock(baseAttrs)
-      ).then((engineBlock) => {
-        // No need to wait for the bid block if the engine block will always be selected, either
-        // due to suspected builder censorship, or because no builders are configured and the
-        // boost factor of 0 always prefers the local block over p2p bids
-        if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
-          controller.abort();
-        }
-        return engineBlock;
-      });
-      const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
-        if (candidate === null) {
-          throw new Error(NO_BID_AVAILABLE);
-        }
-        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
-        return timed(ProducedBlockSource.builder, () =>
-          chain.produceBlock({...baseAttrs, builderBid: candidate.signedBid})
-        );
-      });
-
-      const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
-        resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        signal: controller.signal,
-      });
-
-      let bestResult: typeof engineResult | null = null;
-      let source: ProducedBlockSource = ProducedBlockSource.engine;
-
-      // Resolved instantly whenever the bid branch produced a block
-      const bestBid = bidBlockResult.status === "fulfilled" ? await bestBidPromise : null;
-
-      const logCtx = {
-        slot,
-        parentSlot,
-        parentBlockRoot: parentBlockRootHex,
-        parentBlockHash: parentBlock.executionPayloadBlockHash,
-        fork,
-        builderBoostFactor,
-        strictFeeRecipientCheck,
-        circuitBreakerActive,
-        builderEntries: builderConfig.builders.length,
-        ...(bestBid !== null
-          ? {
-              bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
-              bidValue: prettyGweiToEth(bestBid.signedBid.message.value),
-              bidExecutionPayment: prettyGweiToEth(bestBid.signedBid.message.executionPayment),
-              // The full bid total and the counted total used during bid selection
-              bidTotal: prettyGweiToEth(
-                BigInt(bestBid.signedBid.message.value) + bestBid.signedBid.message.executionPayment
-              ),
-              bidCountedTotal: prettyGweiToEth(bestBid.totalGwei),
-              bidBoostFactor: bestBid.boostFactor,
-              builderIndex: bestBid.signedBid.message.builderIndex,
-              bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
-              bidReceivedMs: bestBid.receivedMs,
-            }
-          : {}),
-      };
-
-      // handle shouldOverrideBuilder separately
-      if (
-        engineResult.status === "fulfilled" &&
-        engineResult.value.shouldOverrideBuilder &&
-        (builderBidExpected || bidBlockResult.status === "fulfilled")
-      ) {
-        source = ProducedBlockSource.engine;
-        bestResult = engineResult;
-        metrics?.blockProductionSelectionResults.inc({
-          source: ProducedBlockSource.engine,
-          reason: EngineBlockSelectionReason.BuilderCensorship,
-        });
-        logger.warn("Selected local block: censorship suspected in builder bid", {
-          ...logCtx,
-          durationMs: engineResult.durationMs,
-          ...getBlockValueLogInfo(engineResult.value),
-        });
-      } else if (engineResult.status === "fulfilled" && bidBlockResult.status === "fulfilled") {
-        const result = selectBlockProductionSourceByBoostFactor({
-          builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
-          engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
-          // The bid total payment is its value plus its counted executionPayment, in Gwei
-          builderExecutionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
-        });
-        source = result.source;
-        metrics?.blockProductionSelectionResults.inc(result);
-        logger.info(`Selected ${source} block`, {
-          reason: result.reason,
-          ...logCtx,
-          engineDurationMs: engineResult.durationMs,
-          ...getBlockValueLogInfo(engineResult.value, ProducedBlockSource.engine),
-          builderDurationMs: bidBlockResult.durationMs,
-        });
-        bestResult = source === ProducedBlockSource.builder ? bidBlockResult : engineResult;
-      } else if (bidBlockResult.status === "fulfilled") {
-        source = ProducedBlockSource.builder;
-        bestResult = bidBlockResult;
-        const reason =
-          engineResult.status === "pending"
-            ? BuilderBlockSelectionReason.EnginePending
-            : BuilderBlockSelectionReason.EngineError;
-        metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.builder, reason});
-        logger.info("Selected builder bid block: no local block produced", {
-          reason,
-          ...logCtx,
-          durationMs: bidBlockResult.durationMs,
-          ...getBlockValueLogInfo(bidBlockResult.value),
-          error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
-        });
-      } else if (engineResult.status === "fulfilled") {
-        source = ProducedBlockSource.engine;
-        bestResult = engineResult;
-        const reason =
-          bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
-            ? EngineBlockSelectionReason.BuilderNoBid
-            : bidBlockResult.status === "pending"
-              ? EngineBlockSelectionReason.BuilderPending
-              : EngineBlockSelectionReason.BuilderError;
-        metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
-        logger.info("Selected local block: no builder bid block produced", {
-          reason,
-          ...logCtx,
-          durationMs: engineResult.durationMs,
-          ...getBlockValueLogInfo(engineResult.value),
-          error: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : undefined,
-        });
-      }
-
-      if (bestResult === null || bestResult.status !== "fulfilled") {
-        const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
-        const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
-        logger.error("Block production failed", {
-          ...logCtx,
-          engineReason: String(engineReason),
-          bidReason: String(bidReason),
-        });
-        throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
-      }
-
-      const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
-
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
-
-      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
-      logger.verbose("Produced block", {
-        ...logCtx,
-        executionPayloadValue,
-        consensusBlockValue,
-        root: blockRoot,
-      });
-      if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(
-          block,
-          source === ProducedBlockSource.builder ? "produced_builder_block" : "produced_engine_block"
-        );
-      }
-
-      // Include the payload for self-builds unless disabled (stateless flow)
-      const isSelfBuild = source === ProducedBlockSource.engine;
-      if (isSelfBuild && includePayload) {
-        const produceResult = chain.blockProductionCache.get(blockRoot);
-        if (
-          produceResult === undefined ||
-          !isForkPostGloas(produceResult.fork) ||
-          produceResult.type !== BlockType.Full
-        ) {
-          throw Error(`Missing cached block production result for produced block slot=${slot} blockRoot=${blockRoot}`);
-        }
-        const {executionPayload, executionRequests, blobsBundle, parentBlockRoot} = produceResult as ProduceFullGloas;
-
-        const blockContents: gloas.BlockContents = {
-          block: block as gloas.BeaconBlock,
-          executionPayloadEnvelope: {
-            payload: executionPayload,
-            executionRequests,
-            builderIndex: BUILDER_INDEX_SELF_BUILD,
-            beaconBlockRoot: fromHex(blockRoot),
-            parentBeaconBlockRoot: parentBlockRoot,
-          },
-          kzgProofs: blobsBundle.proofs,
-          blobs: blobsBundle.blobs,
-        };
-
-        return {
-          data: blockContents,
-          meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: true},
-        };
-      }
-
-      return {
-        data: block as gloas.BeaconBlock,
-        meta: {
-          version: fork,
-          consensusBlockValue,
-          executionPayloadValue,
-          executionPayloadIncluded: false,
-          builderUrl: source === ProducedBlockSource.builder ? bestBid?.url : undefined,
-        },
-      };
+    async produceBlockV4(args) {
+      return produceGloasBlock(args);
     },
 
     async produceAttestationData({committeeIndex, slot}) {
