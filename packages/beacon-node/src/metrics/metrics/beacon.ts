@@ -111,6 +111,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of all block production selection results",
       labelNames: ["source", "reason"],
     }),
+    blockProductionSuppliedBidsDiscarded: register.counter({
+      name: "beacon_block_production_supplied_bids_discarded_total",
+      help: "Count of execution payload bids supplied by the validator client discarded due to failed validation",
+    }),
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",

@@ -580,6 +580,145 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
+  it("uses a supplied bid without consulting p2p or builder API bids", async () => {
+    const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    suppliedBid.message.value = 2;
+    suppliedBid.message.builderIndex = 7;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+
+    const {data: block, meta} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: 100n,
+      signedExecutionPayloadBid: suppliedBid,
+    });
+
+    expect(modules.chain.builderApiClient.getExecutionPayloadBids).not.toHaveBeenCalled();
+    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
+    expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
+      modules.chain,
+      suppliedBid,
+      expect.objectContaining({slot, builderPubkeys: [], maxExecutionPayment: MAX_EXECUTION_PAYMENT, minBid: 0n})
+    );
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: suppliedBid}));
+    expect(block).toEqual(bidBlock);
+    expect(meta.builderUrl).toBeUndefined();
+  });
+
+  it("counts a supplied bid's execution payment in full", async () => {
+    const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    suppliedBid.message.value = 1;
+    suppliedBid.message.executionPayment = 2n;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    // Local payload value (2 gwei) beats the bid value alone (1 gwei) but not its total (3 gwei)
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+      executionPayloadValue: 2_000_000_000n,
+      consensusBlockValue: 0n,
+    }));
+
+    const {data: block} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: 100n,
+      signedExecutionPayloadBid: suppliedBid,
+    });
+
+    expect(block).toEqual(bidBlock);
+  });
+
+  it("prefers the local payload over a supplied bid with a zero boost factor", async () => {
+    const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    suppliedBid.message.value = 2;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+
+    const {data: block} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: 0n,
+      signedExecutionPayloadBid: suppliedBid,
+    });
+
+    expect(block).toEqual(engineBlock);
+  });
+
+  it("falls back to the local payload when the supplied bid fails validation", async () => {
+    const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    suppliedBid.message.value = 2;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid bid"));
+
+    const {data: block} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: maxBuilderBoostFactor,
+      signedExecutionPayloadBid: suppliedBid,
+    });
+
+    // The p2p bid is not a fallback, the validator client already picked from the bids it saw
+    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(block).toEqual(engineBlock);
+  });
+
+  it("ignores the supplied bid when the builder circuit breaker is active", async () => {
+    const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    suppliedBid.message.value = 2;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
+
+    const {data: block} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: maxBuilderBoostFactor,
+      signedExecutionPayloadBid: suppliedBid,
+    });
+
+    expect(validateBuilderApiExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(block).toEqual(engineBlock);
+  });
+
+  it.each([maxBuilderBoostFactor + 1n, -1n])(
+    "rejects a supplied bid request with a boost factor outside the uint64 range: %s",
+    async (builderBoostFactor) => {
+      await expect(
+        api.produceBlockV4WithBid({
+          slot,
+          randaoReveal,
+          graffiti,
+          feeRecipient,
+          includePayload: false,
+          builderBoostFactor,
+          signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+        })
+      ).rejects.toThrow("Invalid builderBoostFactor");
+
+      expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    }
+  );
+
   it("prefers the builder bid with the maximum builder boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
