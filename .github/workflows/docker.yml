@@ -93,6 +93,40 @@ jobs:
             chainsafe/lodestar:${{ inputs.tag }}-amd64 \
             chainsafe/lodestar:${{ inputs.tag }}-arm64
 
+      - name: Mirror lodestar manifest to Swarm registry (Uncloud Registry)
+        # Opt-in mirror of the multi-arch lodestar manifest to a Swarm-backed
+        # OCI registry (Ethereum Swarm via the Uncloud Registry). Inert unless
+        # the SWARM_REGISTRY repo variable is set, so it is a no-op by default.
+        # PoC: https://github.com/lodekeeper/lodestar-swarm-registry-poc
+        # Durability (image not GC'd) needs an externally-funded postage batch
+        # + keeper, and the registry stack is unmaintained today — see the PoC's
+        # docs/RETENTION.md before enabling this for real releases.
+        #
+        # Uses `regctl image copy` rather than `docker buildx imagetools create`:
+        # the target is a separate registry that does not already hold the layers,
+        # and imagetools create only writes the top-level index (its referenced
+        # blobs must already exist in the destination), so a real registry-to-registry
+        # copy of the manifest list + child manifests + blobs is required.
+        if: ${{ vars.SWARM_REGISTRY != '' }}
+        env:
+          SWARM_REGISTRY: ${{ vars.SWARM_REGISTRY }}
+          SWARM_REGISTRY_USERNAME: ${{ secrets.SWARM_REGISTRY_USERNAME }}
+          SWARM_REGISTRY_PASSWORD: ${{ secrets.SWARM_REGISTRY_PASSWORD }}
+        run: |
+          if [ -n "$SWARM_REGISTRY_USERNAME" ]; then
+            echo "$SWARM_REGISTRY_PASSWORD" | docker login "$SWARM_REGISTRY" -u "$SWARM_REGISTRY_USERNAME" --password-stdin
+          fi
+          # regctl does a full multi-arch registry-to-registry copy (manifests + blobs),
+          # reading the docker login credentials above from ~/.docker/config.json.
+          curl -fsSL -o regctl "https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64"
+          chmod +x regctl
+          ./regctl image copy "chainsafe/lodestar:${{ inputs.tag }}" "$SWARM_REGISTRY/chainsafe/lodestar:${{ inputs.tag }}"
+          if [ -n "${{ inputs.extra-tags }}" ]; then
+            for t in $(echo "${{ inputs.extra-tags }}" | tr ',' ' '); do
+              ./regctl image copy "chainsafe/lodestar:${{ inputs.tag }}" "$SWARM_REGISTRY/chainsafe/lodestar:$t"
+            done
+          fi
+
       - name: Create and push grafana manifest
         run: |
           docker buildx imagetools create -t chainsafe/lodestar-grafana:${{ inputs.tag }} \
