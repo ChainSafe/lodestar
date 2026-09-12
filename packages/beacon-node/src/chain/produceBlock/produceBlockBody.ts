@@ -735,7 +735,9 @@ export async function prepareExecutionPayload(
    * parent execution payload first (see `withParentPayloadApplied`).
    */
   state: IBeaconStateViewBellatrix,
-  suggestedFeeRecipient: string
+  suggestedFeeRecipient: string,
+  /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
+  payloadAttributes?: PayloadAttributes
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
@@ -766,13 +768,15 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes = preparePayloadAttributes(fork, chain, {
-      prepareState: state,
-      prepareSlot: state.slot,
-      parentBlockRoot,
-      parentBlockHash,
-      feeRecipient: suggestedFeeRecipient,
-    });
+    const attributes: PayloadAttributes =
+      payloadAttributes ??
+      preparePayloadAttributes(fork, chain, {
+        prepareState: state,
+        prepareSlot: state.slot,
+        parentBlockRoot,
+        parentBlockHash,
+        feeRecipient: suggestedFeeRecipient,
+      });
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
