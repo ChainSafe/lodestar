@@ -1,4 +1,5 @@
 import {digest} from "@chainsafe/as-sha256";
+import {computePtcIndicesForEpoch} from "@chainsafe/lodestar-z/shuffle";
 import {
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
@@ -275,25 +276,36 @@ export function computePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
   committees: Uint32Array[][],
+  shuffling: Uint32Array,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = epoch * SLOTS_PER_EPOCH;
-  const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
-
-  // Pre-allocate slot seed buffer once, reuse across all slots
-  const slotSeedInput = new Uint8Array(epochSeed.length + 8);
-  slotSeedInput.set(epochSeed, 0);
-  const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
-
+  const slotOffsets = new Uint32Array(SLOTS_PER_EPOCH + 1);
+  let shufflingLength = 0;
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-    const slot = startSlot + i;
-    // Write slot as little-endian uint64 (fits in uint32 range)
-    slotSeedView.setUint32(epochSeed.length, slot, true);
-    slotSeedView.setUint32(epochSeed.length + 4, 0, true);
-    const slotSeed = digest(slotSeedInput);
+    slotOffsets[i] = shufflingLength;
+    for (const committee of committees[i]) {
+      shufflingLength += committee.length;
+    }
+  }
+  slotOffsets[SLOTS_PER_EPOCH] = shufflingLength;
 
-    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
+  // Native sampling returns all committees concatenated in slot order, with PTC_SIZE indices per slot.
+  const flatPtcIndices = computePtcIndicesForEpoch(
+    epochSeed,
+    startSlot,
+    SLOTS_PER_EPOCH,
+    shuffling,
+    slotOffsets,
+    effectiveBalanceIncrements,
+    PTC_SIZE,
+    MAX_EFFECTIVE_BALANCE_ELECTRA,
+    EFFECTIVE_BALANCE_INCREMENT
+  );
+  const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    result[i] = flatPtcIndices.subarray(i * PTC_SIZE, (i + 1) * PTC_SIZE);
   }
   return result;
 }

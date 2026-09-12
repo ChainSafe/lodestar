@@ -17,6 +17,7 @@ type BeaconExtraArgs = {
   ignoreWeakSubjectivityCheck?: boolean;
   beaconDir?: string;
   dbDir?: string;
+  dataColumnDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;
@@ -111,6 +112,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     description: "Beacon DB directory",
     defaultDescription: defaultBeaconPaths.dbDir,
     hidden: true,
+    type: "string",
+  },
+
+  dataColumnDir: {
+    description: "Data column flat file directory",
+    defaultDescription: defaultBeaconPaths.dataColumnDir,
     type: "string",
   },
 

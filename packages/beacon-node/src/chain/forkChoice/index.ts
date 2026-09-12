@@ -135,6 +135,7 @@ export function initializeForkChoiceFromFinalizedState(
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
         ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+        importedTimely: true, // Optimistically assume is timely
         proposerIndex: blockHeader.proposerIndex,
 
         justifiedEpoch: justifiedCheckpoint.epoch,
@@ -233,6 +234,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
     ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+    importedTimely: true, // Optimistically assume is timely
     proposerIndex: blockHeader.proposerIndex,
 
     justifiedEpoch: justifiedCheckpoint.epoch,

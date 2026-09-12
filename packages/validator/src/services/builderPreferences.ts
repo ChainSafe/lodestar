@@ -136,7 +136,7 @@ export class BuilderPreferencesService {
       }
       this.logger.debug("Submitted builder preferences", {count: entries.length});
     } catch (e) {
-      this.logger.error("Error submitting builder preferences", {count: entries.length}, e as Error);
+      this.logger.warn("Error submitting builder preferences", {count: entries.length}, e as Error);
     }
   };
 }

@@ -38,11 +38,13 @@ default_config:
     boost_factor: "90"
 ```
 
-Starting with Gloas, the builder section additionally supports `min_bid` (floor in Gwei on the counted total payment from a builder bid) and `max_execution_payment` (ceiling in Gwei on the execution layer payment counted toward a builder bid, values above `0` require `--allowDangerousTrustedPayments`).
+### Builder settings from Gloas
 
-Post-Gloas, an explicitly configured per-validator `boost_factor` takes precedence over `selection`.
+`min_bid` is a floor in Gwei on the counted total payment, applied to p2p and builder API bids alike. `max_execution_payment` caps the execution layer payment in Gwei counted toward a builder API bid, values above `0` require `--allowDangerousTrustedPayments`. `max_execution_payment` has no effect without builder entries, p2p bids never carry an execution payment.
 
-The builder section also supports a `builders` list with the same per-builder entries as the keymanager builder config API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
+`boost_factor` applies to the p2p bid, while each builder's own `builder_boost_factor` applies to that builder's API bid. An explicitly configured per-validator `boost_factor` takes precedence over `selection`, a `boost_factor` in `default_config` only applies when `selection` is `maxprofit`.
+
+`builders` lists the builders to request bids from, with the same per-builder entries as the keymanager builder config API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`, the last three defaulting to the values set on the builder section. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
 
 ```yaml
 builder:

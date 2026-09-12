@@ -74,6 +74,7 @@ export async function getNetworkForTest(
       pubkeyCache,
       db,
       dataDir: ".",
+      dataColumnDir: "data_columns",
       dbName: ".",
       logger,
       processShutdownCallback: () => {},

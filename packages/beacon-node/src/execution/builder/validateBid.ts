@@ -37,10 +37,11 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
     entry: routes.validator.BuilderEntry;
+    getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry} = request;
+  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -53,6 +54,16 @@ export async function validateBuilderApiExecutionPayloadBid(
       `Bid parent parentBlockHash=${bidParentBlockHash} parentBlockRoot=${bidParentBlockRoot} does not match ` +
         `requested parentBlockHash=${parentBlockHash} parentBlockRoot=${parentBlockRoot}`
     );
+  }
+
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Bid block hash ${toRootHex(bid.blockHash)} must not equal its parent block hash`);
+  }
+
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
   }
 
   const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
@@ -99,12 +110,6 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
-  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
-  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-    throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
-  }
-
   // The coverage check only applies to the staked collateral payment, a pure execution
   // layer payment bid has nothing to cover on-chain
   if (bid.value > 0 && !state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
@@ -116,6 +121,20 @@ export async function validateBuilderApiExecutionPayloadBid(
   const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
   if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
     throw Error(`Invalid bid prevRandao=${toHex(bid.prevRandao)} expected=${toHex(randaoMix)}`);
+  }
+
+  // The parent's payload does not try to exit the builder
+  if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
+    const requests = await getParentExecutionRequests();
+    if (
+      requests.builderExits.some(
+        (request) =>
+          byteArrayEquals(request.pubkey, builder.pubkey) &&
+          byteArrayEquals(request.sourceAddress, builder.executionAddress)
+      )
+    ) {
+      throw Error(`Bid builderIndex=${bid.builderIndex} may exit in the parent payload`);
+    }
   }
 
   // The builder must honor the proposer preferences it learned over gossip

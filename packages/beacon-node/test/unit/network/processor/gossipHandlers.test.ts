@@ -150,6 +150,10 @@ async function runBeaconBlockProcessingError(
       type: GossipType.beacon_block,
     },
   });
+  // The handler is now deferred via callInNextEventLoop (setTimeout 0), and it kicks off
+  // processBlock (whose .then/.catch is a further hop). Flush two macrotask ticks so the deferred
+  // import and its result handlers complete before assertions.
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   return {core, peerIdStr};
@@ -247,6 +251,10 @@ async function runBeaconBlockRepeatProposal(
   } catch {
     threw = true;
   }
+  // The handler is now deferred via callInNextEventLoop (setTimeout 0), and it kicks off
+  // processBlock (whose .then/.catch is a further hop). Flush two macrotask ticks so the deferred
+  // import and its result handlers complete before assertions.
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   return {processBlock, threw};

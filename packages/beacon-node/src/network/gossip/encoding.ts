@@ -1,7 +1,6 @@
 import type {Message} from "@libp2p/gossipsub";
 import type {RPC} from "@libp2p/gossipsub/message";
 import type {DataTransform} from "@libp2p/gossipsub/types";
-// snappyjs is better for compression for smaller payloads
 import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
 import snappyWasm from "@chainsafe/snappy-wasm";
@@ -123,9 +122,6 @@ export class DataTransformSnappy implements DataTransform {
     if (uncompressedDataLength > maxSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${maxSize}`);
     }
-    if (uncompressedDataLength > sszType.maxSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
-    }
 
     // Only after sanity length checks, we can decompress the data
     // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments
@@ -145,9 +141,6 @@ export class DataTransformSnappy implements DataTransform {
     this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > maxSize) {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${maxSize}`);
-    }
-    if (data.length > sszType.maxSize) {
-      throw Error(`ssz_snappy encoded data length ${data.length} > ${sszType.maxSize}`);
     }
 
     // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments
