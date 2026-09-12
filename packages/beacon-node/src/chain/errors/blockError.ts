@@ -78,8 +78,8 @@ export enum BlockErrorCode {
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
   /** Bid parent block root does not match block parent root */
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
-  /** A block body operation or parent execution request list exceeds its per-block limit */
-  TOO_MANY_BLOCK_OPERATIONS = "BLOCK_ERROR_TOO_MANY_BLOCK_OPERATIONS",
+  /** A block contains deposits where none are allowed */
+  NON_ZERO_DEPOSITS = "BLOCK_ERROR_NON_ZERO_DEPOSITS",
   /** The parent block's execution payload has been verified as invalid */
   PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
   /**
@@ -120,9 +120,9 @@ export type BlockErrorType =
   | {code: BlockErrorCode.ALREADY_KNOWN; root: RootHex}
   | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex; root: RootHex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
-  | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
-  | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.INCORRECT_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; slot: Slot; root: RootHex}
+  | {code: BlockErrorCode.UNKNOWN_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
@@ -132,7 +132,7 @@ export type BlockErrorType =
       postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
-  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
+  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root: RootHex; parentSlot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
@@ -140,7 +140,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.BLACKLISTED_BLOCK}
-  | {code: BlockErrorCode.INCORRECT_TIMESTAMP; timestamp: number; expectedTimestamp: number}
+  | {code: BlockErrorCode.INCORRECT_TIMESTAMP; slot: Slot; root: RootHex; timestamp: number; expectedTimestamp: number}
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
@@ -151,9 +151,21 @@ export type BlockErrorType =
       errorMessage: string;
     }
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
-  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
-  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
-  | {code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS; name: string; count: number; limit: number}
+  | {
+      code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS;
+      slot: Slot;
+      root: RootHex;
+      blobKzgCommitmentsLen: number;
+      commitmentLimit: number;
+    }
+  | {
+      code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      bidParentRoot: RootHex;
+      blockParentRoot: RootHex;
+    }
+  | {code: BlockErrorCode.NON_ZERO_DEPOSITS; slot: Slot; root: RootHex; count: number}
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
   | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
   | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};

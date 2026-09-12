@@ -243,6 +243,22 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
+        if (
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
+          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
+            prepareState: stateAfterParentPayload,
+            prepareSlot,
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
+            parentBlockHash,
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+        }
+
         if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
@@ -273,22 +289,6 @@ export class PrepareNextSlotScheduler {
         }
 
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
-
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-        if (
-          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
-          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-        ) {
-          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: stateAfterParentPayload,
-            prepareSlot,
-            parentBlockRoot: fromHex(updatedHead.blockRoot),
-            parentBlockHash,
-            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
-          });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
-        }
       } else {
         // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state
         const preparedState = await this.chain.regen.getBlockSlotState(

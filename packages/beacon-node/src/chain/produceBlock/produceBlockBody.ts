@@ -528,23 +528,18 @@ export async function produceBlockBody<T extends BlockType>(
         }
       }
 
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blobKzgCommitments} = builderRes;
-        if (blobKzgCommitments === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
-        }
-
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
-        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+      const {blobKzgCommitments, executionRequests} = builderRes;
+      if (blobKzgCommitments === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
       }
 
-      if (ForkSeq[fork] >= ForkSeq.electra) {
-        const {executionRequests} = builderRes;
-        if (executionRequests === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
-        }
-        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      (blockBody as BlindedBeaconBlockBody<ForkName.fulu>).blobKzgCommitments = blobKzgCommitments;
+      Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+
+      if (executionRequests === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
       }
+      (blockBody as BlindedBeaconBlockBody<ForkName.fulu>).executionRequests = executionRequests;
     }
 
     // blockType === BlockType.Full
@@ -899,45 +894,38 @@ function preparePayloadAttributes(
 ): SSEPayloadAttributes["payloadAttributes"] {
   const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
   const prevRandao = prepareState.getRandaoMix(prepareState.epoch);
-  const payloadAttributes = {
+  if (!isStatePostCapella(prepareState)) {
+    throw new Error("Expected Capella state for withdrawals");
+  }
+
+  let withdrawals: capella.Withdrawal[];
+  if (isStatePostGloas(prepareState)) {
+    const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
+    if (isExtendingPayload) {
+      // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
+      // here means the caller did not apply parent payload to prepareState
+      if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
+        throw new Error("Expected state with parent execution payload applied for withdrawals");
+      }
+      withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
+    } else {
+      // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
+      // already deducted from CL balances but never credited on the EL (the envelope
+      // was not delivered). The next payload must carry those same withdrawals to
+      // restore CL/EL consistency, otherwise validators permanently lose that balance.
+      withdrawals = prepareState.payloadExpectedWithdrawals;
+    }
+  } else {
+    withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
+  }
+
+  const payloadAttributes: deneb.SSEPayloadAttributes["payloadAttributes"] = {
     timestamp,
     prevRandao,
     suggestedFeeRecipient: feeRecipient,
+    withdrawals,
+    parentBeaconBlockRoot: parentBlockRoot,
   };
-
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    if (!isStatePostCapella(prepareState)) {
-      throw new Error("Expected Capella state for withdrawals");
-    }
-
-    if (isStatePostGloas(prepareState)) {
-      const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
-      if (isExtendingPayload) {
-        // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
-        // here means the caller did not apply parent payload to prepareState
-        if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
-          throw new Error("Expected state with parent execution payload applied for withdrawals");
-        }
-        (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-          prepareState.getExpectedWithdrawals().expectedWithdrawals;
-      } else {
-        // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
-        // already deducted from CL balances but never credited on the EL (the envelope
-        // was not delivered). The next payload must carry those same withdrawals to
-        // restore CL/EL consistency, otherwise validators permanently lose that balance.
-        (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-          prepareState.payloadExpectedWithdrawals;
-      }
-    } else {
-      // withdrawals logic is now fork aware as it changes on electra fork post capella
-      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-        prepareState.getExpectedWithdrawals().expectedWithdrawals;
-    }
-  }
-
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
-    (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
-  }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     if (!isStatePostGloas(prepareState)) {
@@ -1050,37 +1038,28 @@ export async function produceCommonBlockBody<T extends BlockType>(
     step: BlockProductionStep.attestations,
   });
 
-  const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
-    randaoReveal,
-    graffiti,
-    // Eth1 data voting is no longer required since electra
-    eth1Data: currentState.eth1Data,
-    proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
-    attesterSlashings,
-    attestations,
-    // Since electra, deposits are processed by the execution layer,
-    // we no longer support handling deposits from earlier forks.
-    deposits: [],
-    voluntaryExits,
-  };
-
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
-  }
-
   const endSyncAggregate = stepsMetrics?.startTimer();
-  if (ForkSeq[fork] >= ForkSeq.altair) {
-    const parentBlockRoot = fromHex(parentBlock.blockRoot);
-    const previousSlot = slot - 1;
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
-    this.metrics?.production.producedSyncAggregateParticipants.observe(
-      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
-    );
-    (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
-  }
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
+  const previousSlot = slot - 1;
+  const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+  this.metrics?.production.producedSyncAggregateParticipants.observe(
+    syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+  );
   endSyncAggregate?.({
     step: BlockProductionStep.syncAggregate,
   });
 
-  return blockBody as CommonBlockBody;
+  // Live proposal production is supported from Fulu onward.
+  return {
+    randaoReveal,
+    graffiti,
+    eth1Data: currentState.eth1Data,
+    proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
+    attesterSlashings,
+    attestations,
+    deposits: [],
+    voluntaryExits,
+    blsToExecutionChanges,
+    syncAggregate,
+  };
 }

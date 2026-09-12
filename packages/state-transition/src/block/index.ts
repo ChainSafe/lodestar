@@ -20,7 +20,7 @@ import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
-import {ProcessBlockOpts, ProposerRewardType} from "./types.js";
+import {BlockProcessStep, ProcessBlockOpts, ProposerRewardType} from "./types.js";
 
 // Spec tests
 export {
@@ -53,24 +53,38 @@ export function processBlock(
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
+  // Capture the parent block's slot before processBlockHeader overwrites latestBlockHeader
+  const parentSlot: Slot | null =
+    fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null;
+
   // Apply the parent's deferred payload effects before everything else. Must run before
   // processBlockHeader and processExecutionPayloadBid so subsequent steps see the updated state.
   if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processParentExecutionPayload});
     processParentExecutionPayload(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+    timer?.();
   }
 
-  processBlockHeader(state, block);
+  {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processBlockHeader});
+    processBlockHeader(state, block);
+    timer?.();
+  }
 
-  if (fork >= ForkSeq.gloas) {
-    // Parent payload's execution requests were already applied by processParentExecutionPayload above
-    processWithdrawals(fork, state as CachedBeaconStateGloas);
-  } else if (fork >= ForkSeq.capella) {
-    const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-    processWithdrawals(
-      fork,
-      state as CachedBeaconStateCapella,
-      fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
-    );
+  if (fork >= ForkSeq.capella) {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processWithdrawals});
+    if (fork >= ForkSeq.gloas) {
+      // Parent payload's execution requests were already applied by processParentExecutionPayload above
+      processWithdrawals(fork, state as CachedBeaconStateGloas);
+    } else {
+      const fullOrBlindedPayload = getFullOrBlindedPayload(block);
+      processWithdrawals(
+        fork,
+        state as CachedBeaconStateCapella,
+        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+      );
+    }
+    timer?.();
   }
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
@@ -83,26 +97,48 @@ export function processBlock(
     fork >= ForkSeq.bellatrix &&
     isExecutionEnabled(state as CachedBeaconStateBellatrix, block)
   ) {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processExecutionPayload});
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
+    timer?.();
   }
 
-  let parentSlot: Slot | null = null;
   if (fork >= ForkSeq.gloas) {
-    parentSlot = processExecutionPayloadBid(
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processExecutionPayloadBid});
+    processExecutionPayloadBid(
       state as CachedBeaconStateGloas,
       (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
     );
+    timer?.();
   }
 
-  processRandao(state, block, verifySignatures);
-  processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, parentSlot, opts, metrics);
+  {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processRandao});
+    processRandao(state, block, verifySignatures);
+    timer?.();
+  }
+
+  {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processEth1Data});
+    processEth1Data(state, block.body.eth1Data);
+    timer?.();
+  }
+
+  {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processOperations});
+    processOperations(fork, state, block.body, parentSlot, opts, metrics);
+    timer?.();
+  }
+
   if (fork >= ForkSeq.altair) {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processSyncAggregate});
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
+    timer?.();
   }
 
   if (fork >= ForkSeq.deneb) {
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processBlobKzgCommitments});
     processBlobKzgCommitments(externalData);
+    timer?.();
     // Only throw PreData so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
     if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.PreData) {
