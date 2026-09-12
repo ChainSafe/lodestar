@@ -185,6 +185,31 @@ export class Eth2Gossipsub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+      // Protobuf decode limits to bound memory allocation from untrusted RPC messages.
+      // js-gossipsub defaults all limits to Infinity. Setting finite values provides
+      // defense-in-depth against resource exhaustion via crafted control messages.
+      // NOTE: maxIhaveMessageIDs / maxIwantMessageIDs are upstream field names but
+      // they actually bound the number of outer ControlIHave / ControlIWant entries,
+      // not nested messageIDs inside each entry.
+      // NOTE: maxMessages must stay high enough for current js-libp2p behavior:
+      // handleIWant() may serialize many RPC.Message entries into a single response RPC.
+      // See: Lighthouse v8.1.3 security patches for analogous rust-libp2p fixes.
+      decodeRpcLimits: {
+        // A peer's full current subscription set on stream attach, plus headroom for topic growth
+        maxSubscriptions: 512,
+        // handleIWant() can pack many RPC.Message entries into one response RPC (must stay high for now)
+        maxMessages: 5000,
+        // outer ControlIHave[] entries (not nested messageIDs); bounded by topic count in honest use
+        maxIhaveMessageIDs: 256,
+        // outer ControlIWant[] entries (not nested messageIDs); js-libp2p normally emits a single one
+        maxIwantMessageIDs: 16,
+        // nested messageIDs per ControlIDontWant; honest behavior is tiny (often 1)
+        maxIdontwantMessageIDs: 16,
+        // outer GRAFT/PRUNE/IDONTWANT entries; room for multi-topic control bursts
+        maxControlMessages: 256,
+        // PX peer infos per ControlPrune; near GossipsubPrunePeers (16) with interop slack
+        maxPeerInfos: 32,
+      },
     })(modules.libp2p.services.components) as GossipSubInternal;
 
     if (metrics) {
