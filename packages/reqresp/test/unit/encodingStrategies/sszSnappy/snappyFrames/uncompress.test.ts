@@ -14,8 +14,6 @@ import {
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
   const malformedBlocks = [
-    {name: "six-byte length prefix", raw: "808080808000", decoded: ""},
-    {name: "ten-byte length prefix", raw: "818080808080808080000041", decoded: "41"},
     {name: "missing output", raw: "08", decoded: "0000000000000000"},
     {name: "underfilled output", raw: "080041", decoded: "4100000000000000"},
     {name: "overfilled literal", raw: "01044142", decoded: "41"},
@@ -33,7 +31,9 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     for (const buffer of [false, true]) {
       it(`rejects ${name} with a matching checksum (${buffer ? "Buffer" : "Uint8Array"})`, () => {
         const frame = Buffer.concat([crc(Buffer.from(decoded, "hex")), Buffer.from(raw, "hex")]);
-        expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, buffer ? frame : new Uint8Array(frame))).toThrow();
+        expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, buffer ? frame : new Uint8Array(frame))).toThrow(
+          /^snappy: /
+        );
       });
     }
   }
@@ -69,10 +69,15 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow(/large/);
   });
 
-  it.each(["", "80", "80808080", "8080808080", "ffffffff10", "ffffffff7f"])("rejects malformed length %s", (raw) => {
-    const frame = Buffer.concat([Buffer.alloc(4), Buffer.from(raw, "hex")]);
-    expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow();
-  });
+  it.each(["", "80", "80808080", "8080808080", "808080808000", "818080808080808080000041", "ffffffff10", "ffffffff7f"])(
+    "rejects malformed length %s",
+    (raw) => {
+      const frame = Buffer.concat([Buffer.alloc(4), Buffer.from(raw, "hex")]);
+      for (const input of [frame, new Uint8Array(frame)]) {
+        expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, input), input.constructor.name).toThrow(/^snappy: /);
+      }
+    }
+  );
 
   it.each(["010041", "81000041", "8180000041", "818080000041", "81808080000041"])(
     "accepts valid length prefix in %s",
@@ -110,6 +115,7 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     const frame = Buffer.concat([checksum, snappy.compressSync(expected)]);
     expect(() => decodeSnappyFrameData(ChunkType.COMPRESSED, frame)).toThrow(/bad checksum/);
   });
+
   it("should work with short input", async () => {
     const testData = "Small test data";
     const compressIterable = encodeSnappy(Buffer.from(testData));
