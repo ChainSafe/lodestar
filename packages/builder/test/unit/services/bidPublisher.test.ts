@@ -165,7 +165,7 @@ describe("BidPublisher", () => {
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
-  it("keeps the one-shot record when the Beacon Node rejects publication", async () => {
+  it("retains the submission record when the Beacon Node rejects publication", async () => {
     const bid = createBid();
     const {api, ledger, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
     api.beacon.publishExecutionPayloadBid.mockResolvedValue(await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST));
