@@ -1,6 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {MapDef} from "@lodestar/utils";
 import {
+  MAX_PENALTY_ACTIONS_PER_PEER,
+  REPEAT_PENALTY_COOLDOWN_MS,
+} from "../../../../src/network/peers/score/constants.js";
+import {
   PeerAction,
   PeerRpcScoreStore,
   RealScore,
@@ -45,9 +49,15 @@ describe("simple block provider score tracking", () => {
 
   for (const [peerAction, times] of timesToBan)
     it(`Should ban peer after ${times} ${peerAction}`, async () => {
+      vi.useFakeTimers();
       const {scoreStore} = mockStore();
-      for (let i = 0; i < times; i++) scoreStore.applyAction(peer, peerAction, actionName);
+      for (let i = 0; i < times; i++) {
+        scoreStore.applyAction(peer, peerAction, actionName);
+        // repeats of the same action are rate limited, space them beyond the cooldown
+        vi.advanceTimersByTime(REPEAT_PENALTY_COOLDOWN_MS);
+      }
       expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Banned);
+      vi.useRealTimers();
     });
 
   const factorForJsBadMath = 1.1;
@@ -74,6 +84,72 @@ describe("simple block provider score tracking", () => {
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
     expect(scoreStore.getScore(peer)).toBeGreaterThanOrEqual(MIN_SCORE);
+  });
+});
+
+describe("peer score penalty rate limiting", () => {
+  const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
+  const actionName = "REQUEST_ERROR_DIAL_TIMEOUT";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("Should apply the same action only once per cooldown", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    for (let i = 0; i < 20; i++) scoreStore.applyAction(peer, PeerAction.LowToleranceError, actionName);
+
+    expect(scoreStore.getScore(peer)).toBe(-10);
+    expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Healthy);
+  });
+
+  it("Should apply the same action again after the cooldown", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    scoreStore.applyAction(peer, PeerAction.LowToleranceError, actionName);
+    vi.advanceTimersByTime(REPEAT_PENALTY_COOLDOWN_MS);
+    scoreStore.applyAction(peer, PeerAction.LowToleranceError, actionName);
+
+    expect(scoreStore.getScore(peer)).toBe(-20);
+  });
+
+  it("Should not rate limit distinct actions", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    for (const reason of ["a", "b", "c", "d", "e"]) {
+      scoreStore.applyAction(peer, PeerAction.LowToleranceError, reason);
+    }
+
+    expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Banned);
+  });
+
+  it("Should bound tracked action names per peer", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    for (let i = 0; i < MAX_PENALTY_ACTIONS_PER_PEER * 2; i++) {
+      scoreStore.applyAction(peer, PeerAction.HighToleranceError, `action-${i}`);
+    }
+    const lastPenalties = (scoreStore["lastPenaltyMs"] as MapDef<string, Map<string, number>>).get(peer.toString());
+
+    expect(lastPenalties?.size).toBe(MAX_PENALTY_ACTIONS_PER_PEER);
+  });
+
+  it("Should not let a weaker action mask a stronger one with the same name", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    // same actionName, different severity: RESP_TIMEOUT is Mid for block methods, Low for ping
+    scoreStore.applyAction(peer, PeerAction.MidToleranceError, "REQUEST_ERROR_RESP_TIMEOUT");
+    scoreStore.applyAction(peer, PeerAction.LowToleranceError, "REQUEST_ERROR_RESP_TIMEOUT");
+
+    expect(scoreStore.getScore(peer)).toBe(-15);
+  });
+
+  it("Should never suppress Fatal", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    scoreStore.applyAction(peer, PeerAction.LowToleranceError, actionName);
+    scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
+
+    expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Banned);
   });
 });
 
