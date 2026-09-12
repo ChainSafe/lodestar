@@ -3,20 +3,48 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {INetworkCore} from "../core/index.js";
 import {
   BatchGossipHandlerFn,
   GossipHandlerFn,
   GossipHandlers,
   GossipMessageInfo,
+  GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
+import {PeerAction} from "../peers/index.js";
 import {prettyPrintPeerIdStr} from "../util.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
+  core: INetworkCore;
+};
+
+/**
+ * Critical topics (the `bypassQueue` set in
+ * `processor/index.ts`) are penalized heavily; the rest with mid tolerance.
+ */
+const gossipRejectPeerAction: Record<GossipType, PeerAction> = {
+  [GossipType.beacon_block]: PeerAction.LowToleranceError,
+  [GossipType.blob_sidecar]: PeerAction.LowToleranceError,
+  [GossipType.data_column_sidecar]: PeerAction.LowToleranceError,
+  [GossipType.execution_payload]: PeerAction.LowToleranceError,
+  [GossipType.beacon_aggregate_and_proof]: PeerAction.MidToleranceError,
+  [GossipType.beacon_attestation]: PeerAction.MidToleranceError,
+  [GossipType.voluntary_exit]: PeerAction.MidToleranceError,
+  [GossipType.proposer_slashing]: PeerAction.MidToleranceError,
+  [GossipType.attester_slashing]: PeerAction.MidToleranceError,
+  [GossipType.sync_committee_contribution_and_proof]: PeerAction.MidToleranceError,
+  [GossipType.sync_committee]: PeerAction.MidToleranceError,
+  [GossipType.light_client_finality_update]: PeerAction.MidToleranceError,
+  [GossipType.light_client_optimistic_update]: PeerAction.MidToleranceError,
+  [GossipType.bls_to_execution_change]: PeerAction.MidToleranceError,
+  [GossipType.payload_attestation_message]: PeerAction.MidToleranceError,
+  [GossipType.execution_payload_bid]: PeerAction.MidToleranceError,
+  [GossipType.proposer_preferences]: PeerAction.MidToleranceError,
 };
 
 /**
@@ -27,7 +55,7 @@ export function getGossipValidatorBatchFn(
   gossipHandlers: GossipHandlers,
   modules: ValidatorFnModules
 ): GossipValidatorBatchFn {
-  const {logger, metrics} = modules;
+  const {logger, metrics, core} = modules;
 
   return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
     // all messageInfos have same topic type
@@ -73,9 +101,10 @@ export function getGossipValidatorBatchFn(
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
+            core.reportPeer(propagationSource, gossipRejectPeerAction[type], e.type.code);
             logger.debug(
               `Gossip validation ${type} rejected`,
-              {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
+              {peer: propagationSource, clientAgent, clientVersion},
               e
             );
             return TopicValidatorResult.Reject;
@@ -108,7 +137,7 @@ export function getGossipValidatorBatchFn(
  * @see getGossipHandlers for reasoning on why GossipHandlerFn are used for gossip validation.
  */
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
-  const {logger, metrics} = modules;
+  const {logger, metrics, core} = modules;
 
   return async function gossipValidatorFn({
     topic,
@@ -157,11 +186,8 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
         case GossipAction.REJECT:
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-          logger.debug(
-            `Gossip validation ${type} rejected`,
-            {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
-            e
-          );
+          core.reportPeer(propagationSource, gossipRejectPeerAction[type], e.type.code);
+          logger.debug(`Gossip validation ${type} rejected`, {peer: propagationSource, clientAgent, clientVersion}, e);
           return TopicValidatorResult.Reject;
       }
     }
