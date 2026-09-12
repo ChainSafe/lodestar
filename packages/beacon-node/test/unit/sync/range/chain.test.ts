@@ -1,6 +1,7 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {LogLevel} from "@lodestar/logger";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
@@ -594,10 +595,21 @@ describe("sync / range / chain", () => {
         });
       };
 
+      const warnSpy = vi.spyOn(logger, LogLevel.warn);
       const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
 
       expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
       expect(reportPeerSpy).toHaveBeenCalled();
+      // a node stuck on an EL rejecting a canonical payload is surfaced above debug/verbose
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Batch processing failed after max attempts, sync is not progressing",
+        expect.objectContaining({
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          error: expect.stringContaining("bal is empty"),
+          hint: expect.any(String),
+        })
+      );
+      warnSpy.mockRestore();
 
       const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
       // only the peers that actually served an INVALID attempt, each reported once
