@@ -3,7 +3,7 @@ import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {HttpStatusCode} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getExecutionPayloadBidSigningRoot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
@@ -153,6 +153,30 @@ describe("BidPublisher", () => {
     await expect(publisher.publish(bid, new AbortController().signal)).rejects.toThrow("signing failed");
     expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  it.each(["pending", "failed", "accepted"])("does not resubmit a pruned %s publication", async (outcome) => {
+    const {api, ledger, publisher, signer} = createPublisher({hasPayload: vi.fn(() => true)});
+    const sign = vi.spyOn(signer, "signExecutionPayloadBid");
+    const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadBid>>>();
+    api.beacon.publishExecutionPayloadBid.mockReturnValue(response.promise);
+    const bid = createBid();
+    const signal = new AbortController().signal;
+    const first = publisher.publish(bid, signal);
+    const firstOutcome = first.catch(() => undefined);
+    if (outcome === "failed") response.reject(Error("connection lost after submission"));
+    if (outcome === "accepted") response.resolve(mockApiResponse({}));
+    if (outcome !== "pending") await firstOutcome;
+
+    ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1);
+    const second = publisher.publish({...bid, value: bid.value + 1}, signal);
+    const secondOutcome = expect(second).rejects.toMatchObject({type: {code: BidLedgerErrorCode.BID_TOO_OLD}});
+    if (outcome === "pending") response.resolve(mockApiResponse({}));
+    await firstOutcome;
+    await secondOutcome;
+
+    expect(sign).toHaveBeenCalledOnce();
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
   });
 
   it("rejects pre-Gloas input before signing", async () => {

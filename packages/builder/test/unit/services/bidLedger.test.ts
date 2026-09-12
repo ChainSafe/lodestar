@@ -197,6 +197,19 @@ describe("BidLedger", () => {
 
     expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
     expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(false);
+    expect(() => ledger.recordBid(bid)).toThrow(BidLedgerError);
+    expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
+  });
+
+  it("does not move the submission cutoff backwards", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1);
+    ledger.prune(0);
+
+    const error = getBidLedgerError(() => ledger.recordBid(bid));
+    expect(error.type).toEqual({code: BidLedgerErrorCode.BID_TOO_OLD, slot: bid.slot, oldestSlot: bid.slot + 1});
+    expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
   });
 
   it("prunes reveal protection even when no winning bid record exists", () => {

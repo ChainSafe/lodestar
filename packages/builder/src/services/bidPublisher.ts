@@ -4,7 +4,7 @@ import {isForkPostGloas} from "@lodestar/params";
 import type {BuilderIndex, RootHex, gloas, heze} from "@lodestar/types";
 import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import {type BidIdentity, type BidLedger, BidLedgerError, BidLedgerErrorCode} from "./bidLedger.js";
+import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
 
 export type BidPublisherModules = {
@@ -80,9 +80,7 @@ export class BidPublisher {
       );
     }
 
-    if (ledger.hasSubmitted(identity.slot, identity.parentBlockHash, identity.parentBlockRoot)) {
-      throw new BidLedgerError({code: BidLedgerErrorCode.DUPLICATE_BID, ...identity});
-    }
+    ledger.assertCanRecordBid(identity);
 
     const signedExecutionPayloadBid = signer.signExecutionPayloadBid(bid);
     const signedBidRoot = toRootHex(
