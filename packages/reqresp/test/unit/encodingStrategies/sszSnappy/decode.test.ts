@@ -15,6 +15,33 @@ import {arrToSource} from "../../../utils/index.js";
 import {createMockStream} from "../../../utils/mockStream.js";
 
 describe("encodingStrategies / sszSnappy / decode", () => {
+  for (const {name, raw} of [
+    {name: "one-byte extended literal length", raw: "081841414141414141f00041"},
+    {name: "two-byte literal with extended length", raw: "0814414141414141f0014141"},
+    {name: "two-byte extended literal length", raw: "081841414141414141f4000041"},
+  ]) {
+    it.each([1, 7, 18])(`accepts Ping with ${name} in %i-byte chunks`, async (chunkSize) => {
+      const ping = 0x4141414141414141n;
+      const expected = ssz.phase0.Ping.serialize(ping);
+      const frame = Buffer.concat([crc(expected), Buffer.from(raw, "hex")]);
+      const wire = Buffer.concat([
+        Buffer.from(varintEncode(expected.length)),
+        IDENTIFIER_FRAME,
+        Buffer.from([ChunkType.COMPRESSED, frame.length, 0, 0]),
+        frame,
+      ]);
+      const chunks: Uint8Array[] = [];
+      for (let offset = 0; offset < wire.length; offset += chunkSize) {
+        chunks.push(wire.subarray(offset, offset + chunkSize));
+      }
+      const {stream} = await createMockStream({source: arrToSource(chunks)});
+      const bytes = byteStream(stream);
+      const bodyResult = await readSszSnappyPayload(bytes, ssz.phase0.Ping).finally(() => bytes.unwrap());
+      expect(bodyResult).toEqual(expected);
+      expect(ssz.phase0.Ping.deserialize(bodyResult)).toBe(ping);
+    });
+  }
+
   it.each([1, 7, 18])("rejects incomplete compressed Ping data in %i-byte chunks", async (chunkSize) => {
     const wire = Buffer.concat([
       Buffer.from(varintEncode(ssz.phase0.Ping.minSize)),
