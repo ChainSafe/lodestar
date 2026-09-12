@@ -706,7 +706,7 @@ describe("fast confirmation", () => {
       unrealizedBalances
     );
 
-    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx);
+    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx, () => {});
 
     expect(store.previousEpochGreatestUnrealizedCheckpoint.rootHex).toBe(greatestUnrealizedRoot);
     expect(store.previousEpochGreatestUnrealizedCheckpoint.epoch).toBe(0);
@@ -738,7 +738,7 @@ describe("fast confirmation", () => {
       []
     );
 
-    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx);
+    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx, () => {});
 
     expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(currentObservedRoot);
     expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(greatestUnrealizedRoot);

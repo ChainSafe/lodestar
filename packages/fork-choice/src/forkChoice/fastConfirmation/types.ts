@@ -29,6 +29,7 @@ type IFastConfirmationAuxStore = {
   currentEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
   previousEpochGreatestUnrealizedBalances: EffectiveBalanceIncrements;
   stateGetter: ForkChoiceStateGetter;
+  notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
 };
 
 export type IFastConfirmationStore = IFastConfirmationSpecStore & IFastConfirmationAuxStore;
@@ -126,6 +127,7 @@ export type FastConfirmationContext = {
   getCurrentSlot(): Slot;
   getHead(): ProtoBlock;
   getBlock(root: RootHex): ProtoBlock | null;
+  hasBlock(root: RootHex): boolean;
   getAncestor(root: RootHex, slot: Slot): RootHex;
   isDescendant(ancestor: RootHex, descendant: RootHex): boolean;
   getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; epoch: Epoch} | null;
@@ -137,5 +139,8 @@ export type FastConfirmationContext = {
 
 export interface IFastConfirmationRule {
   getConfirmedRoot(): RootHex;
-  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FastConfirmationResult;
+  pause(ctx: FastConfirmationContext): void;
+  resume(ctx: FastConfirmationContext): void;
+  onForkChoiceUpdated(ctx: FastConfirmationContext): void;
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext, updateHead: () => void): boolean;
 }
