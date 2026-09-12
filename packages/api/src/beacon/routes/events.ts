@@ -21,6 +21,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {SignedExecutionPayloadBid} from "@lodestar/types/gloas";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -96,6 +97,8 @@ export enum EventType {
   block = "block",
   /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
   blockGossip = "block_gossip",
+  /** The node has received a gloas block (from P2P or API) that includes an execution payload bid */
+  bidIncluded = "bid_included",
   /** The node has received a valid attestation (from P2P or API) */
   attestation = "attestation",
   /** The node has received a valid SingleAttestation (from P2P or API) */
@@ -145,6 +148,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.headV2]: EventType.headV2,
   [EventType.block]: EventType.block,
   [EventType.blockGossip]: EventType.blockGossip,
+  [EventType.bidIncluded]: EventType.bidIncluded,
   [EventType.attestation]: EventType.attestation,
   [EventType.singleAttestation]: EventType.singleAttestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
@@ -190,6 +194,10 @@ export type EventData = {
   [EventType.blockGossip]: {
     slot: Slot;
     block: RootHex;
+  };
+  [EventType.bidIncluded]: {
+    block: RootHex;
+    signedBid: SignedExecutionPayloadBid;
   };
   [EventType.attestation]: Attestation;
   [EventType.singleAttestation]: electra.SingleAttestation;
@@ -342,6 +350,13 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {
         slot: ssz.Slot,
         block: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.bidIncluded]: new ContainerType(
+      {
+        block: stringType,
+        signedBid: ssz.gloas.SignedExecutionPayloadBid,
       },
       {jsonCase: "eth2"}
     ),
