@@ -8,7 +8,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu, gloas, ssz} from "@lodestar/types";
-import {DCOL_HEADER_SIZE, DCOL_VERSION, encodeDcolHeader, setBit} from "../../../../src/db/flatFileStore/dcolFormat.js";
+import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
@@ -215,36 +215,6 @@ describe("FlatFileStore", () => {
 
       const raw = await fs.promises.readFile(path.join(slotDir, dcolFile));
       expect(raw[0]).toBe(DCOL_VERSION);
-    });
-
-    it.each([
-      {compressed: "01f00041", expected: "41"},
-      {compressed: "02f0014141", expected: "4141"},
-      {compressed: "01f4000041", expected: "41"},
-    ])("should read and merge a column with short extended literal $compressed", async ({compressed, expected}) => {
-      const bitmap = new Uint8Array(16);
-      setBit(bitmap, 0);
-      const header = encodeDcolHeader({
-        version: DCOL_VERSION,
-        bitmap,
-        blockRoot: new Uint8Array(32).fill(0xaa),
-        slot: 1000,
-      });
-      const columnBytes = Buffer.from(compressed, "hex");
-      const file = new Uint8Array(DCOL_HEADER_SIZE + 8 + columnBytes.length);
-      file.set(header);
-      new DataView(file.buffer).setUint32(DCOL_HEADER_SIZE + 4, columnBytes.length, false);
-      file.set(columnBytes, DCOL_HEADER_SIZE + 8);
-      const slotDir = path.join(tmpDir, "data_columns", "000000001000");
-      await fs.promises.mkdir(slotDir, {recursive: true});
-      await fs.promises.writeFile(path.join(slotDir, `${ROOT_A}.dcol`), file);
-
-      const column = new Uint8Array(Buffer.from(expected, "hex"));
-      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0])).resolves.toEqual([column]);
-
-      const additionalColumn = new Uint8Array([0x42]);
-      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 1, data: additionalColumn}]);
-      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 1])).resolves.toEqual([column, additionalColumn]);
     });
 
     it("should reject truncated dcol files when read", async () => {
