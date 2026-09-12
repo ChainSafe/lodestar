@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {uncompress} from "snappyjs";
 import {describe, expect, it, vi} from "vitest";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {loadYaml} from "@lodestar/utils";
 
 export enum InputType {
@@ -192,7 +192,7 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
         testCase[`${inputName}_raw`] = fs.readFileSync(file);
         break;
       case InputType.SSZ_SNAPPY:
-        testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
+        testCase[`${inputName}_raw`] = snappyWasm.decompress(fs.readFileSync(file));
         break;
     }
     if (!options.inputProcessing) throw Error("inputProcessing is not defined");
@@ -232,9 +232,9 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");
-    let data = fs.readFileSync(file);
+    let data: Uint8Array = fs.readFileSync(file);
     if (inputType === InputType.SSZ_SNAPPY) {
-      data = uncompress(data);
+      data = snappyWasm.decompress(data);
     }
 
     let sszType: SszTypeGeneric | undefined;

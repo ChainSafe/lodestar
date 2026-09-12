@@ -45,13 +45,13 @@
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
+    "@chainsafe/snappy-wasm": "^0.5.2",
     "@libp2p/interface": "^3.3.0",
     "@libp2p/utils": "^7.4.0",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "snappy": "^7.2.2",
-    "snappyjs": "^0.7.0",
+    "snappy": "^7.4.3",
     "uint8-varint": "^2.0.2",
     "uint8arraylist": "^3.0.2"
   },
