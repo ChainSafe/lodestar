@@ -736,7 +736,8 @@ export class ForkChoice implements IForkChoice {
     importDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    ptcReceiveDelaySec = receiveDelaySec
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -876,7 +877,7 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
-      ptcTimeliness: this.isBlockPtcTimely(block, receiveDelaySec),
+      ptcTimeliness: this.isBlockPtcTimely(block, ptcReceiveDelaySec),
       importedTimely: this.isBlockImportedTimely(block, importDelaySec),
       proposerIndex: block.proposerIndex,
 

@@ -929,6 +929,7 @@ export class BlockInputSync {
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
+        firstSeenTimestampSec: this.chain.seenBlockProposers.getFirstSeenTimestampSec(blockSlot, blockRootHex),
       })
     );
 
