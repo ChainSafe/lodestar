@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
-import snappy from "snappy";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
@@ -201,8 +201,7 @@ function loadTestCaseChainConfig(testCaseDir: string, fork: ForkName) {
 
 function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
   const compressed = fs.readFileSync(path.join(testCaseDir, `${name}.ssz_snappy`));
-  const decompressed = snappy.uncompressSync(compressed);
-  return typeof decompressed === "string" ? Buffer.from(decompressed) : decompressed;
+  return snappyWasm.decompress(compressed);
 }
 
 function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {

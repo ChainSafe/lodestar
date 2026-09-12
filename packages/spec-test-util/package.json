@@ -59,9 +59,9 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/snappy-wasm": "^0.5.2",
     "@lodestar/utils": "workspace:^",
     "rimraf": "^4.4.1",
-    "snappyjs": "^0.7.0",
     "vitest": "catalog:"
   },
   "peerDependencies": {

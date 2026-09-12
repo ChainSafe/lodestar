@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {uncompress} from "snappyjs";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {loadYaml} from "@lodestar/utils";
 
 export type ValidTestCaseData = {
@@ -19,7 +19,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
   }
 
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompress<Uint8Array>(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
+  const serialized = snappyWasm.decompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
   const yamlPath = path.join(dirpath, "value.yaml");
@@ -46,7 +46,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
  */
 export function parseSszGenericInvalidTestcase(dirpath: string) {
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
+  const serialized = snappyWasm.decompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   return {
     serialized,
