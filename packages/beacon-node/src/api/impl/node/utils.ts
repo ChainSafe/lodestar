@@ -4,13 +4,16 @@ import {routes} from "@lodestar/api";
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer
  */
-export function formatNodePeer(peerIdStr: string, connections: Connection[]): routes.node.NodePeer {
+export function formatNodePeer(
+  peerIdStr: string,
+  connections: Connection[],
+  enr?: string | null
+): routes.node.NodePeer {
   const conn = getRelevantConnection(connections);
 
   return {
     peerId: conn ? conn.remotePeer.toString() : peerIdStr,
-    // TODO: figure out how to get enr of peer
-    enr: null,
+    enr: enr ?? null,
     lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
     direction: conn ? (conn.direction as routes.node.PeerDirection) : null,
     state: conn ? getPeerState(conn.status) : "disconnected",
