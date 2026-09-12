@@ -149,6 +149,62 @@ describe("web3signer signature test", () => {
     await assertSameSignature("signVoluntaryExit", pubkeyBytes, validatorIndex, epoch);
   });
 
+  it("signExecutionPayloadEnvelope", async ({skip}) => {
+    if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
+      skip();
+      return;
+    }
+
+    const slot = computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH);
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.payload.slotNumber = slot;
+
+    await assertSameSignature("signExecutionPayloadEnvelope", pubkeyBytes, envelope, slot);
+  });
+
+  it("signPayloadAttestation", async ({skip}) => {
+    if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
+      skip();
+      return;
+    }
+
+    const slot = computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH);
+    const data = ssz.gloas.PayloadAttestationData.defaultValue();
+    data.slot = slot;
+
+    await assertSameSignature("signPayloadAttestation", {pubkey: pubkeyBytes, validatorIndex, slot}, data, slot);
+  });
+
+  it("signProposerPreferences", async ({skip}) => {
+    if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
+      skip();
+      return;
+    }
+
+    const slot = computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH) + 1;
+    const dependentRoot = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
+
+    await assertSameSignature(
+      "signProposerPreferences",
+      {pubkey: pubkeyBytes, validatorIndex, slot},
+      dependentRoot,
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      30_000_000,
+      slot - 1
+    );
+  });
+
+  it("signBuilderRequestAuth", async ({skip}) => {
+    if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
+      skip();
+      return;
+    }
+
+    const slot = computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH);
+
+    await assertSameSignature("signBuilderRequestAuth", pubkeyBytes, Buffer.from("https://builder.example.org"), slot);
+  });
+
   // ValidatorRegistration includes a timestamp so it's possible that web3signer instance and local instance
   // sign different messages and this test fails. Disabling unless it can be proven deterministic
   it.skip("signValidatorRegistration", async () => {

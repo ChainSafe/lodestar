@@ -909,7 +909,7 @@ export class ValidatorStore {
     });
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE,
       data,
     };
 
