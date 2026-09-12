@@ -173,8 +173,14 @@ for (const rootSource of ["archive index", "head state"] as const) {
       }
     });
 
+    // These benchmarks read real LevelDB + flat-file data and depend on warm OS/DB caches, so their
+    // timing has high run-to-run variance on the shared benchmark runner. Gating them on the 3x
+    // regression threshold produces false "Performance regression" CI failures (a different bench trips
+    // each unstable push, and the rolling per-commit baseline lets one noisy run poison the next). Mark
+    // report-only via noThreshold: still measured and shown in the comparison comment, but never fails CI.
     bench({
       id: `${rootSource} / 1 slot / archive root index lookup`,
+      noThreshold: true,
       minRuns: 25,
       maxMs: 15_000,
       fn: async () => {
@@ -185,6 +191,7 @@ for (const rootSource of ["archive index", "head state"] as const) {
 
     bench({
       id: `${rootSource} / 1 slot / archive block lookup, decode and hash`,
+      noThreshold: true,
       minRuns: 25,
       maxMs: 15_000,
       fn: async () => {
@@ -204,6 +211,7 @@ for (const rootSource of ["archive index", "head state"] as const) {
         for (const backend of ["legacy", "flat files"] as const) {
           bench({
             id: `${rootSource} / ${count} slots / ${columns} columns / ${backend}`,
+            noThreshold: true,
             minRuns: 25,
             maxMs: 15_000,
             timeoutBench: 60_000,
