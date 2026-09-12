@@ -216,7 +216,7 @@ describe("Builder", () => {
     expect(api.beacon.getBlockV2).not.toHaveBeenCalled();
   });
 
-  it("warns on a recoverable stream error and continues delivery", () => {
+  it("logs a stream error and continues delivery", () => {
     new Builder(modules);
     const {onError, onEvent} = api.events.eventstream.mock.calls[0][0];
     const error = Error("connection interrupted");
@@ -224,8 +224,8 @@ describe("Builder", () => {
     const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
     onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
 
-    expect(logger.warn).toHaveBeenCalledWith("Failed to receive builder event", {topics: topics.join(",")}, error);
-    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith("Failed to receive builder event", {topics: topics.join(",")}, error);
+    expect(logger.warn).not.toHaveBeenCalled();
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
     expect(api.events.eventstream).toHaveBeenCalledOnce();
   });

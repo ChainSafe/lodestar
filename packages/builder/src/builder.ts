@@ -148,7 +148,7 @@ export class Builder {
           void this.onEvent(event);
         },
         onError: (error) => {
-          if (!signal.aborted) this.logger.warn("Failed to receive builder event", {topics: topics.join(",")}, error);
+          if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
           if (signal.aborted) {
