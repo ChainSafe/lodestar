@@ -264,10 +264,7 @@ export class OpPool {
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
-        isVoluntaryExitSignatureIncludable(
-          stateFork,
-          this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
-        )
+        isVoluntaryExitSignatureIncludable(stateFork, this.getVoluntaryExitFork(voluntaryExit))
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {
@@ -373,10 +370,10 @@ export class OpPool {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
-      // VoluntaryExit messages signed in the previous fork become invalid and can never be included in any future
-      // block, so just drop as the head state advances into the next fork.
-      if (this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
+      const voluntaryExitFork = this.getVoluntaryExitFork(voluntaryExit);
+      if (!isVoluntaryExitSignatureIncludable(headStateFork, voluntaryExitFork)) {
         this.voluntaryExits.delete(key);
+        continue;
       }
 
       // TODO: Improve this simplistic condition
@@ -384,6 +381,10 @@ export class OpPool {
         this.voluntaryExits.delete(key);
       }
     }
+  }
+
+  private getVoluntaryExitFork(voluntaryExit: phase0.SignedVoluntaryExit): ForkSeq {
+    return this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
   }
 
   /**
@@ -418,8 +419,8 @@ export class OpPool {
  */
 function isVoluntaryExitSignatureIncludable(stateFork: ForkSeq, voluntaryExitFork: ForkSeq): boolean {
   if (stateFork >= ForkSeq.deneb) {
-    // Exists are perpetually valid https://eips.ethereum.org/EIPS/eip-7044
-    return true;
+    // Deneb onwards the signature domain fork is fixed to capella, so only capella+ exits remain perpetually valid.
+    return voluntaryExitFork >= ForkSeq.capella;
   }
   // Can only include exits from the current and previous fork
   return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
