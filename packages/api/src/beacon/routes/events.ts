@@ -94,6 +94,11 @@ export enum EventType {
   headV2 = "head_v2",
   /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
+  /**
+   * The node has received a gloas block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler
+   * and includes signed execution payload
+   */
+  blockV2 = "block_v2",
   /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
   blockGossip = "block_gossip",
   /** The node has received a valid attestation (from P2P or API) */
@@ -144,6 +149,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.head]: EventType.head,
   [EventType.headV2]: EventType.headV2,
   [EventType.block]: EventType.block,
+  [EventType.blockV2]: EventType.blockV2,
   [EventType.blockGossip]: EventType.blockGossip,
   [EventType.attestation]: EventType.attestation,
   [EventType.singleAttestation]: EventType.singleAttestation,
@@ -185,6 +191,13 @@ export type EventData = {
   [EventType.block]: {
     slot: Slot;
     block: RootHex;
+    executionOptimistic: boolean;
+  };
+  [EventType.blockV2]: {
+    slot: Slot;
+    block: RootHex;
+    blockHash: RootHex;
+    builderIndex: BuilderIndex;
     executionOptimistic: boolean;
   };
   [EventType.blockGossip]: {
@@ -334,6 +347,16 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {
         slot: ssz.Slot,
         block: stringType,
+        executionOptimistic: ssz.Boolean,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.blockV2]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        block: stringType,
+        blockHash: stringType,
+        builderIndex: ssz.BuilderIndex,
         executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
