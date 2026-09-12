@@ -6,6 +6,7 @@ import {BeaconDb, type IDataColumnStore} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
+  BackfilledRanges,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
   BlockArchiveRepository,
@@ -28,6 +29,7 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
 
   stateArchive: Mocked<StateArchiveRepository>;
+  backfilledRanges: Mocked<BackfilledRanges>;
 
   voluntaryExit: Mocked<VoluntaryExitRepository>;
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
@@ -57,6 +59,7 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
       stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
+      backfilledRanges: vi.mocked(new BackfilledRanges({} as any, {} as any)),
 
       voluntaryExit: vi.mocked(new VoluntaryExitRepository({} as any, {} as any)),
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),
