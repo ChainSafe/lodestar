@@ -1,9 +1,9 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IBeaconStateView, blockToHeader} from "@lodestar/state-transition";
-import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {ForkPostAltair, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IBeaconStateView, blockToHeader, isStatePostAltair} from "@lodestar/state-transition";
+import {BeaconBlock, Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
@@ -146,6 +146,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private backfillStartFromSlot: Slot;
   private backfillRangeWrittenSlot: Slot | null;
 
+  /** State the node started from, needed to serve light client bootstrap for its block once retrieved */
+  private readonly anchorState: IBeaconStateView;
+  private readonly anchorStateBlockRoot: Root;
+
   private processor = new ItTrigger();
   private peers = new Set<PeerIdStr>();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
@@ -166,6 +170,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.config = modules.config;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
+    this.anchorState = modules.anchorState;
+    this.anchorStateBlockRoot = modules.anchorState.computeAnchorCheckpoint().checkpoint.root;
 
     this.opts = opts;
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
@@ -663,6 +669,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
     let anchorBlock = await this.db.blockArchive.getByRoot(anchorBlockRoot);
     if (!anchorBlock) return false;
+    this.maybePersistAnchorLightClientData(anchorBlockRoot, anchorBlock);
 
     if (expectedSlot !== null && anchorBlock.message.slot !== expectedSlot)
       throw Error(
@@ -742,6 +749,23 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     return true;
   }
 
+  /**
+   * The light client server never sees the anchor block being imported, so once we hold the block that
+   * the anchor state was computed from, persist the bootstrap data for it (spec: full nodes SHOULD serve
+   * `LightClientBootstrap` for all finalized epoch boundary blocks, which includes the checkpoint root).
+   */
+  private maybePersistAnchorLightClientData(blockRoot: Root, block: SignedBeaconBlock): void {
+    if (!byteArrayEquals(blockRoot, this.anchorStateBlockRoot)) return;
+    const {lightClientServer} = this.chain;
+    if (!lightClientServer || !isStatePostAltair(this.anchorState)) return;
+
+    lightClientServer
+      .persistAnchorBootstrapData(block.message as BeaconBlock<ForkPostAltair>, this.anchorState)
+      .catch((e) => {
+        this.logger.warn("Error persisting light client data for anchor block", {slot: block.message.slot}, e);
+      });
+  }
+
   private async syncBlockByRoot(peer: PeerIdStr, anchorBlockRoot: Root): Promise<void> {
     const res = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
     if (res.length < 1) throw new Error("InvalidBlockSyncedFromPeer");
@@ -769,6 +793,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       anchorSlot: anchorBlock.message.slot,
       lastBackSyncedBlock: {root: anchorBlockRoot, slot: anchorBlock.message.slot, block: anchorBlock},
     };
+    this.maybePersistAnchorLightClientData(anchorBlockRoot, anchorBlock);
 
     this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.blockbyroot});
 
