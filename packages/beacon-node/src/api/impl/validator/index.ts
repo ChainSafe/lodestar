@@ -8,6 +8,7 @@ import {
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
+  MAX_EXECUTION_PAYMENT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -127,6 +128,7 @@ type BidCandidate = {
   /** Total payment in Gwei, counting the execution payment at most at the entry's cap */
   totalGwei: bigint;
   boostFactor: bigint;
+  source: "direct" | "p2p" | "supplied";
   url?: string;
   /** Time in milliseconds from the slot start when the bid was received */
   receivedMs: number;
@@ -876,8 +878,9 @@ export function getValidatorApi(
   }
 
   /**
-   * Gloas block production behind `produceBlockV4`, the local payload build is raced against
-   * the best builder bid
+   * Gloas block production shared by produceBlockV4 and produceBlockV4WithBid. A bid supplied by
+   * the validator client takes the place of builder API and p2p bids, competing only with the
+   * local payload.
    */
   async function produceGloasBlock({
     slot,
@@ -887,6 +890,7 @@ export function getValidatorApi(
     strictFeeRecipientCheck,
     includePayload,
     builderConfig,
+    suppliedBid,
   }: {
     slot: Slot;
     randaoReveal: BLSSignature;
@@ -895,16 +899,17 @@ export function getValidatorApi(
     strictFeeRecipientCheck?: boolean;
     includePayload: boolean;
     builderConfig: routes.validator.BuilderConfig;
+    suppliedBid?: gloas.SignedExecutionPayloadBid;
   }) {
     const fork = config.getForkName(slot);
 
     if (!isForkPostGloas(fork)) {
-      throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
+      throw new ApiError(400, `Gloas block production not supported for pre-gloas fork=${fork}`);
     }
 
     const builderBoostFactor = builderConfig.builderBoostFactor;
-    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    if (builderBoostFactor < 0n || builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor}, must be a uint64`);
     }
 
     notWhileSyncing(chain, sync.state);
@@ -956,31 +961,34 @@ export function getValidatorApi(
       }
     }
 
-    // A builder bid is expected if builders are configured or a p2p bid was already received.
-    // Used by the censorship override which may run before the bid deadline
+    // A builder bid is expected if builders are configured, a bid was supplied or a p2p bid was
+    // already received. Used by the censorship override which may run before the bid deadline
     const builderBidExpected =
       builderConfig.builders.length > 0 ||
+      suppliedBid !== undefined ||
       (!circuitBreakerActive &&
         chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
     // Select the p2p bid once builders had time to bid up, matching the deadline advertised
-    // on builder API bid requests, unless the circuit breaker is active
-    const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
-      ? Promise.resolve(null)
-      : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
-          const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-          // Discard p2p bids below the proposer's configured floor on the total payment.
-          // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-          if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-            logger.info("Best p2p bid below configured minimum", {
-              slot,
-              bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-              minBid: prettyGweiToEth(builderConfig.minBid),
-            });
-            return null;
-          }
-          return p2pBid;
-        });
+    // on builder API bid requests, unless the circuit breaker is active or the validator
+    // client supplied its own bid, having already picked from the bids it saw
+    const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> =
+      circuitBreakerActive || suppliedBid !== undefined
+        ? Promise.resolve(null)
+        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
+            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+            // Discard p2p bids below the proposer's configured floor on the total payment.
+            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+              logger.info("Best p2p bid below configured minimum", {
+                slot,
+                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+                minBid: prettyGweiToEth(builderConfig.minBid),
+              });
+              return null;
+            }
+            return p2pBid;
+          });
 
     // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
     // by the top-level factors and each builder API bid by its own entry. Ties prefer the
@@ -999,7 +1007,9 @@ export function getValidatorApi(
                 parentBlock,
                 parentBlockHash: bidParentBlockHash,
                 parentBlockRoot: parentBlockRootHex,
-                entry,
+                builderPubkeys: entry.builderPubkeys,
+                maxExecutionPayment: entry.maxExecutionPayment,
+                minBid: entry.minBid,
                 getParentExecutionRequests: () => {
                   parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
                   return parentExecutionRequestsPromise;
@@ -1009,6 +1019,7 @@ export function getValidatorApi(
                 signedBid,
                 totalGwei: getBuilderBidTotalGwei(signedBid.message, entry.maxExecutionPayment),
                 boostFactor: entry.builderBoostFactor,
+                source: "direct",
                 url,
                 receivedMs,
               };
@@ -1021,11 +1032,48 @@ export function getValidatorApi(
         )
       ).filter((candidate): candidate is BidCandidate => candidate !== null);
 
+      // A supplied bid takes the place of builder API and p2p bids, validated like a builder API
+      // bid from any builder and counting the execution payment in full as the validator client
+      // applied its own cap when selecting it
+      if (suppliedBid !== undefined && !circuitBreakerActive) {
+        const receivedMs = chain.clock.msFromSlot(slot);
+        try {
+          await validateBuilderApiExecutionPayloadBid(chain, suppliedBid, {
+            slot,
+            parentBlock,
+            parentBlockHash: bidParentBlockHash,
+            parentBlockRoot: parentBlockRootHex,
+            builderPubkeys: [],
+            maxExecutionPayment: MAX_EXECUTION_PAYMENT,
+            minBid: builderConfig.minBid,
+            getParentExecutionRequests: () => {
+              parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+              return parentExecutionRequestsPromise;
+            },
+          });
+          candidates.push({
+            signedBid: suppliedBid,
+            totalGwei: getBuilderBidTotalGwei(suppliedBid.message, MAX_EXECUTION_PAYMENT),
+            boostFactor: builderConfig.builderBoostFactor,
+            source: "supplied",
+            receivedMs,
+          });
+        } catch (e) {
+          metrics?.blockProductionSuppliedBidsDiscarded.inc();
+          logger.warn(
+            "Ignoring invalid supplied bid",
+            {slot, builderIndex: suppliedBid.message.builderIndex},
+            e as Error
+          );
+        }
+      }
+
       if (p2pBid !== null) {
         candidates.push({
           signedBid: p2pBid.signedBid,
           totalGwei: BigInt(p2pBid.signedBid.message.value),
           boostFactor: builderConfig.builderBoostFactor,
+          source: "p2p",
           receivedMs: p2pBid.receivedMs,
         });
       }
@@ -1039,7 +1087,7 @@ export function getValidatorApi(
         logger.debug("Builder bid candidate", {
           slot,
           rank: index + 1,
-          source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
+          source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : candidate.source,
           builder: candidate.signedBid.message.builderIndex,
           total: prettyGweiToEth(candidate.totalGwei),
           boost: candidate.boostFactor,
@@ -1124,9 +1172,10 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       circuitBreakerActive,
       builderEntries: builderConfig.builders.length,
+      bidSupplied: suppliedBid !== undefined,
       ...(bestBid !== null
         ? {
-            bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
+            bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : bestBid.source,
             bidValue: prettyGweiToEth(bestBid.signedBid.message.value),
             bidExecutionPayment: prettyGweiToEth(bestBid.signedBid.message.executionPayment),
             // The full bid total and the counted total used during bid selection
@@ -1316,6 +1365,14 @@ export function getValidatorApi(
 
     async produceBlockV4(args) {
       return produceGloasBlock(args);
+    },
+
+    async produceBlockV4WithBid({builderBoostFactor, signedExecutionPayloadBid, ...args}) {
+      return produceGloasBlock({
+        ...args,
+        builderConfig: {minBid: 0n, builderBoostFactor, builders: []},
+        suppliedBid: signedExecutionPayloadBid,
+      });
     },
 
     async produceAttestationData({committeeIndex, slot}) {
