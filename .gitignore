@@ -73,7 +73,6 @@ docker/grafana_dev/dashboards
 .pass
 
 # docker-compose .env file
-.env
 
 # Grafana secret
 .secrets.env
@@ -90,3 +89,4 @@ temp/
 # Local development artifacts
 .venv/
 checkpoint_states/
+config.bat
