@@ -1132,16 +1132,14 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       const didUpdateCheckpoints = this.onTick(previousSlot + 1);
-      this.queuedAttestationsPreviousSlot = 0;
       // Process any attestations that might now be eligible before running FCR for this slot.
-      this.processAttestationQueue();
+      const didProcessAttestations = this.processAttestationQueue();
       const didRecomputeHead = this.runFastConfirmation();
 
-      // An epoch-boundary checkpoint pull-up can move the head's dependent root and stale the cached
-      // head before block 0 of the new epoch is imported, making isProposerBoostSameDependentRoot()
-      // wrong for that block. Recompute the head so it reflects the new checkpoint and the queued
-      // votes — unless fast confirmation already did, to avoid a redundant head calculation.
-      if (didUpdateCheckpoints && !didRecomputeHead) {
+      // An epoch-boundary checkpoint pull-up or applied queued votes from previous slot can move the head.
+      // Recompute the head so it reflects the new checkpoint and the queued votes — unless fast
+      // confirmation already did, to avoid a redundant head calculation.
+      if ((didUpdateCheckpoints || didProcessAttestations) && !didRecomputeHead) {
         this.updateHead();
       }
 
@@ -2175,7 +2173,8 @@ export class ForkChoice implements IForkChoice {
    * Processes and removes from the queue any queued attestations which may now be eligible for
    * processing due to the slot clock incrementing.
    */
-  private processAttestationQueue(): void {
+  private processAttestationQueue(): boolean {
+    let processed = false;
     const currentSlot = this.fcStore.currentSlot;
     for (const [slot, byRoot] of this.queuedAttestations.entries()) {
       if (slot < currentSlot) {
@@ -2185,6 +2184,7 @@ export class ForkChoice implements IForkChoice {
           for (const [validatorIndex, payloadStatus] of validatorVotes.entries()) {
             // equivocatingIndices was checked in onAttestation
             this.addLatestMessage(validatorIndex, slot, blockRootHex, payloadStatus);
+            processed = true;
           }
 
           if (slot === currentSlot - 1) {
@@ -2195,6 +2195,7 @@ export class ForkChoice implements IForkChoice {
         break;
       }
     }
+    return processed;
   }
 
   /**
