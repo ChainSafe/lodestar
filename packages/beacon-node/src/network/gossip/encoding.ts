@@ -98,6 +98,7 @@ export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
     private readonly maxPayloadSize: number,
+    private readonly maxGloasDataColumnSidecarSize: number,
     private readonly metrics: Eth2GossipsubMetrics | null
   ) {}
 
@@ -113,7 +114,7 @@ export class DataTransformSnappy implements DataTransform {
 
     const topic = this.gossipTopicCache.getTopic(topicStr);
     const sszType = getGossipSSZType(topic);
-    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
+    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, this.maxGloasDataColumnSidecarSize, sszType);
     this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
     if (uncompressedDataLength < sszType.minSize) {
@@ -137,7 +138,7 @@ export class DataTransformSnappy implements DataTransform {
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     const topic = this.gossipTopicCache.getTopic(topicStr);
     const sszType = getGossipSSZType(topic);
-    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
+    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, this.maxGloasDataColumnSidecarSize, sszType);
     this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > maxSize) {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${maxSize}`);
