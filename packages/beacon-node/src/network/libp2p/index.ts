@@ -6,6 +6,8 @@ import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
+import {loopbackAddressLast, publicAddressesFirst, reliableTransportsFirst} from "@libp2p/utils";
+import type {Multiaddr} from "@multiformats/multiaddr";
 import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
@@ -24,6 +26,13 @@ const noiseCrypto = getCiphers().includes("chacha20-poly1305")
       chaCha20Poly1305Decrypt: asCrypto.chaCha20Poly1305Decrypt,
     };
 
+function quicAddressesFirst(a: Multiaddr, b: Multiaddr): -1 | 0 | 1 {
+  const aQuic = a.getComponents().some((c) => c.name === "quic-v1");
+  const bQuic = b.getComponents().some((c) => c.name === "quic-v1");
+  if (aQuic === bQuic) return 0;
+  return aQuic ? -1 : 1;
+}
+
 /**
  * Custom sorter for libp2p's `addressSorter`.
  *
@@ -32,10 +41,12 @@ const noiseCrypto = getCiphers().includes("chacha20-poly1305")
  * Spec: https://github.com/ethereum/consensus-specs/blob/f21dac06e99743b1e98bb80297897b96520c942b/specs/phase0/p2p-interface.md#transport
  */
 export function quicFirstAddressSorter(a: Address, b: Address): -1 | 0 | 1 {
-  const aQuic = a.multiaddr.getComponents().some((c) => c.name === "quic-v1");
-  const bQuic = b.multiaddr.getComponents().some((c) => c.name === "quic-v1");
-  if (aQuic === bQuic) return 0;
-  return aQuic ? -1 : 1;
+  return (
+    loopbackAddressLast(a.multiaddr, b.multiaddr) ||
+    publicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    quicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    reliableTransportsFirst(a.multiaddr, b.multiaddr)
+  );
 }
 
 export type NodeJsLibp2pOpts = {
