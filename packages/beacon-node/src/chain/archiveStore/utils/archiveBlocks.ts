@@ -1,12 +1,16 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Slot} from "@lodestar/types";
+import {Epoch, Slot, gloas} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
+import {
+  CompactExecutionPayloadEnvelope,
+  compactExecutionPayloadEnvelope,
+} from "../../../db/repositories/executionPayloadEnvelopeArchiveTypes.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -69,7 +73,8 @@ export async function archiveBlocks(
   isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
-  persistOrphanedBlocksDir?: string
+  persistOrphanedBlocksDir?: string,
+  dedupePayloads = true
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete.
   // `ancestors` is the canonical walk back from the finalized root, including the previous finalized
@@ -156,7 +161,9 @@ export async function archiveBlocks(
         config,
         db,
         logger,
-        finalizedCanonicalBlocks
+        finalizedCanonicalBlocks,
+        finalizedCheckpoint.rootHex,
+        dedupePayloads
       );
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
         ...logCtx,
@@ -480,44 +487,43 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
-  canonicalBlocks: ProtoBlock[]
+  canonicalBlocks: ProtoBlock[],
+  finalizedRoot: string,
+  dedupePayloads: boolean
 ): Promise<Slot[]> {
-  const payloadBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
+  const blocks = canonicalBlocks.filter(
+    (block) =>
+      config.getForkSeq(block.slot) >= ForkSeq.gloas &&
+      block.blockRoot !== finalizedRoot &&
+      block.payloadStatus === PayloadStatus.FULL
   );
-  if (payloadBlocks.length === 0) return [];
-  const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
-
-  const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
-  const migratedRoots: Uint8Array[] = [];
-
-  const envelopeBytesArray = await Promise.all(
-    blocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
-  );
-
-  for (let i = 0; i < blocks.length; i++) {
-    const bytes = envelopeBytesArray[i];
-    if (bytes !== null) {
-      envelopeEntries.push({key: blocks[i].slot, value: bytes});
-      migratedRoots.push(blocks[i].root);
-    } else {
-      logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
-        slot: blocks[i].slot,
-        root: toRootHex(blocks[i].root),
-      });
+  const slots: Slot[] = [];
+  for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
+    const batch = blocks.slice(i, i + BLOCK_BATCH_SIZE);
+    const envelopes = await Promise.all(
+      batch.map((block) => db.executionPayloadEnvelope.get(fromHex(block.blockRoot)))
+    );
+    const full: gloas.SignedExecutionPayloadEnvelope[] = [];
+    const compact: CompactExecutionPayloadEnvelope[] = [];
+    for (const [index, envelope] of envelopes.entries()) {
+      const block = batch[index];
+      if (envelope === null) {
+        logger.debug("ExecutionPayloadEnvelope missing in hot db, could be already archived", {
+          slot: block.slot,
+          root: block.blockRoot,
+        });
+        continue;
+      }
+      if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
+        compact.push(compactExecutionPayloadEnvelope(envelope));
+      } else {
+        full.push(envelope);
+      }
+      slots.push(block.slot);
     }
+    if (full.length > 0 || compact.length > 0) await db.archiveExecutionPayloadEnvelopes(full, compact);
   }
-
-  if (envelopeEntries.length === 0) return [];
-
-  await Promise.all([
-    db.executionPayloadEnvelopeArchive.batchPutBinary(envelopeEntries),
-    db.executionPayloadEnvelope.batchDelete(migratedRoots),
-  ]);
-
-  // Slots are ascending in hot-db key order — sort to guarantee `prettyPrintIndices` output is clean
-  // regardless of ancestor-walk order (newest to oldest).
-  return envelopeEntries.map((entry) => entry.key).sort((a, b) => a - b);
+  return slots.sort((a, b) => a - b);
 }
 
 /**

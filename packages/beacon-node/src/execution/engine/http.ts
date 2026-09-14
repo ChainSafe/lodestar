@@ -7,7 +7,7 @@ import {strip0xPrefix} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {JobFnQueue, JobItemQueue} from "../../util/queue/index.js";
 import {
   ClientCode,
   ClientVersion,
@@ -149,6 +149,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * order with which we make them.
    */
   private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
+  private readonly payloadBodiesQueue: JobFnQueue;
 
   private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
     return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
@@ -167,6 +168,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
+    this.payloadBodiesQueue = new JobFnQueue({maxLength: 64, maxConcurrency: 2, noYieldIfOneItem: true, signal});
     this.logger = logger;
     this.metrics = metrics ?? null;
 
@@ -466,30 +468,36 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
+  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+    const method =
+      ForkSeq[fork] >= ForkSeq.gloas ? "engine_getPayloadBodiesByHashV2" : "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
-    return response.map(deserializeExecutionPayloadBody);
+    return this.payloadBodiesQueue.push(async () => {
+      const response = await this.rpc.fetchWithRetries<
+        EngineApiRpcReturnTypes[typeof method],
+        EngineApiRpcParamTypes[typeof method]
+      >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
+      return response.map(deserializeExecutionPayloadBody);
+    });
   }
 
   async getPayloadBodiesByRange(
-    _fork: ForkName,
+    fork: ForkName,
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.gloas ? "engine_getPayloadBodiesByRangeV2" : "engine_getPayloadBodiesByRangeV1";
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
-    return response.map(deserializeExecutionPayloadBody);
+    return this.payloadBodiesQueue.push(async () => {
+      const response = await this.rpc.fetchWithRetries<
+        EngineApiRpcReturnTypes[typeof method],
+        EngineApiRpcParamTypes[typeof method]
+      >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
+      return response.map(deserializeExecutionPayloadBody);
+    });
   }
 
   async getBlobs(

@@ -160,8 +160,9 @@ describe("FlatFileStore reqresp handler integration", () => {
           getBinary: vi.fn().mockResolvedValue(opts.hotExecutionPayloadEnvelopeBytes ?? null),
         },
         executionPayloadEnvelopeArchive: {
-          getBinary: vi.fn().mockResolvedValue(opts.archivedExecutionPayloadEnvelopeBytes ?? null),
+          has: vi.fn().mockResolvedValue(opts.archivedExecutionPayloadEnvelopeBytes != null),
         },
+        compactExecutionPayloadEnvelopeArchive: {has: vi.fn().mockResolvedValue(false)},
       } as unknown as IBeaconDb;
 
       const fallbackChain = {
@@ -662,7 +663,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(0);
       expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
-      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+      expect(db.executionPayloadEnvelopeArchive.has).not.toHaveBeenCalled();
       expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
       expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
@@ -766,7 +767,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(0);
       expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
-      expect(db.executionPayloadEnvelopeArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.executionPayloadEnvelopeArchive.has).toHaveBeenCalledWith(10);
     });
 
     it("should serve old finalized Gloas columns while the payload envelope is still hot", async () => {
@@ -791,7 +792,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(columnBytes);
       expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
-      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+      expect(db.executionPayloadEnvelopeArchive.has).not.toHaveBeenCalled();
     });
 
     it("should not account for unavailable unfinalized Gloas columns without a payload envelope", async () => {
@@ -819,7 +820,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       });
 
       expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
-      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+      expect(db.executionPayloadEnvelopeArchive.has).not.toHaveBeenCalled();
       expect(db.block.getBinary).not.toHaveBeenCalled();
       expect(missingCustodyColumnsInc).not.toHaveBeenCalled();
     });

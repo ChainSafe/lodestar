@@ -46,9 +46,15 @@ export async function handleColumnSidecarUnavailability({
     const hasCachedEnvelope = blockRoot ? chain.seenPayloadEnvelopeInputCache.hasPayload(toRootHex(blockRoot)) : false;
     if (!hasCachedEnvelope) {
       const hotEnvelopeBytes = blockRoot ? await db.executionPayloadEnvelope.getBinary(blockRoot) : null;
-      const envelopeBytes =
-        hotEnvelopeBytes ?? (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot) : null);
-      if (!envelopeBytes) return;
+      if (
+        !hotEnvelopeBytes &&
+        !(
+          finalized &&
+          ((await db.executionPayloadEnvelopeArchive.has(slot)) ||
+            (await db.compactExecutionPayloadEnvelopeArchive.has(slot)))
+        )
+      )
+        return;
     }
   }
 

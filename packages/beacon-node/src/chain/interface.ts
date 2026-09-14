@@ -236,6 +236,10 @@ export interface IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getArchivedExecutionPayloadEnvelopes(
+    startSlot: Slot,
+    endSlot: Slot
+  ): AsyncIterable<gloas.SignedExecutionPayloadEnvelope>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string

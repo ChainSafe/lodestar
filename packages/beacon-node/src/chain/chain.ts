@@ -56,7 +56,16 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {
+  Logger,
+  byteArrayEquals,
+  fromHex,
+  gweiToWei,
+  isErrorAborted,
+  pruneSetToMax,
+  sleep,
+  toRootHex,
+} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -82,6 +91,10 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
+import {
+  reconstructExecutionPayloadEnvelopeStream,
+  reconstructExecutionPayloadEnvelopes,
+} from "./blocks/reconstructExecutionPayloadEnvelopes.js";
 import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
@@ -936,11 +949,18 @@ export class BeaconChain implements IBeaconChain {
       return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+    const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+    const full = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
+    if (full !== null) {
+      return byteArrayEquals(full.message.beaconBlockRoot, fromHex(blockRootHex))
+        ? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full)
+        : null;
+    }
+    const archived = await this.db.compactExecutionPayloadEnvelopeArchive.get(blockSlot);
+    if (archived === null || !byteArrayEquals(archived.message.beaconBlockRoot, fromHex(blockRootHex))) return null;
+    const [envelope] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, [archived]);
+    return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
   }
 
   async getExecutionPayloadEnvelope(
@@ -951,12 +971,50 @@ export class BeaconChain implements IBeaconChain {
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
     }
-
-    return (
+    const full =
       (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot));
+    if (full !== null) {
+      return byteArrayEquals(full.message.beaconBlockRoot, fromHex(blockRootHex)) ? full : null;
+    }
+    const archived = await this.db.compactExecutionPayloadEnvelopeArchive.get(blockSlot);
+    if (archived === null || !byteArrayEquals(archived.message.beaconBlockRoot, fromHex(blockRootHex))) return null;
+    const [envelope] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, [archived]);
+    return envelope;
+  }
+
+  async *getArchivedExecutionPayloadEnvelopes(
+    startSlot: Slot,
+    endSlot: Slot
+  ): AsyncIterable<gloas.SignedExecutionPayloadEnvelope> {
+    const opts = {gte: startSlot, lt: endSlot};
+    const full = this.db.executionPayloadEnvelopeArchive.valuesStream(opts)[Symbol.asyncIterator]();
+    const reconstructed = reconstructExecutionPayloadEnvelopeStream(
+      this.executionEngine,
+      this.db.compactExecutionPayloadEnvelopeArchive.valuesStream(opts)
+    )[Symbol.asyncIterator]();
+    try {
+      let [fullResult, reconstructedResult] = await Promise.all([full.next(), reconstructed.next()]);
+      while (!fullResult.done || !reconstructedResult.done) {
+        if (
+          !fullResult.done &&
+          (reconstructedResult.done ||
+            fullResult.value.message.payload.slotNumber <= reconstructedResult.value.message.payload.slotNumber)
+        ) {
+          const slot = fullResult.value.message.payload.slotNumber;
+          yield fullResult.value;
+          fullResult = await full.next();
+          if (!reconstructedResult.done && reconstructedResult.value.message.payload.slotNumber === slot) {
+            reconstructedResult = await reconstructed.next();
+          }
+        } else if (!reconstructedResult.done) {
+          yield reconstructedResult.value;
+          reconstructedResult = await reconstructed.next();
+        }
+      }
+    } finally {
+      await Promise.all([full.return?.(), reconstructed.return?.()]);
+    }
   }
 
   async getParentExecutionRequests(
@@ -967,8 +1025,13 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    const envelope = payloadInput?.hasPayloadEnvelope()
+      ? payloadInput.getPayloadEnvelope()
+      : ((await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex))) ??
+        (await this.db.executionPayloadEnvelopeArchive.get(parentBlockSlot)) ??
+        (await this.db.compactExecutionPayloadEnvelopeArchive.get(parentBlockSlot)));
+    if (envelope === null || !byteArrayEquals(envelope.message.beaconBlockRoot, fromHex(parentBlockRootHex))) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
     return envelope.message.executionRequests;

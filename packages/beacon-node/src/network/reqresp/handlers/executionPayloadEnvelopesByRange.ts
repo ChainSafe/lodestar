@@ -4,15 +4,17 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
+import {
+  PayloadReconstructionError,
+  PayloadReconstructionErrorCode,
+} from "../../../chain/errors/payloadReconstruction.js";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(
   request: gloas.ExecutionPayloadEnvelopesByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -35,7 +37,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
     );
   }
 
-  const finalized = db.executionPayloadEnvelopeArchive;
   // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
   // The finalized block's envelope stays in the hot db until the next finalization run
@@ -43,15 +44,24 @@ export async function* onExecutionPayloadEnvelopesByRange(
 
   // Finalized range of envelopes
   if (startSlot <= archiveMaxSlot) {
-    for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
-    })) {
-      const slot = finalized.decodeKey(key);
-      yield {
-        data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-      };
+    try {
+      for await (const envelope of chain.getArchivedExecutionPayloadEnvelopes(
+        startSlot,
+        Math.min(endSlot, archiveMaxSlot + 1)
+      )) {
+        yield {
+          data: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(envelope.message.payload.slotNumber)),
+        };
+      }
+    } catch (error) {
+      if (
+        error instanceof PayloadReconstructionError &&
+        error.type.code === PayloadReconstructionErrorCode.BODY_UNAVAILABLE
+      ) {
+        throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, error.message);
+      }
+      throw error;
     }
   }
 

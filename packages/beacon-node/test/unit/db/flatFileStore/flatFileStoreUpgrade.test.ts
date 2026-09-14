@@ -13,6 +13,7 @@ import {fromAsync, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
+import {compactExecutionPayloadEnvelope} from "../../../../src/db/repositories/executionPayloadEnvelopeArchiveTypes.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
 
 describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)", (fork) => {
@@ -144,7 +145,7 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     await writeColumns(10, "legacy");
     await db.init();
     const archiveRead = vi.spyOn(db.dataColumnSidecarArchive, "getManyBinary");
-    const envelopeRead = vi.spyOn(db.executionPayloadEnvelopeArchive, "getBinary");
+    const envelopeRead = vi.spyOn(db.executionPayloadEnvelopeArchive, "has");
     expect(await requestRange(11, 2)).toEqual([]);
     expect(archiveRead).not.toHaveBeenCalled();
     expect(envelopeRead).not.toHaveBeenCalled();
@@ -178,6 +179,16 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
   });
 
   if (fork === "gloas") {
+    it("should serve columns when only a compact payload envelope is archived", async () => {
+      const {columns} = await writeColumns(10, "legacy");
+      const envelope = await db.executionPayloadEnvelopeArchive.get(10);
+      if (envelope === null) throw new Error("Missing test envelope");
+      await db.archiveExecutionPayloadEnvelopes([], [compactExecutionPayloadEnvelope(envelope)]);
+      expect(await db.executionPayloadEnvelopeArchive.has(10)).toBe(false);
+      await db.init();
+      expect(await requestRange(10, 1)).toEqual(columns);
+    });
+
     it("should require an archived payload envelope for an unresolved legacy slot", async () => {
       await writeColumns(10, "legacy");
       await db.executionPayloadEnvelopeArchive.delete(10);
