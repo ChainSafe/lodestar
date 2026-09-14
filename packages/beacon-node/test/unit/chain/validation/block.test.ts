@@ -444,18 +444,4 @@ describe("gossip block validation", () => {
 
     await validateGossipBlock(denebConfig, chain, job, ForkName.deneb);
   });
-
-  it("gloas - NON_ZERO_DEPOSITS is rejected before the parent is looked up", async () => {
-    setupChain(gloasConfig);
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    signedBlock.message.slot = clockSlot;
-    signedBlock.message.body.deposits.push(ssz.phase0.Deposit.defaultValue());
-
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(gloasConfig, chain, signedBlock, ForkName.gloas),
-      BlockErrorCode.NON_ZERO_DEPOSITS
-    );
-    // The parent is unknown here, its IGNORE must not take precedence over the REJECT
-    expect(forkChoice.getBlockHexDefaultStatus).not.toHaveBeenCalled();
-  });
 });

@@ -239,8 +239,11 @@ export const Attestations = new ProgressiveListCompositeType(Attestation, {
   typeName: "Attestations",
   limit: MAX_ATTESTATIONS_ELECTRA,
 });
-// Legacy deposits are removed since Fulu, the list must always be empty
-export const Deposits = new ProgressiveListCompositeType(phase0Ssz.Deposit, {typeName: "Deposits", limit: 0});
+export const Deposits = new ProgressiveListCompositeType(phase0Ssz.Deposit, {
+  typeName: "Deposits",
+  // Legacy deposits are removed since Fulu
+  limit: 0,
+});
 export const VoluntaryExits = new ProgressiveListCompositeType(phase0Ssz.SignedVoluntaryExit, {
   typeName: "VoluntaryExits",
   limit: MAX_VOLUNTARY_EXITS,
