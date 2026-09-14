@@ -263,6 +263,9 @@ importers:
       '@libp2p/tcp':
         specifier: ^11.0.27
         version: 11.0.27
+      '@libp2p/utils':
+        specifier: ^7.4.0
+        version: 7.4.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -354,9 +357,6 @@ importers:
       '@libp2p/logger':
         specifier: ^6.2.13
         version: 6.2.13
-      '@libp2p/utils':
-        specifier: ^7.4.0
-        version: 7.4.0
       '@lodestar/spec-test-util':
         specifier: workspace:^
         version: link:../spec-test-util
