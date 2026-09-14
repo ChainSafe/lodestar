@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect, it, vi} from "vitest";
-import {ContainerType, ProgressiveContainerType, ProgressiveListCompositeType, Type} from "@chainsafe/ssz";
-import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {Type} from "@chainsafe/ssz";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
@@ -22,30 +22,6 @@ import {RunnerType} from "../utils/types.js";
 // Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_static/core.md
 
 type Types = Record<string, Type<any>>;
-
-const BLOCK_TYPES_WITH_DEPOSITS = new Set(["BeaconBlockBody", "BeaconBlock", "SignedBeaconBlock"]);
-
-/**
- * The spec generates ssz_static vectors without runtime limits, so Gloas block bodies carry legacy deposits which
- * the zero limit on `Deposits` rejects. Test the block containers with an unbounded deposits list instead, the
- * limit does not affect serialization or merkleization.
- */
-function getBlockTypesWithUnboundedDeposits(fork: ForkName): Types {
-  const types = sszTypesFor(fork) as Types;
-  const bodyType = types.BeaconBlockBody as unknown as ProgressiveContainerType<Types>;
-  const blockType = types.BeaconBlock as unknown as ContainerType<Types>;
-  const signedBlockType = types.SignedBeaconBlock as unknown as ContainerType<Types>;
-
-  const BeaconBlockBody = new ProgressiveContainerType(
-    {...bodyType.fields, deposits: new ProgressiveListCompositeType(ssz.phase0.Deposit, {typeName: "Deposits"})},
-    bodyType.activeFields,
-    bodyType.opts
-  );
-  const BeaconBlock = new ContainerType({...blockType.fields, body: BeaconBlockBody}, blockType.opts);
-  const SignedBeaconBlock = new ContainerType({...signedBlockType.fields, message: BeaconBlock}, signedBlockType.opts);
-
-  return {BeaconBlockBody, BeaconBlock, SignedBeaconBlock};
-}
 
 // Mapping of sszGeneric() fn arguments to the path in spec tests
 //
@@ -67,9 +43,6 @@ const sszStatic =
     }
 
     const sszType =
-      (isForkPostGloas(fork) && BLOCK_TYPES_WITH_DEPOSITS.has(typeName)
-        ? getBlockTypesWithUnboundedDeposits(fork)[typeName]
-        : undefined) ||
       (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.gloas as Types)[typeName] ||
       (ssz.fulu as Types)[typeName] ||
