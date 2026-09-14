@@ -2,6 +2,8 @@ import {TopicScoreParams, defaultPeerScoreParams, defaultTopicScoreParams} from 
 import {PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
 import {
+  AdvertisedEndpoints,
+  IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
   NativeForkSchedule,
@@ -127,13 +129,17 @@ export function nativeForkSchedule(config: BeaconConfig, slot: number): NativeFo
   };
 }
 
-function discovery(opts: NetworkOptions, key: PrivateKey): NativeDiscoveryConfig | null {
+function discovery(
+  opts: NetworkOptions,
+  key: PrivateKey,
+  listeners: readonly IpEndpoint[]
+): NativeDiscoveryConfig | null {
   if (!opts.discv5) return null;
   const {bindAddrs, bootEnrs, config} = opts.discv5;
-  if ((bindAddrs.ip4 && bindAddrs.ip6) || (config && Object.keys(config).length > 0)) {
+  if (config && Object.keys(config).length > 0) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "native discovery requires one UDP socket and default discovery settings",
+      resource: "native discovery requires default discovery settings",
     });
   }
   nativeInteger(bootEnrs.length, "bootstrap ENRs", 64);
@@ -148,20 +154,62 @@ function discovery(opts: NetworkOptions, key: PrivateKey): NativeDiscoveryConfig
   ) {
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "ENR identity or sequence"});
   }
-  if (enr.tcp !== undefined || enr.tcp6 !== undefined || (enr.ip && enr.ip6)) {
+  if (enr.tcp !== undefined || enr.tcp6 !== undefined) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "native advertisement requires one QUIC address",
+      resource: "native advertisement requires TCP disabled",
     });
   }
-  const bind = parseNativeEndpoint(bindAddrs.ip4 ?? bindAddrs.ip6 ?? "", false);
-  const advertised = enr.getLocationMultiaddr(bind.family === 4 ? "quic4" : "quic6");
-  if (!advertised)
+  const bind = nativeListeners(
+    [bindAddrs.ip4, bindAddrs.ip6].filter((address) => address !== undefined),
+    false
+  );
+  for (const [family, address] of [
+    [4, bindAddrs.ip4],
+    [6, bindAddrs.ip6],
+  ] as const) {
+    if (address && parseNativeEndpoint(address, false).family !== family) {
+      throw new NativeNetworkError({
+        code: NativeNetworkErrorCode.CONFIGURATION,
+        resource: "discovery bind address family",
+      });
+    }
+  }
+  const advertisement: AdvertisedEndpoints = {};
+  for (const family of [4, 6] as const) {
+    const udp = enr.getLocationMultiaddr(family === 4 ? "udp4" : "udp6");
+    const quic = enr.getLocationMultiaddr(family === 4 ? "quic4" : "quic6");
+    if (
+      (udp && !bind.some((endpoint) => endpoint.family === family)) ||
+      (quic && !listeners.some((endpoint) => endpoint.family === family))
+    ) {
+      throw new NativeNetworkError({
+        code: NativeNetworkErrorCode.CONFIGURATION,
+        resource: "advertised address family has no listener",
+      });
+    }
+    const address = quic ?? udp;
+    if (!address) continue;
+    const endpoint = parseNativeEndpoint(address.toString(), quic !== undefined);
+    if (family === 4) {
+      advertisement.ip4 = endpoint.address;
+      if (udp) advertisement.udp = parseNativeEndpoint(udp.toString(), false).port;
+      if (quic) advertisement.quic = endpoint.port;
+    } else {
+      advertisement.ip6 = endpoint.address;
+      if (udp) advertisement.udp6 = parseNativeEndpoint(udp.toString(), false).port;
+      if (quic) advertisement.quic6 = endpoint.port;
+    }
+  }
+  if (
+    (advertisement.quic === undefined && advertisement.quic6 === undefined) ||
+    (advertisement.udp === undefined && advertisement.udp6 === undefined)
+  ) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "missing advertised QUIC address",
+      resource: "missing advertised discovery or QUIC address",
     });
-  const endpoint = parseNativeEndpoint(advertised.toString(), true);
+  }
   return {
     bind,
     sequenceNumber: enr.seq + 1n,
@@ -170,18 +218,32 @@ function discovery(opts: NetworkOptions, key: PrivateKey): NativeDiscoveryConfig
         throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "bootstrap ENR length"});
       return ENR.decodeTxt(text).encode();
     }),
-    advertisement:
-      endpoint.family === 4
-        ? {ip4: endpoint.address, quic: endpoint.port, udp: enr.udp}
-        : {ip6: endpoint.address, quic6: endpoint.port, udp6: enr.udp6},
+    advertisement,
   };
 }
 
-function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
-  if (opts.localMultiaddrs.length !== 1 || opts.tcp !== false || opts.quic === false) {
+function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoint[] {
+  if (addresses.length < 1 || addresses.length > 2) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "native backend requires TCP disabled and exactly one QUIC listener",
+      resource: "native networking requires one listener per IP family",
+    });
+  }
+  const endpoints = addresses.map((address) => parseNativeEndpoint(address, quic));
+  if (endpoints.length === 2 && endpoints[0].family === endpoints[1].family) {
+    throw new NativeNetworkError({
+      code: NativeNetworkErrorCode.CONFIGURATION,
+      resource: "duplicate listener address family",
+    });
+  }
+  return endpoints;
+}
+
+function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
+  if (opts.tcp !== false || opts.quic === false) {
+    throw new NativeNetworkError({
+      code: NativeNetworkErrorCode.CONFIGURATION,
+      resource: "native backend requires TCP disabled and QUIC enabled",
     });
   }
   const unsupported =
@@ -277,10 +339,11 @@ export function createNativeConfig(
     }));
   const small = opts.native?.profile === "small";
   const connections = Math.min(256, Math.max(16, opts.maxPeers + (small ? 4 : 32)));
+  const listeners = nativeListeners(opts.localMultiaddrs, true);
   const application: NativeApplicationConfig = {
     profile: opts.native?.profile ?? "beaconNode",
-    bind: parseNativeEndpoint(opts.localMultiaddrs[0], true),
-    discovery: discovery(opts, key),
+    bind: listeners,
+    discovery: discovery(opts, key, listeners),
     initialSlot: BigInt(Math.max(0, slot)),
     local,
     forkSchedule: nativeForkSchedule(config, slot),

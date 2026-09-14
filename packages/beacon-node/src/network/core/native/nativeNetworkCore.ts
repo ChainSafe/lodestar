@@ -287,7 +287,9 @@ export class NativeNetworkCore implements INetworkCore {
     const discoveryAddresses = [enr?.getLocationMultiaddr("udp4"), enr?.getLocationMultiaddr("udp6")]
       .filter((address) => address !== undefined)
       .map((address) => `${address}/p2p/${peerId}`);
-    const p2pAddresses = new Set([`${nativeMultiaddr(identity.localEndpoint)}/p2p/${peerId}`]);
+    const p2pAddresses = new Set(
+      identity.localEndpoints.map((endpoint) => `${nativeMultiaddr(endpoint)}/p2p/${peerId}`)
+    );
     for (const protocol of ["quic4", "quic6"] as const) {
       const address = enr?.getLocationMultiaddr(protocol);
       if (address) p2pAddresses.add(`${address}/p2p/${peerId}`);

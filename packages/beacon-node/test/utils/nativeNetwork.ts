@@ -23,7 +23,8 @@ import {generateState} from "./state.js";
 export async function nativeNetworkFixture(
   config: BeaconConfig,
   backend: "native" | "libp2p" = "native",
-  native: NativeBackendOptions = {}
+  native: NativeBackendOptions = {},
+  localMultiaddrs = ["/ip4/127.0.0.1/udp/0/quic-v1"]
 ) {
   const directory = await mkdtemp(join(tmpdir(), "lodestar-native-integration-"));
   const logger = testLogger(backend);
@@ -92,7 +93,7 @@ export async function nativeNetworkFixture(
         native: {profile: "small", ...native},
         useWorker: backend === "native",
         tcp: false,
-        localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
+        localMultiaddrs,
         targetPeers: 8,
         maxPeers: 12,
         skipParamsLog: true,

@@ -92,8 +92,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
 
-  if (args["network.backend"] === "native" && (tcp || !quic || Boolean(listenAddress) === Boolean(listenAddress6))) {
-    throw new YargsError("Native networking requires --tcp=false, QUIC and exactly one listen address");
+  if (args["network.backend"] === "native" && (tcp || !quic)) {
+    throw new YargsError("Native networking requires --tcp=false and QUIC");
   }
 
   if (!quic && !tcp) {

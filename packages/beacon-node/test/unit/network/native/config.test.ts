@@ -55,10 +55,11 @@ describe("native configuration boundary", () => {
   });
 
   it.each<Partial<NetworkOptions>>([
+    {localMultiaddrs: []},
     {tcp: true},
     {quic: false},
     {localMultiaddrs: ["/ip4/127.0.0.1/tcp/9000"]},
-    {localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1", "/ip6/::1/udp/9001/quic-v1"]},
+    {localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1", "/ip4/127.0.0.2/udp/9001/quic-v1"]},
     {disablePeerScoring: true},
     {mdns: true},
     {gossipsubD: 9},
@@ -91,5 +92,59 @@ describe("native configuration boundary", () => {
     enr.ip = "127.0.0.2";
     enr.seq = UINT64_MAX;
     expect(() => node.create({discv5: {...discv5, enr: enr.encodeTxt()}})).toThrow("ENR identity or sequence");
+  });
+  it("preserves independent IPv4 and IPv6 listener and advertisement ports", async () => {
+    const node = await fixture();
+    const enr = SignableENR.createFromPrivateKey(node.key);
+    enr.ip = "127.0.0.1";
+    enr.ip6 = "::1";
+    enr.udp = 9000;
+    enr.quic = 9001;
+    enr.udp6 = 19000;
+    enr.quic6 = 19001;
+    const discv5 = {
+      enr: enr.encodeTxt(),
+      bindAddrs: {ip4: "/ip4/0.0.0.0/udp/9000", ip6: "/ip6/::/udp/19000"},
+      bootEnrs: [],
+      config: {},
+    };
+    const localMultiaddrs = ["/ip6/::/udp/19001/quic-v1", "/ip4/0.0.0.0/udp/9001/quic-v1"];
+    const application = node.create({discv5, localMultiaddrs});
+    application.identitySecretKey.fill(0);
+    expect(application.bind).toMatchObject([
+      {family: 6, port: 19001},
+      {family: 4, port: 9001},
+    ]);
+    expect(application.discovery?.bind).toMatchObject([
+      {family: 4, port: 9000},
+      {family: 6, port: 19000},
+    ]);
+    expect(application.discovery?.advertisement).toMatchObject({udp: 9000, quic: 9001, udp6: 19000, quic6: 19001});
+    expect(() => node.create({discv5, localMultiaddrs: [localMultiaddrs[1]]})).toThrow("no listener");
+    expect(() => node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip4}}, localMultiaddrs})).toThrow(
+      "no listener"
+    );
+    expect(() => node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip6}}, localMultiaddrs})).toThrow(
+      "address family"
+    );
+  });
+
+  it("accepts IPv6-only QUIC and discovery", async () => {
+    const node = await fixture();
+    const enr = SignableENR.createFromPrivateKey(node.key);
+    enr.ip6 = "::1";
+    enr.udp6 = 9000;
+    enr.quic6 = 9001;
+    const application = node.create({
+      localMultiaddrs: ["/ip6/::1/udp/0/quic-v1"],
+      discv5: {enr: enr.encodeTxt(), bindAddrs: {ip6: "/ip6/::1/udp/0"}, bootEnrs: [], config: {}},
+    });
+    application.identitySecretKey.fill(0);
+    expect(application.bind).toMatchObject([{family: 6}]);
+    expect(application.discovery?.advertisement).toEqual({
+      ip6: new Uint8Array(16).fill(1, 15),
+      udp6: 9000,
+      quic6: 9001,
+    });
   });
 });

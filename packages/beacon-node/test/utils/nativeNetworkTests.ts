@@ -246,9 +246,14 @@ describe("native Lodestar integration", () => {
       expect(results.filter((result) => result.status === "rejected")).toEqual([]);
     }
   }, 30000);
-  it.each(["native", "libp2p"] as const)(
-    "serves archived blocks in both directions with a %s peer without a network Worker",
-    async (backend) => {
+  it.each([
+    {backend: "native", family: 4},
+    {backend: "native", family: 6},
+    {backend: "libp2p", family: 4},
+    {backend: "libp2p", family: 6},
+  ] as const)(
+    "serves blocks and gossip with an IPv$family $backend peer from a dual-stack runtime",
+    async ({backend, family}) => {
       const worker = vi.spyOn(WorkerNetworkCore, "init");
       const config = createBeaconConfig(
         {
@@ -263,10 +268,16 @@ describe("native Lodestar integration", () => {
         },
         new Uint8Array(32)
       );
-      const left = await nativeNetworkFixture(config);
+      const left = await nativeNetworkFixture(config, "native", {}, [
+        "/ip4/127.0.0.1/udp/0/quic-v1",
+        "/ip6/::1/udp/0/quic-v1",
+      ]);
       let right: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
       try {
-        right = await nativeNetworkFixture(config, backend);
+        right = await nativeNetworkFixture(config, backend, {}, [
+          family === 4 ? "/ip4/127.0.0.1/udp/0/quic-v1" : "/ip6/::1/udp/0/quic-v1",
+        ]);
+        expect((await left.network.getNetworkIdentity()).p2pAddresses).toHaveLength(2);
         const remote = await right.network.getNetworkIdentity();
         await left.network.connectToPeer(remote.peerId, remote.p2pAddresses);
         expect(await left.network.dumpPeer(remote.peerId)).toMatchObject({peerId: remote.peerId, state: "connected"});

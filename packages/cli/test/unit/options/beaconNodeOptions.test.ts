@@ -238,10 +238,24 @@ describe("options / network / tcp and quic flags", () => {
   });
   it.each([
     {"network.backend": "native", listenAddress: "127.0.0.1"},
-    {"network.backend": "native", tcp: false},
-    {"network.backend": "native", tcp: false, listenAddress: "127.0.0.1", listenAddress6: "::1"},
+    {"network.backend": "native", tcp: false, quic: false},
   ] satisfies NetworkArgs[])("rejects unsupported native listeners %o", (args) => {
     expect(() => parseNetworkArgs(args)).toThrow("Native networking requires");
+  });
+  it("accepts native dual-stack listeners with independent ports", () => {
+    const result = parseNetworkArgs({
+      "network.backend": "native",
+      tcp: false,
+      listenAddress: "0.0.0.0",
+      listenAddress6: "::",
+      discoveryPort: 9000,
+      quicPort: 9001,
+      discoveryPort6: 19000,
+      quicPort6: 19001,
+    });
+    expect(result.localMultiaddrs).toEqual(["/ip4/0.0.0.0/udp/9001/quic-v1", "/ip6/::/udp/19001/quic-v1"]);
+    expect(result.discv5).toMatchObject({bindAddrs: {ip4: "/ip4/0.0.0.0/udp/9000", ip6: "/ip6/::/udp/19000"}});
+    expect(() => parseNetworkArgs({"network.backend": "native", tcp: false})).not.toThrow();
   });
   it("should include both tcp and quic multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
