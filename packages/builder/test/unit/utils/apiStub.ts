@@ -8,6 +8,10 @@ export function getApiClientStub(): ApiClientStub {
     beacon: {
       getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
+      getBlockV2: vi.fn(),
+    },
+    events: {
+      eventstream: vi.fn(),
     },
     node: {
       getSyncingStatus: vi.fn(),

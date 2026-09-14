@@ -21,6 +21,7 @@ import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
+import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
@@ -2099,12 +2100,67 @@ export function createLodestarMetrics(
       }),
       dbSizeTotal: register.gauge({
         name: "lodestar_db_size_bytes_total",
-        help: "Approximate number of bytes of file system space used by db",
+        help: "Approximate number of bytes of file system space used by LevelDB",
       }),
       dbApproximateSizeTime: register.histogram({
         name: "lodestar_db_approximate_size_time_seconds",
         help: "Time to approximate db size in seconds",
         buckets: [0.0001, 0.001, 0.01, 0.1, 1],
+      }),
+    },
+
+    flatFileStore: {
+      operationDuration: {
+        read: register.histogram({
+          name: "lodestar_flat_file_store_read_duration_seconds",
+          help: "Duration of flat file store reads in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        write: register.histogram({
+          name: "lodestar_flat_file_store_write_duration_seconds",
+          help: "Duration of flat file store writes in seconds",
+          buckets: [0.005, 0.01, 0.05, 0.1, 0.5, 1],
+        }),
+        delete: register.histogram({
+          name: "lodestar_flat_file_store_delete_duration_seconds",
+          help: "Duration of flat file store deletions in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        prune: register.histogram({
+          name: "lodestar_flat_file_store_prune_duration_seconds",
+          help: "Duration of flat file store pruning in seconds",
+          buckets: [0.0005, 0.01, 0.05, 0.5, 5, 30],
+        }),
+      },
+      operationErrors: register.counter<{operation: FlatFileStoreOperation}>({
+        name: "lodestar_flat_file_store_operation_errors_total",
+        help: "Total count of failed flat file store operations",
+        labelNames: ["operation"],
+      }),
+      readBytes: register.counter({
+        name: "lodestar_flat_file_store_read_bytes_total",
+        help: "Total bytes read from flat file storage",
+      }),
+      writeBytes: register.counter({
+        name: "lodestar_flat_file_store_write_bytes_total",
+        help: "Total bytes written to flat file storage",
+      }),
+      prunedDirectories: register.counter({
+        name: "lodestar_flat_file_store_pruned_directories_total",
+        help: "Total count of slot directories pruned from flat file storage",
+      }),
+      slotIndexSize: register.gauge({
+        name: "lodestar_flat_file_store_indexed_slots",
+        help: "Count of indexed flat file slot directories, including empty directories awaiting pruning",
+      }),
+      startupDuration: register.histogram({
+        name: "lodestar_flat_file_store_startup_duration_seconds",
+        help: "Duration of flat file store slot index reconstruction in seconds",
+        buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 300],
+      }),
+      startupErrors: register.counter({
+        name: "lodestar_flat_file_store_startup_errors_total",
+        help: "Total count of flat file store startup failures",
       }),
     },
 

@@ -25,7 +25,11 @@ type ArchiveStoreModules = {
   metrics: Metrics | null;
 };
 
-type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
+type ArchiveStoreInitOpts = ArchiveStoreOpts & {
+  dbName: string;
+  dataColumnDir: string;
+  anchorState: {finalizedCheckpoint: Checkpoint};
+};
 
 export enum ArchiveStoreTask {
   ArchiveBlocks = "archive_blocks",
@@ -121,6 +125,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          dataColumnDir: this.opts.dataColumnDir,
           nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,

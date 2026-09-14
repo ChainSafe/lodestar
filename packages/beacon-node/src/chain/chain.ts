@@ -268,6 +268,7 @@ export class BeaconChain implements IBeaconChain {
       db,
       dbName,
       dataDir,
+      dataColumnDir,
       logger,
       processShutdownCallback,
       clock,
@@ -285,6 +286,7 @@ export class BeaconChain implements IBeaconChain {
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
+      dataColumnDir?: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -505,7 +507,12 @@ export class BeaconChain implements IBeaconChain {
 
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
-      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      {
+        ...opts,
+        dbName,
+        dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
+        anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint},
+      },
       signal
     );
 
@@ -969,12 +976,15 @@ export class BeaconChain implements IBeaconChain {
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);
+    const sidecarsByIndex = new Map<number, DataColumnSidecar>();
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return payloadInput.getAllColumns();
+        for (const sidecar of payloadInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -983,16 +993,17 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return blockInput.getAllColumns();
+        for (const sidecar of blockInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
-    if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
+    for (const sidecar of await this.db.dataColumns.getAll({slot: blockSlot, blockRoot: blockRootHex})) {
+      if (!sidecarsByIndex.has(sidecar.index)) sidecarsByIndex.set(sidecar.index, sidecar);
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+
+    return [...sidecarsByIndex.values()].sort((a, b) => a.index - b.index);
   }
 
   async getSerializedDataColumnSidecars(
@@ -1001,22 +1012,25 @@ export class BeaconChain implements IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
     const fork = this.config.getForkName(blockSlot);
+    const dataColumnSidecars: (Uint8Array | undefined)[] = indices.map(() => undefined);
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = payloadInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
           }
-          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -1025,26 +1039,42 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = blockInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(
+              sidecar
+            );
           }
-          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
-    if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
-      return sidecarsUnfinalized;
+    const missingPositions = dataColumnSidecars
+      .map((sidecar, position) => (sidecar === undefined ? position : -1))
+      .filter((position) => position !== -1);
+
+    if (missingPositions.length > 0) {
+      const persistedSidecars = await this.db.dataColumns.getManyBinary(
+        {slot: blockSlot, blockRoot: blockRootHex},
+        missingPositions.map((position) => indices[position])
+      );
+      for (let i = 0; i < missingPositions.length; i++) {
+        const sidecar = persistedSidecars[i];
+        if (sidecar !== undefined) {
+          dataColumnSidecars[missingPositions[i]] = sidecar;
+        }
+      }
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices);
-    return sidecarsFinalized;
+
+    return dataColumnSidecars;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
@@ -1387,10 +1417,15 @@ export class BeaconChain implements IBeaconChain {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
       const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
-      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject(
+        "BlindedBeaconBlock",
+        sszType.serialize(data),
+        toRootHex(sszType.hashTreeRoot(data)),
+        suffix
+      );
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
-      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), toRootHex(sszType.hashTreeRoot(data)), suffix);
     }
   }
 
@@ -1411,33 +1446,39 @@ export class BeaconChain implements IBeaconChain {
       this.persistSszObject(
         `SignedBeaconBlock_slot_${blockSlot}`,
         blockType.serialize(block),
-        blockType.hashTreeRoot(block),
+        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
         `${logStr}_block`
       ),
       this.persistSszObject(
         `preState_slot_${preState.slot}_BeaconState`,
         preState.serialize(),
-        preState.hashTreeRoot(),
+        toRootHex(preState.hashTreeRoot()),
         `${logStr}_pre_state`
       ),
       this.persistSszObject(
         `postState_slot_${postState.slot}_BeaconState`,
         postState.serialize(),
-        postState.hashTreeRoot(),
+        toRootHex(postStateRoot),
         `${logStr}_post_state`
       ),
     ]);
   }
 
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(
+        type.typeName,
+        type.serialize(sszObject),
+        // in SignedBeaconBlock case, we want to use BeaconBlock root instead
+        rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
+        suffix
+      );
     }
   }
 
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
+  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
@@ -1568,14 +1609,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, rootHex: RootHex, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${rootHex}.ssz`);
 
     await ensureDir(dirpath);
 

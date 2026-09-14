@@ -1,22 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  MAX_ATTESTATIONS_ELECTRA,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_PAYLOAD_ATTESTATIONS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  MIN_SEED_LOOKAHEAD,
-  isForkPostBellatrix,
-  isForkPostDeneb,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -150,8 +134,9 @@ export async function validateGossipBlock(
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
       slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
     });
   }
 
@@ -166,6 +151,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -173,7 +160,8 @@ export async function validateGossipBlock(
   }
 
   if (isForkPostGloas(fork)) {
-    const bid = (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+    const body = (block as gloas.BeaconBlock).body;
+    const bid = body.signedExecutionPayloadBid.message;
 
     // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
     // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
@@ -182,6 +170,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -191,59 +181,21 @@ export async function validateGossipBlock(
     if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        slot: blockSlot,
+        root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
       });
     }
 
-    // [REJECT] The counts of `block.body.parent_execution_requests` are within
-    //   their respective limits -- i.e. validate that
-    //   `len(block.body.parent_execution_requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`,
-    //   `len(block.body.parent_execution_requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD`,
-    //   `len(block.body.parent_execution_requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD`,
-    //   and
-    //   `len(block.body.parent_execution_requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`.
-    // [REJECT] The counts of the block body operations are within their respective
-    //   limits -- i.e. validate that
-    //   `len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS`,
-    //   `len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA`,
-    //   `len(block.body.attestations) <= MAX_ATTESTATIONS_ELECTRA`,
-    //   `len(block.body.deposits) == 0`,
-    //   `len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS`,
-    //   `len(block.body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES`,
-    //   and `len(block.body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS`.
-    const body = (block as gloas.BeaconBlock).body;
-    const requests = body.parentExecutionRequests;
-    const countLimits: [string, number, number][] = [
-      ["parentExecutionRequests.withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
-      [
-        "parentExecutionRequests.consolidations",
-        requests.consolidations.length,
-        MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-      ],
-      [
-        "parentExecutionRequests.builderDeposits",
-        requests.builderDeposits.length,
-        MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-      ],
-      ["parentExecutionRequests.builderExits", requests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
-      ["proposerSlashings", body.proposerSlashings.length, MAX_PROPOSER_SLASHINGS],
-      ["attesterSlashings", body.attesterSlashings.length, MAX_ATTESTER_SLASHINGS_ELECTRA],
-      ["attestations", body.attestations.length, MAX_ATTESTATIONS_ELECTRA],
-      ["deposits", body.deposits.length, 0],
-      ["voluntaryExits", body.voluntaryExits.length, MAX_VOLUNTARY_EXITS],
-      ["blsToExecutionChanges", body.blsToExecutionChanges.length, MAX_BLS_TO_EXECUTION_CHANGES],
-      ["payloadAttestations", body.payloadAttestations.length, MAX_PAYLOAD_ATTESTATIONS],
-    ];
-    for (const [name, count, limit] of countLimits) {
-      if (count > limit) {
-        throw new BlockGossipError(GossipAction.REJECT, {
-          code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS,
-          name,
-          count,
-          limit,
-        });
-      }
+    // [REJECT] The block contains no deposits.
+    if (body.deposits.length !== 0) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.NON_ZERO_DEPOSITS,
+        slot: blockSlot,
+        root: blockRoot,
+        count: body.deposits.length,
+      });
     }
 
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
@@ -306,6 +258,8 @@ export async function validateGossipBlock(
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_TIMESTAMP,
+          slot: blockSlot,
+          root: blockRoot,
           timestamp: executionPayload.timestamp,
           expectedTimestamp,
         });
@@ -315,7 +269,12 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer index is a valid validator index
   if (proposerIndex >= state.validatorCount) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.UNKNOWN_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
@@ -327,7 +286,12 @@ export async function validateGossipBlock(
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
   if (state.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.INCORRECT_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -372,7 +336,8 @@ export async function verifyBlockProposerSignature(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockSlot,
+      slot: blockSlot,
+      root: blockRoot,
     });
   }
 

@@ -72,6 +72,13 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
+export const NewPayloadRequest = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+  },
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
+);
+
 export const BLSToExecutionChanges = new ListCompositeType(SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
 export const BeaconBlockBody = new ContainerType(
   {
