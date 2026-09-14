@@ -25,6 +25,7 @@ import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
+import {PayloadAttributes} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
@@ -243,6 +244,7 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
+        let payloadAttributes: PayloadAttributes | undefined;
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
         // every slot. Without the flag, only emit the event if we are proposing in the next slot.
         if (
@@ -257,6 +259,7 @@ export class PrepareNextSlotScheduler {
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          payloadAttributes = data.payloadAttributes;
         }
 
         if (feeRecipient) {
@@ -279,7 +282,8 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             stateAfterParentPayload,
-            feeRecipient
+            feeRecipient,
+            payloadAttributes
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
