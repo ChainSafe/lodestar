@@ -1,7 +1,8 @@
 import {PeerId} from "@libp2p/interface";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
+import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
@@ -35,7 +36,19 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
+    let envelopeBytes: Uint8Array | null;
+    try {
+      envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
+    } catch (e) {
+      // Archived envelopes are rebuilt from EL bodies; see executionPayloadEnvelopesByRange for the mapping
+      if (e instanceof EnvelopeReconstructionError) {
+        throw new ResponseError(
+          e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
+          `Failed to reconstruct archived envelope root=${rootHex}: ${e.message}`
+        );
+      }
+      throw e;
+    }
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,

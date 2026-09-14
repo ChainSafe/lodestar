@@ -4,7 +4,7 @@ import {KeyValue} from "@lodestar/db";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Slot} from "@lodestar/types";
+import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
@@ -12,6 +12,7 @@ import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
+import {toSignedCompactEnvelope} from "./compactEnvelope.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -492,7 +493,11 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   const migratedRoots: Uint8Array[] = [];
 
   const envelopeBytesArray = await Promise.all(
-    blocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
+    blocks.map(async (block) => {
+      const envelope = await db.executionPayloadEnvelope.get(block.root);
+      if (envelope === null) return null;
+      return ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(toSignedCompactEnvelope(envelope));
+    })
   );
 
   for (let i = 0; i < blocks.length; i++) {

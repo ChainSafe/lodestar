@@ -509,6 +509,37 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+// Lodestar-internal storage type — NOT a spec container. The execution payload with
+// transactions/withdrawals replaced by their roots, for the de-duplicated envelope archive.
+// Never hashed or put on the wire; the full envelope is reconstructed from the EL before serving.
+export const CompactExecutionPayload = new ContainerType(
+  {
+    ...electraSsz.ExecutionPayloadHeader.fields,
+    blockAccessList: BlockAccessList, // GLOAS:EIP-7928 (retained locally, not reconstructed)
+    slotNumber: Slot, // GLOAS:EIP-7843
+  },
+  {typeName: "CompactExecutionPayload", jsonCase: "eth2"}
+);
+
+export const CompactExecutionPayloadEnvelope = new ContainerType(
+  {
+    payload: CompactExecutionPayload,
+    executionRequests: ExecutionRequests,
+    builderIndex: BuilderIndex,
+    beaconBlockRoot: Root,
+    parentBeaconBlockRoot: Root,
+  },
+  {typeName: "CompactExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
+export const SignedCompactExecutionPayloadEnvelope = new ContainerType(
+  {
+    message: CompactExecutionPayloadEnvelope,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedCompactExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
   {
     signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
