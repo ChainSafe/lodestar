@@ -111,7 +111,10 @@ exceptions:
     - PayloadAttributes#heze
     - Store#heze
 
-  presets: []
+  presets:
+    # gloas (removed in spec PR #5613; computed from BLOB_SCHEDULE at runtime)
+    - MAX_DATA_COLUMN_SIDECAR_SIZE#gloas
+    - MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE#gloas
 
   functions:
     # phase0
