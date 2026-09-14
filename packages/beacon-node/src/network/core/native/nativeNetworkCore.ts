@@ -151,8 +151,7 @@ export class NativeNetworkCore implements INetworkCore {
         const peers = this.peers.drain(32);
         const requests = this.requests.drain(8);
         const gossip = this.gossip.drain();
-        const diagnostics = this.runtime.drain(16);
-        if (peers || requests || gossip || diagnostics.more) this.onReadable();
+        if (peers || requests || gossip) this.onReadable();
       } catch (error) {
         this.onFailure(error);
       }
