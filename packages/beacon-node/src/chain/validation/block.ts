@@ -31,6 +31,15 @@ export async function validateGossipBlock(
   const blockSlot = block.slot;
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
+  // [REJECT] The block contains no deposits.
+  if (isGloasBeaconBlock(block) && block.body.deposits.length !== 0) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.NON_ZERO_DEPOSITS,
+      slot: blockSlot,
+      count: block.body.deposits.length,
+    });
+  }
+
   // [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e.validate
   // that signed_beacon_block.message.slot <= current_slot (a client MAY queue future blocks for processing at the
   // appropriate slot).
@@ -185,16 +194,6 @@ export async function validateGossipBlock(
         root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
-      });
-    }
-
-    // [REJECT] The block contains no deposits.
-    if (body.deposits.length !== 0) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.NON_ZERO_DEPOSITS,
-        slot: blockSlot,
-        root: blockRoot,
-        count: body.deposits.length,
       });
     }
 

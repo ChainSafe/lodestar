@@ -165,7 +165,7 @@ export type BlockErrorType =
       bidParentRoot: RootHex;
       blockParentRoot: RootHex;
     }
-  | {code: BlockErrorCode.NON_ZERO_DEPOSITS; slot: Slot; root: RootHex; count: number}
+  | {code: BlockErrorCode.NON_ZERO_DEPOSITS; slot: Slot; count: number}
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
   | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
   | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
