@@ -48,12 +48,11 @@ describe("reconstructBlobs", () => {
 
       for (const {sidecars, name} of scenarios) {
         // KZG cell reconstruction is CPU-heavy with high run-to-run variance on the shared benchmark runner;
-        // even the smallest blob count (kept enabled above) trips the 3x regression gate with false
-        // positives. Mark report-only via noThreshold so they still run and post to the comparison comment,
-        // but never fail CI.
+        // even the smallest blob count (kept enabled above) trips the default 3x gate with false positives.
+        // Raise the threshold so normal variance passes while a genuine regression still fails CI.
         bench({
           id: `${name} - reconstruct all ${blobCount} blobs`,
-          noThreshold: true,
+          threshold: 10,
           fn: async () => {
             await reconstructBlobs(sidecars);
           },
@@ -61,7 +60,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct half of the blobs out of ${blobCount}`,
-          noThreshold: true,
+          threshold: 10,
           fn: async () => {
             const indices = Array.from({length: blobCount / 2}, (_, i) => i);
             await reconstructBlobs(sidecars, indices);
@@ -70,7 +69,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct single blob out of ${blobCount}`,
-          noThreshold: true,
+          threshold: 10,
           fn: async () => {
             await reconstructBlobs(sidecars, [0]);
           },
