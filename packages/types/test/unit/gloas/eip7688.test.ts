@@ -124,6 +124,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
       expect(() => type.fromJson(type.toJson(value))).toThrow(`Invalid list length ${limit + 1} over limit ${limit}`);
     }
 
+    assertLimit(ssz.gloas.Deposits, 0);
     assertLimit(ssz.gloas.Withdrawals, MAX_WITHDRAWALS_PER_PAYLOAD);
     assertLimit(ssz.gloas.WithdrawalRequests, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
     assertLimit(ssz.gloas.ConsolidationRequests, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
@@ -160,6 +161,21 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.PendingDeposits.limit).toBe(PENDING_DEPOSITS_LIMIT);
     expect(ssz.gloas.PendingPartialWithdrawals.limit).toBe(PENDING_PARTIAL_WITHDRAWALS_LIMIT);
     expect(ssz.gloas.PendingConsolidations.limit).toBe(PENDING_CONSOLIDATIONS_LIMIT);
+  });
+
+  it("rejects Gloas blocks with legacy deposits when deserializing", () => {
+    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBlock.message.body.deposits.push(ssz.phase0.Deposit.defaultValue());
+    const serialized = ssz.gloas.SignedBeaconBlock.serialize(signedBlock);
+    const json = ssz.gloas.SignedBeaconBlock.toJson(signedBlock);
+
+    expect(ssz.gloas.Deposits.maxSize).toBe(0);
+    expect(ssz.heze.BeaconBlockBody.fields.deposits).toBe(ssz.gloas.Deposits);
+    expect(() => ssz.gloas.SignedBeaconBlock.deserialize(serialized)).toThrow("Invalid list length 1 over limit 0");
+    expect(() => ssz.gloas.SignedBeaconBlock.deserializeToViewDU(serialized)).toThrow(
+      "Invalid list length 1 over limit 0"
+    );
+    expect(() => ssz.gloas.SignedBeaconBlock.fromJson(json)).toThrow("Invalid list length 1 over limit 0");
   });
 
   it("derives the Gloas p2p max sizes from the progressive list limits", () => {
