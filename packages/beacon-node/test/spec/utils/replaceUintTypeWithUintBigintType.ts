@@ -52,11 +52,13 @@ export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T):
   if (type instanceof ProgressiveListBasicType) {
     return new ProgressiveListBasicType(replaceUintTypeWithUintBigintType(type.elementType), {
       typeName: type.typeName,
+      limit: type.limit,
     }) as unknown as T;
   }
   if (type instanceof ProgressiveListCompositeType) {
     return new ProgressiveListCompositeType(replaceUintTypeWithUintBigintType(type.elementType), {
       typeName: type.typeName,
+      limit: type.limit,
     }) as unknown as T;
   }
   if (type instanceof VectorCompositeType) {
