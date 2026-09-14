@@ -14,7 +14,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
-import {BeaconConfig, ForkBoundary} from "@lodestar/config";
+import {BeaconConfig, ChainConfig, ForkBoundary} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
@@ -30,6 +30,7 @@ import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
+import {prettyPrintPeerId} from "../util.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
@@ -46,6 +47,25 @@ import {GossipTopicCache, getAllowedTopics, getCoreTopicsAtFork, stringifyGossip
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+
+/**
+ * Snappy worst-case compressed length for a payload of `n` bytes
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_compressed_len
+ */
+function maxCompressedLen(n: number): number {
+  return 32 + n + Math.floor(n / 6);
+}
+
+/**
+ * Max size of a single inbound gossipsub RPC frame. A frame may bundle many messages and control parts, jvm-libp2p
+ * merges everything queued for a peer into one RPC, so this must be well above a single message. Other clients bound
+ * the RPC frame with `max_message_size()`, use the same value for interop. The library default is 4 MiB, which a
+ * burst of 128 data column sidecars from a block with ~20 blobs exceeds.
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_message_size
+ */
+export function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
+  return Math.max(maxCompressedLen(config.MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024);
+}
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -98,6 +118,7 @@ type GossipSubInternal = GossipSub & {
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
   reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
+  handlePeerReadStreamError: (err: Error, peerId: PeerId) => void;
 };
 
 /**
@@ -176,6 +197,7 @@ export class Eth2Gossipsub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      maxInboundDataLength: getMaxInboundDataLength(config),
       // serialize message once and send to all peers when publishing
       batchPublish: true,
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
@@ -186,6 +208,7 @@ export class Eth2Gossipsub {
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
     })(modules.libp2p.services.components) as GossipSubInternal;
+    hangUpOnPeerReadStreamError(gossipsubInstance, modules.libp2p, logger);
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
@@ -520,6 +543,26 @@ function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
   }
 
   return label;
+}
+
+/**
+ * gossipsub treats an inbound RPC read error, e.g. a frame above `maxInboundDataLength`, as a peer disconnect: the peer
+ * is removed from all topics and meshes but the libp2p connection is left open, so the peer is never re-added and no
+ * gossip flows in either direction until the connection drops on its own. Hang up so the peer manager can reconnect.
+ */
+export function hangUpOnPeerReadStreamError(
+  gossipsub: Pick<GossipSubInternal, "handlePeerReadStreamError">,
+  libp2p: Pick<Libp2p, "hangUp">,
+  logger: Logger
+): void {
+  const handlePeerReadStreamError = gossipsub.handlePeerReadStreamError.bind(gossipsub);
+  gossipsub.handlePeerReadStreamError = (err, peerId) => {
+    handlePeerReadStreamError(err, peerId);
+    logger.warn("Gossipsub inbound stream error, hanging up peer", {peer: prettyPrintPeerId(peerId)}, err);
+    libp2p.hangUp(peerId).catch((e) => {
+      logger.debug("Error hanging up peer after gossipsub inbound stream error", {peer: prettyPrintPeerId(peerId)}, e);
+    });
+  };
 }
 
 /**
