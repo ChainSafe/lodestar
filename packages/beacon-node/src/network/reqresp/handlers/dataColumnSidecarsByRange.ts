@@ -198,7 +198,7 @@ async function hasExecutionPayloadEnvelope(
     if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
     if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot))) !== null) return true;
   }
-  return (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null;
+  return (await db.executionPayloadEnvelopeArchive.has(slot)) || db.compactExecutionPayloadEnvelopeArchive.has(slot);
 }
 
 export function validateDataColumnSidecarsByRangeRequest(

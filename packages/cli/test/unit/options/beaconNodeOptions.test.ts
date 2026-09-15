@@ -1,10 +1,23 @@
 import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {options as chainOptions, parseArgs as parseChainArgs} from "../../../src/options/beaconNodeOptions/chain.js";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
+  it("deduplicates payloads by default and accepts an explicit opt-out", () => {
+    expect(chainOptions["chain.dedupePayloads"].default).toBe(true);
+    expect(
+      parseChainArgs({
+        "chain.dedupePayloads": false,
+        suggestedFeeRecipient: "0x" + "00".repeat(20),
+        "chain.archiveStateEpochFrequency": 1024,
+        "chain.archiveMode": ArchiveMode.Frequency,
+      }).dedupePayloads
+    ).toBe(false);
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -37,6 +50,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveDataEpochs": 10000,
+      "chain.dedupePayloads": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
@@ -140,6 +154,7 @@ describe("options / beaconNodeOptions", () => {
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
+        dedupePayloads: true,
         archiveMode: ArchiveMode.Frequency,
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,

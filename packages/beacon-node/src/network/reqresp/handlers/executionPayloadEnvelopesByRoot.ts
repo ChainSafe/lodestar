@@ -1,7 +1,11 @@
 import {PeerId} from "@libp2p/interface";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
+import {
+  PayloadReconstructionError,
+  PayloadReconstructionErrorCode,
+} from "../../../chain/errors/payloadReconstruction.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
@@ -35,7 +39,15 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
+    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex).catch((error: unknown) => {
+      if (
+        error instanceof PayloadReconstructionError &&
+        error.type.code === PayloadReconstructionErrorCode.BODY_UNAVAILABLE
+      ) {
+        throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, error.message);
+      }
+      throw error;
+    });
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,

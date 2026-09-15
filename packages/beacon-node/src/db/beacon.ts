@@ -1,13 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
+import {Db, DbBatch, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Slot, gloas} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Bucket} from "./buckets.js";
+import {Bucket, getBucketNameByValue} from "./buckets.js";
 import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {CompactExecutionPayloadEnvelope} from "./repositories/executionPayloadEnvelopeArchiveTypes.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -18,6 +19,7 @@ import {
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
+  CompactExecutionPayloadEnvelopeArchiveRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
@@ -46,6 +48,7 @@ export class BeaconDb implements IBeaconDb {
 
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+  compactExecutionPayloadEnvelopeArchive: CompactExecutionPayloadEnvelopeArchiveRepository;
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
@@ -83,6 +86,7 @@ export class BeaconDb implements IBeaconDb {
 
     this.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, db);
     this.executionPayloadEnvelopeArchive = new ExecutionPayloadEnvelopeArchiveRepository(config, db);
+    this.compactExecutionPayloadEnvelopeArchive = new CompactExecutionPayloadEnvelopeArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
@@ -122,6 +126,38 @@ export class BeaconDb implements IBeaconDb {
   setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics: FlatFileStoreMetrics | null = null): void {
     this.db.setMetrics(metrics);
     this.flatFileStore.setMetrics(flatFileStoreMetrics);
+  }
+
+  async archiveExecutionPayloadEnvelopes(
+    full: gloas.SignedExecutionPayloadEnvelope[],
+    compact: CompactExecutionPayloadEnvelope[]
+  ): Promise<void> {
+    const operations: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const envelope of full) {
+      const slot = envelope.message.payload.slotNumber;
+      operations.push(
+        {
+          type: "put",
+          key: this.executionPayloadEnvelopeArchive.encodeKey(slot),
+          value: this.executionPayloadEnvelopeArchive.encodeValue(envelope),
+        },
+        {type: "del", key: this.compactExecutionPayloadEnvelopeArchive.encodeKey(slot)},
+        {type: "del", key: this.executionPayloadEnvelope.encodeKey(envelope.message.beaconBlockRoot)}
+      );
+    }
+    for (const envelope of compact) {
+      const slot = envelope.message.payload.slotNumber;
+      operations.push(
+        {
+          type: "put",
+          key: this.compactExecutionPayloadEnvelopeArchive.encodeKey(slot),
+          value: this.compactExecutionPayloadEnvelopeArchive.encodeValue(envelope),
+        },
+        {type: "del", key: this.executionPayloadEnvelopeArchive.encodeKey(slot)},
+        {type: "del", key: this.executionPayloadEnvelope.encodeKey(envelope.message.beaconBlockRoot)}
+      );
+    }
+    await this.db.batch(operations, {bucketId: getBucketNameByValue(Bucket.gloas_executionPayloadEnvelopeArchive)});
   }
 
   async pruneHotDb(): Promise<void> {

@@ -1,5 +1,5 @@
 import {fastify} from "fastify";
-import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
@@ -23,6 +23,9 @@ describe("ExecutionEngine / http", () => {
   let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
+  let bodyResponseGate: Promise<void> | undefined;
+  let activeBodyRequests = 0;
+  let maxActiveBodyRequests = 0;
 
   beforeAll(async () => {
     const controller = new AbortController();
@@ -32,6 +35,12 @@ describe("ExecutionEngine / http", () => {
       if ((req.body as RpcPayload).method === "engine_getClientVersionV1") {
         // Ignore client version requests
         return [];
+      }
+      if ((req.body as RpcPayload).method.startsWith("engine_getPayloadBodies")) {
+        activeBodyRequests++;
+        maxActiveBodyRequests = Math.max(maxActiveBodyRequests, activeBodyRequests);
+        await bodyResponseGate;
+        activeBodyRequests--;
       }
       reqJsonRpcPayload = req.body;
       delete (reqJsonRpcPayload as {id?: number}).id;
@@ -54,6 +63,55 @@ describe("ExecutionEngine / http", () => {
       },
       {signal: controller.signal, logger: console as unknown as Logger}
     );
+  });
+
+  it("limits concurrent payload-body RPCs", async () => {
+    let release!: () => void;
+    bodyResponseGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    maxActiveBodyRequests = 0;
+    returnValue = {jsonrpc: "2.0", id: 1, result: []};
+    const requests = Array.from({length: 5}, () => executionEngine.getPayloadBodiesByRange(ForkName.gloas, 100, 1));
+    try {
+      await vi.waitFor(() => expect(activeBodyRequests).toBe(2));
+    } finally {
+      release();
+      bodyResponseGate = undefined;
+    }
+    await Promise.all(requests);
+    expect(maxActiveBodyRequests).toBe(2);
+  });
+
+  it.each([ForkName.fulu, ForkName.gloas])("retrieves payload bodies using the matching %s methods", async (fork) => {
+    const hash = `0x${"12".repeat(32)}`;
+    const body = {
+      transactions: ["0x010203"],
+      withdrawals: [],
+      ...(fork === ForkName.gloas ? {blockAccessList: "0xc0"} : {}),
+    };
+    returnValue = {jsonrpc: "2.0", id: 1, result: [body, null]};
+    const version = fork === ForkName.gloas ? "V2" : "V1";
+    const byHash = await executionEngine.getPayloadBodiesByHash(fork, [hash, hash]);
+    expect(reqJsonRpcPayload).toEqual({
+      jsonrpc: "2.0",
+      method: `engine_getPayloadBodiesByHash${version}`,
+      params: [[hash, hash]],
+    });
+    expect(byHash.map(serializeExecutionPayloadBody)).toEqual([body, null]);
+    const byRange = await executionEngine.getPayloadBodiesByRange(fork, 100, 2);
+    expect(reqJsonRpcPayload).toEqual({
+      jsonrpc: "2.0",
+      method: `engine_getPayloadBodiesByRange${version}`,
+      params: ["0x64", "0x2"],
+    });
+    expect(byRange.map(serializeExecutionPayloadBody)).toEqual([body, null]);
+  });
+
+  it("preserves a pruned Gloas block access list as null", async () => {
+    returnValue = {jsonrpc: "2.0", id: 1, result: [{transactions: [], withdrawals: [], blockAccessList: null}]};
+    const [body] = await executionEngine.getPayloadBodiesByRange(ForkName.gloas, 100, 1);
+    expect(body?.blockAccessList).toBeNull();
   });
 
   it("getPayload", async () => {

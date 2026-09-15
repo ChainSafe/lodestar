@@ -89,12 +89,14 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+  engine_getPayloadBodiesByRangeV2: [start: QUANTITY, count: QUANTITY];
 
   /**
    * Object - Instance of ClientVersion
@@ -148,8 +150,10 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByRangeV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
@@ -170,11 +174,13 @@ type ExecutionPayloadResponse = ExecutionPayloadRpcWithValue;
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
+  blockAccessList?: DATA | null;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
+  blockAccessList?: Uint8Array | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -674,6 +680,9 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
+        ...(data.blockAccessList !== undefined
+          ? {blockAccessList: data.blockAccessList === null ? null : dataToBytes(data.blockAccessList, null)}
+          : {}),
       }
     : null;
 }
@@ -683,6 +692,9 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+        ...(data.blockAccessList !== undefined
+          ? {blockAccessList: data.blockAccessList === null ? null : bytesToData(data.blockAccessList)}
+          : {}),
       }
     : null;
 }

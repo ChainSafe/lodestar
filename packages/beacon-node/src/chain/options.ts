@@ -103,6 +103,7 @@ export type SeenCacheOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
+  dedupePayloads: true,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],

@@ -23,6 +23,7 @@ export interface StatesArchiveOpts {
 export type ArchiveStoreOpts = StatesArchiveOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveDataEpochs?: number;
+  dedupePayloads?: boolean;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;
   nativeStateView?: boolean;
