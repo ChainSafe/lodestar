@@ -505,7 +505,8 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            // this is optimistic search, the peer may not have the payload
+            this.searchUnknownRoot({slot, root}, false, true, undefined);
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }

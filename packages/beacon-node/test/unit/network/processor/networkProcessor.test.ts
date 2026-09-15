@@ -35,12 +35,15 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let processor: NetworkProcessor;
   let emitter: ChainEventEmitter;
   let unknownBlockRootSpy: Mock<(data: unknown) => void>;
+  let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
     unknownBlockRootSpy = vi.fn();
+    unknownEnvelopeBlockRootSpy = vi.fn();
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
+    emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
 
     const chain = {
       clock: new ClockStopped(clockSlot),
@@ -90,6 +93,15 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     emit(GossipType.beacon_aggregate_and_proof, ForkName.phase0, data);
   }
 
+  function processGloasAggregatePayloadPresent(rootByte: number): void {
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = clockSlot;
+    signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    signedAggregateAndProof.message.aggregate.data.index = 1;
+    const data = ssz.gloas.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+    emit(GossipType.beacon_aggregate_and_proof, ForkName.gloas, data);
+  }
+
   /** Competing bids from different builders, all for the same unknown block (they pile up under one block). */
   function processBid(builderIndex: number): void {
     const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
@@ -111,6 +123,15 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     emit(GossipType.data_column_sidecar, ForkName.gloas, data);
   }
 
+  function processPayloadAttestationMessage(rootByte = 0xee, payloadPresent = true): void {
+    const payloadAttestationMessage = ssz.gloas.PayloadAttestationMessage.defaultValue();
+    payloadAttestationMessage.data.slot = clockSlot;
+    payloadAttestationMessage.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    payloadAttestationMessage.data.payloadPresent = payloadPresent;
+    const data = ssz.gloas.PayloadAttestationMessage.serialize(payloadAttestationMessage);
+    emit(GossipType.payload_attestation_message, ForkName.gloas, data);
+  }
+
   /** An execution payload for an unknown block (there is only ever one payload per block). */
   function processExecutionPayload(rootByte = 0xdd): void {
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -127,6 +148,11 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   /** number of distinct block roots we currently hold messages for */
   function distinctBlockRoots(): number {
     return (processor as unknown as {awaitingMessagesByBlockRoot: {size: number}}).awaitingMessagesByBlockRoot.size;
+  }
+
+  function lastEnvelopeSearchPeer(): PeerIdStr | undefined {
+    const calls = unknownEnvelopeBlockRootSpy.mock.calls;
+    return (calls.at(-1)?.[0] as {peer?: PeerIdStr} | undefined)?.peer;
   }
 
   describe("how many unknown blocks we hold messages for, per slot", () => {
@@ -217,6 +243,25 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(1);
       // the repeated message triggers no extra lookup, but is still held
       expect(bufferedBlockCount()).toBe(2);
+    });
+  });
+
+  describe("which envelope lookups prefer the forwarding peer", () => {
+    it("uses optimistic lookup when gossip validation does not prove the peer has the envelope", () => {
+      processPayloadAttestationMessage();
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSearchPeer()).toBeUndefined();
+
+      unknownEnvelopeBlockRootSpy.mockClear();
+      processDataColumn(0, 0xcf);
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSearchPeer()).toBeUndefined();
+    });
+
+    it("uses the forwarding peer when gossip validation requires the payload", () => {
+      processGloasAggregatePayloadPresent(0xdf);
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSearchPeer()).toBe(peerIdStr);
     });
   });
 
