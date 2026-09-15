@@ -24,7 +24,6 @@ export type ChainArgs = {
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
-  "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
@@ -66,7 +65,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
-    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -250,13 +248,6 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
     defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
-    group: "chain",
-  },
-
-  "chain.assertCorrectProgressiveBalances": {
-    hidden: true,
-    description: "Enable asserting the progressive balances",
-    type: "boolean",
     group: "chain",
   },
 

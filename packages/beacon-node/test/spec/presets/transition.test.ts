@@ -11,7 +11,6 @@ import {
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -61,7 +60,6 @@ const transition =
             verifyStateRoot: true,
             verifyProposer: false,
             verifySignatures: false,
-            assertCorrectProgressiveBalances,
           });
         }
         return state;
