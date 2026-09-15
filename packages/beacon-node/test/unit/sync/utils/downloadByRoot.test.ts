@@ -52,6 +52,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateBlock({
         config,
+        chain: null,
         network,
         peerIdStr,
         blockRoot: capellaBlock.blockRoot,
@@ -68,6 +69,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: null,
           network,
           peerIdStr,
           blockRoot: capellaBlock.blockRoot,
@@ -85,6 +87,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: null,
           network,
           peerIdStr,
           blockRoot: invalidRoot,

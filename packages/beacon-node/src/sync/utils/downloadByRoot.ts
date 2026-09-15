@@ -9,16 +9,20 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
+import {BlockGossipError} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
+import {verifyBlockProposerSignature} from "../../chain/validation/block.js";
 import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
+import {PeerAction} from "../../network/peers/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
@@ -243,6 +247,7 @@ export async function fetchByRoot({
     } else {
       block = await fetchAndValidateBlock({
         config,
+        chain,
         network,
         peerIdStr,
         blockRoot,
@@ -279,6 +284,7 @@ export async function fetchByRoot({
   } else {
     block = await fetchAndValidateBlock({
       config,
+      chain,
       network,
       peerIdStr,
       blockRoot,
@@ -326,10 +332,11 @@ export async function fetchByRoot({
 
 export async function fetchAndValidateBlock({
   config,
+  chain,
   network,
   peerIdStr,
   blockRoot,
-}: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
+}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   const block = response.at(0);
   if (!block) {
@@ -351,6 +358,96 @@ export async function fetchAndValidateBlock({
       "block does not match requested root"
     );
   }
+
+  // Chain is not null as passed by fetchBlockInput()
+  if (chain !== null) {
+    const blockSlot = block.message.slot;
+    const {proposerIndex} = block.message;
+    const rootHex = toRootHex(blockRoot);
+    const peer = prettyPrintPeerIdStr(peerIdStr);
+
+    const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot));
+
+    // [terminal] the block must be later than its parent, provable already when the parent is in fork choice
+    if (parentBlock !== null && parentBlock.slot >= blockSlot) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.NOT_LATER_THAN_PARENT,
+        peer,
+        peerIdStr,
+        slot: blockSlot,
+        blockRoot: rootHex,
+        parentSlot: parentBlock.slot,
+      });
+    }
+
+    // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
+    // we should found it through forkchoice. If not, we should penalize all peers sending us this block chain
+    // 0 - 1 - ... - n - finalizedSlot
+    //                \
+    //                parent 1 - parent 2 - ... - unknownParent block
+    const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+    if (blockSlot <= finalizedSlot && parentBlock === null) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+        peer,
+        peerIdStr,
+        slot: blockSlot,
+        blockRoot: rootHex,
+        finalizedSlot,
+      });
+    }
+    const currentSlotWithDisparity = chain.clock.currentSlotWithGossipDisparity;
+    if (blockSlot > currentSlotWithDisparity) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.FUTURE_SLOT,
+        peer,
+        peerIdStr,
+        slot: blockSlot,
+        blockRoot: rootHex,
+        currentSlot: chain.clock.currentSlot,
+      });
+    }
+
+    if (proposerIndex >= chain.pubkeyCache.size) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.UNKNOWN_PROPOSER,
+        peer,
+        peerIdStr,
+        slot: blockSlot,
+        blockRoot: rootHex,
+        proposerIndex,
+      });
+    }
+
+    try {
+      await verifyBlockProposerSignature(chain, block, rootHex);
+    } catch (e) {
+      if (!(e instanceof BlockGossipError)) {
+        // BLS backend failure, not proof of an invalid block
+        throw e;
+      }
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        peer,
+        peerIdStr,
+        slot: blockSlot,
+        blockRoot: rootHex,
+      });
+    }
+
+    if (blockSlot > finalizedSlot) {
+      chain.seenBlockProposers.observeBlockRoot(
+        blockSlot,
+        proposerIndex,
+        rootHex,
+        signedBlockToSignedHeader(config, block)
+      );
+      if (!chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+        chain.seenBlockProposers.add(blockSlot, proposerIndex, rootHex);
+      }
+    }
+  }
+
   return block;
 }
 
@@ -496,7 +593,55 @@ export enum DownloadByRootErrorCode {
   MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_BLOB_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOB_RESPONSE",
   MISSING_COLUMN_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_COLUMN_RESPONSE",
+  WOULD_REVERT_FINALIZED_SLOT = "DOWNLOAD_BY_ROOT_ERROR_WOULD_REVERT_FINALIZED_SLOT",
+  FUTURE_SLOT = "DOWNLOAD_BY_ROOT_ERROR_FUTURE_SLOT",
+  NOT_LATER_THAN_PARENT = "DOWNLOAD_BY_ROOT_ERROR_NOT_LATER_THAN_PARENT",
+  UNKNOWN_PROPOSER = "DOWNLOAD_BY_ROOT_ERROR_UNKNOWN_PROPOSER",
+  PROPOSAL_SIGNATURE_INVALID = "DOWNLOAD_BY_ROOT_ERROR_PROPOSAL_SIGNATURE_INVALID",
   Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
+}
+
+type TerminalDownloadByRootErrorCode =
+  | DownloadByRootErrorCode.WOULD_REVERT_FINALIZED_SLOT
+  | DownloadByRootErrorCode.FUTURE_SLOT
+  | DownloadByRootErrorCode.NOT_LATER_THAN_PARENT
+  | DownloadByRootErrorCode.UNKNOWN_PROPOSER
+  | DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID;
+
+/**
+ * PeerAction to report the serving peer with, per terminal error code. Terminal means we don't want to download
+ * the same block from another peer.
+ *
+ */
+const terminalErrorPeerAction: Record<TerminalDownloadByRootErrorCode, PeerAction> = {
+  [DownloadByRootErrorCode.WOULD_REVERT_FINALIZED_SLOT]: PeerAction.LowToleranceError,
+  [DownloadByRootErrorCode.FUTURE_SLOT]: PeerAction.LowToleranceError,
+  [DownloadByRootErrorCode.NOT_LATER_THAN_PARENT]: PeerAction.LowToleranceError,
+  [DownloadByRootErrorCode.UNKNOWN_PROPOSER]: PeerAction.Fatal,
+  [DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal,
+};
+
+export type TerminalDownloadByRootError = {
+  code: TerminalDownloadByRootErrorCode;
+  peerAction: PeerAction;
+  peerIdStr: PeerIdStr;
+};
+
+/** Returns null when the error is retryable with another peer */
+export function getTerminalDownloadByRootError(e: unknown): TerminalDownloadByRootError | null {
+  if (!(e instanceof DownloadByRootError)) {
+    return null;
+  }
+  switch (e.type.code) {
+    case DownloadByRootErrorCode.WOULD_REVERT_FINALIZED_SLOT:
+    case DownloadByRootErrorCode.FUTURE_SLOT:
+    case DownloadByRootErrorCode.NOT_LATER_THAN_PARENT:
+    case DownloadByRootErrorCode.UNKNOWN_PROPOSER:
+    case DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID:
+      return {code: e.type.code, peerAction: terminalErrorPeerAction[e.type.code], peerIdStr: e.type.peerIdStr};
+    default:
+      return null;
+  }
 }
 export type DownloadByRootErrorType =
   | {
@@ -549,6 +694,45 @@ export type DownloadByRootErrorType =
   | {
       code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
       peer: string;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.WOULD_REVERT_FINALIZED_SLOT;
+      peer: string;
+      peerIdStr: PeerIdStr;
+      slot: Slot;
+      blockRoot: string;
+      finalizedSlot: Slot;
+    }
+  | {
+      code: DownloadByRootErrorCode.FUTURE_SLOT;
+      peer: string;
+      peerIdStr: PeerIdStr;
+      slot: Slot;
+      blockRoot: string;
+      currentSlot: Slot;
+    }
+  | {
+      code: DownloadByRootErrorCode.NOT_LATER_THAN_PARENT;
+      peer: string;
+      peerIdStr: PeerIdStr;
+      slot: Slot;
+      blockRoot: string;
+      parentSlot: Slot;
+    }
+  | {
+      code: DownloadByRootErrorCode.UNKNOWN_PROPOSER;
+      peer: string;
+      peerIdStr: PeerIdStr;
+      slot: Slot;
+      blockRoot: string;
+      proposerIndex: number;
+    }
+  | {
+      code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      peer: string;
+      peerIdStr: PeerIdStr;
+      slot: Slot;
       blockRoot: string;
     };
 
