@@ -1,15 +1,18 @@
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
+import {generateCachedBellatrixState, generateState, zeroProtoBlock} from "../../utils/state.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const abortController = new AbortController();
@@ -116,18 +119,30 @@ describe("PrepareNextSlot scheduler", () => {
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
-  it("bellatrix - should prepare payload", async () => {
+  it("fulu - should prepare payload and emit payload attributes", async () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
-    getForkStub.mockReturnValue(ForkName.bellatrix);
+    const computeStateHashTreeRoot = vi.spyOn(scheduler, "computeStateHashTreeRoot");
+    getForkStub.mockReturnValue(ForkName.fulu);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
-    const state = generateCachedBellatrixState();
-    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
+    forkChoiceStub.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
+    const fuluConfig = createBeaconConfig(getConfig(ForkName.fulu), new Uint8Array(32));
+    const makeState = (slot: number) =>
+      new BeaconStateView(
+        createCachedBeaconState(generateState({slot}, fuluConfig, true), {config: fuluConfig, pubkeyCache})
+      );
+    const headState = makeState(SLOTS_PER_EPOCH - 3);
+    vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
+    chainStub.getHeadState.mockReturnValue(headState);
+    regenStub.getBlockSlotState.mockResolvedValue(makeState(SLOTS_PER_EPOCH - 1));
     beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
@@ -141,7 +156,20 @@ describe("PrepareNextSlot scheduler", () => {
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.fulu,
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
+    );
     expect(spy).toHaveBeenCalledTimes(1);
+    // payload_attributes must not wait on the EL round trip or the state root warm-up
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(
+      executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
+    );
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
+    expect(loggerStub.error).not.toHaveBeenCalled();
   });
 
   it("post-fulu - should read proposer from head state and dial only the proposer head on reorg", async () => {
@@ -178,7 +206,10 @@ describe("PrepareNextSlot scheduler", () => {
     );
   });
 
-  it("gloas - should update builder circuit breaker instead of builder status", async () => {
+  it("gloas - should update builder circuit breaker and check builder api status ahead of the slot", async () => {
+    // Anchor the fake clock to the start of clockSlot, else msFromSlot resolves against wall time
+    // and the scheduled check collapses to a zero delay
+    vi.setSystemTime((SLOTS_PER_EPOCH - 2) * config.SLOT_DURATION_MS);
     getForkStub.mockReturnValue(ForkName.gloas);
     const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
     const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
@@ -199,6 +230,15 @@ describe("PrepareNextSlot scheduler", () => {
     ]);
 
     expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
+    // The legacy pre-gloas builder status path stays untouched
     expect(updateBuilderStatus).not.toHaveBeenCalled();
+
+    // Past PREPARE_NEXT_SLOT_BPS but before the check is due, an undelayed check would have run
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 12);
+    expect(chainStub.builderApiClient.checkStatus).not.toHaveBeenCalled();
+
+    // Past BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS, connections are warmed before bids are requested
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 4);
+    expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.47.0",
+  "version": "1.48.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/lodestar-z": "catalog:",
-    "@chainsafe/ssz": "^1.6.3",
+    "@chainsafe/ssz": "^1.7.0",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",

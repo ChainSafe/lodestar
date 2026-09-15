@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.14
+version: v1.7.0-beta.0
 style: full
 
 specrefs:
@@ -118,6 +118,7 @@ exceptions:
     - bytes_to_uint64#phase0
     - compute_merkle_branch_root#phase0
     - compute_time_at_slot_ms#phase0
+    - is_future_epoch#phase0
     - is_non_strict_superset#phase0
     - is_within_slot_range#phase0
     - validate_attester_slashing_gossip#phase0
@@ -158,7 +159,6 @@ exceptions:
     - get_weight#phase0
     - is_candidate_block#phase0
     - is_proposer#phase0
-    - is_proposer_equivocation#phase0
     - max_compressed_len#phase0
     - max_message_size#phase0
     - record_block_timeliness#phase0
@@ -299,6 +299,7 @@ exceptions:
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas
     - is_ancestor#gloas
+    - is_current_or_next_slot#gloas
     - is_head_late#gloas
     - is_previous_slot_payload_decision#gloas
     - notify_ptc_messages#gloas
@@ -313,8 +314,6 @@ exceptions:
     - process_proposer_slashing#gloas
     - process_slot#gloas
     - process_withdrawals#gloas
-    - record_block_timeliness#gloas
-    - should_apply_proposer_boost#gloas
     - update_builder_pending_withdrawals#gloas
     - update_latest_messages#gloas
     - update_next_withdrawal_builder_index#gloas

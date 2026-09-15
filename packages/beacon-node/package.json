@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.47.0",
+  "version": "1.48.0",
   "type": "module",
   "exports": {
     ".": {
@@ -104,12 +104,12 @@
     "@chainsafe/discv5": "^12.0.2",
     "@chainsafe/enr": "^6.0.2",
     "@chainsafe/libp2p-noise": "^17.0.0",
-    "@chainsafe/libp2p-quic": "^2.1.3",
+    "@chainsafe/libp2p-quic": "^2.1.4",
     "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.3.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
-    "@chainsafe/snappy-wasm": "^0.5.0",
-    "@chainsafe/ssz": "^1.6.3",
+    "@chainsafe/snappy-wasm": "^0.5.2",
+    "@chainsafe/ssz": "^1.7.0",
     "@chainsafe/threads": "^1.11.3",
     "@crate-crypto/node-eth-kzg": "0.9.1",
     "@fastify/bearer-auth": "^10.0.1",
@@ -118,7 +118,7 @@
     "@fastify/swagger-ui": "^5.0.1",
     "@libp2p/bootstrap": "^12.0.30",
     "@libp2p/crypto": "^5.1.23",
-    "@libp2p/gossipsub": "^16.1.1",
+    "@libp2p/gossipsub": "^17.1.0",
     "@libp2p/identify": "^4.1.13",
     "@libp2p/interface": "^3.3.0",
     "@libp2p/mdns": "^12.0.30",
@@ -148,6 +148,7 @@
     "multiformats": "^13.4.2",
     "prom-client": "^15.1.0",
     "qs": "^6.14.2",
+    "snappy": "^7.4.3",
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.22.9",
     "uint8arraylist": "^2.4.7",
@@ -165,8 +166,6 @@
     "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "rimraf": "^4.4.1",
-    "snappy": "^7.2.2",
-    "snappyjs": "^0.7.0",
     "tmp": "^0.2.1"
   },
   "keywords": [

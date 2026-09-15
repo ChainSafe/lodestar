@@ -1,21 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  MAX_ATTESTATIONS_ELECTRA,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_PAYLOAD_ATTESTATIONS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  isForkPostBellatrix,
-  isForkPostDeneb,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -149,8 +134,9 @@ export async function validateGossipBlock(
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
       slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
     });
   }
 
@@ -165,6 +151,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -172,7 +160,8 @@ export async function validateGossipBlock(
   }
 
   if (isForkPostGloas(fork)) {
-    const bid = (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+    const body = (block as gloas.BeaconBlock).body;
+    const bid = body.signedExecutionPayloadBid.message;
 
     // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
     // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
@@ -181,6 +170,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -190,89 +181,85 @@ export async function validateGossipBlock(
     if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        slot: blockSlot,
+        root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
       });
     }
 
-    // [REJECT] The counts of `block.body.parent_execution_requests` are within
-    //   their respective limits -- i.e. validate that
-    //   `len(block.body.parent_execution_requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`,
-    //   `len(block.body.parent_execution_requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD`,
-    //   `len(block.body.parent_execution_requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD`,
-    //   and
-    //   `len(block.body.parent_execution_requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`.
-    // [REJECT] The counts of the block body operations are within their respective
-    //   limits -- i.e. validate that
-    //   `len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS`,
-    //   `len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA`,
-    //   `len(block.body.attestations) <= MAX_ATTESTATIONS_ELECTRA`,
-    //   `len(block.body.deposits) == 0`,
-    //   `len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS`,
-    //   `len(block.body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES`,
-    //   and `len(block.body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS`.
-    const body = (block as gloas.BeaconBlock).body;
-    const requests = body.parentExecutionRequests;
-    const countLimits: [string, number, number][] = [
-      ["parentExecutionRequests.withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
-      [
-        "parentExecutionRequests.consolidations",
-        requests.consolidations.length,
-        MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-      ],
-      [
-        "parentExecutionRequests.builderDeposits",
-        requests.builderDeposits.length,
-        MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-      ],
-      ["parentExecutionRequests.builderExits", requests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
-      ["proposerSlashings", body.proposerSlashings.length, MAX_PROPOSER_SLASHINGS],
-      ["attesterSlashings", body.attesterSlashings.length, MAX_ATTESTER_SLASHINGS_ELECTRA],
-      ["attestations", body.attestations.length, MAX_ATTESTATIONS_ELECTRA],
-      ["deposits", body.deposits.length, 0],
-      ["voluntaryExits", body.voluntaryExits.length, MAX_VOLUNTARY_EXITS],
-      ["blsToExecutionChanges", body.blsToExecutionChanges.length, MAX_BLS_TO_EXECUTION_CHANGES],
-      ["payloadAttestations", body.payloadAttestations.length, MAX_PAYLOAD_ATTESTATIONS],
-    ];
-    for (const [name, count, limit] of countLimits) {
-      if (count > limit) {
-        throw new BlockGossipError(GossipAction.REJECT, {
-          code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS,
-          name,
-          count,
-          limit,
-        });
-      }
+    // [REJECT] The block contains no deposits.
+    if (body.deposits.length !== 0) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.NON_ZERO_DEPOSITS,
+        slot: blockSlot,
+        root: blockRoot,
+        count: body.deposits.length,
+      });
     }
 
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
     // This requires execution engine integration to verify the parent block hash
   }
 
-  // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
+  // For gossip forwarding we only need the state to check the block's proposer index.
+  // If the state cannot be regenerated we throw an IGNORE (whereas the spec says we should REJECT for the
+  // finalized-ancestor scenario, which is already guarded by the parentBlock lookup above).
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  const blockState = await chain.regen
-    .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
-    .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  const canUseParentState = blockEpoch - computeEpochAtSlot(parentBlock.slot) <= MIN_SEED_LOOKAHEAD;
+
+  const getValidationState = async () => {
+    const getPreState = () =>
+      chain.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock);
+    if (canUseParentState) {
+      try {
+        const parentState = await chain.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipBlock);
+        chain.metrics?.gossipBlock.preStateSource.inc({source: "parentState"});
+        return parentState;
+      } catch {
+        // if parent state is not in memory, we fall back to disk reload / dial-forward
+        chain.metrics?.gossipBlock.preStateSource.inc({source: "fallbackPreState"});
+        chain.logger.debug("Parent state not in memory, falling back to getPreState for gossip block validation", {
+          slot: blockSlot,
+          root: blockRoot,
+          parentSlot: parentBlock.slot,
+          parentRoot,
+        });
+        return getPreState();
+      }
+    }
+    // parent is >1 epoch behind (deep skip) → beyond proposer-lookahead range, must dial forward
+    chain.metrics?.gossipBlock.preStateSource.inc({source: "preState"});
+    chain.logger.debug("Cannot use parent state for gossip block validation, dialing forward via getPreState", {
+      slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
+      parentRoot,
     });
+    return getPreState();
+  };
+
+  const state = await getValidationState().catch(() => {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
-  chain.shufflingCache.processState(blockState);
+  chain.shufflingCache.processState(state);
 
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
+    if (isStatePostBellatrix(state) && state.isExecutionStateType && state.isExecutionEnabled(block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_TIMESTAMP,
+          slot: blockSlot,
+          root: blockRoot,
           timestamp: executionPayload.timestamp,
           expectedTimestamp,
         });
@@ -281,8 +268,13 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer index is a valid validator index
-  if (proposerIndex >= blockState.validatorCount) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+  if (proposerIndex >= state.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.UNKNOWN_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
@@ -293,8 +285,13 @@ export async function validateGossipBlock(
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+  if (state.getBeaconProposer(blockSlot) !== proposerIndex) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.INCORRECT_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -339,7 +336,8 @@ export async function verifyBlockProposerSignature(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockSlot,
+      slot: blockSlot,
+      root: blockRoot,
     });
   }
 

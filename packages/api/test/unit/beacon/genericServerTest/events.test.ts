@@ -119,4 +119,47 @@ describe("beacon / events", () => {
 
     expect(eventsReceived).toEqual([eventHead]);
   });
+
+  it("Keep the stream alive if the event consumer throws", async () => {
+    const eventHead1: BeaconEvent = {
+      type: EventType.head,
+      message: eventTestData[EventType.head],
+    };
+    const eventHead2: BeaconEvent = {
+      type: EventType.head,
+      message: {...eventTestData[EventType.head], slot: eventTestData[EventType.head].slot + 1},
+    };
+    const eventsReceived: BeaconEvent[] = [];
+    const errorsReceived: Error[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      mockApi.eventstream.mockImplementation(async ({onEvent}) => {
+        try {
+          onEvent(eventHead1);
+          await sleep(5);
+          onEvent(eventHead2);
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      const client = getClient(config, baseUrl);
+      void client.eventstream({
+        topics: [EventType.head],
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          // Simulates a consumer failing on the first event, the next event must still be delivered
+          if (eventsReceived.length === 1) throw Error("consumer failed");
+          resolve();
+        },
+        onError: (e) => {
+          errorsReceived.push(e);
+        },
+      });
+    });
+
+    expect(eventsReceived).toEqual([eventHead1, eventHead2]);
+    expect(errorsReceived.map((e) => e.message)).toEqual(["consumer failed"]);
+  });
 });

@@ -7,15 +7,21 @@ import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
+import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
+import {PayloadStore} from "./services/payloadStore.js";
+import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
+  blockObserver: BlockObserver;
   builderStatusTracker: BuilderStatusTracker;
+  proposerPreferencesTracker: ProposerPreferencesTracker;
   clock: IClock;
   index: BuilderIndex;
+  store: PayloadStore;
 };
 
 export type BuilderOptions = {
@@ -34,25 +40,43 @@ export type BuilderOptions = {
  */
 export class Builder {
   readonly builderSigner: BuilderSigner;
+  readonly proposerPreferencesTracker: ProposerPreferencesTracker;
+  private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
+  private readonly store: PayloadStore;
 
-  constructor({opts, builderSigner, builderStatusTracker, clock, index}: BuilderModules) {
+  constructor({
+    opts,
+    builderSigner,
+    blockObserver,
+    builderStatusTracker,
+    proposerPreferencesTracker,
+    clock,
+    index,
+    store,
+  }: BuilderModules) {
     this.builderSigner = builderSigner;
+    this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
+    this.proposerPreferencesTracker = proposerPreferencesTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
     this.index = index;
+    this.store = store;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
+    this.clock.runEverySlot(async (slot) => this.onSlot(slot));
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
+    this.blockObserver.start(this.controller.signal);
+    this.proposerPreferencesTracker.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
       index: this.index,
@@ -89,8 +113,26 @@ export class Builder {
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    const blockObserver = new BlockObserver(config, logger, api);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
 
-    return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
+    const store = new PayloadStore();
+
+    return new Builder({
+      opts,
+      builderSigner,
+      blockObserver,
+      builderStatusTracker,
+      proposerPreferencesTracker,
+      clock,
+      index,
+      store,
+    });
+  }
+
+  private async onSlot(slot: number): Promise<void> {
+    this.store.prune(slot);
+    this.proposerPreferencesTracker.prune(slot);
   }
 
   async close(): Promise<void> {

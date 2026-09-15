@@ -234,7 +234,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_gossip_failure"
+              "api_reject_gossip_failure",
+              blockRoot
             );
             throw error;
           }
@@ -257,7 +258,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_parent_unknown"
+              "api_reject_parent_unknown",
+              blockRoot
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
@@ -277,7 +279,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw error;
           }
@@ -306,7 +309,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw e;
           }
@@ -1064,20 +1068,14 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
+      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+      // TODO: once the builder is tested and can be trusted, skip this local validation
+      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+      validationTimer?.();
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
-
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(elapsedSec * 1000)
-        );
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 

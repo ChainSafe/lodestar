@@ -3,13 +3,20 @@ import {describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray} from "@chainsafe/ssz";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {BLSSignature, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
-import {ZERO_HASH} from "../../../src/constants/index.js";
+import {
+  FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+} from "@lodestar/params";
+import {BLSSignature, ValidatorIndex, capella, gloas, phase0, ssz} from "@lodestar/types";
+import {G2_POINT_AT_INFINITY, ZERO_HASH} from "../../../src/constants/index.js";
 import {BeaconStateView} from "../../../src/index.js";
-import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
-import {generateCachedState} from "../../../src/testUtils/state.js";
+import {getBlockSignatureSets, getPayloadAttestationDataSigningRoot} from "../../../src/signatureSets/index.js";
+import {createCachedBeaconStateTest, generateCachedState} from "../../../src/testUtils/state.js";
 import {SignatureSetType, toBlsSignatureSet, verifySignatureSet} from "../../../src/util/signatureSets.js";
 import {generateValidators} from "../../utils/validator.js";
 
@@ -134,6 +141,87 @@ describe("signatureSets", () => {
         // 1 x voluntaryExits
         1
     );
+  });
+
+  it("should include payload attestation signatures from a gloas block", () => {
+    const chainConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    // The block is at the first slot of an epoch, so its payload attestation uses the previous epoch's PTC
+    const blockSlot = SLOTS_PER_EPOCH;
+    const stateView = ssz.gloas.BeaconState.defaultViewDU();
+    stateView.slot = blockSlot;
+    const pubkeys: Uint8Array[] = [];
+    for (let i = 0; i < 32; i++) {
+      const validator = ssz.phase0.Validator.defaultViewDU();
+      validator.pubkey = SecretKey.fromKeygen(Buffer.alloc(32, i)).toPublicKey().toBytes();
+      validator.effectiveBalance = MAX_EFFECTIVE_BALANCE;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      pubkeys.push(validator.pubkey);
+      stateView.validators.push(validator);
+      stateView.balances.push(MAX_EFFECTIVE_BALANCE);
+      stateView.previousEpochParticipation.push(0);
+      stateView.currentEpochParticipation.push(0);
+      stateView.inactivityScores.push(0);
+    }
+    const syncCommittee = {
+      pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, () => pubkeys[0]),
+      aggregatePubkey: pubkeys[0],
+    };
+    stateView.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
+    stateView.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
+    stateView.commit();
+    pubkeyCache.reset();
+    const state = createCachedBeaconStateTest(stateView, chainConfig);
+
+    const data: gloas.PayloadAttestationData = {
+      beaconBlockRoot: ZERO_HASH,
+      slot: blockSlot - 1,
+      payloadPresent: true,
+      blobDataAvailable: true,
+    };
+    const signature = SecretKey.fromKeygen(Buffer.alloc(32, 0))
+      .sign(getPayloadAttestationDataSigningRoot(state.config, data))
+      .toBytes();
+
+    const signedBlock: gloas.SignedBeaconBlock = {
+      message: {
+        slot: blockSlot,
+        proposerIndex: 0,
+        parentRoot: ZERO_HASH,
+        stateRoot: ZERO_HASH,
+        body: {
+          ...ssz.gloas.BeaconBlockBody.defaultValue(),
+          syncAggregate: {
+            syncCommitteeBits: BitArray.fromBitLen(SYNC_COMMITTEE_SIZE),
+            syncCommitteeSignature: G2_POINT_AT_INFINITY,
+          },
+          payloadAttestations: [{aggregationBits: BitArray.fromSingleBit(PTC_SIZE, 0), data, signature}],
+        },
+      },
+      signature: EMPTY_SIGNATURE,
+    };
+
+    const signatureSets = getBlockSignatureSets(
+      state.config,
+      state.epochCtx.currentSyncCommitteeIndexed,
+      new BeaconStateView(state),
+      signedBlock,
+      []
+    );
+    // Randao reveal, block signature and the payload attestation
+    expect(signatureSets.length).toBe(3);
+    // The default ptcWindow is all zeros, so validator 0 fills every PTC position
+    expect(signatureSets[2]).toMatchObject({type: SignatureSetType.aggregate, indices: [0]});
+    expect(verifySignatureSet(signatureSets[2])).toBe(true);
   });
 });
 

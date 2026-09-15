@@ -1,6 +1,6 @@
 import {ApiClient} from "@lodestar/api";
 import {BuilderIndex, BuilderStatus, Epoch} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyGweiToEth} from "@lodestar/utils";
 import {getBuilderStatus} from "../identity.js";
 import {Metrics, builderStatusValue} from "../metrics.js";
 
@@ -34,7 +34,7 @@ export class BuilderStatusTracker {
       this.balanceGwei = builderStatus.balance;
       this.logger.info("Builder status", {
         status: builderStatus.status,
-        balance: builderStatus.balance,
+        balance: prettyGweiToEth(builderStatus.balance),
         epoch: currentEpoch,
       });
       this.metrics?.builderStatus.set(builderStatusValue[builderStatus.status]);
