@@ -13,7 +13,12 @@ import {loadConfigYaml} from "../yaml.js";
  */
 const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
-const ignoredRemotePresetFields: string[] = [];
+const ignoredRemotePresetFields: string[] = [
+  // Removed from the spec dev branch (ethereum/consensus-specs#5613), now computed from BLOB_SCHEDULE
+  // at runtime. Still present in the pinned release, remove once specVersion > v1.7.0-beta.0
+  "MAX_DATA_COLUMN_SIDECAR_SIZE",
+  "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
+];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

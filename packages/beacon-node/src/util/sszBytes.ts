@@ -1,6 +1,7 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
@@ -549,6 +550,24 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
     )
   );
   return "0x" + blockRootBuf.toString("hex");
+}
+
+// beaconBlockRoot is the last fixed field of the post-gloas layout above, so the fixed part ends there.
+const DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE = BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE; // 56
+const KZG_PROOF_SIZE = 48; // Bytes48
+// each blob contributes one Cell (column) + one KZGProof (kzgProofs)
+const DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE = BYTES_PER_CELL + KZG_PROOF_SIZE; // 2048 + 48 = 2096
+
+/**
+ * Maximum serialized size of a gloas `DataColumnSidecar`, per consensus-specs `compute_max_data_column_sidecar_size`
+ * (https://github.com/ethereum/consensus-specs/pull/5613).
+ */
+export function computeMaxGloasDataColumnSidecarSize(config: ChainForkConfig): number {
+  const maxBlobs = config.BLOB_SCHEDULE.reduce(
+    (max, entry) => Math.max(max, entry.MAX_BLOBS_PER_BLOCK),
+    config.MAX_BLOBS_PER_BLOCK_ELECTRA
+  );
+  return DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE + maxBlobs * DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE;
 }
 
 /**
