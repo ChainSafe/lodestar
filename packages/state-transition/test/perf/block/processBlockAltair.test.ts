@@ -11,10 +11,10 @@ import {
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {
+  BeaconStateView,
   CachedBeaconStateAltair,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  stateTransition,
 } from "../../../src/index.js";
 import {
   cachedStateAltairPopulateCaches,
@@ -128,13 +128,18 @@ describe("altair processBlock", () => {
           return {state: stateCloned, block};
         },
         fn: ({state, block}) => {
-          const postState = stateTransition(state, block, {
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyProposer: false,
-            verifySignatures: false,
-            verifyStateRoot: false,
-          });
+          const postState = new BeaconStateView(state).stateTransition(
+            state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+            block,
+            {
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyProposer: false,
+              verifySignatures: false,
+              verifyStateRoot: false,
+            },
+            {}
+          );
 
           // Not necessary to call commit here since it's called inside .stateTransition()
 

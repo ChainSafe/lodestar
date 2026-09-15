@@ -29,7 +29,7 @@ export type HistoricalStateWorkerData = {
   dataColumnDir: string;
   metricsEnabled: boolean;
   loggerOpts: LoggerNodeOpts;
-  nativeStateView: boolean;
+  useNativeStateView: boolean;
 };
 
 export type HistoricalStateWorkerApi = {

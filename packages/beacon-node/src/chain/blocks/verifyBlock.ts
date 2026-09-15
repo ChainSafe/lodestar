@@ -191,6 +191,7 @@ export async function verifyBlocksInEpoch(
         this.logger,
         this.metrics,
         this.validatorMonitor,
+        this.serializedCache,
         abortController.signal,
         opts
       ),

@@ -10,9 +10,10 @@ import {Metrics} from "../../metrics/index.js";
 export function computeNewStateRoot(
   metrics: Metrics | null,
   state: IBeaconStateView,
-  block: BeaconBlock | BlindedBeaconBlock
+  block: BeaconBlock | BlindedBeaconBlock,
+  blockBytes?: Uint8Array
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const signedBlock = {message: block, signature: EMPTY_SIGNATURE};
-  return state.computeNewStateRoot({block: signedBlock}, {metrics});
+  return state.computeNewStateRoot({block: signedBlock, ssz: blockBytes}, {metrics});
 }

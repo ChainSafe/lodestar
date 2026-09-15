@@ -11,7 +11,20 @@ export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
 /**
  * A collection of metrics used throughout the State Transition.
  */
-export function getMetrics(register: MetricsRegister) {
+export function getMetrics(
+  register: MetricsRegister,
+  {
+    /**
+     * Register for `stateHashTreeRootTime`, defaults to `register`.
+     *
+     * The native state transition only observes the `state_transition` source of this histogram,
+     * every other source is timed on the JS side. When the native state transition metrics are
+     * scraped instead of the JS ones, this histogram must stay registered so those sources are kept.
+     * Prometheus accepts the same metric family from both scrapes as long as the label sets are disjoint.
+     */
+    stateHashTreeRootRegister = register,
+  }: {stateHashTreeRootRegister?: MetricsRegister} = {}
+) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   return {
@@ -77,7 +90,7 @@ export function getMetrics(register: MetricsRegister) {
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
+    stateHashTreeRootTime: stateHashTreeRootRegister.histogram<{source: StateHashTreeRootSource}>({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
