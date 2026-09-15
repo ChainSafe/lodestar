@@ -5,20 +5,24 @@ import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
- * Used to store finalized `SignedExecutionPayloadEnvelope`
+ * Used to store finalized `SignedCompactExecutionPayloadEnvelope` (payload de-duplicated:
+ * transactions/withdrawals reconstructed from the EL on read).
  *
  * Indexed by slot for chronological archival
  */
-export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, gloas.SignedExecutionPayloadEnvelope> {
+export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<
+  Slot,
+  gloas.SignedCompactExecutionPayloadEnvelope
+> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.gloas_executionPayloadEnvelopeArchive;
-    super(config, db, bucket, ssz.gloas.SignedExecutionPayloadEnvelope, getBucketNameByValue(bucket));
+    super(config, db, bucket, ssz.gloas.SignedCompactExecutionPayloadEnvelope, getBucketNameByValue(bucket));
   }
 
   /**
    * Id is the slot from the envelope
    */
-  getId(value: gloas.SignedExecutionPayloadEnvelope): Slot {
+  getId(value: gloas.SignedCompactExecutionPayloadEnvelope): Slot {
     return value.message.payload.slotNumber;
   }
 

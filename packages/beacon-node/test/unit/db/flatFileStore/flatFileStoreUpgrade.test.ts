@@ -10,6 +10,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
+import {toSignedCompactEnvelope} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
@@ -71,7 +72,7 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = root;
       envelope.message.payload.slotNumber = slot;
-      await db.executionPayloadEnvelopeArchive.put(slot, envelope);
+      await db.executionPayloadEnvelopeArchive.put(slot, toSignedCompactEnvelope(envelope));
     }
     return {block, columns: columns.map(({data}) => data)};
   }

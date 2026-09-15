@@ -4,7 +4,9 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
+import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -35,23 +37,37 @@ export async function* onExecutionPayloadEnvelopesByRange(
     );
   }
 
-  const finalized = db.executionPayloadEnvelopeArchive;
   // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range of envelopes
+  // Finalized range of envelopes — reconstructed from the compact archive + EL bodies (V2, incl. BAL)
   if (startSlot <= archiveMaxSlot) {
-    for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
-    })) {
-      const slot = finalized.decodeKey(key);
-      yield {
-        data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-      };
+    try {
+      for await (const {slot, envelope} of reconstructArchivedEnvelopesByRange(
+        db,
+        chain.executionEngine,
+        chain.logger,
+        startSlot,
+        Math.min(endSlot, archiveMaxSlot + 1)
+      )) {
+        yield {
+          data: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+        };
+      }
+    } catch (e) {
+      // Only map reconstruction failures; anything else (e.g. consumer abort) propagates untouched.
+      // EL down (transient) -> RESOURCE_UNAVAILABLE so peers don't downscore us for our own EL being
+      // down; a root mismatch is a real local inconsistency -> SERVER_ERROR.
+      if (e instanceof EnvelopeReconstructionError) {
+        throw new ResponseError(
+          e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
+          `Failed to reconstruct archived envelope: ${e.message}`
+        );
+      }
+      throw e;
     }
   }
 

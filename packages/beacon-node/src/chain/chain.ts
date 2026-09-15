@@ -76,6 +76,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
+import {reconstructArchivedEnvelope} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -936,11 +937,15 @@ export class BeaconChain implements IBeaconChain {
       return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+    // hot is already a full object, return it directly
+    const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+
+    const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
+    if (compact === null) return null;
+
+    const full = await reconstructArchivedEnvelope(this.executionEngine, compact);
+    return full === null ? null : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
   }
 
   async getExecutionPayloadEnvelope(
@@ -952,11 +957,11 @@ export class BeaconChain implements IBeaconChain {
       return payloadInput.getPayloadEnvelope();
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+
+    const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
+    return compact === null ? null : reconstructArchivedEnvelope(this.executionEngine, compact);
   }
 
   async getParentExecutionRequests(

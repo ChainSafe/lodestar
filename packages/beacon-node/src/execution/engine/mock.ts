@@ -144,6 +144,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
@@ -155,6 +156,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
     return [] as ExecutionPayloadBodyRpc[];
+  }
+
+  private getPayloadBodiesByHashV2(
+    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV2"] {
+    return [];
   }
 
   private getPayloadBodiesByRange(
