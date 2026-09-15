@@ -163,6 +163,46 @@ describe("LodestarForkChoice", () => {
     /**
      * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)
      */
+    it("onBlock - evaluates PTC timeliness with the first seen delay when provided", () => {
+      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
+      const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+      const block16 = generateSignedBlockAtSlot(16);
+      block16.message.parentRoot = finalizedRoot;
+      const state16 = runStateTransition(anchorStateView, block16);
+      block16.message.stateRoot = state16.hashTreeRoot();
+      const {block: block17, state: state17} = makeChild({block: block16, state: state16}, 17);
+
+      // Imported late in its slot but first seen on gossip well before the PTC deadline
+      const lateDelaySec = config.SECONDS_PER_SLOT - 1;
+      forkChoice.updateTime(16);
+      const summary16 = forkChoice.onBlock(
+        block16.message,
+        state16,
+        lateDelaySec,
+        lateDelaySec,
+        16,
+        executionStatus,
+        dataAvailabilityStatus,
+        1
+      );
+      expect(summary16.timeliness).toBe(false);
+      expect(summary16.ptcTimeliness).toBe(true);
+
+      // Without a first seen delay the import delay decides
+      forkChoice.updateTime(17);
+      const summary17 = forkChoice.onBlock(
+        block17.message,
+        state17,
+        lateDelaySec,
+        lateDelaySec,
+        17,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      expect(summary17.timeliness).toBe(false);
+      expect(summary17.ptcTimeliness).toBe(false);
+    });
+
     it("prune - should prune old blocks", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);

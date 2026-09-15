@@ -94,6 +94,43 @@ describe("SeenBlockProposers", () => {
     expect(cache.getEquivocationHeaders(slot, proposerIndex)).toBe(null);
   });
 
+  it("keeps the first seen timestamp of a block root", () => {
+    const cache = new SeenBlockProposers();
+
+    cache.observeFirstSeen(slot, blockRoot, 10);
+    cache.observeFirstSeen(slot, blockRoot, 20);
+    cache.observeFirstSeen(slot, conflictingBlockRoot, 30);
+
+    expect(cache.getFirstSeenTimestampSec(slot, blockRoot)).toBe(10);
+    expect(cache.getFirstSeenTimestampSec(slot, conflictingBlockRoot)).toBe(30);
+    expect(cache.getFirstSeenTimestampSec(slot, additionalBlockRoot)).toBe(undefined);
+    expect(cache.getFirstSeenTimestampSec(slot + 1, blockRoot)).toBe(undefined);
+  });
+
+  it("bounds first seen block roots per slot", () => {
+    const cache = new SeenBlockProposers();
+
+    for (let i = 0; i < 4096; i++) {
+      cache.observeFirstSeen(slot, toRootHex(Buffer.from(i.toString(16).padStart(64, "0"), "hex")), i);
+    }
+    cache.observeFirstSeen(slot, blockRoot, 10);
+    cache.observeFirstSeen(slot + 1, blockRoot, 10);
+
+    expect(cache.getFirstSeenTimestampSec(slot, blockRoot)).toBe(undefined);
+    expect(cache.getFirstSeenTimestampSec(slot + 1, blockRoot)).toBe(10);
+  });
+
+  it("prunes first seen block roots and ignores finalized slots", () => {
+    const cache = new SeenBlockProposers();
+    cache.observeFirstSeen(slot, blockRoot, 10);
+
+    cache.prune(slot + 1);
+    cache.observeFirstSeen(slot, conflictingBlockRoot, 20);
+
+    expect(cache.getFirstSeenTimestampSec(slot, blockRoot)).toBe(undefined);
+    expect(cache.getFirstSeenTimestampSec(slot, conflictingBlockRoot)).toBe(undefined);
+  });
+
   it("rejects updates for slots before the finalized slot", () => {
     const cache = new SeenBlockProposers();
     cache.prune(slot + 1);
