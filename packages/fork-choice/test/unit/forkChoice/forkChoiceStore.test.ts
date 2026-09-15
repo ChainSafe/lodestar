@@ -66,9 +66,10 @@ describe("ForkChoiceStore", () => {
     });
   });
 
-  describe("finalizedCheckpoint", () => {
-    it("invokes onFinalized when finalized checkpoint advances", () => {
+  describe("finalizedCheckpoint setter", () => {
+    it("invokes onFinalized when finalized checkpoint is assigned", () => {
       const onFinalized = vi.fn();
+      const finalizedCheckpoint = {epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot};
       const store = new ForkChoiceStore(
         genesisSlot,
         checkpoint,
@@ -82,10 +83,25 @@ describe("ForkChoiceStore", () => {
         }
       );
 
-      store.finalizedCheckpoint = {epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot};
+      store.finalizedCheckpoint = finalizedCheckpoint;
 
       expect(onFinalized).toHaveBeenCalledTimes(1);
-      expect(onFinalized).toHaveBeenCalledWith({epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot});
+      expect(onFinalized).toHaveBeenCalledWith(finalizedCheckpoint);
+    });
+
+    it("is a no-op when events object is not provided", () => {
+      const store = new ForkChoiceStore(
+        genesisSlot,
+        checkpoint,
+        checkpoint,
+        justifiedBalances,
+        justifiedBalancesGetter,
+        stateGetter
+      );
+
+      expect(() => {
+        store.finalizedCheckpoint = {epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot};
+      }).not.toThrow();
     });
   });
 });
