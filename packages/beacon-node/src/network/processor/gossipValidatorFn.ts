@@ -1,7 +1,15 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
+import {
+  AttestationError,
+  BlsToExecutionChangeErrorCode,
+  ExecutionPayloadBidErrorCode,
+  GossipAction,
+  GossipActionError,
+  ProposerPreferencesErrorCode,
+  VoluntaryExitErrorCode,
+} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetworkCore} from "../core/index.js";
 import {
@@ -23,29 +31,47 @@ export type ValidatorFnModules = {
   core: INetworkCore;
 };
 
+type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAction>};
+
 /**
- * Critical topics (the `bypassQueue` set in
- * `processor/index.ts`) are penalized heavily; the rest with mid tolerance.
+ * PeerAction mapping based on the topic and specific codes.
  */
-const gossipRejectPeerAction: Record<GossipType, PeerAction> = {
-  [GossipType.beacon_block]: PeerAction.LowToleranceError,
-  [GossipType.blob_sidecar]: PeerAction.LowToleranceError,
-  [GossipType.data_column_sidecar]: PeerAction.LowToleranceError,
-  [GossipType.execution_payload]: PeerAction.LowToleranceError,
-  [GossipType.beacon_aggregate_and_proof]: PeerAction.MidToleranceError,
-  [GossipType.beacon_attestation]: PeerAction.MidToleranceError,
-  [GossipType.voluntary_exit]: PeerAction.MidToleranceError,
-  [GossipType.proposer_slashing]: PeerAction.MidToleranceError,
-  [GossipType.attester_slashing]: PeerAction.MidToleranceError,
-  [GossipType.sync_committee_contribution_and_proof]: PeerAction.MidToleranceError,
-  [GossipType.sync_committee]: PeerAction.MidToleranceError,
-  [GossipType.light_client_finality_update]: PeerAction.MidToleranceError,
-  [GossipType.light_client_optimistic_update]: PeerAction.MidToleranceError,
-  [GossipType.bls_to_execution_change]: PeerAction.MidToleranceError,
-  [GossipType.payload_attestation_message]: PeerAction.MidToleranceError,
-  [GossipType.execution_payload_bid]: PeerAction.MidToleranceError,
-  [GossipType.proposer_preferences]: PeerAction.MidToleranceError,
+const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
+  [GossipType.beacon_block]: {default: PeerAction.LowToleranceError},
+  [GossipType.blob_sidecar]: {default: PeerAction.LowToleranceError},
+  [GossipType.data_column_sidecar]: {default: PeerAction.LowToleranceError},
+  [GossipType.execution_payload]: {default: PeerAction.LowToleranceError},
+  [GossipType.beacon_aggregate_and_proof]: {default: PeerAction.MidToleranceError},
+  [GossipType.beacon_attestation]: {default: PeerAction.MidToleranceError},
+  [GossipType.sync_committee_contribution_and_proof]: {default: PeerAction.MidToleranceError},
+  [GossipType.sync_committee]: {default: PeerAction.MidToleranceError},
+  [GossipType.payload_attestation_message]: {default: PeerAction.MidToleranceError},
+  [GossipType.execution_payload_bid]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ExecutionPayloadBidErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+  },
+  [GossipType.proposer_preferences]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ProposerPreferencesErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+  },
+  [GossipType.voluntary_exit]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[VoluntaryExitErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+  },
+  [GossipType.bls_to_execution_change]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[BlsToExecutionChangeErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+  },
+  [GossipType.proposer_slashing]: {default: PeerAction.HighToleranceError},
+  [GossipType.attester_slashing]: {default: PeerAction.HighToleranceError},
+  [GossipType.light_client_finality_update]: {default: PeerAction.HighToleranceError},
+  [GossipType.light_client_optimistic_update]: {default: PeerAction.HighToleranceError},
 };
+
+function rejectPeerAction(type: GossipType, code: string): PeerAction {
+  const rule = gossipRejectPeerAction[type];
+  return rule.byCode?.[code] ?? rule.default;
+}
 
 /**
  * Similar to getGossipValidatorFn but return a function to accept a batch of beacon_attestation messages
@@ -97,17 +123,19 @@ export function getGossipValidatorBatchFn(
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
             return TopicValidatorResult.Ignore;
-          case GossipAction.REJECT:
+          case GossipAction.REJECT: {
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
-            core.reportPeer(propagationSource, gossipRejectPeerAction[type], e.type.code);
+            const peerAction = rejectPeerAction(type, e.type.code);
+            core.reportPeer(propagationSource, peerAction, e.type.code);
             logger.debug(
               `Gossip validation ${type} rejected`,
-              {peer: propagationSource, clientAgent, clientVersion},
+              {peer: propagationSource, clientAgent, clientVersion, peerAction},
               e
             );
             return TopicValidatorResult.Reject;
+          }
         }
       });
     } catch (e) {
@@ -184,11 +212,17 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
           metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
           return TopicValidatorResult.Ignore;
 
-        case GossipAction.REJECT:
+        case GossipAction.REJECT: {
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-          core.reportPeer(propagationSource, gossipRejectPeerAction[type], e.type.code);
-          logger.debug(`Gossip validation ${type} rejected`, {peer: propagationSource, clientAgent, clientVersion}, e);
+          const peerAction = rejectPeerAction(type, e.type.code);
+          core.reportPeer(propagationSource, peerAction, e.type.code);
+          logger.debug(
+            `Gossip validation ${type} rejected`,
+            {peer: propagationSource, clientAgent, clientVersion, peerAction},
+            e
+          );
           return TopicValidatorResult.Reject;
+        }
       }
     }
   };
