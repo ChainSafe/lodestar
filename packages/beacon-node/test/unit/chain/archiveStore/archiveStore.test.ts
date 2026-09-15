@@ -27,6 +27,7 @@ describe("chain / archive / ArchiveStore", () => {
         archiveStateEpochFrequency: 1,
         anchorState: {finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)}},
         dbName: "test",
+        dataColumnDir: "data_columns",
       },
       controller.signal
     );

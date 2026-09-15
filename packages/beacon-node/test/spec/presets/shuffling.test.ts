@@ -1,13 +1,11 @@
 import path from "node:path";
-import bindings from "@chainsafe/lodestar-z";
+import {unshuffleList} from "@chainsafe/lodestar-z/shuffle";
 import {ACTIVE_PRESET, SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
-
-const {unshuffleList} = bindings.shuffle;
 
 const shuffling: TestRunnerFn<ShufflingTestCase, string> = () => {
   return {

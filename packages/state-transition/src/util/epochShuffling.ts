@@ -1,4 +1,4 @@
-import bindings from "@chainsafe/lodestar-z";
+import {unshuffleList} from "@chainsafe/lodestar-z/shuffle";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
@@ -15,8 +15,6 @@ import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getSeed} from "./seed.js";
-
-const {unshuffleList} = bindings.shuffle;
 
 /**
  * Readonly interface for EpochShuffling.

@@ -53,6 +53,9 @@ export function makeBlock(
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
     timeliness: false,
+    importedTimely: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
   };
 
   if (executionStatus === ExecutionStatus.PreMerge) {

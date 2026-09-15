@@ -86,7 +86,6 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
     const now = Date.now();
     // here we mutate item, which is used for gossip validation later
     item.indexed = key;
-    item.queueAddedMs = now;
     let queueItem = this.indexedItems.get(key);
     if (queueItem == null) {
       queueItem = {firstSeenMs: now, listItems: new LinkedList<T>()};

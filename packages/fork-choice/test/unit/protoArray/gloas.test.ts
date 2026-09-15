@@ -49,6 +49,9 @@ describe("Gloas Fork Choice", () => {
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
       timeliness: true,
+      importedTimely: true,
+      ptcTimeliness: true,
+      proposerIndex: 0,
       executionPayloadBlockHash: blockRoot, // Use blockRoot as execution hash
       executionPayloadNumber: slot,
       executionPayloadGasLimit: 30000000,

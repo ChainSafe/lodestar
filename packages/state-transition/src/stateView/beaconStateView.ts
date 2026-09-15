@@ -70,7 +70,15 @@ import {loadState} from "../util/loadState/loadState.js";
 import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
+import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
+import {
+  ComputeNewStateRootInput,
+  ComputeNewStateRootResult,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  IBeaconStateViewLatestFork,
+  isStatePostGloas,
+} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -106,6 +114,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get forkName(): ForkName {
     return this.config.getForkName(this.cachedState.slot);
+  }
+
+  get forkSeq(): ForkSeq {
+    return this.config.getForkSeq(this.cachedState.slot);
   }
 
   get slot(): number {
@@ -444,6 +456,18 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
     throw new Error(`PTC committees are not available for epoch=${epoch}`);
   }
+
+  /**
+   * Return the PTC for a slot in the previous, current or next epoch
+   */
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
+  }
+
   /**
    * Return all positions of the validator in the PTC committee for the given slot.
    *
@@ -822,6 +846,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   // State transition
+
+  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = new BeaconStateView(
+      stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
+    );
+    return getComputeNewStateRootResult(postState, modules);
+  }
 
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,

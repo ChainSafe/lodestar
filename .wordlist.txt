@@ -3,6 +3,7 @@ APIs
 Andreas
 Antonopoulos
 AssemblyScript
+Auth
 BLS
 BeaconNode
 Besu
@@ -42,6 +43,7 @@ FINDNODE
 FX
 Flamegraph
 Flamegraphs
+Fulu
 GPG
 Geth
 Github
@@ -51,6 +53,7 @@ Golang
 Gossipsub
 Grafana
 Grandine
+Gwei
 HTTPS
 HackMD
 Hashicorp
@@ -119,6 +122,7 @@ addons
 api
 args
 async
+auth
 backfill
 beaconcha
 blockRoot
@@ -246,8 +250,10 @@ tcp
 testnet
 testnets
 todo
+trustless
 typesafe
 udp
+uint
 unpkg
 util
 utils

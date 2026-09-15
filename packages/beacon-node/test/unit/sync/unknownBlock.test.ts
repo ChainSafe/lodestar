@@ -588,6 +588,7 @@ describe("UnknownBlockSync", () => {
   beforeEach(() => {
     network = {
       events: new NetworkEventBus(),
+      getConnectedPeers: () => [],
     } as Partial<INetwork> as INetwork;
     chain = getMockedBeaconChain();
   });
