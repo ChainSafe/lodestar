@@ -73,7 +73,13 @@
         "useParseIntRadix": {
           "level": "off"
         },
-        "noPrivateImports": "error"
+        "noPrivateImports": "error",
+        // Catches imports in src/ that are not runtime dependencies
+        "noUndeclaredDependencies": {
+          "level": "error",
+          // For these files, devDependencies count as being declared
+          "options": { "devDependencies": ["**/test/**", "**/*.test.ts", "**/src/testUtils/**"] }
+        }
       },
       "performance": {
         // This rule should be enabled but with considerations and careful review
@@ -223,6 +229,15 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["**/packages/**/test/**", "configs/**", "vitest.config.ts", "scripts/**"],
+      "linter": {
+        "rules": {
+          // Switch off noUndeclaredDependencies for the files listed in "includes"
+          "correctness": { "noUndeclaredDependencies": "off" }
+        }
+      }
+    },
     {
       "includes": ["**/packages/**/test/**"],
       "linter": {
