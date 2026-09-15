@@ -494,8 +494,9 @@ export class NetworkProcessor {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            // payload attestation votes that the payload is available but it is not yet known
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            // payload attestation votes that the payload is available but it is not yet known.
+            // this is optimistic search, the peer may not have the payload (only the ptc committee had)
+            this.searchUnknownRoot({slot, root}, false, true, undefined);
             // do not await the envelope, payload attestation processing only requires that the block is known
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -504,7 +505,8 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            // this is optimistic search, the peer may not have the payload
+            this.searchUnknownRoot({slot, root}, false, true, undefined);
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -641,11 +643,15 @@ export class NetworkProcessor {
     return true;
   }
 
+  /**
+   * Search block/envelope given a SlotRootHex
+   * undefined peer id means optimistic search
+   */
   private searchUnknownRoot(
     slotRoot: SlotRootHex,
     searchBlock: boolean,
     searchEnvelope: boolean,
-    peerId: PeerIdStr
+    peerId?: PeerIdStr
   ): void {
     if (!searchBlock && !searchEnvelope) return;
     if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
