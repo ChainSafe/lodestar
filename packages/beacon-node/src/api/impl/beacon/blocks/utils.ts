@@ -73,3 +73,29 @@ export async function getBlockResponse(
 
   return res;
 }
+
+export function getBlobIndicesByVersionedHashes(blockVersionedHashes: string[], requestedHashes: string[]): number[] {
+  const indicesByHash = new Map<string, number[]>();
+
+  for (const [index, hash] of blockVersionedHashes.entries()) {
+    const indices = indicesByHash.get(hash);
+    if (indices) {
+      indices.push(index);
+    } else {
+      indicesByHash.set(hash, [index]);
+    }
+  }
+
+  const requestedIndices: number[] = [];
+
+  for (const requestedHash of requestedHashes) {
+    const indices = indicesByHash.get(requestedHash);
+    if (!indices?.length) {
+      throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
+    }
+
+    requestedIndices.push(...indices);
+  }
+
+  return requestedIndices;
+}
