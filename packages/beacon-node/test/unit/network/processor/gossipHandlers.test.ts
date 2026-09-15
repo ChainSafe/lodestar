@@ -65,7 +65,12 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
-    const {processBlock, threw} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
+    const {processBlock, threw, onSignedBlockHeader} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: true,
+    });
+    // the signed block counts as a proposal in fork choice regardless of the import
+    expect(onSignedBlockHeader).toHaveBeenCalledOnce();
+    expect(onSignedBlockHeader.mock.calls[0]).toEqual([1, 3, expect.any(String), true]);
 
     // imported so LMD-GHOST can weigh it ...
     expect(processBlock).toHaveBeenCalledOnce();
@@ -74,7 +79,10 @@ describe("getGossipHandlers", () => {
   });
 
   it("does not import a REPEAT_PROPOSAL block whose root was not recorded (unverified 3rd+ proposal)", async () => {
-    const {processBlock, threw} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: false});
+    const {processBlock, threw, onSignedBlockHeader} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: false,
+    });
+    expect(onSignedBlockHeader).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
@@ -162,7 +170,11 @@ async function runBeaconBlockProcessingError(
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
   {recorded}: {recorded: boolean}
-): Promise<{processBlock: ReturnType<typeof vi.fn>; threw: boolean}> {
+): Promise<{
+  processBlock: ReturnType<typeof vi.fn>;
+  threw: boolean;
+  onSignedBlockHeader: ReturnType<typeof vi.fn>;
+}> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
   const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
@@ -201,10 +213,16 @@ async function runBeaconBlockRepeatProposal(
   }
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
+  const onSignedBlockHeader = vi.fn();
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {
+      onSignedBlockHeader,
+      isPtcTimely: vi.fn().mockReturnValue(true),
+    } as unknown as IBeaconChain["forkChoice"],
+    genesisTime: 0,
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     processBlock,
@@ -257,7 +275,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw};
+  return {processBlock, threw, onSignedBlockHeader};
 }
 
 function getExecutionBlockError(

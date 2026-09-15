@@ -8,6 +8,7 @@ import {
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getEffectiveBalanceIncrementsZeroed,
   getTemporaryBlockHeader,
   processSlots,
@@ -163,6 +164,13 @@ describe("LodestarForkChoice", () => {
     /**
      * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)
      */
+    it("isPtcTimely - only for the current slot before the PTC deadline", () => {
+      forkChoice.updateTime(16);
+      expect(forkChoice.isPtcTimely(16, 1)).toBe(true);
+      expect(forkChoice.isPtcTimely(16, config.SECONDS_PER_SLOT - 1)).toBe(false);
+      expect(forkChoice.isPtcTimely(15, 1)).toBe(false);
+    });
+
     it("prune - should prune old blocks", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
@@ -269,7 +277,14 @@ describe("LodestarForkChoice", () => {
         executionStatus,
         dataAvailabilityStatus
       );
+      const signedProposals = (forkChoice as unknown as {signedProposals: Map<Slot, unknown>}).signedProposals;
+      expect(signedProposals.has(8)).toBe(true);
       forkChoice.prune(hashBlock(block16.message));
+      const finalizedSlot = computeStartSlotAtEpoch(forkChoice.getFinalizedCheckpoint().epoch);
+      expect([...signedProposals.keys()].filter((slot) => slot < finalizedSlot)).toEqual([]);
+      // signed blocks for pruned slots are not recorded anymore
+      forkChoice.onSignedBlockHeader(finalizedSlot - 1, 0, hashBlock(block08.message), true);
+      expect(signedProposals.has(finalizedSlot - 1)).toBe(false);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL).length).toBeWithMessage(
         1,
         "getAllAncestorBlocks returns the finalized block itself as the last (boundary) node"

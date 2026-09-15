@@ -334,6 +334,14 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         proposerBoost: true,
         proposerBoostReorg: true,
       });
+      if (siblingBlock) {
+        forkChoice.onSignedBlockHeader(
+          siblingBlock.slot,
+          siblingBlock.proposerIndex,
+          siblingBlock.blockRoot,
+          siblingBlock.ptcTimeliness
+        );
+      }
 
       const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock, secFromSlot, currentSlot);
 

@@ -1,5 +1,14 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -188,6 +197,13 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
+  /**
+   * Record a signed block that was seen but not imported, e.g. a repeat proposal ignored on gossip, so it counts
+   * as a proposer equivocation for `should_apply_proposer_boost` and `get_proposer_head`
+   */
+  onSignedBlockHeader(slot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex, ptcTimely: boolean): void;
+  /** Return true if a block for `slot` received `receiveDelaySec` after the slot start is PTC-timely */
+  isPtcTimely(slot: Slot, receiveDelaySec: number): boolean;
   /**
    * Process PTC (Payload Timeliness Committee) messages from a block
    * Updates the PTC votes for the attested beacon block

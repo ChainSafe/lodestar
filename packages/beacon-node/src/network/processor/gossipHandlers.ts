@@ -265,9 +265,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       throw e;
     } finally {
+      const proposerIndex = signedBlock.message.proposerIndex;
+      // A block with a verified proposer signature counts as a proposal of its proposer in fork choice whether it is
+      // imported or not, so the equivocation view does not depend on how many repeat proposals are validated
+      if (chain.seenBlockProposers.hasBlockRoot(slot, proposerIndex, blockRootHex)) {
+        const receiveDelaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+        chain.forkChoice.onSignedBlockHeader(
+          slot,
+          proposerIndex,
+          blockRootHex,
+          chain.forkChoice.isPtcTimely(slot, receiveDelaySec)
+        );
+      }
       // The block received from the network may have established an equivocation, either by conflicting
       // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
-      const proposerIndex = signedBlock.message.proposerIndex;
       if (chain.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
         chain.processProposerEquivocation(slot, proposerIndex);
       }
