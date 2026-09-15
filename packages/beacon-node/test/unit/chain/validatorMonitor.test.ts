@@ -9,7 +9,6 @@ import {Slot, ssz} from "@lodestar/types";
 import {RootHexCache, ValidatorMonitor, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 import {RegistryMetricCreator} from "../../../src/metrics/index.js";
 
-
 describe("ValidatorMonitor", () => {
   // Use phase0 config (no altair) to avoid needing full state with block roots
   const config = createChainForkConfig({

@@ -337,6 +337,7 @@ export type IBeaconStateViewNative = Omit<
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
+  | "getPayloadTimelinessCommittee"
   | "loadOtherState"
   | "pendingConsolidations"
   | "pendingDeposits"
