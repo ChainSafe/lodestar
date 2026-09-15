@@ -6,6 +6,7 @@ import {ForkChoiceStore} from "../../../src/forkChoice/store.js";
 describe("ForkChoiceStore", () => {
   const genesisSlot = 0 as Slot;
   const root = "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const nextRoot = "0x1111111111111111111111111111111111111111111111111111111111111111";
   const checkpoint = {epoch: 0, root: fromHexString(root)};
   const justifiedBalances = new Uint16Array([32]);
   const justifiedBalancesGetter = () => justifiedBalances;
@@ -62,6 +63,29 @@ describe("ForkChoiceStore", () => {
       );
 
       expect(() => store.notifyFastConfirmation({block: root, slot: 1 as Slot, currentSlot: 2 as Slot})).not.toThrow();
+    });
+  });
+
+  describe("finalizedCheckpoint", () => {
+    it("invokes onFinalized when finalized checkpoint advances", () => {
+      const onFinalized = vi.fn();
+      const store = new ForkChoiceStore(
+        genesisSlot,
+        checkpoint,
+        checkpoint,
+        justifiedBalances,
+        justifiedBalancesGetter,
+        stateGetter,
+        {
+          onJustified: () => {},
+          onFinalized,
+        }
+      );
+
+      store.finalizedCheckpoint = {epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot};
+
+      expect(onFinalized).toHaveBeenCalledTimes(1);
+      expect(onFinalized).toHaveBeenCalledWith({epoch: 1, root: fromHexString(nextRoot), rootHex: nextRoot});
     });
   });
 });
