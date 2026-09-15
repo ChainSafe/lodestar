@@ -285,8 +285,8 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       id: "downloaded parent is before finalized slot",
       event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
-      // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
-      // Test verifies blocks are cleaned up from pendingBlocks instead
+      // The below-finalized download is terminal: the serving peer is reported and the referencing
+      // blocks are cleaned up from pendingBlocks
       reportPeer: true,
     },
     {
@@ -370,6 +370,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       });
       let sendBeaconBlocksByRootCallCount = 0;
 
+      const reportPeerFn = vi.fn();
       const networkEvents = new NetworkEventBus();
       const network: Partial<INetwork> = {
         events: networkEvents,
@@ -396,6 +397,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             .filter(notNullish);
           return wrongBlockRoot ? [ssz.gloas.SignedBeaconBlock.defaultValue()] : correctBlocks;
         },
+        reportPeer: reportPeerFn,
       };
 
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
@@ -420,9 +422,11 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             slot: finalizedSlot,
           }) as ProtoBlock,
       };
-      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
+      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown" | "observeBlockRoot" | "add"> = {
         // only return seenBlock for blockC
         isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
+        observeBlockRoot: () => {},
+        add: () => {},
       };
 
       const blockAResolver: () => void = () => {};
@@ -434,9 +438,11 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       const emitter = new ChainEventEmitter();
       const chain: Partial<IBeaconChain> = {
         emitter,
-        clock: new ClockStopped(0),
+        // stopped at blockC's slot so downloaded blocks pass the future-slot check
+        clock: new ClockStopped(blockC.message.slot),
         forkChoice: forkChoice as IForkChoice,
         genesisTime: 0,
+        pubkeyCache: {size: 1_000_000} as unknown as IBeaconChain["pubkeyCache"],
         custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
         processBlock: async (blockInput, opts) => {
           const block = blockInput.getBlock();
@@ -486,6 +492,8 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
               source,
             }),
           prune: () => {},
+          // treat every downloaded block's proposer signature as already verified
+          isVerifiedProposerSignature: () => true,
         } as unknown as SeenBlockInput,
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
@@ -545,9 +553,10 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         // Wait for the network request to happen, then allow async processing to complete
         await sendBeaconBlocksByRootPromise;
         await sleep(200);
-        // Downloaded block is before finalized slot, so blocks should be cleaned up
-        // (peer reporting is currently disabled in removeAndDownScoreAllDescendants)
+        // Downloaded block is before finalized slot (terminal), so blocks are cleaned up and the
+        // serving peer is reported
         expect(processBlockSpy).not.toHaveBeenCalled();
+        expect(reportPeerFn).toHaveBeenCalled();
       } else if (maxPendingBlocks !== undefined) {
         // With maxPendingBlocks=1 and unknownParent event, the scheduler can re-queue one pruned
         // parent root at a time, so it partially recovers the chain. It still cannot retain enough
@@ -698,7 +707,7 @@ describe("UnknownBlockSync", () => {
         const processBlock = vi.fn().mockRejectedValue(error(block));
         const chainForTest = {
           emitter: new ChainEventEmitter(),
-          clock: new ClockStopped(0),
+          clock: new ClockStopped(block.message.slot),
           forkChoice: {
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             getBlockHexDefaultStatus: vi
@@ -708,6 +717,7 @@ describe("UnknownBlockSync", () => {
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
           genesisTime: 0,
+          pubkeyCache: {size: 1_000_000} as unknown as IBeaconChain["pubkeyCache"],
           custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
           processBlock,
           seenBlockInputCache: {
@@ -734,8 +744,13 @@ describe("UnknownBlockSync", () => {
                 peerIdStr,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
-          seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+          seenBlockProposers: {
+            isKnown: vi.fn().mockReturnValue(false),
+            observeBlockRoot: vi.fn(),
+            add: vi.fn(),
+          } as unknown as SeenBlockProposers,
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(undefined),
@@ -815,11 +830,13 @@ describe("UnknownBlockSync", () => {
 
       const chain = {
         emitter,
-        clock: new ClockStopped(0),
+        // payload sync fixtures use slot 1 blocks, keep the clock ahead of them for the future-slot check
+        clock: new ClockStopped(1),
         config: gloasConfig,
         custodyConfig,
         genesisTime: 0,
         metrics: null,
+        pubkeyCache: {size: 1_000_000} as unknown as IBeaconChain["pubkeyCache"],
         serializedCache: {delete: vi.fn()} as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
@@ -829,8 +846,15 @@ describe("UnknownBlockSync", () => {
           getOrReload: vi.fn().mockResolvedValue(undefined),
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+        seenBlockInputCache: {
+          prune: vi.fn(),
+          isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+        } as unknown as SeenBlockInput,
+        seenBlockProposers: {
+          isKnown: vi.fn().mockReturnValue(false),
+          observeBlockRoot: vi.fn(),
+          add: vi.fn(),
+        } as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
           hasBlockHex: vi.fn().mockReturnValue(false),
@@ -1135,6 +1159,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1242,6 +1267,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1350,6 +1376,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2118,10 +2145,11 @@ describe("UnknownBlockSync", () => {
     const chainForTest: Partial<IBeaconChain> = {
       emitter: new ChainEventEmitter(),
       config: gloasConfig,
-      clock: new ClockStopped(0),
+      clock: new ClockStopped(block.message.slot),
       custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
       genesisTime: 0,
       metrics: null,
+      pubkeyCache: {size: 1_000_000} as unknown as IBeaconChain["pubkeyCache"],
       processBlock,
       forkChoice: {
         getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
@@ -2142,9 +2170,14 @@ describe("UnknownBlockSync", () => {
         getOrReload: vi.fn().mockResolvedValue(undefined),
         prune: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-      seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
+      seenBlockInputCache: {
+        prune: vi.fn(),
+        isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+      } as unknown as SeenBlockInput,
       seenBlockProposers: {
         isKnown: vi.fn().mockReturnValue(false),
+        observeBlockRoot: vi.fn(),
+        add: vi.fn(),
       } as unknown as SeenBlockProposers,
     };
 
