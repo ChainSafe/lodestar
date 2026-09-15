@@ -686,11 +686,14 @@ export class ValidatorStore {
       signingRoot: toRootHex(signingRoot),
     });
 
+    const blockTimer = this.metrics?.slashingProtectionBlockTime.startTimer();
     try {
       await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: signingSlot, signingRoot});
     } catch (e) {
       this.metrics?.slashingProtectionBlockError.inc();
       throw e;
+    } finally {
+      blockTimer?.();
     }
 
     const signableMessage: SignableMessage = {
@@ -772,6 +775,7 @@ export class ValidatorStore {
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_ATTESTER);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
+    const attestationTimer = this.metrics?.slashingProtectionAttestationTime.startTimer();
     try {
       await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
         sourceEpoch: attestationData.source.epoch,
@@ -781,6 +785,8 @@ export class ValidatorStore {
     } catch (e) {
       this.metrics?.slashingProtectionAttestationError.inc();
       throw e;
+    } finally {
+      attestationTimer?.();
     }
 
     const signableMessage: SignableMessage = {
