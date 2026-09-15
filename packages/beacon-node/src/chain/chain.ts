@@ -944,7 +944,7 @@ export class BeaconChain implements IBeaconChain {
     const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (compact === null) return null;
 
-    const full = await reconstructArchivedEnvelope(this.executionEngine, this.config, compact);
+    const full = await reconstructArchivedEnvelope(this.executionEngine, compact);
     return full === null ? null : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
   }
 
@@ -961,7 +961,7 @@ export class BeaconChain implements IBeaconChain {
     if (hot !== null) return hot;
 
     const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
-    return compact === null ? null : reconstructArchivedEnvelope(this.executionEngine, this.config, compact);
+    return compact === null ? null : reconstructArchivedEnvelope(this.executionEngine, compact);
   }
 
   async getParentExecutionRequests(

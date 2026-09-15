@@ -1,4 +1,3 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {Slot, gloas} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
@@ -9,7 +8,7 @@ import {
 } from "../../errors/envelopeReconstructionError.js";
 import {signedCompactEnvelopeToFull} from "./compactEnvelope.js";
 
-/** engine_getPayloadBodiesByHashV1: ELs MUST support at least 32 hashes per request (Shanghai). */
+/** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
 export type SlotEnvelope = {slot: Slot; envelope: gloas.SignedExecutionPayloadEnvelope};
@@ -18,17 +17,20 @@ type SlotCompact = {slot: Slot; compact: gloas.SignedCompactExecutionPayloadEnve
 /**
  * Stream finalized envelopes over [startSlot, endSlot), rebuilding each full envelope from its
  * archived compact form + EL bodies. Bodies are fetched in batches of MAX_BODIES_REQUEST (32) to
- * bound round-trips (a range request may span up to MAX_REQUEST_PAYLOADS = 128 slots). Slots the EL
- * cannot serve are skipped and warned once for the whole range.
+ * bound round-trips (a range request may span up to MAX_REQUEST_PAYLOADS = 128 slots).
+ *
+ * Slots the EL cannot serve — unknown block hash, or a pruned block access list (EIP-7928 only
+ * requires ELs to retain BALs for the weak subjectivity period) — are skipped and warned once per
+ * range, matching what Teku does. The by-range spec says peers SHOULD respond ResourceUnavailable
+ * in that case; we omit instead, which the by-root spec explicitly allows.
  *
  * Throws {@link EnvelopeReconstructionError}: ENGINE_UNAVAILABLE if the EL call fails (transient),
- * or *_ROOT_MISMATCH if the EL bodies do not match the archived roots (local inconsistency). Either
- * may surface after some envelopes have already been yielded.
+ * or PAYLOAD_ROOT_MISMATCH if the EL bodies do not hash to the archived payload root (local
+ * inconsistency). Either may surface after some envelopes have already been yielded.
  */
 export async function* reconstructArchivedEnvelopesByRange(
   db: IBeaconDb,
   executionEngine: IExecutionEngine,
-  config: ChainForkConfig,
   logger: Logger,
   startSlot: Slot,
   endSlot: Slot
@@ -40,14 +42,14 @@ export async function* reconstructArchivedEnvelopesByRange(
   for await (const {key: slot, value: compact} of archive.entriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot, compact});
     if (batch.length === MAX_BODIES_REQUEST) {
-      const reconstructed = await reconstructBatch(executionEngine, config, batch);
+      const reconstructed = await reconstructBatch(executionEngine, batch);
       missCount += batch.length - reconstructed.length;
       yield* reconstructed;
       batch = [];
     }
   }
   if (batch.length > 0) {
-    const reconstructed = await reconstructBatch(executionEngine, config, batch);
+    const reconstructed = await reconstructBatch(executionEngine, batch);
     missCount += batch.length - reconstructed.length;
     yield* reconstructed;
   }
@@ -64,35 +66,25 @@ export async function* reconstructArchivedEnvelopesByRange(
 /** Reconstruct a single archived envelope (getter path). Returns null if the EL can't serve its bodies. */
 export async function reconstructArchivedEnvelope(
   executionEngine: IExecutionEngine,
-  config: ChainForkConfig,
   compact: gloas.SignedCompactExecutionPayloadEnvelope
 ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
-  const [reconstructed] = await reconstructBatch(executionEngine, config, [
+  const [reconstructed] = await reconstructBatch(executionEngine, [
     {slot: compact.message.payload.slotNumber, compact},
   ]);
   return reconstructed?.envelope ?? null;
 }
 
-/**
- * One EL round-trip for a batch of compact envelopes, reassembling each full envelope. Assumes a
- * single fork per batch (all archived envelopes fall in the same fork within the serving window, and
- * the bodies endpoint is Capella-stable).
- */
-async function reconstructBatch(
-  executionEngine: IExecutionEngine,
-  config: ChainForkConfig,
-  batch: SlotCompact[]
-): Promise<SlotEnvelope[]> {
-  const fork = config.getForkName(batch[0].compact.message.payload.slotNumber);
+/** One EL round-trip for a batch of compact envelopes, reassembling each full envelope. */
+async function reconstructBatch(executionEngine: IExecutionEngine, batch: SlotCompact[]): Promise<SlotEnvelope[]> {
   const hashes = batch.map(({compact}) => toRootHex(compact.message.payload.blockHash));
 
-  let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHash"]>>;
+  let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
   try {
-    bodies = await executionEngine.getPayloadBodiesByHash(fork, hashes);
+    bodies = await executionEngine.getPayloadBodiesByHashV2(hashes);
   } catch (e) {
     throw new EnvelopeReconstructionError(
       {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
-      `engine_getPayloadBodiesByHash failed: ${(e as Error).message}`,
+      `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`,
       {cause: e}
     );
   }
@@ -101,9 +93,16 @@ async function reconstructBatch(
   for (let i = 0; i < batch.length; i++) {
     const {slot, compact} = batch[i];
     const body = bodies[i];
-    // EL doesn't have the block, or returned a pre-capella shape (no withdrawals) → cannot rebuild
-    if (body == null || body.withdrawals == null) continue;
-    reconstructed.push({slot, envelope: signedCompactEnvelopeToFull(compact, body.transactions, body.withdrawals)});
+    // EL doesn't have the block, pre-capella shape (no withdrawals), or BAL already pruned → cannot rebuild
+    if (body == null || body.withdrawals == null || body.blockAccessList == null) continue;
+    reconstructed.push({
+      slot,
+      envelope: signedCompactEnvelopeToFull(compact, {
+        transactions: body.transactions,
+        withdrawals: body.withdrawals,
+        blockAccessList: body.blockAccessList,
+      }),
+    });
   }
   return reconstructed;
 }

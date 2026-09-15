@@ -11,6 +11,7 @@ import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/com
 import {reconstructArchivedEnvelopesByRange} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
+import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
 
 describe("reconstructArchivedEnvelopesByRange", () => {
@@ -19,15 +20,15 @@ describe("reconstructArchivedEnvelopesByRange", () => {
   let tmpDir: string;
   let controller: LevelDbController;
   let db: BeaconDb;
-  let getPayloadBodiesByHash: ReturnType<typeof vi.fn>;
+  let getPayloadBodiesByHashV2: ReturnType<typeof vi.fn>;
   let executionEngine: IExecutionEngine;
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-envelope-reconstruct-"));
     controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
     db = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "data_columns"), logger});
-    getPayloadBodiesByHash = vi.fn();
-    executionEngine = {getPayloadBodiesByHash} as unknown as IExecutionEngine;
+    getPayloadBodiesByHashV2 = vi.fn();
+    executionEngine = {getPayloadBodiesByHashV2} as unknown as IExecutionEngine;
   });
 
   afterEach(async () => {
@@ -48,6 +49,11 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     return e;
   }
 
+  function bodyOf(full: gloas.SignedExecutionPayloadEnvelope): ExecutionPayloadBodyV2 {
+    const {transactions, withdrawals, blockAccessList} = full.message.payload;
+    return {transactions, withdrawals, blockAccessList};
+  }
+
   // Seed the archive with the compact form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = makeEnvelope(slot);
@@ -55,24 +61,23 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     return full;
   }
 
-  // Mock the EL to return each seeded envelope's real bodies, keyed by blockHash.
+  // Mock the EL to return each seeded envelope's real bodies (incl. BAL), keyed by blockHash.
   function elServes(fulls: gloas.SignedExecutionPayloadEnvelope[]): void {
-    const byHash = new Map(
-      fulls.map((f) => [
-        toRootHex(f.message.payload.blockHash),
-        {transactions: f.message.payload.transactions, withdrawals: f.message.payload.withdrawals},
-      ])
-    );
-    getPayloadBodiesByHash.mockImplementation(async (_fork: string, hashes: string[]) =>
-      hashes.map((h) => byHash.get(h) ?? null)
-    );
+    const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), bodyOf(f)]));
+    getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
   }
 
   const range = (
     start: number,
     end: number
   ): AsyncIterable<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}> =>
-    reconstructArchivedEnvelopesByRange(db, executionEngine, config, logger, start, end);
+    reconstructArchivedEnvelopesByRange(db, executionEngine, logger, start, end);
+
+  const rejection = async (iter: AsyncIterable<unknown>): Promise<EnvelopeReconstructionError | null> =>
+    fromAsync(iter).then(
+      () => null,
+      (e) => e as EnvelopeReconstructionError
+    );
 
   it("reconstructs a range byte-identically to the originals", async () => {
     const fulls = [await seed(10), await seed(11), await seed(12)];
@@ -87,8 +92,8 @@ describe("reconstructArchivedEnvelopesByRange", () => {
       expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(envelope, original)).toBe(true);
     }
     // all three slots fit in one batch → a single EL round-trip with all three hashes
-    expect(getPayloadBodiesByHash).toHaveBeenCalledTimes(1);
-    expect(getPayloadBodiesByHash).toHaveBeenCalledWith("gloas", [
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith([
       toRootHex(new Uint8Array(32).fill(10)),
       toRootHex(new Uint8Array(32).fill(11)),
       toRootHex(new Uint8Array(32).fill(12)),
@@ -104,9 +109,9 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
     expect(out.length).toBe(33);
     // 33 slots → 32 + 1, i.e. two EL round-trips, not 33
-    expect(getPayloadBodiesByHash).toHaveBeenCalledTimes(2);
-    expect(getPayloadBodiesByHash.mock.calls[0][1]).toHaveLength(32);
-    expect(getPayloadBodiesByHash.mock.calls[1][1]).toHaveLength(1);
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(2);
+    expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(32);
+    expect(getPayloadBodiesByHashV2.mock.calls[1][0]).toHaveLength(1);
   });
 
   it("respects the [gte, lt) bounds", async () => {
@@ -124,35 +129,34 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   it("skips slots with a pre-capella body shape (null withdrawals)", async () => {
     const full = await seed(10);
-    getPayloadBodiesByHash.mockResolvedValue([{transactions: full.message.payload.transactions, withdrawals: null}]);
+    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), withdrawals: null}]);
     const out = await fromAsync(range(10, 11));
     expect(out).toEqual([]);
   });
 
+  it("skips slots whose block access list the EL has pruned (null blockAccessList)", async () => {
+    const fulls = [await seed(10), await seed(11)];
+    getPayloadBodiesByHashV2.mockResolvedValue([bodyOf(fulls[0]), {...bodyOf(fulls[1]), blockAccessList: null}]);
+    const out = await fromAsync(range(10, 12));
+    expect(out.map((o) => o.slot)).toEqual([10]);
+  });
+
   it("wraps an EL transport error as ENGINE_UNAVAILABLE (transient)", async () => {
     await seed(10);
-    getPayloadBodiesByHash.mockRejectedValue(new Error("ECONNREFUSED"));
-    const err = await fromAsync(range(10, 11)).then(
-      () => null,
-      (e) => e as unknown
-    );
+    getPayloadBodiesByHashV2.mockRejectedValue(new Error("ECONNREFUSED"));
+    const err = await rejection(range(10, 11));
     expect(err).toBeInstanceOf(EnvelopeReconstructionError);
-    expect((err as EnvelopeReconstructionError).type.code).toBe(EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE);
-    expect((err as EnvelopeReconstructionError).isTransient()).toBe(true);
+    expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE);
+    expect(err?.isTransient()).toBe(true);
   });
 
   it("yields the first batch before an EL failure on the second batch surfaces", async () => {
     const fulls = [];
     for (let slot = 0; slot < 33; slot++) fulls.push(await seed(slot));
-    const byHash = new Map(
-      fulls.map((f) => [
-        toRootHex(f.message.payload.blockHash),
-        {transactions: f.message.payload.transactions, withdrawals: f.message.payload.withdrawals},
-      ])
-    );
+    const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), bodyOf(f)]));
     // First round-trip (32 hashes) succeeds, second (1 hash) fails — the real-world partial-response shape
-    getPayloadBodiesByHash
-      .mockImplementationOnce(async (_fork: string, hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null))
+    getPayloadBodiesByHashV2
+      .mockImplementationOnce(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null))
       .mockRejectedValueOnce(new Error("EL went away"));
 
     const yielded: number[] = [];
@@ -168,31 +172,18 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect((err as EnvelopeReconstructionError).isTransient()).toBe(true);
   });
 
-  it("throws when the EL returns transactions that don't match the stored root", async () => {
-    await seed(10);
-    getPayloadBodiesByHash.mockResolvedValue([
-      {transactions: [Uint8Array.from([0xff])], withdrawals: makeEnvelope(10).message.payload.withdrawals},
-    ]);
-    const err = await fromAsync(range(10, 11)).then(
-      () => null,
-      (e) => e as EnvelopeReconstructionError
-    );
-    expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.TRANSACTIONS_ROOT_MISMATCH);
-    expect(err?.isTransient()).toBe(false);
-  });
-
-  it("throws when the EL returns withdrawals that don't match the stored root", async () => {
-    const full = await seed(10);
-    getPayloadBodiesByHash.mockResolvedValue([
-      {
-        transactions: full.message.payload.transactions,
-        withdrawals: [{index: 99, validatorIndex: 99, address: new Uint8Array(20), amount: 1n}],
-      },
-    ]);
-    const err = await fromAsync(range(10, 11)).then(
-      () => null,
-      (e) => e as EnvelopeReconstructionError
-    );
-    expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.WITHDRAWALS_ROOT_MISMATCH);
-  });
+  it.each([
+    ["transactions", {transactions: [Uint8Array.from([0xff])]}],
+    ["withdrawals", {withdrawals: [{index: 99, validatorIndex: 99, address: new Uint8Array(20), amount: 1n}]}],
+    ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
+  ] as const)(
+    "throws PAYLOAD_ROOT_MISMATCH when the EL returns %s that don't match the archived root",
+    async (_f, override) => {
+      const full = await seed(10);
+      getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), ...override}]);
+      const err = await rejection(range(10, 11));
+      expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
+      expect(err?.isTransient()).toBe(false);
+    }
+  );
 });
