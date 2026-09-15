@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@chainsafe/lodestar-z": "catalog:",
-    "@chainsafe/ssz": "^1.6.3",
+    "@chainsafe/ssz": "^1.8.0",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",

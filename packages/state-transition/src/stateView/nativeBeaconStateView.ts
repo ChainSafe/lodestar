@@ -919,7 +919,11 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  getIndicesInPayloadTimelinessCommittee(_validatorIndex: ValidatorIndex, _slot: Slot): number[] {
+  getPayloadTimelinessCommittee(_slot: Slot): Uint32Array {
+    throw new Error("NativeBeaconStateView does not support Gloas");
+  }
+
+   getIndicesInPayloadTimelinessCommittee(_validatorIndex: ValidatorIndex, _slot: Slot): number[] {
     throw new Error("NativeBeaconStateView does not support Gloas");
   }
 

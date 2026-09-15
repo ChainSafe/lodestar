@@ -524,19 +524,6 @@ export async function importBlock(
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
-      const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
-      const finalizedEpoch = finalizedCheckpoint.epoch;
-      const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
-      if (finalizedEpoch > preFinalizedEpoch) {
-        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: toRootHex(finalizedCheckpoint.root),
-          epoch: finalizedCheckpoint.epoch,
-          state: toRootHex(checkpointState.hashTreeRoot()),
-          executionOptimistic: false,
-        });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
-        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
-      }
     }
   }
 

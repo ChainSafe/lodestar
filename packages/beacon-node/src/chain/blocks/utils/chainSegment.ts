@@ -22,7 +22,7 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  * - Verifies parent root + slot linearity
  * - For gloas: verifies bid.parentBlockHash matches the tracked execution hash; if not, the
  *   previous FULL envelope is treated as orphaned (segment continues as if previous slot was EMPTY)
- * - If an envelope exists for this slot: verifies it references this block's root
+ * - If an envelope exists for this slot (or the parent's slot): verifies it references this block's root
  * - Advances the tracked execution hash (FULL if envelope present, EMPTY if not)
  */
 export function assertLinearChainSegment(
@@ -48,6 +48,15 @@ export function assertLinearChainSegment(
   if (parentBlock !== null) {
     const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
     if (parentPayloadInput?.hasPayloadEnvelope()) {
+      // Envelopes are served by slot, the one at the parent's slot must reference the parent block. Without this
+      // check an envelope of a sibling block is taken as orphaned and only fails downstream in the payload import
+      if (parentPayloadInput.blockRootHex !== parentBlock.blockRoot) {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH,
+          envelopeBlockRoot: parentPayloadInput.blockRootHex,
+          blockRoot: parentBlock.blockRoot,
+        });
+      }
       const parentPayloadBlockHash = parentPayloadInput.getBlockHashHex();
       if (currentExecHash === parentPayloadBlockHash) {
         // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)

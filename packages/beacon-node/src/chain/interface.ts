@@ -290,8 +290,8 @@ export interface IBeaconChain {
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,
