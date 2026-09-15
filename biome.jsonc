@@ -230,7 +230,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/packages/**/test/**", "**/configs/**", "vitest.config.ts", "**/scripts/**"],
+      "includes": ["**/packages/**/test/**", "configs/**", "vitest.config.ts", "scripts/**"],
       "linter": {
         "rules": {
           // Switch off noUndeclaredDependencies for the files listed in "includes"
