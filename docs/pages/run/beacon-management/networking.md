@@ -102,7 +102,7 @@ Note that `--discoveryPort` and `--quicPort` are both UDP but must use different
 
 For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
 
-Lodestar listens on IPv6 (`::`) by default only if the host has a global IPv6 address. Discovery contacts dual-stack peers over IPv6 whenever IPv6 is bound, so a node that binds `::` without IPv6 connectivity cannot reach dual-stack bootnodes. Set `--listenAddress6` to force IPv6 on, or `--listenAddress` to force IPv4 only. Lodestar logs a warning at startup when it skips IPv6 for this reason. A persisted ENR loses its `ip6`, `udp6`, `tcp6` and `quic6` fields when no IPv6 listener is configured, unless they are set explicitly with `--enr.ip6` and friends, because peers prefer an advertised IPv6 endpoint and would keep dialing a dead one.
+Lodestar listens on IPv6 (`::`) by default only if the host has a global IPv6 address. Discovery contacts dual-stack peers over IPv6 whenever IPv6 is bound, so a node that binds `::` without IPv6 connectivity cannot reach dual-stack bootnodes. Set `--listenAddress6` to force IPv6 on, or `--listenAddress` without `--listenAddress6` to force IPv4 only. A persisted ENR loses its `ip6`, `udp6`, `tcp6` and `quic6` fields when no IPv6 listener is configured, unless any of `--enr.ip6`, `--enr.udp6`, `--enr.tcp6` or `--enr.quic6` is set, because peers prefer an advertised IPv6 endpoint and would keep dialing a dead one.
 
 ## Firewall Management
 
