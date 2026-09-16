@@ -4,15 +4,11 @@ import type {DataTransform} from "@libp2p/gossipsub/types";
 import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
 import snappyWasm from "@chainsafe/snappy-wasm";
-import {type CompositeTypeAny} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostGloas} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
-import {computeMaxGloasDataColumnSidecarSize} from "../../util/sszBytes.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
-import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics} from "./metrics.js";
-import {GossipTopicCache, getGossipSSZMaxSize, getGossipSSZType} from "./topic.js";
+import {GossipTopicCache} from "./topic.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -99,15 +95,10 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 }
 
 export class DataTransformSnappy implements DataTransform {
-  private readonly maxGloasDataColumnSidecarSize: number;
-
   constructor(
-    private readonly config: ChainForkConfig,
     private readonly gossipTopicCache: GossipTopicCache,
     private readonly metrics: Eth2GossipsubMetrics | null
-  ) {
-    this.maxGloasDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
-  }
+  ) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.
@@ -120,12 +111,11 @@ export class DataTransformSnappy implements DataTransform {
     const uncompressedDataLength = snappyWasm.decompress_len(data);
 
     const topic = this.gossipTopicCache.getTopic(topicStr);
-    const sszType = getGossipSSZType(topic);
-    const maxSize = this.getMaxSize(topic, sszType);
+    const {minSize, maxSize} = this.gossipTopicCache.getTypeSizes(topicStr);
     this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
-    if (uncompressedDataLength < sszType.minSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    if (uncompressedDataLength < minSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${minSize}`);
     }
     if (uncompressedDataLength > maxSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${maxSize}`);
@@ -144,8 +134,7 @@ export class DataTransformSnappy implements DataTransform {
    */
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     const topic = this.gossipTopicCache.getTopic(topicStr);
-    const sszType = getGossipSSZType(topic);
-    const maxSize = this.getMaxSize(topic, sszType);
+    const {maxSize} = this.gossipTopicCache.getTypeSizes(topicStr);
     this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > maxSize) {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${maxSize}`);
@@ -155,18 +144,5 @@ export class DataTransformSnappy implements DataTransform {
     const compressedData = Buffer.alloc(snappyWasm.max_compress_len(data.length));
     const compressedLen = encoder.compress_into(data, compressedData);
     return compressedData.subarray(0, compressedLen);
-  }
-
-  /**
-   * Maximum uncompressed byte length accepted for a gossip object on this topic.
-   *
-   * Post-gloas, data_column_sidecar is bounded by the blob-schedule-derived size (consensus-specs #5613)
-   * instead of the 4096-cell SSZ type max.
-   */
-  private getMaxSize(topic: GossipTopic, sszType: CompositeTypeAny): number {
-    if (isForkPostGloas(topic.boundary.fork) && topic.type === GossipType.data_column_sidecar) {
-      return Math.min(this.maxGloasDataColumnSidecarSize, this.config.MAX_PAYLOAD_SIZE);
-    }
-    return getGossipSSZMaxSize(topic, this.config.MAX_PAYLOAD_SIZE, sszType);
   }
 }

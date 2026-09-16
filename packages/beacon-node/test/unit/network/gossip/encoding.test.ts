@@ -36,7 +36,7 @@ describe("network / gossip / encoding / DataTransformSnappy", () => {
     boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
   } as const;
   const topicStr = stringifyGossipTopic(config, topic);
-  const transform = new DataTransformSnappy(config, new GossipTopicCache(config), null);
+  const transform = new DataTransformSnappy(new GossipTopicCache(config), null);
 
   it.each([
     {literal: "f00041", length: 1},

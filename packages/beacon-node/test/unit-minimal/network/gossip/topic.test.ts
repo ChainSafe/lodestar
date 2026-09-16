@@ -16,7 +16,7 @@ import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszByte
 
 describe("network / gossip / topic", () => {
   const encoding = GossipEncoding.ssz_snappy;
-  // schedule all forks so gloas/heze topics can be stringified (fork digests exist per scheduled boundary)
+  // Topic serialization requires a scheduled fork boundary to resolve its digest
   const beaconConfig = createBeaconConfig(
     {
       ...config,
@@ -31,11 +31,8 @@ describe("network / gossip / topic", () => {
     },
     ZERO_HASH
   );
-  const maxCol = computeMaxGloasDataColumnSidecarSize(config);
+  const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
 
-  // Gossip size limits are derived from the ssz types, ensure they match the preset p2p bounds for minimal as well.
-  // data_column_sidecar is the exception: it's bounded by the blob-schedule-derived size (consensus-specs #5613),
-  // enforced by DataTransformSnappy.
   for (const fork of [ForkName.gloas, ForkName.heze]) {
     it(`should match the preset p2p size bounds for ${fork} progressive objects`, () => {
       const boundary = {fork, epoch: 0};
@@ -47,7 +44,7 @@ describe("network / gossip / topic", () => {
             boundary,
             encoding,
           },
-          config.MAX_PAYLOAD_SIZE
+          config
         ),
         [GossipType.attester_slashing]: getGossipSSZMaxSize(
           {
@@ -55,7 +52,7 @@ describe("network / gossip / topic", () => {
             boundary,
             encoding,
           },
-          config.MAX_PAYLOAD_SIZE
+          config
         ),
         [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
           {
@@ -63,7 +60,7 @@ describe("network / gossip / topic", () => {
             boundary,
             encoding,
           },
-          config.MAX_PAYLOAD_SIZE
+          config
         ),
       }).toEqual({
         [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
@@ -82,12 +79,12 @@ describe("network / gossip / topic", () => {
       } as const;
       const topicStr = stringifyGossipTopic(beaconConfig, topic);
       const gossipTopicCache = new GossipTopicCache(beaconConfig);
-      const transform = new DataTransformSnappy(beaconConfig, gossipTopicCache, null);
+      const transform = new DataTransformSnappy(gossipTopicCache, null);
       gossipTopicCache.setTopic(topicStr, topic);
 
-      expect(() => transform.outboundTransform(topicStr, new Uint8Array(maxCol))).not.toThrow();
-      expect(() => transform.outboundTransform(topicStr, new Uint8Array(maxCol + 1))).toThrow(
-        `ssz_snappy encoded data length ${maxCol + 1}`
+      expect(() => transform.outboundTransform(topicStr, new Uint8Array(maxDataColumnSidecarSize))).not.toThrow();
+      expect(() => transform.outboundTransform(topicStr, new Uint8Array(maxDataColumnSidecarSize + 1))).toThrow(
+        `ssz_snappy encoded data length ${maxDataColumnSidecarSize + 1}`
       );
     });
   }
