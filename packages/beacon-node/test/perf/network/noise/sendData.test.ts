@@ -22,14 +22,8 @@ describe("network / noise / sendData", () => {
   ]) {
     bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
-      // Encrypting and streaming 1000 messages allocates megabytes of short-lived buffers per run
-      // (up to ~64MB for the 65536B case), so timing is dominated by GC pauses and event-loop
-      // scheduling on the shared benchmark runner rather than the noise send path itself. Observed
-      // 6-7x swings on unrelated commits for the large (>=4096B) messages, worsened by the rolling
-      // per-commit baseline where one noisy run poisons the next. The default 3x gate produces false
-      // "Performance regression" failures on those sizes, so raise the threshold only there while
-      // keeping the default gate for the stable smaller messages (256B-2048B), where a real
-      // regression must still fail CI. undefined defers to the .benchrc.yaml default (3).
+      // Large messages allocate enough short-lived buffers (~64MB at 65536B) that GC/event-loop
+      // noise on the shared runner dominates timing, causing false regressions on those sizes.
       threshold: messageLength >= 2 ** 12 ? 10 : undefined,
       beforeEach: async () => {
         const privateKeyA = await generateKeyPair("secp256k1");
