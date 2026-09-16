@@ -2,6 +2,7 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {
@@ -20,11 +21,12 @@ import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
+import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {DroppedItemReason, PendingBlockType} from "../../sync/types.js";
+import {DownloadResult, DroppedItemReason, FetchResult, PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -707,15 +709,42 @@ export function createLodestarMetrics(
         buckets: [0, 1, 2, 4],
       }),
       // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
-      fetchTimeSec: register.histogram<{result: string}>({
+      fetchTime: register.histogram<{result: FetchResult}>({
         name: "lodestar_sync_unknown_block_fetch_time_seconds",
         help: "Fetch time from start to done (either success or failure)",
         labelNames: ["result"],
         buckets: [0, 1, 2, 4, 8],
       }),
-      fetchPeers: register.gauge<{result: string}>({
+      fetchPeers: register.gauge<{result: FetchResult}>({
         name: "lodestar_sync_unknown_block_fetch_peers_count",
         help: "Number of peers that node fetched from",
+        labelNames: ["result"],
+      }),
+      downloadedPayloadsResult: register.counter<{result: DownloadResult}>({
+        name: "lodestar_sync_unknown_payload_download_result_total",
+        help: "Total number of downloadPayload results in UnknownBlockSync",
+        labelNames: ["result"],
+      }),
+      elapsedTimeTillPayloadReceived: register.histogram({
+        name: "lodestar_sync_unknown_payload_elapsed_time_till_received_seconds",
+        help: "Time elapsed between payload slot time and the time payload received via unknown block sync",
+        buckets: [6, 8, 10, 12],
+      }),
+      payloadFetchBegin: register.histogram({
+        name: "lodestar_sync_unknown_payload_fetch_begin_since_slot_start_seconds",
+        help: "Time into the slot when the payload was fetched",
+        buckets: [6, 8, 10, 12],
+      }),
+      // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
+      payloadFetchTime: register.histogram<{result: FetchResult}>({
+        name: "lodestar_sync_unknown_payload_fetch_time_seconds",
+        help: "Payload fetch time from start to done (either success or failure)",
+        labelNames: ["result"],
+        buckets: [0, 1, 2, 4, 8],
+      }),
+      payloadFetchPeers: register.gauge<{result: FetchResult}>({
+        name: "lodestar_sync_unknown_payload_fetch_peers_count",
+        help: "Number of peers that node fetched the payload from",
         labelNames: ["result"],
       }),
       downloadByRoot: {
@@ -1047,6 +1076,11 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_set_head_after_cutoff_total",
         help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
       }),
+      lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
+        name: "lodestar_import_block_late_canonical_total",
+        help: "Total finalized-canonical blocks this node imported after the attestation cutoff; reason distinguishes this node's processing lag (slow_import) from late reception (late_receive)",
+        labelNames: ["reason"],
+      }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
@@ -1350,11 +1384,6 @@ export function createLodestarMetrics(
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
-          labelNames: ["insertOutcome"],
-        }),
-        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
         }),
         apiValidationTime: register.histogram({
@@ -2098,12 +2127,67 @@ export function createLodestarMetrics(
       }),
       dbSizeTotal: register.gauge({
         name: "lodestar_db_size_bytes_total",
-        help: "Approximate number of bytes of file system space used by db",
+        help: "Approximate number of bytes of file system space used by LevelDB",
       }),
       dbApproximateSizeTime: register.histogram({
         name: "lodestar_db_approximate_size_time_seconds",
         help: "Time to approximate db size in seconds",
         buckets: [0.0001, 0.001, 0.01, 0.1, 1],
+      }),
+    },
+
+    flatFileStore: {
+      operationDuration: {
+        read: register.histogram({
+          name: "lodestar_flat_file_store_read_duration_seconds",
+          help: "Duration of flat file store reads in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        write: register.histogram({
+          name: "lodestar_flat_file_store_write_duration_seconds",
+          help: "Duration of flat file store writes in seconds",
+          buckets: [0.005, 0.01, 0.05, 0.1, 0.5, 1],
+        }),
+        delete: register.histogram({
+          name: "lodestar_flat_file_store_delete_duration_seconds",
+          help: "Duration of flat file store deletions in seconds",
+          buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05],
+        }),
+        prune: register.histogram({
+          name: "lodestar_flat_file_store_prune_duration_seconds",
+          help: "Duration of flat file store pruning in seconds",
+          buckets: [0.0005, 0.01, 0.05, 0.5, 5, 30],
+        }),
+      },
+      operationErrors: register.counter<{operation: FlatFileStoreOperation}>({
+        name: "lodestar_flat_file_store_operation_errors_total",
+        help: "Total count of failed flat file store operations",
+        labelNames: ["operation"],
+      }),
+      readBytes: register.counter({
+        name: "lodestar_flat_file_store_read_bytes_total",
+        help: "Total bytes read from flat file storage",
+      }),
+      writeBytes: register.counter({
+        name: "lodestar_flat_file_store_write_bytes_total",
+        help: "Total bytes written to flat file storage",
+      }),
+      prunedDirectories: register.counter({
+        name: "lodestar_flat_file_store_pruned_directories_total",
+        help: "Total count of slot directories pruned from flat file storage",
+      }),
+      slotIndexSize: register.gauge({
+        name: "lodestar_flat_file_store_indexed_slots",
+        help: "Count of indexed flat file slot directories, including empty directories awaiting pruning",
+      }),
+      startupDuration: register.histogram({
+        name: "lodestar_flat_file_store_startup_duration_seconds",
+        help: "Duration of flat file store slot index reconstruction in seconds",
+        buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 300],
+      }),
+      startupErrors: register.counter({
+        name: "lodestar_flat_file_store_startup_errors_total",
+        help: "Total count of flat file store startup failures",
       }),
     },
 

@@ -1,9 +1,9 @@
 import {FastifyInstance} from "fastify";
-import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {fromHex, sleep} from "@lodestar/utils";
+import {defer, fromHex, sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {
   BeaconEvent,
@@ -62,6 +62,28 @@ describe("beacon / events", () => {
       },
     });
     expect(eventSerdes.fromJson(EventType.payloadAttributes, json)).toEqual(message);
+  });
+
+  it("Closes the server subscription when the client aborts", async () => {
+    const received = defer<void>();
+    const disconnected = defer<void>();
+    const onClose = vi.fn();
+    mockApi.eventstream.mockImplementation(async ({signal, onEvent}) => {
+      signal.addEventListener("abort", () => disconnected.resolve(), {once: true});
+      onEvent({type: EventType.head, message: eventTestData[EventType.head]});
+    });
+
+    await getClient(config, baseUrl).eventstream({
+      topics: [EventType.head, EventType.proposerPreferences],
+      signal: controller.signal,
+      onEvent: () => received.resolve(),
+      onClose,
+    });
+    await received.promise;
+    controller.abort();
+    await disconnected.promise;
+
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("Receive events", async () => {

@@ -41,6 +41,18 @@ export class AttestationByTargetRepository {
     return attestations.map((attestation) => this.type.deserialize(attestation));
   }
 
+  /** Attestation with the highest target epoch recorded for `pubkey`, or null if none */
+  async getLatest(pubkey: BLSPubkey): Promise<SlashingProtectionAttestation | null> {
+    const [att] = await this.db.values({
+      gte: this.encodeKey(pubkey, 0),
+      lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
+      reverse: true,
+      limit: 1,
+      bucketId: this.bucketId,
+    });
+    return att ? this.type.deserialize(att) : null;
+  }
+
   async get(pubkey: BLSPubkey, targetEpoch: Epoch): Promise<SlashingProtectionAttestation | null> {
     const att = await this.db.get(this.encodeKey(pubkey, targetEpoch), this.dbReqOpts);
     return att && this.type.deserialize(att);

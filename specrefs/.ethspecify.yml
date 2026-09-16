@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.14
+version: v1.7.0-beta.0
 style: full
 
 specrefs:
@@ -111,13 +111,17 @@ exceptions:
     - PayloadAttributes#heze
     - Store#heze
 
-  presets: []
+  presets:
+    # TODO GLOAS: Remove these exceptions once the spec pin includes consensus-specs#5613
+    - MAX_DATA_COLUMN_SIDECAR_SIZE#gloas
+    - MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE#gloas
 
   functions:
     # phase0
     - bytes_to_uint64#phase0
     - compute_merkle_branch_root#phase0
     - compute_time_at_slot_ms#phase0
+    - is_future_epoch#phase0
     - is_non_strict_superset#phase0
     - is_within_slot_range#phase0
     - validate_attester_slashing_gossip#phase0
