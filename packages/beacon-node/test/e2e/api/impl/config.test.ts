@@ -13,7 +13,7 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PAYLOAD_STATUS_VALID",
   "PAYLOAD_STATUS_INVALIDATED",
   "PAYLOAD_STATUS_NOT_VALIDATED",
-  // The pinned v1.7.0-beta.0 still includes these; remove the exclusions once the pin includes consensus-specs#5613.
+  // TODO GLOAS: Remove these exclusions once the spec pin includes consensus-specs#5613.
   "MAX_DATA_COLUMN_SIDECAR_SIZE",
   "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
 ]);
