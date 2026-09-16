@@ -54,7 +54,6 @@ Gossipsub
 Grafana
 Grandine
 Gwei
-hostname
 HTTPS
 HackMD
 Hashicorp
@@ -183,6 +182,7 @@ heapdump
 heaptrack
 holesky
 hoodi
+hostname
 interop
 js
 keymanager
