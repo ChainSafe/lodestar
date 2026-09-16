@@ -97,7 +97,7 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   });
 });
 
-function createBuiltPayload<F extends ForkPostGloas>(fork: F): BuiltPayload<F> {
+function createBuiltPayload(fork: ForkPostGloas): BuiltPayload {
   const forkTypes = fork === ForkName.heze ? ssz.heze : ssz.gloas;
   const executionPayload = forkTypes.ExecutionPayload.defaultValue();
   executionPayload.slotNumber = 10;
@@ -114,7 +114,7 @@ function createBuiltPayload<F extends ForkPostGloas>(fork: F): BuiltPayload<F> {
     executionRequests: forkTypes.ExecutionRequests.defaultValue(),
     blobsBundle,
     executionPayloadValue: 1n,
-  } as BuiltPayload<F>;
+  };
 }
 
 function bidIdentity(payload: BuiltPayload): SelectedBidIdentity {
