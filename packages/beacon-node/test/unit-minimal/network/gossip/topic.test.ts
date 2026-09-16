@@ -16,7 +16,7 @@ import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszByte
 
 describe("network / gossip / topic", () => {
   const encoding = GossipEncoding.ssz_snappy;
-  // Topic serialization requires a scheduled fork boundary to resolve its digest.
+  // Topic serialization requires a scheduled fork boundary to resolve its digest
   const beaconConfig = createBeaconConfig(
     {
       ...config,
