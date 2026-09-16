@@ -63,7 +63,7 @@ function maxCompressedLen(n: number): number {
  * burst of 128 data column sidecars from a block with ~20 blobs exceeds.
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_message_size
  */
-export function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
+function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
   return Math.max(maxCompressedLen(config.MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024);
 }
 
@@ -550,7 +550,7 @@ function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
  * is removed from all topics and meshes but the libp2p connection is left open, so the peer is never re-added and no
  * gossip flows in either direction until the connection drops on its own. Hang up so the peer manager can reconnect.
  */
-export function hangUpOnPeerReadStreamError(
+function hangUpOnPeerReadStreamError(
   gossipsub: Pick<GossipSubInternal, "handlePeerReadStreamError">,
   libp2p: Pick<Libp2p, "hangUp">,
   logger: Logger
