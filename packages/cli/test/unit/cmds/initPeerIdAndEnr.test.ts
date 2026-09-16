@@ -87,7 +87,6 @@ describe("overwriteEnrWithCliArgs", () => {
     const enr = SignableENR.createFromPrivateKey(privateKey);
     // Simulate a persisted ENR that already had quic advertised
     enr.quic = 9001;
-    enr.quic6 = 9002;
     const logger = testLogger();
 
     // No quicPort arg, no enr.quic arg — should fall back to existing enr value
@@ -98,7 +97,64 @@ describe("overwriteEnrWithCliArgs", () => {
     );
 
     expect(enr.quic).toBe(9001);
-    expect(enr.quic6).toBe(9002);
+  });
+
+  it("should clear persisted IPv6 fields when no IPv6 listener is configured", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+    const enr = SignableENR.createFromPrivateKey(privateKey);
+    enr.ip = "127.0.0.1";
+    enr.ip6 = "::1";
+    enr.udp6 = 9002;
+    enr.tcp6 = 9002;
+    enr.quic6 = 9003;
+    const logger = testLogger();
+
+    overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
+
+    expect(enr.ip).toBe("127.0.0.1");
+    expect(enr.ip6).toBeUndefined();
+    expect(enr.udp6).toBeUndefined();
+    expect(enr.tcp6).toBeUndefined();
+    expect(enr.quic6).toBeUndefined();
+  });
+
+  it("should keep persisted IPv6 fields when an IPv6 listener is configured", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+    const enr = SignableENR.createFromPrivateKey(privateKey);
+    enr.ip6 = "::1";
+    const logger = testLogger();
+
+    overwriteEnrWithCliArgs(
+      enr,
+      {listenAddress: "0.0.0.0", listenAddress6: "::", port: 9000, nat: true} as unknown as BeaconArgs,
+      logger
+    );
+
+    expect(enr.ip6).toBe("::1");
+    expect(enr.udp6).toBe(9000);
+    expect(enr.tcp6).toBe(9000);
+    expect(enr.quic6).toBe(9001);
+  });
+
+  it("should keep explicit enr IPv6 fields without an IPv6 listener", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+    const enr = SignableENR.createFromPrivateKey(privateKey);
+    const logger = testLogger();
+
+    overwriteEnrWithCliArgs(
+      enr,
+      {
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        "enr.ip6": "2001:db8::1",
+        "enr.udp6": 9002,
+        nat: true,
+      } as unknown as BeaconArgs,
+      logger
+    );
+
+    expect(enr.ip6).toBe("2001:db8::1");
+    expect(enr.udp6).toBe(9002);
   });
 });
 

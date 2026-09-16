@@ -9,7 +9,7 @@ import {SignableENR} from "@chainsafe/enr";
 import {defaultOptions} from "@lodestar/beacon-node";
 import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPrivateKey} from "../../config/index.js";
-import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
+import {hasGlobalIPv6Address, parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
 
@@ -67,18 +67,27 @@ export function overwriteEnrWithCliArgs(
   opts?: {newEnr?: boolean; bootnode?: boolean}
 ): void {
   const preSeq = enr.seq;
-  const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
+  const {port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
   const tcp = args.tcp ?? defaultOptions.network.tcp;
   const quic = args.quic ?? defaultOptions.network.quic;
+  // Peers prefer an advertised IPv6 endpoint, so a persisted one must not outlive its listener
+  const advertiseIp6 =
+    listenAddress6 !== undefined ||
+    [args["enr.ip6"], args["enr.udp6"], args["enr.tcp6"], args["enr.quic6"]].some((v) => v !== undefined);
+  if (!advertiseIp6 && (enr.ip6 !== undefined || enr.udp6 !== undefined)) {
+    logger.warn(
+      "Clearing ENR ip6, udp6, tcp6 and quic6: no IPv6 listener is configured. Set --listenAddress6 or --enr.ip6 to keep them"
+    );
+  }
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
-  maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
+  maybeUpdateEnr(enr, "ip6", advertiseIp6 ? (args["enr.ip6"] ?? enr.ip6) : undefined);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
-  maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
+  maybeUpdateEnr(enr, "udp6", advertiseIp6 ? (args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6) : undefined);
   if (!opts?.bootnode) {
     maybeUpdateEnr(enr, "tcp", tcp ? (args["enr.tcp"] ?? port ?? enr.tcp) : undefined);
-    maybeUpdateEnr(enr, "tcp6", tcp ? (args["enr.tcp6"] ?? port6 ?? enr.tcp6) : undefined);
+    maybeUpdateEnr(enr, "tcp6", tcp && advertiseIp6 ? (args["enr.tcp6"] ?? port6 ?? enr.tcp6) : undefined);
     maybeUpdateEnr(enr, "quic", quic ? (args["enr.quic"] ?? quicPort ?? enr.quic) : undefined);
-    maybeUpdateEnr(enr, "quic6", quic ? (args["enr.quic6"] ?? quicPort6 ?? enr.quic6) : undefined);
+    maybeUpdateEnr(enr, "quic6", quic && advertiseIp6 ? (args["enr.quic6"] ?? quicPort6 ?? enr.quic6) : undefined);
   }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
@@ -142,6 +151,12 @@ export async function initPrivateKeyAndEnr(
   bootnode?: boolean
 ): Promise<{privateKey: PrivateKey; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
+
+  if (!args.listenAddress && !args.listenAddress6 && !hasGlobalIPv6Address()) {
+    logger.warn(
+      "Not listening on IPv6: no global IPv6 address found on this host. Silence this warning with --listenAddress, or bind IPv6 with --listenAddress6"
+    );
+  }
 
   const newPrivateKeyAndENR = async (): Promise<{privateKey: PrivateKey; enr: SignableENR}> => {
     const privateKey = await generateKeyPair("secp256k1");
