@@ -54,6 +54,7 @@ Gossipsub
 Grafana
 Grandine
 Gwei
+hostname
 HTTPS
 HackMD
 Hashicorp
