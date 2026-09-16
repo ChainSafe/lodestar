@@ -10,7 +10,7 @@ import {NativeIntent} from "../../../../src/network/core/native/intent.js";
 import {defaultNetworkOptions} from "../../../../src/network/options.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
-async function fixture(subscribeAllSubnets = false, fuluEpoch = 0) {
+async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = true) {
   const config = createBeaconConfig(
     {
       ALTAIR_FORK_EPOCH: 0,
@@ -47,13 +47,15 @@ async function fixture(subscribeAllSubnets = false, fuluEpoch = 0) {
     ownerSequence: 1n,
     changed: true,
   }));
+  const updateStatus = vi.fn<NativeNetworkApplicationRuntime["updateStatus"]>(async () => undefined);
   const failed = vi.fn();
-  const intent = new NativeIntent({applyIntent}, application, network, clock, opts, 16, status, failed);
-  await intent.activate(status, config.CUSTODY_REQUIREMENT);
+  const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, 16, status, failed);
+  if (activate) await intent.activate(status, config.CUSTODY_REQUIREMENT);
   return {
     config,
     clock,
     applyIntent,
+    updateStatus,
     intent,
     failed,
     latest: () => {
@@ -103,6 +105,7 @@ describe("native local intent transactions", () => {
       node.applyIntent.mockRejectedValueOnce(new Error("native capacity"));
       await expect(node.intent.custody(16)).rejects.toThrow("native capacity");
       await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
+      await node.intent.coreTopics(false);
       expect(node.latest().update.local.metadata.custodyGroupCount).toBe(BigInt(node.config.CUSTODY_REQUIREMENT));
     } finally {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
@@ -118,9 +121,10 @@ describe("native local intent transactions", () => {
       const changed = node.intent.updateStatus(status);
       status.headRoot.fill(9);
       await changed;
-      expect(node.latest().update.local.status.headRoot).toEqual(new Uint8Array(32).fill(7));
+      expect(node.updateStatus.mock.calls.at(-1)?.[0].headRoot).toEqual(new Uint8Array(32).fill(7));
       const duty = {slot: 2, subnet: 1, validatorIndex: 0, isAggregator: true};
       await node.intent.committee([duty], false);
+      expect(node.latest().update.local.status.headRoot).toEqual(new Uint8Array(32).fill(7));
       await node.intent.committee([duty], true);
       expect(node.latest().subscriptions.some(({name}) => name.includes("/sync_committee_1/"))).toBe(true);
       node.clock.setSlot(3);
@@ -161,6 +165,138 @@ describe("native local intent transactions", () => {
     } finally {
       node.intent.close();
     }
+  });
+
+  it("uses Status-only commands within a slot and retains their acknowledged Status for full intents", async () => {
+    const node = await fixture();
+    try {
+      await node.intent.coreTopics(true);
+      await node.intent.committee([{slot: 1, subnet: 1, validatorIndex: 0, isAggregator: true}], false);
+      const before = structuredClone(node.latest());
+      const calls = node.applyIntent.mock.calls.length;
+      const status = ssz.fulu.Status.defaultValue();
+      status.headSlot = 12;
+      await node.intent.updateStatus(status);
+      status.headSlot = 8;
+      await node.intent.updateStatus(status);
+      expect(node.applyIntent).toHaveBeenCalledTimes(calls);
+      expect(node.latest()).toEqual(before);
+      expect(node.updateStatus.mock.calls.map(([value]) => value.headSlot)).toEqual([12n, 8n]);
+      await node.intent.coreTopics(false);
+      expect(node.latest().update.local.status.headSlot).toBe(8n);
+      expect(node.latest().demand).toEqual(before.demand);
+      expect(node.latest().update.local.metadata).toEqual(before.update.local.metadata);
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("orders Status and full intent acknowledgements together and rolls back rejected Status", async () => {
+    const node = await fixture();
+    const held = defer<void>();
+    try {
+      node.updateStatus.mockImplementationOnce(() => held.promise);
+      const first = {...ssz.fulu.Status.defaultValue(), headSlot: 10};
+      const second = {...ssz.fulu.Status.defaultValue(), headSlot: 11};
+      const updating = node.intent.updateStatus(first);
+      const subscribing = node.intent.coreTopics(true);
+      const updatingAgain = node.intent.updateStatus(second);
+      await Promise.resolve();
+      expect(node.updateStatus).toHaveBeenCalledTimes(1);
+      expect(node.applyIntent).toHaveBeenCalledTimes(1);
+      held.resolve();
+      await Promise.all([updating, subscribing, updatingAgain]);
+      expect(node.latest().update.local.status.headSlot).toBe(10n);
+      expect(node.updateStatus.mock.calls[1][0].headSlot).toBe(11n);
+      node.updateStatus.mockRejectedValueOnce(new Error("status rejected"));
+      const rejected = node.intent.updateStatus({...second, headSlot: 99});
+      const removing = node.intent.coreTopics(false);
+      await expect(rejected).rejects.toThrow("status rejected");
+      await removing;
+      expect(node.latest().update.local.status.headSlot).toBe(11n);
+      expect(node.failed).not.toHaveBeenCalled();
+    } finally {
+      held.resolve();
+      node.intent.close();
+    }
+  });
+
+  it("refreshes the clock fork before Status at a new slot even when the head remains behind", async () => {
+    const node = await fixture(false, 1);
+    try {
+      const status = {...ssz.fulu.Status.defaultValue(), headSlot: 0};
+      node.clock.setSlot(SLOTS_PER_EPOCH);
+      await node.intent.updateStatus(status);
+      expect(node.updateStatus).not.toHaveBeenCalled();
+      expect(node.applyIntent.mock.calls.at(-1)?.[1]).toBe(BigInt(SLOTS_PER_EPOCH));
+      expect(node.latest().update.local.fork.fork).toBe("fulu");
+      expect(node.latest().update.local.status.headSlot).toBe(0n);
+      const digest = node.config.forkBoundary2ForkDigest(node.config.getForkBoundaryAtEpoch(1));
+      expect(node.latest().update.local.status.forkDigest).toEqual(digest);
+      const calls = node.applyIntent.mock.calls.length;
+      await node.intent.updateStatus({...status, headSlot: 1});
+      expect(node.applyIntent).toHaveBeenCalledTimes(calls);
+      expect(node.updateStatus.mock.calls[0][0]).toMatchObject({
+        forkDigest: digest,
+        earliestAvailableSlot: 0n,
+        headSlot: 1n,
+      });
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("retries a failed slot refresh before allowing a narrow Status update", async () => {
+    const node = await fixture();
+    try {
+      node.clock.setSlot(1);
+      node.applyIntent.mockRejectedValueOnce(new Error("refresh rejected"));
+      await expect(node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 20})).rejects.toThrow(
+        "refresh rejected"
+      );
+      await node.intent.coreTopics(true);
+      expect(node.latest().update.local.status.headSlot).toBe(0n);
+      expect(node.applyIntent.mock.calls.at(-1)?.[1]).toBe(1n);
+      expect(node.updateStatus).not.toHaveBeenCalled();
+      await node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 10});
+      expect(node.updateStatus).toHaveBeenCalledTimes(1);
+      expect(node.updateStatus.mock.calls[0][0].headSlot).toBe(10n);
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("does not activate a prepared intent through Status or enqueue malformed caller data", async () => {
+    const node = await fixture(false, 0, false);
+    try {
+      await expect(node.intent.updateStatus(ssz.fulu.Status.defaultValue())).rejects.toThrow("not activated");
+      expect(node.applyIntent).not.toHaveBeenCalled();
+      expect(node.updateStatus).not.toHaveBeenCalled();
+      const invalid = ssz.fulu.Status.defaultValue();
+      invalid.headRoot = new Uint8Array(31);
+      expect(() => node.intent.updateStatus(invalid)).toThrow("status root length");
+      invalid.headRoot = new Uint8Array(32);
+      invalid.headSlot = -1;
+      expect(() => node.intent.updateStatus(invalid)).toThrow("head slot");
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("rejects mixed queued commands when closed during a narrow Status acknowledgement", async () => {
+    const node = await fixture();
+    const held = defer<void>();
+    node.updateStatus.mockImplementationOnce(() => held.promise);
+    const pending = [
+      node.intent.updateStatus(ssz.fulu.Status.defaultValue()),
+      node.intent.coreTopics(true),
+      node.intent.updateStatus(ssz.fulu.Status.defaultValue()),
+    ].map((promise) => promise.catch((error: unknown) => error));
+    node.intent.close();
+    held.resolve();
+    expect((await Promise.all(pending)).every((error) => error instanceof Error)).toBe(true);
+    expect(node.updateStatus).toHaveBeenCalledTimes(1);
+    expect(node.applyIntent).toHaveBeenCalledTimes(1);
   });
 
   it("bounds waiters and rejects queued work during close without waiting for native completion", async () => {

@@ -38,7 +38,8 @@ type Desired = {
   syncDuties: Map<number, number>;
 };
 type Change = (desired: Desired) => void;
-type Command = {change: Change; resolve: () => void; reject: (error: unknown) => void};
+type Update = {type: "intent"; change: Change} | {type: "status"; status: Status};
+type Command = Update & {resolve: () => void; reject: (error: unknown) => void};
 
 function snapshotStatus(status: Status): Status {
   const copyRoot = (value: Uint8Array, length: number): Uint8Array => {
@@ -78,8 +79,9 @@ export class NativeIntent {
   private busy = false;
   private dirty = false;
   private closed = false;
+  private appliedSlot: number | null = null;
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "applyIntent">,
+    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "applyIntent" | "updateStatus">,
     private readonly application: NativeApplicationConfig,
     private readonly network: NetworkConfig,
     private readonly clock: IClock,
@@ -100,52 +102,61 @@ export class NativeIntent {
   }
   activate(status: Status, custodyGroupCount: number): Promise<void> {
     const copy = snapshotStatus(status);
-    return this.enqueue((state) => {
-      state.status = copy;
-      state.custodyGroupCount = custodyGroupCount;
+    return this.enqueue({
+      type: "intent",
+      change: (state) => {
+        state.status = copy;
+        state.custodyGroupCount = custodyGroupCount;
+      },
     });
   }
   updateStatus(status: Status): Promise<void> {
-    const copy = snapshotStatus(status);
-    return this.enqueue((state) => {
-      state.status = copy;
-    });
+    return this.enqueue({type: "status", status: snapshotStatus(status)});
   }
   coreTopics(enabled: boolean): Promise<void> {
-    return this.enqueue((state) => {
-      state.coreTopics = enabled;
+    return this.enqueue({
+      type: "intent",
+      change: (state) => {
+        state.coreTopics = enabled;
+      },
     });
   }
   custody(count: number): Promise<void> {
     nativeInteger(count, "custody count", this.network.config.NUMBER_OF_CUSTODY_GROUPS, 1);
-    return this.enqueue((state) => {
-      state.custodyGroupCount = count;
-      state.custodyTopics = true;
+    return this.enqueue({
+      type: "intent",
+      change: (state) => {
+        state.custodyGroupCount = count;
+        state.custodyTopics = true;
+      },
     });
   }
   committee(subscriptions: CommitteeSubscription[], sync: boolean): Promise<void> {
     const copies = snapshotCommitteeSubscriptions(subscriptions, sync);
-    return this.enqueue((state) => {
-      for (const {slot, subnet, isAggregator} of copies) {
-        if (sync) {
-          state.syncDuties.set(subnet, Math.max(state.syncDuties.get(subnet) ?? 0, slot));
-        } else {
-          state.attDemand.set(subnet, Math.max(state.attDemand.get(subnet) ?? 0, slot + 1));
-          if (isAggregator) {
-            let subnets = state.attDuties.get(slot);
-            if (!subnets) {
-              if (state.attDuties.size >= 2 * SLOTS_PER_EPOCH)
-                throw new NativeNetworkError({
-                  code: NativeNetworkErrorCode.CAPACITY,
-                  resource: "aggregator duty slots",
-                });
-              subnets = new Set();
-              state.attDuties.set(slot, subnets);
+    return this.enqueue({
+      type: "intent",
+      change: (state) => {
+        for (const {slot, subnet, isAggregator} of copies) {
+          if (sync) {
+            state.syncDuties.set(subnet, Math.max(state.syncDuties.get(subnet) ?? 0, slot));
+          } else {
+            state.attDemand.set(subnet, Math.max(state.attDemand.get(subnet) ?? 0, slot + 1));
+            if (isAggregator) {
+              let subnets = state.attDuties.get(slot);
+              if (!subnets) {
+                if (state.attDuties.size >= 2 * SLOTS_PER_EPOCH)
+                  throw new NativeNetworkError({
+                    code: NativeNetworkErrorCode.CAPACITY,
+                    resource: "aggregator duty slots",
+                  });
+                subnets = new Set();
+                state.attDuties.set(slot, subnets);
+              }
+              subnets.add(subnet);
             }
-            subnets.add(subnet);
           }
         }
-      }
+      },
     });
   }
   refresh(): void {
@@ -153,7 +164,7 @@ export class NativeIntent {
     this.dirty = true;
     this.start();
   }
-  private enqueue(change: Change): Promise<void> {
+  private enqueue(update: Update): Promise<void> {
     if (this.closed)
       return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"}));
     if (this.commands.length >= 16)
@@ -161,7 +172,7 @@ export class NativeIntent {
         new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "local intent waiters"})
       );
     const completion = defer<void>();
-    this.commands.push({change, resolve: () => completion.resolve(), reject: completion.reject});
+    this.commands.push({...update, resolve: () => completion.resolve(), reject: completion.reject});
     this.start();
     return completion.promise;
   }
@@ -177,24 +188,45 @@ export class NativeIntent {
     for (let turn = 0; turn < 16 && !this.closed; turn++) {
       const command = this.commands.shift();
       if (!command && !this.dirty) return;
+      const refresh = this.dirty;
       this.dirty = false;
       try {
         const slot = this.clock.currentSlot;
-        const desired: Desired = {
-          ...this.desired,
-          attDuties: new Map(Array.from(this.desired.attDuties, ([slot, subnets]) => [slot, new Set(subnets)])),
-          attDemand: new Map(this.desired.attDemand),
-          syncDuties: new Map(this.desired.syncDuties),
-        };
-        for (const key of desired.attDuties.keys()) if (key < slot) desired.attDuties.delete(key);
-        for (const [key, expiry] of desired.attDemand) if (expiry < slot) desired.attDemand.delete(key);
-        const epochSlot = Math.floor(slot / SLOTS_PER_EPOCH) * SLOTS_PER_EPOCH;
-        for (const [key, expiry] of desired.syncDuties) if (expiry < epochSlot) desired.syncDuties.delete(key);
-        command?.change(desired);
-        const intent = this.render(desired, slot);
-        await this.runtime.applyIntent(intent, BigInt(Math.max(0, slot)));
-        if (this.closed) throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
-        this.desired = desired;
+        if (command?.type === "status" && this.appliedSlot === null)
+          throw new NativeNetworkError({
+            code: NativeNetworkErrorCode.UNAVAILABLE,
+            resource: "local intent not activated",
+          });
+        if (command?.type === "status" && this.appliedSlot === slot && !refresh) {
+          const status = nativeLocalState(
+            this.network.config,
+            command.status,
+            slot,
+            this.desired.custodyGroupCount
+          ).status;
+          await this.runtime.updateStatus(status);
+          if (this.closed)
+            throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
+          this.desired.status = command.status;
+        } else {
+          const desired: Desired = {
+            ...this.desired,
+            attDuties: new Map(Array.from(this.desired.attDuties, ([slot, subnets]) => [slot, new Set(subnets)])),
+            attDemand: new Map(this.desired.attDemand),
+            syncDuties: new Map(this.desired.syncDuties),
+          };
+          for (const key of desired.attDuties.keys()) if (key < slot) desired.attDuties.delete(key);
+          for (const [key, expiry] of desired.attDemand) if (expiry < slot) desired.attDemand.delete(key);
+          const epochSlot = Math.floor(slot / SLOTS_PER_EPOCH) * SLOTS_PER_EPOCH;
+          for (const [key, expiry] of desired.syncDuties) if (expiry < epochSlot) desired.syncDuties.delete(key);
+          if (command?.type === "status") desired.status = command.status;
+          else command?.change(desired);
+          await this.runtime.applyIntent(this.render(desired, slot), BigInt(Math.max(0, slot)));
+          if (this.closed)
+            throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
+          this.desired = desired;
+          this.appliedSlot = slot;
+        }
         if (slot !== this.clock.currentSlot) this.dirty = true;
         command?.resolve();
       } catch (error) {
