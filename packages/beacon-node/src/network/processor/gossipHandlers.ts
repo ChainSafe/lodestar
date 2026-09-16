@@ -244,8 +244,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         // IGNORE means the block is acceptable (e.g. FUTURE_SLOT, ALREADY_KNOWN), just not propagated.
         // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
-        // (provably invalid) and unexpected errors prune below.
+        // (provably invalid), unexpected errors and repeat proposals that are not imported prune.
         if (e.action === GossipAction.IGNORE) {
+          if (e.type.code === BlockErrorCode.REPEAT_PROPOSAL) {
+            // Keep the arrival time so a sibling imported later through sync still gets its PTC timeliness from gossip
+            chain.seenBlockProposers.observeFirstSeen(slot, blockRootHex, seenTimestampSec);
+            // Only a signature-verified sibling is imported by the beacon_block handler, any other repeat proposal
+            // is dropped from the caches and re-downloaded by sync if it ever becomes relevant
+            if (!chain.seenBlockProposers.hasBlockRoot(slot, signedBlock.message.proposerIndex, blockRootHex)) {
+              chain.seenBlockInputCache.prune(blockRootHex);
+              if (isForkPostGloas(fork)) {
+                chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+              }
+            }
+          }
           throw e;
         }
 
@@ -738,7 +750,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (
           e instanceof BlockGossipError &&
           e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
-          // this is make sure the block's proposer signature was verified, it should be true anyway
+          // Only a signature-verified sibling recorded in the seen cache is imported. The cache holds at most two
+          // roots per proposer and slot, which bounds full imports over gossip to one alternate
           chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root)
         ) {
           // blockInput was optimistically seeded in validateBeaconBlock and retained on IGNORE

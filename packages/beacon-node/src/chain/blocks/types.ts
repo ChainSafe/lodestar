@@ -88,6 +88,8 @@ export type ImportBlockOpts = {
   validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
+  /** Seconds the block was first seen on gossip, if it was ignored there as a repeat proposal. Only affects PTC timeliness */
+  firstSeenTimestampSec?: number;
 };
 
 /**
@@ -108,6 +110,8 @@ export type FullyVerifiedBlock = {
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
+  /** Seconds the block was first seen on gossip, if it was ignored there as a repeat proposal. Only affects PTC timeliness */
+  firstSeenTimestampSec?: number;
   /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
   executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
 };

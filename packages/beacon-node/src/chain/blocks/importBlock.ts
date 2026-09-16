@@ -104,8 +104,11 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const receiveDelaySec =
-    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+  const slotTimeSec = computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+  const receiveDelaySec = fullyVerifiedBlock.seenTimestampSec - slotTimeSec;
+  // A repeat proposal ignored on gossip and imported later keeps its gossip arrival for PTC timeliness
+  const ptcReceiveDelaySec =
+    (fullyVerifiedBlock.firstSeenTimestampSec ?? fullyVerifiedBlock.seenTimestampSec) - slotTimeSec;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
@@ -149,7 +152,8 @@ export async function importBlock(
     importDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus
+    dataAvailabilityStatus,
+    ptcReceiveDelaySec
   );
 
   // This adds the state necessary to process the next block

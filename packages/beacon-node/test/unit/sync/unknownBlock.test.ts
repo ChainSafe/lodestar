@@ -420,9 +420,10 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             slot: finalizedSlot,
           }) as ProtoBlock,
       };
-      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
+      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown" | "getFirstSeenTimestampSec"> = {
         // only return seenBlock for blockC
         isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
+        getFirstSeenTimestampSec: () => undefined,
       };
 
       const blockAResolver: () => void = () => {};
@@ -735,7 +736,10 @@ describe("UnknownBlockSync", () => {
               }),
             prune: vi.fn(),
           } as unknown as SeenBlockInput,
-          seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+          seenBlockProposers: {
+            isKnown: vi.fn().mockReturnValue(false),
+            getFirstSeenTimestampSec: vi.fn().mockReturnValue(undefined),
+          } as unknown as SeenBlockProposers,
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(undefined),
@@ -779,6 +783,107 @@ describe("UnknownBlockSync", () => {
         service.close();
       });
     }
+
+    it("passes the first seen timestamp of a repeat proposal to block processing", async () => {
+      const peer = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xaa);
+
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const parentRootHex = toRootHex(block.message.parentRoot);
+      const networkEvents = new NetworkEventBus();
+
+      const networkForTest = {
+        events: networkEvents,
+        getConnectedPeers: () => [peer],
+        getConnectedPeerSyncMeta: () => ({
+          peerId: peer,
+          client: "first-seen-test-client",
+          custodyColumns: [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([block]),
+        reportPeer: vi.fn(),
+      } as unknown as INetwork;
+
+      const processBlock = vi.fn().mockResolvedValue(undefined);
+      const chainForTest = {
+        emitter: new ChainEventEmitter(),
+        clock: new ClockStopped(0),
+        forkChoice: {
+          hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+          getBlockHexDefaultStatus: vi
+            .fn()
+            .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
+          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+        } as unknown as IForkChoice,
+        genesisTime: 0,
+        custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+        processBlock,
+        seenBlockInputCache: {
+          getByBlock: ({
+            block,
+            blockRootHex,
+            seenTimestampSec,
+            source,
+            peerIdStr,
+          }: {
+            block: SignedBeaconBlock;
+            blockRootHex: string;
+            seenTimestampSec: number;
+            source: BlockInputSource;
+            peerIdStr?: PeerIdStr;
+          }) =>
+            BlockInputPreData.createFromBlock({
+              block,
+              blockRootHex,
+              forkName: ForkName.phase0,
+              daOutOfRange: false,
+              seenTimestampSec,
+              source,
+              peerIdStr,
+            }),
+          prune: vi.fn(),
+        } as unknown as SeenBlockInput,
+        seenBlockProposers: {
+          isKnown: vi.fn().mockReturnValue(false),
+          getFirstSeenTimestampSec: vi
+            .fn()
+            .mockImplementation((slot: number, root: string) => (slot === 1 && root === blockRootHex ? 42 : undefined)),
+        } as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          prune: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      service = new BlockInputSync(minimalConfig, networkForTest, chainForTest, logger, null, defaultSyncOptions);
+      service.subscribeToNetwork();
+
+      networkEvents.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: {} as never,
+        custodyColumns: [],
+        clientAgent: "first-seen-test-client",
+      });
+      chainForTest.emitter.emit(ChainEvent.unknownBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+
+      expect(processBlock).toHaveBeenCalledOnce();
+      expect(processBlock.mock.calls[0][1]).toMatchObject({firstSeenTimestampSec: 42});
+
+      service.close();
+    });
   });
 
   describe("payload sync flows", () => {
@@ -830,7 +935,10 @@ describe("UnknownBlockSync", () => {
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+        seenBlockProposers: {
+          isKnown: vi.fn().mockReturnValue(false),
+          getFirstSeenTimestampSec: vi.fn().mockReturnValue(undefined),
+        } as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
           hasBlockHex: vi.fn().mockReturnValue(false),
@@ -2145,6 +2253,7 @@ describe("UnknownBlockSync", () => {
       seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
       seenBlockProposers: {
         isKnown: vi.fn().mockReturnValue(false),
+        getFirstSeenTimestampSec: vi.fn().mockReturnValue(undefined),
       } as unknown as SeenBlockProposers,
     };
 
