@@ -1,3 +1,5 @@
+import net from "node:net";
+import os from "node:os";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
@@ -8,6 +10,33 @@ export const defaultListenAddress = "0.0.0.0";
 export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
 export const defaultQuicPort = 9001;
+
+/** IPv6 ranges that are never reachable from the public internet */
+const nonGlobalIPv6 = new net.BlockList();
+nonGlobalIPv6.addSubnet("::", 128, "ipv6"); // unspecified
+nonGlobalIPv6.addSubnet("::1", 128, "ipv6"); // loopback
+nonGlobalIPv6.addSubnet("::ffff:0:0", 96, "ipv6"); // IPv4-mapped
+nonGlobalIPv6.addSubnet("100::", 64, "ipv6"); // discard-only
+nonGlobalIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
+nonGlobalIPv6.addSubnet("fc00::", 7, "ipv6"); // unique local
+nonGlobalIPv6.addSubnet("fe80::", 10, "ipv6"); // link-local
+nonGlobalIPv6.addSubnet("fec0::", 10, "ipv6"); // deprecated site-local
+
+/**
+ * discv5 contacts dual-stack peers over IPv6 whenever an IPv6 socket is bound, so binding "::"
+ * on a host without IPv6 connectivity makes every dual-stack bootnode unreachable.
+ * Only bind IPv6 by default if the host has a global unicast IPv6 address.
+ */
+export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boolean {
+  for (const addrs of Object.values(interfaces)) {
+    for (const addr of addrs ?? []) {
+      // node 18 returned family as a number, see isLocalMultiAddr
+      if (!String(addr.family).endsWith("6") || addr.internal) continue;
+      if (net.isIPv6(addr.address) && !nonGlobalIPv6.check(addr.address, "ipv6")) return true;
+    }
+  }
+  return false;
+}
 
 export type NetworkArgs = {
   discv5?: boolean;
@@ -64,7 +93,7 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
   }
 }
 
-export function parseListenArgs(args: NetworkArgs) {
+export function parseListenArgs(args: NetworkArgs, ipv6Available = hasGlobalIPv6Address()) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
@@ -73,8 +102,9 @@ export function parseListenArgs(args: NetworkArgs) {
   const quicPort = listenAddress ? (args.quicPort ?? (port !== undefined ? port + 1 : defaultQuicPort)) : undefined;
 
   // If listenAddress6 is explicitly set, use it
-  // If listenAddress is not set, use defaultListenAddress6
-  const listenAddress6 = args.listenAddress6 ?? (args.listenAddress ? undefined : defaultListenAddress6);
+  // If listenAddress is not set, use defaultListenAddress6 when the host has a global IPv6 address
+  const listenAddress6 =
+    args.listenAddress6 ?? (!args.listenAddress && ipv6Available ? defaultListenAddress6 : undefined);
   const port6 = listenAddress6 ? (args.port6 ?? args.port ?? defaultP2pPort) : undefined;
   const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? port6) : undefined;
   const quicPort6 = listenAddress6
@@ -244,7 +274,8 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   listenAddress6: {
     type: "string",
-    description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    description:
+      "The IPv6 address to listen for p2p UDP and TCP connections. Enabled by default only if the host has a global IPv6 address",
     defaultDescription: defaultListenAddress6,
     group: "network",
   },

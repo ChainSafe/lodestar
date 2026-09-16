@@ -102,6 +102,8 @@ Note that `--discoveryPort` and `--quicPort` are both UDP but must use different
 
 For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
 
+Lodestar listens on IPv6 (`::`) by default only if the host has a global IPv6 address. Discovery contacts dual-stack peers over IPv6 whenever IPv6 is bound, so a node that binds `::` without IPv6 connectivity cannot reach dual-stack bootnodes. Set `--listenAddress6` to force IPv6 on, or `--listenAddress` to force IPv4 only.
+
 ## Firewall Management
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
