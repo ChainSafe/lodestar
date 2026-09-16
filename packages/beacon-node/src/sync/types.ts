@@ -29,6 +29,26 @@ export enum PendingBlockType {
   INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",
 }
 
+export enum DownloadResult {
+  /** payload fully downloaded, ready to process */
+  Resolved = "resolved",
+  /** payload fully downloaded, but it was already imported (via gossip) while we were downloading */
+  Late = "late",
+  /** envelope downloaded, held until the block lands in fork choice */
+  WaitingForBlock = "waiting_for_block",
+  /** fetch failed, the pending entry is retained for retry */
+  Failed = "failed",
+}
+
+export enum FetchResult {
+  SuccessResolved = "success_resolved",
+  SuccessMissingParent = "success_missing_parent",
+  SuccessLate = "success_late",
+  SuccessWaitingForBlock = "success_waiting_for_block",
+  FailureTriedAllPeers = "failure_tried_all_peers",
+  FailureMaxAttempts = "failure_max_attempts",
+}
+
 export enum PendingBlockInputStatus {
   pending = "pending",
   fetching = "fetching",
