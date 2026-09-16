@@ -14,8 +14,7 @@ import {loadConfigYaml} from "../yaml.js";
 const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
 const ignoredRemotePresetFields: string[] = [
-  // Removed from the spec dev branch (ethereum/consensus-specs#5613), now computed from BLOB_SCHEDULE
-  // at runtime. Still present in the pinned release, remove once specVersion > v1.7.0-beta.0
+  // The pinned v1.7.0-beta.0 still includes these; remove the exclusions once the pin includes consensus-specs#5613.
   "MAX_DATA_COLUMN_SIDECAR_SIZE",
   "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
 ];

@@ -164,8 +164,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
   it("derives the Gloas p2p max sizes from the progressive list limits", () => {
     expect(ssz.gloas.SignedAggregateAndProof.maxSize).toBe(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE);
     expect(ssz.gloas.AttesterSlashing.maxSize).toBe(MAX_ATTESTER_SLASHING_SIZE);
-    // DataColumnSidecar's p2p bound is no longer the SSZ type max: it is derived from the blob schedule
-    // (consensus-specs #5613, computeMaxGloasDataColumnSidecarSize), so it is asserted in the beacon-node network tests.
+    // DataColumnSidecar's network bound depends on BLOB_SCHEDULE and is covered by beacon-node's network tests.
     expect(ssz.gloas.SignedExecutionPayloadBid.maxSize).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE);
   });
 
