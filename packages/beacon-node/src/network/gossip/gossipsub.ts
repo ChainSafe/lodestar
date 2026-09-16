@@ -30,7 +30,6 @@ import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
-import {prettyPrintPeerId} from "../util.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
@@ -118,7 +117,6 @@ type GossipSubInternal = GossipSub & {
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
   reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
-  handlePeerReadStreamError: (err: Error, peerId: PeerId) => void;
 };
 
 /**
@@ -208,7 +206,6 @@ export class Eth2Gossipsub {
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
     })(modules.libp2p.services.components) as GossipSubInternal;
-    hangUpOnPeerReadStreamError(gossipsubInstance, modules.libp2p, logger);
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
@@ -543,26 +540,6 @@ function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
   }
 
   return label;
-}
-
-/**
- * gossipsub treats an inbound RPC read error, e.g. a frame above `maxInboundDataLength`, as a peer disconnect: the peer
- * is removed from all topics and meshes but the libp2p connection is left open, so the peer is never re-added and no
- * gossip flows in either direction until the connection drops on its own. Hang up so the peer manager can reconnect.
- */
-function hangUpOnPeerReadStreamError(
-  gossipsub: Pick<GossipSubInternal, "handlePeerReadStreamError">,
-  libp2p: Pick<Libp2p, "hangUp">,
-  logger: Logger
-): void {
-  const handlePeerReadStreamError = gossipsub.handlePeerReadStreamError.bind(gossipsub);
-  gossipsub.handlePeerReadStreamError = (err, peerId) => {
-    handlePeerReadStreamError(err, peerId);
-    logger.warn("Gossipsub inbound stream error, hanging up peer", {peer: prettyPrintPeerId(peerId)}, err);
-    libp2p.hangUp(peerId).catch((e) => {
-      logger.debug("Error hanging up peer after gossipsub inbound stream error", {peer: prettyPrintPeerId(peerId)}, e);
-    });
-  };
 }
 
 /**
