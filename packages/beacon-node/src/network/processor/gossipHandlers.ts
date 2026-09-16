@@ -255,7 +255,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           ) {
             chain.seenBlockInputCache.remove(blockRootHex);
             if (isForkPostGloas(fork)) {
-              chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+              chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
             }
           }
           throw e;
@@ -273,7 +273,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // both caches, keeping them consistent. The block may carry any parent root, so only its own entry is removed
       chain.seenBlockInputCache.remove(blockRootHex);
       if (isForkPostGloas(fork)) {
-        chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+        chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
       }
       throw e;
     } finally {

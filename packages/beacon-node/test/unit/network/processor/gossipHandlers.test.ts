@@ -138,7 +138,7 @@ async function runBeaconBlockProcessingError(
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
       get: vi.fn().mockReturnValue(undefined),
-      prune: vi.fn(),
+      remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
@@ -253,7 +253,7 @@ async function runBeaconBlockRepeatProposal(
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
       get: vi.fn().mockReturnValue(undefined),
-      prune: vi.fn(),
+      remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
