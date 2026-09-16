@@ -36,14 +36,17 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let emitter: ChainEventEmitter;
   let unknownBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
+  let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
     unknownBlockRootSpy = vi.fn();
     unknownEnvelopeBlockRootSpy = vi.fn();
+    unknownEnvelopeBlockRootSlotSpy = vi.fn();
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
     emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
+    emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, (data) => unknownEnvelopeBlockRootSlotSpy(data));
 
     const chain = {
       clock: new ClockStopped(clockSlot),
@@ -155,6 +158,11 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     return (calls.at(-1)?.[0] as {peer?: PeerIdStr} | undefined)?.peer;
   }
 
+  function lastEnvelopeSlotSearch(): {slot?: number; peer?: PeerIdStr} | undefined {
+    const calls = unknownEnvelopeBlockRootSlotSpy.mock.calls;
+    return calls.at(-1)?.[0] as {slot?: number; peer?: PeerIdStr} | undefined;
+  }
+
   describe("how many unknown blocks we hold messages for, per slot", () => {
     it("stops holding messages once too many different blocks are unknown in the same slot", () => {
       for (let i = 1; i <= MAX_BUFFERED_ROOTS_PER_SLOT + 1; i++) {
@@ -247,21 +255,40 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   });
 
   describe("which envelope lookups prefer the forwarding peer", () => {
-    it("uses optimistic lookup when gossip validation does not prove the peer has the envelope", () => {
+    it("uses optimistic slot-carrying lookup when gossip validation does not prove the peer has the envelope", () => {
+      // the PTC vote's slot is the payload's slot, so the slot-carrying event variant is emitted
       processPayloadAttestationMessage();
-      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
-      expect(lastEnvelopeSearchPeer()).toBeUndefined();
+      expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: undefined});
 
-      unknownEnvelopeBlockRootSpy.mockClear();
+      unknownEnvelopeBlockRootSlotSpy.mockClear();
       processDataColumn(0, 0xcf);
-      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
-      expect(lastEnvelopeSearchPeer()).toBeUndefined();
+      expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: undefined});
     });
 
     it("uses the forwarding peer when gossip validation requires the payload", () => {
+      // the aggregate's slot is not necessarily the payload's slot, so the slot-less event is emitted
       processGloasAggregatePayloadPresent(0xdf);
+      expect(unknownEnvelopeBlockRootSlotSpy).not.toHaveBeenCalled();
       expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
       expect(lastEnvelopeSearchPeer()).toBe(peerIdStr);
+    });
+
+    it("still emits the payload-slot seed once when a slot-less trigger started the search", () => {
+      // aggregate (slot-less) first, PTC vote (payload-slot) second, both for the same root
+      processGloasAggregatePayloadPresent(0xef);
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+
+      processPayloadAttestationMessage(0xef);
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: undefined});
+
+      // the seed is emitted only once per root
+      processPayloadAttestationMessage(0xef);
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
     });
   });
 

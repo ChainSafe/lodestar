@@ -110,9 +110,8 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
-  // message slot from ChainEvent.unknownEnvelopeBlockRoot, which is untrusted and not necessarily the
-  // payload/block slot. See BlockInputSync.resolvePayloadSlot.
+  // slot could be via fork choice or ChainEvent.unknownEnvelopeBlockRootSlot
+  // while ChainEvent.unknownEnvelopeBlockRoot does not provide one
   slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;

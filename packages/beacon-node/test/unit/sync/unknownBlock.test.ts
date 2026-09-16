@@ -32,7 +32,12 @@ import {
   PendingPayloadInputStatus,
   PendingPayloadRootHex,
 } from "../../../src/sync/types.js";
-import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
+import {
+  BlockInputSync,
+  PAYLOAD_FETCH_BEFORE_DUE_MS,
+  PAYLOAD_FETCH_RETRY_INTERVAL_MS,
+  UnknownBlockPeerBalancer,
+} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
@@ -813,9 +818,13 @@ describe("UnknownBlockSync", () => {
       const networkEvents = new NetworkEventBus();
       const peersById = new Map(peers.map((peer) => [peer.peerId, peer]));
 
+      // payload flows run after PAYLOAD_DUE by default, past the current-slot payload fetch gate
+      const clock = new ClockStopped(0);
+      clock.setMsIntoSlot(gloasConfig.getPayloadDueMs());
+
       const chain = {
         emitter,
-        clock: new ClockStopped(0),
+        clock,
         config: gloasConfig,
         custodyConfig,
         genesisTime: 0,
@@ -922,7 +931,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -939,6 +947,134 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
+    });
+
+    it("defers a current-slot payload fetch until shortly before PAYLOAD_DUE", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+        blobCount: 1,
+        sampledColumns: [0],
+        slot: 1,
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const sendDataColumnSidecarsByRoot = vi.fn().mockResolvedValue(columnSidecars);
+      const {chain, emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      // early in the current slot: the payload is not due to exist yet
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      // the scheduled pass performs the fetch once the gate opens at PAYLOAD_DUE - PAYLOAD_FETCH_BEFORE_DUE_MS
+      const gateMs = gloasConfig.getPayloadDueMs() - PAYLOAD_FETCH_BEFORE_DUE_MS;
+      (chain.clock as ClockStopped).setMsIntoSlot(gateMs);
+      await vi.advanceTimersByTimeAsync(gateMs);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
+    });
+
+    it("retries a failed current-slot payload fetch on an interval within the slot", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockRejectedValue(new Error("TEST_ERROR"));
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+      // harness clock defaults to PAYLOAD_DUE into the current slot: the fetch is allowed immediately
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+
+      // availability rises as gossip propagates during the slot: the failed fetch retries on the interval
+      await vi.advanceTimersByTimeAsync(PAYLOAD_FETCH_RETRY_INTERVAL_MS);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+    });
+
+    it("gates a current-slot payload via the slot seeded from unknownEnvelopeBlockRootSlot", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 1, sampledColumns: [0], slot: 1});
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      // default harness fork choice / seen cache: the block is unknown, so resolvePayloadSlot cannot
+      // resolve - the entry's slot can only come from the event
+      const {chain, emitter} = setupPayloadSyncTest({
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      // early in the current slot: the payload is not due to exist yet
+      (chain.clock as ClockStopped).setMsIntoSlot(0);
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+
+      // the scheduled pass performs the fetch once the gate opens at PAYLOAD_DUE - PAYLOAD_FETCH_BEFORE_DUE_MS
+      const gateMs = gloasConfig.getPayloadDueMs() - PAYLOAD_FETCH_BEFORE_DUE_MS;
+      (chain.clock as ClockStopped).setMsIntoSlot(gateMs);
+      await vi.advanceTimersByTimeAsync(gateMs);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
     });
 
     it("does not resurrect a payload entry pruned while its download was in flight", async () => {
@@ -991,7 +1127,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1066,7 +1201,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer: peerA,
         source: BlockInputSource.gossip,
       });
@@ -1162,7 +1296,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1271,7 +1404,6 @@ describe("UnknownBlockSync", () => {
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys (see #9491).
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1384,7 +1516,6 @@ describe("UnknownBlockSync", () => {
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys.
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1447,7 +1578,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1500,7 +1630,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });

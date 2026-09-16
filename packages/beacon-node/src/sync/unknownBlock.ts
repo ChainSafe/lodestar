@@ -55,6 +55,16 @@ const MAX_PENDING_BLOCKS = 100;
  */
 const PRUNE_UNRESOLVED_SLOT_EPOCHS = 2;
 
+/**
+ * This means we start downloading payload PAYLOAD_DUE - 500ms into the slot
+ */
+export const PAYLOAD_FETCH_BEFORE_DUE_MS = 500;
+
+/**
+ * Within the payload's own slot, retry a failed fetch after 1s.
+ */
+export const PAYLOAD_FETCH_RETRY_INTERVAL_MS = 1_000;
+
 type AdvancePendingBlockResult =
   | "ready"
   | "queued_block"
@@ -122,6 +132,7 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  private payloadRetryTimeout: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -158,6 +169,7 @@ export class BlockInputSync {
       this.logger.verbose("BlockInputSync enabled.");
       this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
+      this.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, this.onUnknownEnvelopeBlockRootSlot);
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
       this.chain.emitter.on(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
       this.chain.emitter.on(ChainEvent.blockUnknownParent, this.onUnknownParent);
@@ -183,8 +195,10 @@ export class BlockInputSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
+    this.clearPayloadRetryTimer();
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
+    this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRootSlot, this.onUnknownEnvelopeBlockRootSlot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
     this.chain.emitter.off(ChainEvent.blockUnknownParent, this.onUnknownParent);
@@ -245,6 +259,19 @@ export class BlockInputSync {
       }
     } catch (e) {
       this.logger.debug("Error handling unknownEnvelopeBlockRoot event", {}, e as Error);
+    }
+  };
+
+  private onUnknownEnvelopeBlockRootSlot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]): void => {
+    try {
+      const isNewRoot = this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
+      if (isNewRoot) {
+        this.triggerUnknownBlockSearch();
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
+        this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      }
+    } catch (e) {
+      this.logger.debug("Error handling unknownEnvelopeBlockRootSlot event", {}, e as Error);
     }
   };
 
@@ -791,6 +818,40 @@ export class BlockInputSync {
     }
   }
 
+  /**
+   * The main purpose to to schedule a payload download, but this calls triggerUnknownBlockSearch()
+   * to coordinate block/payload better
+   */
+  private schedulePayloadRetry(delayMs: number): void {
+    if (this.payloadRetryTimeout !== undefined) {
+      return;
+    }
+    this.payloadRetryTimeout = setTimeout(() => {
+      this.payloadRetryTimeout = undefined;
+      this.triggerUnknownBlockSearch();
+    }, delayMs);
+  }
+
+  private clearPayloadRetryTimer(): void {
+    if (this.payloadRetryTimeout !== undefined) {
+      clearTimeout(this.payloadRetryTimeout);
+      this.payloadRetryTimeout = undefined;
+    }
+  }
+
+  /**
+   * ms until fetching `slot`'s payload is allowed; <= 0 = allowed now. Only the current clock slot
+   * is ever gated: before PAYLOAD_DUE - PAYLOAD_FETCH_BEFORE_DUE_MS the payload is not due to
+   * exist, so a by-root fetch would be redundant load on us and on peers.
+   */
+  private msUntilPayloadFetchAllowed(slot: Slot | string | undefined): number {
+    if (typeof slot !== "number" || slot !== this.chain.clock.currentSlot) {
+      // unresolved / past / future slot: fetch as today
+      return 0;
+    }
+    return this.config.getPayloadDueMs() - PAYLOAD_FETCH_BEFORE_DUE_MS - this.chain.clock.msFromSlot(slot);
+  }
+
   private async downloadBlock(block: BlockInputSyncCacheItem): Promise<void> {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
@@ -1111,6 +1172,14 @@ export class BlockInputSync {
       ...(typeof payloadSlot === "number" && {delaySec: this.chain.clock.secFromSlot(payloadSlot)}),
     };
 
+    const msUntilAllowed = this.msUntilPayloadFetchAllowed(payloadSlot);
+    if (msUntilAllowed > 0) {
+      // we don't want to search for the payload too early
+      this.logger.debug("Deferring payload fetch until payload due", {...logCtx, msUntilAllowed});
+      this.schedulePayloadRetry(msUntilAllowed);
+      return;
+    }
+
     this.logger.verbose("BlockInputSync.downloadPayload()", logCtx);
 
     payload.status = PendingPayloadInputStatus.fetching;
@@ -1137,6 +1206,15 @@ export class BlockInputSync {
     this.logger.debug("Ignoring unknown payload root after failed download", logCtx, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
+    }
+    // within the payload's own slot, retry the payload periodically
+    // once the slot has passed, retries stay event-driven as normal
+    if (payloadSlot === this.chain.clock.currentSlot) {
+      this.logger.debug("Scheduling current-slot payload fetch retry", {
+        ...logCtx,
+        retryMs: PAYLOAD_FETCH_RETRY_INTERVAL_MS,
+      });
+      this.schedulePayloadRetry(PAYLOAD_FETCH_RETRY_INTERVAL_MS);
     }
   }
 
