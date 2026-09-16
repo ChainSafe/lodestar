@@ -118,7 +118,7 @@ jobs:
         if: ${{ vars.SWARM_REGISTRY != '' }}
         uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc # v0.1.0
         with:
-          release: v0.9.0
+          release: v0.11.6
 
       - name: Mirror lodestar manifest to Swarm registry (Uncloud Registry)
         # Opt-in mirror of the multi-arch lodestar manifest to a Swarm-backed
