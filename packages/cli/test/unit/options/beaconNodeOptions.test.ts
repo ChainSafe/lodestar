@@ -386,6 +386,9 @@ describe("options / network / hasGlobalIPv6Address", () => {
         iface("2001:db8::1", "IPv6"),
         iface("3fff::1", "IPv6"),
         iface("2001:2::1", "IPv6"),
+        iface("2001::1", "IPv6"),
+        iface("2001:0:1234::1", "IPv6"),
+        iface("2002:c000:201::1", "IPv6"),
         iface("fec0::1", "IPv6"),
         iface("::ffff:10.0.0.1", "IPv6"),
         iface("100::1", "IPv6"),
@@ -400,5 +403,6 @@ describe("options / network / hasGlobalIPv6Address", () => {
       eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::1", "IPv6"), iface("2a01:4ff:f4:3c4a::1", "IPv6")],
     };
     expect(hasGlobalIPv6Address(interfaces)).toBe(true);
+    expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
   });
 });
