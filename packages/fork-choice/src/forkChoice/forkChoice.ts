@@ -89,6 +89,8 @@ export type UpdateAndGetHeadOpt =
 
 // the initial vote epoch for all validators
 const INIT_VOTE_SLOT: Slot = 0;
+/** Two signed block roots establish a proposer equivocation, the first two seen are also the most timely */
+const MAX_SIGNED_PROPOSALS_PER_SLOT_PROPOSER = 2;
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -154,6 +156,13 @@ export class ForkChoice implements IForkChoice {
   private validatedAttestationDatas = new Set<string>();
   /** Boost the entire branch with this proposer root as the leaf */
   private proposerBoostRoot: RootHex | null = null;
+  /**
+   * Block roots signed by a proposer for a slot with their PTC timeliness, imported or not. Two roots establish
+   * an equivocation and the first two seen are the most timely, so later ones are not kept.
+   */
+  private readonly signedProposals = new MapDef<Slot, MapDef<ValidatorIndex, Map<RootHex, boolean>>>(
+    () => new MapDef(() => new Map())
+  );
   /** Score to use in proposer boost, evaluated lazily from justified balances */
   private justifiedProposerBoostScore: bigint | null = null;
   /** The current effective balances */
@@ -938,6 +947,7 @@ export class ForkChoice implements IForkChoice {
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
+    this.recordSignedProposal(slot, block.proposerIndex, blockRootHex, protoBlock.ptcTimeliness);
 
     if (isProposerBoostBlock) {
       this.proposerBoostRoot = blockRootHex;
@@ -1063,6 +1073,19 @@ export class ForkChoice implements IForkChoice {
         }
       }
     }
+  }
+
+  /**
+   * Record a block signed by `proposerIndex` for `slot` that was seen but not imported, e.g. a repeat proposal
+   * ignored on gossip. Imported blocks are recorded by onBlock. The spec reads proposer equivocations from
+   * store.blocks, ie. only valid blocks. Counting signed blocks instead keeps the view consistent across nodes
+   * that bound how many repeat proposals they validate.
+   */
+  onSignedBlockHeader(slot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex, ptcTimely: boolean): void {
+    if (slot < computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch)) {
+      return;
+    }
+    this.recordSignedProposal(slot, proposerIndex, blockRoot, ptcTimely);
   }
 
   /**
@@ -1330,6 +1353,12 @@ export class ForkChoice implements IForkChoice {
    */
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
+    const finalizedSlot = computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch);
+    for (const slot of this.signedProposals.keys()) {
+      if (slot < finalizedSlot) {
+        this.signedProposals.delete(slot);
+      }
+    }
     const prunedCount = prunedNodes.length;
     for (let i = 0; i < this.voteNextSlots.length; i++) {
       const currentIndex = this.voteCurrentIndices[i];
@@ -1750,8 +1779,13 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
+    return this.isPtcTimely(block.slot, blockDelaySec);
+  }
+
+  /** Return true if a block for `slot` received `receiveDelaySec` after the slot start is PTC-timely */
+  isPtcTimely(slot: Slot, receiveDelaySec: number): boolean {
     const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
-    return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
+    return this.fcStore.currentSlot === slot && receiveDelaySec * 1000 < ptcThresholdMs;
   }
 
   /**
@@ -1802,7 +1836,7 @@ export class ForkChoice implements IForkChoice {
 
     // Parent is weak and from the previous slot: apply boost only if there are no early
     // equivocations, ie. no other PTC-timely block at the parent's slot from the same proposer.
-    return !this.protoArray.hasEquivocatingBlock(
+    return !this.hasEquivocatingBlock(
       parentBlock.proposerIndex,
       parentBlock.slot,
       parentBlock.blockRoot,
@@ -1820,7 +1854,42 @@ export class ForkChoice implements IForkChoice {
   private isProposerEquivocation(block: ProtoBlock): boolean {
     // Any known sibling counts, timely or not. Timeliness only matters for withholding the boost from
     // the next proposer, the reorg itself is safe to attempt whenever the equivocation is visible.
-    return this.protoArray.hasEquivocatingBlock(block.proposerIndex, block.slot, block.blockRoot, false);
+    return this.hasEquivocatingBlock(block.proposerIndex, block.slot, block.blockRoot, false);
+  }
+
+  private recordSignedProposal(
+    slot: Slot,
+    proposerIndex: ValidatorIndex,
+    blockRoot: RootHex,
+    ptcTimely: boolean
+  ): void {
+    const ptcTimelyByRoot = this.signedProposals.getOrDefault(slot).getOrDefault(proposerIndex);
+    if (ptcTimelyByRoot.size < MAX_SIGNED_PROPOSALS_PER_SLOT_PROPOSER && !ptcTimelyByRoot.has(blockRoot)) {
+      ptcTimelyByRoot.set(blockRoot, ptcTimely);
+    }
+  }
+
+  /**
+   * Return true if a block other than `excludeRoot` at `slot` was signed by `proposerIndex`.
+   * `should_apply_proposer_boost` only counts PTC-timely blocks (`ptcTimelyOnly`), `is_proposer_equivocation`
+   * counts any known block.
+   */
+  private hasEquivocatingBlock(
+    proposerIndex: ValidatorIndex,
+    slot: Slot,
+    excludeRoot: RootHex,
+    ptcTimelyOnly: boolean
+  ): boolean {
+    const ptcTimelyByRoot = this.signedProposals.get(slot)?.get(proposerIndex);
+    if (ptcTimelyByRoot === undefined) {
+      return false;
+    }
+    for (const [blockRoot, ptcTimely] of ptcTimelyByRoot) {
+      if (blockRoot !== excludeRoot && (ptcTimely || !ptcTimelyOnly)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

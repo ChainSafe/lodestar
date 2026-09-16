@@ -214,6 +214,8 @@ describe("Forkchoice / GetProposerHead", () => {
     headBlock: ProtoBlockWithWeight;
     /** Imported alongside the head, to simulate an equivocation */
     siblingBlock?: ProtoBlockWithWeight;
+    /** false when the sibling was only seen on gossip, ie. recorded in fork choice without being imported */
+    siblingImported?: boolean;
     expectReorg: boolean;
     currentSlot?: Slot;
     secFromSlot?: number;
@@ -316,6 +318,14 @@ describe("Forkchoice / GetProposerHead", () => {
       expectReorg: true,
     },
     {
+      id: "Reorg weak equivocating head when the equivocating block was seen but not imported",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock, timeliness: true},
+      siblingBlock: equivocatingHeadBlock,
+      siblingImported: false,
+      expectReorg: true,
+    },
+    {
       id: "Reorg weak equivocating head even if parent is weak",
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
@@ -373,6 +383,7 @@ describe("Forkchoice / GetProposerHead", () => {
     parentBlock,
     headBlock,
     siblingBlock,
+    siblingImported,
     expectReorg,
     currentSlot: proposalSlot,
     secFromSlot,
@@ -382,14 +393,19 @@ describe("Forkchoice / GetProposerHead", () => {
     it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
       protoArr.onBlock(headBlock, headBlock.slot, null);
-      if (siblingBlock) {
+      if (siblingBlock && siblingImported !== false) {
         protoArr.onBlock(siblingBlock, siblingBlock.slot, null);
       }
 
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;
       protoArr.applyScoreChanges({
-        attestationDeltas: [0, parentBlock.weight, headBlock.weight, ...(siblingBlock ? [siblingBlock.weight] : [])],
+        attestationDeltas: [
+          0,
+          parentBlock.weight,
+          headBlock.weight,
+          ...(siblingBlock && siblingImported !== false ? [siblingBlock.weight] : []),
+        ],
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -402,6 +418,14 @@ describe("Forkchoice / GetProposerHead", () => {
         proposerBoost: true,
         proposerBoostReorg: true,
       });
+      if (siblingBlock) {
+        forkChoice.onSignedBlockHeader(
+          siblingBlock.slot,
+          siblingBlock.proposerIndex,
+          siblingBlock.blockRoot,
+          siblingBlock.ptcTimeliness
+        );
+      }
 
       const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(
         headBlock,

@@ -61,7 +61,7 @@ function setup({
   store = makeStore(),
   childSlot = headSlot,
 }: {
-  sibling?: {ptcTimeliness: boolean; proposerIndex?: ValidatorIndex} | null;
+  sibling?: {ptcTimeliness: boolean; proposerIndex?: ValidatorIndex; imported?: boolean} | null;
   parentVotes?: number;
   store?: IForkChoiceStore;
   childSlot?: Slot;
@@ -72,7 +72,7 @@ function setup({
 
   const protoArray = ProtoArray.initialize(toProtoBlock(genesisSlot, genesisRoot, false), genesisSlot);
   protoArray.onBlock(toProtoBlock(parentSlot, genesisRoot, true, {proposerIndex: PARENT_PROPOSER}), parentSlot, null);
-  if (sibling) {
+  if (sibling && sibling.imported !== false) {
     protoArray.onBlock(
       toProtoBlock(parentSlot, genesisRoot, true, {
         blockRoot: SIBLING_ROOT,
@@ -91,6 +91,14 @@ function setup({
   );
 
   const forkChoice = new ForkChoice(gloasConfig, store, protoArray, VALIDATOR_COUNT, null, {proposerBoost: true});
+  if (sibling) {
+    forkChoice.onSignedBlockHeader(
+      parentSlot,
+      sibling.proposerIndex ?? PARENT_PROPOSER,
+      SIBLING_ROOT,
+      sibling.ptcTimeliness
+    );
+  }
 
   if (parentVotes > 0) {
     protoArray.applyScoreChanges({
@@ -130,6 +138,22 @@ describe("Forkchoice / shouldApplyProposerBoost", () => {
 
   it("applies boost when the equivocating sibling is not PTC-timely", () => {
     const {forkChoice, protoArray, childRoot} = setup({sibling: {ptcTimeliness: false}});
+
+    forkChoice.updateHead();
+
+    expect(appliedBoost(protoArray, childRoot)).toBe(BOOST_SCORE);
+  });
+
+  it("withholds boost when the PTC-timely equivocating sibling was seen but not imported", () => {
+    const {forkChoice, protoArray, childRoot} = setup({sibling: {ptcTimeliness: true, imported: false}});
+
+    forkChoice.updateHead();
+
+    expect(appliedBoost(protoArray, childRoot)).toBe(0n);
+  });
+
+  it("applies boost when the equivocating sibling seen but not imported is not PTC-timely", () => {
+    const {forkChoice, protoArray, childRoot} = setup({sibling: {ptcTimeliness: false, imported: false}});
 
     forkChoice.updateHead();
 
