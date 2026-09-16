@@ -168,7 +168,7 @@ export class Eth2Gossipsub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, metrics),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})

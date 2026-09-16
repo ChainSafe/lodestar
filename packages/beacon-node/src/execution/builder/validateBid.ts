@@ -56,6 +56,10 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Bid block hash ${toRootHex(bid.blockHash)} must not equal its parent block hash`);
+  }
+
   const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
   const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
   if (blobKzgCommitmentsLen > maxBlobsPerBlock) {

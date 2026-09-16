@@ -6,6 +6,7 @@ export type BeaconPathsPartial = Partial<{
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
+  dataColumnDir: string;
   persistInvalidSszObjectsDir: string;
   persistOrphanedBlocksDir?: string;
 }>;
@@ -14,6 +15,7 @@ export type BeaconPaths = {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
+  dataColumnDir: string;
   persistInvalidSszObjectsDir: string;
   persistOrphanedBlocksDir: string;
 };
@@ -42,6 +44,7 @@ export function getBeaconPaths(
   const dataDir = globalPaths.dataDir;
   const beaconDir = dataDir;
   const dbDir = args.dbDir ?? path.join(beaconDir, "chain-db");
+  const dataColumnDir = args.dataColumnDir ?? path.join(beaconDir, "data_columns");
   const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir ?? path.join(beaconDir, "invalidSszObjects");
   const peerStoreDir = args.peerStoreDir ?? path.join(beaconDir, "peerstore");
   const persistOrphanedBlocksDir = args.persistOrphanedBlocksDir ?? path.join(beaconDir, "orphaned_blocks");
@@ -50,6 +53,7 @@ export function getBeaconPaths(
     ...globalPaths,
     beaconDir,
     dbDir,
+    dataColumnDir,
     persistInvalidSszObjectsDir,
     peerStoreDir,
     persistOrphanedBlocksDir,

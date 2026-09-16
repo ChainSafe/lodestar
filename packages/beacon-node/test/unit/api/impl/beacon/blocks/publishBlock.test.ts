@@ -166,7 +166,8 @@ describe("api - beacon - publishBlockV2", () => {
       expect(modules.chain.persistInvalidSszValue).toHaveBeenCalledWith(
         modules.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock,
         signedBlock,
-        "api_reject_gossip_failure"
+        "api_reject_gossip_failure",
+        blockRoot
       );
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
       expect(modules.chain.processBlock).not.toHaveBeenCalled();
