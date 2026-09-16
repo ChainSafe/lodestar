@@ -17,79 +17,65 @@ export type ForkchoiceState = {
   finalizedBlockHash: RootHex;
 };
 
-export type PayloadAttributes<F extends ForkPostGloas = ForkPostGloas> = SSEPayloadAttributes<F>["payloadAttributes"];
+export type PayloadAttributes = SSEPayloadAttributes<ForkPostGloas>["payloadAttributes"];
 
-export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = F extends ForkPostGloas
-  ? {
-      fork: F;
-      forkchoiceState: ForkchoiceState;
-      payloadAttributes: PayloadAttributes<F>;
-      /** Logical custody set. The transport serializes it for Engine API; null means no custody service. */
-      custodyColumns: ColumnIndex[] | null;
-    }
-  : never;
+export type BuildRequest = {
+  fork: ForkPostGloas;
+  forkchoiceState: ForkchoiceState;
+  payloadAttributes: PayloadAttributes;
+};
 
-export type BuildHandle<F extends ForkPostGloas = ForkPostGloas> = {
+export type BuildHandle = {
   sourceId: string;
-  fork: F;
+  fork: ForkPostGloas;
   payloadId: PayloadId;
 };
 
-export type BuiltPayload<F extends ForkPostGloas = ForkPostGloas> = {
+export type BuiltPayload = {
   sourceId: string;
-  fork: F;
-  executionPayload: ExecutionPayload<F>;
-  executionRequests: ExecutionRequests<F>;
-  blobsBundle: BlobsBundle<F>;
+  fork: ForkPostGloas;
+  executionPayload: ExecutionPayload<ForkPostGloas>;
+  executionRequests: ExecutionRequests<ForkPostGloas>;
+  blobsBundle: BlobsBundle<ForkPostGloas>;
   executionPayloadValue: bigint;
 };
 
-export type EnginePayloadResult<F extends ForkPostGloas = ForkPostGloas> = {
-  executionPayload: ExecutionPayload<F>;
+export type EnginePayloadResult = {
+  executionPayload: ExecutionPayload<ForkPostGloas>;
   executionPayloadValue: bigint;
-  blobsBundle?: BlobsBundle<F>;
-  executionRequests?: ExecutionRequests<F>;
+  blobsBundle?: BlobsBundle<ForkPostGloas>;
+  executionRequests?: ExecutionRequests<ForkPostGloas>;
 };
 
 /** Narrow Engine boundary whose transport owns serialization, retries, and request execution. */
 export interface PayloadSourceEngine {
-  notifyForkchoiceUpdate<F extends ForkPostGloas>(
-    fork: F,
+  notifyForkchoiceUpdate(
+    fork: ForkPostGloas,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes: PayloadAttributes<F>,
+    payloadAttributes: PayloadAttributes,
     custodyColumns: ColumnIndex[] | null,
     signal: AbortSignal
   ): Promise<PayloadId | null>;
-  getPayload<F extends ForkPostGloas>(
-    fork: F,
-    payloadId: PayloadId,
-    signal: AbortSignal
-  ): Promise<EnginePayloadResult<F>>;
+  getPayload(fork: ForkPostGloas, payloadId: PayloadId, signal: AbortSignal): Promise<EnginePayloadResult>;
 }
 
 /** Source that prepares and retrieves complete execution payloads without owning build scheduling policy. */
 export interface PayloadSource {
   readonly id: string;
-  prepare<R extends BuildRequest>(request: R, signal: AbortSignal): Promise<BuildHandle<R["fork"]>>;
-  getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>, signal: AbortSignal): Promise<BuiltPayload<F>>;
+  prepare(request: BuildRequest, signal: AbortSignal): Promise<BuildHandle>;
+  getPayload(handle: BuildHandle, signal: AbortSignal): Promise<BuiltPayload>;
 }
 
 export enum PayloadSourceErrorCode {
   NO_PAYLOAD_ID = "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID",
-  SOURCE_MISMATCH = "PAYLOAD_SOURCE_ERROR_SOURCE_MISMATCH",
   MISSING_BLOBS_BUNDLE = "PAYLOAD_SOURCE_ERROR_MISSING_BLOBS_BUNDLE",
   MISSING_EXECUTION_REQUESTS = "PAYLOAD_SOURCE_ERROR_MISSING_EXECUTION_REQUESTS",
 }
 
 export type PayloadSourceErrorType =
   | {code: PayloadSourceErrorCode.NO_PAYLOAD_ID; sourceId: string}
-  | {
-      code: PayloadSourceErrorCode.SOURCE_MISMATCH;
-      sourceId: string;
-      handleSourceId: string;
-    }
   | {
       code: PayloadSourceErrorCode.MISSING_BLOBS_BUNDLE | PayloadSourceErrorCode.MISSING_EXECUTION_REQUESTS;
       sourceId: string;
@@ -105,7 +91,7 @@ export class EnginePayloadSource implements PayloadSource {
     private readonly engine: PayloadSourceEngine
   ) {}
 
-  async prepare<R extends BuildRequest>(request: R, signal: AbortSignal): Promise<BuildHandle<R["fork"]>> {
+  async prepare(request: BuildRequest, signal: AbortSignal): Promise<BuildHandle> {
     const {headBlockHash, safeBlockHash, finalizedBlockHash} = request.forkchoiceState;
     const payloadId = await this.engine.notifyForkchoiceUpdate(
       request.fork,
@@ -113,7 +99,10 @@ export class EnginePayloadSource implements PayloadSource {
       safeBlockHash,
       finalizedBlockHash,
       request.payloadAttributes,
-      request.custodyColumns,
+      // The builder does not custody or sample data columns, so it never provides a custody set.
+      // A null custody set leaves the execution client's blobpool sampling set untouched, which is
+      // also what the spec's own build call does (`prepare_execution_payload` passes `custody_columns=None`).
+      null,
       signal
     );
 
@@ -127,18 +116,7 @@ export class EnginePayloadSource implements PayloadSource {
     return {sourceId: this.id, fork: request.fork, payloadId};
   }
 
-  async getPayload<F extends ForkPostGloas>(handle: BuildHandle<F>, signal: AbortSignal): Promise<BuiltPayload<F>> {
-    if (handle.sourceId !== this.id) {
-      throw new PayloadSourceError(
-        {
-          code: PayloadSourceErrorCode.SOURCE_MISMATCH,
-          sourceId: this.id,
-          handleSourceId: handle.sourceId,
-        },
-        `Payload handle belongs to another source sourceId=${this.id} handleSourceId=${handle.sourceId}`
-      );
-    }
-
+  async getPayload(handle: BuildHandle, signal: AbortSignal): Promise<BuiltPayload> {
     const {executionPayload, executionPayloadValue, blobsBundle, executionRequests} = await this.engine.getPayload(
       handle.fork,
       handle.payloadId,
