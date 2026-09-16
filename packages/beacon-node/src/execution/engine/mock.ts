@@ -296,7 +296,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 
     // 5. Client software MUST update its forkchoice state if payloads referenced by forkchoiceState.headBlockHash and
     //    forkchoiceState.finalizedBlockHash are VALID.
-    if (!this.validBlocks.has(finalizedBlockHash)) {
+    //
+    // A zero finalizedBlockHash means "no finalized execution block" (e.g. the finalized checkpoint has no execution
+    // payload, pre-merge/pre-TTD). Real EL clients accept this, so the mock must not treat it as an unknown block.
+    if (finalizedBlockHash !== ZERO_HASH_HEX && !this.validBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
     this.headBlockHash = headBlockHash;

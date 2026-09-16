@@ -93,6 +93,16 @@ describe("cmds / beacon / args handler", () => {
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
   });
+
+  it("resolves the data column directory independently of the database directory", async () => {
+    const customDbDir = path.join(testFilesDir, "custom-db");
+    const defaultResult = await runBeaconHandlerInit({dbDir: customDbDir});
+    expect(defaultResult.beaconPaths.dataColumnDir).toBe(path.join(testFilesDir, "data_columns"));
+
+    const customDataColumnDir = path.join(testFilesDir, "custom-columns");
+    const customResult = await runBeaconHandlerInit({dataColumnDir: customDataColumnDir});
+    expect(customResult.beaconPaths.dataColumnDir).toBe(customDataColumnDir);
+  });
 });
 
 describe("Test isLocalMultiAddr", () => {
