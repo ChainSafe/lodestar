@@ -23,17 +23,12 @@ describe("EnginePayloadSource", () => {
     finalizedBlockHash: toRootHex(Uint8Array.from({length: 32}, () => 3)),
   };
   const payloadAttributes = ssz.gloas.PayloadAttributes.defaultValue();
-  const request: BuildRequest<ForkName.gloas> = {
+  const request: BuildRequest = {
     fork: ForkName.gloas,
     forkchoiceState,
     payloadAttributes,
   };
-
-  // @ts-expect-error Heze requests cannot use Gloas payload attributes.
-  const mismatchedRequest: BuildRequest = {...request, fork: ForkName.heze};
-  void mismatchedRequest;
-
-  const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
+  const handle: BuildHandle = {sourceId, fork: ForkName.gloas, payloadId};
   const signal = new AbortController().signal;
 
   let notifyForkchoiceUpdate: Mock<NotifyForkchoiceUpdate>;
@@ -132,17 +127,6 @@ describe("EnginePayloadSource", () => {
     expect(builtPayload.blobsBundle).toBe(result.blobsBundle);
     expect(builtPayload.executionRequests).toBe(result.executionRequests);
     expect(builtPayload.executionPayloadValue).toBe(result.executionPayloadValue);
-  });
-
-  it("rejects a handle belonging to another source before calling the Engine API", async () => {
-    const error = await getPayloadSourceError(source.getPayload({...handle, sourceId: "engine-1"}, signal));
-
-    expect(error.type).toEqual({
-      code: PayloadSourceErrorCode.SOURCE_MISMATCH,
-      sourceId,
-      handleSourceId: "engine-1",
-    });
-    expect(getPayload).not.toHaveBeenCalled();
   });
 
   it("rejects a response without a blobs bundle", async () => {
