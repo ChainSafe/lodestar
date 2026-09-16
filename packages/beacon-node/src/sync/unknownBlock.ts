@@ -26,7 +26,9 @@ import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
 import {SyncOptions} from "./options.js";
 import {
   BlockInputSyncCacheItem,
+  DownloadResult,
   DroppedItemReason,
+  FetchResult,
   PayloadSyncCacheItem,
   PendingBlockInput,
   PendingBlockInputStatus,
@@ -62,14 +64,6 @@ type AdvancePendingBlockResult =
   | "queued_parent_payload"
   | "blocked"
   | "removed";
-
-enum FetchResult {
-  SuccessResolved = "success_resolved",
-  SuccessMissingParent = "success_missing_parent",
-  SuccessLate = "success_late",
-  FailureTriedAllPeers = "failure_tried_all_peers",
-  FailureMaxAttempts = "failure_max_attempts",
-}
 
 class UnknownBlockRateLimitedError extends Error {
   constructor(message: string) {
@@ -1125,15 +1119,25 @@ export class BlockInputSync {
         return;
       }
       this.pendingPayloads.set(resultRootHex, pendingPayload);
+      const result = isPendingPayloadEnvelope(pendingPayload)
+        ? DownloadResult.WaitingForBlock
+        : this.chain.forkChoice.hasPayloadHexUnsafe(resultRootHex)
+          ? DownloadResult.Late
+          : DownloadResult.Resolved;
+      this.metrics?.blockInputSync.downloadedPayloadsResult.inc({result});
 
       if (isPendingPayloadEnvelope(pendingPayload)) {
         await this.reconcilePayloadEnvelope(pendingPayload);
       } else if (pendingPayload.status === PendingPayloadInputStatus.downloaded) {
+        this.metrics?.blockInputSync.elapsedTimeTillPayloadReceived.observe(
+          Date.now() / 1000 - computeTimeAtSlot(this.config, pendingPayload.payloadInput.slot, this.chain.genesisTime)
+        );
         await this.processPayload(pendingPayload);
       }
       return;
     }
 
+    this.metrics?.blockInputSync.downloadedPayloadsResult.inc({result: DownloadResult.Failed});
     this.logger.debug("Ignoring unknown payload root after failed download", logCtx, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
@@ -1248,6 +1252,11 @@ export class BlockInputSync {
       : await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
 
+    const fetchStartSec = Date.now() / 1000;
+    if (typeof slot === "number") {
+      this.metrics?.blockInputSync.payloadFetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+    }
+
     let i = 0;
     let deferredByRateLimit = false;
     while (i++ < this.getMaxDownloadAttempts()) {
@@ -1271,6 +1280,11 @@ export class BlockInputSync {
           pendingColumns.size > 0
             ? `cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`
             : "no peer available to download pending payload";
+        this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
+          {result: FetchResult.FailureTriedAllPeers},
+          Date.now() / 1000 - fetchStartSec
+        );
+        this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureTriedAllPeers}, i);
         throw Error(`Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: ${reason}`);
       }
 
@@ -1280,7 +1294,12 @@ export class BlockInputSync {
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
+          const slotWasUnknown = typeof slot !== "number";
           slot = envelope.message.payload.slotNumber;
+          if (slotWasUnknown) {
+            // we were not able to observe the time into slot when starting the fetch, do it now
+            this.metrics?.blockInputSync.payloadFetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+          }
         }
 
         payloadInput ??= await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
@@ -1289,6 +1308,11 @@ export class BlockInputSync {
           // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
           // payloadInput may be seeded from the block body during download, so a non-null payloadInput does not
           // imply the block is imported.
+          this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
+            {result: FetchResult.SuccessWaitingForBlock},
+            Date.now() / 1000 - fetchStartSec
+          );
+          this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.SuccessWaitingForBlock}, i);
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
@@ -1339,6 +1363,12 @@ export class BlockInputSync {
         });
 
         if (pendingPayload.status === PendingPayloadInputStatus.downloaded) {
+          // late = the payload got imported (via gossip) while we were downloading, same as the block path
+          const result = this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)
+            ? FetchResult.SuccessLate
+            : FetchResult.SuccessResolved;
+          this.metrics?.blockInputSync.payloadFetchTimeSec.observe({result}, Date.now() / 1000 - fetchStartSec);
+          this.metrics?.blockInputSync.payloadFetchPeers.set({result}, i);
           return pendingPayload;
         }
 
@@ -1379,6 +1409,11 @@ export class BlockInputSync {
       );
     }
 
+    this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
+      {result: FetchResult.FailureMaxAttempts},
+      Date.now() / 1000 - fetchStartSec
+    );
+    this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
     throw Error(`Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts.`);
   }
 
