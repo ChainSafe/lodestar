@@ -70,6 +70,13 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
+export const NewPayloadRequest = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+  },
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,

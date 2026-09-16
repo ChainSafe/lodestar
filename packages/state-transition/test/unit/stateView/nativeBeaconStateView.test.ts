@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
+import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
@@ -37,6 +38,7 @@ describe("NativeBeaconStateView", () => {
   it("caches forwarded properties so the binding is hit once", () => {
     let forkAccessCount = 0;
     let latestBlockHeaderAccessCount = 0;
+    let forkSeqAccessCount = 0;
     const fakeFork = {previousVersion: new Uint8Array(4), currentVersion: new Uint8Array(4), epoch: 0};
     const fakeHeader = {
       slot: 0,
@@ -55,6 +57,10 @@ describe("NativeBeaconStateView", () => {
         latestBlockHeaderAccessCount++;
         return fakeHeader;
       },
+      get forkSeq() {
+        forkSeqAccessCount++;
+        return ForkSeq.electra;
+      },
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding);
@@ -62,8 +68,11 @@ describe("NativeBeaconStateView", () => {
     expect(view.fork).toBe(fakeFork);
     expect(view.latestBlockHeader).toBe(fakeHeader);
     expect(view.latestBlockHeader).toBe(fakeHeader);
+    expect(view.forkSeq).toBe(ForkSeq.electra);
+    expect(view.forkSeq).toBe(ForkSeq.electra);
     expect(forkAccessCount).toBe(1);
     expect(latestBlockHeaderAccessCount).toBe(1);
+    expect(forkSeqAccessCount).toBe(1);
   });
 
   it("delegates pass-through getters and methods to the binding", () => {

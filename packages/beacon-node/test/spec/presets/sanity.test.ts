@@ -68,7 +68,8 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: verify,
+          // Always verify the state root, it is not gated by bls_setting
+          verifyStateRoot: true,
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
@@ -84,6 +85,9 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
       shouldError: (testCase) => testCase.post === undefined,
+      // Only an ssz list limit violation is an expected input error, anything else is a decode bug
+      shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+        !inputNames.has("post") && /over limit/.test(error.message),
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
