@@ -55,7 +55,6 @@ describe("compactEnvelope", () => {
   it("compact size is header-sized regardless of body size", () => {
     const envelope = populatedEnvelope();
     const p = envelope.message.payload;
-    p.transactions = Array.from({length: 180}, () => crypto.getRandomValues(new Uint8Array(1078))); // ~194 KB
     p.transactions = Array.from({length: 180}, (_, i) => new Uint8Array(1078).fill(i & 0xff));
     p.blockAccessList = new Uint8Array(70 * 1024).fill(0xab);
 
