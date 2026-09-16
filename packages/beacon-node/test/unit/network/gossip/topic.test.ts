@@ -11,6 +11,7 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  SLOTS_PER_EPOCH,
   ZERO_HASH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -354,6 +355,43 @@ describe("network / gossip / topic", () => {
       () => new Uint8Array(ssz.deneb.KZGProof.fixedSize)
     );
     expect(computeMaxGloasDataColumnSidecarSize(config)).toBe(ssz.gloas.DataColumnSidecar.serialize(sidecar).length);
+  });
+
+  it("should accept the largest future blob limit even when a later entry decreases it", () => {
+    const config = createBeaconConfig(
+      {
+        ...chainConfig,
+        GLOAS_FORK_EPOCH: 700000,
+        BLOB_SCHEDULE: [
+          {EPOCH: 700001, MAX_BLOBS_PER_BLOCK: 32},
+          {EPOCH: 700002, MAX_BLOBS_PER_BLOCK: 12},
+        ],
+      },
+      ZERO_HASH
+    );
+    const gossipTopicCache = new GossipTopicCache(config);
+    const transform = new DataTransformSnappy(gossipTopicCache, null);
+    const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+    sidecar.slot = 700001 * SLOTS_PER_EPOCH;
+    sidecar.column = Array.from({length: 32}, () => new Uint8Array(BYTES_PER_CELL));
+    sidecar.kzgProofs = Array.from({length: 32}, () => new Uint8Array(ssz.deneb.KZGProof.fixedSize));
+    const serialized = ssz.gloas.DataColumnSidecar.serialize(sidecar);
+
+    for (const epoch of [700000, 700001, 700002]) {
+      const topicStr = stringifyGossipTopic(config, {
+        type: GossipType.data_column_sidecar,
+        boundary: config.getForkBoundaryAtEpoch(epoch),
+        subnet: 0,
+        encoding,
+      });
+      expect(gossipTopicCache.getTypeSizes(topicStr).maxSize, `epoch ${epoch}`).toBe(serialized.length);
+      const compressed = transform.outboundTransform(topicStr, serialized);
+      expect(new Uint8Array(transform.inboundTransform(topicStr, compressed)), `epoch ${epoch}`).toEqual(serialized);
+      expect(
+        () => transform.inboundTransform(topicStr, snappyWasm.compress(new Uint8Array(serialized.length + 1))),
+        `epoch ${epoch}`
+      ).toThrow(`ssz_snappy decoded data length ${serialized.length + 1}`);
+    }
   });
 
   it("should use the Heze bid size limit post-Heze", () => {
