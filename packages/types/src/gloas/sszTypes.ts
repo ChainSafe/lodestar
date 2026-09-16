@@ -731,8 +731,6 @@ export const SSEPayloadAttributes = new ContainerType(
     // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
-    safeBlockHash: Root,
-    finalizedBlockHash: Root,
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}

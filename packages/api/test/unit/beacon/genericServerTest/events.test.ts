@@ -2,23 +2,14 @@ import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-import {defer, fromHex, sleep} from "@lodestar/utils";
+import {defer, sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
-import {
-  BeaconEvent,
-  Endpoints,
-  EventType,
-  getDefinitions,
-  getEventSerdes,
-} from "../../../../src/beacon/routes/events.js";
+import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
-  const safeBlockHash = "0x1111111111111111111111111111111111111111111111111111111111111111";
-  const finalizedBlockHash = "0x2222222222222222222222222222222222222222222222222222222222222222";
   const mockApi = getMockApi<Endpoints>(getDefinitions(config));
   let server: FastifyInstance;
   let baseUrl: string;
@@ -42,27 +33,6 @@ describe("beacon / events", () => {
     controller = new AbortController();
   });
   afterEach(() => controller.abort());
-
-  it.each([ForkName.gloas, ForkName.heze])("Round-trips %s payload attributes with forkchoice hashes", (fork) => {
-    const data =
-      fork === ForkName.gloas
-        ? ssz.gloas.SSEPayloadAttributes.defaultValue()
-        : ssz.heze.SSEPayloadAttributes.defaultValue();
-    data.safeBlockHash = fromHex(safeBlockHash);
-    data.finalizedBlockHash = fromHex(finalizedBlockHash);
-    const message = {version: fork, data};
-    const eventSerdes = getEventSerdes(config);
-    const json = eventSerdes.toJson({type: EventType.payloadAttributes, message});
-
-    expect(json).toMatchObject({
-      version: fork,
-      data: {
-        safe_block_hash: safeBlockHash,
-        finalized_block_hash: finalizedBlockHash,
-      },
-    });
-    expect(eventSerdes.fromJson(EventType.payloadAttributes, json)).toEqual(message);
-  });
 
   it("Closes the server subscription when the client aborts", async () => {
     const received = defer<void>();
