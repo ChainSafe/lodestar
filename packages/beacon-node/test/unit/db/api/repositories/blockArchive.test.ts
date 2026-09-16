@@ -6,6 +6,7 @@ import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
@@ -211,5 +212,34 @@ describe("block archive repository", () => {
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
     expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+  });
+
+  it("should delete index entries of a pruned range", async () => {
+    const blocks = Array.from({length: 5}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < blocks.length; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(blocks.map((block) => ({key: block.message.slot, value: block})));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange([0, 1, 2]);
+
+    for (const slot of [0, 1, 2]) {
+      expect(await blockArchive.get(slot)).toBeNull();
+      expect(await blockArchive.getRootBySlot(slot)).toBeNull();
+      expect(await blockArchive.getSlotByRoot(roots[slot])).toBeNull();
+    }
+    expect(await blockArchive.getSlotByParentRoot(blocks[0].message.parentRoot)).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[0])).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[1])).toBeNull();
+
+    // the entry pointing at the first kept block must survive
+    expect(await blockArchive.getSlotByParentRoot(roots[2])).toBe(3);
+    expect(await blockArchive.getSlotByRoot(roots[3])).toBe(3);
+    expect(toRootHex((await blockArchive.getRootBySlot(4)) ?? new Uint8Array())).toBe(toRootHex(roots[4]));
   });
 });

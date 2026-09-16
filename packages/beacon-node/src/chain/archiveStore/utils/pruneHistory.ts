@@ -45,7 +45,7 @@ export async function pruneHistory(
   const step1 = metrics?.pruneHistory.pruneKeys.startTimer();
   await Promise.all([
     // ->
-    db.blockArchive.batchDelete(blocks),
+    db.blockArchive.batchDeleteRange(blocks),
     db.executionPayloadEnvelopeArchive.batchDelete(envelopes),
     db.stateArchive.batchDelete(states),
   ]);
