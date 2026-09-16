@@ -24,8 +24,6 @@ export type BuildRequest<F extends ForkPostGloas = ForkPostGloas> = F extends Fo
       fork: F;
       forkchoiceState: ForkchoiceState;
       payloadAttributes: PayloadAttributes<F>;
-      /** CL data-column custody set for EL blobpool sampling; null if the CL provides no custody services. */
-      custodyColumns: ColumnIndex[] | null;
     }
   : never;
 
@@ -113,7 +111,10 @@ export class EnginePayloadSource implements PayloadSource {
       safeBlockHash,
       finalizedBlockHash,
       request.payloadAttributes,
-      request.custodyColumns,
+      // The builder does not custody or sample data columns, so it never provides a custody set.
+      // A null custody set leaves the execution client's blobpool sampling set untouched, which is
+      // also what the spec's own build call does (`prepare_execution_payload` passes `custody_columns=None`).
+      null,
       signal
     );
 

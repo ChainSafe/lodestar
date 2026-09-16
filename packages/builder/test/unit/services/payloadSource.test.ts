@@ -23,12 +23,10 @@ describe("EnginePayloadSource", () => {
     finalizedBlockHash: toRootHex(Uint8Array.from({length: 32}, () => 3)),
   };
   const payloadAttributes = ssz.gloas.PayloadAttributes.defaultValue();
-  const custodyColumns = [0, 3, 127];
   const request: BuildRequest<ForkName.gloas> = {
     fork: ForkName.gloas,
     forkchoiceState,
     payloadAttributes,
-    custodyColumns,
   };
 
   // @ts-expect-error Heze requests cannot use Gloas payload attributes.
@@ -49,7 +47,7 @@ describe("EnginePayloadSource", () => {
     source = new EnginePayloadSource(sourceId, engine);
   });
 
-  it("prepares a payload and returns a source-bound handle", async () => {
+  it("prepares a payload without a custody set and returns a source-bound handle", async () => {
     notifyForkchoiceUpdate.mockResolvedValue(payloadId);
 
     const result = await source.prepare(request, signal);
@@ -60,26 +58,10 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       payloadAttributes,
-      custodyColumns,
-      signal
-    );
-    expect(result).toEqual(handle);
-  });
-
-  it("preserves a null custody set", async () => {
-    notifyForkchoiceUpdate.mockResolvedValue(payloadId);
-
-    await source.prepare({...request, custodyColumns: null}, signal);
-
-    expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
-      ForkName.gloas,
-      forkchoiceState.headBlockHash,
-      forkchoiceState.safeBlockHash,
-      forkchoiceState.finalizedBlockHash,
-      payloadAttributes,
       null,
       signal
     );
+    expect(result).toEqual(handle);
   });
 
   it("supports post-Gloas forks without narrowing the fork", async () => {
@@ -98,7 +80,6 @@ describe("EnginePayloadSource", () => {
         fork: ForkName.heze,
         forkchoiceState,
         payloadAttributes: hezePayloadAttributes,
-        custodyColumns,
       },
       signal
     );
@@ -111,7 +92,7 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       hezePayloadAttributes,
-      custodyColumns,
+      null,
       signal
     );
     expect(getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId, signal);
