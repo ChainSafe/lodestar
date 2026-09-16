@@ -78,7 +78,7 @@
         "noUndeclaredDependencies": {
           "level": "error",
           // For these files, devDependencies count as being declared
-          "options": { "devDependencies": ["**/test/**", "**/*.test.ts", "**/src/testUtils/**"] }
+          "options": { "devDependencies": ["**/test/**", "**/*.test.ts"] }
         }
       },
       "performance": {
