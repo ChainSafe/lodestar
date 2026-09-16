@@ -483,7 +483,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * and block access list dropped and reconstructed from the EL on read. Otherwise the full envelope
  * is archived as-is. Both go in the same bucket as `ArchivedSignedExecutionPayloadEnvelope`.
  */
-async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,

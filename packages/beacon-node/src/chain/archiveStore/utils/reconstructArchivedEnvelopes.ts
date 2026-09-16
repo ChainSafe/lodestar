@@ -64,57 +64,81 @@ export async function* reconstructArchivedEnvelopesByRange(
   }
 }
 
+/**
+ * Reconstruct compact envelopes from EL bodies, in batches of MAX_BODIES_REQUEST. The result is
+ * aligned with the input: `null` where the EL cannot serve that envelope's bodies.
+ */
+export async function reconstructArchivedEnvelopes(
+  executionEngine: IExecutionEngine,
+  compacts: gloas.SignedCompactExecutionPayloadEnvelope[]
+): Promise<(gloas.SignedExecutionPayloadEnvelope | null)[]> {
+  const out: (gloas.SignedExecutionPayloadEnvelope | null)[] = [];
+  for (let i = 0; i < compacts.length; i += MAX_BODIES_REQUEST) {
+    out.push(...(await rebuildCompacts(executionEngine, compacts.slice(i, i + MAX_BODIES_REQUEST))));
+  }
+  return out;
+}
+
 /** Reconstruct a single compact envelope (getter path). Returns null if the EL can't serve its bodies. */
 export async function reconstructArchivedEnvelope(
   executionEngine: IExecutionEngine,
   compact: gloas.SignedCompactExecutionPayloadEnvelope
 ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
-  const [reconstructed] = await reconstructBatch(executionEngine, [
-    {slot: compact.message.payload.slotNumber, archived: {selector: ArchivedEnvelopeKind.Compact, value: compact}},
-  ]);
-  return reconstructed?.envelope ?? null;
+  const [reconstructed] = await reconstructArchivedEnvelopes(executionEngine, [compact]);
+  return reconstructed ?? null;
 }
 
-/** One EL round-trip for the compact entries of a batch, keeping the batch's slot order. */
-async function reconstructBatch(executionEngine: IExecutionEngine, batch: SlotArchived[]): Promise<SlotEnvelope[]> {
-  const hashes: string[] = [];
-  for (const {archived} of batch) {
-    if (archived.selector === ArchivedEnvelopeKind.Compact) {
-      hashes.push(toRootHex(archived.value.message.payload.blockHash));
-    }
+/**
+ * One EL round-trip for up to MAX_BODIES_REQUEST compact envelopes. Aligned with the input; `null`
+ * where the EL doesn't have the block, returned a pre-capella shape (no withdrawals), or has already
+ * pruned the block access list.
+ */
+async function rebuildCompacts(
+  executionEngine: IExecutionEngine,
+  compacts: gloas.SignedCompactExecutionPayloadEnvelope[]
+): Promise<(gloas.SignedExecutionPayloadEnvelope | null)[]> {
+  if (compacts.length === 0) return [];
+  const hashes = compacts.map((compact) => toRootHex(compact.message.payload.blockHash));
+
+  let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
+  try {
+    bodies = await executionEngine.getPayloadBodiesByHashV2(hashes);
+  } catch (e) {
+    throw new EnvelopeReconstructionError(
+      {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
+      `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`,
+      {cause: e}
+    );
   }
 
-  let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>> = [];
-  if (hashes.length > 0) {
-    try {
-      bodies = await executionEngine.getPayloadBodiesByHashV2(hashes);
-    } catch (e) {
-      throw new EnvelopeReconstructionError(
-        {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
-        `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`,
-        {cause: e}
-      );
-    }
+  return compacts.map((compact, i) => {
+    const body = bodies[i];
+    if (body == null || body.withdrawals == null || body.blockAccessList == null) return null;
+    return signedCompactEnvelopeToFull(compact, {
+      transactions: body.transactions,
+      withdrawals: body.withdrawals,
+      blockAccessList: body.blockAccessList,
+    });
+  });
+}
+
+/** Rebuild the compact entries of a range batch in one EL round-trip, keeping the batch's slot order. */
+async function reconstructBatch(executionEngine: IExecutionEngine, batch: SlotArchived[]): Promise<SlotEnvelope[]> {
+  const compacts: gloas.SignedCompactExecutionPayloadEnvelope[] = [];
+  for (const {archived} of batch) {
+    if (archived.selector === ArchivedEnvelopeKind.Compact) compacts.push(archived.value);
   }
+  const rebuilt = await rebuildCompacts(executionEngine, compacts);
 
   const reconstructed: SlotEnvelope[] = [];
-  let bodyIdx = 0;
+  let compactIdx = 0;
   for (const {slot, archived} of batch) {
     if (archived.selector === ArchivedEnvelopeKind.Full) {
       reconstructed.push({slot, envelope: archived.value});
       continue;
     }
-    const body = bodies[bodyIdx++];
-    // EL doesn't have the block, pre-capella shape (no withdrawals), or BAL already pruned → cannot rebuild
-    if (body == null || body.withdrawals == null || body.blockAccessList == null) continue;
-    reconstructed.push({
-      slot,
-      envelope: signedCompactEnvelopeToFull(archived.value, {
-        transactions: body.transactions,
-        withdrawals: body.withdrawals,
-        blockAccessList: body.blockAccessList,
-      }),
-    });
+    const envelope = rebuilt[compactIdx++];
+    if (envelope !== null) reconstructed.push({slot, envelope});
   }
   return reconstructed;
 }

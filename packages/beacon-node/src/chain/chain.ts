@@ -77,7 +77,10 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {reconstructArchivedEnvelope} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {
+  reconstructArchivedEnvelope,
+  reconstructArchivedEnvelopes,
+} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -928,31 +931,64 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-    if (payloadInput?.hasPayloadEnvelope()) {
-      const envelope = payloadInput.getPayloadEnvelope();
-      const serialized = this.serializedCache.get(envelope);
-      if (serialized) {
-        return serialized;
+    const [bytes] = await this.getSerializedExecutionPayloadEnvelopes([{blockSlot, blockRootHex}]);
+    return bytes;
+  }
+
+  /**
+   * Batch variant: archived compact envelopes are reconstructed together, MAX_BODIES_REQUEST per EL
+   * round-trip, instead of one round-trip per envelope. Result is aligned with `requests`.
+   */
+  async getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[]
+  ): Promise<(Uint8Array | null)[]> {
+    const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
+    const compacts: gloas.SignedCompactExecutionPayloadEnvelope[] = [];
+    const compactIdxs: number[] = [];
+
+    for (let i = 0; i < requests.length; i++) {
+      const {blockSlot, blockRootHex} = requests[i];
+
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        const envelope = payloadInput.getPayloadEnvelope();
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        continue;
       }
-      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      // hot is already a full object, return it directly
+      const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+      if (hot !== null) {
+        out[i] = hot;
+        continue;
+      }
+
+      const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+      if (archived === null) continue;
+
+      // full entries are the envelope's own SSZ after the union selector byte, serve without deserializing
+      if (archived[0] === ArchivedEnvelopeKind.Full) {
+        out[i] = archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+        continue;
+      }
+
+      compacts.push(
+        ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(
+          archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH)
+        )
+      );
+      compactIdxs.push(i);
     }
 
-    // hot is already a full object, return it directly
-    const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
-    if (hot !== null) return hot;
+    if (compacts.length > 0) {
+      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
+      for (let j = 0; j < rebuilt.length; j++) {
+        const envelope = rebuilt[j];
+        if (envelope !== null) out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      }
+    }
 
-    const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
-    if (archived === null) return null;
-
-    // full entries are the envelope's own SSZ after the union selector byte, serve without deserializing
-    if (archived[0] === ArchivedEnvelopeKind.Full) return archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
-
-    const compact = ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(
-      archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH)
-    );
-    const full = await reconstructArchivedEnvelope(this.executionEngine, compact);
-    return full === null ? null : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
+    return out;
   }
 
   async getExecutionPayloadEnvelope(

@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {RootHex, Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -18,6 +19,9 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
+  // Resolve slots first so archived compact envelopes can be reconstructed in one batch (MAX_BODIES_REQUEST
+  // per EL round-trip) rather than one EL call per requested root.
+  const requests: {blockSlot: Slot; blockRootHex: RootHex}[] = [];
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
     const block = chain.forkChoice.getBlockHexDefaultStatus(rootHex);
@@ -35,29 +39,35 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       );
       continue;
     }
+    requests.push({blockSlot: slot, blockRootHex: rootHex});
+  }
 
-    let envelopeBytes: Uint8Array | null;
-    try {
-      envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
-    } catch (e) {
-      // Archived envelopes are rebuilt from EL bodies; see executionPayloadEnvelopesByRange for the mapping
-      if (e instanceof EnvelopeReconstructionError) {
-        throw new ResponseError(
-          e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
-          `Failed to reconstruct archived envelope root=${rootHex}: ${e.message}`
-        );
-      }
-      throw e;
+  let envelopesBytes: (Uint8Array | null)[];
+  try {
+    envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(requests);
+  } catch (e) {
+    // Archived envelopes are rebuilt from EL bodies; see executionPayloadEnvelopesByRange for the mapping
+    if (e instanceof EnvelopeReconstructionError) {
+      throw new ResponseError(
+        e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
+        `Failed to reconstruct archived envelopes: ${e.message}`
+      );
     }
+    throw e;
+  }
+
+  for (let i = 0; i < requests.length; i++) {
+    const {blockSlot, blockRootHex} = requests[i];
+    const envelopeBytes = envelopesBytes[i];
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot)),
       };
     } else {
       chain.logger.debug("Cannot serve ExecutionPayloadEnvelopesByRoot: envelope not found", {
-        slot,
-        root: rootHex,
+        slot: blockSlot,
+        root: blockRootHex,
         peer: prettyPrintPeerId(peerId),
         client: peerClient,
       });

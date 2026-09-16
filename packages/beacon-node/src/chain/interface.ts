@@ -236,6 +236,9 @@ export interface IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[]
+  ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
