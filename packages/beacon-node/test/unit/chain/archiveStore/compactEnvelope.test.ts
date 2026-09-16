@@ -1,11 +1,16 @@
 import {describe, expect, it} from "vitest";
-import {ssz} from "@lodestar/types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import type {ExecutionPayloadBodies} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   signedCompactEnvelopeToFull,
   toSignedCompactEnvelope,
 } from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../../src/chain/errors/index.js";
+import {
+  compactExecutionPayloadSsz,
+  signedCompactExecutionPayloadEnvelopeSsz,
+} from "../../../../src/db/repositories/index.js";
 
 type SignedEnvelope = ReturnType<typeof ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue>;
 
@@ -35,12 +40,23 @@ function bodiesOf(envelope: SignedEnvelope): Parameters<typeof signedCompactEnve
 // before handing to the real reconstruct fn — proves it survives persistence.
 function persistedCompact(
   envelope: SignedEnvelope
-): ReturnType<typeof ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize> {
-  const bytes = ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(toSignedCompactEnvelope(envelope));
-  return ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(bytes);
+): ReturnType<typeof signedCompactExecutionPayloadEnvelopeSsz.deserialize> {
+  const bytes = signedCompactExecutionPayloadEnvelopeSsz.serialize(toSignedCompactEnvelope(envelope));
+  return signedCompactExecutionPayloadEnvelopeSsz.deserialize(bytes);
 }
 
 describe("compactEnvelope", () => {
+  // The compact scalars are derived from the electra header, not from the payload being compacted.
+  // If a later fork adds a scalar to ExecutionPayload, the compact form would drop it on write and
+  // the payloadRoot check could not catch it (both sides hash the same container). Pin the field set.
+  const postGloasForks = Object.values(ForkName).filter((fork) => ForkSeq[fork] >= ForkSeq.gloas);
+  it.each(postGloasForks)("compact scalars + bodies cover every %s ExecutionPayload field", (fork) => {
+    const compactFields = Object.keys(compactExecutionPayloadSsz.fields).filter((f) => f !== "payloadRoot");
+    const covered = [...compactFields, "transactions", "withdrawals", "blockAccessList"].sort();
+    const payloadFields = Object.keys(sszTypesFor(fork, "ExecutionPayload").fields).sort();
+    expect(covered).toEqual(payloadFields);
+  });
+
   it("stores the full payload root and drops transactions, withdrawals and the block access list", () => {
     const envelope = populatedEnvelope();
     const compact = toSignedCompactEnvelope(envelope);
@@ -59,7 +75,7 @@ describe("compactEnvelope", () => {
     p.blockAccessList = new Uint8Array(70 * 1024).fill(0xab);
 
     const full = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope).length;
-    const compact = ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(toSignedCompactEnvelope(envelope)).length;
+    const compact = signedCompactExecutionPayloadEnvelopeSsz.serialize(toSignedCompactEnvelope(envelope)).length;
 
     expect(compact).toBeLessThan(1500);
     expect(full - compact).toBeGreaterThan(260_000);
@@ -67,9 +83,9 @@ describe("compactEnvelope", () => {
 
   it("compact type round-trips through bytes", () => {
     const compact = toSignedCompactEnvelope(populatedEnvelope());
-    const bytes = ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(compact);
-    const decoded = ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(bytes);
-    expect(ssz.gloas.SignedCompactExecutionPayloadEnvelope.equals(compact, decoded)).toBe(true);
+    const bytes = signedCompactExecutionPayloadEnvelopeSsz.serialize(compact);
+    const decoded = signedCompactExecutionPayloadEnvelopeSsz.deserialize(bytes);
+    expect(signedCompactExecutionPayloadEnvelopeSsz.equals(compact, decoded)).toBe(true);
   });
 
   it("compact + bodies reconstruct the original byte-identically", () => {

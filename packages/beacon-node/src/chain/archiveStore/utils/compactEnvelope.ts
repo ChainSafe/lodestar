@@ -1,13 +1,15 @@
 import {ssz} from "@lodestar/types";
 import {
   BlockAccessList,
-  CompactExecutionPayloadEnvelope,
   ExecutionPayloadEnvelope,
-  SignedCompactExecutionPayloadEnvelope,
   SignedExecutionPayloadEnvelope,
   Transactions,
   Withdrawals,
 } from "@lodestar/types/gloas";
+import {
+  CompactExecutionPayloadEnvelope,
+  SignedCompactExecutionPayloadEnvelope,
+} from "../../../db/repositories/executionPayloadEnvelopeArchive.js";
 import {
   EnvelopeReconstructionError,
   EnvelopeReconstructionErrorCode,

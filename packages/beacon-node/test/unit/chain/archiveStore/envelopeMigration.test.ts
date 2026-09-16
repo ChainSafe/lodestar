@@ -11,7 +11,11 @@ import {toRootHex} from "@lodestar/utils";
 import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {toSignedCompactEnvelope} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
-import {ArchivedEnvelopeKind} from "../../../../src/db/repositories/index.js";
+import {
+  ArchivedEnvelopeKind,
+  SignedCompactExecutionPayloadEnvelope,
+  signedCompactExecutionPayloadEnvelopeSsz,
+} from "../../../../src/db/repositories/index.js";
 
 describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
@@ -69,8 +73,8 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
       const archived = await db.executionPayloadEnvelopeArchive.get(slot);
       expect(archived?.selector).toBe(ArchivedEnvelopeKind.Compact);
       expect(
-        ssz.gloas.SignedCompactExecutionPayloadEnvelope.equals(
-          archived?.value as gloas.SignedCompactExecutionPayloadEnvelope,
+        signedCompactExecutionPayloadEnvelopeSsz.equals(
+          archived?.value as SignedCompactExecutionPayloadEnvelope,
           toSignedCompactEnvelope(makeEnvelope(slot))
         )
       ).toBe(true);

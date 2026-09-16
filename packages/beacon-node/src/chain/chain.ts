@@ -61,7 +61,12 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
-import {ARCHIVED_ENVELOPE_SELECTOR_LENGTH, ArchivedEnvelopeKind} from "../db/repositories/index.js";
+import {
+  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
+  ArchivedEnvelopeKind,
+  SignedCompactExecutionPayloadEnvelope,
+  signedCompactExecutionPayloadEnvelopeSsz,
+} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -943,7 +948,7 @@ export class BeaconChain implements IBeaconChain {
     requests: {blockSlot: Slot; blockRootHex: RootHex}[]
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const compacts: gloas.SignedCompactExecutionPayloadEnvelope[] = [];
+    const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
     const compactIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
@@ -973,9 +978,7 @@ export class BeaconChain implements IBeaconChain {
       }
 
       compacts.push(
-        ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(
-          archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH)
-        )
+        signedCompactExecutionPayloadEnvelopeSsz.deserialize(archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH))
       );
       compactIdxs.push(i);
     }

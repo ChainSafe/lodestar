@@ -1,7 +1,12 @@
-import {Slot, gloas} from "@lodestar/types";
+import {Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {ArchivedEnvelope, ArchivedEnvelopeKind} from "../../../db/repositories/index.js";
+import {
+  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
+  ArchivedEnvelopeKind,
+  SignedCompactExecutionPayloadEnvelope,
+  signedCompactExecutionPayloadEnvelopeSsz,
+} from "../../../db/repositories/index.js";
 import {IExecutionEngine} from "../../../execution/index.js";
 import {
   EnvelopeReconstructionError,
@@ -12,14 +17,20 @@ import {signedCompactEnvelopeToFull} from "./compactEnvelope.js";
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
-export type SlotEnvelope = {slot: Slot; envelope: gloas.SignedExecutionPayloadEnvelope};
-type SlotArchived = {slot: Slot; archived: ArchivedEnvelope};
+/** A finalized envelope ready to serve: the serialized `SignedExecutionPayloadEnvelope` bytes */
+export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
+
+/** A range entry read raw from the archive: full ones already hold their servable bytes */
+type RangeEntry =
+  | {slot: Slot; kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
+  | {slot: Slot; kind: ArchivedEnvelopeKind.Compact; compact: SignedCompactExecutionPayloadEnvelope};
 
 /**
- * Stream finalized envelopes over [startSlot, endSlot) in slot order. Compact entries (the default)
- * are rebuilt from EL bodies, fetched in batches of MAX_BODIES_REQUEST (32) to bound round-trips (a
- * range request may span up to MAX_REQUEST_PAYLOADS = 128 slots); full entries
- * (`--chain.dedupePayloads=false`) are yielded as-is.
+ * Stream finalized envelopes over [startSlot, endSlot) in slot order, as serialized bytes. Entries
+ * are read raw and branched on the union selector byte: full entries (`--chain.dedupePayloads=false`)
+ * are yielded as `bytes.subarray(1)` without deserializing; compact entries (~1 KB, the default) are
+ * deserialized, rebuilt from EL bodies fetched in batches of MAX_BODIES_REQUEST (32) to bound
+ * round-trips (a range request may span up to MAX_REQUEST_PAYLOADS = 128 slots), and re-serialized.
  *
  * Slots the EL cannot serve — unknown block hash, or a pruned block access list (EIP-7928 only
  * requires ELs to retain BALs for the weak subjectivity period) — are skipped and warned once per
@@ -35,13 +46,23 @@ export async function* reconstructArchivedEnvelopesByRange(
   logger: Logger,
   startSlot: Slot,
   endSlot: Slot
-): AsyncIterable<SlotEnvelope> {
+): AsyncIterable<SlotEnvelopeBytes> {
   const archive = db.executionPayloadEnvelopeArchive;
-  let batch: SlotArchived[] = [];
+  let batch: RangeEntry[] = [];
   let missCount = 0;
 
-  for await (const {key: slot, value: archived} of archive.entriesStream({gte: startSlot, lt: endSlot})) {
-    batch.push({slot, archived});
+  for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+    const slot = archive.decodeKey(key);
+    const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+    if (bytes[0] === ArchivedEnvelopeKind.Full) {
+      batch.push({slot, kind: ArchivedEnvelopeKind.Full, envelopeBytes: value});
+    } else {
+      batch.push({
+        slot,
+        kind: ArchivedEnvelopeKind.Compact,
+        compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value),
+      });
+    }
     if (batch.length === MAX_BODIES_REQUEST) {
       const reconstructed = await reconstructBatch(executionEngine, batch);
       missCount += batch.length - reconstructed.length;
@@ -70,7 +91,7 @@ export async function* reconstructArchivedEnvelopesByRange(
  */
 export async function reconstructArchivedEnvelopes(
   executionEngine: IExecutionEngine,
-  compacts: gloas.SignedCompactExecutionPayloadEnvelope[]
+  compacts: SignedCompactExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | null)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | null)[] = [];
   for (let i = 0; i < compacts.length; i += MAX_BODIES_REQUEST) {
@@ -82,7 +103,7 @@ export async function reconstructArchivedEnvelopes(
 /** Reconstruct a single compact envelope (getter path). Returns null if the EL can't serve its bodies. */
 export async function reconstructArchivedEnvelope(
   executionEngine: IExecutionEngine,
-  compact: gloas.SignedCompactExecutionPayloadEnvelope
+  compact: SignedCompactExecutionPayloadEnvelope
 ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
   const [reconstructed] = await reconstructArchivedEnvelopes(executionEngine, [compact]);
   return reconstructed ?? null;
@@ -95,7 +116,7 @@ export async function reconstructArchivedEnvelope(
  */
 async function rebuildCompacts(
   executionEngine: IExecutionEngine,
-  compacts: gloas.SignedCompactExecutionPayloadEnvelope[]
+  compacts: SignedCompactExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | null)[]> {
   if (compacts.length === 0) return [];
   const hashes = compacts.map((compact) => toRootHex(compact.message.payload.blockHash));
@@ -123,22 +144,27 @@ async function rebuildCompacts(
 }
 
 /** Rebuild the compact entries of a range batch in one EL round-trip, keeping the batch's slot order. */
-async function reconstructBatch(executionEngine: IExecutionEngine, batch: SlotArchived[]): Promise<SlotEnvelope[]> {
-  const compacts: gloas.SignedCompactExecutionPayloadEnvelope[] = [];
-  for (const {archived} of batch) {
-    if (archived.selector === ArchivedEnvelopeKind.Compact) compacts.push(archived.value);
+async function reconstructBatch(executionEngine: IExecutionEngine, batch: RangeEntry[]): Promise<SlotEnvelopeBytes[]> {
+  const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
+  for (const entry of batch) {
+    if (entry.kind === ArchivedEnvelopeKind.Compact) compacts.push(entry.compact);
   }
   const rebuilt = await rebuildCompacts(executionEngine, compacts);
 
-  const reconstructed: SlotEnvelope[] = [];
+  const reconstructed: SlotEnvelopeBytes[] = [];
   let compactIdx = 0;
-  for (const {slot, archived} of batch) {
-    if (archived.selector === ArchivedEnvelopeKind.Full) {
-      reconstructed.push({slot, envelope: archived.value});
+  for (const entry of batch) {
+    if (entry.kind === ArchivedEnvelopeKind.Full) {
+      reconstructed.push({slot: entry.slot, envelopeBytes: entry.envelopeBytes});
       continue;
     }
     const envelope = rebuilt[compactIdx++];
-    if (envelope !== null) reconstructed.push({slot, envelope});
+    if (envelope !== null) {
+      reconstructed.push({
+        slot: entry.slot,
+        envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+      });
+    }
   }
   return reconstructed;
 }

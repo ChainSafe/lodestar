@@ -6,7 +6,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
-import {fromAsync, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {reconstructArchivedEnvelopesByRange} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
@@ -71,14 +71,26 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
   }
 
-  const range = (
+  // Collect the range as deserialized envelopes (the generator yields serialized bytes, as served on the wire)
+  async function range(
     start: number,
     end: number
-  ): AsyncIterable<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}> =>
-    reconstructArchivedEnvelopesByRange(db, executionEngine, logger, start, end);
+  ): Promise<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]> {
+    const out = [];
+    for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
+      db,
+      executionEngine,
+      logger,
+      start,
+      end
+    )) {
+      out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
+    }
+    return out;
+  }
 
-  const rejection = async (iter: AsyncIterable<unknown>): Promise<EnvelopeReconstructionError | null> =>
-    fromAsync(iter).then(
+  const rejection = async (p: Promise<unknown>): Promise<EnvelopeReconstructionError | null> =>
+    p.then(
       () => null,
       (e) => e as EnvelopeReconstructionError
     );
@@ -87,7 +99,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const fulls = [await seed(10), await seed(11), await seed(12)];
     elServes(fulls);
 
-    const out = await fromAsync(range(10, 13));
+    const out = await range(10, 13);
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
     for (const {slot, envelope} of out) {
@@ -109,7 +121,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     for (let slot = 0; slot < 33; slot++) fulls.push(await seed(slot));
     elServes(fulls);
 
-    const out = await fromAsync(range(0, 33));
+    const out = await range(0, 33);
 
     expect(out.length).toBe(33);
     // 33 slots → 32 + 1, i.e. two EL round-trips, not 33
@@ -130,7 +142,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const archivedFull = await seedFull(11);
     elServes(fulls);
 
-    const out = await fromAsync(range(10, 13));
+    const out = await range(10, 13);
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
@@ -141,35 +153,35 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   it("serves a full-only range without calling the EL", async () => {
     await seedFull(10);
-    const out = await fromAsync(range(10, 11));
+    const out = await range(10, 11);
     expect(out.map((o) => o.slot)).toEqual([10]);
     expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
   });
 
   it("respects the [gte, lt) bounds", async () => {
     elServes([await seed(10), await seed(11), await seed(12)]);
-    const out = await fromAsync(range(11, 12));
+    const out = await range(11, 12);
     expect(out.map((o) => o.slot)).toEqual([11]);
   });
 
   it("skips slots the EL cannot serve (null body)", async () => {
     const fulls = [await seed(10), await seed(11)];
     elServes([fulls[0]]); // EL knows 10 but not 11
-    const out = await fromAsync(range(10, 12));
+    const out = await range(10, 12);
     expect(out.map((o) => o.slot)).toEqual([10]);
   });
 
   it("skips slots with a pre-capella body shape (null withdrawals)", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), withdrawals: null}]);
-    const out = await fromAsync(range(10, 11));
+    const out = await range(10, 11);
     expect(out).toEqual([]);
   });
 
   it("skips slots whose block access list the EL has pruned (null blockAccessList)", async () => {
     const fulls = [await seed(10), await seed(11)];
     getPayloadBodiesByHashV2.mockResolvedValue([bodyOf(fulls[0]), {...bodyOf(fulls[1]), blockAccessList: null}]);
-    const out = await fromAsync(range(10, 12));
+    const out = await range(10, 12);
     expect(out.map((o) => o.slot)).toEqual([10]);
   });
 
@@ -194,7 +206,9 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const yielded: number[] = [];
     let err: unknown = null;
     try {
-      for await (const {slot} of range(0, 33)) yielded.push(slot);
+      for await (const {slot} of reconstructArchivedEnvelopesByRange(db, executionEngine, logger, 0, 33)) {
+        yielded.push(slot);
+      }
     } catch (e) {
       err = e;
     }

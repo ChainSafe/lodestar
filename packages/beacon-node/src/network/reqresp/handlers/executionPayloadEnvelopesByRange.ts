@@ -4,7 +4,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {gloas, ssz} from "@lodestar/types";
+import {gloas} from "@lodestar/types";
 import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -45,7 +45,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   // Finalized range of envelopes — reconstructed from the compact archive + EL bodies (V2, incl. BAL)
   if (startSlot <= archiveMaxSlot) {
     try {
-      for await (const {slot, envelope} of reconstructArchivedEnvelopesByRange(
+      for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
         db,
         chain.executionEngine,
         chain.logger,
@@ -53,7 +53,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
         Math.min(endSlot, archiveMaxSlot + 1)
       )) {
         yield {
-          data: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+          data: envelopeBytes,
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
         };
       }

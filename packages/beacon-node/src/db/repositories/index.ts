@@ -13,7 +13,14 @@ export {
   ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
   type ArchivedEnvelope,
   ArchivedEnvelopeKind,
+  type CompactExecutionPayload,
+  type CompactExecutionPayloadEnvelope,
   ExecutionPayloadEnvelopeArchiveRepository,
+  type SignedCompactExecutionPayloadEnvelope,
+  archivedSignedExecutionPayloadEnvelopeSsz,
+  compactExecutionPayloadEnvelopeSsz,
+  compactExecutionPayloadSsz,
+  signedCompactExecutionPayloadEnvelopeSsz,
 } from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";

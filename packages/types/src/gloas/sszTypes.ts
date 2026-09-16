@@ -9,7 +9,6 @@ import {
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
-  UnionType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -508,55 +507,6 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
-);
-
-// Lodestar-internal storage type — NOT a spec container. The execution payload with
-// transactions, withdrawals and blockAccessList dropped, plus the hash_tree_root of the full
-// payload so a reconstruction from EL bodies can be verified with a single check.
-// Never hashed or put on the wire; the full envelope is reconstructed from the EL before serving.
-const {
-  transactionsRoot: _transactionsRoot,
-  withdrawalsRoot: _withdrawalsRoot,
-  ...executionPayloadScalarFields
-} = electraSsz.ExecutionPayloadHeader.fields;
-
-export const CompactExecutionPayload = new ContainerType(
-  {
-    ...executionPayloadScalarFields,
-    slotNumber: Slot, // GLOAS:EIP-7843
-    payloadRoot: Root, // hash_tree_root(ExecutionPayload) of the full payload
-  },
-  {typeName: "CompactExecutionPayload", jsonCase: "eth2"}
-);
-
-export const CompactExecutionPayloadEnvelope = new ContainerType(
-  {
-    payload: CompactExecutionPayload,
-    executionRequests: ExecutionRequests,
-    builderIndex: BuilderIndex,
-    beaconBlockRoot: Root,
-    parentBeaconBlockRoot: Root,
-  },
-  {typeName: "CompactExecutionPayloadEnvelope", jsonCase: "eth2"}
-);
-
-export const SignedCompactExecutionPayloadEnvelope = new ContainerType(
-  {
-    message: CompactExecutionPayloadEnvelope,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedCompactExecutionPayloadEnvelope", jsonCase: "eth2"}
-);
-
-/**
- * Lodestar-internal archive value: a finalized envelope stored either compact (selector 0, default —
- * bodies reconstructed from the EL on read) or in full (selector 1, `--chain.dedupePayloads=false`).
- * Serialized as one selector byte followed by the value, so selector 1 entries can be served as
- * `bytes.subarray(1)` without deserializing.
- */
-export const ArchivedSignedExecutionPayloadEnvelope = new UnionType(
-  [SignedCompactExecutionPayloadEnvelope, SignedExecutionPayloadEnvelope],
-  {typeName: "ArchivedSignedExecutionPayloadEnvelope"}
 );
 
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
