@@ -59,7 +59,18 @@ import {
   heze,
   ssz,
 } from "@lodestar/types";
-import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {
+  GWEI_TO_WEI,
+  Logger,
+  byteArrayEquals,
+  fromHex,
+  prettyGweiToEth,
+  prettyWeiToEth,
+  sleep,
+  toHex,
+  toPubkeyHex,
+  toRootHex,
+} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
@@ -259,7 +270,7 @@ export async function produceBlockBody<T extends BlockType>(
     this.logger.verbose("Produced block with builder bid", {
       slot: blockSlot,
       builderIndex: builderBid.message.builderIndex,
-      bidValue: builderBid.message.value,
+      bidValue: prettyGweiToEth(builderBid.message.value),
       parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
       parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
       blockHash: toRootHex(builderBid.message.blockHash),
@@ -410,7 +421,7 @@ export async function produceBlockBody<T extends BlockType>(
     this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
     this.logger.verbose("Produced block with self-build bid", {
       slot: blockSlot,
-      executionPayloadValue,
+      executionPayloadValue: prettyWeiToEth(executionPayloadValue),
       prepType,
       payloadId,
       fetchedTime,
@@ -490,7 +501,7 @@ export async function produceBlockBody<T extends BlockType>(
       this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
       this.logger.verbose("Fetched execution payload header from builder", {
         slot: blockSlot,
-        executionPayloadValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
         prepType,
         fetchedTime,
       });
@@ -607,7 +618,7 @@ export async function produceBlockBody<T extends BlockType>(
         this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
         this.logger.verbose("Fetched execution payload from engine", {
           slot: blockSlot,
-          executionPayloadValue,
+          executionPayloadValue: prettyWeiToEth(executionPayloadValue),
           prepType,
           payloadId,
           fetchedTime,
