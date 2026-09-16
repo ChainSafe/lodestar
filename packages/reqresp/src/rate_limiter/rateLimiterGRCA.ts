@@ -44,14 +44,13 @@ export class RateLimiterGRCA<Key> {
   }
 
   allows(key: Key, tokens: number): boolean {
-    if (tokens <= 0) {
-      throw new Error(`Token value should always be positive. Given: ${tokens}.`);
-    }
+    // Defense in depth: a non-positive count must still be charged, not skipped.
+    const chargedTokens = Math.max(1, tokens);
 
     const msSinceStart = Date.now() - this.startTimeMs;
 
     /** how long does it take to replenish these tokens */
-    const additionalTime = this.msPerToken * tokens;
+    const additionalTime = this.msPerToken * chargedTokens;
 
     if (additionalTime > this.msPerBucket) {
       // the time required to process this amount of tokens is longer than the time that makes the bucket full.
