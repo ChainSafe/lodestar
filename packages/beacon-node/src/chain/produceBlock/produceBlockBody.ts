@@ -719,7 +719,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  Object.assign(logMeta, {executionPayloadValue});
+  Object.assign(logMeta, {executionPayloadValue: prettyWeiToEth(executionPayloadValue)});
   this.logger.verbose("Produced beacon block body", logMeta);
 
   return {body: blockBody as AssembledBodyType<T>, produceResult, executionPayloadValue, shouldOverrideBuilder};
