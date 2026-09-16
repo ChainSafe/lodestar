@@ -11,6 +11,7 @@ import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/com
 import {reconstructArchivedEnvelopesByRange} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
+import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
 
@@ -57,7 +58,10 @@ describe("reconstructArchivedEnvelopesByRange", () => {
   // Seed the archive with the compact form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = makeEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.put(slot, toSignedCompactEnvelope(full));
+    await db.executionPayloadEnvelopeArchive.put(slot, {
+      selector: ArchivedEnvelopeKind.Compact,
+      value: toSignedCompactEnvelope(full),
+    });
     return full;
   }
 
@@ -112,6 +116,34 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(2);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(32);
     expect(getPayloadBodiesByHashV2.mock.calls[1][0]).toHaveLength(1);
+  });
+
+  // Seed a full entry (--chain.dedupePayloads=false) in the same archive.
+  async function seedFull(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
+    const full = makeEnvelope(slot);
+    await db.executionPayloadEnvelopeArchive.put(slot, {selector: ArchivedEnvelopeKind.Full, value: full});
+    return full;
+  }
+
+  it("interleaves full entries (dedupePayloads=false) in slot order without hitting the EL for them", async () => {
+    const fulls = [await seed(10), await seed(12)];
+    const archivedFull = await seedFull(11);
+    elServes(fulls);
+
+    const out = await fromAsync(range(10, 13));
+
+    expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
+    expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
+    // only the two compact entries go to the EL
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
+    expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it("serves a full-only range without calling the EL", async () => {
+    await seedFull(10);
+    const out = await fromAsync(range(10, 11));
+    expect(out.map((o) => o.slot)).toEqual([10]);
+    expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
   });
 
   it("respects the [gte, lt) bounds", async () => {
@@ -172,18 +204,15 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect((err as EnvelopeReconstructionError).isTransient()).toBe(true);
   });
 
-  it.each([
+  it.each<[string, Partial<ExecutionPayloadBodyV2>]>([
     ["transactions", {transactions: [Uint8Array.from([0xff])]}],
     ["withdrawals", {withdrawals: [{index: 99, validatorIndex: 99, address: new Uint8Array(20), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
-  ] as const)(
-    "throws PAYLOAD_ROOT_MISMATCH when the EL returns %s that don't match the archived root",
-    async (_f, override) => {
-      const full = await seed(10);
-      getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), ...override}]);
-      const err = await rejection(range(10, 11));
-      expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
-      expect(err?.isTransient()).toBe(false);
-    }
-  );
+  ])("throws PAYLOAD_ROOT_MISMATCH when the EL returns %s that don't match the archived root", async (_f, override) => {
+    const full = await seed(10);
+    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), ...override}]);
+    const err = await rejection(range(10, 11));
+    expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
+    expect(err?.isTransient()).toBe(false);
+  });
 });

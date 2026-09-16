@@ -61,6 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {ARCHIVED_ENVELOPE_SELECTOR_LENGTH, ArchivedEnvelopeKind} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -941,9 +942,15 @@ export class BeaconChain implements IBeaconChain {
     const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
     if (hot !== null) return hot;
 
-    const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
-    if (compact === null) return null;
+    const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+    if (archived === null) return null;
 
+    // full entries are the envelope's own SSZ after the union selector byte, serve without deserializing
+    if (archived[0] === ArchivedEnvelopeKind.Full) return archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+
+    const compact = ssz.gloas.SignedCompactExecutionPayloadEnvelope.deserialize(
+      archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH)
+    );
     const full = await reconstructArchivedEnvelope(this.executionEngine, compact);
     return full === null ? null : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
   }
@@ -960,8 +967,10 @@ export class BeaconChain implements IBeaconChain {
     const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
     if (hot !== null) return hot;
 
-    const compact = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
-    return compact === null ? null : reconstructArchivedEnvelope(this.executionEngine, compact);
+    const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
+    if (archived === null) return null;
+    if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
+    return reconstructArchivedEnvelope(this.executionEngine, archived.value);
   }
 
   async getParentExecutionRequests(

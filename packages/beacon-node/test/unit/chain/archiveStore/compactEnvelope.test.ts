@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {ssz} from "@lodestar/types";
+import type {ExecutionPayloadBodies} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   signedCompactEnvelopeToFull,
   toSignedCompactEnvelope,
@@ -55,13 +56,8 @@ describe("compactEnvelope", () => {
     const envelope = populatedEnvelope();
     const p = envelope.message.payload;
     p.transactions = Array.from({length: 180}, () => crypto.getRandomValues(new Uint8Array(1078))); // ~194 KB
-    p.withdrawals = Array.from({length: 16}, (_, i) => ({
-      index: i,
-      validatorIndex: i,
-      address: new Uint8Array(20),
-      amount: 1n,
-    }));
-    p.blockAccessList = crypto.getRandomValues(new Uint8Array(70 * 1024));
+    p.transactions = Array.from({length: 180}, (_, i) => new Uint8Array(1078).fill(i & 0xff));
+    p.blockAccessList = new Uint8Array(70 * 1024).fill(0xab);
 
     const full = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope).length;
     const compact = ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(toSignedCompactEnvelope(envelope)).length;
@@ -89,11 +85,11 @@ describe("compactEnvelope", () => {
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(rebuilt, envelope)).toBe(true);
   });
 
-  it.each([
+  it.each<[string, Partial<ExecutionPayloadBodies>]>([
     ["transactions", {transactions: [Uint8Array.from([9, 9, 9])]}],
     ["withdrawals", {withdrawals: [{index: 9, validatorIndex: 9, address: new Uint8Array(20).fill(0x11), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
-  ] as const)("throws PAYLOAD_ROOT_MISMATCH when the EL-served %s differ from the original", (_field, override) => {
+  ])("throws PAYLOAD_ROOT_MISMATCH when the EL-served %s differ from the original", (_field, override) => {
     const envelope = populatedEnvelope();
     let err: unknown = null;
     try {

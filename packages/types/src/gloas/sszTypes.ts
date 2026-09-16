@@ -9,6 +9,7 @@ import {
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
+  UnionType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -545,6 +546,17 @@ export const SignedCompactExecutionPayloadEnvelope = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedCompactExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
+/**
+ * Lodestar-internal archive value: a finalized envelope stored either compact (selector 0, default —
+ * bodies reconstructed from the EL on read) or in full (selector 1, `--chain.dedupePayloads=false`).
+ * Serialized as one selector byte followed by the value, so selector 1 entries can be served as
+ * `bytes.subarray(1)` without deserializing.
+ */
+export const ArchivedSignedExecutionPayloadEnvelope = new UnionType(
+  [SignedCompactExecutionPayloadEnvelope, SignedExecutionPayloadEnvelope],
+  {typeName: "ArchivedSignedExecutionPayloadEnvelope"}
 );
 
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(

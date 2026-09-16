@@ -7,7 +7,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {ArchivedEnvelopeKind, BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
@@ -70,7 +70,8 @@ export async function archiveBlocks(
   isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
-  persistOrphanedBlocksDir?: string
+  persistOrphanedBlocksDir?: string,
+  dedupePayloads = true
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete.
   // `ancestors` is the canonical walk back from the finalized root, including the previous finalized
@@ -157,7 +158,8 @@ export async function archiveBlocks(
         config,
         db,
         logger,
-        finalizedCanonicalBlocks
+        finalizedCanonicalBlocks,
+        dedupePayloads
       );
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
         ...logCtx,
@@ -476,12 +478,17 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 /**
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
+ *
+ * With `dedupePayloads` (default) envelopes are archived in compact form — transactions, withdrawals
+ * and block access list dropped and reconstructed from the EL on read. Otherwise the full envelope
+ * is archived as-is. Both go in the same bucket as `ArchivedSignedExecutionPayloadEnvelope`.
  */
 async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
-  canonicalBlocks: ProtoBlock[]
+  canonicalBlocks: ProtoBlock[],
+  dedupePayloads: boolean
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(
     (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
@@ -496,7 +503,11 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
     blocks.map(async (block) => {
       const envelope = await db.executionPayloadEnvelope.get(block.root);
       if (envelope === null) return null;
-      return ssz.gloas.SignedCompactExecutionPayloadEnvelope.serialize(toSignedCompactEnvelope(envelope));
+      return ssz.gloas.ArchivedSignedExecutionPayloadEnvelope.serialize(
+        dedupePayloads
+          ? {selector: ArchivedEnvelopeKind.Compact, value: toSignedCompactEnvelope(envelope)}
+          : {selector: ArchivedEnvelopeKind.Full, value: envelope}
+      );
     })
   );
 

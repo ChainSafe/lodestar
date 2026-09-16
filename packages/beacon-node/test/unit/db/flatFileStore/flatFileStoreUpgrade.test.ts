@@ -14,6 +14,7 @@ import {toSignedCompactEnvelope} from "../../../../src/chain/archiveStore/utils/
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
+import {ArchivedEnvelopeKind} from "../../../../src/db/repositories/index.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
 
 describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)", (fork) => {
@@ -72,7 +73,10 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = root;
       envelope.message.payload.slotNumber = slot;
-      await db.executionPayloadEnvelopeArchive.put(slot, toSignedCompactEnvelope(envelope));
+      await db.executionPayloadEnvelopeArchive.put(slot, {
+        selector: ArchivedEnvelopeKind.Compact,
+        value: toSignedCompactEnvelope(envelope),
+      });
     }
     return {block, columns: columns.map(({data}) => data)};
   }
