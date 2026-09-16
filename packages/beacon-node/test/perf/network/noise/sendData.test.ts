@@ -22,6 +22,13 @@ describe("network / noise / sendData", () => {
   ]) {
     bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
+      // Encrypting and streaming 1000 messages allocates megabytes of short-lived buffers per run
+      // (up to ~64MB for the 65536B case), so timing is dominated by GC pauses and event-loop
+      // scheduling on the shared benchmark runner rather than the noise send path itself — observed
+      // 6-7x swings on unrelated commits, worsened by the rolling per-commit baseline where one noisy
+      // run poisons the next. The default 3x gate produces false "Performance regression" failures;
+      // raise the threshold so normal variance passes while a genuine >10x regression still fails CI.
+      threshold: 10,
       beforeEach: async () => {
         const privateKeyA = await generateKeyPair("secp256k1");
         const privateKeyB = await generateKeyPair("secp256k1");
