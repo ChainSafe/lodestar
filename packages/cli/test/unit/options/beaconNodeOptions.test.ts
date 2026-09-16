@@ -380,13 +380,16 @@ describe("options / network / hasGlobalIPv6Address", () => {
     expect(hasGlobalIPv6Address({eth0: [iface("172.18.0.3", "IPv4")]})).toBe(false);
   });
 
-  it("should be false with only documentation, site-local, IPv4-mapped or discard addresses", () => {
+  it("should be false with only special-purpose addresses", () => {
     const interfaces = {
       eth0: [
         iface("2001:db8::1", "IPv6"),
+        iface("3fff::1", "IPv6"),
+        iface("2001:2::1", "IPv6"),
         iface("fec0::1", "IPv6"),
         iface("::ffff:10.0.0.1", "IPv6"),
         iface("100::1", "IPv6"),
+        iface("64:ff9b::a00:1", "IPv6"),
       ],
     };
     expect(hasGlobalIPv6Address(interfaces)).toBe(false);

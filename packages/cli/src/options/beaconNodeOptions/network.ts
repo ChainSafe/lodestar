@@ -11,16 +11,18 @@ export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
 export const defaultQuicPort = 9001;
 
-/** IPv6 ranges that are never reachable from the public internet */
-const nonGlobalIPv6 = new net.BlockList();
-nonGlobalIPv6.addSubnet("::", 128, "ipv6"); // unspecified
-nonGlobalIPv6.addSubnet("::1", 128, "ipv6"); // loopback
-nonGlobalIPv6.addSubnet("::ffff:0:0", 96, "ipv6"); // IPv4-mapped
-nonGlobalIPv6.addSubnet("100::", 64, "ipv6"); // discard-only
-nonGlobalIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
-nonGlobalIPv6.addSubnet("fc00::", 7, "ipv6"); // unique local
-nonGlobalIPv6.addSubnet("fe80::", 10, "ipv6"); // link-local
-nonGlobalIPv6.addSubnet("fec0::", 10, "ipv6"); // deprecated site-local
+/** IANA allocates global unicast addresses from 2000::/3 only */
+const globalUnicastIPv6 = new net.BlockList();
+globalUnicastIPv6.addSubnet("2000::", 3, "ipv6");
+
+/** Special-purpose blocks inside 2000::/3 that are not globally reachable */
+const specialPurposeIPv6 = new net.BlockList();
+specialPurposeIPv6.addSubnet("2001:2::", 48, "ipv6"); // benchmarking
+specialPurposeIPv6.addSubnet("2001:10::", 28, "ipv6"); // ORCHID
+specialPurposeIPv6.addSubnet("2001:20::", 28, "ipv6"); // ORCHIDv2
+specialPurposeIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
+specialPurposeIPv6.addSubnet("3fff::", 20, "ipv6"); // documentation
+specialPurposeIPv6.addSubnet("5f00::", 16, "ipv6"); // SRv6 SIDs
 
 /**
  * discv5 contacts dual-stack peers over IPv6 whenever an IPv6 socket is bound, so binding "::"
@@ -32,7 +34,10 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
     for (const addr of addrs ?? []) {
       // node 18 returned family as a number, see isLocalMultiAddr
       if (!String(addr.family).endsWith("6") || addr.internal) continue;
-      if (net.isIPv6(addr.address) && !nonGlobalIPv6.check(addr.address, "ipv6")) return true;
+      const ip = addr.address;
+      if (net.isIPv6(ip) && globalUnicastIPv6.check(ip, "ipv6") && !specialPurposeIPv6.check(ip, "ipv6")) {
+        return true;
+      }
     }
   }
   return false;
@@ -274,9 +279,8 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   listenAddress6: {
     type: "string",
-    description:
-      "The IPv6 address to listen for p2p UDP and TCP connections. Enabled by default only if the host has a global IPv6 address",
-    defaultDescription: defaultListenAddress6,
+    description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    defaultDescription: `${defaultListenAddress6} if the host has a global IPv6 address`,
     group: "network",
   },
 
