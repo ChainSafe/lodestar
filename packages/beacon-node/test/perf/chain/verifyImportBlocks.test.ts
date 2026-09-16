@@ -5,7 +5,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
+import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -16,6 +16,7 @@ import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/testFileCache.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
