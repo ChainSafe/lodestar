@@ -82,7 +82,110 @@ describe("getGossipHandlers", () => {
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
   });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL block whose parent is unknown", async () => {
+    const {processBlock, threw, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(pruneBlockInput).toHaveBeenCalledOnce();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("reports the gossip peer when the proposer signature is invalid", async () => {
+    const {core, peerIdStr} = await runBeaconBlockValidationReject(
+      denebConfig,
+      BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+    );
+
+    expect(core.reportPeer).toHaveBeenCalledOnce();
+    expect(core.reportPeer).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, "InvalidBlockSignature");
+  });
+
+  it("does not report the gossip peer for other REJECT codes", async () => {
+    const {core} = await runBeaconBlockValidationReject(denebConfig, BlockErrorCode.INCORRECT_PROPOSER);
+
+    expect(core.reportPeer).not.toHaveBeenCalled();
+  });
 });
+
+async function runBeaconBlockValidationReject(
+  config: BeaconConfig,
+  code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID | BlockErrorCode.INCORRECT_PROPOSER
+): Promise<{core: Pick<INetworkCore, "reportPeer">; peerIdStr: PeerIdStr}> {
+  const logger = testLogger();
+  const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+  const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+  signedBlock.message.slot = 1;
+  const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
+  const blockInput = BlockInputBlobs.createFromBlock({
+    block: signedBlock,
+    blockRootHex,
+    forkName: ForkName.deneb,
+    daOutOfRange: false,
+    source: BlockInputSource.gossip,
+    seenTimestampSec: 0,
+    peerIdStr,
+  });
+
+  vi.mocked(validateGossipBlock).mockRejectedValue(
+    new BlockGossipError(GossipAction.REJECT, {
+      code,
+      slot: signedBlock.message.slot,
+      root: blockRootHex,
+      proposerIndex: signedBlock.message.proposerIndex,
+    })
+  );
+
+  const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
+  const chain = {
+    clock: new ClockStopped(1),
+    custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+    emitter: new ChainEventEmitter(),
+    logger,
+    persistInvalidSszValue: vi.fn(),
+    processProposerEquivocation: vi.fn(),
+    seenBlockProposers: new SeenBlockProposers(),
+    seenBlockInputCache: {
+      getByBlock: vi.fn().mockReturnValue(blockInput),
+      prune: vi.fn(),
+    } as unknown as SeenBlockInput,
+    seenPayloadEnvelopeInputCache: {
+      add: vi.fn(),
+      prune: vi.fn(),
+    } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+  } as unknown as IBeaconChain;
+
+  const handlers = getGossipHandlers(
+    {
+      aggregatorTracker: {} as AggregatorTracker,
+      chain,
+      config,
+      core: core as INetworkCore,
+      events: new NetworkEventBus(),
+      logger,
+      metrics: null,
+    },
+    {}
+  );
+  const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+  await expect(
+    beaconBlockHandler({
+      gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+      peerIdStr,
+      seenTimestampSec: 0,
+      topic: {
+        boundary: {fork: ForkName.deneb, epoch: 0},
+        type: GossipType.beacon_block,
+      },
+    })
+  ).rejects.toThrow();
+
+  return {core, peerIdStr};
+}
 
 async function runBeaconBlockProcessingError(
   config: BeaconConfig,
@@ -164,7 +267,7 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded}: {recorded: boolean}
+  {recorded, parentKnown = true}: {recorded: boolean; parentKnown?: boolean}
 ): Promise<{processBlock: ReturnType<typeof vi.fn>; threw: boolean; pruneBlockInput: ReturnType<typeof vi.fn>}> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -209,6 +312,7 @@ async function runBeaconBlockRepeatProposal(
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null)},
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     processBlock,

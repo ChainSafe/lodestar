@@ -246,11 +246,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
         // (provably invalid), unexpected errors and repeat proposals that are not imported prune.
         if (e.action === GossipAction.IGNORE) {
-          // Only a signature-verified sibling is imported by the beacon_block handler, any other repeat proposal
-          // is dropped from the caches and re-downloaded by sync if it ever becomes relevant
+          // Only a signature-verified sibling with a known parent is imported by the beacon_block handler, any other
+          // repeat proposal is dropped from the caches and re-downloaded by sync if it ever becomes relevant
           if (
             e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
-            !chain.seenBlockProposers.hasBlockRoot(slot, signedBlock.message.proposerIndex, blockRootHex)
+            (!chain.seenBlockProposers.hasBlockRoot(slot, signedBlock.message.proposerIndex, blockRootHex) ||
+              chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) === null)
           ) {
             chain.seenBlockInputCache.prune(blockRootHex);
             if (isForkPostGloas(fork)) {
@@ -258,6 +259,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
           }
           throw e;
+        }
+
+        if (e.type.code === BlockErrorCode.PROPOSAL_SIGNATURE_INVALID) {
+          // An honest peer never forwards a block with an invalid proposer signature
+          core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "InvalidBlockSignature");
         }
 
         chain.persistInvalidSszValue(
@@ -751,7 +757,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
           // Only a signature-verified sibling recorded in the seen cache is imported. The cache holds at most two
           // roots per proposer and slot, which bounds full imports over gossip to one alternate
-          chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root)
+          chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
+          // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
+          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null
         ) {
           // blockInput was optimistically seeded in validateBeaconBlock and retained on IGNORE
           const blockInput = chain.seenBlockInputCache.get(e.type.root);
