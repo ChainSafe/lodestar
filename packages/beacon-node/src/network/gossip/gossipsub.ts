@@ -56,10 +56,7 @@ function maxCompressedLen(n: number): number {
 }
 
 /**
- * Max size of a single inbound gossipsub RPC frame. A frame may bundle many messages and control parts, jvm-libp2p
- * merges everything queued for a peer into one RPC, so this must be well above a single message. Other clients bound
- * the RPC frame with `max_message_size()`, use the same value for interop. The library default is 4 MiB, which a
- * burst of 128 data column sidecars from a block with ~20 blobs exceeds.
+ * Max size of an inbound gossipsub RPC frame, including all bundled messages and control
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_message_size
  */
 function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
