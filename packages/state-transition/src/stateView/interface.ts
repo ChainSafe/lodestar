@@ -10,6 +10,7 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPostHeze,
+  ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -77,6 +78,7 @@ export interface IBeaconStateView {
 
   // phase0
   forkName: ForkName;
+  forkSeq: ForkSeq;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -283,6 +285,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
   /**
    * Clone the state and apply parent execution payload effects.

@@ -1,12 +1,13 @@
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
-import {Bucket, getBucketNameByValue} from "../../../../../src/db/buckets.js";
+import {BeaconDb} from "../../../../../src/db/beacon.js";
+import {Bucket} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 
 describe("block archive repository", () => {
@@ -106,55 +107,79 @@ describe("block archive repository", () => {
     }
   });
 
-  it("should store indexes when adding single block", async () => {
-    const spy = vi.spyOn(db, "put");
+  it.each(["put", "batchPut", "putBinary", "batchPutBinary", "batch", "batchBinary"] as const)(
+    "should store block and all indexes with %s",
+    async (method) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      block.message.parentRoot.fill(1);
+      const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+      const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+      if (method === "put") await blockArchive.put(10, block);
+      if (method === "batchPut") await blockArchive.batchPut([{key: 10, value: block}]);
+      if (method === "putBinary") await blockArchive.putBinary(10, bytes);
+      if (method === "batchPutBinary") {
+        await blockArchive.batchPutBinary([
+          {key: 10, value: bytes, slot: 10, blockRoot: root, parentRoot: block.message.parentRoot},
+        ]);
+      }
+      if (method === "batch") await blockArchive.batch([{type: "put", key: 10, value: block}]);
+      if (method === "batchBinary") await blockArchive.batchBinary([{type: "put", key: 10, value: bytes}]);
+
+      expect(await blockArchive.getBinary(10)).toEqual(Buffer.from(bytes));
+      expect(await blockArchive.getSlotByRoot(root)).toBe(10);
+      expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBe(10);
+      expect(await db.get(encodeKey(Bucket.index_mainChain, 10))).toEqual(Buffer.from(root));
+    }
+  );
+
+  it.each(["delete", "batchDelete", "remove", "batchRemove", "batch", "batchBinary"] as const)(
+    "should remove the slot index with %s",
+    async (method) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      await blockArchive.put(10, block);
+      const indexKey = encodeKey(Bucket.index_mainChain, 10);
+      await db.put(indexKey, ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      if (method === "delete") await blockArchive.delete(10);
+      if (method === "batchDelete") await blockArchive.batchDelete([10]);
+      if (method === "remove") await blockArchive.remove(block);
+      if (method === "batchRemove") await blockArchive.batchRemove([block]);
+      if (method === "batch") await blockArchive.batch([{type: "del", key: 10}]);
+      if (method === "batchBinary") await blockArchive.batchBinary([{type: "del", key: 10}]);
+      expect(await blockArchive.get(10)).toBeNull();
+      expect(await db.get(indexKey)).toBeNull();
+    }
+  );
+
+  it("should not persist a block when its indexed batch fails", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    await blockArchive.add(block);
-    expect(spy).toHaveBeenCalledWith(
-      encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
-      intToBytes(block.message.slot, 8, "be"),
-      {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)}
-    );
-    expect(spy).toHaveBeenCalledWith(
-      encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
-      intToBytes(block.message.slot, 8, "be"),
-      {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)}
-    );
+    const error = Object.assign(new Error("write failed"), {code: "EIO"});
+    vi.spyOn(db, "batchPut").mockRejectedValueOnce(error);
+    await expect(blockArchive.put(0, block)).rejects.toThrow(error);
+    expect(await blockArchive.get(0)).toBeNull();
+    expect(await db.get(encodeKey(Bucket.index_mainChain, 0))).toBeNull();
   });
 
-  it("should store indexes when block batch", async () => {
-    const spy = vi.spyOn(db, "put");
-    const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
-    await blockArchive.batchAdd(blocks);
+  it("should leave existing unindexed blocks untouched during startup", async () => {
+    const fuluConfig = createChainForkConfig({FULU_FORK_EPOCH: 0});
+    const beaconDb = new BeaconDb(fuluConfig, db, {
+      dataColumnDir: `${testDir}/data_columns`,
+      logger: testLogger(),
+    });
+    const existingBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const existingBytes = ssz.fulu.SignedBeaconBlock.serialize(existingBlock);
+    await db.put(beaconDb.blockArchive.encodeKey(0), existingBytes);
+    const newBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    newBlock.message.slot = 1;
+    await beaconDb.blockArchive.put(1, newBlock);
 
-    // TODO: Need to improve these assertions
-    expect(spy.mock.calls).toStrictEqual(
-      expect.arrayContaining([
-        [
-          encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
-          intToBytes(blocks[0].message.slot, 8, "be"),
-          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)},
-        ],
-        [
-          encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
-          intToBytes(blocks[0].message.slot, 8, "be"),
-          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)},
-        ],
-      ])
-    );
-    expect(spy.mock.calls).toStrictEqual(
-      expect.arrayContaining([
-        [
-          encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
-          intToBytes(blocks[0].message.slot, 8, "be"),
-          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)},
-        ],
-        [
-          encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
-          intToBytes(blocks[0].message.slot, 8, "be"),
-          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)},
-        ],
-      ])
+    await beaconDb.init();
+
+    expect(await beaconDb.blockArchive.getBinary(0)).toEqual(Buffer.from(existingBytes));
+    expect(await beaconDb.blockArchive.getRootBySlot(0)).toBeNull();
+    expect(await beaconDb.blockArchive.getRootBySlot(1)).toEqual(
+      Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(newBlock.message))
     );
   });
 
