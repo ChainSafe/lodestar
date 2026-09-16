@@ -65,8 +65,8 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
-    const {processBlock, threw, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
-    expect(pruneBlockInput).not.toHaveBeenCalled();
+    const {processBlock, threw, removeBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
+    expect(removeBlockInput).not.toHaveBeenCalled();
 
     // imported so LMD-GHOST can weigh it ...
     expect(processBlock).toHaveBeenCalledOnce();
@@ -74,10 +74,25 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
+  it("removes only the rejected block's own cache entry on gossip REJECT", async () => {
+    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: false,
+      reject: true,
+    });
+    expect(threw).toBe(true);
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(removeBlockInput).toHaveBeenCalledOnce();
+    expect(pruneBlockInput).not.toHaveBeenCalled();
+  });
+
   it("does not import a REPEAT_PROPOSAL block whose root was not recorded (unverified 3rd+ proposal)", async () => {
-    const {processBlock, threw, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: false});
-    // the block is not kept around, sync re-downloads it if it ever becomes relevant
-    expect(pruneBlockInput).toHaveBeenCalledOnce();
+    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: false,
+    });
+    // the block is not kept around, sync re-downloads it if it ever becomes relevant. Only its own entry goes,
+    // an unverified block must not be able to evict the ancestors it claims
+    expect(removeBlockInput).toHaveBeenCalledOnce();
+    expect(pruneBlockInput).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
@@ -164,8 +179,13 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded}: {recorded: boolean}
-): Promise<{processBlock: ReturnType<typeof vi.fn>; threw: boolean; pruneBlockInput: ReturnType<typeof vi.fn>}> {
+  {recorded, reject = false}: {recorded: boolean; reject?: boolean}
+): Promise<{
+  processBlock: ReturnType<typeof vi.fn>;
+  threw: boolean;
+  removeBlockInput: ReturnType<typeof vi.fn>;
+  pruneBlockInput: ReturnType<typeof vi.fn>;
+}> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
   const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
@@ -182,13 +202,21 @@ async function runBeaconBlockRepeatProposal(
     peerIdStr,
   });
 
-  // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL
+  // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL,
+  // or the block outright when `reject` is set
   vi.mocked(validateGossipBlock).mockRejectedValue(
-    new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.REPEAT_PROPOSAL,
-      proposerIndex: signedBlock.message.proposerIndex,
-      root: blockRootHex,
-    })
+    reject
+      ? new BlockGossipError(GossipAction.REJECT, {
+          code: BlockErrorCode.INCORRECT_PROPOSER,
+          slot: signedBlock.message.slot,
+          root: blockRootHex,
+          proposerIndex: signedBlock.message.proposerIndex,
+        })
+      : new BlockGossipError(GossipAction.IGNORE, {
+          code: BlockErrorCode.REPEAT_PROPOSAL,
+          proposerIndex: signedBlock.message.proposerIndex,
+          root: blockRootHex,
+        })
   );
 
   const seenBlockProposers = new SeenBlockProposers();
@@ -204,6 +232,7 @@ async function runBeaconBlockRepeatProposal(
   }
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
+  const removeBlockInput = vi.fn();
   const pruneBlockInput = vi.fn();
   const chain = {
     clock: new ClockStopped(1),
@@ -211,12 +240,14 @@ async function runBeaconBlockRepeatProposal(
     emitter: new ChainEventEmitter(),
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
+    persistInvalidSszValue: vi.fn(),
     processBlock,
     processProposerEquivocation: vi.fn(),
     seenBlockProposers,
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
       get: vi.fn().mockReturnValue(blockInput),
+      remove: removeBlockInput,
       prune: pruneBlockInput,
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
@@ -261,7 +292,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, pruneBlockInput};
+  return {processBlock, threw, removeBlockInput, pruneBlockInput};
 }
 
 function getExecutionBlockError(
