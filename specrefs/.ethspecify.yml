@@ -112,7 +112,7 @@ exceptions:
     - Store#heze
 
   presets:
-    # Remove these exceptions once the spec pin includes consensus-specs#5613
+    # TODO GLOAS: Remove these exceptions once the spec pin includes consensus-specs#5613
     - MAX_DATA_COLUMN_SIDECAR_SIZE#gloas
     - MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE#gloas
 
