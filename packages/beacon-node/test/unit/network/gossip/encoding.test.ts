@@ -6,7 +6,6 @@ import {ssz} from "@lodestar/types";
 import {DataTransformSnappy, msgIdToStrFn} from "../../../../src/network/gossip/encoding.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {GossipTopicCache, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
-import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszBytes.js";
 
 describe("network / gossip / encoding / msgIdToStrFn", () => {
   it("converts a valid 20-byte msgId to a 0x-prefixed hex string", () => {
@@ -37,12 +36,7 @@ describe("network / gossip / encoding / DataTransformSnappy", () => {
     boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
   } as const;
   const topicStr = stringifyGossipTopic(config, topic);
-  const transform = new DataTransformSnappy(
-    new GossipTopicCache(config),
-    config.MAX_PAYLOAD_SIZE,
-    computeMaxGloasDataColumnSidecarSize(config),
-    null
-  );
+  const transform = new DataTransformSnappy(config, new GossipTopicCache(config), null);
 
   it.each([
     {literal: "f00041", length: 1},

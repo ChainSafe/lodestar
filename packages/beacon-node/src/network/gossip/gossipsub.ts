@@ -25,7 +25,6 @@ import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {computeMaxGloasDataColumnSidecarSize} from "../../util/sszBytes.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -169,12 +168,7 @@ export class Eth2Gossipsub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(
-        gossipTopicCache,
-        config.MAX_PAYLOAD_SIZE,
-        computeMaxGloasDataColumnSidecarSize(config),
-        metrics
-      ),
+      dataTransform: new DataTransformSnappy(config, gossipTopicCache, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})

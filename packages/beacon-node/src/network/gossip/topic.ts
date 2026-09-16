@@ -136,18 +136,7 @@ export function getGossipSSZType(topic: GossipTopic) {
  * Return the maximum uncompressed SSZ byte length accepted for a gossip object, the SSZ type max size
  * or MAX_PAYLOAD_SIZE, whichever is smaller.
  */
-export function getGossipSSZMaxSize(
-  topic: GossipTopic,
-  maxPayloadSize: number,
-  maxGloasDataColumnSidecarSize: number,
-  sszType?: CompositeTypeAny
-): number {
-  // Post-gloas, bound data_column_sidecar by the blob-schedule-derived size (consensus-specs #5613) instead of
-  // the 4096-cell SSZ type max. It's sized for the gloas layout only, so it must not bound fulu (whose layout is
-  // larger); fulu keeps the SSZ type max like every other topic.
-  if (topic.type === GossipType.data_column_sidecar && isForkPostGloas(topic.boundary.fork)) {
-    return Math.min(maxGloasDataColumnSidecarSize, maxPayloadSize);
-  }
+export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
   return Math.min((sszType ?? getGossipSSZType(topic)).maxSize, maxPayloadSize);
 }
 
