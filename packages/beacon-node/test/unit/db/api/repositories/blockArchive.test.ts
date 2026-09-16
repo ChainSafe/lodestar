@@ -242,4 +242,31 @@ describe("block archive repository", () => {
     expect(await blockArchive.getSlotByRoot(roots[3])).toBe(3);
     expect(toRootHex((await blockArchive.getRootBySlot(4)) ?? new Uint8Array())).toBe(toRootHex(roots[4]));
   });
+
+  it("should delete parent index entries following an unindexed block", async () => {
+    const blocks = Array.from({length: 5}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < blocks.length; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(
+      blocks.filter((block) => block.message.slot !== 2).map((block) => ({key: block.message.slot, value: block}))
+    );
+    // block 2 is stored without any index entries
+    await db.put(blockArchive.encodeKey(2), ssz.phase0.SignedBeaconBlock.serialize(blocks[2]));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange([0, 1, 2, 3]);
+
+    for (const slot of [0, 1, 2, 3]) {
+      expect(await blockArchive.get(slot)).toBeNull();
+    }
+    // the entry pointing at block 3 is keyed by the unindexed block's root and read from block 3 itself
+    expect(await blockArchive.getSlotByParentRoot(roots[2])).toBeNull();
+    expect(await blockArchive.getSlotByRoot(roots[3])).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[3])).toBe(4);
+  });
 });

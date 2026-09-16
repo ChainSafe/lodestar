@@ -117,19 +117,21 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     for (let i = 0; i < sorted.length; i += DELETE_RANGE_CHUNK_SIZE) {
       const chunk = sorted.slice(i, i + DELETE_RANGE_CHUNK_SIZE);
       const roots = await Promise.all(chunk.map((slot) => this.getRootBySlot(slot)));
-      if (prevRoot === null) {
-        const firstBlock = await this.getBinary(chunk[0]);
-        const parentRootHex = firstBlock ? getParentRootFromSignedBeaconBlockSerialized(firstBlock) : null;
-        prevRoot = parentRootHex ? fromHex(parentRootHex) : null;
-      }
 
       const keys: Uint8Array[] = [];
       for (let j = 0; j < chunk.length; j++) {
         keys.push(this.encodeKey(chunk[j]), getSlotIndexKey(chunk[j]));
         const root = roots[j];
         if (root) keys.push(getRootIndexKey(root));
-        // The parent index entry keyed by this block's parent points at this block
-        if (prevRoot) keys.push(getParentRootIndexKey(prevRoot));
+        // The parent index entry pointing at this block is keyed by its parent root, which is the
+        // previous block's root unless that block is unindexed, then it is read from the block itself
+        let parentRoot = prevRoot;
+        if (parentRoot === null) {
+          const block = await this.getBinary(chunk[j]);
+          const parentRootHex = block ? getParentRootFromSignedBeaconBlockSerialized(block) : null;
+          parentRoot = parentRootHex ? fromHex(parentRootHex) : null;
+        }
+        if (parentRoot) keys.push(getParentRootIndexKey(parentRoot));
         prevRoot = root;
       }
       await this.db.batchDelete(keys, this.dbReqOpts);
