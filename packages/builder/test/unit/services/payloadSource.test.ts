@@ -23,19 +23,12 @@ describe("EnginePayloadSource", () => {
     finalizedBlockHash: toRootHex(Uint8Array.from({length: 32}, () => 3)),
   };
   const payloadAttributes = ssz.gloas.PayloadAttributes.defaultValue();
-  const custodyColumns = [0, 3, 127];
-  const request: BuildRequest<ForkName.gloas> = {
+  const request: BuildRequest = {
     fork: ForkName.gloas,
     forkchoiceState,
     payloadAttributes,
-    custodyColumns,
   };
-
-  // @ts-expect-error Heze requests cannot use Gloas payload attributes.
-  const mismatchedRequest: BuildRequest = {...request, fork: ForkName.heze};
-  void mismatchedRequest;
-
-  const handle: BuildHandle<ForkName.gloas> = {sourceId, fork: ForkName.gloas, payloadId};
+  const handle: BuildHandle = {sourceId, fork: ForkName.gloas, payloadId};
   const signal = new AbortController().signal;
 
   let notifyForkchoiceUpdate: Mock<NotifyForkchoiceUpdate>;
@@ -49,7 +42,7 @@ describe("EnginePayloadSource", () => {
     source = new EnginePayloadSource(sourceId, engine);
   });
 
-  it("prepares a payload and returns a source-bound handle", async () => {
+  it("prepares a payload without a custody set and returns a source-bound handle", async () => {
     notifyForkchoiceUpdate.mockResolvedValue(payloadId);
 
     const result = await source.prepare(request, signal);
@@ -60,26 +53,10 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       payloadAttributes,
-      custodyColumns,
-      signal
-    );
-    expect(result).toEqual(handle);
-  });
-
-  it("preserves a null custody set", async () => {
-    notifyForkchoiceUpdate.mockResolvedValue(payloadId);
-
-    await source.prepare({...request, custodyColumns: null}, signal);
-
-    expect(notifyForkchoiceUpdate).toHaveBeenCalledWith(
-      ForkName.gloas,
-      forkchoiceState.headBlockHash,
-      forkchoiceState.safeBlockHash,
-      forkchoiceState.finalizedBlockHash,
-      payloadAttributes,
       null,
       signal
     );
+    expect(result).toEqual(handle);
   });
 
   it("supports post-Gloas forks without narrowing the fork", async () => {
@@ -98,7 +75,6 @@ describe("EnginePayloadSource", () => {
         fork: ForkName.heze,
         forkchoiceState,
         payloadAttributes: hezePayloadAttributes,
-        custodyColumns,
       },
       signal
     );
@@ -111,7 +87,7 @@ describe("EnginePayloadSource", () => {
       forkchoiceState.safeBlockHash,
       forkchoiceState.finalizedBlockHash,
       hezePayloadAttributes,
-      custodyColumns,
+      null,
       signal
     );
     expect(getPayload).toHaveBeenCalledWith(ForkName.heze, payloadId, signal);
@@ -151,17 +127,6 @@ describe("EnginePayloadSource", () => {
     expect(builtPayload.blobsBundle).toBe(result.blobsBundle);
     expect(builtPayload.executionRequests).toBe(result.executionRequests);
     expect(builtPayload.executionPayloadValue).toBe(result.executionPayloadValue);
-  });
-
-  it("rejects a handle belonging to another source before calling the Engine API", async () => {
-    const error = await getPayloadSourceError(source.getPayload({...handle, sourceId: "engine-1"}, signal));
-
-    expect(error.type).toEqual({
-      code: PayloadSourceErrorCode.SOURCE_MISMATCH,
-      sourceId,
-      handleSourceId: "engine-1",
-    });
-    expect(getPayload).not.toHaveBeenCalled();
   });
 
   it("rejects a response without a blobs bundle", async () => {

@@ -234,7 +234,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_gossip_failure"
+              "api_reject_gossip_failure",
+              blockRoot
             );
             throw error;
           }
@@ -257,7 +258,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_parent_unknown"
+              "api_reject_parent_unknown",
+              blockRoot
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
@@ -277,7 +279,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw error;
           }
@@ -306,7 +309,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw e;
           }
@@ -1072,16 +1076,6 @@ export function getBeaconBlockApi({
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
-
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(elapsedSec * 1000)
-        );
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 

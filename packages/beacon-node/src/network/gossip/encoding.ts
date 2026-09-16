@@ -1,7 +1,6 @@
 import type {Message} from "@libp2p/gossipsub";
 import type {RPC} from "@libp2p/gossipsub/message";
 import type {DataTransform} from "@libp2p/gossipsub/types";
-// snappyjs is better for compression for smaller payloads
 import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
 import snappyWasm from "@chainsafe/snappy-wasm";
@@ -9,7 +8,7 @@ import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {Eth2GossipsubMetrics} from "./metrics.js";
-import {GossipTopicCache, getGossipSSZMaxSize, getGossipSSZType} from "./topic.js";
+import {GossipTopicCache} from "./topic.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -98,7 +97,6 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
-    private readonly maxPayloadSize: number,
     private readonly metrics: Eth2GossipsubMetrics | null
   ) {}
 
@@ -113,18 +111,14 @@ export class DataTransformSnappy implements DataTransform {
     const uncompressedDataLength = snappyWasm.decompress_len(data);
 
     const topic = this.gossipTopicCache.getTopic(topicStr);
-    const sszType = getGossipSSZType(topic);
-    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
+    const {minSize, maxSize} = this.gossipTopicCache.getTypeSizes(topicStr);
     this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
-    if (uncompressedDataLength < sszType.minSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    if (uncompressedDataLength < minSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${minSize}`);
     }
     if (uncompressedDataLength > maxSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${maxSize}`);
-    }
-    if (uncompressedDataLength > sszType.maxSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
     }
 
     // Only after sanity length checks, we can decompress the data
@@ -140,14 +134,10 @@ export class DataTransformSnappy implements DataTransform {
    */
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     const topic = this.gossipTopicCache.getTopic(topicStr);
-    const sszType = getGossipSSZType(topic);
-    const maxSize = getGossipSSZMaxSize(topic, this.maxPayloadSize, sszType);
+    const {maxSize} = this.gossipTopicCache.getTypeSizes(topicStr);
     this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > maxSize) {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${maxSize}`);
-    }
-    if (data.length > sszType.maxSize) {
-      throw Error(`ssz_snappy encoded data length ${data.length} > ${sszType.maxSize}`);
     }
 
     // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments

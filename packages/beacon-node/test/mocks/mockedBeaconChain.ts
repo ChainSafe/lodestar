@@ -181,6 +181,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenPayloadEnvelopeInputCache: {
         get: vi.fn(),
         getOrReload: vi.fn(),
+        prune: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
       shufflingCache: new ShufflingCache(),
@@ -200,6 +201,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       processBlock: vi.fn(),
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
+      persistInvalidSszBytes: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,
