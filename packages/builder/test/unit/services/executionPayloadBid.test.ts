@@ -89,7 +89,7 @@ describe("createExecutionPayloadBid", () => {
   );
 
   it("rejects a runtime payload fork mismatch", () => {
-    const payload = createBuiltPayload(ForkName.heze) as unknown as BuiltPayload<ForkName.gloas>;
+    const payload = createBuiltPayload(ForkName.heze);
 
     expect(() =>
       createExecutionPayloadBid({
@@ -134,7 +134,7 @@ describe("createExecutionPayloadBid", () => {
   });
 });
 
-function createBuiltPayload<F extends ForkName.gloas | ForkName.heze>(fork: F): BuiltPayload<F> {
+function createBuiltPayload(fork: ForkName.gloas | ForkName.heze): BuiltPayload {
   const forkTypes = fork === ForkName.heze ? ssz.heze : ssz.gloas;
   const executionPayload = forkTypes.ExecutionPayload.defaultValue();
   executionPayload.slotNumber = 10;
@@ -149,5 +149,5 @@ function createBuiltPayload<F extends ForkName.gloas | ForkName.heze>(fork: F): 
     executionRequests: forkTypes.ExecutionRequests.defaultValue(),
     blobsBundle: forkTypes.BlobsBundle.defaultValue(),
     executionPayloadValue: 1n,
-  } as BuiltPayload<F>;
+  };
 }

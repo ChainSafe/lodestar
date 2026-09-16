@@ -11,7 +11,7 @@ type CommonBidInput<F extends ForkName.gloas | ForkName.heze> = {
   builderIndex: BuilderIndex;
   feeRecipient: ExecutionAddress;
   value: number;
-  payload: BuiltPayload<F>;
+  payload: BuiltPayload;
 };
 
 export type GloasBidInput = CommonBidInput<ForkName.gloas>;
