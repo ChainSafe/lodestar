@@ -1,13 +1,17 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Slot, ssz} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {ArchivedEnvelopeKind, BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {
+  ArchivedEnvelope,
+  ArchivedEnvelopeKind,
+  BlockArchiveBatchPutBinaryItem,
+} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
@@ -480,8 +484,10 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * is not considered finalized, hence they are archived in the next run.
  *
  * With `dedupePayloads` (default) envelopes are archived in compact form — transactions, withdrawals
- * and block access list dropped and reconstructed from the EL on read. Otherwise the full envelope
- * is archived as-is. Both go in the same bucket as `ArchivedSignedExecutionPayloadEnvelope`.
+ * and block access list dropped and reconstructed from the EL on read. An envelope whose block is not
+ * yet execution-valid (optimistic import) is archived in full, since the EL may not serve its bodies.
+ * Otherwise the full envelope is archived as-is. Both go in the same bucket as
+ * `ArchivedSignedExecutionPayloadEnvelope`. Archive put + hot delete are one atomic db batch.
  */
 export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
@@ -491,49 +497,52 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   dedupePayloads: boolean
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
+    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
   );
   if (payloadBlocks.length === 0) return [];
-  const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
 
-  const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
-  const migratedRoots: Uint8Array[] = [];
+  const migratedSlots: Slot[] = [];
 
-  const envelopeBytesArray = await Promise.all(
-    blocks.map(async (block) => {
-      const envelope = await db.executionPayloadEnvelope.get(block.root);
-      if (envelope === null) return null;
-      return ssz.gloas.ArchivedSignedExecutionPayloadEnvelope.serialize(
-        dedupePayloads
+  // Process in chunks to bound memory: after a long non-finality period the ancestor walk can span
+  // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
+  for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
+    const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
+    const envelopes = await Promise.all(
+      batch.map((block) => db.executionPayloadEnvelope.get(fromHex(block.blockRoot)))
+    );
+
+    const entries: {slot: Slot; archived: ArchivedEnvelope; hotKey: Uint8Array}[] = [];
+    for (let j = 0; j < batch.length; j++) {
+      const block = batch[j];
+      const envelope = envelopes[j];
+      if (envelope === null) {
+        logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
+          slot: block.slot,
+          root: block.blockRoot,
+        });
+        continue;
+      }
+
+      const archived: ArchivedEnvelope =
+        dedupePayloads && block.executionStatus === ExecutionStatus.Valid
           ? {selector: ArchivedEnvelopeKind.Compact, value: toSignedCompactEnvelope(envelope)}
-          : {selector: ArchivedEnvelopeKind.Full, value: envelope}
-      );
-    })
-  );
+          : {selector: ArchivedEnvelopeKind.Full, value: envelope};
 
-  for (let i = 0; i < blocks.length; i++) {
-    const bytes = envelopeBytesArray[i];
-    if (bytes !== null) {
-      envelopeEntries.push({key: blocks[i].slot, value: bytes});
-      migratedRoots.push(blocks[i].root);
-    } else {
-      logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
-        slot: blocks[i].slot,
-        root: toRootHex(blocks[i].root),
+      entries.push({
+        slot: block.slot,
+        archived,
+        hotKey: db.executionPayloadEnvelope.encodeKey(envelope.message.beaconBlockRoot),
       });
+      migratedSlots.push(block.slot);
+    }
+
+    if (entries.length > 0) {
+      await db.executionPayloadEnvelopeArchive.batchArchiveAndDeleteHot(entries);
     }
   }
 
-  if (envelopeEntries.length === 0) return [];
-
-  await Promise.all([
-    db.executionPayloadEnvelopeArchive.batchPutBinary(envelopeEntries),
-    db.executionPayloadEnvelope.batchDelete(migratedRoots),
-  ]);
-
-  // Slots are ascending in hot-db key order — sort to guarantee `prettyPrintIndices` output is clean
-  // regardless of ancestor-walk order (newest to oldest).
-  return envelopeEntries.map((entry) => entry.key).sort((a, b) => a - b);
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  return migratedSlots.sort((a, b) => a - b);
 }
 
 /**

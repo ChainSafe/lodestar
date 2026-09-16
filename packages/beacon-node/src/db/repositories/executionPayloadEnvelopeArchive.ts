@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUCKET_LENGTH, Db, Repository, encodeKey as encodeDbKey} from "@lodestar/db";
+import {BUCKET_LENGTH, Db, DbBatch, Repository, encodeKey as encodeDbKey} from "@lodestar/db";
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
@@ -44,6 +44,24 @@ export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, 
 
   encodeKey(id: Slot): Uint8Array {
     return encodeDbKey(this.bucket, id);
+  }
+
+  /**
+   * Archive entries and delete their hot counterparts in one atomic db batch, so a crash mid-migration
+   * cannot leave an envelope archived-but-not-deleted or deleted-but-not-archived. `hotKey` is the
+   * already-encoded key of the hot `executionPayloadEnvelope` entry (the batch spans both buckets).
+   */
+  async batchArchiveAndDeleteHot(
+    entries: {slot: Slot; archived: ArchivedEnvelope; hotKey: Uint8Array}[]
+  ): Promise<void> {
+    const operations: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const {slot, archived, hotKey} of entries) {
+      operations.push(
+        {type: "put", key: this.encodeKey(slot), value: this.encodeValue(archived)},
+        {type: "del", key: hotKey}
+      );
+    }
+    await this.db.batch(operations, this.dbReqOpts);
   }
 
   decodeKey(data: Uint8Array): number {

@@ -23,6 +23,7 @@ import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBodyRpc,
+  ExecutionPayloadBodyV2Rpc,
   ExecutionPayloadRpc,
   ExecutionRequestsRpc,
   PayloadStatus,
@@ -49,6 +50,8 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
+  /** Bodies as received via newPayload, served back by engine_getPayloadBodiesByHash{V1,V2} */
+  body: ExecutionPayloadBodyV2Rpc;
 };
 
 const TX_TYPE_EIP1559 = 2;
@@ -93,6 +96,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: ZERO_HASH_HEX,
       timestamp: 0,
       blockNumber: 0,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const eth1BlockHash = opts.eth1BlockHash ?? toRootHex(INTEROP_BLOCK_HASH);
@@ -102,6 +106,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: eth1BlockHash,
       timestamp: 0,
       blockNumber: 1,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const {config} = opts;
@@ -153,15 +158,18 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private getPayloadBodiesByHash(
-    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
+    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+    return this.getPayloadBodiesByHashV2(blockHashes).map((body) =>
+      body ? {transactions: body.transactions, withdrawals: body.withdrawals} : null
+    );
   }
 
   private getPayloadBodiesByHashV2(
-    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
+    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV2"] {
-    return [];
+    // null for unknown blocks, as a real EL does; the genesis/eth1 seed blocks carry no body
+    return blockHashes.map((hash) => this.validBlocks.get(hash)?.body ?? null);
   }
 
   private getPayloadBodiesByRange(
@@ -234,6 +242,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash,
       timestamp: quantityToNum(executionPayloadRpc.timestamp),
       blockNumber: quantityToNum(executionPayloadRpc.blockNumber),
+      body: {
+        transactions: executionPayloadRpc.transactions,
+        withdrawals: executionPayloadRpc.withdrawals ?? null,
+        blockAccessList: executionPayloadRpc.blockAccessList ?? null,
+      },
     });
 
     // IF the payload has been fully validated while processing the call
