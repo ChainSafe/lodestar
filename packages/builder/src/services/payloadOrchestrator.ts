@@ -238,6 +238,5 @@ function getPayloadBuildJobFingerprint(job: PayloadBuildJob): string {
     safeBlockHash,
     finalizedBlockHash,
     payloadAttributes: sszTypesFor(request.fork, "PayloadAttributes").toJson(request.payloadAttributes),
-    custodyColumns: request.custodyColumns,
   });
 }

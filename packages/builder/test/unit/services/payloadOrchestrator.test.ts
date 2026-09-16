@@ -18,8 +18,6 @@ import {
 
 const NOW = 1_000;
 
-type GloasPayloadBuildJob = Omit<PayloadBuildJob, "request"> & {request: BuildRequest<ForkName.gloas>};
-
 class StubPayloadSource implements PayloadSource {
   readonly id = "engine-0";
   readonly prepareCalls: BuildRequest[] = [];
@@ -34,26 +32,20 @@ class StubPayloadSource implements PayloadSource {
   getPayloadImpl: (handle: BuildHandle, signal: AbortSignal) => Promise<BuiltPayload> = async (handle) =>
     builtPayload(handle);
 
-  async prepare<F extends BuildRequest["fork"]>(
-    request: BuildRequest<F>,
-    signal: AbortSignal
-  ): Promise<BuildHandle<F>> {
+  async prepare(request: BuildRequest, signal: AbortSignal): Promise<BuildHandle> {
     this.prepareCalls.push(request);
     this.prepareSignals.push(signal);
-    return (await this.prepareImpl(request, signal)) as BuildHandle<F>;
+    return this.prepareImpl(request, signal);
   }
 
-  async getPayload<F extends BuildHandle["fork"]>(
-    handle: BuildHandle<F>,
-    signal: AbortSignal
-  ): Promise<BuiltPayload<F>> {
+  async getPayload(handle: BuildHandle, signal: AbortSignal): Promise<BuiltPayload> {
     this.getPayloadCalls.push(handle);
     this.getPayloadSignals.push(signal);
-    return (await this.getPayloadImpl(handle, signal)) as BuiltPayload<F>;
+    return this.getPayloadImpl(handle, signal);
   }
 }
 
-function buildRequest(): BuildRequest<ForkName.gloas> {
+function buildRequest(): BuildRequest {
   return {
     fork: ForkName.gloas,
     forkchoiceState: {
@@ -62,11 +54,10 @@ function buildRequest(): BuildRequest<ForkName.gloas> {
       finalizedBlockHash: `0x${"33".repeat(32)}`,
     },
     payloadAttributes: ssz.gloas.PayloadAttributes.defaultValue(),
-    custodyColumns: [0, 3, 127],
   };
 }
 
-function buildJob(id = "slot-1-full", getPayloadAt = NOW + 100): GloasPayloadBuildJob {
+function buildJob(id = "slot-1-full", getPayloadAt = NOW + 100): PayloadBuildJob {
   return {id, request: buildRequest(), getPayloadAt};
 }
 
@@ -204,10 +195,10 @@ describe("PayloadOrchestrator", () => {
   });
 
   it.each([
-    ["retrieval time", (job: GloasPayloadBuildJob) => ({...job, getPayloadAt: job.getPayloadAt + 1})],
+    ["retrieval time", (job: PayloadBuildJob) => ({...job, getPayloadAt: job.getPayloadAt + 1})],
     [
       "forkchoice state",
-      (job: GloasPayloadBuildJob) => ({
+      (job: PayloadBuildJob) => ({
         ...job,
         request: {
           ...job.request,
@@ -217,7 +208,7 @@ describe("PayloadOrchestrator", () => {
     ],
     [
       "payload attributes",
-      (job: GloasPayloadBuildJob) => ({
+      (job: PayloadBuildJob) => ({
         ...job,
         request: {
           ...job.request,
@@ -225,8 +216,7 @@ describe("PayloadOrchestrator", () => {
         },
       }),
     ],
-    ["custody columns", (job) => ({...job, request: {...job.request, custodyColumns: [0, 3, 126]}})],
-  ] satisfies [string, (job: GloasPayloadBuildJob) => PayloadBuildJob][])(
+  ] satisfies [string, (job: PayloadBuildJob) => PayloadBuildJob][])(
     "rejects reuse of an active job ID with different %s",
     async (_field, changeJob) => {
       const source = new StubPayloadSource();
