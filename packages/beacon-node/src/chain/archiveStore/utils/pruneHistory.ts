@@ -28,8 +28,9 @@ export async function pruneHistory(
   });
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
-  const [blocks, states] = await Promise.all([
+  const [blocks, envelopes, states] = await Promise.all([
     db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
+    db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
     db.stateArchive.keys({gte: 0, lt: finalizedEpoch}),
   ]);
   step0?.();
@@ -37,6 +38,7 @@ export async function pruneHistory(
   logger.debug("Pruning history", {
     currentEpoch,
     blocksToPrune: blocks.length,
+    envelopesToPrune: envelopes.length,
     statesToPrune: states.length,
   });
 
@@ -44,6 +46,7 @@ export async function pruneHistory(
   await Promise.all([
     // ->
     db.blockArchive.batchDelete(blocks),
+    db.executionPayloadEnvelopeArchive.batchDelete(envelopes),
     db.stateArchive.batchDelete(states),
   ]);
   step1?.();
