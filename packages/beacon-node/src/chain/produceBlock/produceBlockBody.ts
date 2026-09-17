@@ -974,10 +974,10 @@ function preparePayloadAttributes(
     // (only_timely=False in prepare_execution_payload), so the payload also satisfies the
     // timely-only subset every validator enforces.
     const parentBlockRootHex = toRootHex(parentBlockRoot);
-    const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
     if (parentBlock === null) {
       throw new Error(
-        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex}`
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
       );
     }
     const inclusionListSlot = prepareSlot - 1;
