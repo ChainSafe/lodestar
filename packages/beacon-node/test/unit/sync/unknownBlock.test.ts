@@ -491,7 +491,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
           getOrReload: vi.fn().mockResolvedValue(undefined),
-          prune: vi.fn(),
+          remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
 
@@ -740,7 +740,7 @@ describe("UnknownBlockSync", () => {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(undefined),
             getOrReload: vi.fn().mockResolvedValue(undefined),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         } as unknown as IBeaconChain;
 
@@ -827,7 +827,7 @@ describe("UnknownBlockSync", () => {
           add: vi.fn(),
           get: vi.fn().mockReturnValue(undefined),
           getOrReload: vi.fn().mockResolvedValue(undefined),
-          prune: vi.fn(),
+          remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
         seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
@@ -901,7 +901,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -968,7 +968,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1042,7 +1042,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1114,7 +1114,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1221,7 +1221,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1329,7 +1329,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {
             getByBlock: ({
@@ -1430,7 +1430,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1491,7 +1491,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         },
         networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
@@ -1530,7 +1530,7 @@ describe("UnknownBlockSync", () => {
             add: vi.fn(),
             get: vi.fn().mockReturnValue(payloadInput),
             getOrReload: vi.fn().mockResolvedValue(payloadInput),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -1602,7 +1602,7 @@ describe("UnknownBlockSync", () => {
             getOrReload: vi
               .fn()
               .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi
@@ -1657,7 +1657,7 @@ describe("UnknownBlockSync", () => {
           seenPayloadEnvelopeInputCache: {
             add: vi.fn(),
             get: seenGet,
-            prune: vi.fn(),
+            remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2140,7 +2140,7 @@ describe("UnknownBlockSync", () => {
         add: vi.fn(),
         get: vi.fn(),
         getOrReload: vi.fn().mockResolvedValue(undefined),
-        prune: vi.fn(),
+        remove: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
       seenBlockProposers: {
