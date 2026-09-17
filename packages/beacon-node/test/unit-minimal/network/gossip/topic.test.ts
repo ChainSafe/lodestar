@@ -1,14 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {
-  ForkName,
-  MAX_ATTESTER_SLASHING_SIZE,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
-  ZERO_HASH,
-} from "@lodestar/params";
+import {ForkName, ZERO_HASH} from "@lodestar/params";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
 import {GossipEncoding, GossipTopic, GossipType} from "../../../../src/network/gossip/index.js";
 import {
@@ -63,10 +56,9 @@ describe("network / gossip / topic", () => {
           encoding,
         }),
       }).toEqual({
-        [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-        [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
-        [GossipType.execution_payload_bid]:
-          fork === ForkName.heze ? MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE : MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+        [GossipType.beacon_aggregate_and_proof]: 1462,
+        [GossipType.attester_slashing]: 131536,
+        [GossipType.execution_payload_bid]: fork === ForkName.heze ? 196934 : 196932,
       });
     });
 

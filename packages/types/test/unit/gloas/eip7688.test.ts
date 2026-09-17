@@ -9,7 +9,6 @@ import {
 import {
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_ATTESTER_SLASHING_SIZE,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
@@ -19,8 +18,6 @@ import {
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
   MAX_PAYLOAD_ATTESTATIONS,
   MAX_PROPOSER_SLASHINGS,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
@@ -166,10 +163,10 @@ describe("Gloas EIP-7688 SSZ types", () => {
   });
 
   it("derives the Gloas p2p max sizes from the progressive list limits", () => {
-    expect(ssz.gloas.SignedAggregateAndProof.maxSize).toBe(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE);
-    expect(ssz.gloas.AttesterSlashing.maxSize).toBe(MAX_ATTESTER_SLASHING_SIZE);
+    expect(ssz.gloas.SignedAggregateAndProof.maxSize).toBe(16829);
+    expect(ssz.gloas.AttesterSlashing.maxSize).toBe(2097616);
     // DataColumnSidecar's network bound depends on BLOB_SCHEDULE and is covered by beacon-node's network tests
-    expect(ssz.gloas.SignedExecutionPayloadBid.maxSize).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE);
+    expect(ssz.gloas.SignedExecutionPayloadBid.maxSize).toBe(196932);
   });
 
   it("matches Gloas light-client state gindices from EIP-7688 progressive containers", () => {

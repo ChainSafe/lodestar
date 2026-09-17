@@ -152,12 +152,8 @@ export const minimalPreset: BeaconPreset = {
 
   // Type-specific SSZ bounds
   // ---------------------------------------------------------------
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: 1462,
-  MAX_ATTESTER_SLASHING_SIZE: 131536,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: 196932,
 
   // HEZE
   INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
   MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
 };
