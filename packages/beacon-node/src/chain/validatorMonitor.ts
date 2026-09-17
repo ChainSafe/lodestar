@@ -24,7 +24,17 @@ import {
   deneb,
   gloas,
 } from "@lodestar/types";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {
+  LogData,
+  LogHandler,
+  LogLevel,
+  Logger,
+  MapDef,
+  MapDefMax,
+  prettyGweiToEth,
+  prettyPrintIndices,
+  toRootHex,
+} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {RegistryMetricCreator} from "../metrics/index.js";
 
@@ -442,7 +452,7 @@ export function createValidatorMonitor(
         src,
         builderIndex: bid.builderIndex,
         gasLimit: Number(bid.gasLimit),
-        value: bid.value.toString(),
+        value: prettyGweiToEth(bid.value),
         parentBlockRoot: toRootHex(bid.parentBlockRoot),
         parentBlockHash: toRootHex(bid.parentBlockHash),
         blockHash: toRootHex(bid.blockHash),

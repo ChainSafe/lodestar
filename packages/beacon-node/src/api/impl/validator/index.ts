@@ -481,8 +481,8 @@ export function getValidatorApi(
       metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: toRootHex(config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
@@ -540,8 +540,8 @@ export function getValidatorApi(
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced execution block", {
         slot,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
@@ -1247,8 +1247,8 @@ export function getValidatorApi(
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced block", {
         ...logCtx,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
