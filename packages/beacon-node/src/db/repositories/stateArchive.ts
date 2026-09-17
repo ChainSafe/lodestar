@@ -26,20 +26,6 @@ export class StateArchiveRepository extends BinaryRepository<Slot> {
     return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
-  async batchDelete(slots: Slot[]): Promise<void> {
-    const slotSet = new Set(slots);
-    const indexEntries = await this.db.entries({
-      lte: getRootIndexKey(Buffer.alloc(32, 0xff)),
-      gte: getRootIndexKey(Buffer.alloc(32, 0x00)),
-      bucketId: this.bucketId,
-    });
-    const keys = slots.map((slot) => this.encodeKey(slot));
-    for (const entry of indexEntries) {
-      if (slotSet.has(bytesToInt(entry.value, "be"))) keys.push(entry.key);
-    }
-    await this.db.batchDelete(keys, this.dbReqOpts);
-  }
-
   // Index Root -> Slot
 
   async getBinaryByRoot(stateRoot: Root): Promise<Uint8Array | null> {
