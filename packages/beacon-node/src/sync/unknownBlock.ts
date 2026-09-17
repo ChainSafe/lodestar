@@ -1358,7 +1358,7 @@ export class BlockInputSync {
           pendingColumns.size > 0
             ? `cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`
             : "no peer available to download pending payload";
-        this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
+        this.metrics?.blockInputSync.payloadFetchTime.observe(
           {result: FetchResult.FailureTriedAllPeers},
           Date.now() / 1000 - fetchStartSec
         );
@@ -1386,7 +1386,7 @@ export class BlockInputSync {
           // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
           // payloadInput may be seeded from the block body during download, so a non-null payloadInput does not
           // imply the block is imported.
-          this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
+          this.metrics?.blockInputSync.payloadFetchTime.observe(
             {result: FetchResult.SuccessWaitingForBlock},
             Date.now() / 1000 - fetchStartSec
           );
@@ -1445,7 +1445,7 @@ export class BlockInputSync {
           const result = this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)
             ? FetchResult.SuccessLate
             : FetchResult.SuccessResolved;
-          this.metrics?.blockInputSync.payloadFetchTimeSec.observe({result}, Date.now() / 1000 - fetchStartSec);
+          this.metrics?.blockInputSync.payloadFetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
           this.metrics?.blockInputSync.payloadFetchPeers.set({result}, i);
           return pendingPayload;
         }
@@ -1481,17 +1481,17 @@ export class BlockInputSync {
       }
     }
 
+    this.metrics?.blockInputSync.payloadFetchTime.observe(
+      {result: FetchResult.FailureMaxAttempts},
+      Date.now() / 1000 - fetchStartSec
+    );
+    this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
+
     if (deferredByRateLimit && this.peerBalancer.getNextRateLimitRetryAt() !== null) {
       throw new UnknownBlockRateLimitedError(
         `Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts: peers are rate-limited`
       );
     }
-
-    this.metrics?.blockInputSync.payloadFetchTimeSec.observe(
-      {result: FetchResult.FailureMaxAttempts},
-      Date.now() / 1000 - fetchStartSec
-    );
-    this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
     throw Error(`Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts.`);
   }
 
@@ -1596,7 +1596,7 @@ export class BlockInputSync {
 
         // no more peer with needed columns to try, throw error
         const message = `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
-        this.metrics?.blockInputSync.fetchTimeSec.observe(
+        this.metrics?.blockInputSync.fetchTime.observe(
           {result: FetchResult.FailureTriedAllPeers},
           Date.now() / 1000 - fetchStartSec
         );
@@ -1685,7 +1685,7 @@ export class BlockInputSync {
           : this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
             ? FetchResult.SuccessResolved
             : FetchResult.SuccessMissingParent;
-        this.metrics?.blockInputSync.fetchTimeSec.observe({result}, Date.now() / 1000 - fetchStartSec);
+        this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
         this.metrics?.blockInputSync.fetchPeers.set({result}, i);
         return cacheItem;
       }
@@ -1719,7 +1719,7 @@ export class BlockInputSync {
       }
     }
 
-    this.metrics?.blockInputSync.fetchTimeSec.observe(
+    this.metrics?.blockInputSync.fetchTime.observe(
       {result: FetchResult.FailureMaxAttempts},
       Date.now() / 1000 - fetchStartSec
     );

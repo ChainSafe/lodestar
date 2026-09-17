@@ -709,7 +709,7 @@ export function createLodestarMetrics(
         buckets: [0, 1, 2, 4],
       }),
       // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
-      fetchTimeSec: register.histogram<{result: FetchResult}>({
+      fetchTime: register.histogram<{result: FetchResult}>({
         name: "lodestar_sync_unknown_block_fetch_time_seconds",
         help: "Fetch time from start to done (either success or failure)",
         labelNames: ["result"],
@@ -720,7 +720,7 @@ export function createLodestarMetrics(
         help: "Number of peers that node fetched from",
         labelNames: ["result"],
       }),
-      downloadedPayloadsResult: register.gauge<{result: DownloadResult}>({
+      downloadedPayloadsResult: register.counter<{result: DownloadResult}>({
         name: "lodestar_sync_unknown_payload_download_result_total",
         help: "Total number of downloadPayload results in UnknownBlockSync",
         labelNames: ["result"],
@@ -736,7 +736,7 @@ export function createLodestarMetrics(
         buckets: [6, 8, 10, 12],
       }),
       // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
-      payloadFetchTimeSec: register.histogram<{result: FetchResult}>({
+      payloadFetchTime: register.histogram<{result: FetchResult}>({
         name: "lodestar_sync_unknown_payload_fetch_time_seconds",
         help: "Payload fetch time from start to done (either success or failure)",
         labelNames: ["result"],
