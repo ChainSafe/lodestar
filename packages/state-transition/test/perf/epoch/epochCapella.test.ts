@@ -21,7 +21,7 @@ import {
 } from "../../../src/index.js";
 import {capellaState} from "../../../src/testUtils/params.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
-import {getNetworkCachedState} from "../../utils/testFileCache.js";
+import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(capellaState.epoch) - 1;

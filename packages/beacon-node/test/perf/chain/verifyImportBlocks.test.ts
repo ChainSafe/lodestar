@@ -16,7 +16,7 @@ import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {beforeValue} from "../../utils/beforeValueBenchmark.js";
-import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/testFileCache.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/networkCachedStateAndBlock.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
