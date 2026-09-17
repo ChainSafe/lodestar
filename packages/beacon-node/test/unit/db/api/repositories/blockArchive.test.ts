@@ -269,4 +269,27 @@ describe("block archive repository", () => {
     expect(await blockArchive.getSlotByRoot(roots[3])).toBeNull();
     expect(await blockArchive.getSlotByParentRoot(roots[3])).toBe(4);
   });
+
+  it("should carry the parent root across delete chunks", async () => {
+    const count = 2500;
+    const blocks = Array.from({length: count}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < count; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(blocks.map((block) => ({key: block.message.slot, value: block})));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange(blocks.slice(0, count - 1).map((block) => block.message.slot));
+
+    // the entry pointing at the first block of a chunk is keyed by the last root of the previous chunk
+    for (const slot of [1000, 2000]) {
+      expect(await blockArchive.getSlotByParentRoot(roots[slot - 1])).toBeNull();
+    }
+    expect(await blockArchive.getSlotByParentRoot(roots[count - 2])).toBe(count - 1);
+    expect(await blockArchive.get(count - 1)).not.toBeNull();
+  });
 });

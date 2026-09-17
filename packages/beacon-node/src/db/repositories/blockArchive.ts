@@ -25,6 +25,8 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
   parentRoot: Root;
 };
 
+// The initial prune can span millions of slots. This bounds the slot index reads in flight and keeps each
+// delete batch at a few thousand keys, both tiny next to the block value batches in archiveBlocks
 const DELETE_RANGE_CHUNK_SIZE = 1000;
 
 /**
