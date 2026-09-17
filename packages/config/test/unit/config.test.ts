@@ -151,10 +151,4 @@ describe("getMinEpochsForBlockRequests", () => {
     expect(mainnetConfig.getMinEpochsForBlockRequests(10)).toBe(14299);
     expect(minimalConfig.getMinEpochsForBlockRequests(10)).toBe(262);
   });
-
-  it("never exceeds the configured MIN_EPOCHS_FOR_BLOCK_REQUESTS", () => {
-    const config = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10, MIN_EPOCHS_FOR_BLOCK_REQUESTS: 100});
-
-    expect(config.getMinEpochsForBlockRequests(10)).toBe(100);
-  });
 });

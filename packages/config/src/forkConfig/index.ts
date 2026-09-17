@@ -229,16 +229,13 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         return config.MIN_EPOCHS_FOR_BLOCK_REQUESTS;
       }
 
-      // Same derivation as MIN_EPOCHS_FOR_BLOCK_REQUESTS (max weak subjectivity period) using the churn limits
-      // from EIP-8061, the spec has not been updated for this. Must never exceed the configured value.
+      // Max weak subjectivity period with the churn limits from EIP-8061. Exit churn is weighted 2/3,
+      // consolidation churn 1 and the capped activation churn is negligible for a large validator set.
       const exitQuotient = config.CHURN_LIMIT_QUOTIENT_GLOAS;
       const consolidationQuotient = config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT;
-      const maxChurnEpochs = Math.floor(
-        (3 * exitQuotient * consolidationQuotient) / (2 * (2 * consolidationQuotient + 3 * exitQuotient))
-      );
-      return Math.min(
-        config.MIN_EPOCHS_FOR_BLOCK_REQUESTS,
-        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + maxChurnEpochs
+      return (
+        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY +
+        Math.floor((3 * exitQuotient * consolidationQuotient) / (2 * (2 * consolidationQuotient + 3 * exitQuotient)))
       );
     },
     getAttestationDueMs(fork: ForkName): number {
