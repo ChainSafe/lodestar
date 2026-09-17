@@ -224,6 +224,23 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return undefined;
     },
+    getMinEpochsForBlockRequests(epoch: Epoch): number {
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        return config.MIN_EPOCHS_FOR_BLOCK_REQUESTS;
+      }
+
+      // Same derivation as MIN_EPOCHS_FOR_BLOCK_REQUESTS (max weak subjectivity period) using the churn limits
+      // from EIP-8061, the spec has not been updated for this. Must never exceed the configured value.
+      const exitQuotient = config.CHURN_LIMIT_QUOTIENT_GLOAS;
+      const consolidationQuotient = config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT;
+      const maxChurnEpochs = Math.floor(
+        (3 * exitQuotient * consolidationQuotient) / (2 * (2 * consolidationQuotient + 3 * exitQuotient))
+      );
+      return Math.min(
+        config.MIN_EPOCHS_FOR_BLOCK_REQUESTS,
+        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + maxChurnEpochs
+      );
+    },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS_GLOAS);

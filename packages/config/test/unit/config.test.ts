@@ -1,4 +1,6 @@
 import {beforeAll, describe, expect, it} from "vitest";
+import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
+import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {chainConfig} from "../../src/default.js";
 import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
 
@@ -132,5 +134,27 @@ describe("getScheduledGasLimit", () => {
     expect(config.getScheduledGasLimit(20)).toBe(75_000_000);
     expect(config.getScheduledGasLimit(30)).toBe(90_000_000);
     expect(config.getScheduledGasLimit(100)).toBe(90_000_000);
+  });
+});
+
+describe("getMinEpochsForBlockRequests", () => {
+  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS pre-gloas", () => {
+    const config = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10});
+
+    expect(config.getMinEpochsForBlockRequests(9)).toBe(33024);
+  });
+
+  it("returns the value derived from the gloas churn limits post-gloas", () => {
+    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10});
+    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 10});
+
+    expect(mainnetConfig.getMinEpochsForBlockRequests(10)).toBe(14299);
+    expect(minimalConfig.getMinEpochsForBlockRequests(10)).toBe(262);
+  });
+
+  it("never exceeds the configured MIN_EPOCHS_FOR_BLOCK_REQUESTS", () => {
+    const config = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10, MIN_EPOCHS_FOR_BLOCK_REQUESTS: 100});
+
+    expect(config.getMinEpochsForBlockRequests(10)).toBe(100);
   });
 });
