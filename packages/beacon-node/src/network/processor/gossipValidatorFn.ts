@@ -3,11 +3,20 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {
   AttestationError,
+  AttestationErrorCode,
+  AttesterSlashingErrorCode,
+  BlobSidecarErrorCode,
+  BlockErrorCode,
   BlsToExecutionChangeErrorCode,
+  DataColumnSidecarErrorCode,
   ExecutionPayloadBidErrorCode,
+  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
+  ProposerSlashingErrorCode,
+  SyncCommitteeErrorCode,
   VoluntaryExitErrorCode,
 } from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -35,35 +44,70 @@ type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAc
 
 /**
  * PeerAction mapping based on the topic and specific codes.
+ * Invalid signatures are Fatal on every topic.
  */
 const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
-  [GossipType.beacon_block]: {default: PeerAction.LowToleranceError},
-  [GossipType.blob_sidecar]: {default: PeerAction.LowToleranceError},
-  [GossipType.data_column_sidecar]: {default: PeerAction.LowToleranceError},
-  [GossipType.execution_payload]: {default: PeerAction.LowToleranceError},
-  [GossipType.beacon_aggregate_and_proof]: {default: PeerAction.MidToleranceError},
-  [GossipType.beacon_attestation]: {default: PeerAction.MidToleranceError},
-  [GossipType.sync_committee_contribution_and_proof]: {default: PeerAction.MidToleranceError},
-  [GossipType.sync_committee]: {default: PeerAction.MidToleranceError},
-  [GossipType.payload_attestation_message]: {default: PeerAction.MidToleranceError},
+  [GossipType.beacon_block]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[BlockErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.blob_sidecar]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.data_column_sidecar]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.execution_payload]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.beacon_aggregate_and_proof]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.beacon_attestation]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.sync_committee_contribution_and_proof]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[SyncCommitteeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.sync_committee]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[SyncCommitteeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.payload_attestation_message]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[PayloadAttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
   [GossipType.execution_payload_bid]: {
     default: PeerAction.HighToleranceError,
-    byCode: {[ExecutionPayloadBidErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+    byCode: {[ExecutionPayloadBidErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.proposer_preferences]: {
     default: PeerAction.HighToleranceError,
-    byCode: {[ProposerPreferencesErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+    byCode: {[ProposerPreferencesErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.voluntary_exit]: {
     default: PeerAction.HighToleranceError,
-    byCode: {[VoluntaryExitErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+    byCode: {[VoluntaryExitErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.bls_to_execution_change]: {
     default: PeerAction.HighToleranceError,
-    byCode: {[BlsToExecutionChangeErrorCode.INVALID_SIGNATURE]: PeerAction.MidToleranceError},
+    byCode: {[BlsToExecutionChangeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
-  [GossipType.proposer_slashing]: {default: PeerAction.HighToleranceError},
-  [GossipType.attester_slashing]: {default: PeerAction.HighToleranceError},
+  [GossipType.proposer_slashing]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ProposerSlashingErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.attester_slashing]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[AttesterSlashingErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  // light client validators only throw IGNORE
   [GossipType.light_client_finality_update]: {default: PeerAction.HighToleranceError},
   [GossipType.light_client_optimistic_update]: {default: PeerAction.HighToleranceError},
 };
