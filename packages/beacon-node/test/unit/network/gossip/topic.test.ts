@@ -37,6 +37,8 @@ describe("network / gossip / topic", () => {
   const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
+  const getMaxSize = (topic: Parameters<typeof getGossipSSZType>[0], cfg = config): number =>
+    getGossipSSZMaxSize(topic, cfg, getGossipSSZType(topic));
 
   // Enforce with Typescript that we test all GossipType
   const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
@@ -248,7 +250,7 @@ describe("network / gossip / topic", () => {
 
   it("should provide finite gossip size limits for every gossip type", () => {
     for (const {topic} of Object.values(testCases).flat()) {
-      const maxSize = getGossipSSZMaxSize(topic, config);
+      const maxSize = getMaxSize(topic);
 
       expect(Number.isFinite(maxSize)).toBe(true);
       expect(maxSize).toBeGreaterThanOrEqual(getGossipSSZType(topic).minSize);
@@ -259,31 +261,22 @@ describe("network / gossip / topic", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     expect({
-      [GossipType.beacon_block]: getGossipSSZMaxSize({type: GossipType.beacon_block, boundary, encoding}, config),
-      [GossipType.beacon_aggregate_and_proof]: getGossipSSZMaxSize(
-        {
-          type: GossipType.beacon_aggregate_and_proof,
-          boundary,
-          encoding,
-        },
-        config
-      ),
-      [GossipType.attester_slashing]: getGossipSSZMaxSize(
-        {
-          type: GossipType.attester_slashing,
-          boundary,
-          encoding,
-        },
-        config
-      ),
-      [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
-        {
-          type: GossipType.execution_payload_bid,
-          boundary,
-          encoding,
-        },
-        config
-      ),
+      [GossipType.beacon_block]: getMaxSize({type: GossipType.beacon_block, boundary, encoding}),
+      [GossipType.beacon_aggregate_and_proof]: getMaxSize({
+        type: GossipType.beacon_aggregate_and_proof,
+        boundary,
+        encoding,
+      }),
+      [GossipType.attester_slashing]: getMaxSize({
+        type: GossipType.attester_slashing,
+        boundary,
+        encoding,
+      }),
+      [GossipType.execution_payload_bid]: getMaxSize({
+        type: GossipType.execution_payload_bid,
+        boundary,
+        encoding,
+      }),
     }).toEqual({
       [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
       [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
@@ -315,7 +308,7 @@ describe("network / gossip / topic", () => {
     } as const;
     const gloasTopicStr = stringifyGossipTopic(config, gloasTopic);
     gossipTopicCache.setTopic(gloasTopicStr, gloasTopic);
-    expect(getGossipSSZMaxSize(gloasTopic, config)).toBe(maxDataColumnSidecarSize);
+    expect(getMaxSize(gloasTopic)).toBe(maxDataColumnSidecarSize);
     expect(() => transform.outboundTransform(gloasTopicStr, new Uint8Array(maxDataColumnSidecarSize))).not.toThrow();
     expect(() => transform.outboundTransform(gloasTopicStr, new Uint8Array(maxDataColumnSidecarSize + 1))).toThrow(
       `ssz_snappy encoded data length ${maxDataColumnSidecarSize + 1}`
@@ -397,7 +390,7 @@ describe("network / gossip / topic", () => {
   it("should use the Heze bid size limit post-Heze", () => {
     const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
 
-    expect(getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config)).toBe(
+    expect(getMaxSize({type: GossipType.execution_payload_bid, boundary, encoding})).toBe(
       MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE
     );
   });
@@ -413,7 +406,7 @@ describe("network / gossip / topic", () => {
       {type: GossipType.execution_payload_bid, boundary, encoding},
       {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
     ] as const) {
-      expect(getGossipSSZMaxSize(topic, config)).toBeLessThanOrEqual(getGossipSSZType(topic).maxSize);
+      expect(getMaxSize(topic)).toBeLessThanOrEqual(getGossipSSZType(topic).maxSize);
     }
   });
 
