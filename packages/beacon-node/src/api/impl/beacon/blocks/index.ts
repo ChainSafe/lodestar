@@ -35,7 +35,7 @@ import {
   isSignedExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -1090,7 +1090,7 @@ export function getBeaconBlockApi({
         builderIndex: bid.builderIndex,
         blockHash: toRootHex(bid.blockHash),
         parentBlockHash: toRootHex(bid.parentBlockHash),
-        value: bid.value,
+        value: prettyGweiToEth(bid.value),
         sentPeers,
       });
     },
