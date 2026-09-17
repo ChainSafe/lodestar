@@ -10,7 +10,7 @@ import {
   ZERO_HASH,
 } from "@lodestar/params";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
-import {GossipEncoding, GossipType} from "../../../../src/network/gossip/index.js";
+import {GossipEncoding, GossipTopic, GossipType} from "../../../../src/network/gossip/index.js";
 import {
   GossipTopicCache,
   getGossipSSZMaxSize,
@@ -37,8 +37,10 @@ describe("network / gossip / topic", () => {
     ZERO_HASH
   );
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
-  const getMaxSize = (topic: Parameters<typeof getGossipSSZType>[0], cfg = config): number =>
-    getGossipSSZMaxSize(topic, cfg, getGossipSSZType(topic));
+  function getMaxSize(topic: GossipTopic, cfg = config): number {
+    const sszType = getGossipSSZType(topic);
+    return getGossipSSZMaxSize(topic, cfg, sszType);
+  }
 
   for (const fork of [ForkName.gloas, ForkName.heze]) {
     it(`should match the preset p2p size bounds for ${fork} progressive objects`, () => {
