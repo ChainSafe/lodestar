@@ -171,7 +171,8 @@ const fastConfirmationTest =
         logger.debug("Fork choice test", {steps: stepsLen});
 
         try {
-          for (const [i, step] of steps.entries()) {
+          for (const i of getExecutionOrder(steps)) {
+            const step = steps[i];
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
               const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
@@ -838,6 +839,30 @@ type FastConfirmationTestCase = {
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
+
+/**
+ * Feed each tick's trailing attestation steps to fork choice before the tick, so its attestation
+ * queue applies them at the tick, ahead of the fast confirmation rule that runs there.
+ * Vectors moved them after the tick in https://github.com/ethereum/consensus-specs/pull/5627.
+ * Returns indices so assertion messages keep the `steps.yaml` numbering.
+ */
+function getExecutionOrder(steps: Step[]): number[] {
+  const order: number[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (!isTick(steps[i])) {
+      order.push(i);
+      continue;
+    }
+    let next = i + 1;
+    while (next < steps.length && isAttestation(steps[next])) {
+      order.push(next);
+      next++;
+    }
+    order.push(i);
+    i = next - 1;
+  }
+  return order;
+}
 
 function isTick(step: Step): step is OnTick {
   return (step as OnTick).tick >= 0;
