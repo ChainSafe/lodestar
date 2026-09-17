@@ -91,7 +91,6 @@ export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {
   typeName: "AttestingIndices",
   limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
 });
-// Unbounded in the spec, kept bounded as DoS protection since an EL-valid payload cannot approach these limits
 export const Transaction = new ProgressiveByteListType({typeName: "Transaction", limit: MAX_BYTES_PER_TRANSACTION});
 export const Transactions = new ProgressiveListCompositeType(Transaction, {
   typeName: "Transactions",
