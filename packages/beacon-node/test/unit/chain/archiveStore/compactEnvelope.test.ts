@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ContainerType, Type} from "@chainsafe/ssz";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import type {ExecutionPayloadBodies} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
@@ -49,11 +50,14 @@ describe("compactEnvelope", () => {
   // The compact scalars are derived from the electra header, not from the payload being compacted.
   // If a later fork adds a scalar to ExecutionPayload, the compact form would drop it on write and
   // the payloadRoot check could not catch it (both sides hash the same container). Pin the field set.
-  const postGloasForks = Object.values(ForkName).filter((fork) => ForkSeq[fork] >= ForkSeq.gloas);
+  const postGloasForks = Object.values(ForkName).filter(isForkPostGloas);
   it.each(postGloasForks)("compact scalars + bodies cover every %s ExecutionPayload field", (fork) => {
     const compactFields = Object.keys(compactExecutionPayloadSsz.fields).filter((f) => f !== "payloadRoot");
     const covered = [...compactFields, "transactions", "withdrawals", "blockAccessList"].sort();
-    const payloadFields = Object.keys(sszTypesFor(fork, "ExecutionPayload").fields).sort();
+    const payloadType = sszTypesFor(fork, "ExecutionPayload") as unknown as ContainerType<
+      Record<string, Type<unknown>>
+    >;
+    const payloadFields = Object.keys(payloadType.fields).sort();
     expect(covered).toEqual(payloadFields);
   });
 
