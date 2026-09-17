@@ -191,7 +191,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ): Promise<{
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
-    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    blobKzgCommitments?: deneb.BlobKZGCommitments;
     executionRequests?: electra.ExecutionRequests;
   }> {
     const res = await this.api.getHeader(

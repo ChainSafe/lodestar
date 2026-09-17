@@ -42,7 +42,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.AttestingIndices).toBeInstanceOf(ProgressiveListBasicType);
     expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
-    expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.BlobKZGCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BuilderDepositRequests).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BuilderExitRequests).toBeInstanceOf(ProgressiveListCompositeType);
@@ -126,10 +126,10 @@ describe("Gloas EIP-7688 SSZ types", () => {
     assertLimit(ssz.gloas.AttesterSlashings, MAX_ATTESTER_SLASHINGS_ELECTRA);
     assertLimit(ssz.gloas.Attestations, MAX_ATTESTATIONS_ELECTRA);
     assertLimit(ssz.gloas.VoluntaryExits, MAX_VOLUNTARY_EXITS);
-    assertLimit(ssz.gloas.BlsToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
+    assertLimit(ssz.gloas.BLSToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
     assertLimit(ssz.gloas.PayloadAttestations, MAX_PAYLOAD_ATTESTATIONS);
     assertLimit(ssz.gloas.Transactions, MAX_TRANSACTIONS_PER_PAYLOAD);
-    assertLimit(ssz.gloas.BlobKzgCommitments, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+    assertLimit(ssz.gloas.BlobKZGCommitments, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.KZGProofs, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.DataColumn, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.AttestingIndices, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);

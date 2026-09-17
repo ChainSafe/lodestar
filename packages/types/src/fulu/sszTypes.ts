@@ -57,7 +57,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: ColumnIndex,
     column: DataColumn,
-    kzgCommitments: denebSsz.BlobKzgCommitments,
+    kzgCommitments: denebSsz.BlobKZGCommitments,
     kzgProofs: denebSsz.KZGProofs,
     signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
     kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
@@ -112,7 +112,7 @@ export const SignedBeaconBlock = electraSsz.SignedBeaconBlock;
 // Containers
 export const BlobsBundle = new ContainerType(
   {
-    commitments: denebSsz.BlobKzgCommitments,
+    commitments: denebSsz.BlobKZGCommitments,
     proofs: KZGProofs,
     blobs: denebSsz.Blobs,
   },

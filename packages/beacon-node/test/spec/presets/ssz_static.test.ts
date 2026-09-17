@@ -24,12 +24,6 @@ import {RunnerType} from "../utils/types.js";
 
 type Types = Record<string, Type<any>>;
 
-// Spec type names that differ from the Lodestar export
-const typeNameAliases: Record<string, string> = {
-  BLSToExecutionChanges: "BlsToExecutionChanges",
-  BlobKZGCommitments: "BlobKzgCommitments",
-};
-
 // Mapping of sszGeneric() fn arguments to the path in spec tests
 //
 //       / config  / fork   / test runner      / test handler / test suite   / test case
@@ -39,17 +33,16 @@ const typeNameAliases: Record<string, string> = {
 
 const sszStatic =
   (skippedFork: string, skippedTypes?: string[]) =>
-  (fork: ForkName, specTypeName: string, testSuite: string, testSuiteDirpath: string): void => {
+  (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
     if (fork === skippedFork) {
       return;
     }
 
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-    if (skippedTypes?.includes(specTypeName)) {
+    if (skippedTypes?.includes(typeName)) {
       return;
     }
 
-    const typeName = typeNameAliases[specTypeName] ?? specTypeName;
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.gloas as Types)[typeName] ||

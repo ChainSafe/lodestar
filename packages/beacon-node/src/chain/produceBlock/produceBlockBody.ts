@@ -822,7 +822,7 @@ async function prepareExecutionPayloadHeader(
 ): Promise<{
   header: ExecutionPayloadHeader;
   executionPayloadValue: Wei;
-  blobKzgCommitments?: deneb.BlobKzgCommitments;
+  blobKzgCommitments?: deneb.BlobKZGCommitments;
   executionRequests?: electra.ExecutionRequests;
 }> {
   if (!chain.executionBuilder) {

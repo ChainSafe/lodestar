@@ -323,7 +323,7 @@ export async function validateBlockBlobSidecars(
 }
 
 export async function validateBlobsAndBlobProofs(
-  expectedKzgCommitments: deneb.BlobKzgCommitments,
+  expectedKzgCommitments: deneb.BlobKZGCommitments,
   blobs: deneb.Blobs,
   proofs: deneb.KZGProofs
 ): Promise<void> {

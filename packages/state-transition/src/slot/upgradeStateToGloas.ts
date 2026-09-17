@@ -84,7 +84,7 @@ export function upgradeStateToGloas(
     slot: stateFulu.latestBlockHeader.slot,
     value: 0,
     executionPayment: 0n,
-    blobKzgCommitments: ssz.gloas.BlobKzgCommitments.defaultValue(),
+    blobKzgCommitments: ssz.gloas.BlobKZGCommitments.defaultValue(),
     executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue()),
   });
   stateGloasView.latestExecutionPayloadBid = latestExecutionPayloadBid;

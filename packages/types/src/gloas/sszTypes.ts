@@ -100,8 +100,8 @@ export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawa
   typeName: "Withdrawals",
   limit: MAX_WITHDRAWALS_PER_PAYLOAD,
 });
-export const BlobKzgCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
-  typeName: "BlobKzgCommitments",
+export const BlobKZGCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
+  typeName: "BlobKZGCommitments",
   limit: MAX_BLOB_COMMITMENTS_PER_BLOCK,
 });
 export const KZGProofs = new ProgressiveListCompositeType(denebSsz.KZGProof, {
@@ -244,7 +244,7 @@ export const VoluntaryExits = new ProgressiveListCompositeType(phase0Ssz.SignedV
   typeName: "VoluntaryExits",
   limit: MAX_VOLUNTARY_EXITS,
 });
-export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
+export const BLSToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
   typeName: "BLSToExecutionChanges",
   limit: MAX_BLS_TO_EXECUTION_CHANGES,
 });
@@ -398,7 +398,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
     // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
     executionPayment: UintBn64,
-    blobKzgCommitments: BlobKzgCommitments,
+    blobKzgCommitments: BlobKZGCommitments,
     executionRequestsRoot: Root,
   },
   activeFields(12),
@@ -511,7 +511,7 @@ export const BeaconBlockBody = new ProgressiveContainerType(
     voluntaryExits: VoluntaryExits,
     syncAggregate: altairSsz.BeaconBlockBody.fields.syncAggregate,
     // executionPayload: ExecutionPayload, // Removed in GLOAS:EIP7732
-    blsToExecutionChanges: BlsToExecutionChanges,
+    blsToExecutionChanges: BLSToExecutionChanges,
     // blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments, // Removed in GLOAS:EIP7732
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
@@ -678,7 +678,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: DataColumn,
-    // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
+    // kzgCommitments: denebSsz.BlobKZGCommitments, // Removed in GLOAS:EIP7732
     kzgProofs: KZGProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
