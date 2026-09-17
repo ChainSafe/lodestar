@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect, it, vi} from "vitest";
-import {Type} from "@chainsafe/ssz";
+import snappyWasm from "@chainsafe/snappy-wasm";
+import {CompositeTypeAny, Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -23,6 +24,12 @@ import {RunnerType} from "../utils/types.js";
 
 type Types = Record<string, Type<any>>;
 
+// Spec type names that differ from the Lodestar export
+const typeNameAliases: Record<string, string> = {
+  BLSToExecutionChanges: "BlsToExecutionChanges",
+  BlobKZGCommitments: "BlobKzgCommitments",
+};
+
 // Mapping of sszGeneric() fn arguments to the path in spec tests
 //
 //       / config  / fork   / test runner      / test handler / test suite   / test case
@@ -32,16 +39,17 @@ type Types = Record<string, Type<any>>;
 
 const sszStatic =
   (skippedFork: string, skippedTypes?: string[]) =>
-  (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
+  (fork: ForkName, specTypeName: string, testSuite: string, testSuiteDirpath: string): void => {
     if (fork === skippedFork) {
       return;
     }
 
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-    if (skippedTypes?.includes(typeName)) {
+    if (skippedTypes?.includes(specTypeName)) {
       return;
     }
 
+    const typeName = typeNameAliases[specTypeName] ?? specTypeName;
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.gloas as Types)[typeName] ||
@@ -59,6 +67,23 @@ const sszStatic =
 
     if (!sszType) {
       // Return instead of throwing an error to only skip ssz_static tests associated to missing type
+      return;
+    }
+
+    // A list one past its declared limit, the bytes must be rejected before any element is materialized.
+    // Checked on the type as declared, the uint replacement below rebuilds lists for value decoding only.
+    if (testSuite === "ssz_over_limit") {
+      for (const testCase of fs.readdirSync(testSuiteDirpath)) {
+        it(testCase, () => {
+          const serialized = snappyWasm.decompress(
+            fs.readFileSync(path.join(testSuiteDirpath, testCase, "serialized.ssz_snappy"))
+          );
+          expect(() => sszType.deserialize(serialized)).toThrow();
+          if ("deserializeToViewDU" in sszType) {
+            expect(() => (sszType as CompositeTypeAny).deserializeToViewDU(serialized)).toThrow();
+          }
+        });
+      }
       return;
     }
 
