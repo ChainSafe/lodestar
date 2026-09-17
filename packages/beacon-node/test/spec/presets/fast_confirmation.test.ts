@@ -841,10 +841,9 @@ type FastConfirmationTestCase = {
 };
 
 /**
- * Feed each tick's trailing attestation steps to fork choice before the tick, so its attestation
+ * Attestation steps following a tick must reach fork choice before it, so that its attestation
  * queue applies them at the tick, ahead of the fast confirmation rule that runs there.
- * Vectors moved them after the tick in https://github.com/ethereum/consensus-specs/pull/5627.
- * Returns indices so assertion messages keep the `steps.yaml` numbering.
+ * Indices are returned so assertion messages keep the `steps.yaml` numbering.
  */
 function getExecutionOrder(steps: Step[]): number[] {
   const order: number[] = [];
