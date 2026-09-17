@@ -922,7 +922,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -991,7 +990,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1066,7 +1064,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer: peerA,
         source: BlockInputSource.gossip,
       });
@@ -1162,7 +1159,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1271,7 +1267,6 @@ describe("UnknownBlockSync", () => {
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys (see #9491).
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1384,7 +1379,6 @@ describe("UnknownBlockSync", () => {
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys.
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1447,7 +1441,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1500,7 +1493,6 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
-        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
