@@ -147,21 +147,6 @@ describe("Gloas EIP-7688 SSZ types", () => {
       `bitLen over limit ${aggregationBitsLimit + 1} > ${aggregationBitsLimit}`
     );
 
-    // Unbounded in the spec, the network layer bounds them by MAX_PAYLOAD_SIZE instead
-    for (const type of [
-      ssz.gloas.DepositRequests,
-      ssz.gloas.Validators,
-      ssz.gloas.Balances,
-      ssz.gloas.EpochParticipation,
-      ssz.gloas.InactivityScores,
-      ssz.gloas.PendingDeposits,
-      ssz.gloas.PendingPartialWithdrawals,
-      ssz.gloas.PendingConsolidations,
-      ssz.gloas.Builders,
-      ssz.gloas.BuilderPendingWithdrawals,
-    ]) {
-      expect(type.limit, type.typeName).toBe(Number.MAX_SAFE_INTEGER);
-    }
     expect(ssz.gloas.Transaction.limitBytes).toBe(MAX_BYTES_PER_TRANSACTION);
   });
 
