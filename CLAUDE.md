@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-See [AGENTS.md](./AGENTS.md) for the full project guide — build commands, code style, architecture patterns, testing, and PR guidelines.
+@AGENTS.md
 
 ## Quick Reference
 
