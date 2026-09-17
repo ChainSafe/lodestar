@@ -19,6 +19,7 @@ import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
 import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
 import {onExecutionPayloadEnvelopesByRange} from "./executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "./executionPayloadEnvelopesByRoot.js";
+import {onInclusionListsByIndices} from "./inclusionListsByIndices.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -98,6 +99,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
+    [ReqRespMethod.InclusionListsByIndices]: (req, peerId, peerClient) => {
+      const body = deserializeRequestBody(ssz.heze.InclusionListsByIndicesRequest, req.data);
+      return onInclusionListsByIndices(body, chain, peerId, peerClient);
+    },
   };
 
   return (method) => handlers[method];

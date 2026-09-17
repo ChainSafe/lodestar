@@ -9,7 +9,16 @@ import {
   ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+  capella,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
@@ -73,7 +82,13 @@ export type ExecutePayloadResponse =
       latestValidHash: null;
       validationError: null;
     }
-  | {status: ExecutionPayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {
+      status: ExecutionPayloadStatus.VALID;
+      latestValidHash: RootHex;
+      validationError: null;
+      /** [New in Heze:EIP7805] whether the payload satisfied the inclusion list constraints */
+      inclusionListSatisfied?: boolean | null;
+    }
   | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
       status:
@@ -99,6 +114,8 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
   targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  /** Transactions the built payload must include (PayloadAttributesV5, HEZE:EIP-7805) */
+  inclusionListTransactions?: bellatrix.Transactions;
 };
 
 export type VersionedHashes = Uint8Array[];
@@ -129,8 +146,17 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse>;
+
+  /**
+   * Retrieve the transactions the execution layer wants included, to build an inclusion list.
+   *
+   * Takes no parameters: execution-apis#609 merged engine_getInclusionListV1 as parameterless,
+   * with the execution layer building against its own view of the head.
+   */
+  getInclusionList(): Promise<bellatrix.Transactions>;
 
   /**
    * Signal fork choice updates
