@@ -20,18 +20,22 @@ export async function pruneHistory(
     finalizedEpoch
   );
   const blockCutoffSlot = computeStartSlotAtEpoch(blockCutoffEpoch);
+  // The latest archived state is the anchor on restart and can trail finalization by a few epochs
+  const lastArchivedStateSlot = (await db.stateArchive.lastKey()) ?? 0;
+  const stateCutoffSlot = Math.min(computeStartSlotAtEpoch(finalizedEpoch), lastArchivedStateSlot);
 
   logger.debug("Preparing to prune history", {
     currentEpoch,
     finalizedEpoch,
     blockCutoffEpoch,
+    stateCutoffSlot,
   });
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
   const [blocks, envelopes, states] = await Promise.all([
     db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
     db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    db.stateArchive.keys({gte: 0, lt: finalizedEpoch}),
+    db.stateArchive.keys({gte: 0, lt: stateCutoffSlot}),
   ]);
   step0?.();
 

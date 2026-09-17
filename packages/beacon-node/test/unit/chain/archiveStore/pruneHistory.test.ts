@@ -44,4 +44,30 @@ describe("chain / archiveStore / pruneHistory", () => {
     expect(await db.blockArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
     expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
   });
+
+  it("prunes archived states before the finalized epoch", async () => {
+    const currentEpoch = 100;
+    const finalizedEpoch = currentEpoch - 2;
+    const finalizedSlot = computeStartSlotAtEpoch(finalizedEpoch);
+    const slots = [0, computeStartSlotAtEpoch(finalizedEpoch - 64), finalizedSlot - 1, finalizedSlot];
+
+    await Promise.all(slots.map((slot) => db.stateArchive.putBinary(slot, new Uint8Array([1]))));
+
+    await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+
+    expect(await db.stateArchive.keys()).toEqual([finalizedSlot]);
+  });
+
+  it("keeps the latest archived state when it trails the finalized epoch", async () => {
+    const currentEpoch = 100;
+    const finalizedEpoch = currentEpoch - 2;
+    const lastArchivedSlot = computeStartSlotAtEpoch(finalizedEpoch - 8);
+    const slots = [0, computeStartSlotAtEpoch(finalizedEpoch - 40), lastArchivedSlot];
+
+    await Promise.all(slots.map((slot) => db.stateArchive.putBinary(slot, new Uint8Array([1]))));
+
+    await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+
+    expect(await db.stateArchive.keys()).toEqual([lastArchivedSlot]);
+  });
 });
