@@ -15,11 +15,19 @@ import {IForkChoice} from "./interface.js";
  *
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/bellatrix/fast-confirmation.md#new-get_safe_execution_block_hash
  */
-export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.debug>): RootHex {
+export function getSafeExecutionBlockHash(
+  forkChoice: IForkChoice,
+  logger?: Pick<Logger, LogLevel.debug | LogLevel.warn>
+): RootHex {
   const confirmedRoot = forkChoice.getConfirmedRoot();
   const confirmedBlock = forkChoice.getConfirmedBlock();
   if (confirmedBlock === null) {
-    throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: confirmedRoot});
+    const finalizedBlock = forkChoice.getFinalizedBlock();
+    logger?.warn("Confirmed block unavailable, using finalized block", {
+      confirmedRoot,
+      finalizedRoot: finalizedBlock.blockRoot,
+    });
+    return getExecutionBlockHash(finalizedBlock);
   }
 
   if (confirmedBlock.blockRoot === forkChoice.getFinalizedBlock().blockRoot) {

@@ -220,6 +220,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[]
         state,
         epoch,
         shuffling.committees,
+        shuffling.shuffling,
         state.epochCtx.effectiveBalanceIncrements
       )
     );

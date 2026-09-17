@@ -73,6 +73,7 @@ export function toProtoBlock(
     unrealizedFinalizedRoot: getBlockRoot(genesisSlot),
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
 

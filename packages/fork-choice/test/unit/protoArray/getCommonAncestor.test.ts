@@ -42,6 +42,7 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedRoot: "-",
 
       timeliness: false,
+      importedTimely: false,
       ptcTimeliness: false,
       proposerIndex: 0,
 
@@ -73,6 +74,7 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
+        importedTimely: false,
         ptcTimeliness: false,
         proposerIndex: 0,
 

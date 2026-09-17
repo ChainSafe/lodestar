@@ -116,6 +116,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.config.getForkName(this.cachedState.slot);
   }
 
+  get forkSeq(): ForkSeq {
+    return this.config.getForkSeq(this.cachedState.slot);
+  }
+
   get slot(): number {
     return this.cachedState.slot;
   }
@@ -452,6 +456,18 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
     throw new Error(`PTC committees are not available for epoch=${epoch}`);
   }
+
+  /**
+   * Return the PTC for a slot in the previous, current or next epoch
+   */
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
+  }
+
   /**
    * Return all positions of the validator in the PTC committee for the given slot.
    *

@@ -48,6 +48,7 @@ describe("Forkchoice", () => {
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
+        importedTimely: false,
         ptcTimeliness: false,
         proposerIndex: 0,
       } as Omit<ProtoBlock, "targetRoot">,
@@ -151,6 +152,7 @@ describe("Forkchoice", () => {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      importedTimely: false,
       ptcTimeliness: false,
       proposerIndex: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
