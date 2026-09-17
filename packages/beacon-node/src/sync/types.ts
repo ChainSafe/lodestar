@@ -24,6 +24,10 @@ export enum PendingBlockType {
    */
   UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
   /**
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT, but the trigger also carries the payload's slot.
+   */
+  UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT = "unknown_payload_block_root_slot",
+  /**
    * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
    */
   INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",

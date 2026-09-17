@@ -249,7 +249,7 @@ export class BlockInputSync {
       const isNewRoot = this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
       if (isNewRoot) {
         this.triggerUnknownBlockSearch();
-        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT});
         this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
       }
     } catch (e) {
