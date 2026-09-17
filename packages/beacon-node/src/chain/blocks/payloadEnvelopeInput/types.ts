@@ -23,7 +23,7 @@ export enum PayloadEnvelopeInputSource {
  * - prune: explicit prune by root
  * - cap: insertion-order backstop cap (MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE)
  */
-export type PayloadEnvelopeInputPruneReason = "belowParent" | "finalized" | "prune" | "cap";
+export type PayloadEnvelopeInputPruneReason = "belowParent" | "finalized" | "remove" | "cap";
 
 export type SourceMeta = {
   source: PayloadEnvelopeInputSource;
