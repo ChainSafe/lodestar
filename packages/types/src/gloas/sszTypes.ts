@@ -38,13 +38,9 @@ import {
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
-  PENDING_CONSOLIDATIONS_LIMIT,
-  PENDING_DEPOSITS_LIMIT,
-  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
@@ -95,6 +91,7 @@ export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {
   typeName: "AttestingIndices",
   limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
 });
+// Unbounded in the spec, kept bounded as DoS protection since an EL-valid payload cannot approach these limits
 export const Transaction = new ProgressiveByteListType({typeName: "Transaction", limit: MAX_BYTES_PER_TRANSACTION});
 export const Transactions = new ProgressiveListCompositeType(Transaction, {
   typeName: "Transactions",
@@ -253,33 +250,18 @@ export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz
   limit: MAX_BLS_TO_EXECUTION_CHANGES,
 });
 
-export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {
-  typeName: "Validators",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const Balances = new ProgressiveListBasicType(UintNum64, {
-  typeName: "Balances",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {
-  typeName: "EpochParticipation",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const InactivityScores = new ProgressiveListBasicType(UintNum64, {
-  typeName: "InactivityScores",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
+export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {typeName: "Validators"});
+export const Balances = new ProgressiveListBasicType(UintNum64, {typeName: "Balances"});
+export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {typeName: "EpochParticipation"});
+export const InactivityScores = new ProgressiveListBasicType(UintNum64, {typeName: "InactivityScores"});
 export const PendingDeposits = new ProgressiveListCompositeType(electraSsz.PendingDeposit, {
   typeName: "PendingDeposits",
-  limit: PENDING_DEPOSITS_LIMIT,
 });
 export const PendingPartialWithdrawals = new ProgressiveListCompositeType(electraSsz.PendingPartialWithdrawal, {
   typeName: "PendingPartialWithdrawals",
-  limit: PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 });
 export const PendingConsolidations = new ProgressiveListCompositeType(electraSsz.PendingConsolidation, {
   typeName: "PendingConsolidations",
-  limit: PENDING_CONSOLIDATIONS_LIMIT,
 });
 
 export const Builder = new ContainerType(

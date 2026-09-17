@@ -26,10 +26,6 @@ import {
   MAX_VOLUNTARY_EXITS,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  PENDING_CONSOLIDATIONS_LIMIT,
-  PENDING_DEPOSITS_LIMIT,
-  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
@@ -151,15 +147,22 @@ describe("Gloas EIP-7688 SSZ types", () => {
       `bitLen over limit ${aggregationBitsLimit + 1} > ${aggregationBitsLimit}`
     );
 
-    // Limits too large to materialize in a test, only assert the configured value
+    // Unbounded in the spec, the network layer bounds them by MAX_PAYLOAD_SIZE instead
+    for (const type of [
+      ssz.gloas.DepositRequests,
+      ssz.gloas.Validators,
+      ssz.gloas.Balances,
+      ssz.gloas.EpochParticipation,
+      ssz.gloas.InactivityScores,
+      ssz.gloas.PendingDeposits,
+      ssz.gloas.PendingPartialWithdrawals,
+      ssz.gloas.PendingConsolidations,
+      ssz.gloas.Builders,
+      ssz.gloas.BuilderPendingWithdrawals,
+    ]) {
+      expect(type.limit, type.typeName).toBe(Number.MAX_SAFE_INTEGER);
+    }
     expect(ssz.gloas.Transaction.limitBytes).toBe(MAX_BYTES_PER_TRANSACTION);
-    expect(ssz.gloas.Validators.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.Balances.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.EpochParticipation.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.InactivityScores.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.PendingDeposits.limit).toBe(PENDING_DEPOSITS_LIMIT);
-    expect(ssz.gloas.PendingPartialWithdrawals.limit).toBe(PENDING_PARTIAL_WITHDRAWALS_LIMIT);
-    expect(ssz.gloas.PendingConsolidations.limit).toBe(PENDING_CONSOLIDATIONS_LIMIT);
   });
 
   it("rejects Gloas blocks with legacy deposits when deserializing", () => {
