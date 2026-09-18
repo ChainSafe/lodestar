@@ -24,6 +24,10 @@ export enum PendingBlockType {
    */
   UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
   /**
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT, but the trigger also carries the payload's slot.
+   */
+  UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT = "unknown_payload_block_root_slot",
+  /**
    * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
    */
   INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",
@@ -130,9 +134,8 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
-  // message slot from ChainEvent.unknownEnvelopeBlockRoot, which is untrusted and not necessarily the
-  // payload/block slot. See BlockInputSync.resolvePayloadSlot.
+  // slot could be via fork choice or ChainEvent.unknownEnvelopeBlockRootSlot
+  // while ChainEvent.unknownEnvelopeBlockRoot does not provide one
   slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;

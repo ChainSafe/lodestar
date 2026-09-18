@@ -86,8 +86,13 @@ export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>>
 
 /**
  * Track the forwarded peers we already emit to UnknownBlockInput sync.
+ * envelopeSlotEmitted: whether the unknownEnvelopeBlockRootSlot event was already emitted for this root.
  */
-type SearchedRootEntry = {blockPeerIds?: Set<PeerIdStr>; envelopePeerIds?: Set<PeerIdStr>};
+type SearchedRootEntry = {
+  blockPeerIds?: Set<PeerIdStr>;
+  envelopePeerIds?: Set<PeerIdStr>;
+  envelopeSlotEmitted?: boolean;
+};
 
 /**
  * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
@@ -347,12 +352,17 @@ export class NetworkProcessor {
   }
 
   /**
-   * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` event
+   * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` / `ChainEvent.unknownEnvelopeBlockRootSlot` event
    * Slot is the message slot, which is not necessarily the same as the envelope's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
    * Same peer-forwarding + dedup behavior as searchUnknownBlock.
    */
-  searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+  searchUnknownEnvelope(
+    {slot, root}: SlotRootHex,
+    source: BlockInputSource,
+    peer?: PeerIdStr,
+    slotIsPayloadSlot = false
+  ): void {
     if (this.chain.seenPayloadEnvelope(root)) {
       return;
     }
@@ -369,8 +379,17 @@ export class NetworkProcessor {
       forwardedPeers.add(peer);
       shouldEmit = true;
     }
+    // the payload-slot seed must reach the sync once, even if a slot-less trigger started the search first
+    if (slotIsPayloadSlot && !entry.envelopeSlotEmitted) {
+      shouldEmit = true;
+    }
     if (shouldEmit) {
-      this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, slot, peer, source});
+      if (slotIsPayloadSlot) {
+        entry.envelopeSlotEmitted = true;
+        this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
+      } else {
+        this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
+      }
     }
   }
 
@@ -494,8 +513,9 @@ export class NetworkProcessor {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            // payload attestation votes that the payload is available but it is not yet known
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            // payload attestation votes that the payload is available but it is not yet known.
+            // the PTC vote's slot is the payload's slot
+            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
             // do not await the envelope, payload attestation processing only requires that the block is known
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -504,7 +524,8 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            // the sidecar's slot is the block's (and so the payload's) slot
+            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -641,16 +662,23 @@ export class NetworkProcessor {
     return true;
   }
 
+  /**
+   * Search block/envelope given a SlotRootHex
+   * envelopeSlotIsPayloadSlot: the message slot is the payload's slot or not
+   */
   private searchUnknownRoot(
     slotRoot: SlotRootHex,
     searchBlock: boolean,
     searchEnvelope: boolean,
-    peerId: PeerIdStr
+    peerId: PeerIdStr,
+    envelopeSlotIsPayloadSlot = false
   ): void {
     if (!searchBlock && !searchEnvelope) return;
     if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
     if (searchBlock) this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
-    if (searchEnvelope) this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId);
+    if (searchEnvelope) {
+      this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, envelopeSlotIsPayloadSlot);
+    }
   }
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
