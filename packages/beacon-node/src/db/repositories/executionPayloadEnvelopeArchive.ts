@@ -30,11 +30,8 @@ export const compactExecutionPayloadSsz = new ContainerType(
 
 export const compactExecutionPayloadEnvelopeSsz = new ContainerType(
   {
+    ...ssz.gloas.ExecutionPayloadEnvelope.fields,
     payload: compactExecutionPayloadSsz,
-    executionRequests: ssz.gloas.ExecutionPayloadEnvelope.fields.executionRequests,
-    builderIndex: ssz.gloas.ExecutionPayloadEnvelope.fields.builderIndex,
-    beaconBlockRoot: ssz.Root,
-    parentBeaconBlockRoot: ssz.Root,
   },
   {typeName: "CompactExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
