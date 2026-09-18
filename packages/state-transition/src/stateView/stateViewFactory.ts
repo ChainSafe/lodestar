@@ -33,7 +33,6 @@ type NativeOpts = {
  */
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
     return new NativeBeaconStateView(
       bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
       opts.config
@@ -65,7 +64,6 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
     return new NativeBeaconStateView(
       bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
       opts.config

@@ -2,6 +2,7 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import bindings from "@chainsafe/lodestar-z";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
@@ -89,6 +90,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
     pubkeyCache.ensureCapacity(anchorState.validators.length + pubkeyCacheHeadroom);
     pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
+    if (args["chain.nativeStateView"]) {
+      bindings.config.set(beaconConfig, beaconConfig.genesisValidatorsRoot);
+    }
     const anchorStateView = args["chain.nativeStateView"]
       ? createBeaconStateView({useNative: true, config: beaconConfig, stateBytes: anchorStateBytes})
       : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
