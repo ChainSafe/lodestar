@@ -105,7 +105,9 @@
     </spec>
 
 - name: COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
+      search: const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR =
   spec: |
     <spec constant_var="COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR" fork="phase0" hash="0e734eab">
     COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR: Uint64 = 5
@@ -301,14 +303,18 @@
     </spec>
 
 - name: EMPTY_BLOCK_HASH#bellatrix
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/api/impl/config/constants.ts
+      search: "EMPTY_BLOCK_HASH: ZERO_HASH_HEX,"
   spec: |
     <spec constant_var="EMPTY_BLOCK_HASH" fork="bellatrix" hash="23cdf402">
     EMPTY_BLOCK_HASH: Hash32 =
     </spec>
 
 - name: ENDIANNESS#phase0
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/api/impl/config/constants.ts
+      search: 'ENDIANNESS: "little",'
   spec: |
     <spec constant_var="ENDIANNESS" fork="phase0" hash="76922bbc">
     ENDIANNESS = 'little'
@@ -324,7 +330,9 @@
     </spec>
 
 - name: ETH_TO_GWEI#phase0
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: export const ETH_TO_GWEI =
   spec: |
     <spec constant_var="ETH_TO_GWEI" fork="phase0" hash="a9c1d610">
     ETH_TO_GWEI: Uint64 = 10**9
@@ -437,42 +445,54 @@
     </spec>
 
 - name: PAYLOAD_STATUS_EMPTY#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: EMPTY = 1,
   spec: |
     <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="84265c9b">
     PAYLOAD_STATUS_EMPTY: PayloadStatus = 0
     </spec>
 
 - name: PAYLOAD_STATUS_FULL#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: FULL = 2,
   spec: |
     <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="357ae377">
     PAYLOAD_STATUS_FULL: PayloadStatus = 1
     </spec>
 
 - name: PAYLOAD_STATUS_INVALIDATED#bellatrix
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Invalid = "Invalid",
   spec: |
     <spec constant_var="PAYLOAD_STATUS_INVALIDATED" fork="bellatrix" hash="573428af">
     PAYLOAD_STATUS_INVALIDATED: PayloadValidationStatus = 1
     </spec>
 
 - name: PAYLOAD_STATUS_NOT_VALIDATED#bellatrix
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Syncing = "Syncing",
   spec: |
     <spec constant_var="PAYLOAD_STATUS_NOT_VALIDATED" fork="bellatrix" hash="d15db48c">
     PAYLOAD_STATUS_NOT_VALIDATED: PayloadValidationStatus = 2
     </spec>
 
 - name: PAYLOAD_STATUS_PENDING#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: PENDING = 0,
   spec: |
     <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="6a0d6cbf">
     PAYLOAD_STATUS_PENDING: PayloadStatus = 2
     </spec>
 
 - name: PAYLOAD_STATUS_VALID#bellatrix
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Valid = "Valid",
   spec: |
     <spec constant_var="PAYLOAD_STATUS_VALID" fork="bellatrix" hash="1e190907">
     PAYLOAD_STATUS_VALID: PayloadValidationStatus = 0
@@ -495,7 +515,9 @@
     </spec>
 
 - name: SAFETY_DECAY#phase0
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: const SAFETY_DECAY =
   spec: |
     <spec constant_var="SAFETY_DECAY" fork="phase0" hash="a14d04b9">
     SAFETY_DECAY: Uint64 = 10
