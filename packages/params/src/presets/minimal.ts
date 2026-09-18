@@ -150,9 +150,6 @@ export const minimalPreset: BeaconPreset = {
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: 16, // 2**4
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: 16, // 2**4
 
-  // Type-specific SSZ bounds
-  // ---------------------------------------------------------------
-
   // HEZE
   INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
   MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
