@@ -487,7 +487,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * and block access list dropped and reconstructed from the EL on read. An envelope whose block is not
  * yet execution-valid (optimistic import) is archived in full, since the EL may not serve its bodies;
  * it is NOT compacted later, so a checkpoint-synced node whose EL took a while to sync keeps full
- * envelopes for that window (a lazy re-compaction pass is a possible follow-up).
+ * envelopes for that window.
  * With the flag off, the full envelope is archived as-is. Both go in the same bucket as
  * `ArchivedSignedExecutionPayloadEnvelope`. Archive put + hot delete are one atomic db batch.
  */
