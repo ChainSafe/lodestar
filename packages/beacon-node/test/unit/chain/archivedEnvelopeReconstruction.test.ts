@@ -4,11 +4,17 @@ import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {LogLevel} from "@lodestar/logger";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
-import {reconstructArchivedEnvelopesByRange} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {
+  ReconstructByRangeOpts,
+  ReconstructedEnvelopeCache,
+  reconstructArchivedEnvelope,
+  reconstructArchivedEnvelopesByRange,
+} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
@@ -71,22 +77,41 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
   }
 
-  // Collect the range as deserialized envelopes (the generator yields serialized bytes, as served on the wire)
-  async function range(
+  // Everything in the archive is inside the serving window unless a test says otherwise
+  const inWindow: ReconstructByRangeOpts = {servingWindowStartSlot: 0};
+
+  // Collect the range as deserialized envelopes (the generator yields serialized bytes, as served on the wire),
+  // plus the slot the stream stopped short at, if any
+  async function rangeWith(
     start: number,
-    end: number
-  ): Promise<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]> {
+    end: number,
+    opts: ReconstructByRangeOpts = inWindow
+  ): Promise<{out: {slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]; unservableSlot: number | null}> {
     const out = [];
+    let unservableSlot: number | null = null;
     for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
       db,
       executionEngine,
       logger,
       start,
-      end
+      end,
+      {
+        ...opts,
+        onUnservable: (slot) => {
+          unservableSlot = slot;
+        },
+      }
     )) {
       out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
     }
-    return out;
+    return {out, unservableSlot};
+  }
+
+  async function range(
+    start: number,
+    end: number
+  ): Promise<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]> {
+    return (await rangeWith(start, end)).out;
   }
 
   const rejection = async (p: Promise<unknown>): Promise<EnvelopeReconstructionError | null> =>
@@ -164,25 +189,96 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect(out.map((o) => o.slot)).toEqual([11]);
   });
 
-  it("skips slots the EL cannot serve (null body)", async () => {
-    const fulls = [await seed(10), await seed(11)];
-    elServes([fulls[0]]); // EL knows 10 but not 11
-    const out = await range(10, 12);
+  it("ends the stream at the first slot the EL cannot serve instead of leaving a hole", async () => {
+    const fulls = [await seed(10), await seed(11), await seed(12)];
+    elServes([fulls[0], fulls[2]]); // EL knows 10 and 12 but not 11
+    const {out, unservableSlot} = await rangeWith(10, 13);
+    // 12 is servable but a response [10, 12] would look like a hole to a peer that knows 11 is FULL
     expect(out.map((o) => o.slot)).toEqual([10]);
+    expect(unservableSlot).toBe(11);
   });
 
-  it("skips slots with a pre-capella body shape (null withdrawals)", async () => {
+  it("ends the stream on a pre-capella body shape (null withdrawals)", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), withdrawals: null}]);
-    const out = await range(10, 11);
+    const {out, unservableSlot} = await rangeWith(10, 11);
     expect(out).toEqual([]);
+    expect(unservableSlot).toBe(10);
   });
 
-  it("skips slots whose block access list the EL has pruned (null blockAccessList)", async () => {
+  it.each<[string, Uint8Array | null]>([
+    ["null", null],
+    ["empty bytes (0x, as some ELs return once pruned)", new Uint8Array(0)],
+  ])("ends the stream when the EL returns a %s block access list", async (_label, blockAccessList) => {
     const fulls = [await seed(10), await seed(11)];
-    getPayloadBodiesByHashV2.mockResolvedValue([bodyOf(fulls[0]), {...bodyOf(fulls[1]), blockAccessList: null}]);
-    const out = await range(10, 12);
+    getPayloadBodiesByHashV2.mockResolvedValue([bodyOf(fulls[0]), {...bodyOf(fulls[1]), blockAccessList}]);
+    const {out, unservableSlot} = await rangeWith(10, 12);
     expect(out.map((o) => o.slot)).toEqual([10]);
+    expect(unservableSlot).toBe(11);
+  });
+
+  it("reports no unservable slot when the range is simply empty", async () => {
+    const {out, unservableSlot} = await rangeWith(10, 12);
+    expect(out).toEqual([]);
+    expect(unservableSlot).toBeNull();
+    expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
+  });
+
+  it("still attempts compact entries below the serving window: the EL's retention is the floor, not the spec window", async () => {
+    // window starts at 12, but the EL still has 10 and 11 → served; the window is advisory
+    const fulls = [await seed(10), await seed(11), await seed(12)];
+    elServes(fulls);
+    const {out, unservableSlot} = await rangeWith(10, 13, {servingWindowStartSlot: 12});
+    expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
+    expect(unservableSlot).toBeNull();
+  });
+
+  it("logs a miss below the serving window at debug and inside it at warn", async () => {
+    const debug = vi.spyOn(logger, LogLevel.debug);
+    const warn = vi.spyOn(logger, LogLevel.warn);
+    const fulls = [await seed(10), await seed(20)];
+    elServes([]); // EL has neither
+
+    await rangeWith(10, 11, {servingWindowStartSlot: 15});
+    expect(warn).not.toHaveBeenCalled();
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining("below serving window"),
+      expect.objectContaining({slot: 10})
+    );
+
+    await rangeWith(20, 21, {servingWindowStartSlot: 15});
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("inside serving window"),
+      expect.objectContaining({slot: 20})
+    );
+    expect(fulls).toHaveLength(2);
+  });
+
+  it("serves a recently reconstructed envelope from the cache without an EL call", async () => {
+    const fulls = [await seed(10), await seed(11)];
+    elServes(fulls);
+    const cache = new ReconstructedEnvelopeCache();
+    expect((await rangeWith(10, 12, {...inWindow, cache})).out.map((o) => o.slot)).toEqual([10, 11]);
+    expect(cache.size).toBe(2);
+    getPayloadBodiesByHashV2.mockClear();
+    // second pass: both served from cache, byte-identical, no EL round-trip
+    const {out} = await rangeWith(10, 12, {...inWindow, cache});
+    expect(out.map((o) => o.slot)).toEqual([10, 11]);
+    expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, fulls[1])).toBe(true);
+    expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
+  });
+
+  it("caches only successful reconstructions and evicts oldest first past its size", async () => {
+    const cache = new ReconstructedEnvelopeCache(2);
+    const fulls = [await seed(10), await seed(11), await seed(12)];
+    elServes([fulls[0], fulls[1]]); // 12 unservable
+    await rangeWith(10, 13, {...inWindow, cache});
+    expect(cache.get(12)).toBeUndefined();
+    expect(cache.get(10)).toBeDefined();
+    cache.set(13, new Uint8Array(1));
+    expect(cache.size).toBe(2);
+    expect(cache.get(10)).toBeUndefined(); // FIFO
+    expect(cache.get(11)).toBeDefined();
   });
 
   it("wraps an EL transport error as ENGINE_UNAVAILABLE (transient)", async () => {
@@ -206,7 +302,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const yielded: number[] = [];
     let err: unknown = null;
     try {
-      for await (const {slot} of reconstructArchivedEnvelopesByRange(db, executionEngine, logger, 0, 33)) {
+      for await (const {slot} of reconstructArchivedEnvelopesByRange(db, executionEngine, logger, 0, 33, inWindow)) {
         yielded.push(slot);
       }
     } catch (e) {
@@ -222,11 +318,26 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     ["transactions", {transactions: [Uint8Array.from([0xff])]}],
     ["withdrawals", {withdrawals: [{index: 99, validatorIndex: 99, address: new Uint8Array(20), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
-  ])("throws PAYLOAD_ROOT_MISMATCH when the EL returns %s that don't match the archived root", async (_f, override) => {
+  ])("ends the range (no throw) when the EL returns %s that don't match the archived root", async (_f, override) => {
+    const fulls = [await seed(10), await seed(11)];
+    // 10 mismatches: a local inconsistency, but on the p2p path the peer just sees a short response
+    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(fulls[0]), ...override}, bodyOf(fulls[1])]);
+    const {out, unservableSlot} = await rangeWith(10, 12);
+    expect(out).toEqual([]);
+    expect(unservableSlot).toBe(10);
+  });
+
+  it("keeps PAYLOAD_ROOT_MISMATCH as a throw on the getter path (REST 500 / by-root SERVER_ERROR)", async () => {
     const full = await seed(10);
-    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), ...override}]);
-    const err = await rejection(range(10, 11));
+    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
+    const err = await rejection(reconstructArchivedEnvelope(executionEngine, toSignedCompactEnvelope(full)));
     expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
     expect(err?.isTransient()).toBe(false);
+  });
+
+  it("returns null from the getter path when the EL cannot serve the bodies", async () => {
+    const full = await seed(10);
+    getPayloadBodiesByHashV2.mockResolvedValue([null]);
+    expect(await reconstructArchivedEnvelope(executionEngine, toSignedCompactEnvelope(full))).toBeNull();
   });
 });

@@ -1,10 +1,10 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Slot, gloas} from "@lodestar/types";
 import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -44,30 +44,58 @@ export async function* onExecutionPayloadEnvelopesByRange(
 
   // Finalized range of envelopes — reconstructed from the compact archive + EL bodies (V2, incl. BAL)
   if (startSlot <= archiveMaxSlot) {
+    // Every archived entry is attempted regardless of age — the spec requires serving the
+    // MIN_EPOCHS_FOR_BLOCK_REQUESTS window and allows serving more, and the EL's block access list
+    // retention decides how much more. The window only sets the log level of a miss.
+    const servingWindowStartSlot = computeStartSlotAtEpoch(
+      Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)
+    );
+    let yielded = 0;
+    let unservableSlot: Slot | null = null;
     try {
       for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
         db,
         chain.executionEngine,
         chain.logger,
         startSlot,
-        Math.min(endSlot, archiveMaxSlot + 1)
+        Math.min(endSlot, archiveMaxSlot + 1),
+        {
+          servingWindowStartSlot,
+          cache: chain.reconstructedEnvelopeCache,
+          onUnservable: (slot) => {
+            unservableSlot = slot;
+          },
+        }
       )) {
+        yielded++;
         yield {
           data: envelopeBytes,
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
         };
       }
     } catch (e) {
-      // Only map reconstruction failures; anything else (e.g. consumer abort) propagates untouched.
-      // EL down (transient) -> RESOURCE_UNAVAILABLE so peers don't downscore us for our own EL being
-      // down; a root mismatch is a real local inconsistency -> SERVER_ERROR.
+      // The generator only throws when our own EL is down: RESOURCE_UNAVAILABLE so peers don't
+      // downscore us for it. An unservable or inconsistent slot ends the stream cleanly instead
+      // (see reconstructArchivedEnvelopesByRange). Anything else (e.g. consumer abort) propagates.
       if (e instanceof EnvelopeReconstructionError) {
         throw new ResponseError(
-          e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
+          RespStatus.RESOURCE_UNAVAILABLE,
           `Failed to reconstruct archived envelope: ${e.message}`
         );
       }
       throw e;
+    }
+
+    // Stopped short: a shorter response is spec-legal and the peer retries elsewhere, but continuing
+    // into the non-finalized range would leave a hole. With nothing served at all, say so explicitly.
+    if (unservableSlot !== null) {
+      if (yielded === 0) {
+        throw new ResponseError(
+          RespStatus.RESOURCE_UNAVAILABLE,
+          `Cannot serve archived envelope slot=${unservableSlot} startSlot=${startSlot} count=${count}`
+        );
+      }
+      return;
     }
   }
 

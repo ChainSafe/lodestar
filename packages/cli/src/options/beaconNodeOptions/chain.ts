@@ -189,7 +189,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.dedupePayloads": {
     type: "boolean",
     description:
-      "Store finalized Gloas execution payload envelopes in a compact form and reconstruct transactions, withdrawals and block access lists from the execution client when serving them. Set to false to keep full envelopes on disk.",
+      "Store finalized Gloas execution payload envelopes in a compact form and reconstruct transactions, withdrawals and block access lists from the execution client when serving them. Serving an envelope then requires the execution client to still hold its block access list: EIP-7928 only guarantees the weak subjectivity period (~16 days) and some clients prune at that floor (see ethereum/EIPs#12347), while full envelopes on disk have no such dependency. Set to false to keep full envelopes on disk.",
     defaultDescription: String(defaultOptions.chain.dedupePayloads),
     group: "chain",
   },

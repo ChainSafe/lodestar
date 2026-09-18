@@ -83,6 +83,7 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {
+  ReconstructedEnvelopeCache,
   reconstructArchivedEnvelope,
   reconstructArchivedEnvelopes,
 } from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
@@ -223,6 +224,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
+  /** Archived envelopes recently rebuilt from EL bodies; shared by the by-range and by-root serving paths */
+  readonly reconstructedEnvelopeCache = new ReconstructedEnvelopeCache();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -968,6 +971,12 @@ export class BeaconChain implements IBeaconChain {
         continue;
       }
 
+      const reconstructed = this.reconstructedEnvelopeCache.get(blockSlot);
+      if (reconstructed !== undefined) {
+        out[i] = reconstructed;
+        continue;
+      }
+
       const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
       if (archived === null) continue;
 
@@ -987,7 +996,10 @@ export class BeaconChain implements IBeaconChain {
       const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
       for (let j = 0; j < rebuilt.length; j++) {
         const envelope = rebuilt[j];
-        if (envelope !== null) out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        if (envelope === null) continue;
+        const envelopeBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        this.reconstructedEnvelopeCache.set(requests[compactIdxs[j]].blockSlot, envelopeBytes);
+        out[compactIdxs[j]] = envelopeBytes;
       }
     }
 
@@ -1009,6 +1021,8 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
+    // Not cached: this object path is REST-only, and the reconstructedEnvelopeCache holds serialized
+    // bytes for the p2p serving paths; serializing here just to populate it isn't worth it.
     return reconstructArchivedEnvelope(this.executionEngine, archived.value);
   }
 
@@ -1020,11 +1034,21 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
+    // executionRequests is kept verbatim in the compact archive form, so read it directly rather than
+    // reconstructing the envelope: no EL round-trip, and an EL null can't turn into "not found" here.
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (hot !== null) return hot.message.executionRequests;
+
+    const archived = await this.db.executionPayloadEnvelopeArchive.get(parentBlockSlot);
+    if (archived === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return envelope.message.executionRequests;
+    return archived.value.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
