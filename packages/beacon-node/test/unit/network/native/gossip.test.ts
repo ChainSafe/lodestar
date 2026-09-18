@@ -29,7 +29,16 @@ async function fixture(events = new NetworkEventBus(), hostGossipItems = 1) {
     pressured: 0,
     duplicate: false,
   }));
-  const runtime = {drainGossip: () => ({messages: queued.splice(0), more: false}), reportGossip, publishGossip};
+  const runtime = {
+    drainGossip: () => ({messages: queued.splice(0), more: false, grouped: false}),
+    reportGossip,
+    publishGossip,
+    drainGossipChecks: () => [],
+    classifyGossip: () => true,
+    notifyGossipBlock: () => {},
+    dropQueuedGossip: () => {},
+    trackGossipSearch: () => true,
+  };
   const opts = {...defaultNetworkOptions, native: {hostGossipItems, hostGossipBytes: hostGossipItems * 64}};
   const gossip = new NativeGossip(runtime, config, events, opts);
   const pending: PendingGossipsubMessage[] = [];
@@ -59,6 +68,8 @@ async function fixture(events = new NetworkEventBus(), hostGossipItems = 1) {
         id: new Uint8Array(20).fill(id),
         data: new Uint8Array(new ArrayBuffer(64), 0, 1),
         receivedAtUnixMs: 12345,
+        slot: null,
+        attestationData: null,
       };
     },
     drain(...messages: NativeGossipMessage[]): void {
@@ -74,6 +85,23 @@ async function fixture(events = new NetworkEventBus(), hostGossipItems = 1) {
 }
 
 describe("native gossip host ownership", () => {
+  it("wakes the replacement runtime when an older runtime returns execution credit", async () => {
+    const old = await fixture();
+    const next = await fixture();
+    const wake = vi.fn();
+    try {
+      old.drain(old.message());
+      old.gossip.close();
+      next.gossip.attach({check: () => true, canExecute: () => true, execute: vi.fn()}, wake);
+      expect(next.gossip.snapshot().items).toBe(1);
+      old.retire(old.pending[0]);
+      expect(wake).toHaveBeenCalledOnce();
+      expect(next.gossip.snapshot().items).toBe(0);
+    } finally {
+      old.close();
+      next.close();
+    }
+  });
   it("keeps existing idle instances on the shared budget after an allowed policy change", async () => {
     const old = await fixture();
     const next = await fixture(undefined, 2);
@@ -106,7 +134,7 @@ describe("native gossip host ownership", () => {
       expect(() => new NativeGossip(old.runtime, config, old.events, old.opts)).toThrow("gossip event bus still owned");
       next.drain(next.message(2));
       expect(next.pending).toHaveLength(0);
-      expect(next.runtime.reportGossip).toHaveBeenCalledWith(next.message(2).handle, "ignore");
+      expect(next.runtime.reportGossip).not.toHaveBeenCalled();
       old.retire(old.pending[0]);
       expect(old.runtime.reportGossip).not.toHaveBeenCalled();
       const reopened = new NativeGossip(old.runtime, config, old.events, old.opts);

@@ -46,6 +46,7 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {NativeGossipExecutor} from "./core/native/executor.js";
 import {snapshotCommitteeSubscriptions} from "./core/native/intent.js";
 import {NativeNetworkCore} from "./core/native/nativeNetworkCore.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
@@ -82,7 +83,7 @@ type NetworkModules = {
   chain: IBeaconChain;
   networkEventBus: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
-  networkProcessor: NetworkProcessor;
+  networkProcessor: NetworkProcessor | NativeGossipExecutor;
   core: INetworkCore;
 };
 
@@ -122,7 +123,7 @@ export class Network implements INetwork {
   private readonly controller: AbortController;
 
   // TODO: Review
-  private readonly networkProcessor: NetworkProcessor;
+  private readonly networkProcessor: NetworkProcessor | NativeGossipExecutor;
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
 
@@ -227,13 +228,14 @@ export class Network implements INetwork {
               activeValidatorCount,
             });
 
-    let networkProcessor: NetworkProcessor | undefined;
+    let networkProcessor: NetworkProcessor | NativeGossipExecutor | undefined;
     let network: Network | undefined;
     try {
-      networkProcessor = new NetworkProcessor(
-        {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
-        opts.backend === "native" ? {...opts, completeGossipWork: true} : opts
-      );
+      const processorModules = {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker};
+      networkProcessor =
+        core instanceof NativeNetworkCore
+          ? core.createGossipExecutor(processorModules, opts)
+          : new NetworkProcessor(processorModules, opts);
 
       const multiaddresses = opts.localMultiaddrs?.join(",");
       const peerId = peerIdFromPrivateKey(privateKey);

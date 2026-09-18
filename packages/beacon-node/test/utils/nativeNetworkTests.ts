@@ -2,6 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
+import bindings from "@chainsafe/lodestar-z";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   NativeApplicationConfig,
@@ -141,7 +142,7 @@ describe("native Lodestar integration", () => {
       16
     );
     application.local.status.finalizedEpoch = (1n << 64n) - 1n;
-    application.requestPolicy.hostIntegerMax = null;
+    bindings.config.set(config, config.genesisValidatorsRoot);
     const remote = createNativeNetworkApplicationRuntime(application, () => {});
     application.identitySecretKey.fill(0);
     try {
@@ -165,7 +166,8 @@ describe("native Lodestar integration", () => {
   }, 15000);
   it("closes and reopens while real serving and gossip handlers retain unfinished host work", async () => {
     const config = fuluConfig();
-    const limits = {hostGossipItems: 1, hostGossipBytes: 1024 * 1024};
+    // The weighted plan gives proposer slashings one execution slot with this budget.
+    const limits = {hostGossipItems: 65, hostGossipBytes: 64 * 1024 * 1024};
     const old = await nativeNetworkFixture(config, "native", limits);
     let remote: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
     let replacement: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
@@ -202,16 +204,16 @@ describe("native Lodestar integration", () => {
       await replacement.network.subscribeGossipCoreTopics();
       await remote.network.connectToPeer(next.peerId, next.p2pAddresses);
       const delivered = vi.fn();
-      replacement.network.events.on(NetworkEvent.pendingGossipsubMessage, delivered);
+      replacement.network.events.on(NetworkEvent.gossipMessageValidationResult, delivered);
       const replacementNetwork = replacement.network;
-      const refusals = async () => {
+      const queued = async () => {
         const match = (await replacementNetwork.scrapeMetrics()).match(
-          /lodestar_native_host_gossip_capacity_refusals_total (\d+)/
+          /lodestar_native_gossip_processor_queued_items (\d+)/
         );
-        if (!match) throw new Error("Missing gossip pressure metric");
+        if (!match) throw new Error("Missing gossip queue metric");
         return BigInt(match[1]);
       };
-      const before = await refusals();
+      expect(await queued()).toBe(0n);
       const nextSlashing = ssz.phase0.ProposerSlashing.defaultValue();
       nextSlashing.signedHeader1.message.proposerIndex = 1;
       nextSlashing.signedHeader2.message.proposerIndex = 1;
@@ -220,7 +222,7 @@ describe("native Lodestar integration", () => {
       await vi.waitFor(async () => expect(await publisher.publishProposerSlashing(nextSlashing)).toBeGreaterThan(0), {
         timeout: 5000,
       });
-      await vi.waitFor(async () => expect(await refusals()).toBeGreaterThan(before), {timeout: 5000});
+      await vi.waitFor(async () => expect(await queued()).toBe(1n), {timeout: 5000});
       expect(await remote.network.sendBeaconBlocksByRoot(next.peerId, [new Uint8Array(32).fill(8)])).toEqual([]);
       expect(delivered).not.toHaveBeenCalled();
       const retired = vi.fn();
@@ -234,9 +236,8 @@ describe("native Lodestar integration", () => {
         },
         {timeout: 5000}
       );
-      nextSlashing.signedHeader1.message.bodyRoot.fill(5);
-      expect(await publisher.publishProposerSlashing(nextSlashing)).toBeGreaterThan(0);
       await vi.waitFor(() => expect(delivered).toHaveBeenCalledOnce(), {timeout: 5000});
+      expect(await queued()).toBe(0n);
     } finally {
       block.resolve(null);
       signature.resolve(false);
@@ -411,6 +412,7 @@ describe("native Lodestar integration", () => {
         config.CUSTODY_REQUIREMENT,
         16384
       );
+      bindings.config.set(config, config.genesisValidatorsRoot);
       const runtime = createNativeNetworkApplicationRuntime(application, () => {});
       try {
         const identity = await runtime.ready;
@@ -430,8 +432,6 @@ function emptyIntent(application: NativeApplicationConfig): NativeLocalIntent {
   return {
     update: {
       local: application.local,
-      schedule: application.forkSchedule,
-      capabilities: application.capabilities,
       endpoints: null,
     },
     subscriptions: [],

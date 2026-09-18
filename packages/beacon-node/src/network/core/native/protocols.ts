@@ -1,6 +1,6 @@
-import {NativeCapabilities, NativeProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
+import {NativeProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, isForkPostAltair, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {ContextBytesType} from "@lodestar/reqresp";
 import * as protocols from "../../reqresp/protocols.js";
 import {ProtocolNoHandler, ReqRespMethod} from "../../reqresp/types.js";
@@ -82,41 +82,4 @@ export function nativeProtocols(config: BeaconConfig, fork: ForkName): ReadonlyM
     });
   }
   return result;
-}
-
-export function nativeCapabilities(
-  config: BeaconConfig,
-  fork: ForkName,
-  disableLightClientServer: boolean
-): NativeCapabilities {
-  nativeFork(fork);
-  const common: NativeProtocolId[] = ["/ipfs/id/1.0.0", "/meshsub/1.2.0", "/meshsub/1.1.0", "/meshsub/1.0.0"];
-  const receive = [...common];
-  const request = [...common];
-  for (const protocol of nativeProtocols(config, fork).values()) {
-    const {method, version, id} = protocol;
-    if (method === ReqRespMethod.Status && version !== (isForkPostFulu(fork) ? 2 : 1)) continue;
-    if (
-      method === ReqRespMethod.Metadata &&
-      ((version === 1 && isForkPostAltair(fork)) || (version === 2 && isForkPostFulu(fork)))
-    )
-      continue;
-    if (
-      (method === ReqRespMethod.BlobSidecarsByRange || method === ReqRespMethod.BlobSidecarsByRoot) &&
-      !isForkPostDeneb(fork)
-    )
-      continue;
-    if (
-      (method === ReqRespMethod.BeaconBlocksByHead ||
-        method === ReqRespMethod.DataColumnSidecarsByRange ||
-        method === ReqRespMethod.DataColumnSidecarsByRoot) &&
-      !isForkPostFulu(fork)
-    )
-      continue;
-    const lightClient = method.startsWith("light_client_");
-    if (lightClient && !isForkPostAltair(fork)) continue;
-    request.push(id);
-    if (!lightClient || !disableLightClientServer) receive.push(id);
-  }
-  return {receive, request};
 }

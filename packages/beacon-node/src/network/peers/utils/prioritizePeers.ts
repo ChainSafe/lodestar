@@ -4,6 +4,7 @@ import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {TARGET_GROUP_PEERS_PER_SUBNET} from "../../../constants/network.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
@@ -12,12 +13,6 @@ import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const TARGET_SUBNET_PEERS = 6;
-
-/**
- * This is for non-sampling groups only. This is a very easy number to achieve given an average of 6.25 peers per column subnet on public networks.
- * This is needed to always maintain some minimum peers on all subnets so that when we publish a block, we're sure we pubish to all column subnets.
- */
-const TARGET_GROUP_PEERS_PER_SUBNET = 4;
 
 /**
  * This is used in the pruning logic. We avoid pruning peers on sync-committees if doing so would

@@ -1,16 +1,22 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it, vi} from "vitest";
 import {NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
-import {createBeaconConfig} from "@lodestar/config";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {createNativeConfig} from "../../../../src/network/core/native/config.js";
 import {NativeIntent} from "../../../../src/network/core/native/intent.js";
-import {defaultNetworkOptions} from "../../../../src/network/options.js";
+import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
-async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = true) {
+async function fixture(
+  subscribeAllSubnets = false,
+  fuluEpoch = 0,
+  activate = true,
+  networkOptions: Partial<NetworkOptions> = {},
+  chainConfig: Partial<ChainConfig> = {}
+) {
   const config = createBeaconConfig(
     {
       ALTAIR_FORK_EPOCH: 0,
@@ -21,6 +27,7 @@ async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = tr
       FULU_FORK_EPOCH: fuluEpoch,
       GLOAS_FORK_EPOCH: Infinity,
       BLOB_SCHEDULE: [],
+      ...chainConfig,
     },
     new Uint8Array(32)
   );
@@ -29,6 +36,7 @@ async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = tr
     tcp: false,
     localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
     subscribeAllSubnets,
+    ...networkOptions,
   };
   const status = ssz.fulu.Status.defaultValue();
   const clock = new ClockStopped(0);
@@ -53,6 +61,7 @@ async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = tr
   if (activate) await intent.activate(status, config.CUSTODY_REQUIREMENT);
   return {
     config,
+    network,
     clock,
     applyIntent,
     updateStatus,
@@ -67,6 +76,58 @@ async function fixture(subscribeAllSubnets = false, fuluEpoch = 0, activate = tr
 }
 
 describe("native local intent transactions", () => {
+  it("maintains publication peers outside local sampling groups", async () => {
+    const node = await fixture();
+    try {
+      const targets = node.latest().demand.groupTargets;
+      const sampled = new Set(node.network.custodyConfig.sampleGroups);
+      expect(sampled.size).toBeLessThan(node.config.NUMBER_OF_CUSTODY_GROUPS);
+      expect(targets).toHaveLength(128);
+      for (let group = 0; group < 128; group++)
+        expect(targets[group]).toBe(group >= node.config.NUMBER_OF_CUSTODY_GROUPS ? 0 : sampled.has(group) ? 6 : 4);
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it.each([
+    {maxPeers: 5, targetGroupPeers: 5},
+    {maxPeers: 3, targetGroupPeers: 2},
+  ])("bounds column targets by configured groups and peer capacity: %o", async ({maxPeers, targetGroupPeers}) => {
+    const node = await fixture(
+      false,
+      0,
+      true,
+      {maxPeers, targetPeers: maxPeers - 1, targetGroupPeers},
+      {NUMBER_OF_CUSTODY_GROUPS: 64}
+    );
+    try {
+      const sampled = new Set(node.network.custodyConfig.sampleGroups);
+      const targets = node.latest().demand.groupTargets;
+      for (let group = 0; group < 128; group++)
+        expect(targets[group]).toBe(group >= 64 ? 0 : sampled.has(group) ? targetGroupPeers : Math.min(4, maxPeers));
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("starts column publication demand at Fulu activation", async () => {
+    const node = await fixture(false, 1);
+    try {
+      expect(node.latest().demand.groupTargets.every((target) => target === 0)).toBe(true);
+      node.clock.setSlot(SLOTS_PER_EPOCH);
+      await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
+      expect(
+        node
+          .latest()
+          .demand.groupTargets.slice(0, node.config.NUMBER_OF_CUSTODY_GROUPS)
+          .every((target) => target >= 4)
+      ).toBe(true);
+    } finally {
+      node.intent.close();
+    }
+  });
+
   it("keeps subscribe-all and custody ownership when core topics are removed", async () => {
     const node = await fixture(true);
     try {
@@ -229,15 +290,13 @@ describe("native local intent transactions", () => {
       await node.intent.updateStatus(status);
       expect(node.updateStatus).not.toHaveBeenCalled();
       expect(node.applyIntent.mock.calls.at(-1)?.[1]).toBe(BigInt(SLOTS_PER_EPOCH));
-      expect(node.latest().update.local.fork.fork).toBe("fulu");
+      expect(node.latest().update.local).not.toHaveProperty("fork");
       expect(node.latest().update.local.status.headSlot).toBe(0n);
-      const digest = node.config.forkBoundary2ForkDigest(node.config.getForkBoundaryAtEpoch(1));
-      expect(node.latest().update.local.status.forkDigest).toEqual(digest);
+      expect(node.latest().update.local.status).not.toHaveProperty("forkDigest");
       const calls = node.applyIntent.mock.calls.length;
       await node.intent.updateStatus({...status, headSlot: 1});
       expect(node.applyIntent).toHaveBeenCalledTimes(calls);
       expect(node.updateStatus.mock.calls[0][0]).toMatchObject({
-        forkDigest: digest,
         earliestAvailableSlot: 0n,
         headSlot: 1n,
       });

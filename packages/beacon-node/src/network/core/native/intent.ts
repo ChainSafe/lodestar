@@ -14,6 +14,7 @@ import {
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
+import {TARGET_GROUP_PEERS_PER_SUBNET} from "../../../constants/network.js";
 import {IClock} from "../../../util/clock.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForkBoundaries, getCurrentAndNextForkBoundary} from "../../forks.js";
@@ -24,9 +25,8 @@ import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {computeSubscribedSubnet} from "../../subnets/util.js";
-import {nativeForkSchedule, nativeLocalState, nativeTopicScore} from "./config.js";
+import {nativeLocalState, nativeTopicScore} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
-import {nativeCapabilities} from "./protocols.js";
 
 type Desired = {
   status: Status;
@@ -290,14 +290,19 @@ export class NativeIntent {
     if (topics.size > 512)
       throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "active gossip topics"});
     const groupTargets = Array<number>(128).fill(0);
-    if (isForkPostFulu(config.getForkName(slot)))
-      for (const group of custodyConfig.sampleGroups) groupTargets[group] = this.opts.targetGroupPeers;
+    if (isForkPostFulu(config.getForkName(slot))) {
+      groupTargets.fill(
+        Math.min(TARGET_GROUP_PEERS_PER_SUBNET, this.opts.maxPeers),
+        0,
+        config.NUMBER_OF_CUSTODY_GROUPS
+      );
+      for (const group of custodyConfig.sampleGroups)
+        groupTargets[group] = Math.min(this.opts.targetGroupPeers, this.opts.maxPeers);
+    }
     return {
       update: {
         local,
-        schedule: nativeForkSchedule(config, slot),
         endpoints: this.application.discovery?.advertisement ?? null,
-        capabilities: nativeCapabilities(config, config.getForkName(slot), this.opts.disableLightClientServer ?? false),
       },
       subscriptions: Array.from(topics, (name) => ({
         name,

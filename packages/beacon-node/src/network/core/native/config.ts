@@ -6,8 +6,8 @@ import {
   IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
-  NativeForkSchedule,
   NativeLocalState,
+  NativeTopicBoundary,
   NativeTopicKind,
   NativeTopicRule,
   NativeTopicScoreParams,
@@ -15,29 +15,25 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
-  ForkName,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
-import {getCurrentAndNextForkBoundary} from "../../forks.js";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../gossip/scoringParameters.js";
 import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../gossip/topic.js";
-import {getENRForkID} from "../../metadata.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
 import {nativePeerId, parseNativeEndpoint} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
-import {nativeCapabilities, nativeFork} from "./protocols.js";
+import {nativeFork} from "./protocols.js";
 
 export const UINT64_MAX = 18446744073709551615n;
 const MiB = 1024 * 1024;
-const kinds: readonly NativeTopicKind[] = [
+export const kinds: readonly NativeTopicKind[] = [
   "beacon_block",
   "beacon_aggregate_and_proof",
   "beacon_attestation",
@@ -52,6 +48,30 @@ const kinds: readonly NativeTopicKind[] = [
   "blob_sidecar",
   "data_column_sidecar",
 ];
+
+export function gossipExecutionLimits(
+  opts: NetworkOptions,
+  policy: readonly NativeTopicBoundary[]
+): {items: number; bytes: number}[] {
+  const byteWeights = [32, 4, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 24];
+  const itemWeights = [1, 8, 32, 1, 1, 1, 2, 4, 1, 1, 1, 4, 8];
+  const byteTotal = byteWeights.reduce((sum, weight) => sum + weight, 0);
+  const itemTotal = itemWeights.reduce((sum, weight) => sum + weight, 0);
+  const itemBudget = nativeInteger(opts.native?.hostGossipItems ?? 4096, "host gossip items", 16384, 1);
+  const byteBudget = nativeInteger(opts.native?.hostGossipBytes ?? 64 * MiB, "host gossip bytes", 1024 * MiB, 1);
+  const concurrency = nativeInteger(opts.maxGossipTopicConcurrency ?? itemBudget, "gossip topic concurrency", 16384, 1);
+  return kinds.map((kind, i) => {
+    const items = Math.min(concurrency, Math.floor((itemBudget * itemWeights[i]) / itemTotal));
+    const bytes = Math.floor((byteBudget * byteWeights[i]) / byteTotal);
+    const largest = Math.max(0, ...policy.map((boundary) => boundary.rules[kind].sszMax));
+    if (items < 1 || bytes < largest)
+      throw new NativeNetworkError({
+        code: NativeNetworkErrorCode.CONFIGURATION,
+        resource: `gossip execution capacity for ${kind}`,
+      });
+    return {items, bytes};
+  });
+}
 
 export function nativeTopicScore(params: TopicScoreParams): NativeTopicScoreParams {
   return {
@@ -84,11 +104,8 @@ export function nativeLocalState(
   nativeInteger(slot, "clock slot", Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER);
   const fork = config.getForkName(slot);
   nativeFork(fork);
-  const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
-  const digest = config.forkBoundary2ForkDigest(config.getForkBoundaryAtEpoch(epoch));
   return {
     status: {
-      forkDigest: digest,
       finalizedRoot: status.finalizedRoot,
       headRoot: status.headRoot,
       finalizedEpoch: BigInt(nativeInteger(status.finalizedEpoch, "finalized epoch")),
@@ -108,24 +125,6 @@ export function nativeLocalState(
       syncnets: 0,
       custodyGroupCount: BigInt(nativeInteger(custodyGroupCount, "custody groups", config.NUMBER_OF_CUSTODY_GROUPS, 1)),
     },
-    fork: {
-      fork: nativeFork(fork),
-      digest,
-      custodyGroups: config.NUMBER_OF_CUSTODY_GROUPS,
-      minimumSamplingGroups: isForkPostFulu(fork) ? config.SAMPLES_PER_SLOT : 0,
-    },
-  };
-}
-
-export function nativeForkSchedule(config: BeaconConfig, slot: number): NativeForkSchedule {
-  const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
-  const enr = getENRForkID(config, epoch);
-  const {nextBoundary} = getCurrentAndNextForkBoundary(config, epoch);
-  return {
-    fuluScheduled: config.FULU_FORK_EPOCH !== Infinity,
-    nextVersion: enr.nextForkVersion,
-    nextEpoch: nextBoundary ? BigInt(nativeInteger(nextBoundary.epoch, "next fork epoch")) : UINT64_MAX,
-    nextDigest: nextBoundary ? config.forkBoundary2ForkDigest(nextBoundary) : new Uint8Array(4),
   };
 }
 
@@ -300,7 +299,7 @@ export function createNativeConfig(
   status: Status,
   custodyGroupCount: number,
   activeValidatorCount: number
-): {application: NativeApplicationConfig; network: NetworkConfig} {
+): {application: NativeApplicationConfig; network: NetworkConfig; executionLimits: {items: number; bytes: number}[]} {
   validateOptions(opts, config);
   if (key.type !== "secp256k1")
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "secp256k1 identity required"});
@@ -323,32 +322,38 @@ export function createNativeConfig(
     (boundary, index, all) =>
       boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch && !isForkPostGloas(boundary.fork)
   );
-  const requestForks = boundaries.map((boundary) => ({
-    digest: config.forkBoundary2ForkDigest(boundary),
-    fork: nativeFork(boundary.fork),
-  }));
-  const blobSchedule = [
-    config.DENEB_FORK_EPOCH,
-    config.ELECTRA_FORK_EPOCH,
-    ...config.BLOB_SCHEDULE.map((entry) => entry.EPOCH),
-  ]
-    .filter((epoch, index, all) => epoch !== Infinity && all.indexOf(epoch) === index)
-    .map((epoch) => ({
-      startSlot: BigInt(nativeInteger(epoch * SLOTS_PER_EPOCH, "blob fork slot")),
-      maxBlobs: config.getMaxBlobsPerBlock(epoch),
-    }));
   const small = opts.native?.profile === "small";
   const connections = Math.min(256, Math.max(16, opts.maxPeers + (small ? 4 : 32)));
   const listeners = nativeListeners(opts.localMultiaddrs, true);
+  const topicPolicy = boundaries.map((boundary) => {
+    const rules = Object.fromEntries(kinds.map((kind) => [kind, {count: 0, sszMin: 0, sszMax: 0}])) as Record<
+      NativeTopicKind,
+      NativeTopicRule
+    >;
+    for (const type of getCoreTopicsAtFork(network, boundary.fork, {
+      subscribeAllSubnets: true,
+      subscribeAllColumnSubnets: true,
+    })) {
+      const kind = kinds.find((kind) => kind === type.type);
+      if (!kind)
+        throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: `topic ${type.type}`});
+      const topic = {...type, boundary};
+      const schema = getGossipSSZType(topic);
+      rules[kind] = {
+        count: rules[kind].count + 1,
+        sszMin: schema.minSize,
+        sszMax: Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE, schema)),
+      };
+    }
+    return {digest: config.forkBoundary2ForkDigest(boundary), rules};
+  });
   const application: NativeApplicationConfig = {
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
     discovery: discovery(opts, key, listeners),
     initialSlot: BigInt(Math.max(0, slot)),
     local,
-    forkSchedule: nativeForkSchedule(config, slot),
-    requestForks,
-    capabilities: nativeCapabilities(config, config.getForkName(slot), opts.disableLightClientServer ?? false),
+    serveLightClients: !(opts.disableLightClientServer ?? false),
     identify: {agentVersion: opts.private ? "" : `Lodestar/${opts.version ?? "dev"}`, protocolVersion: "eth2/1.0.0"},
     resources: {
       peerCapacity: Math.max(64, 2 * opts.maxPeers),
@@ -360,47 +365,10 @@ export function createNativeConfig(
       handshakingCapacity: Math.min(connections, small ? 8 : 32),
       dialingCapacity: Math.min(connections, small ? 4 : 16),
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? (small ? 64 : 512) * MiB,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 80 : 256) * MiB,
+      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 512 * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
-    requestPolicy: {
-      denebStartSlot:
-        config.DENEB_FORK_EPOCH === Infinity
-          ? null
-          : BigInt(nativeInteger(config.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH, "deneb slot")),
-      blocksPreDeneb: config.MAX_REQUEST_BLOCKS,
-      blocksDeneb: config.MAX_REQUEST_BLOCKS_DENEB,
-      blobIdentifiersDeneb: config.MAX_REQUEST_BLOB_SIDECARS,
-      blobIdentifiersElectra: config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA,
-      numberOfColumns: NUMBER_OF_COLUMNS,
-      columnChunks: config.MAX_REQUEST_DATA_COLUMN_SIDECARS,
-      blobSchedule,
-      hostIntegerMax: BigInt(Number.MAX_SAFE_INTEGER),
-    },
-    topicPolicy: boundaries.map((boundary) => {
-      const rules = Object.fromEntries(kinds.map((kind) => [kind, {count: 0, sszMin: 0, sszMax: 0}])) as Record<
-        NativeTopicKind,
-        NativeTopicRule
-      >;
-      for (const type of getCoreTopicsAtFork(network, boundary.fork, {
-        subscribeAllSubnets: true,
-        subscribeAllColumnSubnets: true,
-      })) {
-        const kind = kinds.find((kind) => kind === type.type);
-        if (!kind)
-          throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: `topic ${type.type}`});
-        const topic = {...type, boundary};
-        const schema = getGossipSSZType(topic);
-        rules[kind] = {
-          count: rules[kind].count + 1,
-          sszMin: schema.minSize,
-          sszMax: Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE, schema)),
-        };
-      }
-      return {digest: config.forkBoundary2ForkDigest(boundary), rules};
-    }),
     gossipPolicy: {
-      phase0Digest: boundaries[0]?.fork === ForkName.phase0 ? config.forkBoundary2ForkDigest(boundaries[0]) : null,
       heartbeatIntervalMs: 700n,
       iwantFollowupMs: 12000n,
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
@@ -433,5 +401,34 @@ export function createNativeConfig(
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };
-  return {application, network};
+  const items: Record<NativeTopicKind, number> = {
+    beacon_block: 8,
+    beacon_attestation: Math.max(128, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1)),
+    beacon_aggregate_and_proof: 2048,
+    blob_sidecar: 256,
+    data_column_sidecar: 256,
+    sync_committee: 1024,
+    sync_committee_contribution_and_proof: 128,
+    proposer_slashing: 32,
+    attester_slashing: 32,
+    voluntary_exit: 128,
+    bls_to_execution_change: 128,
+    light_client_finality_update: 8,
+    light_client_optimistic_update: 8,
+  };
+  const byteWeights = [24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16];
+  application.gossipPolicy.processor = kinds.map((kind, i) => {
+    const largest = Math.max(0, ...topicPolicy.map((boundary) => boundary.rules[kind].sszMax));
+    const compressedMax = 32 + largest + Math.floor(largest / 6);
+    const pages = Math.ceil(Math.max(4096, compressedMax, byteWeights[i] * MiB) / 4096);
+    return {items: items[kind], bytes: pages * 4096};
+  });
+  nativeInteger(
+    application.gossipPolicy.processor.reduce((sum, limit) => sum + limit.items, 0),
+    "gossip work capacity",
+    65535,
+    1
+  );
+  const executionLimits = gossipExecutionLimits(opts, topicPolicy);
+  return {application, network, executionLimits};
 }

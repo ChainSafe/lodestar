@@ -36,6 +36,7 @@ async function fixture() {
     scoreAtMs: 0n,
     banUntilMs: 0n,
     goodbyeUntilMs: 0n,
+    redialUntilMs: 0n,
   };
   const queue: NativePeerObservation[] = [];
   const disconnect = vi.fn(async () => {});

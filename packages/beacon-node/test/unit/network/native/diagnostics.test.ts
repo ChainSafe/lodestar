@@ -75,6 +75,7 @@ async function fixture() {
     scoreAtMs: 9000n,
     banUntilMs: 0n,
     goodbyeUntilMs: 0n,
+    redialUntilMs: 0n,
   };
   const runtime = {
     getGossipDiagnostics: vi.fn(async () => page),

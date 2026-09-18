@@ -1,0 +1,145 @@
+import {TopicValidatorResult} from "@libp2p/gossipsub";
+import {NativeGossipDependencyCheck} from "@chainsafe/lodestar-z/network";
+import {routes} from "@lodestar/api";
+import {SlotRootHex} from "@lodestar/types";
+import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
+import {ChainEvent} from "../../../chain/emitter.js";
+import {ClockEvent} from "../../../util/clock.js";
+import {PeerIdStr} from "../../../util/peerId.js";
+import {NetworkEvent} from "../../events.js";
+import {GossipMessageInfo, GossipType} from "../../gossip/interface.js";
+import {getGossipHandlers} from "../../processor/gossipHandlers.js";
+import {getGossipValidatorBatchFn, getGossipValidatorFn} from "../../processor/gossipValidatorFn.js";
+import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
+import {PendingGossipsubMessage} from "../../processor/types.js";
+import {hostPeerId} from "./addresses.js";
+import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
+import {NativeGossip} from "./gossip.js";
+
+export class NativeGossipExecutor {
+  private readonly validate;
+  private readonly validateBatch;
+  private stopped = false;
+  private retry: NodeJS.Timeout | undefined;
+
+  constructor(
+    private readonly modules: NetworkProcessorModules,
+    opts: NetworkProcessorOpts,
+    private readonly gossip: Pick<NativeGossip, "attach" | "trackSearch" | "notifyBlock" | "dropQueued">,
+    private readonly wake: () => void
+  ) {
+    const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
+    this.validate = getGossipValidatorFn(handlers, modules);
+    this.validateBatch = getGossipValidatorBatchFn(handlers, modules);
+    gossip.attach(this, wake);
+    modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
+    modules.chain.clock.on(ClockEvent.slot, this.onSlot);
+  }
+
+  check(check: NativeGossipDependencyCheck): boolean {
+    const root = `0x${Buffer.from(check.root).toString("hex")}`;
+    const available = this.modules.chain.forkChoice.hasBlockHexUnsafe(root);
+    if (!available) {
+      this.searchUnknownBlock(
+        {slot: Number(check.slot), root},
+        BlockInputSource.network_processor,
+        hostPeerId(check.peerId)
+      );
+    }
+    return available;
+  }
+
+  canExecute(): boolean {
+    const {chain} = this.modules;
+    const ready = chain.blsThreadPoolCanAcceptWork() && chain.regenCanAcceptWork();
+    if (!ready && !this.retry && !this.stopped) {
+      this.retry = setTimeout(() => {
+        this.retry = undefined;
+        this.wake();
+      }, 25);
+      this.retry.unref();
+    }
+    return ready;
+  }
+
+  execute(messages: PendingGossipsubMessage[], grouped: boolean): void {
+    void this.run(messages, grouped).catch((error: unknown) =>
+      this.modules.logger.error("Native gossip execution failed", {code: "NATIVE_GOSSIP_EXECUTION"}, error as Error)
+    );
+  }
+
+  private async run(messages: PendingGossipsubMessage[], grouped: boolean): Promise<void> {
+    let results: TopicValidatorResult[] = messages.map(() => TopicValidatorResult.Ignore);
+    try {
+      if (!this.stopped) {
+        const start = Date.now() / 1000;
+        const infos: GossipMessageInfo[] = messages.map((message) => {
+          message.startProcessUnixSec = start;
+          this.modules.metrics?.gossipValidationQueue.jobWaitTime.observe(
+            {topic: message.topic.type},
+            Math.max(0, start - message.seenTimestampSec)
+          );
+          return {...message, msgSlot: message.msgSlot ?? null};
+        });
+        this.modules.metrics?.networkProcessor.jobsSubmitted.observe(messages.length);
+        results =
+          grouped || infos[0].topic.type === GossipType.beacon_attestation
+            ? await this.validateBatch(infos)
+            : [await this.validate(infos[0])];
+      }
+    } finally {
+      for (const [i, message] of messages.entries()) {
+        const acceptance = results[i] ?? TopicValidatorResult.Ignore;
+        if (acceptance === TopicValidatorResult.Accept && message.startProcessUnixSec !== null) {
+          this.modules.metrics?.gossipValidationQueue.jobTime.observe(
+            {topic: message.topic.type},
+            Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
+          );
+        }
+        this.modules.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource: message.propagationSource,
+          acceptance,
+        });
+      }
+      this.wake();
+    }
+  }
+
+  searchUnknownBlock({root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    if (this.stopped || this.modules.chain.seenBlock(root) || !this.gossip.trackSearch(root, peer)) return;
+    this.modules.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
+  }
+
+  searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    if (this.stopped || this.modules.chain.seenPayloadEnvelope(root) || !this.gossip.trackSearch(root, peer)) return;
+    this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, slot, peer, source});
+  }
+
+  private readonly onBlock = ({block}: {block: string}): void => {
+    this.gossip.notifyBlock(Buffer.from(block.slice(2), "hex"));
+  };
+  private readonly onSlot = (): void => {
+    this.wake();
+  };
+
+  dropAllJobs(): void {
+    this.gossip.dropQueued();
+  }
+
+  dumpGossipQueue(_type: GossipType): PendingGossipsubMessage[] {
+    throw new NativeNetworkError({
+      code: NativeNetworkErrorCode.UNAVAILABLE,
+      resource: "native gossip payload dump; use native processor diagnostics",
+    });
+  }
+
+  stop(): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    if (this.retry) clearTimeout(this.retry);
+    this.modules.chain.emitter.off(routes.events.EventType.block, this.onBlock);
+    this.modules.chain.clock.off(ClockEvent.slot, this.onSlot);
+    this.dropAllJobs();
+  }
+}

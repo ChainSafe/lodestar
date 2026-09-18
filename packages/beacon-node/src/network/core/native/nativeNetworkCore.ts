@@ -1,5 +1,6 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
+import bindings from "@chainsafe/lodestar-z";
 import {
   NativeNetworkApplicationRuntime,
   NativePeerAction,
@@ -11,6 +12,7 @@ import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
+import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {assertBoundedReqRespHandlers} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
@@ -20,6 +22,7 @@ import {hostPeerId, nativeMultiaddr, nativePeerId, parseNativeEndpoint} from "./
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
+import {NativeGossipExecutor} from "./executor.js";
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
@@ -55,7 +58,7 @@ export class NativeNetworkCore implements INetworkCore {
       });
     assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
-    const {application, network} = createNativeConfig(
+    const {application, network, executionLimits} = createNativeConfig(
       opts,
       config,
       privateKey,
@@ -74,6 +77,7 @@ export class NativeNetworkCore implements INetworkCore {
       },
     });
     try {
+      bindings.config.set(config, config.genesisValidatorsRoot);
       core.runtime = createNativeNetworkApplicationRuntime(application, core.onReadable);
       core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
       await core.runtime.ready;
@@ -88,7 +92,7 @@ export class NativeNetworkCore implements INetworkCore {
         initialStatus,
         core.onFailure
       );
-      core.gossip = new NativeGossip(core.runtime, config, modules.events, core.modules.opts);
+      core.gossip = new NativeGossip(core.runtime, config, modules.events, core.modules.opts, executionLimits);
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(
         core.runtime,
@@ -110,6 +114,10 @@ export class NativeNetworkCore implements INetworkCore {
     } finally {
       application.identitySecretKey.fill(0);
     }
+  }
+
+  createGossipExecutor(modules: NetworkProcessorModules, opts: NetworkProcessorOpts): NativeGossipExecutor {
+    return new NativeGossipExecutor(modules, opts, this.gossip, this.onReadable);
   }
 
   async activate(status: Status, custodyGroupCount: number): Promise<void> {
@@ -316,6 +324,11 @@ export class NativeNetworkCore implements INetworkCore {
       host_gossip_environment_items: gossip.items,
       host_gossip_environment_backing_bytes: gossip.bytes,
       host_gossip_active_items: gossip.activeItems,
+      gossip_processor_queued_items: diagnostics.gossip.queued,
+      gossip_processor_waiting_items: diagnostics.gossip.waiting,
+      gossip_processor_checking_items: diagnostics.gossip.checking,
+      gossip_processor_executing_items: diagnostics.gossip.executing,
+      gossip_processor_fixed_payload_bytes: diagnostics.gossip.fixedPayloadBytes,
       requests_occupied: diagnostics.requests.occupied,
       incoming_occupied: diagnostics.incoming.occupied,
     };
@@ -324,6 +337,9 @@ export class NativeNetworkCore implements INetworkCore {
       peer_status_range_refusals_total: this.peers.statusRefusals,
       host_gossip_capacity_refusals_total: gossip.refused,
       gossip_messages_copied_total: diagnostics.gossip.messagesCopied,
+      gossip_processor_kind_refusals_total: diagnostics.gossip.kindRefusals,
+      gossip_processor_dependency_refusals_total: diagnostics.gossip.dependencyRefusals,
+      gossip_processor_slot_refusals_total: diagnostics.gossip.slotRefusals,
       gossip_verdicts_applied_total:
         diagnostics.gossip.reportsAppliedAccept +
         diagnostics.gossip.reportsAppliedReject +

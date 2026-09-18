@@ -1,6 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
+import bindings from "@chainsafe/lodestar-z";
+import {createNativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {UINT64_MAX, createNativeConfig} from "../../../../src/network/core/native/config.js";
@@ -26,7 +28,7 @@ async function fixture() {
   const opts = {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]};
   return {
     key,
-    create: (options: Partial<NetworkOptions> = {}, slot = 0) =>
+    create: (options: Partial<NetworkOptions> = {}, slot = 0, validators = 16) =>
       createNativeConfig(
         {...opts, ...options},
         config,
@@ -34,21 +36,36 @@ async function fixture() {
         slot,
         ssz.fulu.Status.defaultValue(),
         config.CUSTODY_REQUIREMENT,
-        16
+        validators
       ).application,
   };
 }
 
 describe("native configuration boundary", () => {
+  it("fits the fixed native plan for a million-validator Fulu workload", async () => {
+    const node = await fixture();
+    const application = node.create({}, 0, 1_000_000);
+    bindings.config.set(config, config.genesisValidatorsRoot);
+    const runtime = createNativeNetworkApplicationRuntime(application, () => {});
+    try {
+      await runtime.ready;
+      const diagnostics = runtime.diagnostics();
+      expect(diagnostics.gossip.capacity).toBeGreaterThan(34_375);
+      expect(diagnostics.nativeRequestedBytes).toBeLessThanOrEqual(application.resources.nativeBudgetBytes);
+      expect(diagnostics.bridgeRequestedBytes).toBeLessThanOrEqual(application.resources.bridgeBudgetBytes);
+    } finally {
+      application.identitySecretKey.fill(0);
+      await runtime.close();
+    }
+  });
   it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {
     const node = await fixture();
     const application = node.create({}, -1);
     try {
       expect(application.initialSlot).toBe(0n);
-      expect(application.local.fork.fork).toBe("fulu");
-      expect(application.requestForks).toEqual([
-        {fork: "fulu", digest: config.forkBoundary2ForkDigest(config.getForkBoundaryAtEpoch(-1))},
-      ]);
+      expect(application.local).not.toHaveProperty("fork");
+      expect(application.local.status).not.toHaveProperty("forkDigest");
+      expect(application).not.toHaveProperty("requestForks");
     } finally {
       application.identitySecretKey.fill(0);
     }
@@ -67,6 +84,8 @@ describe("native configuration boundary", () => {
     {dialTimeoutMs: 1000},
     {requestTimeoutMs: 1000},
     {respTimeoutMs: 1000},
+    {maxGossipTopicConcurrency: Number.NaN},
+    {native: {hostGossipBytes: 1024}},
     {maxPeers: 257},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
   ])("rejects unmappable options: %j", async (opts) => {
