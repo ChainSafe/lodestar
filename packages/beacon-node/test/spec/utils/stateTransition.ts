@@ -45,7 +45,9 @@ export function stateViewToBeaconState(fork: ForkName, state: IBeaconStateView):
   try {
     return ssz[fork].BeaconState.deserializeToViewDU(state.serialize()) as BeaconStateAllForks;
   } finally {
-    releaseNativeStateView(state);
+    if (state instanceof NativeBeaconStateView) {
+      state.release();
+    }
   }
 }
 
@@ -56,13 +58,9 @@ export function replaceStateViewForTest(
   try {
     return createNextState(state);
   } finally {
-    releaseNativeStateView(state);
-  }
-}
-
-function releaseNativeStateView(state: IBeaconStateView): void {
-  if (state instanceof NativeBeaconStateView) {
-    state.release();
+    if (state instanceof NativeBeaconStateView) {
+      state.release();
+    }
   }
 }
 
