@@ -120,6 +120,31 @@ describe("NativeBeaconStateView", () => {
     expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
   });
 
+  it("serializes blocks for native block reward computation", async () => {
+    const block = ssz.phase0.BeaconBlock.defaultValue();
+    const proposerRewards = {attestations: 1, syncAggregate: 2, slashing: 3};
+    const blockRewards = {
+      proposerIndex: 0,
+      total: 6,
+      attestations: 1,
+      syncAggregate: 2,
+      proposerSlashings: 0,
+      attesterSlashings: 3,
+    };
+    const binding = {
+      computeBlockRewards: vi.fn(() => blockRewards),
+    } as unknown as IBeaconStateViewNative;
+
+    const result = await new NativeBeaconStateView(binding, config).computeBlockRewards(block, proposerRewards);
+
+    expect(binding.computeBlockRewards).toHaveBeenCalledWith(
+      ssz.phase0.SignedBeaconBlock.serialize({message: block, signature: new Uint8Array(96)}),
+      false,
+      proposerRewards
+    );
+    expect(result).toBe(blockRewards);
+  });
+
   it("enables native validator monitoring only when the module is provided", () => {
     const block = ssz.bellatrix.SignedBeaconBlock.defaultValue();
     const blockBytes = new Uint8Array([1, 2, 3]);

@@ -332,6 +332,7 @@ export type IBeaconStateViewLatestFork = Omit<
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
+  | "computeBlockRewards"
   | "computeNewStateRoot"
   | "eth1Data"
   | "executionPayloadAvailability"
@@ -357,6 +358,11 @@ export type IBeaconStateViewNative = Omit<
   // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
   eth1Data: Omit<phase0.Eth1Data, "depositCount"> & {depositCount: number};
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  computeBlockRewards(
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
+    proposerRewards?: RewardCache
+  ): rewards.BlockRewards;
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
   getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];

@@ -35,6 +35,7 @@ import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
+import {EMPTY_SIGNATURE} from "../constants/constants.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
@@ -53,11 +54,9 @@ import {
  * Wraps a native binding (the auto-generated JS interface produced by a `.node`
  * file) and exposes it as a fully-conformant `IBeaconStateViewLatestFork`.
  *
- * The binding is typed `IBeaconStateViewNative` — identical to
- * `IBeaconStateViewLatestFork` except `executionPayloadAvailability` is a raw
- * `{uint8Array, bitLen}` POJO. The `executionPayloadAvailability` getter lifts
- * that POJO back to a `BitArray` so beacon-node consumers see no difference from
- * the TS-side `BeaconStateView`.
+ * The binding is typed `IBeaconStateViewNative`. This type models FFI-specific
+ * inputs and outputs, such as serialized blocks and typed arrays. The wrapper
+ * converts those values to the forms used by `IBeaconStateViewLatestFork`.
  *
  * Every getter that returns a value stable for the view's lifetime is cached so
  * the binding is hit at most once per field per view. Only mutable counters
@@ -488,8 +487,19 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.proposerRewards;
   }
 
-  computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
-    return this.binding.computeBlockRewards(block, proposerRewards);
+  async computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
+    const isBlinded = isBlindedBeaconBlock(block);
+    const signedBlockBytes = isBlinded
+      ? this.config.getPostBellatrixForkTypes(block.slot).SignedBlindedBeaconBlock.serialize({
+          message: block as BlindedBeaconBlock,
+          signature: EMPTY_SIGNATURE,
+        } as SignedBlindedBeaconBlock)
+      : this.config.getForkTypes(block.slot).SignedBeaconBlock.serialize({
+          message: block,
+          signature: EMPTY_SIGNATURE,
+        } as SignedBeaconBlock);
+
+    return this.binding.computeBlockRewards(signedBlockBytes, isBlinded, proposerRewards);
   }
 
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
