@@ -115,21 +115,22 @@ describe("altair processBlock", () => {
         before: () => {
           const state = generatePerfTestCachedStateAltair();
           const block = getBlockAltair(state, opts);
+          const blockBytes = state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
           // Populate permanent root caches of the block
           ssz.altair.BeaconBlock.hashTreeRoot(block.message);
           // Populate tree root caches of the state
           state.hashTreeRoot();
-          return {state, block};
+          return {state, block, blockBytes};
         },
-        beforeEach: ({state, block}) => {
+        beforeEach: ({state, block, blockBytes}) => {
           const stateCloned = state.clone();
           // Populate all state array caches (on the cloned instance)
           cachedStateAltairPopulateCaches(stateCloned as CachedBeaconStateAltair);
-          return {state: stateCloned, block};
+          return {state: stateCloned, block, blockBytes};
         },
-        fn: ({state, block}) => {
+        fn: ({state, block, blockBytes}) => {
           const postState = new BeaconStateView(state).stateTransition(
-            state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+            blockBytes,
             block,
             {
               executionPayloadStatus: ExecutionPayloadStatus.valid,

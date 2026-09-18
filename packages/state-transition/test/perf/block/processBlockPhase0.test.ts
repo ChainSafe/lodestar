@@ -103,13 +103,14 @@ describe("phase0 processBlock", () => {
       before: () => {
         const state = generatePerfTestCachedStatePhase0();
         const block = getBlockPhase0(state, opts);
+        const blockBytes = state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
         state.hashTreeRoot();
-        return {block, state};
+        return {block, blockBytes, state};
       },
-      beforeEach: ({state, block}) => ({state: state.clone(), block}),
-      fn: ({state, block}) => {
+      beforeEach: ({state, block, blockBytes}) => ({state: state.clone(), block, blockBytes}),
+      fn: ({state, block, blockBytes}) => {
         const postState = new BeaconStateView(state).stateTransition(
-          state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+          blockBytes,
           block,
           {
             executionPayloadStatus: ExecutionPayloadStatus.valid,
