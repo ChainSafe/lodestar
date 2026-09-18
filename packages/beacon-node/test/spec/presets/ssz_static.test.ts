@@ -89,7 +89,13 @@ const sszStatic =
           return;
         }
 
-        runValidSszTest(sszTypeNoUint, parseSszStaticTestcase(testCaseDir));
+        const testData = parseSszStaticTestcase(testCaseDir);
+        if (meta.valid === true) {
+          // An encoding at the declared limit must be accepted by the type as declared, the uint replacement
+          // below would hide a limit set too low
+          expect(() => sszType.deserialize(testData.serialized)).not.toThrow();
+        }
+        runValidSszTest(sszTypeNoUint, testData);
       });
     }
   };
