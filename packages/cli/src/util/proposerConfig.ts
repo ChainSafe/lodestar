@@ -226,7 +226,8 @@ export function parseBuilderEntries(builders?: unknown): BuilderEntryConfig[] | 
     if (!isValidAsciiHttpUrl(entry.url)) {
       throw Error(`Invalid builder url: ${entry.url}`);
     }
-    const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
+    const authData =
+      entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(new URL(entry.url).hostname));
     const entryKey = `${entry.url}|${authData}`;
     if (seenEntries.has(entryKey)) {
       throw Error(`Duplicate builder entry url=${entry.url}`);
@@ -239,7 +240,7 @@ export function parseBuilderEntries(builders?: unknown): BuilderEntryConfig[] | 
 /**
  * Parse builder urls into builder entries. Auth data agreed with a builder out of band may be
  * appended as a hex fragment (`https://builder.example.com#0x0123`), it is stripped from the url
- * and never sent on the wire. Without a fragment the auth data derives from the url.
+ * and never sent on the wire. Without a fragment the auth data derives from the url hostname.
  */
 export function parseBuilderUrls(urls?: string[]): BuilderEntryConfig[] | undefined {
   if (urls === undefined) return undefined;
@@ -261,7 +262,7 @@ export function parseBuilderUrls(urls?: string[]): BuilderEntryConfig[] | undefi
         `Invalid builder url auth data, must be a 0x-prefixed hex string of 1 to ${MAX_BUILDER_AUTH_DATA_SIZE} bytes: ${url}`
       );
     }
-    const entryKey = `${url}|${authData !== undefined ? toHex(fromHex(authData)) : toHex(Buffer.from(url))}`;
+    const entryKey = `${url}|${authData !== undefined ? toHex(fromHex(authData)) : toHex(Buffer.from(new URL(url).hostname))}`;
     if (seenEntries.has(entryKey)) {
       throw Error(`Duplicate builder url: ${url}`);
     }

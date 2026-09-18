@@ -107,7 +107,7 @@ export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 export type BuilderEntryConfig = {
   /** URL the bid requests for this entry are sent to */
   url: string;
-  /** Auth data hex string as agreed with the builder, derived from the UTF-8 bytes of the builder url when omitted */
+  /** Auth data hex string as agreed with the builder, derived from the builder url hostname when omitted */
   authData?: string;
   /** Builder BLS pubkeys this entry accepts bids from, empty or omitted accepts any builder */
   builderPubkeys?: string[];

@@ -17,7 +17,7 @@ describe("validator / parseBuilderUrls", () => {
 
   it("rejects duplicate entries, comparing an omitted auth data as derived from the url", () => {
     const url = "https://builder.example.com";
-    const derived = `0x${Buffer.from(url).toString("hex")}`;
+    const derived = `0x${Buffer.from("builder.example.com").toString("hex")}`;
     expect(() => parseBuilderUrls([url, url])).toThrow(/Duplicate builder url/);
     expect(() => parseBuilderUrls([url, `${url}#${derived}`])).toThrow(/Duplicate builder url/);
   });
