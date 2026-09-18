@@ -10,7 +10,7 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
-import {importBlock, importsBlockAttestations} from "./importBlock.js";
+import {importBlock, isRecentBlock} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
@@ -95,7 +95,7 @@ export async function processBlocks(
     // variant has no descendants and ties at zero weight with the EMPTY variant carrying the chain, the payload
     // status tiebreaker then picks FULL and parks the head there.
     const blockEpoch = computeEpochAtSlot(relevantBlocks[0].getBlock().message.slot);
-    const importsAttestations = importsBlockAttestations(opts, blockEpoch, this.clock.currentEpoch);
+    const importsAttestations = isRecentBlock(opts, blockEpoch, this.clock.currentEpoch);
     const skipped = orphanedPayloads != null && payloadEnvelopes !== null && !importsAttestations;
     let payloadEnvelopesToImport = payloadEnvelopes;
     if (skipped) {
@@ -274,7 +274,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     }
     if (
       head.blockRoot !== blockRootHex &&
-      !importsBlockAttestations(opts, computeEpochAtSlot(slot), currentEpoch) &&
+      !isRecentBlock(opts, computeEpochAtSlot(slot), currentEpoch) &&
       this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
