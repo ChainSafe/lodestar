@@ -45,7 +45,7 @@ import {
   isPendingPayloadEnvelope,
   isPendingPayloadInput,
 } from "./types.js";
-import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, downloadByRoot, getTerminalDownloadByRootError} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
@@ -838,6 +838,24 @@ export class BlockInputSync {
       };
       this.logger.verbose("Downloaded unknown block", logCtx2);
 
+      // NOT_LATER_THAN_PARENT propagated forward: a pending child that claimed this block as parent but
+      // does not have a later slot is provably invalid, remove it and its subtree.
+      for (const child of this.pendingBlocks.values()) {
+        if (
+          isPendingBlockInput(child) &&
+          child.blockInput.parentRootHex === pending.blockInput.blockRootHex &&
+          child.blockInput.slot <= blockSlot
+        ) {
+          this.logger.debug("Pending block is not later than its downloaded parent", {
+            slot: child.blockInput.slot,
+            root: child.blockInput.blockRootHex,
+            parentSlot: blockSlot,
+            parentRoot: pending.blockInput.blockRootHex,
+          });
+          this.removeAndDownScoreAllDescendants(child, DroppedItemReason.invalidBlock);
+        }
+      }
+
       if (parentInForkChoice) {
         // If the direct parent is already in fork choice, let the block state machine decide if
         // the next step is block import, parent payload download, or branch removal.
@@ -874,6 +892,20 @@ export class BlockInputSync {
         this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
       }
     } else {
+      const terminalError = getTerminalDownloadByRootError(res.err);
+      if (terminalError !== null) {
+        // penalize the serving peer, forwarding peers will be penalized inside removeAndDownScoreAllDescendants
+        this.network.reportPeer(terminalError.peerIdStr, terminalError.peerAction, terminalError.code);
+        this.logger.debug(
+          "Downloaded block by root is invalid",
+          {...logCtx, peer: prettyPrintPeerIdStr(terminalError.peerIdStr), peerAction: terminalError.peerAction},
+          res.err
+        );
+        this.metrics?.blockInputSync.downloadedBlocksError.inc();
+        this.removeAndDownScoreAllDescendants(block, DroppedItemReason.invalidBlock);
+        return;
+      }
+
       if (res.err instanceof UnknownBlockRateLimitedError) {
         const pendingBlock = this.pendingBlocks.get(rootHex);
         if (pendingBlock) {
@@ -937,6 +969,9 @@ export class BlockInputSync {
         // there could be finalized/head sync at the same time so we need to ignore if finalized
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
+        // proposer signature already checked in fetchAndValidateBlock() for downloaded blocks and in
+        // validateBeaconBlock() for gossip-retained blocks
+        validProposerSignature: true,
         blsVerifyOnMainThread: true,
       })
     );
@@ -1582,6 +1617,10 @@ export class BlockInputSync {
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          if (getTerminalDownloadByRootError(e) !== null) {
+            // block was downloaded with terminal error, we should not go with another loop
+            throw e;
+          }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
@@ -1679,7 +1718,7 @@ export class BlockInputSync {
 
     for (const block of badPendingBlocks) {
       //
-      // TODO(fulu): why is this commented out here?
+      // TODO(fulu): why is this commented out here? see https://github.com/ChainSafe/lodestar/issues/10091
       //
       //   this.knownBadBlocks.add(block.blockRootHex);
       //   for (const peerIdStr of block.peerIdStrings) {
