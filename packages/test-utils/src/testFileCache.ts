@@ -1,15 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {SignedBeaconBlock} from "@lodestar/types";
 import {fetch} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "../index.js";
-import {testCachePath} from "./cache.js";
-import {getInfuraBeaconUrl} from "./infura.js";
-import {createCachedBeaconStateTest} from "./state.js";
 
 /**
  * Full link example:
@@ -17,6 +11,11 @@ import {createCachedBeaconStateTest} from "./state.js";
  * https://github.com/dapplion/ethereum-consensus-test-data/releases/download/v0.1.0/block_mainnet_3766821.ssz
  * ``` */
 const TEST_FILES_BASE_URL = "https://github.com/dapplion/ethereum-consensus-test-data/releases/download/v0.1.0";
+
+type NetworkCachedBytes = {
+  config: ChainForkConfig;
+  bytes: Uint8Array;
+};
 
 /**
  * Create a network config from known network params
@@ -29,20 +28,20 @@ export function getNetworkConfig(network: NetworkName): ChainForkConfig {
 /**
  * Download a state from Infura. Caches states in local fs by network and slot to only download once.
  */
-export async function getNetworkCachedState(
+export async function getNetworkCachedStateBytes(
   network: NetworkName,
   slot: number,
+  cacheDir: string,
   timeout?: number
-): Promise<CachedBeaconStateAllForks> {
+): Promise<NetworkCachedBytes> {
   const config = getNetworkConfig(network);
   const fileId = `state_${network}_${slot}.ssz`;
 
-  const filepath = path.join(testCachePath, fileId);
+  const filepath = path.join(cacheDir, fileId);
 
   if (fs.existsSync(filepath)) {
     const stateSsz = fs.readFileSync(filepath);
-    pubkeyCache.reset();
-    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
+    return {config, bytes: stateSsz};
   }
 
   const stateSsz = await tryEach([
@@ -59,26 +58,26 @@ export async function getNetworkCachedState(
   ]);
 
   fs.writeFileSync(filepath, stateSsz);
-  pubkeyCache.reset();
-  return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
+  return {config, bytes: stateSsz};
 }
 
 /**
  * Download a state from Infura. Caches states in local fs by network and slot to only download once.
  */
-export async function getNetworkCachedBlock(
+export async function getNetworkCachedBlockBytes(
   network: NetworkName,
   slot: number,
+  cacheDir: string,
   timeout?: number
-): Promise<SignedBeaconBlock> {
+): Promise<NetworkCachedBytes> {
   const config = getNetworkConfig(network);
   const fileId = `block_${network}_${slot}.ssz`;
 
-  const filepath = path.join(testCachePath, fileId);
+  const filepath = path.join(cacheDir, fileId);
 
   if (fs.existsSync(filepath)) {
     const blockSsz = fs.readFileSync(filepath);
-    return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
+    return {config, bytes: blockSsz};
   }
 
   const blockSsz = await tryEach([
@@ -94,12 +93,11 @@ export async function getNetworkCachedBlock(
   ]);
 
   fs.writeFileSync(filepath, blockSsz);
-  return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
+  return {config, bytes: blockSsz};
 }
 
 async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
-  // biome-ignore lint/suspicious/noConsole: We explicity need to log to console
   console.log(`Downloading file ${fileUrl}`);
 
   try {
@@ -113,6 +111,15 @@ async function downloadTestFile(fileId: string): Promise<Uint8Array> {
     error.message = `Error downloading ${fileUrl}: ${error.message}`;
     throw error;
   }
+}
+
+function getInfuraBeaconUrl(network: NetworkName): string {
+  const credentials = process.env.INFURA_ETH2_CREDENTIALS;
+  if (!credentials) {
+    throw Error("Must set ENV INFURA_ETH2_CREDENTIALS");
+  }
+
+  return `https://${credentials}@eth2-beacon-${network}.infura.io`;
 }
 
 async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {
