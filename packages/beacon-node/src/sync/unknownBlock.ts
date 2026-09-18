@@ -152,6 +152,7 @@ export class BlockInputSync {
       this.logger.verbose("BlockInputSync enabled.");
       this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
+      this.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, this.onUnknownEnvelopeBlockRootSlot);
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
       this.chain.emitter.on(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
       this.chain.emitter.on(ChainEvent.blockUnknownParent, this.onUnknownParent);
@@ -179,6 +180,7 @@ export class BlockInputSync {
     this.clearRateLimitBackoffTimer();
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
+    this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRootSlot, this.onUnknownEnvelopeBlockRootSlot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
     this.chain.emitter.off(ChainEvent.blockUnknownParent, this.onUnknownParent);
@@ -239,6 +241,19 @@ export class BlockInputSync {
       }
     } catch (e) {
       this.logger.debug("Error handling unknownEnvelopeBlockRoot event", {}, e as Error);
+    }
+  };
+
+  private onUnknownEnvelopeBlockRootSlot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]): void => {
+    try {
+      const isNewRoot = this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
+      if (isNewRoot) {
+        this.triggerUnknownBlockSearch();
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT});
+        this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      }
+    } catch (e) {
+      this.logger.debug("Error handling unknownEnvelopeBlockRootSlot event", {}, e as Error);
     }
   };
 
