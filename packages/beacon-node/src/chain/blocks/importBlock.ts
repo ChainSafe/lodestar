@@ -24,11 +24,13 @@ import {
   computeTimeAtSlot,
   isStatePostAltair,
   isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   Attestation,
   BeaconBlock,
   Epoch,
+  ValidatorIndex,
   altair,
   capella,
   electra,
@@ -269,13 +271,19 @@ export async function importBlock(
 
   // 4.5. Import payload attestations to fork choice (Gloas)
   //
-  if (isGloasBeaconBlock(block.message)) {
+  if (isGloasBeaconBlock(block.message) && isStatePostGloas(postState)) {
     for (const payloadAttestation of block.message.body.payloadAttestations) {
       try {
-        // Extract PTC indices from aggregation bits
+        // A validator can hold multiple PTC positions and its vote counts for all of them,
+        // even if the aggregate only has some of its bits set
+        const ptc = postState.getPayloadTimelinessCommittee(payloadAttestation.data.slot);
+        const attesters = new Set<ValidatorIndex>();
+        for (const i of payloadAttestation.aggregationBits.getTrueBitIndexes()) {
+          attesters.add(ptc[i]);
+        }
         const ptcIndices: number[] = [];
-        for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
-          if (payloadAttestation.aggregationBits.get(i)) {
+        for (let i = 0; i < ptc.length; i++) {
+          if (attesters.has(ptc[i])) {
             ptcIndices.push(i);
           }
         }
