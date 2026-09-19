@@ -1,13 +1,23 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import {
+  registerLocalValidator as registerNativeLocalValidator,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  initNativeStateTransitionMetrics,
+  isStatePostBellatrix,
+  isStatePostGloas,
+  scrapeNativeMetrics,
+} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -175,12 +185,24 @@ export class BeaconNode {
     const signal = controller.signal;
 
     let metrics = null;
+    let nativeStateTransitionMetricsEnabled = false;
     if (
       opts.metrics.enabled ||
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
+      if (opts.metrics.enabled && opts.chain.nativeStateView) {
+        try {
+          initNativeStateTransitionMetrics();
+          nativeStateTransitionMetricsEnabled = true;
+        } catch (e) {
+          logger.warn("Failed to initialize native state-transition metrics", {}, e as Error);
+        }
+      }
+
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
+        includeStateTransitionMetrics: !nativeStateTransitionMetricsEnabled,
+      });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db, metrics.flatFileStore);
@@ -194,7 +216,13 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            opts.validatorMonitor,
+            nativeStateTransitionMetricsEnabled
+              ? {
+                  registerLocalValidator: registerNativeLocalValidator,
+                  unregisterLocalValidator: unregisterNativeLocalValidator,
+                }
+              : null
           )
         : null;
 
@@ -328,7 +356,17 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
+          getOtherMetrics: async () => {
+            const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
+            if (nativeStateTransitionMetricsEnabled) {
+              try {
+                otherMetrics.push(scrapeNativeMetrics());
+              } catch (e) {
+                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+              }
+            }
+            return otherMetrics;
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

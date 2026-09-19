@@ -8,7 +8,7 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@lodestar/params";
-import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
+import {BeaconStateView, DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../../src/testUtils/util.js";
 import {StateBlock} from "../types.js";
 import {BlockOpts, getBlockPhase0} from "./util.js";
@@ -103,20 +103,26 @@ describe("phase0 processBlock", () => {
       before: () => {
         const state = generatePerfTestCachedStatePhase0();
         const block = getBlockPhase0(state, opts);
+        const blockBytes = state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
         state.hashTreeRoot();
-        return {block, state};
+        return {block, blockBytes, state};
       },
-      beforeEach: ({state, block}) => ({state: state.clone(), block}),
-      fn: ({state, block}) => {
-        stateTransition(state, block, {
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyProposer: false,
-          verifySignatures: false,
-          verifyStateRoot: false,
-        });
+      beforeEach: ({state, block, blockBytes}) => ({state: state.clone(), block, blockBytes}),
+      fn: ({state, block, blockBytes}) => {
+        const postState = new BeaconStateView(state).stateTransition(
+          blockBytes,
+          block,
+          {
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyProposer: false,
+            verifySignatures: false,
+            verifyStateRoot: false,
+          },
+          {}
+        );
         // set verifyStateRoot = false, and get the root here because the block root is wrong
-        state.hashTreeRoot();
+        postState.hashTreeRoot();
       },
     });
   }

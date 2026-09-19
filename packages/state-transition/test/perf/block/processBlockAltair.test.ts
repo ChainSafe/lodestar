@@ -11,10 +11,10 @@ import {
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {
+  BeaconStateView,
   CachedBeaconStateAltair,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  stateTransition,
 } from "../../../src/index.js";
 import {
   cachedStateAltairPopulateCaches,
@@ -115,26 +115,32 @@ describe("altair processBlock", () => {
         before: () => {
           const state = generatePerfTestCachedStateAltair();
           const block = getBlockAltair(state, opts);
+          const blockBytes = state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
           // Populate permanent root caches of the block
           ssz.altair.BeaconBlock.hashTreeRoot(block.message);
           // Populate tree root caches of the state
           state.hashTreeRoot();
-          return {state, block};
+          return {state, block, blockBytes};
         },
-        beforeEach: ({state, block}) => {
+        beforeEach: ({state, block, blockBytes}) => {
           const stateCloned = state.clone();
           // Populate all state array caches (on the cloned instance)
           cachedStateAltairPopulateCaches(stateCloned as CachedBeaconStateAltair);
-          return {state: stateCloned, block};
+          return {state: stateCloned, block, blockBytes};
         },
-        fn: ({state, block}) => {
-          const postState = stateTransition(state, block, {
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyProposer: false,
-            verifySignatures: false,
-            verifyStateRoot: false,
-          });
+        fn: ({state, block, blockBytes}) => {
+          const postState = new BeaconStateView(state).stateTransition(
+            blockBytes,
+            block,
+            {
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyProposer: false,
+              verifySignatures: false,
+              verifyStateRoot: false,
+            },
+            {}
+          );
 
           // Not necessary to call commit here since it's called inside .stateTransition()
 
