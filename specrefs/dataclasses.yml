@@ -35,7 +35,11 @@
     </spec>
 
 - name: ExpectedWithdrawals#capella
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "expectedWithdrawals: capella.Withdrawal[];"
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "processedValidatorSweepCount: number;"
   spec: |
     <spec dataclass="ExpectedWithdrawals" fork="capella" hash="0a0b25b7">
     class ExpectedWithdrawals:
@@ -44,7 +48,11 @@
     </spec>
 
 - name: ExpectedWithdrawals#electra
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "expectedWithdrawals: capella.Withdrawal[];"
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "processedPartialWithdrawalsCount: number;"
   spec: |
     <spec dataclass="ExpectedWithdrawals" fork="electra" hash="2c82cb0e">
     class ExpectedWithdrawals:
@@ -55,7 +63,13 @@
     </spec>
 
 - name: ExpectedWithdrawals#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "expectedWithdrawals: capella.Withdrawal[];"
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "processedBuilderWithdrawalsCount: number;"
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: "processedBuildersSweepCount: number;"
   spec: |
     <spec dataclass="ExpectedWithdrawals" fork="gloas" hash="254d1735">
     class ExpectedWithdrawals:
@@ -69,7 +83,9 @@
     </spec>
 
 - name: FastConfirmationStore#phase0
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/fastConfirmation/types.ts
+      search: export type IFastConfirmationSpecStore =
   spec: |
     <spec dataclass="FastConfirmationStore" fork="phase0" hash="e667d4ee">
     class FastConfirmationStore:
@@ -83,7 +99,9 @@
     </spec>
 
 - name: ForkChoiceNode#phase0
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: export type ProtoNode = ProtoBlock & {
   spec: |
     <spec dataclass="ForkChoiceNode" fork="phase0" hash="885e8b15">
     @dataclass(eq=True, frozen=True)
@@ -92,7 +110,11 @@
     </spec>
 
 - name: ForkChoiceNode#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: export type ProtoNode = ProtoBlock & {
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: "payloadStatus: PayloadStatus;"
   spec: |
     <spec dataclass="ForkChoiceNode" fork="gloas" hash="d692047d">
     @dataclass(eq=True, frozen=True)
@@ -375,7 +397,9 @@
     </spec>
 
 - name: PayloadAttributes#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const PayloadAttributes =
   spec: |
     <spec dataclass="PayloadAttributes" fork="heze" hash="c1298bc5">
     class PayloadAttributes:
@@ -551,7 +575,13 @@
     </spec>
 
 - name: Store#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/store.ts
+      search: export interface IForkChoiceStore
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadTimelinessVotes =
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadDataAvailabilityVotes =
   spec: |
     <spec dataclass="Store" fork="gloas" hash="cd813231">
     class Store:
