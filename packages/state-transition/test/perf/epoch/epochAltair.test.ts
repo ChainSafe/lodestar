@@ -20,8 +20,8 @@ import {
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
 import {altairState} from "../../../src/testUtils/params.js";
-import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(altairState.epoch) - 1;
