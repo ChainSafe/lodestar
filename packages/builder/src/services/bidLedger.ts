@@ -32,6 +32,7 @@ type MutableBidLedgerRecord = SubmittedBid & {
 export enum BidLedgerErrorCode {
   INVALID_BID_VALUE = "BID_LEDGER_ERROR_INVALID_BID_VALUE",
   DUPLICATE_BID = "BID_LEDGER_ERROR_DUPLICATE_BID",
+  BID_TOO_OLD = "BID_LEDGER_ERROR_BID_TOO_OLD",
   REVEAL_CONFLICT = "BID_LEDGER_ERROR_REVEAL_CONFLICT",
   UNSETTLED_VALUE_OVERFLOW = "BID_LEDGER_ERROR_UNSETTLED_VALUE_OVERFLOW",
 }
@@ -46,6 +47,11 @@ export type BidLedgerErrorType =
       slot: Slot;
       parentBlockHash: RootHex;
       parentBlockRoot: RootHex;
+    }
+  | {
+      code: BidLedgerErrorCode.BID_TOO_OLD;
+      slot: Slot;
+      oldestSlot: Slot;
     }
   | {
       code: BidLedgerErrorCode.REVEAL_CONFLICT;
@@ -69,9 +75,26 @@ const KEEP_SLOTS = RECORD_RETENTION_EPOCHS * SLOTS_PER_EPOCH;
 export class BidLedger {
   private readonly bidsBySlot = new Map<Slot, Map<string, MutableBidLedgerRecord>>();
   private readonly revealedPayloadByBlockRoot = new Map<RootHex, RevealedPayload>();
+  private oldestSlot = 0;
 
   hasSubmitted(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
     return this.bidsBySlot.get(slot)?.has(tupleKey(parentBlockHash, parentBlockRoot)) ?? false;
+  }
+
+  assertCanRecordBid({
+    slot,
+    parentBlockHash,
+    parentBlockRoot,
+  }: Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot">): void {
+    if (slot < this.oldestSlot) {
+      throw new BidLedgerError({code: BidLedgerErrorCode.BID_TOO_OLD, slot, oldestSlot: this.oldestSlot});
+    }
+    if (this.hasSubmitted(slot, parentBlockHash, parentBlockRoot)) {
+      throw new BidLedgerError(
+        {code: BidLedgerErrorCode.DUPLICATE_BID, slot, parentBlockHash, parentBlockRoot},
+        `Bid already recorded slot=${slot} parentBlockHash=${parentBlockHash} parentBlockRoot=${parentBlockRoot}`
+      );
+    }
   }
 
   recordBid(bid: SubmittedBid): BidLedgerRecord {
@@ -82,6 +105,7 @@ export class BidLedger {
       );
     }
 
+    this.assertCanRecordBid(bid);
     let bidsForSlot = this.bidsBySlot.get(bid.slot);
     if (bidsForSlot === undefined) {
       bidsForSlot = new Map();
@@ -89,18 +113,6 @@ export class BidLedger {
     }
 
     const key = tupleKey(bid.parentBlockHash, bid.parentBlockRoot);
-    if (bidsForSlot.has(key)) {
-      throw new BidLedgerError(
-        {
-          code: BidLedgerErrorCode.DUPLICATE_BID,
-          slot: bid.slot,
-          parentBlockHash: bid.parentBlockHash,
-          parentBlockRoot: bid.parentBlockRoot,
-        },
-        `Bid already recorded slot=${bid.slot} parentBlockHash=${bid.parentBlockHash} parentBlockRoot=${bid.parentBlockRoot}`
-      );
-    }
-
     const record = {...bid, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
     bidsForSlot.set(key, record);
     return toRecord(record);
@@ -198,9 +210,11 @@ export class BidLedger {
   }
 
   prune(currentSlot: Slot): number {
+    // Pruning must not make an expired slot eligible for another submission.
+    this.oldestSlot = Math.max(this.oldestSlot, currentSlot - KEEP_SLOTS);
     let removed = 0;
     for (const [slot, bidsForSlot] of this.bidsBySlot) {
-      if (slot >= currentSlot - KEEP_SLOTS) {
+      if (slot >= this.oldestSlot) {
         continue;
       }
 
