@@ -22,7 +22,13 @@ export interface ServingHandler extends AsyncIterableIterator<ResponseOutgoing> 
 export type BoundedReqRespHandlers = (
   method: ReqRespMethod
 ) => (...args: Parameters<ProtocolHandler>) => ServingHandler;
-const boundedFactories = new WeakSet<GetReqRespHandlerFn>();
+const boundedFactories = new WeakMap<GetReqRespHandlerFn, HostServingBudget>();
+
+export function servingBudget(factory: GetReqRespHandlerFn): HostServingBudget {
+  const budget = boundedFactories.get(factory);
+  if (!budget) throw new ServingConfigurationError("Native network requires bounded serving handlers");
+  return budget;
+}
 
 export function assertBoundedReqRespHandlers(factory: GetReqRespHandlerFn): asserts factory is BoundedReqRespHandlers {
   if (!boundedFactories.has(factory))
@@ -150,6 +156,6 @@ export function getBoundedReqRespHandlers(
         assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
         return getReqRespHandlers(modules, context)(method)(...args);
       });
-  boundedFactories.add(factory);
+  boundedFactories.set(factory, budget);
   return factory;
 }

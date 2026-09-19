@@ -18,7 +18,7 @@ import {
   RpcResponseStatusError,
   responseStatusErrorToRequestError,
 } from "@lodestar/reqresp";
-import {ServingHandler, getBoundedReqRespHandlers} from "../../reqresp/serving/handler.js";
+import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {hostPeerId, nativePeerId} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -138,6 +138,9 @@ async function serve(
 ): Promise<void> {
   try {
     for (let chunks = 0; chunks <= maxChunks; chunks++) {
+      if (!route.request) return;
+      await route.request.ready();
+      if (!route.request) return;
       let result: IteratorResult<ResponseOutgoing> | undefined = await handler.next();
       if (!route.request) return;
       if (result.done) {
@@ -175,13 +178,18 @@ export class NativeRequests {
   private readonly protocols: ReadonlyMap<string, NativeProtocol>;
   private readonly maxChunks: number;
   private closed = false;
+  private readonly capacity: number;
+  private readonly budget;
+  private retry: NodeJS.Timeout | undefined;
   constructor(
-    private readonly runtime: NativeNetworkApplicationRuntime,
+    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "takeIncomingRequest">,
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
-    private readonly capacity: number
+    capacity: number
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
+    this.budget = servingBudget(getHandler);
+    this.capacity = Math.min(capacity, this.budget.snapshot().limits.capacity);
     this.protocols = nativeProtocols(config, config.getForkName(0));
     this.maxChunks = nativeInteger(
       Math.max(
@@ -201,10 +209,21 @@ export class NativeRequests {
     nativeInteger(max, "incoming drain", 32, 1);
     if (this.closed) return false;
     for (let count = 0; count < max; count++) {
+      if (this.routes.size >= this.capacity) return false;
+      if (!this.budget.canAcquire()) {
+        if (!this.retry) {
+          this.retry = setTimeout(() => {
+            this.retry = undefined;
+            this.drain(this.capacity);
+          }, 25);
+          this.retry.unref();
+        }
+        return false;
+      }
       const request = this.runtime.takeIncomingRequest();
       if (!request) return false;
       const protocol = this.protocols.get(request.protocol);
-      if (!protocol || this.routes.size >= this.capacity) {
+      if (!protocol) {
         void request
           .fail(RespStatus.SERVER_ERROR, new TextEncoder().encode("Local serving capacity exhausted"))
           .catch(() => {});
@@ -214,7 +233,6 @@ export class NativeRequests {
       this.routes.add(route);
       void request.closed.then(() => {
         route.clear();
-        this.routes.delete(route);
       });
       try {
         const handler = this.getHandler(protocol.method)(
@@ -223,12 +241,21 @@ export class NativeRequests {
           "unknown"
         );
         route.handler = handler;
+        request.retainUntil(handler.retired);
+        void handler.retired.then(() => {
+          this.routes.delete(route);
+          this.drain(this.capacity);
+        });
         void serve(route, handler, protocol, this.config, this.maxChunks).catch(() => {});
       } catch (error) {
         const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
         const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
         void request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
         route.clear();
+        void request.closed.then(() => {
+          this.routes.delete(route);
+          this.drain(this.capacity);
+        });
       }
     }
     return true;
@@ -236,6 +263,7 @@ export class NativeRequests {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    if (this.retry) clearTimeout(this.retry);
     for (const route of this.routes) {
       const request = route.request;
       route.clear();

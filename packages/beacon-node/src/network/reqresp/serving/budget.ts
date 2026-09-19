@@ -79,8 +79,11 @@ export class HostServingBudget {
     }
     return budget;
   }
+  canAcquire(): boolean {
+    return this.occupancy < this.policy.capacity;
+  }
   acquire(): ServingLease {
-    if (this.occupancy >= this.policy.capacity) {
+    if (!this.canAcquire()) {
       this.refused++;
       throw new ServingCapacityError("handler admission");
     }

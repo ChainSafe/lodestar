@@ -50,6 +50,7 @@ describe("native configuration boundary", () => {
     try {
       await runtime.ready;
       const diagnostics = runtime.diagnostics();
+      console.info("million-validator native reservations", diagnostics.nativeRequestedBytes);
       expect(diagnostics.gossip.capacity).toBeGreaterThan(34_375);
       expect(diagnostics.nativeRequestedBytes).toBeLessThanOrEqual(application.resources.nativeBudgetBytes);
       expect(diagnostics.bridgeRequestedBytes).toBeLessThanOrEqual(application.resources.bridgeBudgetBytes);
