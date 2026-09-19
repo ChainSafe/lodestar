@@ -152,7 +152,7 @@ export async function initPrivateKeyAndEnr(
 
   if (!args.listenAddress && !args.listenAddress6 && !hasGlobalIPv6Address()) {
     logger.warn(
-      "Not listening on IPv6: no global IPv6 address found. Set --listenAddress for IPv4 only or --listenAddress6 for IPv6"
+      "Not listening on IPv6: no global IPv6 address found. Set --listenAddress for IPv4 only or --listenAddress6 to enable IPv6 explicitly"
     );
   }
 
