@@ -49,6 +49,7 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
+  body?: ExecutionPayloadBodyRpc;
 };
 
 const TX_TYPE_EIP1559 = 2;
@@ -143,8 +144,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
-      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByHashV1: (hashes) => this.getPayloadBodiesByHash(hashes),
+      engine_getPayloadBodiesByHashV2: (hashes) => this.getPayloadBodiesByHash(hashes, true),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getPayloadBodiesByRangeV2: (start, count) => this.getPayloadBodiesByRange(start, count, true),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
@@ -152,16 +155,35 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private getPayloadBodiesByHash(
-    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
+    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0],
+    includeBlockAccessList = false
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+    return blockHashes.map((hash) => {
+      const body = this.validBlocks.get(hash)?.body;
+      if (!body) return null;
+      return includeBlockAccessList ? body : {transactions: body.transactions, withdrawals: body.withdrawals};
+    });
   }
 
   private getPayloadBodiesByRange(
-    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
-    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
+    start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
+    count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1],
+    includeBlockAccessList = false
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+    const startBlock = quantityToNum(start);
+    let block = this.validBlocks.get(this.headBlockHash);
+    const length = Math.min(quantityToNum(count), Math.max(0, (block?.blockNumber ?? 0) - startBlock + 1));
+    const bodies: (ExecutionPayloadBodyRpc | null)[] = Array.from({length}, () => null);
+    while (block && block.blockNumber >= startBlock && block.blockNumber > 0) {
+      if (block.blockNumber < startBlock + length) {
+        bodies[block.blockNumber - startBlock] = this.getPayloadBodiesByHash(
+          [block.blockHash],
+          includeBlockAccessList
+        )[0];
+      }
+      block = this.validBlocks.get(block.parentHash);
+    }
+    return bodies;
   }
 
   /**
@@ -227,6 +249,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash,
       timestamp: quantityToNum(executionPayloadRpc.timestamp),
       blockNumber: quantityToNum(executionPayloadRpc.blockNumber),
+      body: {
+        transactions: executionPayloadRpc.transactions,
+        withdrawals: executionPayloadRpc.withdrawals ?? null,
+        blockAccessList: executionPayloadRpc.blockAccessList ?? null,
+      },
     });
 
     // IF the payload has been fully validated while processing the call

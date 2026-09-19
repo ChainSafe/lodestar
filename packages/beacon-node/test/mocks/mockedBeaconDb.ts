@@ -10,8 +10,11 @@ import {
   BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
+  CompactExecutionPayloadEnvelopeArchiveRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -63,6 +66,14 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
 
+      executionPayloadEnvelope: vi.mocked(new ExecutionPayloadEnvelopeRepository(minimalConfig, {} as Db)),
+      executionPayloadEnvelopeArchive: vi.mocked(
+        new ExecutionPayloadEnvelopeArchiveRepository(minimalConfig, {} as Db)
+      ),
+      compactExecutionPayloadEnvelopeArchive: vi.mocked(
+        new CompactExecutionPayloadEnvelopeArchiveRepository(minimalConfig, {} as Db)
+      ),
+      archiveExecutionPayloadEnvelopes: vi.fn(),
       dataColumns,
       init: vi.fn().mockResolvedValue(undefined),
     };

@@ -2,13 +2,14 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {PayloadStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import {compactExecutionPayloadEnvelope} from "../../../../src/db/repositories/executionPayloadEnvelopeArchiveTypes.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
@@ -45,6 +46,56 @@ describe("block archiver task", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each([false, true, undefined])("archives Gloas envelopes with dedupePayloads=%s", async (dedupePayloads) => {
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const envelopes = Array.from({length: 4}, (_, i) => {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.payload.slotNumber = i + 1;
+      envelope.message.payload.blockNumber = i + 1;
+      envelope.message.beaconBlockRoot.fill(i + 1);
+      return envelope;
+    });
+    const blocks = envelopes.map((envelope, i) =>
+      generateProtoBlock({
+        slot: i + 1,
+        blockRoot: toHexString(envelope.message.beaconBlockRoot),
+        payloadStatus: i === 1 ? PayloadStatus.EMPTY : PayloadStatus.FULL,
+        executionStatus: i === 0 ? ExecutionStatus.Syncing : ExecutionStatus.Valid,
+      })
+    );
+    const finalized = blocks[3];
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: blocks.toReversed(),
+      nonAncestors: [],
+    });
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(null);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(toAsyncIterable([]));
+    vi.spyOn(dbStub.blobSidecars, "getBinary").mockResolvedValue(null);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "get").mockImplementation(async (root) => envelopes[root[0] - 1]);
+    const archive = vi.spyOn(dbStub, "archiveExecutionPayloadEnvelopes").mockResolvedValue();
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 1, root: fromHexString(finalized.blockRoot), rootHex: finalized.blockRoot},
+      2,
+      null,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      dedupePayloads
+    );
+    expect(archive).toHaveBeenCalledExactlyOnceWith(
+      dedupePayloads !== false ? [envelopes[0]] : [envelopes[2], envelopes[0]],
+      dedupePayloads !== false ? [compactExecutionPayloadEnvelope(envelopes[2])] : []
+    );
+    expect(dbStub.executionPayloadEnvelope.get).not.toHaveBeenCalledWith(envelopes[3].message.beaconBlockRoot);
+    expect(dbStub.executionPayloadEnvelope.get).not.toHaveBeenCalledWith(envelopes[1].message.beaconBlockRoot);
   });
 
   it("should archive finalized blocks", async () => {

@@ -33,6 +33,7 @@ export type ChainArgs = {
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveDataEpochs"?: number;
+  "chain.dedupePayloads"?: boolean;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.nativeStateView"?: boolean;
@@ -76,6 +77,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveDataEpochs: args["chain.archiveDataEpochs"],
+    dedupePayloads: args["chain.dedupePayloads"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
@@ -298,6 +300,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Maximum ShufflingCache epochs to keep in memory",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
+    group: "chain",
+  },
+
+  "chain.dedupePayloads": {
+    description:
+      "Avoid storing duplicate finalized Gloas payload bodies in the beacon database and retrieve them from the EL on demand. Requires EL retention of transactions, withdrawals, and block access lists for the history served. Disabling this only affects future archives.",
+    type: "boolean",
+    default: defaultOptions.chain.dedupePayloads,
     group: "chain",
   },
 

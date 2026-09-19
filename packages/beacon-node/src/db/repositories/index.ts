@@ -6,6 +6,7 @@ export {BlockRepository} from "./block.js";
 export type {BlockArchiveBatchPutBinaryItem, BlockFilterOptions} from "./blockArchive.js";
 export {BlockArchiveRepository} from "./blockArchive.js";
 export {BLSToExecutionChangeRepository} from "./blsToExecutionChange.js";
+export {CompactExecutionPayloadEnvelopeArchiveRepository} from "./compactExecutionPayloadEnvelopeArchive.js";
 export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";

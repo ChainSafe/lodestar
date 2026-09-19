@@ -1,8 +1,9 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
+import {Slot, gloas} from "@lodestar/types";
 import type {IDataColumnStore} from "./dataColumnStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {CompactExecutionPayloadEnvelope} from "./repositories/executionPayloadEnvelopeArchiveTypes.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -13,6 +14,7 @@ import {
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
+  CompactExecutionPayloadEnvelopeArchiveRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
@@ -42,6 +44,7 @@ export interface IBeaconDb {
 
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+  compactExecutionPayloadEnvelopeArchive: CompactExecutionPayloadEnvelopeArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;
@@ -68,6 +71,11 @@ export interface IBeaconDb {
   init(): Promise<void>;
 
   pruneHotDb(): Promise<void>;
+
+  archiveExecutionPayloadEnvelopes(
+    full: gloas.SignedExecutionPayloadEnvelope[],
+    compact: CompactExecutionPayloadEnvelope[]
+  ): Promise<void>;
 
   deleteDeprecatedEth1Data(): Promise<void>;
 

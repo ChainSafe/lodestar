@@ -51,6 +51,10 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
 import {
+  PayloadReconstructionError,
+  PayloadReconstructionErrorCode,
+} from "../../../../chain/errors/payloadReconstruction.js";
+import {
   BlockType,
   ProduceFullBellatrix,
   ProduceFullDeneb,
@@ -1109,9 +1113,18 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      const data = await (context?.returnBytes
+        ? chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+        : chain.getExecutionPayloadEnvelope(slot, blockRootHex)
+      ).catch((error: unknown) => {
+        if (
+          error instanceof PayloadReconstructionError &&
+          error.type.code === PayloadReconstructionErrorCode.BODY_UNAVAILABLE
+        ) {
+          throw new ApiError(500, error.message);
+        }
+        throw error;
+      });
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);

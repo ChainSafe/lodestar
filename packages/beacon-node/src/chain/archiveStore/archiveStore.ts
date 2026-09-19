@@ -230,7 +230,8 @@ export class ArchiveStore {
         isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir
+        this.chain.opts.persistOrphanedBlocksDir,
+        this.opts.dedupePayloads
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
