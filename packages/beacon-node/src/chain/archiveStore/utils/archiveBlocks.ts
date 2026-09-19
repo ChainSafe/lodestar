@@ -483,13 +483,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
  *
- * With `dedupePayloads` (default) envelopes are archived in compact form — transactions, withdrawals
- * and block access list dropped and reconstructed from the EL on read. An envelope whose block is not
- * yet execution-valid (optimistic import) is archived in full, since the EL may not serve its bodies;
- * it is NOT compacted later, so a checkpoint-synced node whose EL took a while to sync keeps full
- * envelopes for that window.
- * With the flag off, the full envelope is archived as-is. Both go in the same bucket as
- * `ArchivedSignedExecutionPayloadEnvelope`. Archive put + hot delete are one atomic db batch.
+ * With `dedupePayloads` (default), execution-valid envelopes are archived in compact form. Envelopes of
+ * still-optimistic blocks are archived in full, since the EL may not serve their bodies, and are not
+ * compacted later. Archive put + hot delete are one atomic db batch.
  */
 export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,

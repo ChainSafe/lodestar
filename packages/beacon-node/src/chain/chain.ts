@@ -224,7 +224,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  /** Archived envelopes recently rebuilt from EL bodies; shared by the by-range and by-root serving paths */
   readonly reconstructedEnvelopeCache = new ReconstructedEnvelopeCache();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
@@ -943,10 +942,7 @@ export class BeaconChain implements IBeaconChain {
     return bytes;
   }
 
-  /**
-   * Batch variant: archived compact envelopes are reconstructed together, MAX_BODIES_REQUEST per EL
-   * round-trip, instead of one round-trip per envelope. Result is aligned with `requests`.
-   */
+  /** Batch variant: archived compact envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`. */
   async getSerializedExecutionPayloadEnvelopes(
     requests: {blockSlot: Slot; blockRootHex: RootHex}[]
   ): Promise<(Uint8Array | null)[]> {
@@ -964,7 +960,6 @@ export class BeaconChain implements IBeaconChain {
         continue;
       }
 
-      // hot is already a full object, return it directly
       const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
       if (hot !== null) {
         out[i] = hot;
@@ -980,7 +975,7 @@ export class BeaconChain implements IBeaconChain {
       const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
       if (archived === null) continue;
 
-      // full entries are the envelope's own SSZ after the union selector byte, serve without deserializing
+      // full entry: the envelope's own SSZ after the selector byte
       if (archived[0] === ArchivedEnvelopeKind.Full) {
         out[i] = archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
         continue;
@@ -1021,8 +1016,7 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    // Not cached: this object path is REST-only, and the reconstructedEnvelopeCache holds serialized
-    // bytes for the p2p serving paths; serializing here just to populate it isn't worth it.
+    // REST-only object path; not worth serializing just to populate reconstructedEnvelopeCache
     return reconstructArchivedEnvelope(this.executionEngine, archived.value);
   }
 
@@ -1034,8 +1028,7 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    // executionRequests is kept verbatim in the compact archive form, so read it directly rather than
-    // reconstructing the envelope: no EL round-trip, and an EL null can't turn into "not found" here.
+    // executionRequests survives compaction, so read it without reconstructing
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope().message.executionRequests;

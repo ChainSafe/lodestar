@@ -22,12 +22,7 @@ export type ExecutionPayloadBodies = {
   blockAccessList: BlockAccessList;
 };
 
-/**
- * Trim an execution payload envelope to its compact archive form: transactions, withdrawals and
- * the block access list are dropped (the EL already stores them) and the hash_tree_root of the
- * full payload is kept so a reconstruction can be verified. Reconstruct with
- * {@link signedCompactEnvelopeToFull}.
- */
+/** Drop transactions, withdrawals and BAL, keep the full payload's root for {@link signedCompactEnvelopeToFull} */
 export function toCompactEnvelope(envelope: ExecutionPayloadEnvelope): CompactExecutionPayloadEnvelope {
   const {transactions: _t, withdrawals: _w, blockAccessList: _b, ...scalars} = envelope.payload;
   return {
@@ -43,10 +38,8 @@ export function toSignedCompactEnvelope(
 }
 
 /**
- * Rebuild the full signed envelope from its compact form plus the bodies refetched from the EL.
- * The rebuilt payload's hash_tree_root is checked against the archived payloadRoot, so a faulty
- * EL response cannot silently corrupt the served envelope; the signature is carried verbatim.
- * Throws {@link EnvelopeReconstructionError} PAYLOAD_ROOT_MISMATCH on mismatch.
+ * Rebuild the full signed envelope from compact + EL bodies, verified against the archived payloadRoot.
+ * Throws {@link EnvelopeReconstructionError} PAYLOAD_ROOT_MISMATCH.
  */
 export function signedCompactEnvelopeToFull(
   compactEnvelope: SignedCompactExecutionPayloadEnvelope,

@@ -42,11 +42,8 @@ export async function* onExecutionPayloadEnvelopesByRange(
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range of envelopes — reconstructed from the compact archive + EL bodies (V2, incl. BAL)
+  // Finalized range of envelopes, compact entries rebuilt from EL bodies
   if (startSlot <= archiveMaxSlot) {
-    // Every archived entry is attempted regardless of age — the spec requires serving the
-    // MIN_EPOCHS_FOR_BLOCK_REQUESTS window and allows serving more, and the EL's block access list
-    // retention decides how much more. The window only sets the log level of a miss.
     const servingWindowStartSlot = computeStartSlotAtEpoch(
       Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)
     );
@@ -74,9 +71,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
         };
       }
     } catch (e) {
-      // The generator only throws when our own EL is down: RESOURCE_UNAVAILABLE so peers don't
-      // downscore us for it. An unservable or inconsistent slot ends the stream cleanly instead
-      // (see reconstructArchivedEnvelopesByRange). Anything else (e.g. consumer abort) propagates.
+      // Only thrown when our own EL is down; RESOURCE_UNAVAILABLE so peers don't downscore us for it
       if (e instanceof EnvelopeReconstructionError) {
         throw new ResponseError(
           RespStatus.RESOURCE_UNAVAILABLE,
@@ -86,8 +81,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
       throw e;
     }
 
-    // Stopped short: a shorter response is spec-legal and the peer retries elsewhere, but continuing
-    // into the non-finalized range would leave a hole. With nothing served at all, say so explicitly.
+    // Stopped short: a short response is spec-legal, continuing into the hot range would leave a hole
     if (unservableSlot !== null) {
       if (yielded === 0) {
         throw new ResponseError(

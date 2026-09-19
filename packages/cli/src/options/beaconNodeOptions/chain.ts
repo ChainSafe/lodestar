@@ -189,7 +189,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.dedupePayloads": {
     type: "boolean",
     description:
-      "Store finalized Gloas execution payload envelopes in a compact form and reconstruct transactions, withdrawals and block access lists from the execution client when serving them. Serving an envelope then requires the execution client to still hold its block access list; how long clients retain it is currently implementation-dependent, though there is a proposal to standardize a minimum (see ethereum/EIPs#12347). Set to false to keep full envelopes on disk instead, which carries no such dependency.",
+      "Archive finalized Gloas execution payload envelopes in compact form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list; retention is implementation-dependent until ethereum/EIPs#12347 standardizes a minimum. Set to false to keep full envelopes on disk.",
     defaultDescription: String(defaultOptions.chain.dedupePayloads),
     group: "chain",
   },
