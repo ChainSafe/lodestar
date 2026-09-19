@@ -89,6 +89,7 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
@@ -148,6 +149,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -175,6 +177,15 @@ export type ExecutionPayloadBodyRpc = {
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
+};
+
+/** engine_getPayloadBodiesByHashV2 (Amsterdam): adds the RLP-encoded block access list, or null if the EL has pruned it */
+export type ExecutionPayloadBodyV2Rpc = ExecutionPayloadBodyRpc & {
+  blockAccessList: DATA | null | undefined;
+};
+
+export type ExecutionPayloadBodyV2 = ExecutionPayloadBody & {
+  blockAccessList: Uint8Array | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -676,6 +687,20 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
+}
+
+export function deserializeExecutionPayloadBodyV2(
+  data: ExecutionPayloadBodyV2Rpc | null
+): ExecutionPayloadBodyV2 | null {
+  const body = deserializeExecutionPayloadBody(data);
+  return body
+    ? {...body, blockAccessList: data?.blockAccessList ? dataToBytes(data.blockAccessList, null) : null}
+    : null;
+}
+
+export function serializeExecutionPayloadBodyV2(data: ExecutionPayloadBodyV2 | null): ExecutionPayloadBodyV2Rpc | null {
+  const body = serializeExecutionPayloadBody(data);
+  return body ? {...body, blockAccessList: data?.blockAccessList ? bytesToData(data.blockAccessList) : null} : null;
 }
 
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {

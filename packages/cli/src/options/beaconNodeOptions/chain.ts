@@ -17,6 +17,7 @@ export type ChainArgs = {
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.persistOrphanedBlocks"?: boolean;
+  "chain.dedupePayloads"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
@@ -57,6 +58,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
     persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
+    dedupePayloads: args["chain.dedupePayloads"],
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
@@ -181,6 +183,14 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Whether to persist orphaned blocks",
+    group: "chain",
+  },
+
+  "chain.dedupePayloads": {
+    type: "boolean",
+    description:
+      "Archive finalized Gloas execution payload envelopes in compact form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list; retention is implementation-dependent until ethereum/EIPs#12347 standardizes a minimum. Set to false to keep full envelopes on disk.",
+    defaultDescription: String(defaultOptions.chain.dedupePayloads),
     group: "chain",
   },
 

@@ -1,10 +1,12 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Slot, gloas} from "@lodestar/types";
+import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -35,23 +37,58 @@ export async function* onExecutionPayloadEnvelopesByRange(
     );
   }
 
-  const finalized = db.executionPayloadEnvelopeArchive;
   // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range of envelopes
+  // Finalized range of envelopes, compact entries rebuilt from EL bodies
   if (startSlot <= archiveMaxSlot) {
-    for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
-    })) {
-      const slot = finalized.decodeKey(key);
-      yield {
-        data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-      };
+    const servingWindowStartSlot = computeStartSlotAtEpoch(
+      Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)
+    );
+    let yielded = 0;
+    let unservableSlot: Slot | null = null;
+    try {
+      for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
+        db,
+        chain.executionEngine,
+        chain.logger,
+        startSlot,
+        Math.min(endSlot, archiveMaxSlot + 1),
+        {
+          servingWindowStartSlot,
+          onUnservable: (slot) => {
+            unservableSlot = slot;
+          },
+        }
+      )) {
+        yielded++;
+        yield {
+          data: envelopeBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+        };
+      }
+    } catch (e) {
+      // Only thrown when our own EL is down; RESOURCE_UNAVAILABLE so peers don't downscore us for it
+      if (e instanceof EnvelopeReconstructionError) {
+        throw new ResponseError(
+          RespStatus.RESOURCE_UNAVAILABLE,
+          `Failed to reconstruct archived envelope: ${e.message}`
+        );
+      }
+      throw e;
+    }
+
+    // Stopped short: a short response is spec-legal, continuing into the hot range would leave a hole
+    if (unservableSlot !== null) {
+      if (yielded === 0) {
+        throw new ResponseError(
+          RespStatus.RESOURCE_UNAVAILABLE,
+          `Cannot serve archived envelope slot=${unservableSlot} startSlot=${startSlot} count=${count}`
+        );
+      }
+      return;
     }
   }
 

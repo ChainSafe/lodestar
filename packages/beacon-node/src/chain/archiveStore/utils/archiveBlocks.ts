@@ -1,17 +1,22 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {
+  ArchivedEnvelope,
+  ArchivedEnvelopeKind,
+  BlockArchiveBatchPutBinaryItem,
+} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
+import {toSignedCompactEnvelope} from "./compactEnvelope.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -69,7 +74,8 @@ export async function archiveBlocks(
   isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
-  persistOrphanedBlocksDir?: string
+  persistOrphanedBlocksDir?: string,
+  dedupePayloads = true
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete.
   // `ancestors` is the canonical walk back from the finalized root, including the previous finalized
@@ -156,7 +162,8 @@ export async function archiveBlocks(
         config,
         db,
         logger,
-        finalizedCanonicalBlocks
+        finalizedCanonicalBlocks,
+        dedupePayloads
       );
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
         ...logCtx,
@@ -475,49 +482,65 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 /**
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
+ *
+ * With `dedupePayloads` (default), execution-valid envelopes are archived in compact form. Envelopes of
+ * still-optimistic blocks are archived in full, since the EL may not serve their bodies, and are not
+ * compacted later. Archive put + hot delete are one atomic db batch.
  */
-async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
-  canonicalBlocks: ProtoBlock[]
+  canonicalBlocks: ProtoBlock[],
+  dedupePayloads: boolean
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
+    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
   );
   if (payloadBlocks.length === 0) return [];
-  const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
 
-  const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
-  const migratedRoots: Uint8Array[] = [];
+  const migratedSlots: Slot[] = [];
 
-  const envelopeBytesArray = await Promise.all(
-    blocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
-  );
+  // Process in chunks to bound memory: after a long non-finality period the ancestor walk can span
+  // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
+  for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
+    const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
+    const envelopes = await Promise.all(
+      batch.map((block) => db.executionPayloadEnvelope.get(fromHex(block.blockRoot)))
+    );
 
-  for (let i = 0; i < blocks.length; i++) {
-    const bytes = envelopeBytesArray[i];
-    if (bytes !== null) {
-      envelopeEntries.push({key: blocks[i].slot, value: bytes});
-      migratedRoots.push(blocks[i].root);
-    } else {
-      logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
-        slot: blocks[i].slot,
-        root: toRootHex(blocks[i].root),
+    const entries: {slot: Slot; archived: ArchivedEnvelope; hotKey: Uint8Array}[] = [];
+    for (let j = 0; j < batch.length; j++) {
+      const block = batch[j];
+      const envelope = envelopes[j];
+      if (envelope === null) {
+        logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
+          slot: block.slot,
+          root: block.blockRoot,
+        });
+        continue;
+      }
+
+      const archived: ArchivedEnvelope =
+        dedupePayloads && block.executionStatus === ExecutionStatus.Valid
+          ? {selector: ArchivedEnvelopeKind.Compact, value: toSignedCompactEnvelope(envelope)}
+          : {selector: ArchivedEnvelopeKind.Full, value: envelope};
+
+      entries.push({
+        slot: block.slot,
+        archived,
+        hotKey: db.executionPayloadEnvelope.encodeKey(envelope.message.beaconBlockRoot),
       });
+      migratedSlots.push(block.slot);
+    }
+
+    if (entries.length > 0) {
+      await db.executionPayloadEnvelopeArchive.batchArchiveAndDeleteHot(entries);
     }
   }
 
-  if (envelopeEntries.length === 0) return [];
-
-  await Promise.all([
-    db.executionPayloadEnvelopeArchive.batchPutBinary(envelopeEntries),
-    db.executionPayloadEnvelope.batchDelete(migratedRoots),
-  ]);
-
-  // Slots are ascending in hot-db key order — sort to guarantee `prettyPrintIndices` output is clean
-  // regardless of ancestor-walk order (newest to oldest).
-  return envelopeEntries.map((entry) => entry.key).sort((a, b) => a - b);
+  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
+  return migratedSlots.sort((a, b) => a - b);
 }
 
 /**

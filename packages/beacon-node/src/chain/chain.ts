@@ -61,6 +61,12 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {
+  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
+  ArchivedEnvelopeKind,
+  SignedCompactExecutionPayloadEnvelope,
+  signedCompactExecutionPayloadEnvelopeSsz,
+} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -76,6 +82,10 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
+import {
+  reconstructArchivedEnvelope,
+  reconstructArchivedEnvelopes,
+} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -926,21 +936,58 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-    if (payloadInput?.hasPayloadEnvelope()) {
-      const envelope = payloadInput.getPayloadEnvelope();
-      const serialized = this.serializedCache.get(envelope);
-      if (serialized) {
-        return serialized;
+    const [bytes] = await this.getSerializedExecutionPayloadEnvelopes([{blockSlot, blockRootHex}]);
+    return bytes;
+  }
+
+  /** Batch variant: archived compact envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`. */
+  async getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[]
+  ): Promise<(Uint8Array | null)[]> {
+    const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
+    const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
+    const compactIdxs: number[] = [];
+
+    for (let i = 0; i < requests.length; i++) {
+      const {blockSlot, blockRootHex} = requests[i];
+
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        const envelope = payloadInput.getPayloadEnvelope();
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        continue;
       }
-      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+      if (hot !== null) {
+        out[i] = hot;
+        continue;
+      }
+
+      const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+      if (archived === null) continue;
+
+      // full entry: the envelope's own SSZ after the selector byte
+      if (archived[0] === ArchivedEnvelopeKind.Full) {
+        out[i] = archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+        continue;
+      }
+
+      compacts.push(
+        signedCompactExecutionPayloadEnvelopeSsz.deserialize(archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH))
+      );
+      compactIdxs.push(i);
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+    if (compacts.length > 0) {
+      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
+      for (let j = 0; j < rebuilt.length; j++) {
+        const envelope = rebuilt[j];
+        if (envelope !== null) out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      }
+    }
+
+    return out;
   }
 
   async getExecutionPayloadEnvelope(
@@ -952,11 +999,13 @@ export class BeaconChain implements IBeaconChain {
       return payloadInput.getPayloadEnvelope();
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+
+    const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
+    if (archived === null) return null;
+    if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
+    return reconstructArchivedEnvelope(this.executionEngine, archived.value);
   }
 
   async getParentExecutionRequests(
@@ -967,11 +1016,20 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
+    // executionRequests survives compaction, so read it without reconstructing
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (hot !== null) return hot.message.executionRequests;
+
+    const archived = await this.db.executionPayloadEnvelopeArchive.get(parentBlockSlot);
+    if (archived === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return envelope.message.executionRequests;
+    return archived.value.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {

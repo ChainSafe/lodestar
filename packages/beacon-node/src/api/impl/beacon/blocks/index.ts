@@ -47,6 +47,7 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  EnvelopeReconstructionError,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -1109,9 +1110,21 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      try {
+        data = context?.returnBytes
+          ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+          : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      } catch (e) {
+        // Archived envelopes are rebuilt from EL bodies: EL down -> 503 (retryable), root mismatch -> 500
+        if (e instanceof EnvelopeReconstructionError) {
+          throw new ApiError(
+            e.isTransient() ? 503 : 500,
+            `Failed to reconstruct execution payload envelope: ${e.message}`
+          );
+        }
+        throw e;
+      }
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
