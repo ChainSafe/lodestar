@@ -105,8 +105,7 @@ describe("beacon / events", () => {
   it("Send the response headers before the first event", async () => {
     mockApi.eventstream.mockImplementation(async () => {});
 
-    // Resolves once the headers are received, a topic that emits rarely must not keep the consumer
-    // or a reverse proxy in front of the node waiting for the response until they time out
+    // Resolves once the response headers are received
     const res = await fetch(`${baseUrl}/eth/v1/events?topics=${EventType.chainReorg}`, {signal: controller.signal});
 
     expect(res.status).toBe(200);

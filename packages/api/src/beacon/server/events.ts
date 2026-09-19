@@ -3,13 +3,8 @@ import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "
 import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 
 /**
- * Interval at which a comment line is written to an event stream. Topics like `chain_reorg` or
- * `proposer_preferences` can stay silent for longer than the idle timeout of a reverse proxy or of the
- * consumer itself (commonly 60 seconds), the connection is then dropped and every event emitted
- * until the consumer has reconnected is lost as events are not replayed.
- *
- * Comment lines are ignored by clients, 15 seconds is the interval suggested by the specification
- * https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
+ * Quiet topics otherwise exceed the idle timeout of a reverse proxy or consumer, commonly 60 seconds, and
+ * events are not replayed. https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
  */
 export const SSE_KEEP_ALIVE_INTERVAL_MS = 15_000;
 const SSE_KEEP_ALIVE_COMMENT = ":\n\n";
@@ -54,8 +49,7 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
             if (!res.raw.writableEnded && !res.raw.destroyed) res.raw.write(SSE_KEEP_ALIVE_COMMENT);
           }, SSE_KEEP_ALIVE_INTERVAL_MS);
 
-          // Send the headers right away instead of with the first event. A consumer or reverse proxy
-          // otherwise waits for the response of a topic that emits rarely and times out the request.
+          // Headers are otherwise sent with the first event, a quiet topic times out behind a reverse proxy
           res.raw.flushHeaders();
 
           await new Promise<void>((resolve, reject) => {
