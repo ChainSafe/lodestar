@@ -7,7 +7,7 @@ import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   ReconstructByRangeOpts,
-  reconstructArchivedEnvelope,
+  reconstructArchivedEnvelopes,
   reconstructArchivedEnvelopesByRange,
 } from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
@@ -275,7 +275,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
   it("keeps PAYLOAD_ROOT_MISMATCH as a throw on the getter path (REST 500 / by-root SERVER_ERROR)", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
-    const err = await rejection(reconstructArchivedEnvelope(executionEngine, toSignedCompactEnvelope(full)));
+    const err = await rejection(reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)]));
     expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
     expect(err?.isTransient()).toBe(false);
   });
@@ -283,6 +283,6 @@ describe("reconstructArchivedEnvelopesByRange", () => {
   it("returns null from the getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructArchivedEnvelope(executionEngine, toSignedCompactEnvelope(full))).toBeNull();
+    expect(await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)])).toEqual([null]);
   });
 });

@@ -2,10 +2,10 @@ import {Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {
-  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
+  ArchivedEnvelopeBinary,
   ArchivedEnvelopeKind,
   SignedCompactExecutionPayloadEnvelope,
-  signedCompactExecutionPayloadEnvelopeSsz,
+  decodeArchivedEnvelopeBinary,
 } from "../../../db/repositories/index.js";
 import {IExecutionEngine} from "../../../execution/index.js";
 import {
@@ -20,10 +20,7 @@ const MAX_BODIES_REQUEST = 32;
 /** Serialized `SignedExecutionPayloadEnvelope` ready to serve */
 export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
-/** Archive entry read raw; full ones already hold servable bytes */
-type RangeEntry =
-  | {slot: Slot; kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
-  | {slot: Slot; kind: ArchivedEnvelopeKind.Compact; compact: SignedCompactExecutionPayloadEnvelope};
+type RangeEntry = ArchivedEnvelopeBinary & {slot: Slot};
 
 export type RebuildMiss =
   /** EL does not have the block, or has pruned its block access list */
@@ -67,17 +64,7 @@ export async function* reconstructArchivedEnvelopesByRange(
   let batch: RangeEntry[] = [];
 
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-    const slot = archive.decodeKey(key);
-    const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
-    if (bytes[0] === ArchivedEnvelopeKind.Full) {
-      batch.push({slot, kind: ArchivedEnvelopeKind.Full, envelopeBytes: value});
-    } else {
-      batch.push({
-        slot,
-        kind: ArchivedEnvelopeKind.Compact,
-        compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value),
-      });
-    }
+    batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelopeBinary(bytes)});
     if (batch.length === MAX_BODIES_REQUEST) {
       const {envelopes, unservableSlot} = await reconstructBatch(executionEngine, logger, batch, opts);
       yield* envelopes;
@@ -118,15 +105,6 @@ export async function reconstructArchivedEnvelopes(
   return out;
 }
 
-/** Single-envelope variant of {@link reconstructArchivedEnvelopes} */
-export async function reconstructArchivedEnvelope(
-  executionEngine: IExecutionEngine,
-  compact: SignedCompactExecutionPayloadEnvelope
-): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
-  const [reconstructed] = await reconstructArchivedEnvelopes(executionEngine, [compact]);
-  return reconstructed ?? null;
-}
-
 function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
   return "reason" in result;
 }
@@ -153,8 +131,8 @@ async function rebuildCompacts(
   return compacts.map((compact, i) => {
     const slot = compact.message.payload.slotNumber;
     const body = bodies[i];
-    // A pruned BAL comes back null or, from some ELs, as 0x (OffchainLabs/prysm#17174). RLP is never
-    // empty (empty list is 0xc0), so length 0 means pruned.
+    // A pruned BAL comes back null; a zero-length one is treated the same (RLP is never empty, an empty
+    // list is 0xc0), as Prysm guards it too (OffchainLabs/prysm#17174).
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
       return {slot, reason: "unavailable"};
     }

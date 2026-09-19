@@ -62,10 +62,9 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {
-  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
   ArchivedEnvelopeKind,
   SignedCompactExecutionPayloadEnvelope,
-  signedCompactExecutionPayloadEnvelopeSsz,
+  decodeArchivedEnvelopeBinary,
 } from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -82,10 +81,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {
-  reconstructArchivedEnvelope,
-  reconstructArchivedEnvelopes,
-} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {reconstructArchivedEnvelopes} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -964,18 +960,15 @@ export class BeaconChain implements IBeaconChain {
         continue;
       }
 
-      const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
-      if (archived === null) continue;
+      const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+      if (archivedBytes === null) continue;
 
-      // full entry: the envelope's own SSZ after the selector byte
-      if (archived[0] === ArchivedEnvelopeKind.Full) {
-        out[i] = archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+      const archived = decodeArchivedEnvelopeBinary(archivedBytes);
+      if (archived.kind === ArchivedEnvelopeKind.Full) {
+        out[i] = archived.envelopeBytes;
         continue;
       }
-
-      compacts.push(
-        signedCompactExecutionPayloadEnvelopeSsz.deserialize(archived.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH))
-      );
+      compacts.push(archived.compact);
       compactIdxs.push(i);
     }
 
@@ -1005,7 +998,8 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    return reconstructArchivedEnvelope(this.executionEngine, archived.value);
+    const [envelope] = await reconstructArchivedEnvelopes(this.executionEngine, [archived.value]);
+    return envelope ?? null;
   }
 
   async getParentExecutionRequests(

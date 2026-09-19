@@ -10,8 +10,8 @@ export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";
 export {
-  ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
   type ArchivedEnvelope,
+  type ArchivedEnvelopeBinary,
   ArchivedEnvelopeKind,
   type CompactExecutionPayload,
   type CompactExecutionPayloadEnvelope,
@@ -20,6 +20,7 @@ export {
   archivedSignedExecutionPayloadEnvelopeSsz,
   compactExecutionPayloadEnvelopeSsz,
   compactExecutionPayloadSsz,
+  decodeArchivedEnvelopeBinary,
   signedCompactExecutionPayloadEnvelopeSsz,
 } from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
