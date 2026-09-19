@@ -12,25 +12,9 @@ import {
   compactExecutionPayloadSsz,
   signedCompactExecutionPayloadEnvelopeSsz,
 } from "../../../../src/db/repositories/index.js";
+import {generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
 
 type SignedEnvelope = ReturnType<typeof ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue>;
-
-function populatedEnvelope(): SignedEnvelope {
-  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  const p = envelope.message.payload;
-  p.transactions = [Uint8Array.from([1, 2, 3]), Uint8Array.from([4, 5, 6])];
-  p.withdrawals = [{index: 1, validatorIndex: 2, address: new Uint8Array(20).fill(0xdd), amount: 99n}];
-  p.blockHash = new Uint8Array(32).fill(0xaa);
-  p.stateRoot = new Uint8Array(32).fill(0xbb);
-  p.blockNumber = 42;
-  p.slotNumber = 8; // GLOAS:EIP-7843
-  p.blockAccessList = Uint8Array.from([0x11, 0x22, 0x33]); // GLOAS:EIP-7928
-  envelope.message.builderIndex = 7;
-  envelope.message.beaconBlockRoot = new Uint8Array(32).fill(0xcc);
-  envelope.message.parentBeaconBlockRoot = new Uint8Array(32).fill(0x99);
-  envelope.signature = new Uint8Array(96).fill(0xee);
-  return envelope;
-}
 
 function bodiesOf(envelope: SignedEnvelope): Parameters<typeof signedCompactEnvelopeToFull>[1] {
   const {transactions, withdrawals, blockAccessList} = envelope.message.payload;
@@ -62,7 +46,7 @@ describe("compactEnvelope", () => {
   });
 
   it("stores the full payload root and drops transactions, withdrawals and the block access list", () => {
-    const envelope = populatedEnvelope();
+    const envelope = generateSignedExecutionPayloadEnvelope(8);
     const compact = toSignedCompactEnvelope(envelope);
     expect(compact.message.payload.payloadRoot).toEqual(
       ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.message.payload)
@@ -73,7 +57,7 @@ describe("compactEnvelope", () => {
   });
 
   it("compact size is header-sized regardless of body size", () => {
-    const envelope = populatedEnvelope();
+    const envelope = generateSignedExecutionPayloadEnvelope(8);
     const p = envelope.message.payload;
     p.transactions = Array.from({length: 180}, (_, i) => new Uint8Array(1078).fill(i & 0xff));
     p.blockAccessList = new Uint8Array(70 * 1024).fill(0xab);
@@ -86,14 +70,14 @@ describe("compactEnvelope", () => {
   });
 
   it("compact type round-trips through bytes", () => {
-    const compact = toSignedCompactEnvelope(populatedEnvelope());
+    const compact = toSignedCompactEnvelope(generateSignedExecutionPayloadEnvelope(8));
     const bytes = signedCompactExecutionPayloadEnvelopeSsz.serialize(compact);
     const decoded = signedCompactExecutionPayloadEnvelopeSsz.deserialize(bytes);
     expect(signedCompactExecutionPayloadEnvelopeSsz.equals(compact, decoded)).toBe(true);
   });
 
   it("compact + bodies reconstruct the original byte-identically", () => {
-    const envelope = populatedEnvelope();
+    const envelope = generateSignedExecutionPayloadEnvelope(8);
     const rebuilt = signedCompactEnvelopeToFull(persistedCompact(envelope), bodiesOf(envelope));
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(rebuilt, envelope)).toBe(true);
   });
@@ -109,7 +93,7 @@ describe("compactEnvelope", () => {
     ["withdrawals", {withdrawals: [{index: 9, validatorIndex: 9, address: new Uint8Array(20).fill(0x11), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
   ])("throws PAYLOAD_ROOT_MISMATCH when the EL-served %s differ from the original", (_field, override) => {
-    const envelope = populatedEnvelope();
+    const envelope = generateSignedExecutionPayloadEnvelope(8);
     let err: unknown = null;
     try {
       signedCompactEnvelopeToFull(persistedCompact(envelope), {...bodiesOf(envelope), ...override});

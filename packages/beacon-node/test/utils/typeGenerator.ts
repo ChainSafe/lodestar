@@ -1,6 +1,6 @@
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Slot, phase0, ssz} from "@lodestar/types";
+import {Slot, gloas, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../src/constants/index.js";
 
@@ -20,6 +20,32 @@ export function generateSignedBlockAtSlot(slot: Slot): phase0.SignedBeaconBlock 
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
   block.message.slot = slot;
   return block;
+}
+
+/**
+ * A populated Gloas envelope whose roots, hashes and bodies are unique per slot (2 bytes of slot, so
+ * >256 slots don't collide), for archive/migration/reconstruction tests that need a body to drop
+ * and put back. Signature is a fixed filler, never verified.
+ */
+export function generateSignedExecutionPayloadEnvelope(slot: Slot): gloas.SignedExecutionPayloadEnvelope {
+  const hi = (slot >> 8) & 0xff;
+  const lo = slot & 0xff;
+  const root32 = (tag: number): Uint8Array => Uint8Array.from([tag, hi, lo, ...new Uint8Array(29)]);
+
+  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+  const p = envelope.message.payload;
+  p.slotNumber = slot; // GLOAS:EIP-7843
+  p.blockNumber = slot;
+  p.blockHash = root32(0xaa);
+  p.stateRoot = root32(0xbb);
+  p.transactions = [Uint8Array.from([lo, 1, 2]), Uint8Array.from([lo, 3, 4])];
+  p.withdrawals = [{index: slot, validatorIndex: 2, address: new Uint8Array(20).fill(0xdd), amount: 99n}];
+  p.blockAccessList = Uint8Array.from([lo, 0x22]); // GLOAS:EIP-7928
+  envelope.message.builderIndex = 7;
+  envelope.message.beaconBlockRoot = root32(0xcc);
+  envelope.message.parentBeaconBlockRoot = root32(0x99);
+  envelope.signature = new Uint8Array(96).fill(0xee);
+  return envelope;
 }
 
 export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBlock {

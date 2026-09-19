@@ -19,6 +19,7 @@ import {BeaconDb} from "../../../src/db/beacon.js";
 import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
+import {generateSignedExecutionPayloadEnvelope} from "../../utils/typeGenerator.js";
 
 describe("reconstructArchivedEnvelopesByRange", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
@@ -42,19 +43,6 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     await rm(tmpDir, {recursive: true, force: true});
   });
 
-  function makeEnvelope(slot: number): gloas.SignedExecutionPayloadEnvelope {
-    const e = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    const p = e.message.payload;
-    p.slotNumber = slot;
-    p.blockHash = new Uint8Array(32).fill(slot & 0xff);
-    p.transactions = [Uint8Array.from([slot, 1, 2]), Uint8Array.from([slot, 3, 4])];
-    p.withdrawals = [{index: slot, validatorIndex: 2, address: new Uint8Array(20).fill(0xdd), amount: 99n}];
-    p.blockAccessList = Uint8Array.from([slot, 0x22]);
-    e.message.beaconBlockRoot = new Uint8Array(32).fill(slot & 0x0f);
-    e.signature = new Uint8Array(96).fill(0xee);
-    return e;
-  }
-
   function bodyOf(full: gloas.SignedExecutionPayloadEnvelope): ExecutionPayloadBodyV2 {
     const {transactions, withdrawals, blockAccessList} = full.message.payload;
     return {transactions, withdrawals, blockAccessList};
@@ -62,7 +50,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   // Seed the archive with the compact form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    const full = makeEnvelope(slot);
+    const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.put(slot, {
       selector: ArchivedEnvelopeKind.Compact,
       value: toSignedCompactEnvelope(full),
@@ -133,11 +121,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     }
     // all three slots fit in one batch → a single EL round-trip with all three hashes
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
-    expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith([
-      toRootHex(new Uint8Array(32).fill(10)),
-      toRootHex(new Uint8Array(32).fill(11)),
-      toRootHex(new Uint8Array(32).fill(12)),
-    ]);
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith(fulls.map((f) => toRootHex(f.message.payload.blockHash)));
   });
 
   it("chunks EL fetches at MAX_BODIES_REQUEST (32), not one per slot", async () => {
@@ -156,7 +140,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   // Seed a full entry (--chain.dedupePayloads=false) in the same archive.
   async function seedFull(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    const full = makeEnvelope(slot);
+    const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.put(slot, {selector: ArchivedEnvelopeKind.Full, value: full});
     return full;
   }
