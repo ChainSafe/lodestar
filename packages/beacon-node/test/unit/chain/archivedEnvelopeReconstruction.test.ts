@@ -145,6 +145,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     // only the two compact entries go to the EL
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(2);
+    expect(getPayloadBodiesByHashV2.mock.calls[0][0]).not.toContain(toRootHex(archivedFull.message.payload.blockHash));
   });
 
   it("serves a full-only range without calling the EL", async () => {
