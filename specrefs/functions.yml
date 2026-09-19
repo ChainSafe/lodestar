@@ -900,6 +900,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="phase0" hash="55e27800">
     def compute_fork_version(epoch: Epoch) -> Version:  # noqa: ARG001
@@ -913,6 +915,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="altair" hash="ac13fc52">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -928,6 +932,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="bellatrix" hash="2e5e09be">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -945,6 +951,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="capella" hash="cf11ff98">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -964,6 +972,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="deneb" hash="287e691a">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -985,6 +995,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="electra" hash="c142a405">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -1008,6 +1020,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="fulu" hash="6d472038">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -1033,6 +1047,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="gloas" hash="b6fccd63">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -1060,6 +1076,8 @@
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getForkVersion(slot: Slot): Version {"
+    - file: packages/config/src/forkConfig/index.ts
+      search: const forks =
   spec: |
     <spec fn="compute_fork_version" fork="heze" hash="e16984c9">
     def compute_fork_version(epoch: Epoch) -> Version:
@@ -5227,7 +5245,7 @@
 - name: get_payload_attestation_due_ms#gloas
   sources:
     - file: packages/validator/src/services/ptc.ts
-      search: const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+      search: const payloadAttestationDueMs =
   spec: |
     <spec fn="get_payload_attestation_due_ms" fork="gloas" hash="268cc3e0">
     def get_payload_attestation_due_ms() -> Uint64:
@@ -5961,7 +5979,7 @@
 - name: get_support_discount#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
-      search: const supportDiscount = computeEmptySlotSupportDiscount(
+      search: export function computeEmptySlotSupportDiscount(
   spec: |
     <spec fn="get_support_discount" fork="phase0" hash="9dce5551">
     def get_support_discount(store: Store, balance_source: BeaconState, block_root: Root) -> Gwei:
@@ -7472,7 +7490,7 @@
 - name: is_head_late#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: const isHeadLate = !headBlock.timeliness;
+      search: const isHeadLate =
   spec: |
     <spec fn="is_head_late" fork="gloas" hash="dd4c9308">
     def is_head_late(store: Store, head_root: Root) -> bool:
@@ -12476,6 +12494,8 @@
 
 - name: set_or_append_list#altair
   sources:
+    - file: packages/state-transition/src/block/processDeposit.ts
+      search: stateAltair.inactivityScores.push(
     - file: packages/state-transition/src/util/gloas.ts
       search: if (builderIndex < state.builders.length) {
   spec: |
@@ -12858,7 +12878,7 @@
 - name: update_builder_pending_withdrawals#gloas
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: stateGloas.builderPendingWithdrawals = stateGloas.builderPendingWithdrawals.sliceFrom(
+      search: stateGloas.builderPendingWithdrawals =
   spec: |
     <spec fn="update_builder_pending_withdrawals" fork="gloas" hash="d9882622">
     def update_builder_pending_withdrawals(
@@ -12966,7 +12986,7 @@
 - name: update_next_withdrawal_builder_index#gloas
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: stateGloas.nextWithdrawalBuilderIndex = nextIndex % stateGloas.builders.length;
+      search: stateGloas.nextWithdrawalBuilderIndex =
   spec: |
     <spec fn="update_next_withdrawal_builder_index" fork="gloas" hash="c860ede9">
     def update_next_withdrawal_builder_index(
@@ -12982,7 +13002,7 @@
 - name: update_next_withdrawal_index#capella
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: state.nextWithdrawalIndex = latestWithdrawal.index + 1;
+      search: state.nextWithdrawalIndex =
   spec: |
     <spec fn="update_next_withdrawal_index" fork="capella" hash="dec06adb">
     def update_next_withdrawal_index(state: BeaconState, withdrawals: Sequence[Withdrawal]) -> None:
@@ -12995,7 +13015,7 @@
 - name: update_next_withdrawal_validator_index#capella
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+      search: // Update the nextWithdrawalValidatorIndex
   spec: |
     <spec fn="update_next_withdrawal_validator_index" fork="capella" hash="4319e0d2">
     def update_next_withdrawal_validator_index(
@@ -13016,7 +13036,7 @@
 - name: update_payload_expected_withdrawals#gloas
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: stateGloas.payloadExpectedWithdrawals = ssz.gloas.Withdrawals.toViewDU(expectedWithdrawals);
+      search: stateGloas.payloadExpectedWithdrawals =
   spec: |
     <spec fn="update_payload_expected_withdrawals" fork="gloas" hash="65ea5a0c">
     def update_payload_expected_withdrawals(
@@ -13028,7 +13048,7 @@
 - name: update_pending_partial_withdrawals#electra
   sources:
     - file: packages/state-transition/src/block/processWithdrawals.ts
-      search: stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(
+      search: stateElectra.pendingPartialWithdrawals =
   spec: |
     <spec fn="update_pending_partial_withdrawals" fork="electra" hash="ab8f3216">
     def update_pending_partial_withdrawals(

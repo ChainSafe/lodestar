@@ -305,7 +305,7 @@
 - name: EMPTY_BLOCK_HASH#bellatrix
   sources:
     - file: packages/beacon-node/src/api/impl/config/constants.ts
-      search: "EMPTY_BLOCK_HASH: ZERO_HASH_HEX,"
+      search: "EMPTY_BLOCK_HASH:"
   spec: |
     <spec constant_var="EMPTY_BLOCK_HASH" fork="bellatrix" hash="23cdf402">
     EMPTY_BLOCK_HASH: Hash32 =
@@ -314,7 +314,7 @@
 - name: ENDIANNESS#phase0
   sources:
     - file: packages/beacon-node/src/api/impl/config/constants.ts
-      search: 'ENDIANNESS: "little",'
+      search: "ENDIANNESS:"
   spec: |
     <spec constant_var="ENDIANNESS" fork="phase0" hash="76922bbc">
     ENDIANNESS = 'little'
@@ -447,7 +447,7 @@
 - name: PAYLOAD_STATUS_EMPTY#gloas
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: EMPTY = 1,
+      search: EMPTY =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="84265c9b">
     PAYLOAD_STATUS_EMPTY: PayloadStatus = 0
@@ -456,7 +456,7 @@
 - name: PAYLOAD_STATUS_FULL#gloas
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: FULL = 2,
+      search: FULL =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="357ae377">
     PAYLOAD_STATUS_FULL: PayloadStatus = 1
@@ -465,7 +465,7 @@
 - name: PAYLOAD_STATUS_INVALIDATED#bellatrix
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: Invalid = "Invalid",
+      search: Invalid =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_INVALIDATED" fork="bellatrix" hash="573428af">
     PAYLOAD_STATUS_INVALIDATED: PayloadValidationStatus = 1
@@ -474,7 +474,7 @@
 - name: PAYLOAD_STATUS_NOT_VALIDATED#bellatrix
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: Syncing = "Syncing",
+      search: Syncing =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_NOT_VALIDATED" fork="bellatrix" hash="d15db48c">
     PAYLOAD_STATUS_NOT_VALIDATED: PayloadValidationStatus = 2
@@ -483,7 +483,7 @@
 - name: PAYLOAD_STATUS_PENDING#gloas
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: PENDING = 0,
+      search: PENDING =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="6a0d6cbf">
     PAYLOAD_STATUS_PENDING: PayloadStatus = 2
@@ -492,7 +492,7 @@
 - name: PAYLOAD_STATUS_VALID#bellatrix
   sources:
     - file: packages/fork-choice/src/protoArray/interface.ts
-      search: Valid = "Valid",
+      search: Valid =
   spec: |
     <spec constant_var="PAYLOAD_STATUS_VALID" fork="bellatrix" hash="1e190907">
     PAYLOAD_STATUS_VALID: PayloadValidationStatus = 0
