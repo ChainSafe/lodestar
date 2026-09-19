@@ -236,18 +236,18 @@ export function lintGrafanaDashboard(json) {
   });
 
   assertTemplatingListItemContent(json, variableNameFilters, {
+    // Must track the datasource variable, like panels do. Ad hoc filters only
+    // apply to queries using the filter's own datasource, so a hardcoded uid
+    // that does not exist on the importing Grafana leaves the filter inert:
+    // it cannot list label keys and it filters nothing.
     datasource: {
       type: "prometheus",
-      uid: "prometheus_local",
+      uid: `\${${variableNameDatasource}}`,
     },
-    filters: [
-      {
-        condition: "",
-        key: "instance",
-        operator: "=",
-        value: "unstable-super",
-      },
-    ],
+    // Ship no filters. A default filter is applied on load, so pinning one
+    // here points every panel at a single node that only exists on the
+    // Grafana the dashboard was exported from.
+    filters: [],
     hide: 0,
     name: "Filters",
     skipUrlSync: false,
