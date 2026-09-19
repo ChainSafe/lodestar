@@ -37,7 +37,7 @@ export const bootnodeExtraOptions: CliCommandOptions<BootnodeExtraArgs> = {
   listenAddress6: {
     type: "string",
     description: "The IPv6 address to listen for discv5 connections",
-    defaultDescription: defaultListenAddress6,
+    defaultDescription: `${defaultListenAddress6} if the host has a global IPv6 address`,
     group: "network",
   },
 
