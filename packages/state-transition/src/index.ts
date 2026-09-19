@@ -24,7 +24,11 @@ export {
   type EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
-export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+export {
+  type EpochTransitionCache,
+  type EpochTransitionCacheOpts,
+  beforeProcessEpoch,
+} from "./cache/epochTransitionCache.js";
 // Main state caches
 export {
   type BeaconStateCache,
