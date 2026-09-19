@@ -1132,6 +1132,7 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       const didUpdateCheckpoints = this.onTick(previousSlot + 1);
+      this.queuedAttestationsPreviousSlot = 0;
       // Process any attestations that might now be eligible before running FCR for this slot.
       const didProcessAttestations = this.processAttestationQueue();
       const didRecomputeHead = this.runFastConfirmation();
