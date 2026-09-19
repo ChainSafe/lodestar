@@ -17,6 +17,7 @@ describe("execution engine mock payload bodies", () => {
   }
 
   it("serves gloas bodies by hash from payloads it has seen, null for unknown hashes", () => {
+    // Asserts on the backend's sync JSON-RPC handlers; the async IExecutionEngine method is covered in http.test.ts
     const {handlers} = new ExecutionEngineMockBackend({});
     const payload = makePayload(1);
     expect(handlers.engine_newPayloadV5(payload, [], ZERO_HASH_HEX, []).status).toBe(ExecutionPayloadStatus.VALID);

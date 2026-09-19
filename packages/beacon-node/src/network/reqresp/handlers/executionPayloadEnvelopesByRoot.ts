@@ -45,6 +45,8 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   try {
     envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(requests);
   } catch (e) {
+    // Unlike by-range, a payload root mismatch reaches here and is SERVER_ERROR: by-root allows omission,
+    // so there is no consecutive-order reason to hide a local inconsistency from the peer
     if (e instanceof EnvelopeReconstructionError) {
       throw new ResponseError(
         e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
