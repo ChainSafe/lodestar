@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ForkName, isForkPostGloas} from "@lodestar/params";
-import {ssz, sszTypesFor} from "@lodestar/types";
+import {gloas, ssz, sszTypesFor} from "@lodestar/types";
 import type {ExecutionPayloadBodies} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   signedCompactEnvelopeToFull,
@@ -12,19 +12,14 @@ import {
   compactExecutionPayloadSsz,
   signedCompactExecutionPayloadEnvelopeSsz,
 } from "../../../../src/db/repositories/index.js";
-import {generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
+import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../../utils/typeGenerator.js";
 
-type SignedEnvelope = ReturnType<typeof ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue>;
-
-function bodiesOf(envelope: SignedEnvelope): Parameters<typeof signedCompactEnvelopeToFull>[1] {
-  const {transactions, withdrawals, blockAccessList} = envelope.message.payload;
-  return {transactions, withdrawals, blockAccessList};
-}
+const bodiesOf = payloadBodiesOf;
 
 // Serialize the compact through bytes and back, mirroring the archive round-trip
 // before handing to the real reconstruct fn — proves it survives persistence.
 function persistedCompact(
-  envelope: SignedEnvelope
+  envelope: gloas.SignedExecutionPayloadEnvelope
 ): ReturnType<typeof signedCompactExecutionPayloadEnvelopeSsz.deserialize> {
   const bytes = signedCompactExecutionPayloadEnvelopeSsz.serialize(toSignedCompactEnvelope(envelope));
   return signedCompactExecutionPayloadEnvelopeSsz.deserialize(bytes);

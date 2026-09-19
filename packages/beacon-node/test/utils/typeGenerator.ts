@@ -48,6 +48,16 @@ export function generateSignedExecutionPayloadEnvelope(slot: Slot): gloas.Signed
   return envelope;
 }
 
+/** The parts of an envelope's payload the EL serves back via engine_getPayloadBodiesByHashV2 */
+export function payloadBodiesOf(envelope: gloas.SignedExecutionPayloadEnvelope): {
+  transactions: gloas.Transactions;
+  withdrawals: gloas.Withdrawals;
+  blockAccessList: gloas.BlockAccessList;
+} {
+  const {transactions, withdrawals, blockAccessList} = envelope.message.payload;
+  return {transactions, withdrawals, blockAccessList};
+}
+
 export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBlock {
   return {
     slot: 0,

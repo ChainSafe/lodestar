@@ -1,9 +1,5 @@
-import {mkdtemp, rm} from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db/controller/level";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
@@ -16,25 +12,20 @@ import {
   SignedCompactExecutionPayloadEnvelope,
   signedCompactExecutionPayloadEnvelopeSsz,
 } from "../../../../src/db/repositories/index.js";
-import {generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
+import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
+import {generateProtoBlock, generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
 
 describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
   const logger = testLogger();
-  let tmpDir: string;
-  let controller: LevelDbController;
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-envelope-migration-"));
-    controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
-    db = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "data_columns"), logger});
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-envelope-migration-"));
   });
 
-  afterEach(async () => {
-    await db.close();
-    await rm(tmpDir, {recursive: true, force: true});
-  });
+  afterEach(() => closeDb());
 
   /** Put a full envelope in the hot db and return the finalized ProtoBlock stub that references it */
   async function seedHot(
@@ -44,12 +35,12 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   ): Promise<ProtoBlock> {
     const envelope = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelope.put(envelope.message.beaconBlockRoot, envelope);
-    return {
+    return generateProtoBlock({
       slot,
       blockRoot: toRootHex(envelope.message.beaconBlockRoot),
       payloadStatus,
       executionStatus,
-    } as unknown as ProtoBlock;
+    });
   }
 
   it("archives compact envelopes by default (dedupePayloads=true) and removes them from hot", async () => {
@@ -126,15 +117,13 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
 
   it("skips EMPTY payload-status blocks and blocks missing from hot", async () => {
     const empty = await seedHot(10, PayloadStatus.EMPTY);
-    const missing = {slot: 11, blockRoot: toRootHex(new Uint8Array(32).fill(0xff)), payloadStatus: PayloadStatus.FULL};
+    const missing = generateProtoBlock({
+      slot: 11,
+      blockRoot: toRootHex(new Uint8Array(32).fill(0xff)),
+      payloadStatus: PayloadStatus.FULL,
+    });
 
-    const migrated = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
-      config,
-      db,
-      logger,
-      [empty, missing as unknown as ProtoBlock],
-      true
-    );
+    const migrated = await migrateExecutionPayloadEnvelopesFromHotToColdDb(config, db, logger, [empty, missing], true);
 
     expect(migrated).toEqual([]);
     expect(await db.executionPayloadEnvelopeArchive.get(10)).toBeNull();

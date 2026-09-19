@@ -1,9 +1,5 @@
-import {mkdtemp, rm} from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db/controller/level";
 import {LogLevel} from "@lodestar/logger";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
@@ -19,34 +15,26 @@ import {BeaconDb} from "../../../src/db/beacon.js";
 import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
-import {generateSignedExecutionPayloadEnvelope} from "../../utils/typeGenerator.js";
+import {startIsolatedTmpBeaconDb} from "../../utils/db.js";
+import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
 
 describe("reconstructArchivedEnvelopesByRange", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
   const logger = testLogger();
-  let tmpDir: string;
-  let controller: LevelDbController;
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
   let getPayloadBodiesByHashV2: ReturnType<typeof vi.fn>;
   let executionEngine: IExecutionEngine;
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-envelope-reconstruct-"));
-    controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
-    db = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "data_columns"), logger});
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-envelope-reconstruct-"));
     getPayloadBodiesByHashV2 = vi.fn();
     executionEngine = {getPayloadBodiesByHashV2} as unknown as IExecutionEngine;
   });
 
-  afterEach(async () => {
-    await db.close();
-    await rm(tmpDir, {recursive: true, force: true});
-  });
+  afterEach(() => closeDb());
 
-  function bodyOf(full: gloas.SignedExecutionPayloadEnvelope): ExecutionPayloadBodyV2 {
-    const {transactions, withdrawals, blockAccessList} = full.message.payload;
-    return {transactions, withdrawals, blockAccessList};
-  }
+  const bodyOf = payloadBodiesOf;
 
   // Seed the archive with the compact form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
