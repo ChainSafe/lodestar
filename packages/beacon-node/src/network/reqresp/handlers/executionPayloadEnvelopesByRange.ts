@@ -58,7 +58,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
         Math.min(endSlot, archiveMaxSlot + 1),
         {
           servingWindowStartSlot,
-          cache: chain.reconstructedEnvelopeCache,
           onUnservable: (slot) => {
             unservableSlot = slot;
           },

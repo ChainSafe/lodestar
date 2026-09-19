@@ -1,5 +1,5 @@
 import {Slot, gloas, ssz} from "@lodestar/types";
-import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {
   ARCHIVED_ENVELOPE_SELECTOR_LENGTH,
@@ -17,37 +17,10 @@ import {signedCompactEnvelopeToFull} from "./compactEnvelope.js";
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
-/**
- * Recently rebuilt envelopes (serialized), so N peers syncing the same range cost one round of EL
- * calls + hashTreeRoots, not N. 32 entries ≈ 9 MB. FIFO eviction (a hit does not refresh), which for
- * sequential sync drops the slots behind the cursors first. Slot key is safe: the archive only holds
- * canonical finalized envelopes.
- */
-export const RECONSTRUCTED_ENVELOPE_CACHE_SIZE = 32;
-
-export class ReconstructedEnvelopeCache {
-  private readonly bySlot = new Map<Slot, Uint8Array>();
-
-  constructor(private readonly maxEntries = RECONSTRUCTED_ENVELOPE_CACHE_SIZE) {}
-
-  get(slot: Slot): Uint8Array | undefined {
-    return this.bySlot.get(slot);
-  }
-
-  set(slot: Slot, envelopeBytes: Uint8Array): void {
-    this.bySlot.set(slot, envelopeBytes);
-    pruneSetToMax(this.bySlot, this.maxEntries);
-  }
-
-  get size(): number {
-    return this.bySlot.size;
-  }
-}
-
 /** Serialized `SignedExecutionPayloadEnvelope` ready to serve */
 export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
-/** Archive entry read raw; full and cached ones already hold servable bytes */
+/** Archive entry read raw; full ones already hold servable bytes */
 type RangeEntry =
   | {slot: Slot; kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
   | {slot: Slot; kind: ArchivedEnvelopeKind.Compact; compact: SignedCompactExecutionPayloadEnvelope};
@@ -65,7 +38,6 @@ export type ReconstructByRangeOpts = {
    * warn inside it since the EL is then failing to serve what the CL must (ethereum/EIPs#12347).
    */
   servingWindowStartSlot: Slot;
-  cache?: ReconstructedEnvelopeCache;
   /** Fires, right before the generator returns, when the stream stops short at an unservable slot */
   onUnservable?: (slot: Slot) => void;
 };
@@ -100,16 +72,11 @@ export async function* reconstructArchivedEnvelopesByRange(
     if (bytes[0] === ArchivedEnvelopeKind.Full) {
       batch.push({slot, kind: ArchivedEnvelopeKind.Full, envelopeBytes: value});
     } else {
-      const cached = opts.cache?.get(slot);
-      if (cached !== undefined) {
-        batch.push({slot, kind: ArchivedEnvelopeKind.Full, envelopeBytes: cached});
-      } else {
-        batch.push({
-          slot,
-          kind: ArchivedEnvelopeKind.Compact,
-          compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value),
-        });
-      }
+      batch.push({
+        slot,
+        kind: ArchivedEnvelopeKind.Compact,
+        compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value),
+      });
     }
     if (batch.length === MAX_BODIES_REQUEST) {
       const {envelopes, unservableSlot} = await reconstructBatch(executionEngine, logger, batch, opts);
@@ -209,7 +176,7 @@ async function reconstructBatch(
   executionEngine: IExecutionEngine,
   logger: Logger,
   batch: RangeEntry[],
-  {cache, servingWindowStartSlot}: ReconstructByRangeOpts
+  {servingWindowStartSlot}: ReconstructByRangeOpts
 ): Promise<{envelopes: SlotEnvelopeBytes[]; unservableSlot: Slot | null}> {
   const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
@@ -241,9 +208,7 @@ async function reconstructBatch(
       }
       return {envelopes, unservableSlot: entry.slot};
     }
-    const envelopeBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
-    cache?.set(entry.slot, envelopeBytes);
-    envelopes.push({slot: entry.slot, envelopeBytes});
+    envelopes.push({slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)});
   }
   return {envelopes, unservableSlot: null};
 }

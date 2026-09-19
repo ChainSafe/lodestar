@@ -32,7 +32,6 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
-import {ReconstructedEnvelopeCache} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
@@ -146,7 +145,6 @@ export interface IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  readonly reconstructedEnvelopeCache: ReconstructedEnvelopeCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 

@@ -83,7 +83,6 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {
-  ReconstructedEnvelopeCache,
   reconstructArchivedEnvelope,
   reconstructArchivedEnvelopes,
 } from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
@@ -224,7 +223,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  readonly reconstructedEnvelopeCache = new ReconstructedEnvelopeCache();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -966,12 +964,6 @@ export class BeaconChain implements IBeaconChain {
         continue;
       }
 
-      const reconstructed = this.reconstructedEnvelopeCache.get(blockSlot);
-      if (reconstructed !== undefined) {
-        out[i] = reconstructed;
-        continue;
-      }
-
       const archived = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
       if (archived === null) continue;
 
@@ -991,10 +983,7 @@ export class BeaconChain implements IBeaconChain {
       const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
       for (let j = 0; j < rebuilt.length; j++) {
         const envelope = rebuilt[j];
-        if (envelope === null) continue;
-        const envelopeBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-        this.reconstructedEnvelopeCache.set(requests[compactIdxs[j]].blockSlot, envelopeBytes);
-        out[compactIdxs[j]] = envelopeBytes;
+        if (envelope !== null) out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
       }
     }
 
@@ -1016,7 +1005,6 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    // REST-only object path; not worth serializing just to populate reconstructedEnvelopeCache
     return reconstructArchivedEnvelope(this.executionEngine, archived.value);
   }
 

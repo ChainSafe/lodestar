@@ -11,7 +11,6 @@ import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   ReconstructByRangeOpts,
-  ReconstructedEnvelopeCache,
   reconstructArchivedEnvelope,
   reconstructArchivedEnvelopesByRange,
 } from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
@@ -252,33 +251,6 @@ describe("reconstructArchivedEnvelopesByRange", () => {
       expect.objectContaining({slot: 20})
     );
     expect(fulls).toHaveLength(2);
-  });
-
-  it("serves a recently reconstructed envelope from the cache without an EL call", async () => {
-    const fulls = [await seed(10), await seed(11)];
-    elServes(fulls);
-    const cache = new ReconstructedEnvelopeCache();
-    expect((await rangeWith(10, 12, {...inWindow, cache})).out.map((o) => o.slot)).toEqual([10, 11]);
-    expect(cache.size).toBe(2);
-    getPayloadBodiesByHashV2.mockClear();
-    // second pass: both served from cache, byte-identical, no EL round-trip
-    const {out} = await rangeWith(10, 12, {...inWindow, cache});
-    expect(out.map((o) => o.slot)).toEqual([10, 11]);
-    expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, fulls[1])).toBe(true);
-    expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
-  });
-
-  it("caches only successful reconstructions and evicts oldest first past its size", async () => {
-    const cache = new ReconstructedEnvelopeCache(2);
-    const fulls = [await seed(10), await seed(11), await seed(12)];
-    elServes([fulls[0], fulls[1]]); // 12 unservable
-    await rangeWith(10, 13, {...inWindow, cache});
-    expect(cache.get(12)).toBeUndefined();
-    expect(cache.get(10)).toBeDefined();
-    cache.set(13, new Uint8Array(1));
-    expect(cache.size).toBe(2);
-    expect(cache.get(10)).toBeUndefined(); // FIFO
-    expect(cache.get(11)).toBeDefined();
   });
 
   it("wraps an EL transport error as ENGINE_UNAVAILABLE (transient)", async () => {
