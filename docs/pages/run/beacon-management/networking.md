@@ -102,9 +102,9 @@ Note that `--discoveryPort` and `--quicPort` are both UDP but must use different
 
 For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
 
-Lodestar listens on IPv6 (`::`) by default only if the host has a global IPv6 address. Otherwise, it listens on IPv4 only. Set `--listenAddress6` to enable IPv6 explicitly, or `--listenAddress` without `--listenAddress6` for IPv4 only.
+By default, Lodestar listens on both IPv4 and IPv6 if the host has a global IPv6 address. Otherwise, it listens on IPv4 only. Setting only `--listenAddress` limits listening to IPv4. Setting only `--listenAddress6` limits it to IPv6.
 
-When no IPv6 listener is configured, Lodestar removes `ip6`, `udp6`, `tcp6`, and `quic6` from the persisted ENR so peers do not attempt to connect over IPv6. Setting any of `--enr.ip6`, `--enr.udp6`, `--enr.tcp6`, or `--enr.quic6` preserves the IPv6 fields. Use `--nat` when advertising an address that is not assigned to a local interface.
+IPv6 ENR fields are cleared when no IPv6 listener is configured, unless any of `--enr.ip6`, `--enr.udp6`, `--enr.tcp6`, or `--enr.quic6` is set. Use `--nat` when advertising a non-local address.
 
 ## Firewall Management
 

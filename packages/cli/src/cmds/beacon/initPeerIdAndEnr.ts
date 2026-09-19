@@ -98,11 +98,9 @@ export function overwriteEnrWithCliArgs(
       }
     } else {
       if (!isLocal) {
-        logger.warn(
-          `Configured ENR ${ip4 ? "IPv4" : "IPv6"} address is not local, clearing ENR ${ip4 ? "ip" : "ip6"} and ${
-            ip4 ? "udp" : "udp6"
-          }. Set the --nat flag to prevent this`
-        );
+        logger.warn("Clearing non-local ENR address and ports. Set --nat to allow non-local addresses", {
+          ipVersion: ip4 ? 4 : 6,
+        });
         if (ip4) {
           enr.delete("ip");
           enr.delete("udp");
@@ -154,7 +152,7 @@ export async function initPrivateKeyAndEnr(
 
   if (!args.listenAddress && !args.listenAddress6 && !hasGlobalIPv6Address()) {
     logger.warn(
-      "IPv6 is disabled by default because no global IPv6 address was found. Set --listenAddress for IPv4 only or --listenAddress6 to enable IPv6 explicitly"
+      "Not listening on IPv6: no global IPv6 address found. Set --listenAddress for IPv4 only or --listenAddress6 for IPv6"
     );
   }
 
