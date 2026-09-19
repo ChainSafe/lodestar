@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.8322f31f.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.e61991cc.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.8da9b7e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -74,6 +74,8 @@
 <table><thead><tr><th>Port</th><th>Protocol</th><th>Default</th><th>Purpose</th></tr></thead><tbody><tr><td><code>--port</code></td><td>TCP</td><td>9000</td><td>TCP transport for libp2p</td></tr><tr><td><code>--discoveryPort</code></td><td>UDP</td><td>9000 (same as <code>--port</code>)</td><td>discv5 peer discovery</td></tr><tr><td><code>--quicPort</code></td><td>UDP</td><td>9001 (<code>--port</code> + 1)</td><td>QUIC transport for libp2p</td></tr></tbody></table>
 <p>Note that <code>--discoveryPort</code> and <code>--quicPort</code> are both UDP but must use different ports. Lodestar will error on startup if they collide.</p>
 <p>For IPv6 dual-stack, equivalent flags are available: <code>--port6</code>, <code>--discoveryPort6</code>, and <code>--quicPort6</code>.</p>
+<p>By default, Lodestar listens on IPv4 and also on IPv6 when the host has a global IPv6 address. Use either <code>--listenAddress</code> for IPv4 only or <code>--listenAddress6</code> for IPv6 only.</p>
+<p>IPv6 ENR fields are cleared when no IPv6 listener is configured so peers don&#x27;t try to connect over IPv6. This cleanup is skipped if any of <code>--enr.ip6</code>, <code>--enr.udp6</code>, <code>--enr.tcp6</code>, or <code>--enr.quic6</code> is set. Use <code>--nat</code> when advertising a non-local address.</p>
 <h2 class="anchor anchorWithStickyNavbar_d3C5" id="firewall-management">Firewall Management<a href="#firewall-management" class="hash-link" aria-label="Direct link to Firewall Management" title="Direct link to Firewall Management">​</a></h2>
 <p>If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.</p>
 <p>Ports that must be opened:</p>
