@@ -15,13 +15,12 @@ export const defaultQuicPort = 9001;
 const globalUnicastIPv6 = new net.BlockList();
 globalUnicastIPv6.addSubnet("2000::", 3, "ipv6");
 
-/** Special-purpose blocks inside 2000::/3 that are not globally reachable (IANA IPv6 Special-Purpose Address Registry) */
+/** Special-purpose blocks excluded from automatic IPv6 listening (IANA IPv6 Special-Purpose Address Registry) */
 const specialPurposeIPv6 = new net.BlockList();
 specialPurposeIPv6.addSubnet("2001::", 23, "ipv6"); // IETF protocol assignments, includes Teredo
 specialPurposeIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
 specialPurposeIPv6.addSubnet("2002::", 16, "ipv6"); // 6to4
 specialPurposeIPv6.addSubnet("3fff::", 20, "ipv6"); // documentation
-specialPurposeIPv6.addSubnet("5f00::", 16, "ipv6"); // SRv6 SIDs
 
 /**
  * discv5 contacts dual-stack peers over IPv6 whenever an IPv6 socket is bound, so binding "::"
