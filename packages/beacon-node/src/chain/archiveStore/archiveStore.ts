@@ -77,6 +77,7 @@ export class ArchiveStore {
     if (opts.archiveMode === ArchiveMode.Frequency) {
       this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
         this.chain.regen,
+        () => this.chain.getHeadState(),
         this.db,
         this.logger,
         opts,

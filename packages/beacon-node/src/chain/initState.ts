@@ -41,10 +41,10 @@ export async function persistAnchorState(
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
+      db.stateArchive.putBinaryWithRoot(anchorState.slot, anchorStateBytes, anchorState.hashTreeRoot()),
     ]);
   } else {
-    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
+    await db.stateArchive.putBinaryWithRoot(anchorState.slot, anchorStateBytes, anchorState.hashTreeRoot());
   }
 }
 
