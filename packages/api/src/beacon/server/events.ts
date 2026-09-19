@@ -3,8 +3,8 @@ import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "
 import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 
 /**
- * Quiet topics otherwise exceed the idle timeout of a reverse proxy or consumer, commonly 60 seconds, and
- * events are not replayed. https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
+ * A stream with no events otherwise exceeds the idle timeout of a reverse proxy or consumer, commonly 60 seconds,
+ * and events are not replayed. https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
  */
 export const SSE_KEEP_ALIVE_INTERVAL_MS = 15_000;
 const SSE_KEEP_ALIVE_COMMENT = ":\n\n";
@@ -49,7 +49,7 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
             if (!res.raw.writableEnded && !res.raw.destroyed) res.raw.write(SSE_KEEP_ALIVE_COMMENT);
           }, SSE_KEEP_ALIVE_INTERVAL_MS);
 
-          // Headers are otherwise sent with the first event, a quiet topic times out behind a reverse proxy
+          // Headers are otherwise only sent with the first event, a reverse proxy times out waiting for them
           res.raw.flushHeaders();
 
           await new Promise<void>((resolve, reject) => {
