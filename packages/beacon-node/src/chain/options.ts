@@ -63,10 +63,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -114,7 +110,6 @@ export const defaultChainOptions: IChainOptions = {
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
