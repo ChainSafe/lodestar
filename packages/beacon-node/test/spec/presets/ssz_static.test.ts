@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect, it, vi} from "vitest";
-import {Type} from "@chainsafe/ssz";
+import snappyWasm from "@chainsafe/snappy-wasm";
+import {CompositeTypeAny, Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
+import {loadYaml} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
@@ -72,7 +74,27 @@ const sszStatic =
           vi.setConfig({testTimeout: 30 * 1000});
         }
 
-        const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
+        const testCaseDir = path.join(testSuiteDirpath, testCase);
+        const metaPath = path.join(testCaseDir, "meta.yaml");
+        const meta = fs.existsSync(metaPath) ? (loadYaml(fs.readFileSync(metaPath, "utf8")) as {valid?: boolean}) : {};
+
+        if (meta.valid === false) {
+          // The bytes must be rejected before any element is materialized, checked on the type as declared
+          // since the uint replacement rebuilds lists for value decoding only
+          const serialized = snappyWasm.decompress(fs.readFileSync(path.join(testCaseDir, "serialized.ssz_snappy")));
+          expect(() => sszType.deserialize(serialized)).toThrow();
+          if ("deserializeToViewDU" in sszType) {
+            expect(() => (sszType as CompositeTypeAny).deserializeToViewDU(serialized)).toThrow();
+          }
+          return;
+        }
+
+        const testData = parseSszStaticTestcase(testCaseDir);
+        if (meta.valid === true) {
+          // An encoding at the declared limit must be accepted by the type as declared, the uint replacement
+          // below would hide a limit set too low
+          expect(() => sszType.deserialize(testData.serialized)).not.toThrow();
+        }
         runValidSszTest(sszTypeNoUint, testData);
       });
     }

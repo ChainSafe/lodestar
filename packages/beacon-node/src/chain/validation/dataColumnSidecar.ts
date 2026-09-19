@@ -418,7 +418,7 @@ export async function verifyDataColumnSidecarKzgProofs(
  */
 export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar): boolean {
   return verifyMerkleBranch(
-    ssz.deneb.BlobKzgCommitments.hashTreeRoot(dataColumnSidecar.kzgCommitments),
+    ssz.deneb.BlobKZGCommitments.hashTreeRoot(dataColumnSidecar.kzgCommitments),
     dataColumnSidecar.kzgCommitmentsInclusionProof,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
     KZG_COMMITMENTS_SUBTREE_INDEX,

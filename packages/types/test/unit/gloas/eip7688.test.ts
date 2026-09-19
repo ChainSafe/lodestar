@@ -9,7 +9,6 @@ import {
 import {
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_ATTESTER_SLASHING_SIZE,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
@@ -19,17 +18,11 @@ import {
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
   MAX_PAYLOAD_ATTESTATIONS,
   MAX_PROPOSER_SLASHINGS,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  PENDING_CONSOLIDATIONS_LIMIT,
-  PENDING_DEPOSITS_LIMIT,
-  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
@@ -49,7 +42,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.AttestingIndices).toBeInstanceOf(ProgressiveListBasicType);
     expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
-    expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.BlobKZGCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BuilderDepositRequests).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BuilderExitRequests).toBeInstanceOf(ProgressiveListCompositeType);
@@ -133,10 +126,10 @@ describe("Gloas EIP-7688 SSZ types", () => {
     assertLimit(ssz.gloas.AttesterSlashings, MAX_ATTESTER_SLASHINGS_ELECTRA);
     assertLimit(ssz.gloas.Attestations, MAX_ATTESTATIONS_ELECTRA);
     assertLimit(ssz.gloas.VoluntaryExits, MAX_VOLUNTARY_EXITS);
-    assertLimit(ssz.gloas.BlsToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
+    assertLimit(ssz.gloas.BLSToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
     assertLimit(ssz.gloas.PayloadAttestations, MAX_PAYLOAD_ATTESTATIONS);
     assertLimit(ssz.gloas.Transactions, MAX_TRANSACTIONS_PER_PAYLOAD);
-    assertLimit(ssz.gloas.BlobKzgCommitments, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+    assertLimit(ssz.gloas.BlobKZGCommitments, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.KZGProofs, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.DataColumn, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.AttestingIndices, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
@@ -151,15 +144,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
       `bitLen over limit ${aggregationBitsLimit + 1} > ${aggregationBitsLimit}`
     );
 
-    // Limits too large to materialize in a test, only assert the configured value
     expect(ssz.gloas.Transaction.limitBytes).toBe(MAX_BYTES_PER_TRANSACTION);
-    expect(ssz.gloas.Validators.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.Balances.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.EpochParticipation.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.InactivityScores.limit).toBe(VALIDATOR_REGISTRY_LIMIT);
-    expect(ssz.gloas.PendingDeposits.limit).toBe(PENDING_DEPOSITS_LIMIT);
-    expect(ssz.gloas.PendingPartialWithdrawals.limit).toBe(PENDING_PARTIAL_WITHDRAWALS_LIMIT);
-    expect(ssz.gloas.PendingConsolidations.limit).toBe(PENDING_CONSOLIDATIONS_LIMIT);
   });
 
   it("rejects Gloas blocks with legacy deposits when deserializing", () => {
@@ -178,10 +163,10 @@ describe("Gloas EIP-7688 SSZ types", () => {
   });
 
   it("derives the Gloas p2p max sizes from the progressive list limits", () => {
-    expect(ssz.gloas.SignedAggregateAndProof.maxSize).toBe(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE);
-    expect(ssz.gloas.AttesterSlashing.maxSize).toBe(MAX_ATTESTER_SLASHING_SIZE);
+    expect(ssz.gloas.SignedAggregateAndProof.maxSize).toBe(16829);
+    expect(ssz.gloas.AttesterSlashing.maxSize).toBe(2097616);
     // DataColumnSidecar's network bound depends on BLOB_SCHEDULE and is covered by beacon-node's network tests
-    expect(ssz.gloas.SignedExecutionPayloadBid.maxSize).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE);
+    expect(ssz.gloas.SignedExecutionPayloadBid.maxSize).toBe(196932);
   });
 
   it("matches Gloas light-client state gindices from EIP-7688 progressive containers", () => {

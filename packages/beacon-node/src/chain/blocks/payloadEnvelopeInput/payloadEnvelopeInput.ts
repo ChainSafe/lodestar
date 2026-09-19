@@ -176,7 +176,7 @@ export class PayloadEnvelopeInput {
     return toRootHex(this.bid.blockHash);
   }
 
-  getBlobKzgCommitments(): deneb.BlobKzgCommitments {
+  getBlobKzgCommitments(): deneb.BlobKZGCommitments {
     return this.bid.blobKzgCommitments;
   }
 

@@ -38,13 +38,9 @@ import {
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
-  PENDING_CONSOLIDATIONS_LIMIT,
-  PENDING_DEPOSITS_LIMIT,
-  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
@@ -104,8 +100,8 @@ export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawa
   typeName: "Withdrawals",
   limit: MAX_WITHDRAWALS_PER_PAYLOAD,
 });
-export const BlobKzgCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
-  typeName: "BlobKzgCommitments",
+export const BlobKZGCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
+  typeName: "BlobKZGCommitments",
   limit: MAX_BLOB_COMMITMENTS_PER_BLOCK,
 });
 export const KZGProofs = new ProgressiveListCompositeType(denebSsz.KZGProof, {
@@ -248,38 +244,23 @@ export const VoluntaryExits = new ProgressiveListCompositeType(phase0Ssz.SignedV
   typeName: "VoluntaryExits",
   limit: MAX_VOLUNTARY_EXITS,
 });
-export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
+export const BLSToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
   typeName: "BLSToExecutionChanges",
   limit: MAX_BLS_TO_EXECUTION_CHANGES,
 });
 
-export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {
-  typeName: "Validators",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const Balances = new ProgressiveListBasicType(UintNum64, {
-  typeName: "Balances",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {
-  typeName: "EpochParticipation",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
-export const InactivityScores = new ProgressiveListBasicType(UintNum64, {
-  typeName: "InactivityScores",
-  limit: VALIDATOR_REGISTRY_LIMIT,
-});
+export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {typeName: "Validators"});
+export const Balances = new ProgressiveListBasicType(UintNum64, {typeName: "Balances"});
+export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {typeName: "EpochParticipation"});
+export const InactivityScores = new ProgressiveListBasicType(UintNum64, {typeName: "InactivityScores"});
 export const PendingDeposits = new ProgressiveListCompositeType(electraSsz.PendingDeposit, {
   typeName: "PendingDeposits",
-  limit: PENDING_DEPOSITS_LIMIT,
 });
 export const PendingPartialWithdrawals = new ProgressiveListCompositeType(electraSsz.PendingPartialWithdrawal, {
   typeName: "PendingPartialWithdrawals",
-  limit: PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 });
 export const PendingConsolidations = new ProgressiveListCompositeType(electraSsz.PendingConsolidation, {
   typeName: "PendingConsolidations",
-  limit: PENDING_CONSOLIDATIONS_LIMIT,
 });
 
 export const Builder = new ContainerType(
@@ -417,7 +398,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
     // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
     executionPayment: UintBn64,
-    blobKzgCommitments: BlobKzgCommitments,
+    blobKzgCommitments: BlobKZGCommitments,
     executionRequestsRoot: Root,
   },
   activeFields(12),
@@ -530,7 +511,7 @@ export const BeaconBlockBody = new ProgressiveContainerType(
     voluntaryExits: VoluntaryExits,
     syncAggregate: altairSsz.BeaconBlockBody.fields.syncAggregate,
     // executionPayload: ExecutionPayload, // Removed in GLOAS:EIP7732
-    blsToExecutionChanges: BlsToExecutionChanges,
+    blsToExecutionChanges: BLSToExecutionChanges,
     // blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments, // Removed in GLOAS:EIP7732
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
@@ -697,7 +678,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: DataColumn,
-    // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
+    // kzgCommitments: denebSsz.BlobKZGCommitments, // Removed in GLOAS:EIP7732
     kzgProofs: KZGProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732

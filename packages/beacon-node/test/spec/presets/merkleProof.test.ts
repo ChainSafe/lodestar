@@ -44,7 +44,7 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         : BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex;
 
       const leaf = isForkPostFulu(fork)
-        ? ssz.deneb.BlobKzgCommitments.hashTreeRoot(
+        ? ssz.deneb.BlobKZGCommitments.hashTreeRoot(
             (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
           )
         : ssz.deneb.KZGCommitment.hashTreeRoot(

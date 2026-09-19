@@ -40,7 +40,7 @@ export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOB_COMMITME
 
 export const VersionedHash = Bytes32;
 export const VersionedHashes = new ListCompositeType(VersionedHash, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+export const BlobKZGCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 // ReqResp types
@@ -98,7 +98,7 @@ export const BeaconBlockBody = new ContainerType(
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload, // Modified in DENEB
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
+    blobKzgCommitments: BlobKZGCommitments, // New in DENEB
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -137,7 +137,7 @@ export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOB_COMMITME
 
 export const BlobsBundle = new ContainerType(
   {
-    commitments: BlobKzgCommitments,
+    commitments: BlobKZGCommitments,
     proofs: KZGProofs,
     blobs: Blobs,
   },
@@ -149,7 +149,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
     ...altairSsz.BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
+    blobKzgCommitments: BlobKZGCommitments, // New in DENEB
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -173,7 +173,7 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader,
-    blobKzgCommitments: BlobKzgCommitments,
+    blobKzgCommitments: BlobKZGCommitments,
     value: UintBn256,
     pubkey: BLSPubkey,
   },

@@ -997,7 +997,7 @@ export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
     }
   }
 
-  getBlobKzgCommitments(): deneb.BlobKzgCommitments {
+  getBlobKzgCommitments(): deneb.BlobKZGCommitments {
     return (this.state.block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
       .blobKzgCommitments;
   }

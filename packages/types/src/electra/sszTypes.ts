@@ -263,7 +263,7 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader, // Modified in ELECTRA
-    blobKzgCommitments: denebSsz.BlobKzgCommitments,
+    blobKzgCommitments: denebSsz.BlobKZGCommitments,
     executionRequests: ExecutionRequests, // New in ELECTRA
     value: UintBn256,
     pubkey: BLSPubkey,

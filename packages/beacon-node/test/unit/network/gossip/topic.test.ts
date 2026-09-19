@@ -7,10 +7,6 @@ import {
   BYTES_PER_CELL,
   ForkName,
   GENESIS_EPOCH,
-  MAX_ATTESTER_SLASHING_SIZE,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
 } from "@lodestar/params";
@@ -279,9 +275,9 @@ describe("network / gossip / topic", () => {
       }),
     }).toEqual({
       [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
-      [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-      [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
-      [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+      [GossipType.beacon_aggregate_and_proof]: 16829,
+      [GossipType.attester_slashing]: 2097616,
+      [GossipType.execution_payload_bid]: 196932,
     });
   });
 
@@ -390,9 +386,7 @@ describe("network / gossip / topic", () => {
   it("should use the Heze bid size limit post-Heze", () => {
     const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
 
-    expect(getMaxSize({type: GossipType.execution_payload_bid, boundary, encoding})).toBe(
-      MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE
-    );
+    expect(getMaxSize({type: GossipType.execution_payload_bid, boundary, encoding})).toBe(196934);
   });
 
   it("should cap Gloas progressive gossip objects at or below their theoretical SSZ max", () => {
@@ -422,9 +416,9 @@ describe("network / gossip / topic", () => {
 
     gossipTopicCache.setTopic(topicStr, topic);
 
-    expect(() =>
-      transform.outboundTransform(topicStr, new Uint8Array(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1))
-    ).toThrow(`ssz_snappy encoded data length ${MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1}`);
+    expect(() => transform.outboundTransform(topicStr, new Uint8Array(16829 + 1))).toThrow(
+      "ssz_snappy encoded data length 16830"
+    );
   });
 
   describe("getAllowedTopics", () => {

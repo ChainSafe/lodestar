@@ -62,7 +62,7 @@ export type DownloadByRangeRequests = {
 export type ParentPayloadCommitments = {
   blockRoot: Uint8Array;
   blockRootHex: RootHex;
-  kzgCommitments: deneb.BlobKzgCommitments;
+  kzgCommitments: deneb.BlobKZGCommitments;
 };
 
 export type DownloadByRangeResponses = {
