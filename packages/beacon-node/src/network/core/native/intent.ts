@@ -290,14 +290,17 @@ export class NativeIntent {
     if (topics.size > 512)
       throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "active gossip topics"});
     const groupTargets = Array<number>(128).fill(0);
+    const custodyGroupTargets = Array<number>(128).fill(0);
     if (isForkPostFulu(config.getForkName(slot))) {
       groupTargets.fill(
         Math.min(TARGET_GROUP_PEERS_PER_SUBNET, this.opts.maxPeers),
         0,
         config.NUMBER_OF_CUSTODY_GROUPS
       );
-      for (const group of custodyConfig.sampleGroups)
+      for (const group of custodyConfig.sampleGroups) {
         groupTargets[group] = Math.min(this.opts.targetGroupPeers, this.opts.maxPeers);
+        custodyGroupTargets[group] = Math.min(2, this.opts.maxPeers);
+      }
     }
     return {
       update: {
@@ -312,6 +315,7 @@ export class NativeIntent {
         attnets,
         syncnets: local.metadata.syncnets,
         groupTargets,
+        custodyGroupTargets,
         attestationTarget: Math.min(6, this.opts.maxPeers),
         syncTarget: Math.min(6, this.opts.maxPeers),
         expiresAtSlot: BigInt(Math.max(0, slot)) + 2n,

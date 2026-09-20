@@ -76,15 +76,40 @@ async function fixture(
 }
 
 describe("native local intent transactions", () => {
+  it("requests peers for non-aggregator attester duties without adding a local topic join", async () => {
+    const node = await fixture();
+    try {
+      const before = node.latest();
+      const subnet = Array.from({length: 64}, (_, index) => index).find(
+        (index) => (before.update.local.metadata.attnets[index >> 3] & (1 << (index % 8))) === 0
+      );
+      if (subnet === undefined) throw new Error("Expected an unjoined attestation subnet");
+      await node.intent.committee([{slot: 2, subnet, validatorIndex: 0, isAggregator: false}], false);
+      const current = node.latest();
+      expect(current.demand.attnets[subnet >> 3] & (1 << (subnet % 8))).not.toBe(0);
+      expect(current.update.local.metadata.attnets).toEqual(before.update.local.metadata.attnets);
+      expect(current.subscriptions.some(({name}) => name.includes(`/beacon_attestation_${subnet}/`))).toBe(false);
+      node.clock.setSlot(4);
+      await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
+      expect(node.latest().demand.attnets[subnet >> 3] & (1 << (subnet % 8))).toBe(0);
+    } finally {
+      node.intent.close();
+    }
+  });
+
   it("maintains publication peers outside local sampling groups", async () => {
     const node = await fixture();
     try {
       const targets = node.latest().demand.groupTargets;
+      const custodyTargets = node.latest().demand.custodyGroupTargets;
       const sampled = new Set(node.network.custodyConfig.sampleGroups);
       expect(sampled.size).toBeLessThan(node.config.NUMBER_OF_CUSTODY_GROUPS);
       expect(targets).toHaveLength(128);
-      for (let group = 0; group < 128; group++)
+      expect(custodyTargets).toHaveLength(128);
+      for (let group = 0; group < 128; group++) {
         expect(targets[group]).toBe(group >= node.config.NUMBER_OF_CUSTODY_GROUPS ? 0 : sampled.has(group) ? 6 : 4);
+        expect(custodyTargets[group]).toBe(sampled.has(group) ? 2 : 0);
+      }
     } finally {
       node.intent.close();
     }
@@ -93,6 +118,7 @@ describe("native local intent transactions", () => {
   it.each([
     {maxPeers: 5, targetGroupPeers: 5},
     {maxPeers: 3, targetGroupPeers: 2},
+    {maxPeers: 2, targetGroupPeers: 1},
   ])("bounds column targets by configured groups and peer capacity: %o", async ({maxPeers, targetGroupPeers}) => {
     const node = await fixture(
       false,
@@ -104,8 +130,10 @@ describe("native local intent transactions", () => {
     try {
       const sampled = new Set(node.network.custodyConfig.sampleGroups);
       const targets = node.latest().demand.groupTargets;
-      for (let group = 0; group < 128; group++)
+      for (let group = 0; group < 128; group++) {
         expect(targets[group]).toBe(group >= 64 ? 0 : sampled.has(group) ? targetGroupPeers : Math.min(4, maxPeers));
+        expect(node.latest().demand.custodyGroupTargets[group]).toBe(sampled.has(group) ? Math.min(2, maxPeers) : 0);
+      }
     } finally {
       node.intent.close();
     }
@@ -115,6 +143,7 @@ describe("native local intent transactions", () => {
     const node = await fixture(false, 1);
     try {
       expect(node.latest().demand.groupTargets.every((target) => target === 0)).toBe(true);
+      expect(node.latest().demand.custodyGroupTargets.every((target) => target === 0)).toBe(true);
       node.clock.setSlot(SLOTS_PER_EPOCH);
       await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
       expect(
@@ -123,6 +152,9 @@ describe("native local intent transactions", () => {
           .demand.groupTargets.slice(0, node.config.NUMBER_OF_CUSTODY_GROUPS)
           .every((target) => target >= 4)
       ).toBe(true);
+      expect(node.latest().demand.custodyGroupTargets.filter((target) => target === 2)).toHaveLength(
+        node.network.custodyConfig.sampleGroups.length
+      );
     } finally {
       node.intent.close();
     }

@@ -439,6 +439,7 @@ function emptyIntent(application: NativeApplicationConfig): NativeLocalIntent {
       attnets: new Uint8Array(8),
       syncnets: 0,
       groupTargets: Array<number>(128).fill(0),
+      custodyGroupTargets: Array<number>(128).fill(0),
       attestationTarget: 6,
       syncTarget: 6,
       expiresAtSlot: 2n,
