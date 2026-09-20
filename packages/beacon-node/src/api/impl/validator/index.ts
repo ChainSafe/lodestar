@@ -2104,7 +2104,7 @@ export function getValidatorApi(
               auth: entry.auth,
             });
           } catch (e) {
-            failures.push({index: i, message: (e as Error).message});
+            failures.push({index: i, message: `${builder}: ${(e as Error).message}`});
             logger.verbose(
               `Error on submitBuilderPreferences [${i}]`,
               {slot: entry.auth.message.slot, builder},
