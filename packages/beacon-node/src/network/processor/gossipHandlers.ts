@@ -244,7 +244,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         // IGNORE means the block is acceptable (e.g. FUTURE_SLOT, ALREADY_KNOWN), just not propagated.
         // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
-        // (provably invalid), unexpected errors and repeat proposals that are not imported prune.
+        // (provably invalid), unexpected errors and repeat proposals that are not imported remove the entry.
         if (e.action === GossipAction.IGNORE) {
           // Only a signature-verified sibling with a known parent is imported by the beacon_block handler, any other
           // repeat proposal is dropped from the caches and re-downloaded by sync if it ever becomes relevant. Only its
