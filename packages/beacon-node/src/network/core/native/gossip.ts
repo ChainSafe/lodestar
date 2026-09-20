@@ -1,8 +1,14 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
-import {NativeGossipHandle, NativeNetworkApplicationRuntime, NativeTopicKind} from "@chainsafe/lodestar-z/network";
+import {
+  NativeGossipBatch,
+  NativeGossipHandle,
+  NativeGossipMessage,
+  NativeNetworkApplicationRuntime,
+  NativeTopicKind,
+} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../../events.js";
+import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
@@ -107,91 +113,56 @@ class GossipBudget {
       this.kindItems[kinds.indexOf(kind)]--;
       this.kindBytes[kinds.indexOf(kind)] -= bytes;
     }
-    for (const wake of this.consumers) wake?.();
+  }
+  wake(): void {
+    const errors: unknown[] = [];
+    for (const wake of this.consumers) {
+      try {
+        wake?.();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length > 0) throw new AggregateError(errors, "Gossip budget wake failed");
   }
 }
 
-const claims = new WeakMap<NetworkEventBus, GossipRetirement>();
-
-class GossipRetirement {
-  readonly entries = new Map<string, {handle: NativeGossipHandle; bytes: number; kind?: NativeTopicKind}>();
-  private runtime: GossipRuntime | undefined;
-  constructor(
-    runtime: GossipRuntime,
-    private readonly events: NetworkEventBus,
-    readonly budget: GossipBudget
-  ) {
-    if (claims.has(events))
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "gossip event bus still owned"});
-    this.runtime = runtime;
-    claims.set(events, this);
-    events.on(NetworkEvent.gossipMessageValidationResult, this.retire);
-  }
-  private readonly retire = ({
-    msgId,
-    propagationSource,
-    acceptance,
-  }: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void => {
-    if (msgId.length !== 40 || propagationSource.length > 128) return;
-    const key = `${msgId}:${propagationSource}`;
-    const entry = this.entries.get(key);
-    if (!entry) return;
-    this.entries.delete(key);
-    this.budget.release(entry.bytes, entry.kind);
-    try {
-      this.runtime?.reportGossip(
-        entry.handle,
-        acceptance === TopicValidatorResult.Accept
-          ? "accept"
-          : acceptance === TopicValidatorResult.Reject
-            ? "reject"
-            : "ignore"
-      );
-    } finally {
-      this.releaseBus();
-    }
-  };
-  close(): void {
-    this.runtime = undefined;
-    this.releaseBus();
-  }
-  private releaseBus(): void {
-    if (!this.runtime && this.entries.size === 0) {
-      this.events.off(NetworkEvent.gossipMessageValidationResult, this.retire);
-      claims.delete(this.events);
-    }
-  }
-}
+type GossipExecutor = Pick<NativeGossipExecutor, "check" | "canExecute" | "execute" | "observe">;
+type GossipJob = {
+  handle: NativeGossipHandle;
+  message?: PendingGossipsubMessage;
+  credit?: {key: string; bytes: number};
+  result: TopicValidatorResult;
+  completed: boolean;
+};
 
 export class NativeGossip {
-  private readonly retirement: GossipRetirement;
+  private readonly budget: GossipBudget;
+  private readonly entries = new Set<string>();
   private closed = false;
-  private processor: Pick<NativeGossipExecutor, "check" | "canExecute" | "execute"> | undefined;
+  private processor: GossipExecutor | undefined;
   private detach: (() => void) | undefined;
   constructor(
     private readonly runtime: GossipRuntime,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
+    private readonly onError: (error: unknown) => void,
     executionLimits?: readonly {items: number; bytes: number}[]
   ) {
-    this.retirement = new GossipRetirement(
-      runtime,
-      events,
-      GossipBudget.forEnvironment(
-        opts.native?.hostGossipItems ?? 4096,
-        opts.native?.hostGossipBytes ?? 64 * 1024 * 1024,
-        executionLimits
-      )
+    this.budget = GossipBudget.forEnvironment(
+      opts.native?.hostGossipItems ?? 4096,
+      opts.native?.hostGossipBytes ?? 64 * 1024 * 1024,
+      executionLimits
     );
   }
-  attach(processor: Pick<NativeGossipExecutor, "check" | "canExecute" | "execute">, wake: () => void): void {
+  attach(processor: GossipExecutor, wake: () => void): void {
     if (this.closed || this.detach)
       throw new NativeNetworkError({
         code: NativeNetworkErrorCode.CONFIGURATION,
         resource: "gossip executor attachment",
       });
-    this.detach = this.retirement.budget.subscribe(wake);
+    this.detach = this.budget.subscribe(wake);
     this.processor = processor;
   }
   notifyBlock(root: Uint8Array): void {
@@ -207,74 +178,160 @@ export class NativeGossip {
     );
   }
   drain(): boolean {
-    if (this.closed) return false;
-    if (this.processor) {
-      for (const check of this.runtime.drainGossipChecks())
-        this.runtime.classifyGossip(check.handle, this.processor.check(check));
-    }
-    const order: (NativeTopicKind | undefined)[] = this.processor
-      ? [
-          "beacon_block",
-          "blob_sidecar",
-          "data_column_sidecar",
-          "beacon_aggregate_and_proof",
-          "voluntary_exit",
-          "bls_to_execution_change",
-          "beacon_attestation",
-          "proposer_slashing",
-          "attester_slashing",
-          "sync_committee_contribution_and_proof",
-          "sync_committee",
-          "light_client_finality_update",
-          "light_client_optimistic_update",
-        ]
-      : [undefined];
+    const processor = this.processor;
+    if (this.closed || !processor) return false;
+    for (const check of this.runtime.drainGossipChecks())
+      this.runtime.classifyGossip(check.handle, processor.check(check));
+    const order: NativeTopicKind[] = [
+      "beacon_block",
+      "blob_sidecar",
+      "data_column_sidecar",
+      "beacon_aggregate_and_proof",
+      "voluntary_exit",
+      "bls_to_execution_change",
+      "beacon_attestation",
+      "proposer_slashing",
+      "attester_slashing",
+      "sync_committee_contribution_and_proof",
+      "sync_committee",
+      "light_client_finality_update",
+      "light_client_optimistic_update",
+    ];
     let copied = 0;
     let more = false;
     for (const kind of order) {
-      const room = this.retirement.budget.remaining(kind);
+      const room = this.budget.remaining(kind);
       if (room.items === 0 || room.bytes === 0 || copied === 64) continue;
       const batch = this.runtime.drainGossip({
         items: Math.min(64 - copied, room.items),
         bytes: Math.min(16 * 1024 * 1024, room.bytes),
-        ordinary: this.processor?.canExecute() ?? true,
+        ordinary: processor.canExecute(),
         kind,
       });
-      const pending: PendingGossipsubMessage[] = [];
-      for (const message of batch.messages) {
-        const topic = parseGossipTopic(this.config, message.topic);
-        const source = hostPeerId(message.peerId);
-        const id = Buffer.from(message.id).toString("hex");
-        const key = `${id}:${source}`;
-        const bytes = message.data.buffer.byteLength;
-        if (this.retirement.entries.has(key) || !this.retirement.budget.acquire(bytes, kind)) {
-          this.runtime.reportGossip(message.handle, "ignore");
-          continue;
-        }
-        this.retirement.entries.set(key, {handle: message.handle, bytes, kind});
-        pending.push({
-          topic,
-          msg: {type: "unsigned", topic: message.topic, data: message.data},
-          msgId: id,
-          propagationSource: source,
-          clientAgent: "unknown",
-          clientVersion: "unknown",
-          indexed: message.attestationData ?? undefined,
-          msgSlot: message.slot === null || message.slot === undefined ? undefined : Number(message.slot),
-          seenTimestampSec: message.receivedAtUnixMs / 1000,
-          startProcessUnixSec: null,
-        });
-      }
       copied += batch.messages.length;
-      if (this.processor) {
-        if (pending.length > 0) this.processor.execute(pending, batch.grouped);
-      } else for (const message of pending) this.events.emit(NetworkEvent.pendingGossipsubMessage, message);
+      if (batch.messages.length > 0) void this.dispatch(batch, kind, processor).catch(this.onError);
       more ||= batch.more && batch.messages.length > 0;
     }
     return more;
   }
+  private prepare(job: GossipJob, message: NativeGossipMessage, kind: NativeTopicKind): void {
+    const topic = parseGossipTopic(this.config, message.topic);
+    const source = hostPeerId(message.peerId);
+    const id = Buffer.from(message.id).toString("hex");
+    const key = `${id}:${source}`;
+    const pending: PendingGossipsubMessage = {
+      topic,
+      msg: {type: "unsigned", topic: message.topic, data: message.data},
+      msgId: id,
+      propagationSource: source,
+      clientAgent: "unknown",
+      clientVersion: "unknown",
+      indexed: message.attestationData ?? undefined,
+      msgSlot: message.slot === null || message.slot === undefined ? undefined : Number(message.slot),
+      seenTimestampSec: message.receivedAtUnixMs / 1000,
+      startProcessUnixSec: null,
+    };
+    const bytes = message.data.buffer.byteLength;
+    if (this.entries.has(key) || !this.budget.acquire(bytes, kind)) return;
+    job.credit = {key, bytes};
+    this.entries.add(key);
+    job.message = pending;
+  }
+  private complete(job: GossipJob, kind: NativeTopicKind): void {
+    if (job.completed) return;
+    job.completed = true;
+    try {
+      if (!this.closed)
+        this.runtime.reportGossip(
+          job.handle,
+          job.result === TopicValidatorResult.Accept
+            ? "accept"
+            : job.result === TopicValidatorResult.Reject
+              ? "reject"
+              : "ignore"
+        );
+    } finally {
+      if (job.credit !== undefined) {
+        this.entries.delete(job.credit.key);
+        this.budget.release(job.credit.bytes, kind);
+      }
+    }
+  }
+  private dispatch(batch: NativeGossipBatch, kind: NativeTopicKind, processor: GossipExecutor): Promise<void> {
+    const jobs: GossipJob[] = batch.messages.map(({handle}) => ({
+      handle,
+      result: TopicValidatorResult.Ignore,
+      completed: false,
+    }));
+    const errors: unknown[] = [];
+    try {
+      for (const [i, job] of jobs.entries()) {
+        this.prepare(job, batch.messages[i], kind);
+        if (!job.message) this.complete(job, kind);
+      }
+    } catch (error) {
+      errors.push(error);
+    }
+    return this.execute(jobs, batch.grouped, kind, processor, errors);
+  }
+  private async execute(
+    jobs: GossipJob[],
+    grouped: boolean,
+    kind: NativeTopicKind,
+    processor: GossipExecutor,
+    errors: unknown[]
+  ): Promise<void> {
+    const pending: PendingGossipsubMessage[] = [];
+    const executing: GossipJob[] = [];
+    let results: TopicValidatorResult[] = [];
+    try {
+      for (const job of jobs)
+        if (job.message) {
+          pending.push(job.message);
+          executing.push(job);
+        }
+      if (pending.length > 0 && errors.length === 0) {
+        results = await processor.execute(pending, grouped);
+        for (const [i, job] of executing.entries()) job.result = results[i] ?? TopicValidatorResult.Ignore;
+      }
+    } catch (error) {
+      errors.push(error);
+    } finally {
+      for (const job of jobs) {
+        try {
+          this.complete(job, kind);
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+    }
+    // Observers may throw or dispatch more work. Every handle and credit must be retired first.
+    try {
+      processor.observe(pending, results);
+    } catch (error) {
+      errors.push(error);
+    }
+    for (const [i, message] of pending.entries()) {
+      try {
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource: message.propagationSource,
+          acceptance: executing[i].result,
+        });
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    try {
+      this.budget.wake();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Native gossip batch failed");
+  }
   snapshot() {
-    const {budget, entries} = this.retirement;
+    const {budget, entries} = this;
     return {items: budget.items, bytes: budget.bytes, refused: budget.refused, activeItems: entries.size};
   }
   async publish(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
@@ -309,6 +366,5 @@ export class NativeGossip {
     this.closed = true;
     this.detach?.();
     this.detach = undefined;
-    this.retirement.close();
   }
 }

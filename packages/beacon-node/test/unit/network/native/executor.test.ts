@@ -8,6 +8,7 @@ import {defer, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
+import {Metrics} from "../../../../src/metrics/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
@@ -19,8 +20,9 @@ import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
+import {createMetricsTest} from "../../metrics/utils.js";
 
-function fixture() {
+function fixture(metrics: Metrics | null = null) {
   const single = vi.fn(async () => {});
   const batch = vi.fn<BatchGossipHandlerFn>(async (items) => items.map(() => null));
   const handlers: GossipHandlers = {
@@ -65,7 +67,7 @@ function fixture() {
       aggregatorTracker: new AggregatorTracker(),
       core: {} as INetworkCore,
       logger: getMockedLogger(),
-      metrics: null,
+      metrics,
       gossipHandlers: handlers,
     },
     {},
@@ -92,25 +94,27 @@ function message(id: string, attestation = false): PendingGossipsubMessage {
 }
 
 describe("native gossip host execution", () => {
-  it("keeps running work alive through stop and retires it exactly once on settlement", async () => {
+  it("returns running validation results through stop without using result events for completion", async () => {
     const f = fixture();
     const held = defer<void>();
     f.single.mockImplementation(() => held.promise);
     try {
-      f.executor.execute([message("held")], false);
+      const execution = f.executor.execute([message("held")], false);
+      const settled = vi.fn();
+      void execution.then(settled);
       expect(f.single).toHaveBeenCalledOnce();
       f.executor.stop();
       f.executor.stop();
       expect(f.result).not.toHaveBeenCalled();
+      expect(settled).not.toHaveBeenCalled();
       expect(f.gossip.dropQueued).toHaveBeenCalledOnce();
       expect(f.chain.clock.listenerCount(ClockEvent.slot)).toBe(0);
       held.resolve();
-      await vi.waitFor(() => expect(f.result).toHaveBeenCalledOnce());
-      expect(f.result).toHaveBeenCalledWith({
-        msgId: "held",
-        propagationSource: "peer",
-        acceptance: TopicValidatorResult.Accept,
-      });
+      await expect(execution).resolves.toEqual([TopicValidatorResult.Accept]);
+      expect(f.result).not.toHaveBeenCalled();
+      expect(settled).toHaveBeenCalledOnce();
+      await expect(f.executor.execute([message("stopped")], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      expect(f.single).toHaveBeenCalledOnce();
     } finally {
       held.resolve();
       f.executor.stop();
@@ -124,18 +128,44 @@ describe("native gossip host execution", () => {
         null,
         new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE}),
       ]);
-      f.executor.execute([message("accept", true), message("reject", true)], true);
-      await vi.waitFor(() => expect(f.result).toHaveBeenCalledTimes(2));
-      expect(f.result.mock.calls.map(([result]) => result.acceptance)).toEqual([
+      expect(await f.executor.execute([message("accept", true), message("reject", true)], true)).toEqual([
         TopicValidatorResult.Accept,
         TopicValidatorResult.Reject,
       ]);
-      f.executor.execute([message("unindexed", true)], false);
-      await vi.waitFor(() => expect(f.result).toHaveBeenCalledTimes(3));
+      await expect(f.executor.execute([message("unindexed", true)], false)).resolves.toEqual([
+        TopicValidatorResult.Accept,
+      ]);
       expect(f.batch).toHaveBeenCalledTimes(2);
       expect(f.single).not.toHaveBeenCalled();
     } finally {
       f.executor.stop();
+    }
+  });
+
+  it("records submission while validation is running and returns the verdict before completion metrics", async () => {
+    const metrics = createMetricsTest();
+    const submitted = vi.spyOn(metrics.networkProcessor.jobsSubmitted, "observe");
+    const observed = vi.spyOn(metrics.gossipValidationQueue.jobTime, "observe").mockImplementation(() => {
+      throw new Error("completion metric failed");
+    });
+    const f = fixture(metrics);
+    const held = defer<void>();
+    f.single.mockImplementation(() => held.promise);
+    try {
+      const messages = [message("held")];
+      const execution = f.executor.execute(messages, false);
+      expect(submitted).toHaveBeenCalledWith(1);
+      expect(observed).not.toHaveBeenCalled();
+      held.resolve();
+      const results = await execution;
+      expect(results).toEqual([TopicValidatorResult.Accept]);
+      expect(() => f.executor.observe(messages, results)).toThrow("completion metric failed");
+      expect(results).toEqual([TopicValidatorResult.Accept]);
+    } finally {
+      held.resolve();
+      f.executor.stop();
+      submitted.mockRestore();
+      observed.mockRestore();
     }
   });
 

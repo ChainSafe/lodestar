@@ -6,7 +6,6 @@ import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../chain/emitter.js";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerIdStr} from "../../../util/peerId.js";
-import {NetworkEvent} from "../../events.js";
 import {GossipMessageInfo, GossipType} from "../../gossip/interface.js";
 import {getGossipHandlers} from "../../processor/gossipHandlers.js";
 import {getGossipValidatorBatchFn, getGossipValidatorFn} from "../../processor/gossipValidatorFn.js";
@@ -62,47 +61,31 @@ export class NativeGossipExecutor {
     return ready;
   }
 
-  execute(messages: PendingGossipsubMessage[], grouped: boolean): void {
-    void this.run(messages, grouped).catch((error: unknown) =>
-      this.modules.logger.error("Native gossip execution failed", {code: "NATIVE_GOSSIP_EXECUTION"}, error as Error)
-    );
+  async execute(messages: PendingGossipsubMessage[], grouped: boolean): Promise<TopicValidatorResult[]> {
+    if (this.stopped || messages.length === 0) return messages.map(() => TopicValidatorResult.Ignore);
+    const start = Date.now() / 1000;
+    const infos: GossipMessageInfo[] = messages.map((message) => {
+      message.startProcessUnixSec = start;
+      this.modules.metrics?.gossipValidationQueue.jobWaitTime.observe(
+        {topic: message.topic.type},
+        Math.max(0, start - message.seenTimestampSec)
+      );
+      return {...message, msgSlot: message.msgSlot ?? null};
+    });
+    this.modules.metrics?.networkProcessor.jobsSubmitted.observe(messages.length);
+    return grouped || infos[0].topic.type === GossipType.beacon_attestation
+      ? this.validateBatch(infos)
+      : [await this.validate(infos[0])];
   }
 
-  private async run(messages: PendingGossipsubMessage[], grouped: boolean): Promise<void> {
-    let results: TopicValidatorResult[] = messages.map(() => TopicValidatorResult.Ignore);
-    try {
-      if (!this.stopped) {
-        const start = Date.now() / 1000;
-        const infos: GossipMessageInfo[] = messages.map((message) => {
-          message.startProcessUnixSec = start;
-          this.modules.metrics?.gossipValidationQueue.jobWaitTime.observe(
-            {topic: message.topic.type},
-            Math.max(0, start - message.seenTimestampSec)
-          );
-          return {...message, msgSlot: message.msgSlot ?? null};
-        });
-        this.modules.metrics?.networkProcessor.jobsSubmitted.observe(messages.length);
-        results =
-          grouped || infos[0].topic.type === GossipType.beacon_attestation
-            ? await this.validateBatch(infos)
-            : [await this.validate(infos[0])];
-      }
-    } finally {
-      for (const [i, message] of messages.entries()) {
-        const acceptance = results[i] ?? TopicValidatorResult.Ignore;
-        if (acceptance === TopicValidatorResult.Accept && message.startProcessUnixSec !== null) {
-          this.modules.metrics?.gossipValidationQueue.jobTime.observe(
-            {topic: message.topic.type},
-            Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
-          );
-        }
-        this.modules.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: message.msgId,
-          propagationSource: message.propagationSource,
-          acceptance,
-        });
-      }
-      this.wake();
+  observe(messages: PendingGossipsubMessage[], results: TopicValidatorResult[]): void {
+    for (const [i, message] of messages.entries()) {
+      if (message.startProcessUnixSec === null) continue;
+      if (results[i] === TopicValidatorResult.Accept)
+        this.modules.metrics?.gossipValidationQueue.jobTime.observe(
+          {topic: message.topic.type},
+          Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
+        );
     }
   }
 

@@ -92,7 +92,14 @@ export class NativeNetworkCore implements INetworkCore {
         initialStatus,
         core.onFailure
       );
-      core.gossip = new NativeGossip(core.runtime, config, modules.events, core.modules.opts, executionLimits);
+      core.gossip = new NativeGossip(
+        core.runtime,
+        config,
+        modules.events,
+        core.modules.opts,
+        core.onFailure,
+        executionLimits
+      );
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(
         core.runtime,
