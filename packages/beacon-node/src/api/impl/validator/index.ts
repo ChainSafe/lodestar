@@ -1052,14 +1052,19 @@ export function getValidatorApi(
 
         const rankedCandidates = candidates.toSorted(compareBidCandidates);
         for (const [index, candidate] of rankedCandidates.entries()) {
+          const isMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
           logger.debug("Builder bid candidate", {
             slot,
             rank: index + 1,
             source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
             builder: candidate.signedBid.message.builderIndex,
+            // `total` counts the execution payment at most at the entry's cap, the raw values show
+            // whether a bid is low or just not counted
+            value: prettyGweiToEth(candidate.signedBid.message.value),
+            executionPayment: prettyGweiToEth(candidate.signedBid.message.executionPayment),
             total: prettyGweiToEth(candidate.totalGwei),
-            boost: candidate.boostFactor,
-            boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
+            boost: isMaxBoost ? "max" : candidate.boostFactor,
+            boosted: isMaxBoost ? "max" : prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
             receivedMs: candidate.receivedMs,
           });
         }

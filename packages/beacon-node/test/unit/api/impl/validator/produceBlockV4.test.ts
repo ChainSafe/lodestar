@@ -472,7 +472,50 @@ describe("api/validator - produceBlockV4", () => {
     // The ranking log must agree with the selection, ranking by boosted value alone would put the
     // zero value max boost bid last even though it wins
     const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
-    expect(candidateLogs[0]?.[1]).toMatchObject({rank: 1, source: builderUrl});
+    expect(candidateLogs[0]?.[1]).toMatchObject({rank: 1, source: builderUrl, boost: "max", boosted: "max"});
+  });
+
+  it("logs the bid value and execution payment of each candidate", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      // Only a part of the execution payment is counted, the log must still show the full amount
+      maxExecutionPayment: 3_000_000_000n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    apiBid.message.value = 0;
+    apiBid.message.executionPayment = 5_000_000_000n;
+    const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    p2pBid.message.value = 1_000_000_000;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
+    ]);
+
+    await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
+    expect(candidateLogs.map(([, ctx]) => ctx)).toMatchObject([
+      // The api bid pays 5 Gwei but only 3 are counted, without both fields the total alone does not
+      // show whether the bid is low or capped
+      {source: builderUrl, value: "0.00000 ETH", executionPayment: "5.00000 ETH", total: "3.00000 ETH"},
+      {source: "p2p", value: "1.00000 ETH", executionPayment: "0.00000 ETH", total: "1.00000 ETH"},
+    ]);
   });
 
   it("falls back to the p2p bid when the builder API bid fails validation", async () => {
