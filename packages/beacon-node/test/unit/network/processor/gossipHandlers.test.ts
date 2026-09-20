@@ -110,18 +110,8 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
-  it("reports the gossip peer when the proposer signature is invalid", async () => {
-    const {core, peerIdStr} = await runBeaconBlockValidationReject(
-      denebConfig,
-      BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
-    );
-
-    expect(core.reportPeer).toHaveBeenCalledOnce();
-    expect(core.reportPeer).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, "InvalidBlockSignature");
-  });
-
-  it("does not report the gossip peer for other REJECT codes", async () => {
-    const {core} = await runBeaconBlockValidationReject(denebConfig, BlockErrorCode.INCORRECT_PROPOSER);
+  it("leaves the peer penalty for a rejected block to the gossip validator", async () => {
+    const {core} = await runBeaconBlockValidationReject(denebConfig, BlockErrorCode.PROPOSAL_SIGNATURE_INVALID);
 
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
@@ -129,8 +119,8 @@ describe("getGossipHandlers", () => {
 
 async function runBeaconBlockValidationReject(
   config: BeaconConfig,
-  code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID | BlockErrorCode.INCORRECT_PROPOSER
-): Promise<{core: Pick<INetworkCore, "reportPeer">; peerIdStr: PeerIdStr}> {
+  code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+): Promise<{core: Pick<INetworkCore, "reportPeer">}> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
   const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
@@ -151,7 +141,6 @@ async function runBeaconBlockValidationReject(
       code,
       slot: signedBlock.message.slot,
       root: blockRootHex,
-      proposerIndex: signedBlock.message.proposerIndex,
     })
   );
 
@@ -166,11 +155,11 @@ async function runBeaconBlockValidationReject(
     seenBlockProposers: new SeenBlockProposers(),
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
-      prune: vi.fn(),
+      remove: vi.fn(),
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
-      prune: vi.fn(),
+      remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
   } as unknown as IBeaconChain;
 
@@ -200,7 +189,7 @@ async function runBeaconBlockValidationReject(
     })
   ).rejects.toThrow();
 
-  return {core, peerIdStr};
+  return {core};
 }
 
 async function runBeaconBlockProcessingError(

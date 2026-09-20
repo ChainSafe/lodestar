@@ -262,11 +262,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           throw e;
         }
 
-        if (e.type.code === BlockErrorCode.PROPOSAL_SIGNATURE_INVALID) {
-          // An honest peer never forwards a block with an invalid proposer signature
-          core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "InvalidBlockSignature");
-        }
-
         chain.persistInvalidSszValue(
           forkTypes.SignedBeaconBlock,
           signedBlock,
