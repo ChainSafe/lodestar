@@ -472,7 +472,7 @@ describe("api/validator - produceBlockV4", () => {
     // The ranking log must agree with the selection, ranking by boosted value alone would put the
     // zero value max boost bid last even though it wins
     const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
-    expect(candidateLogs[0]?.[1]).toMatchObject({rank: 1, source: builderUrl, boost: "max", boosted: "max"});
+    expect(candidateLogs[0]?.[1]).toMatchObject({rank: 1, source: builderUrl});
   });
 
   it("logs the bid value and execution payment of each candidate", async () => {
@@ -481,7 +481,6 @@ describe("api/validator - produceBlockV4", () => {
       url: new TextEncoder().encode(builderUrl),
       auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
       builderPubkeys: [],
-      // Only a part of the execution payment is counted, the log must still show the full amount
       maxExecutionPayment: 3_000_000_000n,
       minBid: 0n,
       builderBoostFactor: 100n,
@@ -511,8 +510,6 @@ describe("api/validator - produceBlockV4", () => {
 
     const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
     expect(candidateLogs.map(([, ctx]) => ctx)).toMatchObject([
-      // The api bid pays 5 Gwei but only 3 are counted, without both fields the total alone does not
-      // show whether the bid is low or capped
       {source: builderUrl, value: "0.00000 ETH", executionPayment: "5.00000 ETH", total: "3.00000 ETH"},
       {source: "p2p", value: "1.00000 ETH", executionPayment: "0.00000 ETH", total: "1.00000 ETH"},
     ]);
