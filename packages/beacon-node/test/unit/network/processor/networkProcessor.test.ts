@@ -35,12 +35,18 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let processor: NetworkProcessor;
   let emitter: ChainEventEmitter;
   let unknownBlockRootSpy: Mock<(data: unknown) => void>;
+  let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
+  let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
     unknownBlockRootSpy = vi.fn();
+    unknownEnvelopeBlockRootSpy = vi.fn();
+    unknownEnvelopeBlockRootSlotSpy = vi.fn();
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
+    emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
+    emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, (data) => unknownEnvelopeBlockRootSlotSpy(data));
 
     const chain = {
       clock: new ClockStopped(clockSlot),
@@ -90,6 +96,26 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     emit(GossipType.beacon_aggregate_and_proof, ForkName.phase0, data);
   }
 
+  /** A gloas aggregate voting that the payload of the unknown block is present (index = 1). */
+  function processGloasAggregatePayloadPresent(rootByte: number): void {
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = clockSlot;
+    signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    signedAggregateAndProof.message.aggregate.data.index = 1;
+    const data = ssz.gloas.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+    emit(GossipType.beacon_aggregate_and_proof, ForkName.gloas, data);
+  }
+
+  /** A PTC vote that the payload of the unknown block is present. */
+  function processPayloadAttestationMessage(rootByte = 0xee): void {
+    const payloadAttestationMessage = ssz.gloas.PayloadAttestationMessage.defaultValue();
+    payloadAttestationMessage.data.slot = clockSlot;
+    payloadAttestationMessage.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    payloadAttestationMessage.data.payloadPresent = true;
+    const data = ssz.gloas.PayloadAttestationMessage.serialize(payloadAttestationMessage);
+    emit(GossipType.payload_attestation_message, ForkName.gloas, data);
+  }
+
   /** Competing bids from different builders, all for the same unknown block (they pile up under one block). */
   function processBid(builderIndex: number): void {
     const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
@@ -127,6 +153,14 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   /** number of distinct block roots we currently hold messages for */
   function distinctBlockRoots(): number {
     return (processor as unknown as {awaitingMessagesByBlockRoot: {size: number}}).awaitingMessagesByBlockRoot.size;
+  }
+
+  function lastEnvelopeSearch(): {slot?: number; peer?: PeerIdStr} | undefined {
+    return unknownEnvelopeBlockRootSpy.mock.calls.at(-1)?.[0] as {slot?: number; peer?: PeerIdStr} | undefined;
+  }
+
+  function lastEnvelopeSlotSearch(): {slot?: number; peer?: PeerIdStr} | undefined {
+    return unknownEnvelopeBlockRootSlotSpy.mock.calls.at(-1)?.[0] as {slot?: number; peer?: PeerIdStr} | undefined;
   }
 
   describe("how many unknown blocks we hold messages for, per slot", () => {
@@ -217,6 +251,42 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(1);
       // the repeated message triggers no extra lookup, but is still held
       expect(bufferedBlockCount()).toBe(2);
+    });
+  });
+
+  describe("which envelope lookups carry the payload slot", () => {
+    it("carries the slot when the message slot is the payload's slot", () => {
+      processPayloadAttestationMessage();
+      expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: peerIdStr});
+
+      unknownEnvelopeBlockRootSlotSpy.mockClear();
+      processDataColumn(0, 0xcf);
+      expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: peerIdStr});
+    });
+
+    it("carries no slot when the message slot is not necessarily the payload's slot", () => {
+      processGloasAggregatePayloadPresent(0xdf);
+      expect(unknownEnvelopeBlockRootSlotSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSearch()).toEqual(expect.not.objectContaining({slot: expect.anything()}));
+    });
+
+    it("still emits the payload slot once when a slot-less lookup started the search", () => {
+      // aggregate (no slot) first, PTC vote (payload slot) second, both for the same root
+      processGloasAggregatePayloadPresent(0xef);
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+
+      processPayloadAttestationMessage(0xef);
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot});
+
+      // the payload slot is emitted only once per root
+      processPayloadAttestationMessage(0xef);
+      expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
     });
   });
 

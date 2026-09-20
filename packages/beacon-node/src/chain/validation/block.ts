@@ -207,16 +207,6 @@ export async function validateGossipBlock(
       });
     }
 
-    // [REJECT] The block contains no deposits.
-    if (body.deposits.length !== 0) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.NON_ZERO_DEPOSITS,
-        slot: blockSlot,
-        root: blockRoot,
-        count: body.deposits.length,
-      });
-    }
-
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
     // This requires execution engine integration to verify the parent block hash
   }

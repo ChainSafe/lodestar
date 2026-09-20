@@ -26,7 +26,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {DroppedItemReason, PendingBlockType} from "../../sync/types.js";
+import {DownloadResult, DroppedItemReason, FetchResult, PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -709,15 +709,42 @@ export function createLodestarMetrics(
         buckets: [0, 1, 2, 4],
       }),
       // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
-      fetchTimeSec: register.histogram<{result: string}>({
+      fetchTime: register.histogram<{result: FetchResult}>({
         name: "lodestar_sync_unknown_block_fetch_time_seconds",
         help: "Fetch time from start to done (either success or failure)",
         labelNames: ["result"],
         buckets: [0, 1, 2, 4, 8],
       }),
-      fetchPeers: register.gauge<{result: string}>({
+      fetchPeers: register.gauge<{result: FetchResult}>({
         name: "lodestar_sync_unknown_block_fetch_peers_count",
         help: "Number of peers that node fetched from",
+        labelNames: ["result"],
+      }),
+      downloadedPayloadsResult: register.counter<{result: DownloadResult}>({
+        name: "lodestar_sync_unknown_payload_download_result_total",
+        help: "Total number of downloadPayload results in UnknownBlockSync",
+        labelNames: ["result"],
+      }),
+      elapsedTimeTillPayloadReceived: register.histogram({
+        name: "lodestar_sync_unknown_payload_elapsed_time_till_received_seconds",
+        help: "Time elapsed between payload slot time and the time payload received via unknown block sync",
+        buckets: [6, 8, 10, 12],
+      }),
+      payloadFetchBegin: register.histogram({
+        name: "lodestar_sync_unknown_payload_fetch_begin_since_slot_start_seconds",
+        help: "Time into the slot when the payload was fetched",
+        buckets: [6, 8, 10, 12],
+      }),
+      // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
+      payloadFetchTime: register.histogram<{result: FetchResult}>({
+        name: "lodestar_sync_unknown_payload_fetch_time_seconds",
+        help: "Payload fetch time from start to done (either success or failure)",
+        labelNames: ["result"],
+        buckets: [0, 1, 2, 4, 8],
+      }),
+      payloadFetchPeers: register.gauge<{result: FetchResult}>({
+        name: "lodestar_sync_unknown_payload_fetch_peers_count",
+        help: "Number of peers that node fetched the payload from",
         labelNames: ["result"],
       }),
       downloadByRoot: {

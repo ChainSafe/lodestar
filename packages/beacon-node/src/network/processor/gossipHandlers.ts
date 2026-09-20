@@ -247,15 +247,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // (provably invalid), unexpected errors and repeat proposals that are not imported prune.
         if (e.action === GossipAction.IGNORE) {
           // Only a signature-verified sibling with a known parent is imported by the beacon_block handler, any other
-          // repeat proposal is dropped from the caches and re-downloaded by sync if it ever becomes relevant
+          // repeat proposal is dropped from the caches and re-downloaded by sync if it ever becomes relevant. Only its
+          // own entry is removed, never its claimed ancestors, which an unverified block must not be able to evict
           if (
             e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
             (!chain.seenBlockProposers.hasBlockRoot(slot, signedBlock.message.proposerIndex, blockRootHex) ||
               chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) === null)
           ) {
-            chain.seenBlockInputCache.prune(blockRootHex);
+            chain.seenBlockInputCache.remove(blockRootHex);
             if (isForkPostGloas(fork)) {
-              chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+              chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
             }
           }
           throw e;
@@ -275,10 +276,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
-      // both caches, keeping them consistent.
-      chain.seenBlockInputCache.prune(blockRootHex);
+      // both caches, keeping them consistent. The block may carry any parent root, so only its own entry is removed
+      chain.seenBlockInputCache.remove(blockRootHex);
       if (isForkPostGloas(fork)) {
-        chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+        chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
       }
       throw e;
     } finally {
