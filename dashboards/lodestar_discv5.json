@@ -371,7 +371,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -388,12 +388,24 @@
           "exemplar": false,
           "expr": "rate(lodestar_discovery_total_dial_attempts[$rate_interval])",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "upstream discovery dial calls",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
+          "interval": "",
+          "legendFormat": "native selected {{source}}",
+          "refId": "B"
         }
       ],
-      "title": "dial attempt rate / second",
-      "type": "timeseries"
+      "title": "Dial demand rate / second",
+      "type": "timeseries",
+      "description": "Upstream counts logical discovery dial calls. Native counts selected endpoint attempts by demand origin, including immediate errors and local capacity deferrals. These are distinct measurements."
     },
     {
       "datasource": {
@@ -536,7 +548,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -553,12 +565,24 @@
           "exemplar": false,
           "expr": "sum(lodestar_discovery_dial_time_seconds_count{status=\"error\"})/sum(lodestar_discovery_dial_time_seconds_count)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "upstream discovery",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum(lodestar_native_peer_dial_time_seconds_count{status=\"error\"}) / sum(lodestar_native_peer_dial_time_seconds_count)",
+          "interval": "",
+          "legendFormat": "native all origins",
+          "refId": "B"
         }
       ],
-      "title": "dial error rate (cumulative)",
-      "type": "timeseries"
+      "title": "Completed dial error fraction (cumulative)",
+      "type": "timeseries",
+      "description": "Native completed endpoint attempts include manual, direct and discovery demand; local capacity deferrals are excluded. Upstream covers logical discovery calls."
     },
     {
       "datasource": {
@@ -1169,12 +1193,24 @@
           "exemplar": false,
           "expr": "rate(lodestar_discovery_dial_time_seconds_sum[$rate_interval])/rate(lodestar_discovery_dial_time_seconds_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "{{status}}",
+          "legendFormat": "upstream discovery {{status}}",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_native_peer_dial_time_seconds_sum[$rate_interval]) / rate(lodestar_native_peer_dial_time_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "native all origins {{status}}",
+          "refId": "B"
         }
       ],
       "title": "dial time seconds",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Native elapsed time per completed endpoint attempt across all origins. Upstream elapsed time per logical discovery dial call."
     },
     {
       "datasource": {

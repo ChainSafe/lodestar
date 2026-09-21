@@ -243,7 +243,7 @@
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "{{type}}",
+          "legendFormat": "{{type}} {{boundary}}",
           "refId": "A"
         }
       ],
@@ -558,7 +558,7 @@
           "exemplar": false,
           "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
           "interval": "",
-          "legendFormat": "{{subnet}}",
+          "legendFormat": "{{subnet}} {{boundary}}",
           "refId": "A"
         }
       ],
@@ -616,7 +616,7 @@
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "{{type}}",
+          "legendFormat": "{{type}} {{boundary}}",
           "refId": "A"
         }
       ],
@@ -698,7 +698,7 @@
           "exemplar": false,
           "expr": "count(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count > 0)",
           "interval": "",
-          "legendFormat": "{{subnet}}",
+          "legendFormat": "{{subnet}} {{boundary}}",
           "refId": "A"
         }
       ],
@@ -832,7 +832,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -1544,7 +1544,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": false
@@ -1745,7 +1745,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": false
@@ -1858,7 +1858,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": false
@@ -2105,12 +2105,24 @@
           "expr": "rate(lodestar_peer_manager_heartbeat_duration_seconds_sum[$rate_interval])\n/\nrate(lodestar_peer_manager_heartbeat_duration_seconds_count[$rate_interval])",
           "format": "heatmap",
           "interval": "",
-          "legendFormat": "avg",
+          "legendFormat": "upstream heartbeat average",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_native_peer_selection_seconds_sum[$rate_interval]) / rate(lodestar_native_peer_selection_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "native uncached selection average",
+          "refId": "B"
         }
       ],
-      "title": "Peer manager heartbeat duration",
-      "type": "timeseries"
+      "title": "Peer manager work duration",
+      "type": "timeseries",
+      "description": "Upstream periodic heartbeat and native revision/deadline-triggered selection measure different work. Cached native turns do not add observations."
     },
     {
       "datasource": {
@@ -3921,7 +3933,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -5066,7 +5078,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -7509,7 +7521,7 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval])",
-          "legendFormat": "attnets avg",
+          "legendFormat": "upstream attnets avg",
           "range": true,
           "refId": "A"
         },
@@ -7520,14 +7532,36 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval])",
-          "legendFormat": "syncnets avg",
+          "legendFormat": "upstream syncnets avg",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_native_peers_per_active_subnet_sum{type=\"attnets\"} / lodestar_native_peers_per_active_subnet_count{type=\"attnets\"}",
+          "legendFormat": "native attnets current average",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_native_peers_per_active_subnet_sum{type=\"syncnets\"} / lodestar_native_peers_per_active_subnet_count{type=\"syncnets\"}",
+          "legendFormat": "native syncnets current average",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Peers per active subnet",
       "type": "timeseries",
-      "description": "Connected peer count per active subnet (avg per type).\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant."
+      "description": "Upstream averages observations over the rate window. Native shows the current usable coverage distribution for demanded subnets, so its sum and count must not be passed through rate()."
     },
     {
       "datasource": {
@@ -7720,6 +7754,305 @@
       "title": "Peer manager map sizes",
       "type": "timeseries",
       "description": "Entry counts of peer manager data structures (**not bytes**).\n\n**Metrics:** `lodestar_peer_manager_score_map_size`, `lodestar_peer_manager_connected_peers_map_size`, `libp2p_peers`\n\n- *connected peers map* should track *libp2p_peers*; a persistent gap indicates a connection leak.\n- *score map* reflects prune-to-MAX_ENTRIES / SCORE_THRESHOLD retention."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 335
+      },
+      "id": 643,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_native_peer_dials_requested",
+          "interval": "",
+          "legendFormat": "dials permitted",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_native_peer_disconnects_requested",
+          "interval": "",
+          "legendFormat": "disconnect {{reason}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_native_peer_below_target",
+          "interval": "",
+          "legendFormat": "below peer target",
+          "refId": "C"
+        }
+      ],
+      "title": "Native current peer demand",
+      "type": "timeseries",
+      "description": "Current selection gauges are separate from cumulative requested-peer counters. Below target does not indicate chain-head starvation."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 343
+      },
+      "id": 644,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_beacon_attestation_subnet_count)",
+          "interval": "",
+          "legendFormat": "attnet {{boundary}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_sync_committee_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_sync_committee_subnet_count)",
+          "interval": "",
+          "legendFormat": "syncnet {{boundary}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_data_column_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_data_column_subnet_count)",
+          "interval": "",
+          "legendFormat": "column {{boundary}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Native locally subscribed subnets with an empty mesh",
+      "type": "timeseries",
+      "description": "Counts zero-member meshes only where this node has a local subscription. Unsubscribed subnets are intentionally excluded. Each visible fork boundary is separate."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 351
+      },
+      "id": 645,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_gossip_topic_peers_by_data_column_subnet_count",
+          "interval": "",
+          "legendFormat": "column {{subnet}} {{boundary}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native remote data-column subscriptions",
+      "type": "timeseries",
+      "description": "Accepted remote subscription memberships include topics with no local mesh or overlay row. Advertised subscriptions are distinct from usable policy coverage."
     }
   ],
   "refresh": "10s",
