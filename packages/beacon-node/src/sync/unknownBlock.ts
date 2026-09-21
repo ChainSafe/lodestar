@@ -359,12 +359,21 @@ export class BlockInputSync {
       }
     }
 
-    let deletedBlocks = 0;
+    let belowFinalizedBlocks = 0;
+    let agedOutBlocks = 0;
     for (const [rootHex, block] of this.pendingBlocks) {
       const slot = getBlockInputSyncCacheItemSlot(block);
-      if (typeof slot === "number" && slot < finalizedSlot) {
+      if (typeof slot !== "number") {
+        // we may not be able to download a root, hence there is no slot for it
+        if (nowSec - block.timeAddedSec > maxSecInCache) {
+          this.pendingBlocks.delete(rootHex);
+          agedOutBlocks++;
+        }
+        continue;
+      }
+      if (slot < finalizedSlot) {
         this.pendingBlocks.delete(rootHex);
-        deletedBlocks++;
+        belowFinalizedBlocks++;
       }
     }
 
@@ -377,16 +386,20 @@ export class BlockInputSync {
     if (agedOutPayloads > 0) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: DroppedItemReason.agedOut}, agedOutPayloads);
     }
-    if (deletedBlocks > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.belowFinalized}, deletedBlocks);
+    if (belowFinalizedBlocks > 0) {
+      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.belowFinalized}, belowFinalizedBlocks);
+    }
+    if (agedOutBlocks > 0) {
+      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.agedOut}, agedOutBlocks);
     }
 
-    this.logger.debug("BlockInputSync.pruneFinalized dropped pre-finalized pending items", {
+    this.logger.debug("BlockInputSync.pruneFinalized dropped stale pending items", {
       finalizedSlot,
       finalizedRoot: checkpoint.rootHex,
       belowFinalizedPayloads,
       agedOutPayloads,
-      deletedBlocks,
+      belowFinalizedBlocks,
+      agedOutBlocks,
       unresolvedSlotPayloads,
     });
   };
@@ -823,6 +836,11 @@ export class BlockInputSync {
     if (!res.err) {
       this.metrics?.blockInputSync.downloadedBlocksSuccess.inc();
       const pending = res.result;
+      // pruning may have deleted this entry while we were awaiting the network, do not resurrect it via the set below
+      if (!this.pendingBlocks.has(rootHex)) {
+        this.logger.verbose("Dropping downloaded block, entry pruned during fetch", logCtx);
+        return;
+      }
       this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
       const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
@@ -885,8 +903,11 @@ export class BlockInputSync {
       }
 
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
-      this.logger.debug("Ignoring unknown block root after many failed downloads", logCtx, res.err);
-      this.removeAndDownScoreAllDescendants(block, DroppedItemReason.unavailable);
+      this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
+      const pendingBlock = this.pendingBlocks.get(rootHex);
+      if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
+        pendingBlock.status = PendingBlockInputStatus.pending;
+      }
     }
   }
 
@@ -1153,7 +1174,7 @@ export class BlockInputSync {
     }
 
     this.metrics?.blockInputSync.downloadedPayloadsResult.inc({result: DownloadResult.Failed});
-    this.logger.debug("Ignoring unknown payload root after failed download", logCtx, res.err);
+    this.logger.debug("Failed to download unknown payload root, retained for retry", logCtx, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
     }
