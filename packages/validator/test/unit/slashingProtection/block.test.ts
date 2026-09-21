@@ -9,7 +9,7 @@ import {BlockBySlotRepository} from "../../../src/slashingProtection/block/index
 import {InvalidBlockErrorCode, SlashingProtection} from "../../../src/slashingProtection/index.js";
 import {testLogger} from "../../utils/logger.js";
 
-describe("SlashingProtection concurrent block proposals", () => {
+describe("SlashingProtection overlapping block proposal checks", () => {
   const pubkey = ssz.BLSPubkey.defaultValue();
   const block = {slot: 32, signingRoot: Buffer.alloc(32, 1)};
   const conflict = {slot: 32, signingRoot: Buffer.alloc(32, 2)};
@@ -31,7 +31,7 @@ describe("SlashingProtection concurrent block proposals", () => {
     fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
-  it("rejects concurrent conflicting proposals for the same public key bytes", async () => {
+  it("rejects conflicting proposals when checks for the same public key bytes overlap", async () => {
     const results = await Promise.allSettled([
       slashingProtection.checkAndInsertBlockProposal(pubkey, block),
       slashingProtection.checkAndInsertBlockProposal(Uint8Array.from(pubkey), conflict),
@@ -44,7 +44,7 @@ describe("SlashingProtection concurrent block proposals", () => {
     expect(await blocks.getAll(pubkey)).toEqual([block]);
   });
 
-  it("accepts concurrent repeat signing of the same block", async () => {
+  it("accepts overlapping checks for the same block", async () => {
     await Promise.all([
       slashingProtection.checkAndInsertBlockProposal(pubkey, block),
       slashingProtection.checkAndInsertBlockProposal(pubkey, block),
@@ -53,7 +53,7 @@ describe("SlashingProtection concurrent block proposals", () => {
     expect(await blocks.getAll(pubkey)).toEqual([block]);
   });
 
-  it("enforces the lower bound across concurrent proposals for different slots", async () => {
+  it("enforces the lower bound when checks for different slots overlap", async () => {
     const earlierBlock = {...block, slot: 31};
     const results = await Promise.allSettled([
       slashingProtection.checkAndInsertBlockProposal(pubkey, block),
