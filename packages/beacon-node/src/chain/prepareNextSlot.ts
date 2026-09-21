@@ -101,7 +101,7 @@ export class PrepareNextSlotScheduler {
 
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
-      // or precompute epoch transition.
+      // or precompute epoch transition
       await sleep(this.config.getSlotComponentDurationMs(fork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
