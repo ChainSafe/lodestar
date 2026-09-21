@@ -38,8 +38,6 @@ export type ReconstructByRangeOpts = {
    * warn inside it since the EL is then failing to serve what the CL must (ethereum/EIPs#12347).
    */
   servingWindowStartSlot: Slot;
-  /** Fires, right before the generator returns, when the stream stops short at an unservable slot */
-  onUnservable?: (slot: Slot) => void;
 };
 
 /**
@@ -50,10 +48,11 @@ export type ReconstructByRangeOpts = {
  * The by-range spec inherits BeaconBlocksByRange v2 semantics: consecutive, MAY be short. A hole
  * looks like a lying peer to one that already holds the blocks, so the stream ends at the first
  * entry that cannot be served (EL miss, or payload root mismatch — logged at error, but to the peer
- * it is simply missing) and `opts.onUnservable` gets that slot.
+ * it is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with that
+ * slot; everything yielded before it is still a valid response.
  *
- * Throws {@link EnvelopeReconstructionError} ENGINE_UNAVAILABLE only, possibly after some envelopes
- * were already yielded.
+ * Also throws ENGINE_UNAVAILABLE if the EL call itself fails. Either may surface after some
+ * envelopes were already yielded.
  */
 export async function* reconstructArchivedEnvelopesByRange(
   db: IBeaconDb,
@@ -69,19 +68,58 @@ export async function* reconstructArchivedEnvelopesByRange(
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelopeBinary(bytes)});
     if (batch.length === MAX_BODIES_REQUEST) {
-      const {envelopes, unservableSlot} = await reconstructBatch(executionEngine, logger, batch, opts);
-      yield* envelopes;
-      if (unservableSlot !== null) {
-        opts.onUnservable?.(unservableSlot);
-        return;
-      }
+      yield* reconstructBatch(executionEngine, logger, batch, opts);
       batch = [];
     }
   }
   if (batch.length > 0) {
-    const {envelopes, unservableSlot} = await reconstructBatch(executionEngine, logger, batch, opts);
-    yield* envelopes;
-    if (unservableSlot !== null) opts.onUnservable?.(unservableSlot);
+    yield* reconstructBatch(executionEngine, logger, batch, opts);
+  }
+}
+
+/**
+ * Rebuild a range batch, yielding what precedes the first unservable entry before throwing
+ * RANGE_UNSERVABLE for it
+ */
+async function* reconstructBatch(
+  executionEngine: IExecutionEngine,
+  logger: Logger,
+  batch: RangeEntry[],
+  {servingWindowStartSlot}: ReconstructByRangeOpts
+): AsyncIterable<SlotEnvelopeBytes> {
+  const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
+  for (const entry of batch) {
+    if (entry.kind === ArchivedEnvelopeKind.Compact) compacts.push(entry.compact);
+  }
+  const rebuilt = await rebuildCompacts(executionEngine, compacts);
+
+  let compactIdx = 0;
+  for (const entry of batch) {
+    if (entry.kind === ArchivedEnvelopeKind.Full) {
+      yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
+      continue;
+    }
+    const result = rebuilt[compactIdx++];
+    if (isRebuildMiss(result)) {
+      if (result.reason === "mismatch") {
+        logger.error("Archived envelope failed payload root check against EL bodies", {slot: entry.slot}, result.error);
+      } else if (entry.slot < servingWindowStartSlot) {
+        logger.debug("EL cannot serve bodies for archived envelope below serving window, ending range", {
+          slot: entry.slot,
+          servingWindowStartSlot,
+        });
+      } else {
+        logger.warn("EL cannot serve bodies for archived envelope inside serving window, ending range", {
+          slot: entry.slot,
+          servingWindowStartSlot,
+        });
+      }
+      throw new EnvelopeReconstructionError(
+        {code: EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE, slot: entry.slot},
+        `archived envelope range unservable from slot=${entry.slot}`
+      );
+    }
+    yield {slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)};
   }
 }
 
@@ -143,46 +181,4 @@ async function rebuildCompacts(
       throw e;
     }
   });
-}
-
-/** Rebuild a range batch in one EL round-trip, stopping at the first unservable entry */
-async function reconstructBatch(
-  executionEngine: IExecutionEngine,
-  logger: Logger,
-  batch: RangeEntry[],
-  {servingWindowStartSlot}: ReconstructByRangeOpts
-): Promise<{envelopes: SlotEnvelopeBytes[]; unservableSlot: Slot | null}> {
-  const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
-  for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Compact) compacts.push(entry.compact);
-  }
-  const rebuilt = await rebuildCompacts(executionEngine, compacts);
-
-  const envelopes: SlotEnvelopeBytes[] = [];
-  let compactIdx = 0;
-  for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Full) {
-      envelopes.push({slot: entry.slot, envelopeBytes: entry.envelopeBytes});
-      continue;
-    }
-    const result = rebuilt[compactIdx++];
-    if (isRebuildMiss(result)) {
-      if (result.reason === "mismatch") {
-        logger.error("Archived envelope failed payload root check against EL bodies", {slot: entry.slot}, result.error);
-      } else if (entry.slot < servingWindowStartSlot) {
-        logger.debug("EL cannot serve bodies for archived envelope below serving window, ending range", {
-          slot: entry.slot,
-          servingWindowStartSlot,
-        });
-      } else {
-        logger.warn("EL cannot serve bodies for archived envelope inside serving window, ending range", {
-          slot: entry.slot,
-          servingWindowStartSlot,
-        });
-      }
-      return {envelopes, unservableSlot: entry.slot};
-    }
-    envelopes.push({slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)});
-  }
-  return {envelopes, unservableSlot: null};
 }

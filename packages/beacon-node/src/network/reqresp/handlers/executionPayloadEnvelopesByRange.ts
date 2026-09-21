@@ -4,9 +4,9 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Slot, gloas} from "@lodestar/types";
+import {gloas} from "@lodestar/types";
 import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
-import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
+import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -48,7 +48,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
       Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)
     );
     let yielded = 0;
-    let unservableSlot: Slot | null = null;
     try {
       for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
         db,
@@ -56,12 +55,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
         chain.logger,
         startSlot,
         Math.min(endSlot, archiveMaxSlot + 1),
-        {
-          servingWindowStartSlot,
-          onUnservable: (slot) => {
-            unservableSlot = slot;
-          },
-        }
+        {servingWindowStartSlot}
       )) {
         yielded++;
         yield {
@@ -70,25 +64,15 @@ export async function* onExecutionPayloadEnvelopesByRange(
         };
       }
     } catch (e) {
-      // Only thrown when our own EL is down; RESOURCE_UNAVAILABLE so peers don't downscore us for it
       if (e instanceof EnvelopeReconstructionError) {
-        throw new ResponseError(
-          RespStatus.RESOURCE_UNAVAILABLE,
-          `Failed to reconstruct archived envelope: ${e.message}`
-        );
+        if (e.type.code === EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE && yielded > 0) {
+          // A short response is spec-legal; continuing into the hot range would leave a hole
+          return;
+        }
+        // RESOURCE_UNAVAILABLE rather than SERVER_ERROR so peers don't downscore us for our own EL
+        throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Failed to serve archived envelopes: ${e.message}`);
       }
       throw e;
-    }
-
-    // Stopped short: a short response is spec-legal, continuing into the hot range would leave a hole
-    if (unservableSlot !== null) {
-      if (yielded === 0) {
-        throw new ResponseError(
-          RespStatus.RESOURCE_UNAVAILABLE,
-          `Cannot serve archived envelope slot=${unservableSlot} startSlot=${startSlot} count=${count}`
-        );
-      }
-      return;
     }
   }
 

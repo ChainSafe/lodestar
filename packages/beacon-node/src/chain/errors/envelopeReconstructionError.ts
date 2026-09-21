@@ -6,11 +6,14 @@ export enum EnvelopeReconstructionErrorCode {
   ENGINE_UNAVAILABLE = "ENVELOPE_RECONSTRUCTION_ERROR_ENGINE_UNAVAILABLE",
   /** The payload rebuilt from EL bodies does not hash to the archived payloadRoot. Local DB/EL inconsistency. */
   PAYLOAD_ROOT_MISMATCH = "ENVELOPE_RECONSTRUCTION_ERROR_PAYLOAD_ROOT_MISMATCH",
+  /** A by-range stream stopped short at a slot that cannot be served; the response so far is still valid */
+  RANGE_UNSERVABLE = "ENVELOPE_RECONSTRUCTION_ERROR_RANGE_UNSERVABLE",
 }
 
 export type EnvelopeReconstructionErrorType =
   | {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE}
-  | {code: EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH; slot: Slot};
+  | {code: EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH; slot: Slot}
+  | {code: EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE; slot: Slot};
 
 export class EnvelopeReconstructionError extends LodestarError<EnvelopeReconstructionErrorType> {
   constructor(type: EnvelopeReconstructionErrorType, message?: string, options?: {cause?: unknown}) {

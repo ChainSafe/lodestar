@@ -57,30 +57,34 @@ describe("reconstructArchivedEnvelopesByRange", () => {
   const inWindow: ReconstructByRangeOpts = {servingWindowStartSlot: 0};
 
   // Collect the range as deserialized envelopes (the generator yields serialized bytes, as served on the wire),
-  // plus the slot the stream stopped short at, if any
+  // plus the slot the stream stopped short at, if any. Any other error propagates.
   async function rangeWith(
     start: number,
     end: number,
     opts: ReconstructByRangeOpts = inWindow
   ): Promise<{out: {slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]; unservableSlot: number | null}> {
     const out = [];
-    let unservableSlot: number | null = null;
-    for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
-      db,
-      executionEngine,
-      logger,
-      start,
-      end,
-      {
-        ...opts,
-        onUnservable: (slot) => {
-          unservableSlot = slot;
-        },
+    try {
+      for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
+        db,
+        executionEngine,
+        logger,
+        start,
+        end,
+        opts
+      )) {
+        out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
       }
-    )) {
-      out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
+    } catch (e) {
+      if (
+        e instanceof EnvelopeReconstructionError &&
+        e.type.code === EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE
+      ) {
+        return {out, unservableSlot: e.type.slot};
+      }
+      throw e;
     }
-    return {out, unservableSlot};
+    return {out, unservableSlot: null};
   }
 
   async function range(
