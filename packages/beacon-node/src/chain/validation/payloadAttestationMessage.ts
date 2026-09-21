@@ -82,6 +82,7 @@ async function validatePayloadAttestationMessage(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
+  // [REJECT] The payload attestation slot is at or after the Gloas fork.
   if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
