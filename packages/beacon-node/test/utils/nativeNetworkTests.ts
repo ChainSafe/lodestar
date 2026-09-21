@@ -421,7 +421,6 @@ function emptyIntent(application: NativeApplicationConfig): NativeLocalIntent {
       custodyGroupTargets: new Uint16Array(128),
       attestationTarget: 6,
       syncTarget: 6,
-      expiresAtSlot: 2n,
     },
   };
 }

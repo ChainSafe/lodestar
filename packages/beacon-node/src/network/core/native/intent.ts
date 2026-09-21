@@ -305,7 +305,6 @@ export class NativeIntent {
         custodyGroupTargets,
         attestationTarget: Math.min(6, this.opts.maxPeers),
         syncTarget: Math.min(6, this.opts.maxPeers),
-        expiresAtSlot: BigInt(Math.max(0, slot)) + 2n,
       },
     };
   }

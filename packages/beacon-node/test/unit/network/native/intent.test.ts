@@ -209,9 +209,10 @@ describe("native local intent transactions", () => {
     }
   });
 
-  it("snapshots caller data and expires aggregator and sync duties at their respective boundaries", async () => {
+  it("snapshots caller data and expires duties while preserving standing custody and sampling targets", async () => {
     const node = await fixture();
     try {
+      const {groupTargets, custodyGroupTargets} = structuredClone(node.latest().demand);
       const status = ssz.fulu.Status.defaultValue();
       status.headRoot.fill(7);
       const changed = node.intent.updateStatus(status);
@@ -229,6 +230,11 @@ describe("native local intent transactions", () => {
       node.clock.setSlot(SLOTS_PER_EPOCH);
       await node.intent.updateStatus(status);
       expect(subscriptionNames(node.latest()).some((name) => name.includes("/sync_committee_1/"))).toBe(false);
+      expect(node.latest().demand.syncnets).toBe(0);
+      node.clock.setSlot(10_000 * SLOTS_PER_EPOCH);
+      await node.intent.updateStatus(status);
+      expect(node.latest().demand.groupTargets).toEqual(groupTargets);
+      expect(node.latest().demand.custodyGroupTargets).toEqual(custodyGroupTargets);
       expect(() =>
         node.intent.committee(
           Array.from({length: 4097}, () => duty),
