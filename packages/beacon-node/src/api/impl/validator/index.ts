@@ -1057,6 +1057,8 @@ export function getValidatorApi(
             rank: index + 1,
             source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
             builder: candidate.signedBid.message.builderIndex,
+            value: prettyGweiToEth(candidate.signedBid.message.value),
+            executionPayment: prettyGweiToEth(candidate.signedBid.message.executionPayment),
             total: prettyGweiToEth(candidate.totalGwei),
             boost: candidate.boostFactor,
             boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
