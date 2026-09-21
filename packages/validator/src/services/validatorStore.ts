@@ -51,7 +51,7 @@ import {
 } from "@lodestar/types";
 import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ISlashingProtection} from "../slashingProtection/index.js";
+import {ISlashingProtection, InvalidBlockError, InvalidBlockErrorCode} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
@@ -666,12 +666,11 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: BeaconBlock | BlindedBeaconBlock,
-    currentSlot: Slot,
+    dutySlot: Slot,
     logger?: LoggerVc
   ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    if (blindedOrFull.slot !== dutySlot) {
+      throw new InvalidBlockError({code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blindedOrFull.slot, dutySlot});
     }
 
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw

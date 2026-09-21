@@ -3,6 +3,7 @@ import {LodestarError} from "@lodestar/utils";
 import {SlashingProtectionBlock} from "../types.js";
 
 export enum InvalidBlockErrorCode {
+  SLOT_MISMATCH = "ERR_INVALID_BLOCK_SLOT_MISMATCH",
   /**
    * The block has the same slot as a block from the DB
    */
@@ -14,6 +15,11 @@ export enum InvalidBlockErrorCode {
 }
 
 type InvalidBlockErrorType =
+  | {
+      code: InvalidBlockErrorCode.SLOT_MISMATCH;
+      slot: Slot;
+      dutySlot: Slot;
+    }
   | {
       code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL;
       block: SlashingProtectionBlock;
