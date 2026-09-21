@@ -199,13 +199,16 @@ type PreprocessResult =
 
 enum SearchTarget {
   Block,
-  Envelope,
+  PayloadEnvelope,
 }
 
 type SearchUnknownRootTarget =
   | {target: SearchTarget.Block}
-  /** slotIsPayloadSlot: the message slot is the payload's slot, so it can be used for UnknownBlockInput search */
-  | {target: SearchTarget.Envelope; slotIsPayloadSlot: boolean};
+  | {
+      target: SearchTarget.PayloadEnvelope;
+      /** The message slot is the payload's slot, so it can be used for UnknownBlockInput search */
+      slotIsPayloadSlot: boolean;
+    };
 
 /**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
@@ -488,7 +491,7 @@ export class NetworkProcessor {
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
               // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
-              search = {target: SearchTarget.Envelope, slotIsPayloadSlot: false};
+              search = {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
             }
           }
         } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
@@ -515,7 +518,10 @@ export class NetworkProcessor {
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
-            this.searchUnknownRoot({slot, root}, peerId, {target: SearchTarget.Envelope, slotIsPayloadSlot: false});
+            this.searchUnknownRoot({slot, root}, peerId, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: false,
+            });
             preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
@@ -528,7 +534,7 @@ export class NetworkProcessor {
             // this is optimistic search, the peer may not have the payload (only the ptc committee had).
             // the PTC vote's slot is the payload's slot
             this.searchUnknownRoot({slot, root}, undefined, {
-              target: SearchTarget.Envelope,
+              target: SearchTarget.PayloadEnvelope,
               slotIsPayloadSlot: true,
             });
             // do not await the envelope, payload attestation processing only requires that the block is known
@@ -542,7 +548,7 @@ export class NetworkProcessor {
             // this is optimistic search, the peer may not have the payload.
             // the sidecar's slot is the block's (and so the payload's) slot
             this.searchUnknownRoot({slot, root}, undefined, {
-              target: SearchTarget.Envelope,
+              target: SearchTarget.PayloadEnvelope,
               slotIsPayloadSlot: true,
             });
             // do not await the envelope, we can do gossip validation
@@ -581,7 +587,7 @@ export class NetworkProcessor {
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
               this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {
-                target: SearchTarget.Envelope,
+                target: SearchTarget.PayloadEnvelope,
                 slotIsPayloadSlot: false,
               });
               preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
@@ -698,7 +704,7 @@ export class NetworkProcessor {
       case SearchTarget.Block:
         this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
         break;
-      case SearchTarget.Envelope:
+      case SearchTarget.PayloadEnvelope:
         this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, search.slotIsPayloadSlot);
         break;
     }
