@@ -36,19 +36,19 @@ async function validatePayloadAttestationMessage(
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
 
+  // [REJECT] The payload attestation slot is at or after the Gloas fork.
+  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
+      slot: data.slot,
+    });
+  }
+
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.NOT_CURRENT_SLOT,
       currentSlot: chain.clock.currentSlot,
-      slot: data.slot,
-    });
-  }
-
-  // [REJECT] The payload attestation slot is at or after the Gloas fork.
-  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
-    throw new PayloadAttestationError(GossipAction.REJECT, {
-      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
       slot: data.slot,
     });
   }
