@@ -1399,9 +1399,7 @@
     </spec>
 
 - name: CustodyColumnBits#gloas
-  sources:
-    - file: packages/beacon-node/src/util/dataColumns.ts
-      search: "private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {"
+  sources: []
   spec: |
     <spec container="CustodyColumnBits" fork="gloas" hash="b35abdb2">
     class CustodyColumnBits(BitVector):
@@ -2477,7 +2475,9 @@
     </spec>
 
 - name: LightClientHeader#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const LightClientHeader =
   spec: |
     <spec container="LightClientHeader" fork="gloas" hash="b0387ab2">
     class LightClientHeader(Container):
@@ -3125,6 +3125,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/beaconBlocksByRange.ts
+      search: export function validateBeaconBlocksByRangeRequest(
   spec: |
     <spec container="SignedBeaconBlocks" fork="phase0" hash="55c94960">
     class SignedBeaconBlocks(List[SignedBeaconBlock]):
@@ -3140,6 +3142,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/beaconBlocksByRange.ts
+      search: export function validateBeaconBlocksByRangeRequest(
   spec: |
     <spec container="SignedBeaconBlocks" fork="deneb" hash="363a3db0">
     class SignedBeaconBlocks(List[SignedBeaconBlock]):
@@ -3200,6 +3204,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendExecutionPayloadEnvelopesByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/executionPayloadEnvelopesByRange.ts
+      search: export function validateExecutionPayloadEnvelopesByRangeRequest(
   spec: |
     <spec container="SignedExecutionPayloadEnvelopes" fork="gloas" hash="826dc65b">
     class SignedExecutionPayloadEnvelopes(List[SignedExecutionPayloadEnvelope]):
