@@ -19,6 +19,7 @@ export class ClockMock implements IClock {
   secFromSlot = (): number => 0;
   getCurrentSlot = (): number => 0;
   getCurrentEpoch = (): number => 0;
+  getSlotDurationMs = (_slot: number): number => 12000;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
     for (const fn of this.everySlot) await fn(slot, signal);
