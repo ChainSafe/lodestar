@@ -174,7 +174,7 @@ describe("native gossip host execution", () => {
     const key = await generateKeyPair("secp256k1");
     const root = new Uint8Array(32).fill(7);
     const check = {
-      handle: {session: 1n, generation: 1n, index: 0},
+      handle: {generation: 1n, index: 0},
       root,
       slot: 64n,
       peerId: key.publicKey.toMultihash().bytes,

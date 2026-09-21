@@ -1,6 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import bindings from "@chainsafe/lodestar-z";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -240,6 +241,8 @@ export class BeaconNode {
         config,
       };
     }
+
+    if (opts.network.backend === "native") bindings.config.set(config, config.genesisValidatorsRoot);
 
     const chain = new BeaconChain(opts.chain, {
       privateKey,

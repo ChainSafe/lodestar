@@ -2,7 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
-import {createNativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {UINT64_MAX, createNativeConfig} from "../../../../src/network/core/native/config.js";
@@ -46,9 +46,9 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     const application = node.create({}, 0, 1_000_000);
     bindings.config.set(config, config.genesisValidatorsRoot);
-    const runtime = createNativeNetworkApplicationRuntime(application, () => {});
+    const runtime = initializeNativeNetworkRuntime(application, () => {});
     try {
-      await runtime.ready;
+      await runtime.identity;
       const diagnostics = runtime.diagnostics();
       console.info("million-validator native reservations", diagnostics.nativeRequestedBytes);
       expect(diagnostics.gossip.capacity).toBeGreaterThan(34_375);
@@ -89,9 +89,48 @@ describe("native configuration boundary", () => {
     {native: {hostGossipBytes: 1024}},
     {maxPeers: 257},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
+    {directPeers: ["/ip4/127.0.0.1/udp/9001/quic-v1"]},
+    {directPeers: ["x".repeat(405)]},
   ])("rejects unmappable options: %j", async (opts) => {
     const node = await fixture();
     expect(() => node.create(opts)).toThrow(NativeNetworkError);
+  });
+
+  it("resolves configured direct peers into copied identities and both QUIC endpoints", async () => {
+    const node = await fixture();
+    const enr = SignableENR.createFromPrivateKey(node.key);
+    enr.ip = "127.0.0.1";
+    enr.ip6 = "::1";
+    expect(() => node.create({directPeers: [enr.encodeTxt()]})).toThrow("direct peer has no QUIC address");
+    enr.quic = 9001;
+    enr.quic6 = 19001;
+    const id = enr.peerId.toString();
+    const plan = createNativeConfig(
+      {
+        ...defaultNetworkOptions,
+        tcp: false,
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
+        directPeers: [enr.encodeTxt(), `/ip4/127.0.0.2/udp/9002/quic-v1/p2p/${id}`],
+      },
+      config,
+      node.key,
+      0,
+      ssz.fulu.Status.defaultValue(),
+      config.CUSTODY_REQUIREMENT,
+      16
+    );
+    try {
+      enr.quic = 9003;
+      expect(plan.directPeers.map((peer) => peer.id)).toEqual([id, id]);
+      expect(plan.directPeers[0].identity).toEqual(enr.peerId.toMultihash().bytes);
+      expect(plan.directPeers[0].addresses).toMatchObject([
+        {family: 4, port: 9001},
+        {family: 6, port: 19001},
+      ]);
+      expect(plan.directPeers[1].addresses).toEqual([{family: 4, port: 9002, address: Uint8Array.of(127, 0, 0, 2)}]);
+    } finally {
+      plan.application.identitySecretKey.fill(0);
+    }
   });
 
   it("checks the imported identity and sequence before handing discovery to native", async () => {

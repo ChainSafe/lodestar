@@ -79,7 +79,7 @@ export class NativeIntent {
   private busy = false;
   private dirty = false;
   private closed = false;
-  private appliedSlot: number | null = null;
+  private appliedSlot: number;
   constructor(
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "applyIntent" | "updateStatus">,
     private readonly application: NativeApplicationConfig,
@@ -90,6 +90,7 @@ export class NativeIntent {
     status: Status,
     private readonly onFailure: (error: unknown) => void
   ) {
+    this.appliedSlot = Number(application.initialSlot);
     this.desired = {
       status: snapshotStatus(status),
       custodyGroupCount: network.custodyConfig.targetCustodyGroupCount,
@@ -99,16 +100,6 @@ export class NativeIntent {
       attDemand: new Map(),
       syncDuties: new Map(),
     };
-  }
-  activate(status: Status, custodyGroupCount: number): Promise<void> {
-    const copy = snapshotStatus(status);
-    return this.enqueue({
-      type: "intent",
-      change: (state) => {
-        state.status = copy;
-        state.custodyGroupCount = custodyGroupCount;
-      },
-    });
   }
   updateStatus(status: Status): Promise<void> {
     return this.enqueue({type: "status", status: snapshotStatus(status)});
@@ -192,11 +183,6 @@ export class NativeIntent {
       this.dirty = false;
       try {
         const slot = this.clock.currentSlot;
-        if (command?.type === "status" && this.appliedSlot === null)
-          throw new NativeNetworkError({
-            code: NativeNetworkErrorCode.UNAVAILABLE,
-            resource: "local intent not activated",
-          });
         if (command?.type === "status" && this.appliedSlot === slot && !refresh) {
           const status = nativeLocalState(
             this.network.config,

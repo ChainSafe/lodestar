@@ -27,7 +27,7 @@ import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
-import {nativePeerId, parseNativeEndpoint} from "./addresses.js";
+import {NativeDirectPeer, nativePeerId, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {nativeFork} from "./protocols.js";
 
@@ -299,8 +299,14 @@ export function createNativeConfig(
   status: Status,
   custodyGroupCount: number,
   activeValidatorCount: number
-): {application: NativeApplicationConfig; network: NetworkConfig; executionLimits: {items: number; bytes: number}[]} {
+): {
+  application: NativeApplicationConfig;
+  network: NetworkConfig;
+  executionLimits: {items: number; bytes: number}[];
+  directPeers: NativeDirectPeer[];
+} {
   validateOptions(opts, config);
+  const directPeers = (opts.directPeers ?? []).map(parseNativeDirectPeer);
   if (key.type !== "secp256k1")
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "secp256k1 identity required"});
   nativeInteger(activeValidatorCount, "active validators", Number.MAX_SAFE_INTEGER, 1);
@@ -430,5 +436,5 @@ export function createNativeConfig(
     1
   );
   const executionLimits = gossipExecutionLimits(opts, topicPolicy);
-  return {application, network, executionLimits};
+  return {application, network, executionLimits, directPeers};
 }

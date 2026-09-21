@@ -7,7 +7,7 @@ import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   NativeApplicationConfig,
   NativeLocalIntent,
-  createNativeNetworkApplicationRuntime,
+  initializeNativeNetworkRuntime,
 } from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -20,13 +20,32 @@ import {createNativeConfig} from "../../src/network/core/native/config.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
-import {ClockEvent} from "../../src/util/clock.js";
 import {ClockStopped} from "../mocks/clock.js";
+import {nativeBindingProcess} from "./nativeBindingProcess.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
+import {nativeNetworkProcess} from "./nativeNetworkProcess.js";
 
 describe("native Lodestar integration", () => {
+  it("rejects malformed configured direct peers before native initialization", async () => {
+    const originalInit = NativeNetworkCore.init;
+    const initialize = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) =>
+      originalInit({
+        ...modules,
+        opts: {...modules.opts, directPeers: ["/ip4/127.0.0.1/udp/9001/quic-v1"]},
+      })
+    );
+    let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
+    try {
+      await expect(nativeNetworkFixture(fuluConfig())).rejects.toThrow("direct peer identity");
+      node = await nativeNetworkFixture(fuluConfig());
+      expect(node.network.closed).toBe(false);
+    } finally {
+      await node?.close();
+      initialize.mockRestore();
+    }
+  }, 15000);
   it.each([false, true])(
-    "refreshes after preparation and unwinds an unsupported active fork: %s",
+    "initializes current fork state or fails before starting: unsupported=%s",
     async (unsupported) => {
       const config = createBeaconConfig(
         {
@@ -41,55 +60,42 @@ describe("native Lodestar integration", () => {
         },
         new Uint8Array(32)
       );
-      const originalPrepare = NativeNetworkCore.prepare;
-      let clock: ClockStopped | undefined;
-      let joined = false;
-      let existingSlotListeners: ReturnType<ClockStopped["listeners"]> = [];
-      const prepare = vi.spyOn(NativeNetworkCore, "prepare").mockImplementationOnce(async (modules) => {
-        existingSlotListeners = modules.clock.listeners(ClockEvent.slot);
-        const core = await originalPrepare(modules);
-        if (!(modules.clock instanceof ClockStopped)) throw new Error("Expected stopped fixture clock");
-        clock = modules.clock;
-        clock.setSlot(SLOTS_PER_EPOCH);
-        void core.terminated.then(() => {
-          joined = true;
-        });
-        return core;
+      const originalInit = NativeNetworkCore.init;
+      const init = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) => {
+        if (!(modules.clock instanceof ClockStopped)) throw new Error("Expected stopped clock");
+        modules.clock.setSlot(SLOTS_PER_EPOCH);
+        return originalInit(modules);
       });
-      const activate = vi.spyOn(NativeNetworkCore.prototype, "activate");
       let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
       try {
-        if (unsupported) {
-          await expect(nativeNetworkFixture(config)).rejects.toThrow("Unsupported native fork gloas");
-          expect(joined).toBe(true);
-          expect(clock?.listeners(ClockEvent.slot)).toEqual(existingSlotListeners);
-        } else {
+        if (unsupported) await expect(nativeNetworkFixture(config)).rejects.toThrow("Unsupported native fork gloas");
+        else {
           node = await nativeNetworkFixture(config);
-          const status = activate.mock.calls[0][0];
-          expect(status.forkDigest).toEqual(config.forkBoundary2ForkDigest(config.getForkBoundaryAtEpoch(1)));
-          expect(status.headSlot).toBe(0);
+          const initial = await node.network.getNetworkIdentity();
+          expect(initial.metadata.attnets.uint8Array.some((byte) => byte !== 0)).toBe(true);
           await node.network.subscribeGossipCoreTopics();
           expect(node.network.closed).toBe(false);
+          expect((await node.network.getNetworkIdentity()).metadata.custodyGroupCount).toBeGreaterThan(0);
         }
+        expect(init).toHaveBeenCalledOnce();
       } finally {
         await node?.close();
-        prepare.mockRestore();
-        activate.mockRestore();
+        init.mockRestore();
       }
     },
     15000
   );
   it("returns current signed discovery and metadata snapshots after a native intent", async () => {
-    const originalPrepare = NativeNetworkCore.prepare;
+    const originalInit = NativeNetworkCore.init;
     let imported: string | undefined;
-    const prepare = vi.spyOn(NativeNetworkCore, "prepare").mockImplementationOnce(async (modules) => {
+    const initialize = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) => {
       const enr = SignableENR.createFromPrivateKey(modules.privateKey);
       enr.ip = "127.0.0.1";
       enr.udp = 9000;
       enr.quic = 9001;
       enr.seq = 42n;
       imported = enr.encodeTxt();
-      return originalPrepare({
+      return originalInit({
         ...modules,
         opts: {
           ...modules.opts,
@@ -119,7 +125,7 @@ describe("native Lodestar integration", () => {
       expect(after.metadata.syncnets.uint8Array).toEqual(Uint8Array.of(2));
     } finally {
       await node?.close();
-      prepare.mockRestore();
+      initialize.mockRestore();
     }
   }, 15000);
   it("disconnects an actual peer with uint64 Status values outside the host range without stopping the network", async () => {
@@ -143,10 +149,10 @@ describe("native Lodestar integration", () => {
     );
     application.local.status.finalizedEpoch = (1n << 64n) - 1n;
     bindings.config.set(config, config.genesisValidatorsRoot);
-    const remote = createNativeNetworkApplicationRuntime(application, () => {});
+    const remote = await nativeBindingProcess(application, config);
     application.identitySecretKey.fill(0);
     try {
-      const peer = await remote.ready;
+      const peer = await remote.identity;
       await remote.applyIntent(emptyIntent(application), 0n);
       const identity = await node.network.getNetworkIdentity();
       const peerId = hostPeerId(peer.peerId);
@@ -164,19 +170,18 @@ describe("native Lodestar integration", () => {
       expect(results.filter((result) => result.status === "rejected")).toEqual([]);
     }
   }, 15000);
-  it("closes and reopens while real serving and gossip handlers retain unfinished host work", async () => {
+  it("closes while real serving and gossip handlers retain unfinished host work", async () => {
     const config = fuluConfig();
     // The weighted plan gives proposer slashings one execution slot with this budget.
     const limits = {hostGossipItems: 65, hostGossipBytes: 64 * 1024 * 1024};
     const old = await nativeNetworkFixture(config, "native", limits);
-    let remote: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
-    let replacement: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
+    let remote: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
     const block = defer<null>();
     const signature = defer<boolean>();
     const serving = vi.spyOn(old.chain, "getSerializedBlockByRoot").mockImplementationOnce(() => block.promise);
     const verifying = vi.spyOn(old.chain.bls, "verifySignatureSets").mockImplementationOnce(() => signature.promise);
     try {
-      remote = await nativeNetworkFixture(config, "native", limits);
+      remote = await nativeNetworkProcess(config, "native", limits);
       const identity = await old.network.getNetworkIdentity();
       await Promise.all([old.network.subscribeGossipCoreTopics(), remote.network.subscribeGossipCoreTopics()]);
       await remote.network.connectToPeer(identity.peerId, identity.p2pAddresses);
@@ -199,32 +204,6 @@ describe("native Lodestar integration", () => {
       expect(old.network.getConnectedPeerCount()).toBe(0);
       expect(old.budget.snapshot()).toMatchObject({occupancy: 1, outstandingRetirements: 1});
       expect(await request).toBeInstanceOf(Error);
-      replacement = await nativeNetworkFixture(config, "native", limits);
-      const next = await replacement.network.getNetworkIdentity();
-      await replacement.network.subscribeGossipCoreTopics();
-      await remote.network.connectToPeer(next.peerId, next.p2pAddresses);
-      const delivered = vi.fn();
-      replacement.network.events.on(NetworkEvent.gossipMessageValidationResult, delivered);
-      const replacementNetwork = replacement.network;
-      const queued = async () => {
-        const match = (await replacementNetwork.scrapeMetrics()).match(
-          /lodestar_native_gossip_processor_queued_items (\d+)/
-        );
-        if (!match) throw new Error("Missing gossip queue metric");
-        return BigInt(match[1]);
-      };
-      expect(await queued()).toBe(0n);
-      const nextSlashing = ssz.phase0.ProposerSlashing.defaultValue();
-      nextSlashing.signedHeader1.message.proposerIndex = 1;
-      nextSlashing.signedHeader2.message.proposerIndex = 1;
-      nextSlashing.signedHeader1.message.bodyRoot.fill(3);
-      nextSlashing.signedHeader2.message.bodyRoot.fill(4);
-      await vi.waitFor(async () => expect(await publisher.publishProposerSlashing(nextSlashing)).toBeGreaterThan(0), {
-        timeout: 5000,
-      });
-      await vi.waitFor(async () => expect(await queued()).toBe(1n), {timeout: 5000});
-      expect(await remote.network.sendBeaconBlocksByRoot(next.peerId, [new Uint8Array(32).fill(8)])).toEqual([]);
-      expect(delivered).not.toHaveBeenCalled();
       const retired = vi.fn();
       old.network.events.on(NetworkEvent.gossipMessageValidationResult, retired);
       block.resolve(null);
@@ -236,14 +215,12 @@ describe("native Lodestar integration", () => {
         },
         {timeout: 5000}
       );
-      await vi.waitFor(() => expect(delivered).toHaveBeenCalledOnce(), {timeout: 5000});
-      expect(await queued()).toBe(0n);
     } finally {
       block.resolve(null);
       signature.resolve(false);
       serving.mockRestore();
       verifying.mockRestore();
-      const results = await Promise.allSettled([old.close(), remote?.close(), replacement?.close()]);
+      const results = await Promise.allSettled([old.close(), remote?.close()]);
       expect(results.filter((result) => result.status === "rejected")).toEqual([]);
     }
   }, 30000);
@@ -273,9 +250,9 @@ describe("native Lodestar integration", () => {
         "/ip4/127.0.0.1/udp/0/quic-v1",
         "/ip6/::1/udp/0/quic-v1",
       ]);
-      let right: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
+      let right: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
       try {
-        right = await nativeNetworkFixture(config, backend, {}, [
+        right = await nativeNetworkProcess(config, backend, {}, [
           family === 4 ? "/ip4/127.0.0.1/udp/0/quic-v1" : "/ip6/::1/udp/0/quic-v1",
         ]);
         expect((await left.network.getNetworkIdentity()).p2pAddresses).toHaveLength(2);
@@ -303,9 +280,7 @@ describe("native Lodestar integration", () => {
           receivedLeft.map((block) => ssz.fulu.SignedBeaconBlock.serialize(block as fulu.SignedBeaconBlock))
         ).toEqual([ssz.fulu.SignedBeaconBlock.serialize(leftBlock)]);
         await Promise.all([left.network.subscribeGossipCoreTopics(), right.network.subscribeGossipCoreTopics()]);
-        const accepted: NetworkEventData[NetworkEvent.gossipMessageValidationResult][] = [];
         const rejected: NetworkEventData[NetworkEvent.gossipMessageValidationResult][] = [];
-        right.network.events.on(NetworkEvent.gossipMessageValidationResult, (result) => accepted.push(result));
         left.network.events.on(NetworkEvent.gossipMessageValidationResult, (result) => rejected.push(result));
         const slashing = ssz.phase0.ProposerSlashing.defaultValue();
         slashing.signedHeader1.message.bodyRoot.fill(1);
@@ -318,11 +293,15 @@ describe("native Lodestar integration", () => {
           timeout: 5000,
           interval: 100,
         });
+        const receiver = right;
         await vi.waitFor(
-          () => expect(accepted.map((result) => result.acceptance)).toContain(TopicValidatorResult.Accept),
+          async () =>
+            expect((await receiver.validationResults()).map((result) => result.acceptance)).toContain(
+              TopicValidatorResult.Accept
+            ),
           {timeout: 5000}
         );
-        expect(right.chain.opPool.hasSeenProposerSlashing(0)).toBe(true);
+        expect(await right.chain.opPool.hasSeenProposerSlashing(0)).toBe(true);
         const invalid = ssz.phase0.ProposerSlashing.defaultValue();
         invalid.signedHeader1.message.proposerIndex = 1;
         invalid.signedHeader2.message.proposerIndex = 1;
@@ -380,7 +359,7 @@ describe("native Lodestar integration", () => {
     30000
   );
   it.each(["small", "beaconNode"] as const)(
-    "prepares and activates the %s runtime from BeaconConfig",
+    "initializes the %s runtime from BeaconConfig",
     async (profile) => {
       const config = createBeaconConfig(
         {
@@ -413,10 +392,10 @@ describe("native Lodestar integration", () => {
         16384
       );
       bindings.config.set(config, config.genesisValidatorsRoot);
-      const runtime = createNativeNetworkApplicationRuntime(application, () => {});
+      const runtime = initializeNativeNetworkRuntime(application, () => {});
       try {
-        const identity = await runtime.ready;
-        expect(runtime.state).toBe("prepared");
+        const identity = await runtime.identity;
+        expect(runtime.state).toBe("running");
         expect(identity.localEndpoint.port).toBeGreaterThan(0);
         await runtime.applyIntent(emptyIntent(application), 0n);
         expect(runtime.state).toBe("running");

@@ -27,7 +27,6 @@ function fixture() {
         level: "debug",
         scope: "network_reqresp",
         message: "request_completed",
-        session: 9n,
         sequence: BigInt(i + 1),
         timestampMs: 1000n,
         monotonicMs: 20n,
@@ -50,7 +49,6 @@ it("forwards structured native context through the normal logger and flushes a f
   expect(f.runtime.setLogLevel).toHaveBeenCalledWith("debug");
   expect(f.logger.debug).toHaveBeenCalledWith("request_completed", {
     nativeScope: "network_reqresp",
-    nativeSession: "9",
     nativeSequence: "1",
     nativeTimestampMs: "1000",
     nativeMonotonicMs: "20",

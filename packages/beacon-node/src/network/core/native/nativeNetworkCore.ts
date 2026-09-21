@@ -1,10 +1,9 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
-import bindings from "@chainsafe/lodestar-z";
 import {
   NativeNetworkApplicationRuntime,
   NativePeerAction,
-  createNativeNetworkApplicationRuntime,
+  initializeNativeNetworkRuntime,
 } from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -18,7 +17,14 @@ import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {BaseNetworkInit} from "../networkCore.js";
 import {INetworkCore} from "../types.js";
-import {hostPeerId, nativeMultiaddr, nativePeerId, parseNativeEndpoint} from "./addresses.js";
+import {
+  NativeDirectPeer,
+  hostPeerId,
+  nativeMultiaddr,
+  nativePeerId,
+  parseNativeDirectPeer,
+  parseNativeEndpoint,
+} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -47,10 +53,9 @@ export class NativeNetworkCore implements INetworkCore {
   private scheduled: NodeJS.Immediate | undefined;
   private closed = false;
   private closePromise: Promise<void> | undefined;
-  private active = false;
   private constructor(private readonly modules: BaseNetworkInit) {}
 
-  static async prepare(modules: BaseNetworkInit): Promise<NativeNetworkCore> {
+  static init(modules: BaseNetworkInit): NativeNetworkCore {
     if (modules.peerStoreDir)
       throw new NativeNetworkError({
         code: NativeNetworkErrorCode.CONFIGURATION,
@@ -58,7 +63,7 @@ export class NativeNetworkCore implements INetworkCore {
       });
     assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
-    const {application, network, executionLimits} = createNativeConfig(
+    const {application, network, executionLimits, directPeers} = createNativeConfig(
       opts,
       config,
       privateKey,
@@ -77,11 +82,7 @@ export class NativeNetworkCore implements INetworkCore {
       },
     });
     try {
-      bindings.config.set(config, config.genesisValidatorsRoot);
-      core.runtime = createNativeNetworkApplicationRuntime(application, core.onReadable);
-      core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
-      await core.runtime.ready;
-      const diagnostics = core.runtime.diagnostics();
+      core.runtime = initializeNativeNetworkRuntime(application, core.onWorkAvailable);
       core.intent = new NativeIntent(
         core.runtime,
         application,
@@ -92,6 +93,8 @@ export class NativeNetworkCore implements INetworkCore {
         initialStatus,
         core.onFailure
       );
+      core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
+      const diagnostics = core.runtime.diagnostics();
       core.gossip = new NativeGossip(
         core.runtime,
         config,
@@ -114,9 +117,16 @@ export class NativeNetworkCore implements INetworkCore {
           return core.close();
         })
         .catch((error: unknown) => modules.logger.error("Native network terminal cleanup failed", {}, error as Error));
+      modules.clock.on(ClockEvent.slot, core.onSlot);
+      core.intent.refresh();
+      queueMicrotask(() => {
+        if (!core.closed) void core.connectConfiguredPeers(directPeers).catch(core.onFailure);
+      });
       return core;
     } catch (error) {
-      await core.close();
+      void core
+        .close()
+        .catch((closeError: unknown) => modules.logger.error("Native startup cleanup failed", {}, closeError as Error));
       throw error;
     } finally {
       application.identitySecretKey.fill(0);
@@ -124,18 +134,16 @@ export class NativeNetworkCore implements INetworkCore {
   }
 
   createGossipExecutor(modules: NetworkProcessorModules, opts: NetworkProcessorOpts): NativeGossipExecutor {
-    return new NativeGossipExecutor(modules, opts, this.gossip, this.onReadable);
+    return new NativeGossipExecutor(modules, opts, this.gossip, this.onWorkAvailable);
   }
 
-  async activate(status: Status, custodyGroupCount: number): Promise<void> {
-    this.modules.clock.on(ClockEvent.slot, this.onSlot);
-    await this.intent.activate(status, custodyGroupCount);
-    if (this.closed) throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "activation"});
-    this.active = true;
-    this.onReadable();
+  private async connectConfiguredPeers(directPeers: NativeDirectPeer[]): Promise<void> {
     const {opts} = this.modules;
-    for (const address of opts.directPeers ?? []) await this.addDirectPeer(address);
-    void this.connectBootnodes(opts.bootMultiaddrs ?? []);
+    for (const peer of directPeers) {
+      if (this.closed) return;
+      await this.runtime.addDirectPeer(peer.identity, peer.addresses);
+    }
+    await this.connectBootnodes(opts.bootMultiaddrs ?? []);
   }
 
   private async connectBootnodes(addresses: string[]): Promise<void> {
@@ -157,8 +165,8 @@ export class NativeNetworkCore implements INetworkCore {
   private readonly onSlot = (): void => {
     this.intent.refresh();
   };
-  private readonly onReadable = (): void => {
-    if (!this.active || this.closed || this.scheduled) return;
+  private readonly onWorkAvailable = (): void => {
+    if (this.closed || this.scheduled) return;
     this.scheduled = setImmediate(() => {
       this.scheduled = undefined;
       if (this.closed) return;
@@ -166,7 +174,7 @@ export class NativeNetworkCore implements INetworkCore {
         const peers = this.peers.drain(32);
         const requests = this.requests.drain(8);
         const gossip = this.gossip.drain();
-        if (peers || requests || gossip) this.onReadable();
+        if (peers || requests || gossip) this.onWorkAvailable();
       } catch (error) {
         this.onFailure(error);
       }
@@ -184,7 +192,6 @@ export class NativeNetworkCore implements INetworkCore {
     const completion = defer<void>();
     this.closePromise = completion.promise;
     this.closed = true;
-    this.active = false;
     this.modules.clock.off(ClockEvent.slot, this.onSlot);
     if (this.scheduled) clearImmediate(this.scheduled);
     this.scheduled = undefined;
@@ -250,31 +257,9 @@ export class NativeNetworkCore implements INetworkCore {
     return this.runtime.disconnect(nativePeerId(peer));
   }
   async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
-    const address = peer;
-    if (typeof address !== "string" || address.length > 404)
-      throw new NativeNetworkError({
-        code: NativeNetworkErrorCode.CONFIGURATION,
-        resource: "direct peer address length",
-      });
-    if (address.startsWith("enr:")) {
-      const enr = ENR.decodeTxt(address);
-      const id = enr.peerId.toString();
-      const addresses = [enr.getLocationMultiaddr("quic4"), enr.getLocationMultiaddr("quic6")]
-        .filter((address) => address !== undefined)
-        .map((address) => parseNativeEndpoint(address.toString(), true));
-      if (!addresses.length)
-        throw new NativeNetworkError({
-          code: NativeNetworkErrorCode.CONFIGURATION,
-          resource: "direct peer has no QUIC address",
-        });
-      await this.runtime.addDirectPeer(nativePeerId(id), addresses);
-      return id;
-    }
-    const id = address.split("/p2p/")[1];
-    if (!id)
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "direct peer identity"});
-    await this.runtime.addDirectPeer(nativePeerId(id), [parseNativeEndpoint(address, true, id)]);
-    return id;
+    const direct = parseNativeDirectPeer(peer);
+    await this.runtime.addDirectPeer(direct.identity, direct.addresses);
+    return direct.id;
   }
   removeDirectPeer(peer: string): Promise<boolean> {
     return this.runtime.removeDirectPeer(nativePeerId(peer));

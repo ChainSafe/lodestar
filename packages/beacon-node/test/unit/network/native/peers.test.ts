@@ -8,7 +8,6 @@ import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 async function fixture() {
   const key = await generateKeyPair("secp256k1");
   const state: NativePeerState = {
-    session: (1n << 62n) + 1n,
     peer: {index: 0, generation: (1n << 63n) + 1n},
     identity: key.publicKey.toMultihash().bytes,
     connection: {index: 0, generation: 17},
@@ -110,7 +109,6 @@ describe("native peer projection", () => {
     if (!old.connection) throw new Error("Missing test connection");
     node.drain({
       type: "closed",
-      session: old.session,
       peer: old.peer,
       identity: old.identity,
       connection: old.connection,
@@ -120,7 +118,6 @@ describe("native peer projection", () => {
     expect(node.disconnected).not.toHaveBeenCalled();
     node.drain({
       type: "closed",
-      session: current.session,
       peer: current.peer,
       identity: current.identity,
       connection: current.connection,

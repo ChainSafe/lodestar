@@ -13,7 +13,7 @@ import {ClockStopped} from "../../../mocks/clock.js";
 async function fixture(
   subscribeAllSubnets = false,
   fuluEpoch = 0,
-  activate = true,
+  refreshInitialState = true,
   networkOptions: Partial<NetworkOptions> = {},
   chainConfig: Partial<ChainConfig> = {}
 ) {
@@ -58,7 +58,10 @@ async function fixture(
   const updateStatus = vi.fn<NativeNetworkApplicationRuntime["updateStatus"]>(async () => undefined);
   const failed = vi.fn();
   const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, 16, status, failed);
-  if (activate) await intent.activate(status, config.CUSTODY_REQUIREMENT);
+  if (refreshInitialState) {
+    intent.refresh();
+    await Promise.resolve();
+  }
   return {
     config,
     network,
@@ -357,12 +360,12 @@ describe("native local intent transactions", () => {
     }
   });
 
-  it("does not activate a prepared intent through Status or enqueue malformed caller data", async () => {
+  it("uses Status immediately after initialization and rejects malformed caller data", async () => {
     const node = await fixture(false, 0, false);
     try {
-      await expect(node.intent.updateStatus(ssz.fulu.Status.defaultValue())).rejects.toThrow("not activated");
+      await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
       expect(node.applyIntent).not.toHaveBeenCalled();
-      expect(node.updateStatus).not.toHaveBeenCalled();
+      expect(node.updateStatus).toHaveBeenCalledOnce();
       const invalid = ssz.fulu.Status.defaultValue();
       invalid.headRoot = new Uint8Array(31);
       expect(() => node.intent.updateStatus(invalid)).toThrow("status root length");

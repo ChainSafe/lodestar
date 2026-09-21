@@ -31,7 +31,6 @@ export class NativeLogs {
           try {
             this.logger[record.level](record.message, {
               nativeScope: record.scope,
-              nativeSession: record.session.toString(),
               nativeSequence: record.sequence.toString(),
               nativeTimestampMs: record.timestampMs.toString(),
               nativeMonotonicMs: record.monotonicMs.toString(),

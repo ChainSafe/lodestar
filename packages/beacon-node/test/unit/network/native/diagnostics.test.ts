@@ -54,7 +54,6 @@ async function fixture() {
     ],
   };
   const peer: NativePeerState = {
-    session: 1n,
     peer: {index: 0, generation: 1n},
     identity,
     connection: {index: 0, generation: 1},

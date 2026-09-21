@@ -79,7 +79,7 @@ async function fixture(events = new NetworkEventBus(), hostGossipItems = 1, atta
     wake,
     message(id = 1): NativeGossipMessage {
       return {
-        handle: {session: (1n << 62n) + 7n, index: 0, generation: (1n << 63n) + BigInt(id)},
+        handle: {index: 0, generation: (1n << 63n) + BigInt(id)},
         connection: {index: 0, generation: 1},
         peerId: peer.publicKey.toMultihash().bytes,
         topic,

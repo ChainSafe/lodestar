@@ -73,11 +73,10 @@ export function formatNativePeer(peer: NativePeerState): routes.lodestar.Lodesta
 }
 
 function sameConnection(
-  left: Pick<NativePeerState, "session" | "peer" | "connection">,
-  right: Pick<NativePeerState, "session" | "peer" | "connection">
+  left: Pick<NativePeerState, "peer" | "connection">,
+  right: Pick<NativePeerState, "peer" | "connection">
 ): boolean {
   return (
-    left.session === right.session &&
     left.peer.index === right.peer.index &&
     left.peer.generation === right.peer.generation &&
     left.connection !== null &&

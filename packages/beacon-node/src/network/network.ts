@@ -179,9 +179,10 @@ export class Network implements INetwork {
       logger.info("running libp2p instance in worker thread");
     }
 
+    // Native construction and consumer attachment stay in one JS turn, before notifications run.
     const core =
       opts.backend === "native"
-        ? await NativeNetworkCore.prepare({
+        ? NativeNetworkCore.init({
             opts,
             config,
             privateKey,
@@ -256,7 +257,6 @@ export class Network implements INetwork {
         void core.terminated
           .then(() => network?.close())
           .catch((error: unknown) => logger.error("Native network stopped unexpectedly", {}, error as Error));
-        await core.activate(chain.getStatus(), chain.custodyConfig.targetCustodyGroupCount);
       }
       return network;
     } catch (error) {
