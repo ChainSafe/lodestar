@@ -4,9 +4,11 @@ import {SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
 import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {UINT64_MAX, createNativeConfig} from "../../../../src/network/core/native/config.js";
+import {UINT64_MAX, createNativeConfig, kinds, nativeTopicScore} from "../../../../src/network/core/native/config.js";
 import {NativeNetworkError} from "../../../../src/network/core/native/errors.js";
+import {computeGossipPeerScoreParams} from "../../../../src/network/gossip/scoringParameters.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
 
 const config = createBeaconConfig(
@@ -207,3 +209,43 @@ describe("native configuration boundary", () => {
     });
   });
 });
+
+it.each([16, 1_000_000])(
+  "startup kind policies preserve upstream scoring across activation slots for %i validators",
+  async (validators) => {
+    const node = await fixture();
+    const application = node.create({}, 0, validators);
+    application.identitySecretKey.fill(0);
+    const policies = application.gossipPolicy.score.topics;
+    const boundary = config.forkBoundariesAscendingEpochOrder.findLast((boundary) => boundary.epoch === 0);
+    if (!boundary) throw Error("Missing genesis boundary");
+    const digest = Buffer.from(config.forkBoundary2ForkDigest(boundary)).toString("hex");
+    expect(Object.keys(policies).sort()).toEqual([...kinds].sort());
+    expect(policies.sync_committee.weight).toBe(0);
+    expect(policies.data_column_sidecar.weight).toBe(0);
+    for (const kind of ["beacon_block", "beacon_aggregate_and_proof", "beacon_attestation"] as const) {
+      const policy = policies[kind];
+      expect(policy.meshDeliveryStartSlot).toBeGreaterThan(0n);
+      for (const offset of [-1, 0, 1]) {
+        const slot = Number(policy.meshDeliveryStartSlot) + offset;
+        const upstream = computeGossipPeerScoreParams({
+          config,
+          eth2Context: {
+            activeValidatorCount: validators,
+            currentSlot: slot,
+            currentEpoch: Math.floor(slot / SLOTS_PER_EPOCH),
+          },
+        });
+        const topic = `/eth2/${digest}/${kind}${kind === "beacon_attestation" ? "_0" : ""}/ssz_snappy`;
+        const params = upstream.topics?.[topic];
+        if (!params) throw Error(`Missing upstream parameters: ${topic}`);
+        const effective = {...policy};
+        if (offset < 0) {
+          effective.meshDeliveryWeight = 0;
+          effective.meshDeliveryThreshold = 0;
+        }
+        expect(effective).toEqual(nativeTopicScore(params, Number(policy.meshDeliveryStartSlot)));
+      }
+    }
+  }
+);

@@ -22,7 +22,7 @@ import {
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
-import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../gossip/scoringParameters.js";
+import {computeGossipPeerScoreParamsByKind, gossipScoreThresholds} from "../../gossip/scoringParameters.js";
 import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../gossip/topic.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
@@ -73,8 +73,9 @@ export function gossipExecutionLimits(
   });
 }
 
-export function nativeTopicScore(params: TopicScoreParams): NativeTopicScoreParams {
+export function nativeTopicScore(params: TopicScoreParams, meshDeliveryStartSlot = 0): NativeTopicScoreParams {
   return {
+    meshDeliveryStartSlot: BigInt(nativeInteger(meshDeliveryStartSlot, "mesh delivery start slot")),
     weight: params.topicWeight,
     timeInMeshWeight: params.timeInMeshWeight,
     timeInMeshCap: params.timeInMeshCap,
@@ -319,10 +320,7 @@ export function createNativeConfig(
   };
   const score = {
     ...defaultPeerScoreParams,
-    ...computeGossipPeerScoreParams({
-      config,
-      eth2Context: {activeValidatorCount, currentSlot: slot, currentEpoch: Math.floor(slot / SLOTS_PER_EPOCH)},
-    }),
+    ...computeGossipPeerScoreParamsByKind(config, activeValidatorCount),
   };
   const boundaries = config.forkBoundariesAscendingEpochOrder.filter(
     (boundary, index, all) =>
@@ -402,7 +400,12 @@ export function createNativeConfig(
         publishThreshold: gossipScoreThresholds.publishThreshold,
         graylistThreshold: gossipScoreThresholds.graylistThreshold,
         opportunisticGraftThreshold: gossipScoreThresholds.opportunisticGraftThreshold,
-        defaultTopic: nativeTopicScore(defaultTopicScoreParams),
+        topics: Object.fromEntries(
+          kinds.map((kind) => {
+            const policy = score.topics[kind] ?? {...defaultTopicScoreParams, topicWeight: 0, meshDeliveryStartSlot: 0};
+            return [kind, nativeTopicScore(policy, policy.meshDeliveryStartSlot)];
+          })
+        ) as Record<NativeTopicKind, NativeTopicScoreParams>,
       },
     },
     identitySecretKey: Uint8Array.from(key.raw),

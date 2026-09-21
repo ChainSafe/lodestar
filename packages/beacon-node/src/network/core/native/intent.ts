@@ -1,8 +1,8 @@
-import {defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {
   NativeApplicationConfig,
   NativeLocalIntent,
   NativeNetworkApplicationRuntime,
+  NativeSubscriptionSet,
 } from "@chainsafe/lodestar-z/network";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -18,14 +18,13 @@ import {TARGET_GROUP_PEERS_PER_SUBNET} from "../../../constants/network.js";
 import {IClock} from "../../../util/clock.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForkBoundaries, getCurrentAndNextForkBoundary} from "../../forks.js";
-import {GossipType} from "../../gossip/interface.js";
-import {computeGossipPeerScoreParams} from "../../gossip/scoringParameters.js";
-import {getCoreTopicsAtFork, getDataColumnSidecarTopics, stringifyGossipTopic} from "../../gossip/topic.js";
+import {GossipTopicTypeMap, GossipType} from "../../gossip/interface.js";
+import {getCoreTopicsAtFork, getDataColumnSidecarTopics} from "../../gossip/topic.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {computeSubscribedSubnet} from "../../subnets/util.js";
-import {nativeLocalState, nativeTopicScore} from "./config.js";
+import {kinds, nativeLocalState} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 type Desired = {
@@ -86,7 +85,6 @@ export class NativeIntent {
     private readonly network: NetworkConfig,
     private readonly clock: IClock,
     private readonly opts: NetworkOptions,
-    private readonly activeValidatorCount: number,
     status: Status,
     private readonly onFailure: (error: unknown) => void
   ) {
@@ -240,43 +238,49 @@ export class NativeIntent {
     if (this.opts.subscribeAllSubnets) local.metadata.attnets.fill(255);
     for (const subnet of state.syncDuties.keys()) local.metadata.syncnets |= 1 << subnet;
     if (this.opts.subscribeAllSubnets) local.metadata.syncnets = (1 << SYNC_COMMITTEE_SUBNET_COUNT) - 1;
-    const score = computeGossipPeerScoreParams({
-      config,
-      eth2Context: {activeValidatorCount: this.activeValidatorCount, currentEpoch: epoch, currentSlot: slot},
-    });
-    const topics = new Set<string>();
+    const subscriptions: NativeSubscriptionSet[] = [];
     for (const boundary of boundaries) {
+      const subnets: NativeSubscriptionSet["subnets"] = {};
+      const add = (topic: GossipTopicTypeMap[GossipType]): void => {
+        const kind = kinds.find((kind) => kind === topic.type);
+        if (!kind)
+          throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: `topic ${topic.type}`});
+        const subnet = "subnet" in topic ? topic.subnet : 0;
+        const bytes = Math.floor(nativeInteger(subnet, "subscription subnet", 127) / 8) + 1;
+        let mask = subnets[kind];
+        if (!mask || mask.length < bytes) {
+          const expanded = new Uint8Array(bytes);
+          if (mask) expanded.set(mask);
+          subnets[kind] = mask = expanded;
+        }
+        mask[subnet >> 3] |= 1 << (subnet % 8);
+      };
+      subscriptions.push({digest: config.forkBoundary2ForkDigest(boundary), subnets});
       if (state.coreTopics)
         for (const type of getCoreTopicsAtFork(network, boundary.fork, {
           subscribeAllSubnets: false,
           disableLightClientServer: this.opts.disableLightClientServer,
         }))
-          topics.add(stringifyGossipTopic(config, {...type, boundary}));
+          add(type);
       if (state.custodyTopics && isForkPostFulu(boundary.fork))
-        for (const type of getDataColumnSidecarTopics(network))
-          topics.add(stringifyGossipTopic(config, {...type, boundary}));
+        for (const type of getDataColumnSidecarTopics(network)) add(type);
       if (this.opts.subscribeAllSubnets) {
         for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
-          topics.add(stringifyGossipTopic(config, {type: GossipType.beacon_attestation, subnet, boundary}));
+          add({type: GossipType.beacon_attestation, subnet});
         if (isForkPostAltair(boundary.fork))
           for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++)
-            topics.add(stringifyGossipTopic(config, {type: GossipType.sync_committee, subnet, boundary}));
+            add({type: GossipType.sync_committee, subnet});
       }
-      for (const subnet of longLived)
-        topics.add(stringifyGossipTopic(config, {type: GossipType.beacon_attestation, subnet, boundary}));
+      for (const subnet of longLived) add({type: GossipType.beacon_attestation, subnet});
       for (const [dutySlot, subnets] of state.attDuties) {
         if (dutySlot >= slot && dutySlot <= slot + this.opts.slotsToSubscribeBeforeAggregatorDuty)
-          for (const subnet of subnets)
-            topics.add(stringifyGossipTopic(config, {type: GossipType.beacon_attestation, subnet, boundary}));
+          for (const subnet of subnets) add({type: GossipType.beacon_attestation, subnet});
       }
       if (isForkPostAltair(boundary.fork))
-        for (const subnet of state.syncDuties.keys())
-          topics.add(stringifyGossipTopic(config, {type: GossipType.sync_committee, subnet, boundary}));
+        for (const subnet of state.syncDuties.keys()) add({type: GossipType.sync_committee, subnet});
     }
-    if (topics.size > 512)
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "active gossip topics"});
-    const groupTargets = Array<number>(128).fill(0);
-    const custodyGroupTargets = Array<number>(128).fill(0);
+    const groupTargets = new Uint16Array(128);
+    const custodyGroupTargets = new Uint16Array(128);
     if (isForkPostFulu(config.getForkName(slot))) {
       groupTargets.fill(
         Math.min(TARGET_GROUP_PEERS_PER_SUBNET, this.opts.maxPeers),
@@ -293,10 +297,7 @@ export class NativeIntent {
         local,
         endpoints: this.application.discovery?.advertisement ?? null,
       },
-      subscriptions: Array.from(topics, (name) => ({
-        name,
-        params: nativeTopicScore(score.topics?.[name] ?? {...defaultTopicScoreParams, topicWeight: 0}),
-      })),
+      subscriptions,
       demand: {
         attnets,
         syncnets: local.metadata.syncnets,

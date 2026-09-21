@@ -89,7 +89,6 @@ export class NativeNetworkCore implements INetworkCore {
         network,
         clock,
         core.modules.opts,
-        activeValidatorCount,
         initialStatus,
         core.onFailure
       );

@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it, vi} from "vitest";
-import {NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import {NativeLocalIntent, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -57,7 +57,7 @@ async function fixture(
   }));
   const updateStatus = vi.fn<NativeNetworkApplicationRuntime["updateStatus"]>(async () => undefined);
   const failed = vi.fn();
-  const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, 16, status, failed);
+  const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, status, failed);
   if (refreshInitialState) {
     intent.refresh();
     await Promise.resolve();
@@ -91,7 +91,7 @@ describe("native local intent transactions", () => {
       const current = node.latest();
       expect(current.demand.attnets[subnet >> 3] & (1 << (subnet % 8))).not.toBe(0);
       expect(current.update.local.metadata.attnets).toEqual(before.update.local.metadata.attnets);
-      expect(current.subscriptions.some(({name}) => name.includes(`/beacon_attestation_${subnet}/`))).toBe(false);
+      expect(subscriptionNames(current).some((name) => name.includes(`/beacon_attestation_${subnet}/`))).toBe(false);
       node.clock.setSlot(4);
       await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
       expect(node.latest().demand.attnets[subnet >> 3] & (1 << (subnet % 8))).toBe(0);
@@ -169,7 +169,7 @@ describe("native local intent transactions", () => {
       await node.intent.coreTopics(true);
       await node.intent.custody(16);
       await node.intent.coreTopics(false);
-      const names = node.latest().subscriptions.map(({name}) => name);
+      const names = subscriptionNames(node.latest());
       expect(names.some((name) => name.includes("/beacon_block/"))).toBe(false);
       expect(names.filter((name) => name.includes("/beacon_attestation_"))).toHaveLength(64);
       expect(names.filter((name) => name.includes("/sync_committee_"))).toHaveLength(4);
@@ -197,7 +197,7 @@ describe("native local intent transactions", () => {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       await subscribing;
       await unsubscribing;
-      expect(node.latest().subscriptions.some(({name}) => name.includes("/beacon_block/"))).toBe(false);
+      expect(subscriptionNames(node.latest()).some((name) => name.includes("/beacon_block/"))).toBe(false);
       node.applyIntent.mockRejectedValueOnce(new Error("native capacity"));
       await expect(node.intent.custody(16)).rejects.toThrow("native capacity");
       await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
@@ -222,13 +222,13 @@ describe("native local intent transactions", () => {
       await node.intent.committee([duty], false);
       expect(node.latest().update.local.status.headRoot).toEqual(new Uint8Array(32).fill(7));
       await node.intent.committee([duty], true);
-      expect(node.latest().subscriptions.some(({name}) => name.includes("/sync_committee_1/"))).toBe(true);
+      expect(subscriptionNames(node.latest()).some((name) => name.includes("/sync_committee_1/"))).toBe(true);
       node.clock.setSlot(3);
       await node.intent.updateStatus(status);
-      expect(node.latest().subscriptions.some(({name}) => name.includes("/sync_committee_1/"))).toBe(true);
+      expect(subscriptionNames(node.latest()).some((name) => name.includes("/sync_committee_1/"))).toBe(true);
       node.clock.setSlot(SLOTS_PER_EPOCH);
       await node.intent.updateStatus(status);
-      expect(node.latest().subscriptions.some(({name}) => name.includes("/sync_committee_1/"))).toBe(false);
+      expect(subscriptionNames(node.latest()).some((name) => name.includes("/sync_committee_1/"))).toBe(false);
       expect(() =>
         node.intent.committee(
           Array.from({length: 4097}, () => duty),
@@ -254,7 +254,7 @@ describe("native local intent transactions", () => {
       ] as const) {
         node.clock.setSlot(epoch * SLOTS_PER_EPOCH);
         await node.intent.updateStatus(ssz.fulu.Status.defaultValue());
-        const names = node.latest().subscriptions.map(({name}) => name);
+        const names = subscriptionNames(node.latest());
         expect(names.some((name) => name.includes(`/${digest(0)}/`))).toBe(old);
         expect(names.some((name) => name.includes(`/${digest(4)}/`))).toBe(next);
       }
@@ -405,3 +405,19 @@ describe("native local intent transactions", () => {
     await expect(node.intent.coreTopics(true)).rejects.toThrow("NATIVE_NETWORK_CLOSED");
   });
 });
+
+function subscriptionNames(intent: NativeLocalIntent): string[] {
+  const names: string[] = [];
+  for (const {digest, subnets} of intent.subscriptions) {
+    for (const [kind, mask] of Object.entries(subnets)) {
+      for (let i = 0; i < mask.length * 8; i++) {
+        if (!(mask[i >> 3] & (1 << (i % 8)))) continue;
+        const suffix = ["beacon_attestation", "sync_committee", "blob_sidecar", "data_column_sidecar"].includes(kind)
+          ? `_${i}`
+          : "";
+        names.push(`/eth2/${Buffer.from(digest).toString("hex")}/${kind}${suffix}/ssz_snappy`);
+      }
+    }
+  }
+  return names;
+}
