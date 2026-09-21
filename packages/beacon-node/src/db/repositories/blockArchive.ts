@@ -1,8 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, DbBatch, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
-import {bytesToInt, intToBytes} from "@lodestar/utils";
+import {bytesToInt, fromHex, intToBytes} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
+import {getParentRootFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {
   deleteParentRootIndex,
@@ -23,6 +24,10 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
   blockRoot: Root;
   parentRoot: Root;
 };
+
+// The initial prune can span millions of slots. This bounds the slot index reads in flight and keeps each
+// delete batch at a few thousand keys, both tiny next to the block value batches in archiveBlocks
+const DELETE_RANGE_CHUNK_SIZE = 1000;
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -101,6 +106,38 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
       slots.flatMap((slot) => [this.encodeKey(slot), getSlotIndexKey(slot)]),
       this.dbReqOpts
     );
+  }
+
+  /**
+   * Delete a contiguous range of archived blocks together with their index entries.
+   * `slots` must be every archived slot in the range, so the parent of each block is the entry before it.
+   */
+  async batchDeleteRange(slots: Slot[]): Promise<void> {
+    const sorted = [...slots].sort((a, b) => a - b);
+    let prevRoot: Root | null = null;
+
+    for (let i = 0; i < sorted.length; i += DELETE_RANGE_CHUNK_SIZE) {
+      const chunk = sorted.slice(i, i + DELETE_RANGE_CHUNK_SIZE);
+      const roots = await Promise.all(chunk.map((slot) => this.getRootBySlot(slot)));
+
+      const keys: Uint8Array[] = [];
+      for (let j = 0; j < chunk.length; j++) {
+        keys.push(this.encodeKey(chunk[j]), getSlotIndexKey(chunk[j]));
+        const root = roots[j];
+        if (root) keys.push(getRootIndexKey(root));
+        // The parent index entry pointing at this block is keyed by its parent root, which is the
+        // previous block's root unless that block is unindexed, then it is read from the block itself
+        let parentRoot = prevRoot;
+        if (parentRoot === null) {
+          const block = await this.getBinary(chunk[j]);
+          const parentRootHex = block ? getParentRootFromSignedBeaconBlockSerialized(block) : null;
+          parentRoot = parentRootHex ? fromHex(parentRootHex) : null;
+        }
+        if (parentRoot) keys.push(getParentRootIndexKey(parentRoot));
+        prevRoot = root;
+      }
+      await this.db.batchDelete(keys, this.dbReqOpts);
+    }
   }
 
   async batch(operations: DbBatch<Slot, SignedBeaconBlock>): Promise<void> {

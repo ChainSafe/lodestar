@@ -181,7 +181,9 @@
     </spec>
 
 - name: CONFIRMATION_BYZANTINE_THRESHOLD#phase0
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "CONFIRMATION_BYZANTINE_THRESHOLD:"
   spec: |
     <spec config_var="CONFIRMATION_BYZANTINE_THRESHOLD" fork="phase0" hash="340aaaea">
     CONFIRMATION_BYZANTINE_THRESHOLD: Uint64 = 25

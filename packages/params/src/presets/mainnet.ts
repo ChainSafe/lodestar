@@ -153,8 +153,6 @@ export const mainnetPreset: BeaconPreset = {
   // ---------------------------------------------------------------
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: 16829,
   MAX_ATTESTER_SLASHING_SIZE: 2097616,
-  MAX_DATA_COLUMN_SIDECAR_SIZE: 8585272,
-  MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: 8585741,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: 196932,
 
   // HEZE

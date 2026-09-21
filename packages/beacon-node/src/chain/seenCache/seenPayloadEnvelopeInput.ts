@@ -256,10 +256,11 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.size;
   }
 
-  prune(blockRootHex: RootHex): void {
+  /** Removes the single PayloadEnvelopeInput from the cache */
+  remove(blockRootHex: RootHex): void {
     const input = this.payloadInputs.get(blockRootHex);
     if (input) {
-      this.evictPayloadInput(input, "prune");
+      this.evictPayloadInput(input, "remove");
     }
   }
 

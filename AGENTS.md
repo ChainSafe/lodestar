@@ -72,6 +72,12 @@ pnpm lint
 # Fix lint issues automatically
 pnpm lint:fix
 
+# Lint markdown docs (prettier)
+pnpm docs:lint
+
+# Fix markdown formatting automatically
+pnpm docs:lint:fix
+
 # Type check all packages
 pnpm check-types
 
