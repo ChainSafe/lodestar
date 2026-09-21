@@ -7,6 +7,7 @@ import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
   ReconstructByRangeOpts,
+  isRebuildMiss,
   reconstructArchivedEnvelopes,
   reconstructArchivedEnvelopesByRange,
 } from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
@@ -272,17 +273,21 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect(unservableSlot).toBe(10);
   });
 
-  it("keeps PAYLOAD_ROOT_MISMATCH as a throw on the getter path (REST 500 / by-root SERVER_ERROR)", async () => {
+  it("reports a mismatch as a miss carrying PAYLOAD_ROOT_MISMATCH on the batch getter path", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
-    const err = await rejection(reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)]));
-    expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
-    expect(err?.isTransient()).toBe(false);
+    const [result] = await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)]);
+    if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
+    expect(result.slot).toBe(10);
+    expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
+    expect(result.error.isTransient()).toBe(false);
   });
 
-  it("returns null from the getter path when the EL cannot serve the bodies", async () => {
+  it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)])).toEqual([null]);
+    expect(await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)])).toEqual([
+      {slot: 10, reason: "unavailable"},
+    ]);
   });
 });

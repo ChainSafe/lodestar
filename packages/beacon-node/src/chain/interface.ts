@@ -32,6 +32,7 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
+import {ReconstructMismatchPolicy} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
@@ -237,7 +238,8 @@ export interface IBeaconChain {
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getSerializedExecutionPayloadEnvelopes(
-    requests: {blockSlot: Slot; blockRootHex: RootHex}[]
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMismatch?: ReconstructMismatchPolicy
   ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,

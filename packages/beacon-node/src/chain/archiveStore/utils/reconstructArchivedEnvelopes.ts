@@ -22,6 +22,9 @@ export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
 type RangeEntry = ArchivedEnvelopeBinary & {slot: Slot};
 
+/** What a payload root mismatch means on a given serving path */
+export type ReconstructMismatchPolicy = "throw" | "omit";
+
 export type RebuildMiss =
   /** EL does not have the block, or has pruned its block access list */
   | {slot: Slot; reason: "unavailable"}
@@ -83,29 +86,22 @@ export async function* reconstructArchivedEnvelopesByRange(
 }
 
 /**
- * Rebuild compact envelopes from EL bodies, 32 per round-trip. Aligned with the input, `null` where
- * the EL cannot serve the bodies. A payload root mismatch throws: REST (500) and by-root
- * (SERVER_ERROR) surface it as the local inconsistency it is.
+ * Rebuild compact envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
+ * {@link RebuildMiss} where the envelope could not be rebuilt; the caller decides what a miss means
+ * on its path. Throws ENGINE_UNAVAILABLE only.
  */
 export async function reconstructArchivedEnvelopes(
   executionEngine: IExecutionEngine,
   compacts: SignedCompactExecutionPayloadEnvelope[]
-): Promise<(gloas.SignedExecutionPayloadEnvelope | null)[]> {
-  const out: (gloas.SignedExecutionPayloadEnvelope | null)[] = [];
+): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
+  const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
   for (let i = 0; i < compacts.length; i += MAX_BODIES_REQUEST) {
-    for (const result of await rebuildCompacts(executionEngine, compacts.slice(i, i + MAX_BODIES_REQUEST))) {
-      if (isRebuildMiss(result)) {
-        if (result.reason === "mismatch") throw result.error;
-        out.push(null);
-      } else {
-        out.push(result);
-      }
-    }
+    out.push(...(await rebuildCompacts(executionEngine, compacts.slice(i, i + MAX_BODIES_REQUEST))));
   }
   return out;
 }
 
-function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
+export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
   return "reason" in result;
 }
 

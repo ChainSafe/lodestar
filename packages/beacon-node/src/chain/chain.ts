@@ -81,7 +81,11 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {reconstructArchivedEnvelopes} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
+import {
+  ReconstructMismatchPolicy,
+  isRebuildMiss,
+  reconstructArchivedEnvelopes,
+} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -936,9 +940,14 @@ export class BeaconChain implements IBeaconChain {
     return bytes;
   }
 
-  /** Batch variant: archived compact envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`. */
+  /**
+   * Batch variant: archived compact envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
+   * A payload root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
+   * returns null for that entry, for peer-facing paths where the spec allows omission.
+   */
   async getSerializedExecutionPayloadEnvelopes(
-    requests: {blockSlot: Slot; blockRootHex: RootHex}[]
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMismatch: ReconstructMismatchPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
     const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
@@ -975,8 +984,19 @@ export class BeaconChain implements IBeaconChain {
     if (compacts.length > 0) {
       const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
       for (let j = 0; j < rebuilt.length; j++) {
-        const envelope = rebuilt[j];
-        if (envelope !== null) out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        const result = rebuilt[j];
+        if (isRebuildMiss(result)) {
+          if (result.reason === "mismatch") {
+            if (onMismatch === "throw") throw result.error;
+            this.logger.error(
+              "Archived envelope failed payload root check against EL bodies",
+              {slot: result.slot},
+              result.error
+            );
+          }
+          continue;
+        }
+        out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -998,8 +1018,12 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    const [envelope] = await reconstructArchivedEnvelopes(this.executionEngine, [archived.value]);
-    return envelope ?? null;
+    const [result] = await reconstructArchivedEnvelopes(this.executionEngine, [archived.value]);
+    if (isRebuildMiss(result)) {
+      if (result.reason === "mismatch") throw result.error;
+      return null;
+    }
+    return result;
   }
 
   async getParentExecutionRequests(

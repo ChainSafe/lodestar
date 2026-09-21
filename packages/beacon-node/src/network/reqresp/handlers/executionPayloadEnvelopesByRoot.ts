@@ -43,13 +43,12 @@ export async function* onExecutionPayloadEnvelopesByRoot(
 
   let envelopesBytes: (Uint8Array | null)[];
   try {
-    envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(requests);
+    // by-root allows omission, so a mismatched envelope is left out rather than failing the response
+    envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(requests, "omit");
   } catch (e) {
-    // Unlike by-range, a payload root mismatch reaches here and is SERVER_ERROR: by-root allows omission,
-    // so there is no consecutive-order reason to hide a local inconsistency from the peer
     if (e instanceof EnvelopeReconstructionError) {
       throw new ResponseError(
-        e.isTransient() ? RespStatus.RESOURCE_UNAVAILABLE : RespStatus.SERVER_ERROR,
+        RespStatus.RESOURCE_UNAVAILABLE,
         `Failed to reconstruct archived envelopes: ${e.message}`
       );
     }
