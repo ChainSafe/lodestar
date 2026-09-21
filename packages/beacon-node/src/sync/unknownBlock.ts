@@ -207,8 +207,11 @@ export class BlockInputSync {
   private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
       const isNewRoot = this.addByRootHex(data.rootHex, data.peer);
-      if (isNewRoot) {
+      // A retained entry (an earlier download failed, #10018) is not new but still needs a retry pass.
+      if (this.pendingBlocks.get(data.rootHex)?.status === PendingBlockInputStatus.pending) {
         this.triggerUnknownBlockSearch();
+      }
+      if (isNewRoot) {
         this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
         this.metrics?.blockInputSync.source.inc({source: data.source});
       }
