@@ -17,7 +17,6 @@ import {signedCompactEnvelopeToFull} from "./compactEnvelope.js";
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
-/** Serialized `SignedExecutionPayloadEnvelope` ready to serve */
 export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
 type RangeEntry = ArchivedEnvelopeBinary & {slot: Slot};
@@ -35,7 +34,7 @@ export type ReconstructByRangeOpts = {
   /**
    * Start of the MIN_EPOCHS_FOR_BLOCK_REQUESTS window. Does not gate what is attempted (every compact
    * entry is tried; the EL's null is the floor), only the log level of a miss: debug below the window,
-   * warn inside it since the EL is then failing to serve what the CL must (ethereum/EIPs#12347).
+   * warn inside it since the EL is then failing to serve what the CL must.
    */
   servingWindowStartSlot: Slot;
 };
@@ -47,9 +46,9 @@ export type ReconstructByRangeOpts = {
  *
  * The by-range spec inherits BeaconBlocksByRange v2 semantics: consecutive, MAY be short. A hole
  * looks like a lying peer to one that already holds the blocks, so the stream ends at the first
- * entry that cannot be served (EL miss, or payload root mismatch — logged at error, but to the peer
- * it is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with that
- * slot; everything yielded before it is still a valid response.
+ * entry that cannot be served (EL miss, or payload root mismatch, which is logged at error but to
+ * the peer is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with
+ * that slot; everything yielded before it is still a valid response.
  *
  * Also throws ENGINE_UNAVAILABLE if the EL call itself fails. Either may surface after some
  * envelopes were already yielded.
@@ -165,8 +164,7 @@ async function rebuildCompacts(
   return compacts.map((compact, i) => {
     const slot = compact.message.payload.slotNumber;
     const body = bodies[i];
-    // A pruned BAL comes back null; a zero-length one is treated the same (RLP is never empty, an empty
-    // list is 0xc0), as Prysm guards it too (OffchainLabs/prysm#17174).
+    // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
       return {slot, reason: "unavailable"};
     }

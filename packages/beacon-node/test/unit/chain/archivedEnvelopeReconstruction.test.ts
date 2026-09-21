@@ -185,7 +185,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   it.each<[string, Uint8Array | null]>([
     ["null", null],
-    ["empty bytes (0x, as some ELs return once pruned)", new Uint8Array(0)],
+    ["zero-length", new Uint8Array(0)],
   ])("ends the stream when the EL returns a %s block access list", async (_label, blockAccessList) => {
     const fulls = [await seed(10), await seed(11)];
     getPayloadBodiesByHashV2.mockResolvedValue([bodyOf(fulls[0]), {...bodyOf(fulls[1]), blockAccessList}]);
@@ -244,7 +244,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const fulls = [];
     for (let slot = 0; slot < 33; slot++) fulls.push(await seed(slot));
     const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), bodyOf(f)]));
-    // First round-trip (32 hashes) succeeds, second (1 hash) fails — the real-world partial-response shape
+    // First round-trip (32 hashes) succeeds, second (1 hash) fails, the real-world partial-response shape
     getPayloadBodiesByHashV2
       .mockImplementationOnce(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null))
       .mockRejectedValueOnce(new Error("EL went away"));

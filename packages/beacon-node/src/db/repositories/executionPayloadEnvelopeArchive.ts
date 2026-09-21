@@ -5,7 +5,7 @@ import {Slot, gloas, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
-// Lodestar-internal storage types, not spec containers (precedent: blobSidecarsWrapperSsz)
+// Lodestar-internal storage types, not spec containers
 
 const {
   transactions: _transactions,
@@ -18,7 +18,7 @@ const {
 export const compactExecutionPayloadSsz = new ContainerType(
   {
     ...executionPayloadScalarFields,
-    payloadRoot: ssz.Root, // hash_tree_root(ExecutionPayload) of the full payload
+    payloadRoot: ssz.Root,
   },
   {typeName: "CompactExecutionPayload", jsonCase: "eth2"}
 );
@@ -65,7 +65,6 @@ export type ArchivedEnvelope =
   | {selector: ArchivedEnvelopeKind.Compact; value: SignedCompactExecutionPayloadEnvelope}
   | {selector: ArchivedEnvelopeKind.Full; value: gloas.SignedExecutionPayloadEnvelope};
 
-/** Byte length of the union selector that prefixes the serialized value */
 const ARCHIVED_ENVELOPE_SELECTOR_LENGTH = 1;
 
 /** A raw archive value branched on its selector byte, without deserializing the full form */
@@ -73,10 +72,6 @@ export type ArchivedEnvelopeBinary =
   | {kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
   | {kind: ArchivedEnvelopeKind.Compact; compact: SignedCompactExecutionPayloadEnvelope};
 
-/**
- * Branch a raw archive value on its selector byte: a full entry's envelope SSZ is served as-is
- * (`bytes.subarray(1)`), a compact entry is deserialized for reconstruction.
- */
 export function decodeArchivedEnvelopeBinary(bytes: Uint8Array): ArchivedEnvelopeBinary {
   const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
   return bytes[0] === ArchivedEnvelopeKind.Full

@@ -42,7 +42,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range of envelopes, compact entries rebuilt from EL bodies
   if (startSlot <= archiveMaxSlot) {
     const servingWindowStartSlot = computeStartSlotAtEpoch(
       Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)

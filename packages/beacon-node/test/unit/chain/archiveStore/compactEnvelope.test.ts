@@ -17,7 +17,7 @@ import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../../
 const bodiesOf = payloadBodiesOf;
 
 // Serialize the compact through bytes and back, mirroring the archive round-trip
-// before handing to the real reconstruct fn — proves it survives persistence.
+// before handing to the real reconstruct fn, proving it survives persistence.
 function persistedCompact(
   envelope: gloas.SignedExecutionPayloadEnvelope
 ): ReturnType<typeof signedCompactExecutionPayloadEnvelopeSsz.deserialize> {

@@ -1116,7 +1116,6 @@ export function getBeaconBlockApi({
           ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
           : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
       } catch (e) {
-        // Archived envelopes are rebuilt from EL bodies: EL down -> 503 (retryable), root mismatch -> 500
         if (e instanceof EnvelopeReconstructionError) {
           throw new ApiError(
             e.isTransient() ? 503 : 500,
