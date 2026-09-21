@@ -229,7 +229,7 @@ function processSlotsWithTransientCache(
       let epochTransitionCache: EpochTransitionCache;
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.beforeProcessEpoch});
-        epochTransitionCache = beforeProcessEpoch(postState);
+        epochTransitionCache = beforeProcessEpoch(postState, metrics);
         timer?.();
       }
 

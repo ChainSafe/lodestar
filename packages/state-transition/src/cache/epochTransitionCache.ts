@@ -8,6 +8,7 @@ import {
   CachedBeaconStatePhase0,
   hasCompoundingWithdrawalCredential,
 } from "../index.js";
+import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {
   FLAG_CURR_HEAD_ATTESTER,
@@ -211,7 +212,10 @@ const isCompoundingValidatorArr = new Array<boolean>();
 const previousEpochParticipation = new Array<number>();
 const currentEpochParticipation = new Array<number>();
 
-export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochTransitionCache {
+export function beforeProcessEpoch(
+  state: CachedBeaconStateAllForks,
+  metrics?: BeaconStateTransitionMetrics | null
+): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
   const currentEpoch = epochCtx.epoch;
@@ -460,15 +464,16 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochTrans
   }
 
   if (forkSeq >= ForkSeq.altair) {
-    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-      throw Error(
-        `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+    const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
+    const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
+    if (currentTargetMismatch || previousTargetMismatch) {
+      metrics?.progressiveBalancesMismatches.inc();
     }
-    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-      throw Error(
-        `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+    if (currentTargetMismatch) {
+      epochCtx.currentTargetUnslashedBalanceIncrements = currTargetUnslStake;
+    }
+    if (previousTargetMismatch) {
+      epochCtx.previousTargetUnslashedBalanceIncrements = prevTargetUnslStake;
     }
   }
 

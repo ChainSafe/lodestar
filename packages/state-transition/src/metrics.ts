@@ -137,6 +137,10 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
     }),
+    progressiveBalancesMismatches: register.counter({
+      name: "lodestar_stfn_progressive_balances_mismatches_total",
+      help: "Total count of progressive balance cache mismatches",
+    }),
     proposerRewards: register.gauge<{type: ProposerRewardType}>({
       name: "lodestar_stfn_proposer_rewards_total",
       help: "Proposer reward by type per block",
