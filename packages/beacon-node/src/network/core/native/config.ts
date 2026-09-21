@@ -387,7 +387,6 @@ export function createNativeConfig(
       gossipFactor: 0.25,
       ipAllowlist: [],
       score: {
-        appWeight: score.appSpecificWeight,
         ipColocationWeight: score.IPColocationFactorWeight,
         ipColocationThreshold: score.IPColocationFactorThreshold,
         behaviourWeight: score.behaviourPenaltyWeight,
