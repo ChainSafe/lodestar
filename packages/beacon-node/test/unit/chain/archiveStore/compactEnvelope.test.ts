@@ -26,7 +26,6 @@ function persistedCompact(
 }
 
 describe("compactEnvelope", () => {
-  // The compact scalars are derived from the electra header, not from the payload being compacted.
   // If a later fork adds a scalar to ExecutionPayload, the compact form would drop it on write and
   // the payloadRoot check could not catch it (both sides hash the same container). Pin the field set.
   const postGloasForks = Object.values(ForkName).filter(isForkPostGloas);

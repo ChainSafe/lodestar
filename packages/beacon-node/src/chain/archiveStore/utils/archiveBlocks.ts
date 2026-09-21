@@ -17,7 +17,7 @@ import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
-import {toSignedCompactEnvelope} from "./compactEnvelope.ts";
+import {toSignedCompactEnvelope} from "./compactEnvelope.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
