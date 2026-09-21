@@ -1,7 +1,6 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {NativeGossipDiagnosticsPage, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import type {PeerScoreStats} from "../../peers/score/interface.js";
-import {hostPeerId} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 type Runtime = Pick<NativeNetworkApplicationRuntime, "getPeers" | "getGossipDiagnostics">;
@@ -70,7 +69,7 @@ export async function dumpNativeGossipScores(runtime: Runtime): Promise<PeerScor
         weights: peer.weights,
         outboundReady: peer.outboundReady,
       };
-      dump[hostPeerId(peer.identity)] = stats;
+      dump[peer.identity] = stats;
     }
   });
   return dump;
@@ -84,7 +83,7 @@ export async function dumpNativeMeshPeers(runtime: Runtime): Promise<Record<stri
       if (topic.subscribed && !meshes.has(topic.topic)) meshes.set(topic.topic, new Set());
     }
     for (const peer of page.peers) {
-      const identity = hostPeerId(peer.identity);
+      const identity = peer.identity;
       for (const entry of peer.topics) {
         const topic = names.get(entry.index);
         if (entry.meshMember && topic?.subscribed) meshes.get(topic.topic)?.add(identity);
@@ -100,12 +99,12 @@ export async function dumpNativePeerScores(runtime: Runtime): Promise<PeerScoreS
   let observed: NativeGossipDiagnosticsPage | undefined;
   await visitPages(runtime, (page) => {
     observed ??= page;
-    for (const peer of page.peers) gossip.set(hostPeerId(peer.identity), peer.score);
+    for (const peer of page.peers) gossip.set(peer.identity, peer.score);
   });
   const page = observed;
   if (!page) throw new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource: "peer score snapshot"});
   return snapshot.peers.map((peer) => {
-    const peerId = hostPeerId(peer.identity);
+    const peerId = peer.identity;
     const gossipScore = gossip.get(peerId) ?? 0;
     return {
       peerId,

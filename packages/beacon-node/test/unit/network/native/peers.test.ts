@@ -1,4 +1,5 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {NativePeerObservation, NativePeerState} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
@@ -8,8 +9,7 @@ import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 async function fixture() {
   const key = await generateKeyPair("secp256k1");
   const state: NativePeerState = {
-    peer: {index: 0, generation: (1n << 63n) + 1n},
-    identity: key.publicKey.toMultihash().bytes,
+    identity: peerIdFromPublicKey(key.publicKey).toString(),
     connection: {index: 0, generation: 17},
     direction: "inbound",
     endpoint: {family: 4, address: Uint8Array.of(127, 0, 0, 1), port: 9001},
@@ -109,7 +109,7 @@ describe("native peer projection", () => {
     if (!old.connection) throw new Error("Missing test connection");
     node.drain({
       type: "closed",
-      peer: old.peer,
+
       identity: old.identity,
       connection: old.connection,
       ownerSequence: 3n,
@@ -118,7 +118,7 @@ describe("native peer projection", () => {
     expect(node.disconnected).not.toHaveBeenCalled();
     node.drain({
       type: "closed",
-      peer: current.peer,
+
       identity: current.identity,
       connection: current.connection,
       ownerSequence: 4n,

@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
+import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {NativeGossipMessage, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
@@ -81,7 +82,7 @@ async function fixture(events = new NetworkEventBus(), hostGossipItems = 1, atta
       return {
         handle: {index: 0, generation: (1n << 63n) + BigInt(id)},
         connection: {index: 0, generation: 1},
-        peerId: peer.publicKey.toMultihash().bytes,
+        peerId: peerIdFromPublicKey(peer.publicKey).toString(),
         topic,
         id: new Uint8Array(20).fill(id),
         data: new Uint8Array(new ArrayBuffer(64), 0, 1),

@@ -1,9 +1,9 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
 import {NativeIncomingRequest} from "@chainsafe/lodestar-z/network";
 import {RequestErrorCode} from "@lodestar/reqresp";
 import {defer} from "@lodestar/utils";
-import {hostPeerId} from "../../../../src/network/core/native/addresses.js";
 import {nativeProtocols} from "../../../../src/network/core/native/protocols.js";
 import {NativeRequests, outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
 import {HostServingBudget} from "../../../../src/network/reqresp/serving/budget.js";
@@ -28,7 +28,7 @@ it("maps native admission refusal to local request rate limiting", async () => {
       {request},
       nativeProtocols(config, config.getForkName(0)),
       {
-        peerId: hostPeerId(key.publicKey.toMultihash().bytes),
+        peerId: peerIdFromPublicKey(key.publicKey).toString(),
         method: ReqRespMethod.BeaconBlocksByRoot,
         versions: [2],
         requestData: new Uint8Array(32),
@@ -44,7 +44,7 @@ async function incoming() {
   const permission = defer<void>();
   const written = defer<void>();
   const request: NativeIncomingRequest = {
-    peerId: key.publicKey.toMultihash().bytes,
+    peerId: peerIdFromPublicKey(key.publicKey).toString(),
     connection: {index: 0, generation: 1},
     protocol: "/eth2/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy",
     data: new Uint8Array(32),

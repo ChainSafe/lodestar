@@ -13,7 +13,6 @@ import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
-import {hostPeerId, nativePeerId} from "./addresses.js";
 import {kinds} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
@@ -175,7 +174,7 @@ export class NativeGossip {
   trackSearch(root: string, peer?: string): boolean {
     return (
       !this.closed &&
-      this.runtime.trackGossipSearch(Buffer.from(root.slice(2), "hex"), peer === undefined ? null : nativePeerId(peer))
+      this.runtime.trackGossipSearch(Buffer.from(root.slice(2), "hex"), peer === undefined ? null : peer)
     );
   }
   drain(): boolean {
@@ -217,7 +216,7 @@ export class NativeGossip {
   }
   private prepare(job: GossipJob, message: NativeGossipMessage, kind: NativeTopicKind): void {
     const topic = parseGossipTopic(this.config, message.topic);
-    const source = hostPeerId(message.peerId);
+    const source = message.peerId;
     const id = Buffer.from(message.id).toString("hex");
     const key = `${id}:${source}`;
     const pending: PendingGossipsubMessage = {

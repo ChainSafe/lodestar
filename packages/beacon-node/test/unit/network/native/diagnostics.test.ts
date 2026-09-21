@@ -15,7 +15,7 @@ import {NativeNetworkErrorCode} from "../../../../src/network/core/native/errors
 
 async function fixture() {
   const key = await generateKeyPair("secp256k1");
-  const identity = key.publicKey.toMultihash().bytes;
+  const identity = peerIdFromPublicKey(key.publicKey).toString();
   const page: NativeGossipDiagnosticsPage = {
     ownerSequence: 1n,
     observedMonoMs: 10000n,
@@ -54,7 +54,6 @@ async function fixture() {
     ],
   };
   const peer: NativePeerState = {
-    peer: {index: 0, generation: 1n},
     identity,
     connection: {index: 0, generation: 1},
     direction: "inbound",

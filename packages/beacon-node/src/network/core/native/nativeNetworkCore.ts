@@ -17,14 +17,7 @@ import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {BaseNetworkInit} from "../networkCore.js";
 import {INetworkCore} from "../types.js";
-import {
-  NativeDirectPeer,
-  hostPeerId,
-  nativeMultiaddr,
-  nativePeerId,
-  parseNativeDirectPeer,
-  parseNativeEndpoint,
-} from "./addresses.js";
+import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -230,16 +223,16 @@ export class NativeNetworkCore implements INetworkCore {
     return this.intent.custody(count);
   }
   reportPeer(peer: string, action: PeerAction, _actionName: string): void {
-    this.runtime.reportPeer(nativePeerId(peer), actions[action]);
+    this.runtime.reportPeer(peer, actions[action]);
   }
   reStatusPeers(peers: string[]): Promise<void> {
     nativeInteger(peers.length, "re-status peers", this.modules.opts.maxPeers);
-    return this.runtime.reStatusPeers(peers.map(nativePeerId));
+    return this.runtime.reStatusPeers(peers);
   }
   async getConnectedPeers(): Promise<string[]> {
     return (await this.runtime.getPeers()).peers
       .filter((peer) => peer.connection !== null)
-      .map((peer) => hostPeerId(peer.identity));
+      .map((peer) => peer.identity);
   }
   async getConnectedPeerCount(): Promise<number> {
     return (await this.runtime.getPeers()).counts.connected;
@@ -247,13 +240,13 @@ export class NativeNetworkCore implements INetworkCore {
   connectToPeer(peer: string, addresses: string[]): Promise<void> {
     nativeInteger(addresses.length, "dial addresses", 8, 1);
     return this.runtime.connect(
-      nativePeerId(peer),
+      peer,
       addresses.map((address) => parseNativeEndpoint(address, true, peer)),
       BigInt(this.modules.opts.dialTimeoutMs ?? 10000)
     );
   }
   disconnectPeer(peer: string): Promise<void> {
-    return this.runtime.disconnect(nativePeerId(peer));
+    return this.runtime.disconnect(peer);
   }
   async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
     const direct = parseNativeDirectPeer(peer);
@@ -261,10 +254,10 @@ export class NativeNetworkCore implements INetworkCore {
     return direct.id;
   }
   removeDirectPeer(peer: string): Promise<boolean> {
-    return this.runtime.removeDirectPeer(nativePeerId(peer));
+    return this.runtime.removeDirectPeer(peer);
   }
   async getDirectPeers(): Promise<string[]> {
-    return (await this.runtime.getDirectPeers()).identities.map(hostPeerId);
+    return (await this.runtime.getDirectPeers()).identities;
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
     const {opts, config, clock} = this.modules;
@@ -279,7 +272,7 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
     const identity = await this.runtime.getIdentity();
-    const peerId = hostPeerId(identity.peerId);
+    const peerId = identity.peerId;
     const enr = identity.localEnr ? ENR.decode(identity.localEnr) : undefined;
     const metadata = identity.metadata;
     const discoveryAddresses = [enr?.getLocationMultiaddr("udp4"), enr?.getLocationMultiaddr("udp6")]
@@ -357,7 +350,7 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async dumpPeer(peerId: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const snapshot = await this.runtime.getPeers();
-    const peer = snapshot.peers.find((peer) => peer.connection !== null && hostPeerId(peer.identity) === peerId);
+    const peer = snapshot.peers.find((peer) => peer.connection !== null && peer.identity === peerId);
     return peer ? formatNativePeer(peer) : undefined;
   }
   dumpPeerScoreStats(): ReturnType<typeof dumpNativePeerScores> {

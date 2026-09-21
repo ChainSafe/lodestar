@@ -27,7 +27,7 @@ import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
-import {NativeDirectPeer, nativePeerId, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
+import {NativeDirectPeer, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {nativeFork} from "./protocols.js";
 
@@ -284,11 +284,9 @@ function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
   nativeInteger(opts.directPeers?.length ?? 0, "direct peers", opts.maxPeers);
   nativeInteger(opts.bootMultiaddrs?.length ?? 0, "bootstrap peers", 64);
   for (const address of opts.bootMultiaddrs ?? []) {
-    if (typeof address !== "string" || address.length > 256)
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "bootstrap address length"});
-    const peer = address.split("/p2p/")[1];
-    nativePeerId(peer);
-    parseNativeEndpoint(address, true, peer);
+    if (typeof address !== "string" || address.length > 256 || !address.startsWith("/"))
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "bootstrap address"});
+    parseNativeDirectPeer(address);
   }
 }
 

@@ -1,21 +1,10 @@
 import {peerIdFromString} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
-import {base58btc} from "multiformats/bases/base58";
 import {ENR} from "@chainsafe/enr";
 import {IpEndpoint} from "@chainsafe/lodestar-z/network";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-export function nativePeerId(peer: string): Uint8Array {
-  if (typeof peer !== "string" || peer.length > 128)
-    throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "peer ID"});
-  return peerIdFromString(peer).toMultihash().bytes;
-}
-
-export function hostPeerId(peer: Uint8Array): string {
-  return peerIdFromString(base58btc.encode(peer).slice(1)).toString();
-}
-
-export type NativeDirectPeer = {id: string; identity: Uint8Array; addresses: IpEndpoint[]};
+export type NativeDirectPeer = {id: string; identity: string; addresses: IpEndpoint[]};
 
 export function parseNativeDirectPeer(address: string): NativeDirectPeer {
   if (typeof address !== "string" || address.length > 404)
@@ -31,11 +20,13 @@ export function parseNativeDirectPeer(address: string): NativeDirectPeer {
         code: NativeNetworkErrorCode.CONFIGURATION,
         resource: "direct peer has no QUIC address",
       });
-    return {id, identity: nativePeerId(id), addresses};
+    return {id, identity: id, addresses};
   }
-  const id = address.split("/p2p/")[1];
-  if (!id) throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "direct peer identity"});
-  return {id, identity: nativePeerId(id), addresses: [parseNativeEndpoint(address, true, id)]};
+  const encoded = address.split("/p2p/")[1];
+  if (!encoded)
+    throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "direct peer identity"});
+  const id = peerIdFromString(encoded).toString();
+  return {id, identity: id, addresses: [parseNativeEndpoint(address, true, id)]};
 }
 
 export function parseNativeEndpoint(address: string, quic: boolean, peer?: string): IpEndpoint {

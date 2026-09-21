@@ -20,7 +20,6 @@ import {
 } from "@lodestar/reqresp";
 import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
-import {hostPeerId, nativePeerId} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
@@ -78,7 +77,7 @@ export function outgoingNativeRequest(
   const protocol = selected;
   let iterator: AsyncIterableIterator<NativeResponseChunk>;
   try {
-    iterator = runtime.request(nativePeerId(data.peerId), protocol.id, data.requestData, options);
+    iterator = runtime.request(data.peerId, protocol.id, data.requestData, options);
   } catch (error) {
     throw requestError(error);
   }
@@ -237,7 +236,7 @@ export class NativeRequests {
       try {
         const handler = this.getHandler(protocol.method)(
           {data: request.data, version: protocol.version},
-          peerIdFromString(hostPeerId(request.peerId)),
+          peerIdFromString(request.peerId),
           "unknown"
         );
         route.handler = handler;

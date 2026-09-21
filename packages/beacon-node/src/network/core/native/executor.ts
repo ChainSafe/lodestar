@@ -11,7 +11,6 @@ import {getGossipHandlers} from "../../processor/gossipHandlers.js";
 import {getGossipValidatorBatchFn, getGossipValidatorFn} from "../../processor/gossipValidatorFn.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
-import {hostPeerId} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import {NativeGossip} from "./gossip.js";
 
@@ -39,11 +38,7 @@ export class NativeGossipExecutor {
     const root = `0x${Buffer.from(check.root).toString("hex")}`;
     const available = this.modules.chain.forkChoice.hasBlockHexUnsafe(root);
     if (!available) {
-      this.searchUnknownBlock(
-        {slot: Number(check.slot), root},
-        BlockInputSource.network_processor,
-        hostPeerId(check.peerId)
-      );
+      this.searchUnknownBlock({slot: Number(check.slot), root}, BlockInputSource.network_processor, check.peerId);
     }
     return available;
   }

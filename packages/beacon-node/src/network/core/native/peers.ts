@@ -11,7 +11,7 @@ import {Status} from "@lodestar/types";
 import {computeColumnsForCustodyGroup} from "../../../util/dataColumns.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {getKnownClientFromAgentVersion} from "../../peers/client.js";
-import {hostPeerId, nativeMultiaddr} from "./addresses.js";
+import {nativeMultiaddr} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 function hostInteger(value: bigint): number {
@@ -34,7 +34,7 @@ export function hostStatus(status: NetworkStatus): Status {
 }
 
 export function formatNativePeer(peer: NativePeerState): routes.lodestar.LodestarNodePeer {
-  const peerId = hostPeerId(peer.identity);
+  const peerId = peer.identity;
   const status = peer.status;
   const metadata = peer.metadata;
   return {
@@ -73,12 +73,10 @@ export function formatNativePeer(peer: NativePeerState): routes.lodestar.Lodesta
 }
 
 function sameConnection(
-  left: Pick<NativePeerState, "peer" | "connection">,
-  right: Pick<NativePeerState, "peer" | "connection">
+  left: Pick<NativePeerState, "connection">,
+  right: Pick<NativePeerState, "connection">
 ): boolean {
   return (
-    left.peer.index === right.peer.index &&
-    left.peer.generation === right.peer.generation &&
     left.connection !== null &&
     right.connection !== null &&
     left.connection.index === right.connection.index &&
@@ -107,7 +105,7 @@ export class NativePeers {
   }
   private observe(event: NativePeerObservation): void {
     if (event.type === "closed") {
-      const peer = hostPeerId(event.identity);
+      const peer = event.identity;
       const previous = this.peers.get(peer);
       if (!previous || previous.sequence >= event.ownerSequence || !sameConnection(previous.state, event)) return;
       this.peers.delete(peer);
@@ -115,7 +113,7 @@ export class NativePeers {
       return;
     }
     const {state} = event;
-    const peer = hostPeerId(state.identity);
+    const peer = state.identity;
     const previous = this.peers.get(peer);
     if (previous && previous.sequence >= event.ownerSequence) return;
     if (!state.connection) {

@@ -15,7 +15,7 @@ import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
 import {defer, withTimeout} from "@lodestar/utils";
 import {WorkerNetworkCore} from "../../src/network/core/index.js";
-import {hostPeerId, nativeMultiaddr} from "../../src/network/core/native/addresses.js";
+import {nativeMultiaddr} from "../../src/network/core/native/addresses.js";
 import {createNativeConfig} from "../../src/network/core/native/config.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
@@ -155,7 +155,7 @@ describe("native Lodestar integration", () => {
       const peer = await remote.identity;
       await remote.applyIntent(emptyIntent(application), 0n);
       const identity = await node.network.getNetworkIdentity();
-      const peerId = hostPeerId(peer.peerId);
+      const peerId = peer.peerId;
       await node.network.connectToPeer(peerId, [`${nativeMultiaddr(peer.localEndpoint)}/p2p/${peerId}`]);
       await vi.waitFor(
         async () =>

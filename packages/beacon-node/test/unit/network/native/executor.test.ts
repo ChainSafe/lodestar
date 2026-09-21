@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
+import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
@@ -177,7 +178,7 @@ describe("native gossip host execution", () => {
       handle: {generation: 1n, index: 0},
       root,
       slot: 64n,
-      peerId: key.publicKey.toMultihash().bytes,
+      peerId: peerIdFromPublicKey(key.publicKey).toString(),
       topic: "test",
     };
     const search = vi.fn();
