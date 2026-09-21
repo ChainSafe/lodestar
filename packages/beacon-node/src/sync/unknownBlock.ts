@@ -1637,7 +1637,11 @@ export class BlockInputSync {
         this.peerBalancer.onRequestCompleted(peerId);
       }
 
-      this.pendingBlocks.set(getBlockInputSyncCacheItemRootHex(cacheItem), cacheItem);
+      const cacheItemRootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
+      // pruning may have dropped it mid-fetch
+      if (this.pendingBlocks.has(cacheItemRootHex)) {
+        this.pendingBlocks.set(cacheItemRootHex, cacheItem);
+      }
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
         // download was successful, no need to go with another peer, return
