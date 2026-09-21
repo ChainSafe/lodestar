@@ -8,16 +8,16 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 // Lodestar-internal storage types, not spec containers (precedent: blobSidecarsWrapperSsz)
 
 const {
-  transactionsRoot: _transactionsRoot,
-  withdrawalsRoot: _withdrawalsRoot,
+  transactions: _transactions,
+  withdrawals: _withdrawals,
+  blockAccessList: _blockAccessList,
   ...executionPayloadScalarFields
-} = ssz.electra.ExecutionPayloadHeader.fields;
+} = ssz.gloas.ExecutionPayload.fields;
 
 /** ExecutionPayload minus transactions, withdrawals and blockAccessList, plus the full payload's hash_tree_root */
 export const compactExecutionPayloadSsz = new ContainerType(
   {
     ...executionPayloadScalarFields,
-    slotNumber: ssz.Slot, // GLOAS:EIP-7843
     payloadRoot: ssz.Root, // hash_tree_root(ExecutionPayload) of the full payload
   },
   {typeName: "CompactExecutionPayload", jsonCase: "eth2"}
