@@ -61,7 +61,7 @@ function requestError(error: unknown): unknown {
 }
 
 export function outgoingNativeRequest(
-  runtime: NativeNetworkApplicationRuntime,
+  runtime: Pick<NativeNetworkApplicationRuntime, "request">,
   protocols: ReadonlyMap<string, NativeProtocol>,
   data: OutgoingRequestArgs,
   options: NativeRequestOptions

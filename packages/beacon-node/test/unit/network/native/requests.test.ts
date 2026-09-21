@@ -1,16 +1,41 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, expect, it, vi} from "vitest";
 import {NativeIncomingRequest} from "@chainsafe/lodestar-z/network";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {defer} from "@lodestar/utils";
-import {NativeRequests} from "../../../../src/network/core/native/requests.js";
+import {hostPeerId} from "../../../../src/network/core/native/addresses.js";
+import {nativeProtocols} from "../../../../src/network/core/native/protocols.js";
+import {NativeRequests, outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
 import {HostServingBudget} from "../../../../src/network/reqresp/serving/budget.js";
 import * as handlers from "../../../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../../../src/network/reqresp/serving/policy.js";
+import {ReqRespMethod} from "../../../../src/network/reqresp/types.js";
 import {servingConfig} from "../../../utils/network/reqresp/servingCases.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
+});
+
+it("maps native admission refusal to local request rate limiting", async () => {
+  const key = await generateKeyPair("secp256k1");
+  const config = servingConfig();
+  const request = vi.fn(() => {
+    throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", reason: "slots_exhausted"});
+  });
+  expect(() =>
+    outgoingNativeRequest(
+      {request},
+      nativeProtocols(config, config.getForkName(0)),
+      {
+        peerId: hostPeerId(key.publicKey.toMultihash().bytes),
+        method: ReqRespMethod.BeaconBlocksByRoot,
+        versions: [2],
+        requestData: new Uint8Array(32),
+      },
+      {}
+    )
+  ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
 });
 
 async function incoming() {

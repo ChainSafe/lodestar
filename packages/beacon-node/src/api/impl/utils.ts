@@ -73,3 +73,16 @@ export function assertUniqueItems(array: unknown[] | undefined, message: string)
     throw new ApiError(400, `${message}: ${duplicateItems.join(", ")}`);
   }
 }
+
+/** Bounds concurrent validation and publication while retaining each original failure index. */
+export async function forEachGossipSubmission<T>(
+  items: readonly T[],
+  submit: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  let next = 0;
+  await Promise.all(
+    Array.from({length: Math.min(64, items.length)}, async () => {
+      for (let index = next++; index < items.length; index = next++) await submit(items[index], index);
+    })
+  );
+}
