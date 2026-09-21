@@ -45,6 +45,14 @@ async function validatePayloadAttestationMessage(
     });
   }
 
+  // [REJECT] The payload attestation slot is at or after the Gloas fork.
+  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
+      slot: data.slot,
+    });
+  }
+
   // [IGNORE] The `payload_attestation_message` is the first valid message received
   // for the slot from the validator with index `payload_attestation_message.validator_index`.
   if (chain.seenPayloadAttesters.isKnown(data.slot, validatorIndex)) {
@@ -81,14 +89,6 @@ async function validatePayloadAttestationMessage(
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
-
-  // [REJECT] The payload attestation slot is at or after the Gloas fork.
-  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
-    throw new PayloadAttestationError(GossipAction.REJECT, {
-      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
-      slot: data.slot,
-    });
-  }
 
   // block.slot === data.slot is enforced above, so use the block's post-state directly to avoid
   // getting through regen queue
