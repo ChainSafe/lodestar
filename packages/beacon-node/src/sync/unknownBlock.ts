@@ -126,7 +126,7 @@ export class BlockInputSync {
   /**
    * Search unknown payload starting at PAYLOAD_DUE_BPS.
    */
-  private readonly deferredPayloadRoots = new Map<RootHex, {slot: Slot; source: BlockInputSource}>();
+  private readonly deferredPayloadRoots = new Map<RootHex, {slot: Slot; source: BlockInputSource; peer?: PeerIdStr}>();
   private payloadPollAbortController: AbortController | undefined;
 
   constructor(
@@ -271,7 +271,12 @@ export class BlockInputSync {
         // tick. If that loop already returned - every root it watched was imported - this root waits
         // for the next slot, where onClockSlot moves it to pendingPayloads. That is not the normal
         // scenario, and in a forking condition it only delays the search of the extra root
-        this.deferredPayloadRoots.set(data.rootHex, {slot: data.slot, source: data.source});
+        const deferred = this.deferredPayloadRoots.get(data.rootHex);
+        if (deferred === undefined) {
+          this.deferredPayloadRoots.set(data.rootHex, {slot: data.slot, source: data.source, peer: data.peer});
+        } else if (deferred.peer === undefined) {
+          deferred.peer = data.peer;
+        }
         return;
       }
 
@@ -837,10 +842,10 @@ export class BlockInputSync {
     this.payloadPollAbortController?.abort();
     this.payloadPollAbortController = new AbortController();
     // entries from an earlier slot is not polled
-    for (const [rootHex, {slot: deferredSlot, source}] of this.deferredPayloadRoots) {
+    for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
       if (deferredSlot < slot) {
         if (!this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
-          this.addDeferredPayloadRoot(rootHex, deferredSlot, source);
+          this.addDeferredPayloadRoot(rootHex, deferredSlot, source, peer);
         }
         this.deferredPayloadRoots.delete(rootHex);
       }
@@ -869,13 +874,13 @@ export class BlockInputSync {
 
       for (polls = 0; polls < tickCount; polls++) {
         let importedCount = 0;
-        for (const [rootHex, {slot: deferredSlot, source}] of this.deferredPayloadRoots) {
+        for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
           if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
             importedCount++;
             continue;
           }
           // copy to the regular pendingPayloads so that we can search
-          this.addDeferredPayloadRoot(rootHex, deferredSlot, source);
+          this.addDeferredPayloadRoot(rootHex, deferredSlot, source, peer);
           searchedRoots.add(rootHex);
         }
 
@@ -933,8 +938,8 @@ export class BlockInputSync {
     }
   }
 
-  private addDeferredPayloadRoot(rootHex: RootHex, slot: Slot, source: BlockInputSource): void {
-    const isNewRoot = this.addByPayloadRootHex(rootHex, undefined, slot);
+  private addDeferredPayloadRoot(rootHex: RootHex, slot: Slot, source: BlockInputSource, peer?: PeerIdStr): void {
+    const isNewRoot = this.addByPayloadRootHex(rootHex, peer, slot);
     if (isNewRoot) {
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.DEFERRED_PAYLOAD_BLOCK_ROOT});
       this.metrics?.blockInputSync.payloadSource.inc({source});
