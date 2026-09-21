@@ -8,15 +8,16 @@ import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {
-  ArchivedEnvelope,
   ArchivedEnvelopeKind,
   BlockArchiveBatchPutBinaryItem,
+  archivedSignedExecutionPayloadEnvelopeSsz,
+  encodeArchivedFullEnvelopeBinary,
 } from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
-import {toSignedCompactEnvelope} from "./compactEnvelope.js";
+import {toSignedCompactEnvelope} from "./compactEnvelope.ts";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -505,15 +506,29 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
   for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
     const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
-    const envelopes = await Promise.all(
-      batch.map((block) => db.executionPayloadEnvelope.get(fromHex(block.blockRoot)))
+    // Only compacted envelopes need deserializing; full ones are copied as bytes
+    const archivedBytesArray = await Promise.all(
+      batch.map(async (block) => {
+        const root = fromHex(block.blockRoot);
+        if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
+          const envelope = await db.executionPayloadEnvelope.get(root);
+          return envelope === null
+            ? null
+            : archivedSignedExecutionPayloadEnvelopeSsz.serialize({
+                selector: ArchivedEnvelopeKind.Compact,
+                value: toSignedCompactEnvelope(envelope),
+              });
+        }
+        const envelopeBytes = await db.executionPayloadEnvelope.getBinary(root);
+        return envelopeBytes === null ? null : encodeArchivedFullEnvelopeBinary(envelopeBytes);
+      })
     );
 
-    const entries: {slot: Slot; archived: ArchivedEnvelope; hotKey: Uint8Array}[] = [];
+    const entries: {slot: Slot; archivedBytes: Uint8Array; hotKey: Uint8Array}[] = [];
     for (let j = 0; j < batch.length; j++) {
       const block = batch[j];
-      const envelope = envelopes[j];
-      if (envelope === null) {
+      const archivedBytes = archivedBytesArray[j];
+      if (archivedBytes === null) {
         logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
           slot: block.slot,
           root: block.blockRoot,
@@ -521,15 +536,10 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
         continue;
       }
 
-      const archived: ArchivedEnvelope =
-        dedupePayloads && block.executionStatus === ExecutionStatus.Valid
-          ? {selector: ArchivedEnvelopeKind.Compact, value: toSignedCompactEnvelope(envelope)}
-          : {selector: ArchivedEnvelopeKind.Full, value: envelope};
-
       entries.push({
         slot: block.slot,
-        archived,
-        hotKey: db.executionPayloadEnvelope.encodeKey(envelope.message.beaconBlockRoot),
+        archivedBytes,
+        hotKey: db.executionPayloadEnvelope.encodeKey(fromHex(block.blockRoot)),
       });
       migratedSlots.push(block.slot);
     }

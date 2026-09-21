@@ -21,6 +21,7 @@ export {
   compactExecutionPayloadEnvelopeSsz,
   compactExecutionPayloadSsz,
   decodeArchivedEnvelopeBinary,
+  encodeArchivedFullEnvelopeBinary,
   signedCompactExecutionPayloadEnvelopeSsz,
 } from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";

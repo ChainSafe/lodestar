@@ -84,6 +84,14 @@ export function decodeArchivedEnvelopeBinary(bytes: Uint8Array): ArchivedEnvelop
     : {kind: ArchivedEnvelopeKind.Compact, compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value)};
 }
 
+/** Full envelope bytes as they already are in the hot db, prefixed with the selector byte */
+export function encodeArchivedFullEnvelopeBinary(envelopeBytes: Uint8Array): Uint8Array {
+  const out = new Uint8Array(ARCHIVED_ENVELOPE_SELECTOR_LENGTH + envelopeBytes.length);
+  out[0] = ArchivedEnvelopeKind.Full;
+  out.set(envelopeBytes, ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+  return out;
+}
+
 /**
  * Finalized envelopes, compact or full ({@link ArchivedEnvelopeKind}), indexed by slot
  */
@@ -108,14 +116,11 @@ export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, 
 
   /** Archive entries and delete their hot counterparts (`hotKey` pre-encoded) in one atomic batch */
   async batchArchiveAndDeleteHot(
-    entries: {slot: Slot; archived: ArchivedEnvelope; hotKey: Uint8Array}[]
+    entries: {slot: Slot; archivedBytes: Uint8Array; hotKey: Uint8Array}[]
   ): Promise<void> {
     const operations: DbBatch<Uint8Array, Uint8Array> = [];
-    for (const {slot, archived, hotKey} of entries) {
-      operations.push(
-        {type: "put", key: this.encodeKey(slot), value: this.encodeValue(archived)},
-        {type: "del", key: hotKey}
-      );
+    for (const {slot, archivedBytes, hotKey} of entries) {
+      operations.push({type: "put", key: this.encodeKey(slot), value: archivedBytes}, {type: "del", key: hotKey});
     }
     await this.db.batch(operations, this.dbReqOpts);
   }
