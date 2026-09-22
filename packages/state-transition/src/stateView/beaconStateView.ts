@@ -109,6 +109,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     this.config = cachedState.config;
   }
 
+  release(): void {}
+
   // phase0
 
   get forkName(): ForkName {

@@ -6,7 +6,6 @@ import {
   BeaconStateAllForks,
   BeaconStateView,
   IBeaconStateView,
-  NativeBeaconStateView,
   createBeaconStateView,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -47,12 +46,17 @@ export function stateViewToBeaconState(fork: ForkName, state: IBeaconStateView):
   try {
     return ssz[fork].BeaconState.deserializeToViewDU(state.serialize()) as BeaconStateAllForks;
   } finally {
-    if (state instanceof NativeBeaconStateView) {
-      state.release();
-    }
+    state.release();
   }
 }
 
+/**
+ * Creates a replacement state view and releases the input view.
+ *
+ * State transition methods return a new view without releasing the input view.
+ * The caller owns the returned view and must release that view separately.
+ * Do not use `state` after this function returns or throws.
+ */
 export function replaceStateViewForTest(
   state: IBeaconStateView,
   createNextState: (state: IBeaconStateView) => IBeaconStateView
@@ -60,9 +64,7 @@ export function replaceStateViewForTest(
   try {
     return createNextState(state);
   } finally {
-    if (state instanceof NativeBeaconStateView) {
-      state.release();
-    }
+    state.release();
   }
 }
 

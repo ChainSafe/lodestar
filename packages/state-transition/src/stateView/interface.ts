@@ -158,6 +158,13 @@ export interface IBeaconStateView {
   // TODO is there a better name that is less implementation specific but still conveys the meaning?
   isStateValidatorsNodesPopulated(): boolean;
 
+  // Lifecycle
+  /**
+   * Release resources owned by this view.
+   * Do not use the view after calling this method.
+   */
+  release(): void;
+
   // Serialization
   /** Set `preloadValidatorsAndBalances` only when the whole state will be consumed
    *  immediately (e.g. CP reload before block replay). */
@@ -345,7 +352,6 @@ export type IBeaconStateViewNative = Omit<
   | "stateTransition"
   | "withParentPayloadApplied"
 > & {
-  release(): void;
   pendingDeposits: Uint8Array;
   pendingPartialWithdrawals: Uint8Array;
   pendingConsolidations: Uint8Array;
