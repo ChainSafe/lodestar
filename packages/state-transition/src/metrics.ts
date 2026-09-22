@@ -18,9 +18,7 @@ export function getMetrics(
      * Register for `stateHashTreeRootTime`, defaults to `register`.
      *
      * The native state transition only observes the `state_transition` source of this histogram,
-     * every other source is timed on the JS side. When the native state transition metrics are
-     * scraped instead of the JS ones, this histogram must stay registered so those sources are kept.
-     * Prometheus accepts the same metric family from both scrapes as long as the label sets are disjoint.
+     * every other source is timed on the JS side.
      */
     stateHashTreeRootRegister = register,
   }: {stateHashTreeRootRegister?: MetricsRegister} = {}
