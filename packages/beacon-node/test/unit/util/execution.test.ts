@@ -63,6 +63,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
         db,
         executionEngine,
         logger,
+        null,
         start,
         end
       )) {
@@ -215,7 +216,14 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     const yielded: number[] = [];
     let err: unknown = null;
     try {
-      for await (const {slot} of reconstructExecutionPayloadEnvelopesByRange(db, executionEngine, logger, 0, 33)) {
+      for await (const {slot} of reconstructExecutionPayloadEnvelopesByRange(
+        db,
+        executionEngine,
+        logger,
+        null,
+        0,
+        33
+      )) {
         yielded.push(slot);
       }
     } catch (e) {
@@ -243,7 +251,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("reports a mismatch as a miss carrying BODY_ROOT_MISMATCH on the batch getter path", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
-    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, [toSignedBlindedEnvelope(full)]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedBlindedEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
@@ -253,7 +261,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructExecutionPayloadEnvelopes(executionEngine, [toSignedBlindedEnvelope(full)])).toEqual([
+    expect(await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedBlindedEnvelope(full)])).toEqual([
       {slot: 10, reason: "unavailable"},
     ]);
   });

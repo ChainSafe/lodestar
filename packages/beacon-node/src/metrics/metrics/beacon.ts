@@ -215,6 +215,18 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
       }),
     },
+    payloadEnvelopeReconstruction: {
+      envelopes: register.counter<{result: "ok" | "unavailable" | "mismatch"}>({
+        name: "beacon_payload_envelope_reconstruction_envelopes_total",
+        help: "Archived blinded envelopes rebuilt from EL bodies, by outcome",
+        labelNames: ["result"],
+      }),
+      mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({
+        name: "beacon_payload_envelope_reconstruction_mismatch_total",
+        help: "Body root mismatches, by which body differed from the stored root",
+        labelNames: ["field"],
+      }),
+    },
 
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull

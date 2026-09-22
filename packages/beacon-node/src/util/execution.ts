@@ -297,6 +297,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
   db: IBeaconDb,
   executionEngine: IExecutionEngine,
   logger: Logger,
+  metrics: Metrics | null,
   startSlot: Slot,
   endSlot: Slot
 ): AsyncIterable<SlotEnvelopeBytes> {
@@ -306,12 +307,12 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelopeBinary(bytes)});
     if (batch.length === MAX_BODIES_REQUEST) {
-      yield* reconstructBatch(executionEngine, logger, batch);
+      yield* reconstructBatch(executionEngine, logger, metrics, batch);
       batch = [];
     }
   }
   if (batch.length > 0) {
-    yield* reconstructBatch(executionEngine, logger, batch);
+    yield* reconstructBatch(executionEngine, logger, metrics, batch);
   }
 }
 
@@ -322,13 +323,14 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
 async function* reconstructBatch(
   executionEngine: IExecutionEngine,
   logger: Logger,
+  metrics: Metrics | null,
   batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
   const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
     if (entry.kind === ArchivedEnvelopeKind.Blinded) blindedEnvelopes.push(entry.blinded);
   }
-  const rebuilt = await reconstructEnvelopesBatch(executionEngine, blindedEnvelopes);
+  const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes);
 
   let blindedIdx = 0;
   for (const entry of batch) {
@@ -360,11 +362,14 @@ async function* reconstructBatch(
  */
 export async function reconstructExecutionPayloadEnvelopes(
   executionEngine: IExecutionEngine,
+  metrics: Metrics | null,
   blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
   for (let i = 0; i < blindedEnvelopes.length; i += MAX_BODIES_REQUEST) {
-    out.push(...(await reconstructEnvelopesBatch(executionEngine, blindedEnvelopes.slice(i, i + MAX_BODIES_REQUEST))));
+    out.push(
+      ...(await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
+    );
   }
   return out;
 }
@@ -373,9 +378,14 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
   return "reason" in result;
 }
 
-/** One EL round-trip. Aligned with the input; never throws per envelope, only ENGINE_UNAVAILABLE. */
+/**
+ * One EL round-trip. Aligned with the input; never throws per envelope, only ENGINE_UNAVAILABLE.
+ * Every serving path (by-range, by-root, REST) comes through here, so the outcome metrics are
+ * incremented once, in this function.
+ */
 async function reconstructEnvelopesBatch(
   executionEngine: IExecutionEngine,
+  metrics: Metrics | null,
   blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   if (blindedEnvelopes.length === 0) return [];
@@ -397,16 +407,26 @@ async function reconstructEnvelopesBatch(
     const body = bodies[i];
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "unavailable"});
       return {slot, reason: "unavailable"};
     }
     try {
-      return signedBlindedEnvelopeToFull(blindedEnvelope, {
+      const envelope = signedBlindedEnvelopeToFull(blindedEnvelope, {
         transactions: body.transactions,
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,
       });
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "ok"});
+      return envelope;
     } catch (e) {
-      if (e instanceof EnvelopeReconstructionError) return {slot, reason: "mismatch", error: e};
+      if (
+        e instanceof EnvelopeReconstructionError &&
+        e.type.code === EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH
+      ) {
+        metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "mismatch"});
+        metrics?.payloadEnvelopeReconstruction.mismatchByField.inc({field: e.type.field});
+        return {slot, reason: "mismatch", error: e};
+      }
       throw e;
     }
   });

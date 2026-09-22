@@ -49,6 +49,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
         db,
         chain.executionEngine,
         chain.logger,
+        chain.metrics,
         startSlot,
         Math.min(endSlot, archiveMaxSlot + 1)
       )) {

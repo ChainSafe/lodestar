@@ -974,7 +974,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (blindedEnvelopes.length > 0) {
-      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, blindedEnvelopes);
+      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, blindedEnvelopes);
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
@@ -1010,7 +1010,7 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, [archived.value]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [archived.value]);
     if (isRebuildMiss(result)) {
       if (result.reason === "mismatch") throw result.error;
       return null;
