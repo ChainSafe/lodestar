@@ -18,10 +18,12 @@ import {
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
+import type {BlobAndProof} from "@lodestar/types/deneb";
+import type {BlobAndProofV2} from "@lodestar/types/fulu";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, PayloadAttributes} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
-import {ExecutionPayloadBody} from "./types.js";
+import {BLOB_AND_PROOF_V2_RPC_BYTES, ExecutionPayloadBody} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // EL fork names — the `Eth-Execution-Version` header values.
@@ -545,4 +547,78 @@ export function decodeBodiesResponse(fork: ForkName, data: Uint8Array): (Executi
   return parsed.entries.map((e) =>
     e.available ? {transactions: e.body.transactions, withdrawals: e.body.withdrawals ?? null} : null
   );
+}
+
+// ---------------------------------------------------------------------------
+// Blobs — refactor-ssz.md § POST /blobs/v1, /blobs/v2 (independently versioned)
+// ---------------------------------------------------------------------------
+
+const BlobsRequest = new ContainerType({versionedHashes: VersionedHashesList}, {typeName: "BlobsRequest"});
+
+const BlobAndProofV1Ssz = new ContainerType({blob: BlobBytes, proof: Bytes48}, {typeName: "BlobAndProofV1"});
+// Named `*Ssz` to avoid colliding with the `BlobAndProofV2` type imported from @lodestar/types/fulu.
+const BlobAndProofV2Ssz = new ContainerType(
+  {blob: BlobBytes, proofs: new ListCompositeType(Bytes48, CELLS_PER_EXT_BLOB)},
+  {typeName: "BlobAndProofV2"}
+);
+const BlobV1Entry = new ContainerType({available: Boolean, contents: BlobAndProofV1Ssz}, {typeName: "BlobV1Entry"});
+const BlobV2Entry = new ContainerType({available: Boolean, contents: BlobAndProofV2Ssz}, {typeName: "BlobV2Entry"});
+const BlobsV1Response = new ContainerType(
+  {entries: new ListCompositeType(BlobV1Entry, MAX_BLOBS_REQUEST)},
+  {typeName: "BlobsV1Response"}
+);
+const BlobsV2Response = new ContainerType(
+  {entries: new ListCompositeType(BlobV2Entry, MAX_BLOBS_REQUEST)},
+  {typeName: "BlobsV2Response"}
+);
+
+const PROOF_BYTES = 48;
+
+// ---------------------------------------------------------------------------
+// Public: blobs
+// ---------------------------------------------------------------------------
+
+export function encodeBlobsRequest(versionedHashes: Uint8Array[]): Uint8Array {
+  return BlobsRequest.serialize({versionedHashes});
+}
+
+/** `/blobs/v1` supports partial responses: `available=false` -> null (JSON-RPC v1 contract). */
+export function decodeBlobsV1Response(data: Uint8Array): (BlobAndProof | null)[] {
+  return BlobsV1Response.deserialize(data).entries.map((e) =>
+    e.available ? {blob: e.contents.blob, proof: e.contents.proof} : null
+  );
+}
+
+/**
+ * `/blobs/v2` is all-or-nothing: a 200 must have every entry available (a miss is
+ * signalled by 204, handled by the caller). When `buffers` is given, blob and proofs
+ * are copied into `buffers[i]` and the returned views alias it (block-production hot path).
+ */
+export function decodeBlobsV2Response(data: Uint8Array, buffers?: Uint8Array[]): BlobAndProofV2[] {
+  const {entries} = BlobsV2Response.deserialize(data);
+  return entries.map((e, i) => {
+    if (!e.available) {
+      throw Error(`/blobs/v2 entry ${i} has available=false; v2 is all-or-nothing`);
+    }
+    if (e.contents.proofs.length !== CELLS_PER_EXT_BLOB) {
+      throw Error(`Invalid proofs length ${e.contents.proofs.length}, expected ${CELLS_PER_EXT_BLOB}`);
+    }
+    const buffer = buffers?.[i];
+    if (buffer === undefined) {
+      return {blob: e.contents.blob, proofs: e.contents.proofs};
+    }
+    if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
+      throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
+    }
+    const blob = buffer.subarray(0, BYTES_PER_BLOB);
+    blob.set(e.contents.blob);
+    const proofs: Uint8Array[] = [];
+    for (let p = 0; p < CELLS_PER_EXT_BLOB; p++) {
+      const start = BYTES_PER_BLOB + p * PROOF_BYTES;
+      const view = buffer.subarray(start, start + PROOF_BYTES);
+      view.set(e.contents.proofs[p]);
+      proofs.push(view);
+    }
+    return {blob, proofs};
+  });
 }

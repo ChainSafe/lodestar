@@ -5,14 +5,18 @@ import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   clForkToElFork,
+  decodeBlobsV1Response,
+  decodeBlobsV2Response,
   decodeBodiesResponse,
   decodeBuiltPayload,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
+  encodeBlobsRequest,
   encodeBodiesByHashRequest,
   encodeForkchoiceUpdate,
   encodeNewPayload,
 } from "../../../src/execution/engine/sszRestEncoding.js";
+import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../../../src/execution/engine/types.js";
 
 describe("sszRestEncoding / fork map", () => {
   it("maps every post-merge CL fork to its EL fork name", () => {
@@ -373,5 +377,64 @@ describe("sszRestEncoding / bodies", () => {
   it("truncated range response is returned as a shorter array", () => {
     const bytes = BodiesShanghai.serialize({entries: []});
     expect(decodeBodiesResponse(ForkName.deneb, bytes)).toEqual([]);
+  });
+});
+
+const Bytes48T = new ByteVectorType(48);
+const Blob = new ByteVectorType(131072);
+const BlobsReq = new ContainerType({versionedHashes: new ListCompositeType(Root, 128)});
+const BlobAndProofV1 = new ContainerType({blob: Blob, proof: Bytes48T});
+const BlobAndProofV2 = new ContainerType({blob: Blob, proofs: new ListCompositeType(Bytes48T, 128)});
+const BlobsV1Resp = response(new ContainerType({available: ssz.Boolean, contents: BlobAndProofV1}));
+const BlobsV2Resp = response(new ContainerType({available: ssz.Boolean, contents: BlobAndProofV2}));
+
+describe("sszRestEncoding / blobs", () => {
+  it("encodes BlobsRequest", () => {
+    const h = new Uint8Array(32).fill(5);
+    expect(BlobsReq.deserialize(encodeBlobsRequest([h])).versionedHashes[0]).toEqual(h);
+  });
+
+  it("v1: available=false -> null at that index", () => {
+    const blob = new Uint8Array(131072).fill(1);
+    const proof = new Uint8Array(48).fill(2);
+    const bytes = BlobsV1Resp.serialize({
+      entries: [
+        {available: true, contents: {blob, proof}},
+        {available: false, contents: {blob: new Uint8Array(131072), proof: new Uint8Array(48)}},
+      ],
+    });
+    const out = decodeBlobsV1Response(bytes);
+    expect(out[0]).toEqual({blob, proof});
+    expect(out[1]).toBeNull();
+  });
+
+  it("v2: returns contents; copies into caller buffers when provided", () => {
+    const blob = new Uint8Array(131072).fill(3);
+    const proofs = Array.from({length: 128}, (_, i) => new Uint8Array(48).fill(i));
+    const bytes = BlobsV2Resp.serialize({entries: [{available: true, contents: {blob, proofs}}]});
+
+    const plain = decodeBlobsV2Response(bytes);
+    expect(plain[0].blob).toEqual(blob);
+    expect(plain[0].proofs[127]).toEqual(proofs[127]);
+
+    const buffer = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
+    const [into] = decodeBlobsV2Response(bytes, [buffer]);
+    expect(into.blob.buffer).toBe(buffer.buffer);
+    expect(into.proofs[5].buffer).toBe(buffer.buffer);
+    expect(buffer.subarray(0, 131072)).toEqual(blob);
+    expect(buffer.subarray(131072 + 5 * 48, 131072 + 6 * 48)).toEqual(proofs[5]);
+  });
+
+  it("v2: rejects available=false entries and wrong buffer sizes", () => {
+    const bytes = BlobsV2Resp.serialize({
+      entries: [{available: false, contents: {blob: new Uint8Array(131072), proofs: []}}],
+    });
+    expect(() => decodeBlobsV2Response(bytes)).toThrow(/available=false/);
+    const ok = BlobsV2Resp.serialize({
+      entries: [
+        {available: true, contents: {blob: new Uint8Array(131072), proofs: Array(128).fill(new Uint8Array(48))}},
+      ],
+    });
+    expect(() => decodeBlobsV2Response(ok, [new Uint8Array(10)])).toThrow(/buffer/);
   });
 });
