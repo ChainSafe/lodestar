@@ -6,21 +6,13 @@ import {getNetworkCachedBlockBytes, getNetworkCachedStateBytes} from "@lodestar/
 import {SignedBeaconBlock} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 
-export async function getNetworkCachedState(
-  network: NetworkName,
-  slot: number,
-  timeout?: number
-): Promise<CachedBeaconStateAllForks> {
-  const {config, bytes} = await getNetworkCachedStateBytes(network, slot, testCachePath, timeout);
+export async function getNetworkCachedState(network: NetworkName, slot: number): Promise<CachedBeaconStateAllForks> {
+  const {config, bytes} = await getNetworkCachedStateBytes(network, slot, testCachePath);
   pubkeyCache.reset();
   return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(bytes), config);
 }
 
-export async function getNetworkCachedBlock(
-  network: NetworkName,
-  slot: number,
-  timeout?: number
-): Promise<SignedBeaconBlock> {
-  const {config, bytes} = await getNetworkCachedBlockBytes(network, slot, testCachePath, timeout);
+export async function getNetworkCachedBlock(network: NetworkName, slot: number): Promise<SignedBeaconBlock> {
+  const {config, bytes} = await getNetworkCachedBlockBytes(network, slot, testCachePath);
   return config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
 }

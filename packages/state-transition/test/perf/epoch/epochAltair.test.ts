@@ -34,7 +34,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(altairState.network, slot, 300_000);
+    const state = await getNetworkCachedState(altairState.network, slot);
     state.hashTreeRoot();
     return state;
   }, 300_000);

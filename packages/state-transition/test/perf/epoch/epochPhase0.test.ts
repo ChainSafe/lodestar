@@ -32,7 +32,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(phase0State.network, slot, 300_000);
+    const state = await getNetworkCachedState(phase0State.network, slot);
     state.hashTreeRoot();
     return state;
   }, 300_000);

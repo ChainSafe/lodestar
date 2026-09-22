@@ -34,7 +34,7 @@ describe(`capella processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(capellaState.network, slot, 300_000);
+    const state = await getNetworkCachedState(capellaState.network, slot);
     state.hashTreeRoot();
     return state;
   }, 300_000);

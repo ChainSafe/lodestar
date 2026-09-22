@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {fetch} from "@lodestar/utils";
@@ -31,8 +30,7 @@ export function getNetworkConfig(network: NetworkName): ChainForkConfig {
 export async function getNetworkCachedStateBytes(
   network: NetworkName,
   slot: number,
-  cacheDir: string,
-  timeout?: number
+  cacheDir: string
 ): Promise<NetworkCachedBytes> {
   const config = getNetworkConfig(network);
   const fileId = `state_${network}_${slot}.ssz`;
@@ -44,18 +42,7 @@ export async function getNetworkCachedStateBytes(
     return {config, bytes: stateSsz};
   }
 
-  const stateSsz = await tryEach([
-    () => downloadTestFile(fileId),
-    () => {
-      const client = getClient(
-        {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
-        {config}
-      );
-      return client.debug.getStateV2({stateId: slot}).then((r) => {
-        return r.ssz();
-      });
-    },
-  ]);
+  const stateSsz = await downloadTestFile(fileId);
 
   fs.writeFileSync(filepath, stateSsz);
   return {config, bytes: stateSsz};
@@ -67,8 +54,7 @@ export async function getNetworkCachedStateBytes(
 export async function getNetworkCachedBlockBytes(
   network: NetworkName,
   slot: number,
-  cacheDir: string,
-  timeout?: number
+  cacheDir: string
 ): Promise<NetworkCachedBytes> {
   const config = getNetworkConfig(network);
   const fileId = `block_${network}_${slot}.ssz`;
@@ -80,17 +66,7 @@ export async function getNetworkCachedBlockBytes(
     return {config, bytes: blockSsz};
   }
 
-  const blockSsz = await tryEach([
-    () => downloadTestFile(fileId),
-    async () => {
-      const client = getClient(
-        {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
-        {config}
-      );
-
-      return (await client.beacon.getBlockV2({blockId: slot})).ssz();
-    },
-  ]);
+  const blockSsz = await downloadTestFile(fileId);
 
   fs.writeFileSync(filepath, blockSsz);
   return {config, bytes: blockSsz};
@@ -101,7 +77,7 @@ async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   console.log(`Downloading file ${fileUrl}`);
 
   try {
-    const res = await fetch(fileUrl);
+    const res = await fetch(fileUrl, {signal: AbortSignal.timeout(4 * 60 * 1000)});
     if (!res.ok) {
       throw new Error(`Error downloading ${fileUrl}: ${res.status} ${res.statusText}`);
     }
@@ -111,27 +87,4 @@ async function downloadTestFile(fileId: string): Promise<Uint8Array> {
     error.message = `Error downloading ${fileUrl}: ${error.message}`;
     throw error;
   }
-}
-
-function getInfuraBeaconUrl(network: NetworkName): string {
-  const credentials = process.env.INFURA_ETH2_CREDENTIALS;
-  if (!credentials) {
-    throw Error("Must set ENV INFURA_ETH2_CREDENTIALS");
-  }
-
-  return `https://${credentials}@eth2-beacon-${network}.infura.io`;
-}
-
-async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {
-  const errors: Error[] = [];
-
-  for (let i = 0; i < promises.length; i++) {
-    try {
-      return await promises[i]();
-    } catch (e) {
-      errors.push(e as Error);
-    }
-  }
-
-  throw Error(errors.map((e, i) => `Error[${i}] ${e.message}`).join("\n"));
 }

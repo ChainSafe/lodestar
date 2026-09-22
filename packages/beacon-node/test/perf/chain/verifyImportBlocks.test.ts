@@ -57,7 +57,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       Promise.all(
         // Start at next slot, since the parent of current state's header is not known
         linspace(startSlot + 1, endSlot).map(async (slot) =>
-          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e: unknown) => {
+          getNetworkCachedBlock(network, slot).catch((e: unknown) => {
             (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
             throw e;
           })
@@ -67,7 +67,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
   );
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, startSlot, timeoutInfura);
+    const state = await getNetworkCachedState(network, startSlot);
     state.hashTreeRoot();
     return state;
   }, timeoutInfura);
