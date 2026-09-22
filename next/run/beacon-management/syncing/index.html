@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.e61991cc.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.9acb2335.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.8da9b7e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -28,7 +28,8 @@
 <h3 class="anchor anchorWithStickyNavbar_d3C5" id="range-sync">Range Sync<a href="#range-sync" class="hash-link" aria-label="Direct link to Range Sync" title="Direct link to Range Sync">​</a></h3>
 <p>Range sync involves syncing blocks within a specified range, beneficial when a node is only temporarily offline and needs to catch up over a short range. In the beacon node context, this entails requesting and processing blocks within a defined range, ensuring the node quickly gets updated to the current network state.</p>
 <h3 class="anchor anchorWithStickyNavbar_d3C5" id="backfill-sync">Backfill Sync<a href="#backfill-sync" class="hash-link" aria-label="Direct link to Backfill Sync" title="Direct link to Backfill Sync">​</a></h3>
-<p>This is another version of checkpoint sync that allows a node that has not been historically synchronized to verify data prior to the checkpoint. It is done via downloading a checkpoint and then fetch blocks backwards from that point until the desired data can be verified. It is a relatively inexpensive sync from a cpu perspective because it only checks the block hashes and verifies the proposer signatures along the way.</p>
+<p>🚧 Work in progress. Backfill sync is not yet available in Lodestar.</p>
+<p>Backfill sync downloads historical blocks preceding a checkpoint.</p>
 <h2 class="anchor anchorWithStickyNavbar_d3C5" id="syncing-lodestar">Syncing Lodestar<a href="#syncing-lodestar" class="hash-link" aria-label="Direct link to Syncing Lodestar" title="Direct link to Syncing Lodestar">​</a></h2>
 <p>The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown-parent sync. Range sync is used when the start point of syncing is known. In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary. Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is. While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network. It will also request <a href="https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#getmetadata-v1" target="_blank" rel="noopener noreferrer"><code>MetaData</code></a> from its peers and use that to start requesting the correct blocks from the network.</p>
 <p>There are several flags that can be used to configure the sync process.</p>
