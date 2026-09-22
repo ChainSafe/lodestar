@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-import {ForkName, type ForkPostGloas} from "@lodestar/params";
 import type {RootHex} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -10,34 +9,40 @@ import {
   type SelectedBidIdentity,
   createExecutionPayloadEnvelopeMaterial,
 } from "../../../src/services/executionPayloadEnvelope.js";
-import type {BuiltPayload} from "../../../src/services/payloadSource.js";
+import {type BuiltPayload, PayloadStore} from "../../../src/services/payloadStore.js";
 
 const builderIndex = 7;
 const blockRoot = root(8);
 
 describe("createExecutionPayloadEnvelopeMaterial", () => {
-  for (const fork of [ForkName.gloas, ForkName.heze] as const) {
-    it(`assembles exact ${fork} stateless envelope material`, () => {
-      const payload = createBuiltPayload(fork);
-      const selectedBid = bidIdentity(payload);
-      const storedPayload = retain(payload, selectedBid.parentBlockRoot);
-
-      const material = createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload});
-
-      expect(material.envelope).toEqual({
-        payload: payload.executionPayload,
-        executionRequests: payload.executionRequests,
-        builderIndex,
-        beaconBlockRoot: fromHex(blockRoot),
-        parentBeaconBlockRoot: fromHex(selectedBid.parentBlockRoot),
-      });
-      expect(material.kzgProofs).toBe(payload.blobsBundle.proofs);
-      expect(material.blobs).toBe(payload.blobsBundle.blobs);
+  it("assembles stateless envelope material from the payload store", () => {
+    const payload = createBuiltPayload();
+    const selectedBid = bidIdentity(payload);
+    const store = new PayloadStore();
+    store.add({
+      slot: selectedBid.slot,
+      blockHash: selectedBid.blockHash,
+      ...retain(payload, selectedBid.parentBlockRoot),
     });
-  }
+    const storedPayload = store.get(selectedBid.blockHash);
+    expect(storedPayload).not.toBeNull();
+    if (storedPayload === null) throw Error("Expected retained payload");
+
+    const material = createExecutionPayloadEnvelopeMaterial({blockRoot, builderIndex, selectedBid, storedPayload});
+
+    expect(material.envelope).toEqual({
+      payload: payload.executionPayload,
+      executionRequests: payload.executionRequests,
+      builderIndex,
+      beaconBlockRoot: fromHex(blockRoot),
+      parentBeaconBlockRoot: fromHex(selectedBid.parentBlockRoot),
+    });
+    expect(material.kzgProofs).toBe(payload.blobsBundle.proofs);
+    expect(material.blobs).toBe(payload.blobsBundle.blobs);
+  });
 
   it("rejects retained material for a different slot", () => {
-    const payload = createBuiltPayload(ForkName.gloas);
+    const payload = createBuiltPayload();
     const selectedBid = {...bidIdentity(payload), slot: 11};
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
@@ -52,7 +57,7 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   });
 
   it("rejects retained material for a different parent block root", () => {
-    const payload = createBuiltPayload(ForkName.gloas);
+    const payload = createBuiltPayload();
     const selectedBid = bidIdentity(payload);
     const storedPayload = retain(payload, root(9));
 
@@ -67,7 +72,7 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   });
 
   it("rejects retained material for a different parent block hash", () => {
-    const payload = createBuiltPayload(ForkName.gloas);
+    const payload = createBuiltPayload();
     const selectedBid = {...bidIdentity(payload), parentBlockHash: root(9)};
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
@@ -82,7 +87,7 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   });
 
   it("rejects retained material for a different execution block hash", () => {
-    const payload = createBuiltPayload(ForkName.gloas);
+    const payload = createBuiltPayload();
     const selectedBid = {...bidIdentity(payload), blockHash: root(9)};
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
@@ -97,21 +102,19 @@ describe("createExecutionPayloadEnvelopeMaterial", () => {
   });
 });
 
-function createBuiltPayload(fork: ForkPostGloas): BuiltPayload {
-  const forkTypes = fork === ForkName.heze ? ssz.heze : ssz.gloas;
-  const executionPayload = forkTypes.ExecutionPayload.defaultValue();
+function createBuiltPayload(): BuiltPayload {
+  const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
   executionPayload.slotNumber = 10;
   executionPayload.parentHash = Buffer.alloc(32, 2);
   executionPayload.blockHash = Buffer.alloc(32, 4);
-  const blobsBundle = forkTypes.BlobsBundle.defaultValue();
+  const blobsBundle = ssz.gloas.BlobsBundle.defaultValue();
   blobsBundle.proofs.push(Buffer.alloc(48, 5));
   blobsBundle.blobs.push(Buffer.alloc(0));
 
   return {
     sourceId: "engine",
-    fork,
     executionPayload,
-    executionRequests: forkTypes.ExecutionRequests.defaultValue(),
+    executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
     blobsBundle,
     executionPayloadValue: 1n,
   };

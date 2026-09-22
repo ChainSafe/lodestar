@@ -1,6 +1,6 @@
-import type {BuilderIndex, Root, RootHex, Slot, gloas} from "@lodestar/types";
+import type {BuilderIndex, RootHex, Slot, gloas} from "@lodestar/types";
 import {LodestarError, fromHex, toRootHex} from "@lodestar/utils";
-import type {BuiltPayload} from "./payloadSource.js";
+import type {BuiltPayload, StoredPayload} from "./payloadStore.js";
 
 export type SelectedBidIdentity = {
   slot: Slot;
@@ -13,10 +13,7 @@ export type ExecutionPayloadEnvelopeInput = {
   blockRoot: RootHex;
   builderIndex: BuilderIndex;
   selectedBid: SelectedBidIdentity;
-  storedPayload: {
-    parentBlockRoot: Root;
-    payload: BuiltPayload;
-  };
+  storedPayload: Pick<StoredPayload, "parentBlockRoot" | "payload">;
 };
 
 export type ExecutionPayloadEnvelopeMaterial = {
@@ -56,6 +53,7 @@ export type ExecutionPayloadEnvelopeErrorType =
 
 export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloadEnvelopeErrorType> {}
 
+/** The caller must match the complete signed bid to its local record before assembling retained material. */
 export function createExecutionPayloadEnvelopeMaterial({
   blockRoot,
   builderIndex,
