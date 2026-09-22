@@ -1,10 +1,13 @@
 import {describe, expect, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   clForkToElFork,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
+  encodeNewPayload,
 } from "../../../src/execution/engine/sszRestEncoding.js";
 
 describe("sszRestEncoding / fork map", () => {
@@ -83,5 +86,77 @@ describe("sszRestEncoding / ForkchoiceUpdateResponse", () => {
     const bytes = new Uint8Array([8, 0, 0, 0, 17, 0, 0, 0, 2, 9, 0, 0, 0, 9, 0, 0, 0]);
     expect(decodeForkchoiceUpdateResponse(bytes).payloadId).toBeNull();
     expect(decodeForkchoiceUpdateResponse(bytes).payloadStatus.status).toBe(ExecutionPayloadStatus.SYNCING);
+  });
+});
+
+// Spec-derived oracle containers (refactor.md § Examples: every fork). Built here
+// independently of the implementation so a field-order slip in the codec fails.
+const Root = new ByteVectorType(32);
+const ReqBytes = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+const ReqList = new ListCompositeType(ReqBytes, 256);
+
+const EnvelopeParis = new ContainerType({payload: ssz.bellatrix.ExecutionPayload});
+const EnvelopeCancun = new ContainerType({payload: ssz.deneb.ExecutionPayload, parentBeaconBlockRoot: Root});
+const EnvelopePrague = new ContainerType({
+  payload: ssz.deneb.ExecutionPayload,
+  parentBeaconBlockRoot: Root,
+  executionRequests: ReqList,
+});
+const EnvelopeAmsterdam = new ContainerType({
+  payload: ssz.gloas.ExecutionPayload,
+  parentBeaconBlockRoot: Root,
+  executionRequests: ReqList,
+});
+
+function payloadFor(fork: ForkName) {
+  const p = ssz[fork as "bellatrix" | "capella" | "deneb" | "gloas"].ExecutionPayload.defaultValue();
+  p.blockNumber = 7;
+  return p;
+}
+
+describe("sszRestEncoding / ExecutionPayloadEnvelope", () => {
+  it("paris: bare payload", () => {
+    const bytes = encodeNewPayload(ForkName.bellatrix, payloadFor(ForkName.bellatrix));
+    expect(EnvelopeParis.deserialize(bytes).payload.blockNumber).toBe(7);
+  });
+
+  it("cancun: payload + parent_beacon_block_root, no versioned hashes", () => {
+    const root = new Uint8Array(32).fill(1);
+    const bytes = encodeNewPayload(ForkName.deneb, payloadFor(ForkName.deneb), root);
+    const parsed = EnvelopeCancun.deserialize(bytes);
+    expect(parsed.parentBeaconBlockRoot).toEqual(root);
+    expect(bytes.length).toBe(EnvelopeCancun.serialize(parsed).length);
+  });
+
+  it("prague/osaka: adds execution_requests as type-prefixed byte lists", () => {
+    const root = new Uint8Array(32).fill(2);
+    const deposit = ssz.electra.DepositRequest.defaultValue();
+    for (const fork of [ForkName.electra, ForkName.fulu]) {
+      const bytes = encodeNewPayload(fork, payloadFor(ForkName.deneb), root, {
+        deposits: [deposit],
+        withdrawals: [],
+        consolidations: [],
+      });
+      const parsed = EnvelopePrague.deserialize(bytes);
+      expect(parsed.executionRequests.length).toBe(1);
+      expect(parsed.executionRequests[0][0]).toBe(0); // DEPOSIT_REQUEST_TYPE
+    }
+  });
+
+  it("amsterdam: uses the gloas payload container", () => {
+    const root = new Uint8Array(32).fill(3);
+    const bytes = encodeNewPayload(ForkName.gloas, payloadFor(ForkName.gloas), root, {
+      deposits: [],
+      withdrawals: [],
+      consolidations: [],
+    });
+    expect(EnvelopeAmsterdam.deserialize(bytes).payload.blockNumber).toBe(7);
+  });
+
+  it("requires parent root from cancun and execution requests from prague", () => {
+    expect(() => encodeNewPayload(ForkName.deneb, payloadFor(ForkName.deneb))).toThrow(/parentBeaconBlockRoot/);
+    expect(() => encodeNewPayload(ForkName.electra, payloadFor(ForkName.deneb), new Uint8Array(32))).toThrow(
+      /executionRequests/
+    );
   });
 });

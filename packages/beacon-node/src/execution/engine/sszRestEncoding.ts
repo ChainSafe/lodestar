@@ -17,7 +17,7 @@ import {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {ExecutionRequests, RootHex, ssz} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
@@ -227,4 +227,74 @@ export function decodeForkchoiceUpdateResponse(data: Uint8Array): DecodedForkcho
     payloadStatus: toDecodedPayloadStatus(parsed.payloadStatus),
     payloadId: parsed.payloadId.length === 1 ? toHex(parsed.payloadId[0]) : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Per-fork catalogue — refactor-ssz.md § Per-fork container catalogue
+// ---------------------------------------------------------------------------
+
+/** Spec ExecutionPayload{Fork} ≡ consensus ExecutionPayload of the matching CL fork. */
+export const EXECUTION_PAYLOAD_BY_EL_FORK = {
+  paris: ssz.bellatrix.ExecutionPayload,
+  shanghai: ssz.capella.ExecutionPayload,
+  cancun: ssz.deneb.ExecutionPayload,
+  prague: ssz.deneb.ExecutionPayload,
+  osaka: ssz.deneb.ExecutionPayload,
+  amsterdam: ssz.gloas.ExecutionPayload,
+} as const;
+
+function envelopeType(elFork: ElForkName) {
+  const payload = EXECUTION_PAYLOAD_BY_EL_FORK[elFork];
+  switch (elFork) {
+    case "paris":
+    case "shanghai":
+      return new ContainerType({payload}, {typeName: `ExecutionPayloadEnvelope_${elFork}`});
+    case "cancun":
+      return new ContainerType(
+        {payload, parentBeaconBlockRoot: Bytes32},
+        {typeName: `ExecutionPayloadEnvelope_${elFork}`}
+      );
+    default:
+      return new ContainerType(
+        {payload, parentBeaconBlockRoot: Bytes32, executionRequests: ExecutionRequestsList},
+        {typeName: `ExecutionPayloadEnvelope_${elFork}`}
+      );
+  }
+}
+
+const ExecutionPayloadEnvelope = Object.fromEntries(EL_FORK_NAMES.map((f) => [f, envelopeType(f)])) as Record<
+  ElForkName,
+  ReturnType<typeof envelopeType>
+>;
+
+// ---------------------------------------------------------------------------
+// Public: POST /payloads
+// ---------------------------------------------------------------------------
+
+export function encodeNewPayload(
+  fork: ForkName,
+  executionPayload: ExecutionPayload,
+  parentBeaconBlockRoot?: Uint8Array,
+  executionRequests?: ExecutionRequests
+): Uint8Array {
+  const elFork = clForkToElFork(fork);
+  const type = ExecutionPayloadEnvelope[elFork];
+
+  if (elFork === "paris" || elFork === "shanghai") {
+    return type.serialize({payload: executionPayload} as never);
+  }
+  if (parentBeaconBlockRoot === undefined) {
+    throw Error(`parentBeaconBlockRoot required in newPayload for fork=${fork}`);
+  }
+  if (elFork === "cancun") {
+    return type.serialize({payload: executionPayload, parentBeaconBlockRoot} as never);
+  }
+  if (executionRequests === undefined) {
+    throw Error(`executionRequests required in newPayload for fork=${fork}`);
+  }
+  return type.serialize({
+    payload: executionPayload,
+    parentBeaconBlockRoot,
+    executionRequests: buildExecutionRequestsList(executionRequests),
+  } as never);
 }
