@@ -1,6 +1,8 @@
 import {Logger} from "@lodestar/logger";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, RootHex} from "@lodestar/types";
+import type {BlobAndProof} from "@lodestar/types/deneb";
+import type {BlobAndProofV2} from "@lodestar/types/fulu";
 import {fromHex} from "@lodestar/utils";
 import {PayloadAttributes} from "./interface.js";
 import {JsonRpcHttpClientEvent, JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
@@ -15,15 +17,20 @@ import {
   MAX_REQUEST_BODY_SIZE,
   RestCapabilities,
   clForkToElFork,
+  decodeBlobsV1Response,
+  decodeBlobsV2Response,
+  decodeBodiesResponse,
   decodeBuiltPayload,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
+  encodeBlobsRequest,
+  encodeBodiesByHashRequest,
   encodeForkchoiceUpdate,
   encodeNewPayload,
   parseCapabilities,
   parseIdentity,
 } from "./sszRestEncoding.js";
-import {ClientVersionRpc} from "./types.js";
+import {ClientVersionRpc, ExecutionPayloadBody} from "./types.js";
 
 export interface SszRestEngineModules {
   logger: Logger;
@@ -123,6 +130,52 @@ export class SszRestEngine {
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<DecodedBuiltPayload> {
     const resp = await this.sszRequired("GET", `/engine/v1/payloads/${payloadId}`, {fork: clForkToElFork(fork)});
     return decodeBuiltPayload(fork, resp);
+  }
+
+  /**
+   * `POST /engine/v1/bodies/hash` — refactor.md § Historical bodies. The fork header
+   * selects both the body schema and the block era: hashes outside `fork`'s era come
+   * back `available=false` -> null.
+   */
+  async bodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+    const body = encodeBodiesByHashRequest(blockHashes.map((h) => fromHex(h)));
+    const resp = await this.sszRequired("POST", "/engine/v1/bodies/hash", {fork: clForkToElFork(fork), body});
+    return decodeBodiesResponse(fork, resp);
+  }
+
+  /** `GET /engine/v1/bodies?from=N&count=M` — range past head is truncated, not padded. */
+  async bodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]> {
+    const resp = await this.sszRequired("GET", `/engine/v1/bodies?from=${start}&count=${count}`, {
+      fork: clForkToElFork(fork),
+    });
+    return decodeBodiesResponse(fork, resp);
+  }
+
+  /** `/blobs/vN` revision Lodestar uses for a fork: v1 (whole-blob proof) pre-Fulu, v2 (cell proofs) from Fulu. */
+  static blobsRevision(fork: ForkName): 1 | 2 {
+    return ForkSeq[fork] >= ForkSeq.fulu ? 2 : 1;
+  }
+
+  /** `POST /engine/v1/blobs/v1` — partial responses; 204 = EL cannot serve (all null, as JSON-RPC v1 callers expect). */
+  async blobsV1(versionedHashes: Uint8Array[]): Promise<(BlobAndProof | null)[]> {
+    const resp = await this.ssz("POST", "/engine/v1/blobs/v1", {body: encodeBlobsRequest(versionedHashes)});
+    if (resp === null) return versionedHashes.map(() => null);
+    const out = decodeBlobsV1Response(resp);
+    if (out.length !== versionedHashes.length) {
+      throw Error(`Invalid /blobs/v1 response length=${out.length} versionedHashes=${versionedHashes.length}`);
+    }
+    return out;
+  }
+
+  /** `POST /engine/v1/blobs/v2` — all-or-nothing; 204 = null (matches `engine_getBlobsV2`). */
+  async blobsV2(versionedHashes: Uint8Array[], buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
+    const resp = await this.ssz("POST", "/engine/v1/blobs/v2", {body: encodeBlobsRequest(versionedHashes)});
+    if (resp === null) return null;
+    const out = decodeBlobsV2Response(resp, buffers);
+    if (out.length !== versionedHashes.length) {
+      throw Error(`Invalid /blobs/v2 response length=${out.length} versionedHashes=${versionedHashes.length}`);
+    }
+    return out;
   }
 
   /** Like `ssz()` but 204 is a protocol violation: only `/blobs/vN` may return it. */

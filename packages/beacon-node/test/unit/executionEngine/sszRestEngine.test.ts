@@ -279,3 +279,137 @@ describe("SszRestEngine / hot path", () => {
     await expect(engine.getPayload(ForkName.deneb, "0x0102030405060708")).rejects.toThrow(/unexpected empty response/);
   });
 });
+
+// Spec oracle containers for /bodies and /blobs/vN — mirrors the fake EL's responses.
+const TxListT = new ListCompositeType(new ByteListType(MAX_BYTES_PER_TRANSACTION), 1_048_576);
+const BodyShanghaiT = new ContainerType({transactions: TxListT, withdrawals: ssz.capella.Withdrawals});
+const BodiesShanghaiT = new ContainerType({
+  entries: new ListCompositeType(new ContainerType({available: ssz.Boolean, body: BodyShanghaiT}), 32),
+});
+const BlobT = new ByteVectorType(131072);
+const B48 = new ByteVectorType(48);
+const BlobsV1T = new ContainerType({
+  entries: new ListCompositeType(
+    new ContainerType({available: ssz.Boolean, contents: new ContainerType({blob: BlobT, proof: B48})}),
+    128
+  ),
+});
+const BlobsV2T = new ContainerType({
+  entries: new ListCompositeType(
+    new ContainerType({
+      available: ssz.Boolean,
+      contents: new ContainerType({blob: BlobT, proofs: new ListCompositeType(B48, 128)}),
+    }),
+    128
+  ),
+});
+
+describe("SszRestEngine / bodies & blobs", () => {
+  const afterCallbacks: (() => Promise<void>)[] = [];
+  afterEach(async () => {
+    while (afterCallbacks.length) await afterCallbacks.pop()?.();
+  });
+
+  async function el(setup: (server: FastifyInstance) => void): Promise<FakeEl> {
+    return startFakeEl(afterCallbacks, (server) => {
+      server.get("/engine/v1/capabilities", async () => ({
+        supported_forks: ["cancun"],
+        independently_versioned: {blobs: ["v1", "v2"]},
+      }));
+      setup(server);
+    });
+  }
+
+  it("bodiesByHash POSTs /bodies/hash with fork header; available=false -> null", async () => {
+    const {url} = await el((server) => {
+      server.post("/engine/v1/bodies/hash", async (req, reply) => {
+        expect(req.headers["eth-execution-version"]).toBe("cancun");
+        sendSsz(
+          reply,
+          BodiesShanghaiT.serialize({
+            entries: [
+              {available: false, body: {transactions: [], withdrawals: []}},
+              {available: true, body: {transactions: [new Uint8Array([1])], withdrawals: []}},
+            ],
+          })
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+    const out = await engine.bodiesByHash(ForkName.deneb, [zeroHex, zeroHex]);
+    expect(out[0]).toBeNull();
+    expect(out[1]).toEqual({transactions: [new Uint8Array([1])], withdrawals: []});
+  });
+
+  it("bodiesByRange GETs /bodies?from&count with no body; truncated response returned as-is", async () => {
+    let query: unknown;
+    let contentType: unknown;
+    const {url} = await el((server) => {
+      server.get("/engine/v1/bodies", async (req, reply) => {
+        query = req.query;
+        contentType = req.headers["content-type"];
+        sendSsz(
+          reply,
+          BodiesShanghaiT.serialize({entries: [{available: true, body: {transactions: [], withdrawals: []}}]})
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+    const out = await engine.bodiesByRange(ForkName.deneb, 100, 5);
+    expect(query).toEqual({from: "100", count: "5"});
+    expect(contentType).toBeUndefined();
+    expect(out.length).toBe(1);
+  });
+
+  it("blobsV1: no fork header; partial -> null; 204 -> all null", async () => {
+    let mode: "partial" | "empty" = "partial";
+    const {url} = await el((server) => {
+      server.post("/engine/v1/blobs/v1", async (req, reply) => {
+        expect(req.headers["eth-execution-version"]).toBeUndefined();
+        if (mode === "empty") return reply.code(204).send();
+        sendSsz(
+          reply,
+          BlobsV1T.serialize({
+            entries: [
+              {available: true, contents: {blob: new Uint8Array(131072), proof: new Uint8Array(48)}},
+              {available: false, contents: {blob: new Uint8Array(131072), proof: new Uint8Array(48)}},
+            ],
+          })
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+    const partial = await engine.blobsV1([zero32, zero32]);
+    expect(partial[0]).not.toBeNull();
+    expect(partial[1]).toBeNull();
+    mode = "empty";
+    expect(await engine.blobsV1([zero32, zero32])).toEqual([null, null]);
+  });
+
+  it("blobsV2: 204 -> null; 200 -> contents; length mismatch throws", async () => {
+    let mode: "ok" | "empty" | "short" = "ok";
+    const entry = {
+      available: true,
+      contents: {blob: new Uint8Array(131072), proofs: Array.from({length: 128}, () => new Uint8Array(48))},
+    };
+    const {url} = await el((server) => {
+      server.post("/engine/v1/blobs/v2", async (_req, reply) => {
+        if (mode === "empty") return reply.code(204).send();
+        sendSsz(reply, BlobsV2T.serialize({entries: mode === "short" ? [entry] : [entry, entry]}));
+      });
+    });
+    const {engine} = makeEngine(url);
+    expect((await engine.blobsV2([zero32, zero32]))?.length).toBe(2);
+    mode = "empty";
+    expect(await engine.blobsV2([zero32, zero32])).toBeNull();
+    mode = "short";
+    await expect(engine.blobsV2([zero32, zero32])).rejects.toThrow(/length/);
+  });
+
+  it("blobsRevision picks v1 before fulu and v2 from fulu", () => {
+    expect(SszRestEngine.blobsRevision(ForkName.deneb)).toBe(1);
+    expect(SszRestEngine.blobsRevision(ForkName.electra)).toBe(1);
+    expect(SszRestEngine.blobsRevision(ForkName.fulu)).toBe(2);
+    expect(SszRestEngine.blobsRevision(ForkName.gloas)).toBe(2);
+  });
+});
