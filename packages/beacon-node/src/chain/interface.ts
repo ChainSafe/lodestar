@@ -97,6 +97,8 @@ export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   readonly earliestAvailableSlot: Slot;
+  /** Recompute {@link earliestAvailableSlot} from the DB (at startup and after archiving/pruning). */
+  updateEarliestAvailableSlot(): Promise<void>;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
