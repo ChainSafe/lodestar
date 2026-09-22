@@ -15,6 +15,8 @@ import {
   encodeBodiesByHashRequest,
   encodeForkchoiceUpdate,
   encodeNewPayload,
+  parseCapabilities,
+  parseIdentity,
 } from "../../../src/execution/engine/sszRestEncoding.js";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../../../src/execution/engine/types.js";
 
@@ -436,5 +438,47 @@ describe("sszRestEncoding / blobs", () => {
       ],
     });
     expect(() => decodeBlobsV2Response(ok, [new Uint8Array(10)])).toThrow(/buffer/);
+  });
+});
+
+describe("sszRestEncoding / JSON diagnostics", () => {
+  const specExample = {
+    supported_forks: ["paris", "shanghai", "cancun", "prague", "osaka", "amsterdam"],
+    fork_scoped_endpoints: ["payloads", "forkchoice", "bodies"],
+    independently_versioned: {blobs: ["v1", "v2", "v3", "v4"]},
+    unscoped_endpoints: ["capabilities", "identity"],
+    limits: {"bodies.max_count": 32, "blobs.max_versioned_hashes": 128, "payload.max_bytes": 67108864},
+  };
+
+  it("parses the spec example", () => {
+    const caps = parseCapabilities(specExample);
+    expect([...caps.supportedForks]).toEqual(specExample.supported_forks);
+    expect([...caps.blobRevisions]).toEqual([1, 2, 3, 4]);
+    expect(caps.limits).toEqual({bodiesMaxCount: 32, blobsMaxVersionedHashes: 128, payloadMaxBytes: 67108864});
+  });
+
+  it("ignores unknown forks and defaults missing limits / blobs", () => {
+    const caps = parseCapabilities({supported_forks: ["cancun", "verkle"]});
+    expect([...caps.supportedForks]).toEqual(["cancun"]);
+    expect(caps.blobRevisions.size).toBe(0);
+    expect(caps.limits).toEqual({bodiesMaxCount: 32, blobsMaxVersionedHashes: 128, payloadMaxBytes: 67108864});
+  });
+
+  it("clamps advertised limits to the spec MAX_* constants", () => {
+    const caps = parseCapabilities({supported_forks: [], limits: {"bodies.max_count": 999}});
+    expect(caps.limits.bodiesMaxCount).toBe(32);
+  });
+
+  it("rejects bodies without supported_forks", () => {
+    expect(() => parseCapabilities({})).toThrow(/supported_forks/);
+    expect(() => parseCapabilities(null)).toThrow();
+    expect(() => parseCapabilities("nope")).toThrow();
+  });
+
+  it("parses identity as ClientVersion[]", () => {
+    const v = [{code: "GE", name: "geth", version: "1.0", commit: "0x00000000"}];
+    expect(parseIdentity(v)).toEqual(v);
+    expect(() => parseIdentity({})).toThrow();
+    expect(() => parseIdentity([{code: "GE"}])).toThrow();
   });
 });

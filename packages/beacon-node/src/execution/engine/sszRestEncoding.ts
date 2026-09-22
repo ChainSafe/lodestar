@@ -12,7 +12,6 @@ import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
-  MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BYTES_PER_TRANSACTION,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
@@ -23,7 +22,7 @@ import type {BlobAndProofV2} from "@lodestar/types/fulu";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, PayloadAttributes} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
-import {BLOB_AND_PROOF_V2_RPC_BYTES, ExecutionPayloadBody} from "./types.js";
+import {BLOB_AND_PROOF_V2_RPC_BYTES, ClientVersionRpc, ExecutionPayloadBody} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // EL fork names — the `Eth-Execution-Version` header values.
@@ -82,6 +81,7 @@ export const MAX_REQUEST_BODY_SIZE = 2 ** 26;
 // ---------------------------------------------------------------------------
 
 const Uint8 = new UintNumberType(1);
+// biome-ignore lint/suspicious/noShadowRestrictedNames: SSZ BooleanType instance, mirrors ssz.Boolean naming
 const Boolean = new BooleanType();
 const Bytes8 = new ByteVectorType(8);
 const Bytes20 = new ByteVectorType(20);
@@ -620,5 +620,74 @@ export function decodeBlobsV2Response(data: Uint8Array, buffers?: Uint8Array[]):
       proofs.push(view);
     }
     return {blob, proofs};
+  });
+}
+
+// ---------------------------------------------------------------------------
+// JSON diagnostics — refactor.md § Capabilities & identification
+// ---------------------------------------------------------------------------
+
+export interface RestCapabilities {
+  supportedForks: Set<ElForkName>;
+  blobRevisions: Set<number>;
+  limits: {bodiesMaxCount: number; blobsMaxVersionedHashes: number; payloadMaxBytes: number};
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function limitOrDefault(limits: Record<string, unknown> | undefined, key: string, max: number): number {
+  const v = limits?.[key];
+  // Advertised values are an upper bound the server will serve; they MUST NOT exceed MAX_*.
+  return typeof v === "number" && Number.isInteger(v) && v > 0 ? Math.min(v, max) : max;
+}
+
+export function parseCapabilities(json: unknown): RestCapabilities {
+  if (!isRecord(json)) throw Error("capabilities: expected a JSON object");
+  const forks = json.supported_forks;
+  if (!Array.isArray(forks)) throw Error("capabilities: missing supported_forks");
+
+  const supportedForks = new Set<ElForkName>();
+  for (const f of forks) {
+    if (typeof f === "string" && (EL_FORK_NAMES as readonly string[]).includes(f)) {
+      supportedForks.add(f as ElForkName);
+    }
+  }
+
+  const blobRevisions = new Set<number>();
+  const versioned = isRecord(json.independently_versioned) ? json.independently_versioned : undefined;
+  if (Array.isArray(versioned?.blobs)) {
+    for (const v of versioned.blobs) {
+      const m = typeof v === "string" ? /^v(\d+)$/.exec(v) : null;
+      if (m) blobRevisions.add(Number(m[1]));
+    }
+  }
+
+  const limits = isRecord(json.limits) ? json.limits : undefined;
+  return {
+    supportedForks,
+    blobRevisions,
+    limits: {
+      bodiesMaxCount: limitOrDefault(limits, "bodies.max_count", MAX_BODIES_REQUEST),
+      blobsMaxVersionedHashes: limitOrDefault(limits, "blobs.max_versioned_hashes", MAX_BLOBS_REQUEST),
+      payloadMaxBytes: limitOrDefault(limits, "payload.max_bytes", MAX_REQUEST_BODY_SIZE),
+    },
+  };
+}
+
+export function parseIdentity(json: unknown): ClientVersionRpc[] {
+  if (!Array.isArray(json)) throw Error("identity: expected a JSON array");
+  return json.map((v, i) => {
+    if (
+      !isRecord(v) ||
+      typeof v.code !== "string" ||
+      typeof v.name !== "string" ||
+      typeof v.version !== "string" ||
+      typeof v.commit !== "string"
+    ) {
+      throw Error(`identity: entry ${i} is not a ClientVersion`);
+    }
+    return {code: v.code, name: v.name, version: v.version, commit: v.commit};
   });
 }
