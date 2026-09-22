@@ -5,10 +5,10 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
-import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {reconstructArchivedEnvelopesByRange} from "../../../util/reconstructArchivedEnvelopes.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(

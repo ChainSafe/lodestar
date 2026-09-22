@@ -3,17 +3,17 @@ import {createChainForkConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
-import {
-  isRebuildMiss,
-  reconstructArchivedEnvelopes,
-  reconstructArchivedEnvelopesByRange,
-} from "../../../src/chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
+import {toSignedBlindedEnvelope} from "../../../src/util/blindedEnvelope.js";
+import {
+  isRebuildMiss,
+  reconstructArchivedEnvelopes,
+  reconstructArchivedEnvelopesByRange,
+} from "../../../src/util/reconstructArchivedEnvelopes.js";
 import {startIsolatedTmpBeaconDb} from "../../utils/db.js";
 import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
 
@@ -35,12 +35,12 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
   const bodyOf = payloadBodiesOf;
 
-  // Seed the archive with the compact form (the write seam does this at hot→cold migration).
+  // Seed the archive with the blinded form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.put(slot, {
-      selector: ArchivedEnvelopeKind.Compact,
-      value: toSignedCompactEnvelope(full),
+      selector: ArchivedEnvelopeKind.Blinded,
+      value: toSignedBlindedEnvelope(full),
     });
     return full;
   }
@@ -140,7 +140,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
-    // only the two compact entries go to the EL
+    // only the two blinded entries go to the EL
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(2);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).not.toContain(toRootHex(archivedFull.message.payload.blockHash));
@@ -240,20 +240,20 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect(unservableSlot).toBe(10);
   });
 
-  it("reports a mismatch as a miss carrying PAYLOAD_ROOT_MISMATCH on the batch getter path", async () => {
+  it("reports a mismatch as a miss carrying BODY_ROOT_MISMATCH on the batch getter path", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
-    const [result] = await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)]);
+    const [result] = await reconstructArchivedEnvelopes(executionEngine, [toSignedBlindedEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);
-    expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.PAYLOAD_ROOT_MISMATCH);
+    expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
     expect(result.error.isTransient()).toBe(false);
   });
 
   it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructArchivedEnvelopes(executionEngine, [toSignedCompactEnvelope(full)])).toEqual([
+    expect(await reconstructArchivedEnvelopes(executionEngine, [toSignedBlindedEnvelope(full)])).toEqual([
       {slot: 10, reason: "unavailable"},
     ]);
   });

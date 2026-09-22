@@ -1,18 +1,13 @@
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/index.js";
-import {
-  ArchivedEnvelopeBinary,
-  ArchivedEnvelopeKind,
-  SignedCompactExecutionPayloadEnvelope,
-  decodeArchivedEnvelopeBinary,
-} from "../../../db/repositories/index.js";
-import {IExecutionEngine} from "../../../execution/index.js";
 import {
   EnvelopeReconstructionError,
   EnvelopeReconstructionErrorCode,
-} from "../../errors/envelopeReconstructionError.js";
-import {signedCompactEnvelopeToFull} from "./compactEnvelope.js";
+} from "../chain/errors/envelopeReconstructionError.js";
+import {IBeaconDb} from "../db/index.js";
+import {ArchivedEnvelopeBinary, ArchivedEnvelopeKind, decodeArchivedEnvelopeBinary} from "../db/repositories/index.js";
+import {IExecutionEngine} from "../execution/index.js";
+import {signedBlindedEnvelopeToFull} from "./blindedEnvelope.js";
 
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
@@ -27,13 +22,13 @@ export type ReconstructMismatchPolicy = "throw" | "omit";
 export type RebuildMiss =
   /** EL does not have the block, or has pruned its block access list */
   | {slot: Slot; reason: "unavailable"}
-  /** EL bodies do not hash to the archived payloadRoot (local inconsistency) */
+  /** An EL body does not hash to its stored root (local inconsistency) */
   | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
 
 /**
  * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes. Full entries are served
- * as `bytes.subarray(1)` without deserializing; compact ones are rebuilt from EL bodies, 32 per
- * round-trip. Every compact entry is attempted regardless of age: the spec requires serving
+ * as `bytes.subarray(1)` without deserializing; blinded ones are rebuilt from EL bodies, 32 per
+ * round-trip. Every blinded entry is attempted regardless of age: the spec requires serving
  * MIN_EPOCHS_FOR_BLOCK_REQUESTS and allows more, and how much more is decided by the EL's block
  * access list retention.
  *
@@ -77,23 +72,23 @@ async function* reconstructBatch(
   logger: Logger,
   batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
-  const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
+  const blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Compact) compacts.push(entry.compact);
+    if (entry.kind === ArchivedEnvelopeKind.Blinded) blindeds.push(entry.blinded);
   }
-  const rebuilt = await rebuildCompacts(executionEngine, compacts);
+  const rebuilt = await reconstructEnvelopesBatch(executionEngine, blindeds);
 
-  let compactIdx = 0;
+  let blindedIdx = 0;
   for (const entry of batch) {
     if (entry.kind === ArchivedEnvelopeKind.Full) {
       yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
       continue;
     }
-    const result = rebuilt[compactIdx++];
+    const result = rebuilt[blindedIdx++];
     if (isRebuildMiss(result)) {
       // Peer-triggered, so debug: a persistent local mismatch would otherwise log on every request
       if (result.reason === "mismatch") {
-        logger.debug("Archived envelope failed payload root check against EL bodies", {slot: entry.slot}, result.error);
+        logger.debug("Archived envelope failed body root check against EL bodies", {slot: entry.slot}, result.error);
       } else {
         logger.debug("EL cannot serve bodies for archived envelope, ending range", {slot: entry.slot});
       }
@@ -107,17 +102,17 @@ async function* reconstructBatch(
 }
 
 /**
- * Rebuild compact envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
+ * Rebuild blinded envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
  * {@link RebuildMiss} where the envelope could not be rebuilt; the caller decides what a miss means
  * on its path. Throws ENGINE_UNAVAILABLE only.
  */
 export async function reconstructArchivedEnvelopes(
   executionEngine: IExecutionEngine,
-  compacts: SignedCompactExecutionPayloadEnvelope[]
+  blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
-  for (let i = 0; i < compacts.length; i += MAX_BODIES_REQUEST) {
-    out.push(...(await rebuildCompacts(executionEngine, compacts.slice(i, i + MAX_BODIES_REQUEST))));
+  for (let i = 0; i < blindeds.length; i += MAX_BODIES_REQUEST) {
+    out.push(...(await reconstructEnvelopesBatch(executionEngine, blindeds.slice(i, i + MAX_BODIES_REQUEST))));
   }
   return out;
 }
@@ -127,12 +122,12 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
 }
 
 /** One EL round-trip. Aligned with the input; never throws per envelope, only ENGINE_UNAVAILABLE. */
-async function rebuildCompacts(
+async function reconstructEnvelopesBatch(
   executionEngine: IExecutionEngine,
-  compacts: SignedCompactExecutionPayloadEnvelope[]
+  blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
-  if (compacts.length === 0) return [];
-  const hashes = compacts.map((compact) => toRootHex(compact.message.payload.blockHash));
+  if (blindeds.length === 0) return [];
+  const hashes = blindeds.map((blinded) => toRootHex(blinded.message.payload.blockHash));
 
   let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
   try {
@@ -145,15 +140,15 @@ async function rebuildCompacts(
     );
   }
 
-  return compacts.map((compact, i) => {
-    const slot = compact.message.payload.slotNumber;
+  return blindeds.map((blinded, i) => {
+    const slot = blinded.message.payload.slotNumber;
     const body = bodies[i];
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
       return {slot, reason: "unavailable"};
     }
     try {
-      return signedCompactEnvelopeToFull(compact, {
+      return signedBlindedEnvelopeToFull(blinded, {
         transactions: body.transactions,
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,

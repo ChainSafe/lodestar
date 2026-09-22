@@ -61,11 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
-import {
-  ArchivedEnvelopeKind,
-  SignedCompactExecutionPayloadEnvelope,
-  decodeArchivedEnvelopeBinary,
-} from "../db/repositories/index.js";
+import {ArchivedEnvelopeKind, decodeArchivedEnvelopeBinary} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -78,14 +74,14 @@ import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
-import {SerializedCache} from "../util/serializedCache.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
-import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {
   ReconstructMismatchPolicy,
   isRebuildMiss,
   reconstructArchivedEnvelopes,
-} from "./archiveStore/utils/reconstructArchivedEnvelopes.js";
+} from "../util/reconstructArchivedEnvelopes.js";
+import {SerializedCache} from "../util/serializedCache.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
+import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -941,8 +937,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Batch variant: archived compact envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
-   * A payload root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
+   * Batch variant: archived blinded envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
+   * A body root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
    * returns null for that entry, for peer-facing paths where the spec allows omission.
    */
   async getSerializedExecutionPayloadEnvelopes(
@@ -950,8 +946,8 @@ export class BeaconChain implements IBeaconChain {
     onMismatch: ReconstructMismatchPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
-    const compactIdxs: number[] = [];
+    const blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
+    const blindedIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
       const {blockSlot, blockRootHex} = requests[i];
@@ -977,26 +973,26 @@ export class BeaconChain implements IBeaconChain {
         out[i] = archived.envelopeBytes;
         continue;
       }
-      compacts.push(archived.compact);
-      compactIdxs.push(i);
+      blindeds.push(archived.blinded);
+      blindedIdxs.push(i);
     }
 
-    if (compacts.length > 0) {
-      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, compacts);
+    if (blindeds.length > 0) {
+      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, blindeds);
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
           if (result.reason === "mismatch") {
             if (onMismatch === "throw") throw result.error;
             this.logger.debug(
-              "Archived envelope failed payload root check against EL bodies",
+              "Archived envelope failed body root check against EL bodies",
               {slot: result.slot},
               result.error
             );
           }
           continue;
         }
-        out[compactIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[blindedIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -1034,7 +1030,7 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    // executionRequests survives compaction, so read it without reconstructing
+    // executionRequests survives blinding, so read it without reconstructing
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope().message.executionRequests;

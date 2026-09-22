@@ -14,10 +14,10 @@ import {
   encodeArchivedFullEnvelopeBinary,
 } from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
+import {toSignedBlindedEnvelope} from "../../../util/blindedEnvelope.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
-import {toSignedCompactEnvelope} from "./compactEnvelope.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -484,9 +484,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
  *
- * With `dedupePayloads` (default), execution-valid envelopes are archived in compact form. Envelopes of
+ * With `dedupePayloads` (default), execution-valid envelopes are archived blinded. Envelopes of
  * still-optimistic blocks are archived in full, since the EL may not serve their bodies, and are not
- * compacted later. Archive put + hot delete are one atomic db batch.
+ * blinded later. Archive put + hot delete are one atomic db batch.
  */
 export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
@@ -506,7 +506,7 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
   for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
     const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
-    // Only compacted envelopes need deserializing; full ones are copied as bytes
+    // Only blinded envelopes need deserializing; full ones are copied as bytes
     const archivedBytesArray = await Promise.all(
       batch.map(async (block) => {
         const root = fromHex(block.blockRoot);
@@ -515,8 +515,8 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
           return envelope === null
             ? null
             : archivedSignedExecutionPayloadEnvelopeSsz.serialize({
-                selector: ArchivedEnvelopeKind.Compact,
-                value: toSignedCompactEnvelope(envelope),
+                selector: ArchivedEnvelopeKind.Blinded,
+                value: toSignedBlindedEnvelope(envelope),
               });
         }
         const envelopeBytes = await db.executionPayloadEnvelope.getBinary(root);

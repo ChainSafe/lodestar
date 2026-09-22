@@ -509,6 +509,42 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+/**
+ * Lodestar-internal blinding of ExecutionPayload: transactions, withdrawals and blockAccessList
+ * replaced by their hash_tree_root at the same field positions, so it hashes to the same root as the
+ * full payload (same pattern as ExecutionPayloadHeader). Used to archive finalized envelopes without
+ * the bodies the EL already stores. Not a spec container, never on the wire.
+ */
+export const BlindedExecutionPayload = new ProgressiveContainerType(
+  {
+    ...electraSsz.ExecutionPayloadHeader.fields,
+    blobGasUsed: electraSsz.ExecutionPayload.fields.blobGasUsed,
+    excessBlobGas: electraSsz.ExecutionPayload.fields.excessBlobGas,
+    blockAccessListRoot: Root, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
+  },
+  activeFields(19),
+  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+);
+
+/** Same root as ExecutionPayloadEnvelope, so a builder signature verifies against the blinded form */
+export const BlindedExecutionPayloadEnvelope = new ProgressiveContainerType(
+  {
+    ...ExecutionPayloadEnvelope.fields,
+    payload: BlindedExecutionPayload,
+  },
+  activeFields(5),
+  {typeName: "BlindedExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
+export const SignedBlindedExecutionPayloadEnvelope = new ContainerType(
+  {
+    message: BlindedExecutionPayloadEnvelope,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlindedExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
   {
     signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,

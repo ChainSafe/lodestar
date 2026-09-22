@@ -1,68 +1,32 @@
-import {ContainerType, Type, UnionType, ValueOf} from "@chainsafe/ssz";
+import {Type, UnionType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH, Db, DbBatch, Repository, encodeKey as encodeDbKey} from "@lodestar/db";
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
-// Lodestar-internal storage types, not spec containers
-
-const {
-  transactions: _transactions,
-  withdrawals: _withdrawals,
-  blockAccessList: _blockAccessList,
-  ...executionPayloadScalarFields
-} = ssz.gloas.ExecutionPayload.fields;
-
-/** ExecutionPayload minus transactions, withdrawals and blockAccessList, plus the full payload's hash_tree_root */
-export const compactExecutionPayloadSsz = new ContainerType(
-  {
-    ...executionPayloadScalarFields,
-    payloadRoot: ssz.Root,
-  },
-  {typeName: "CompactExecutionPayload", jsonCase: "eth2"}
-);
-
-export const compactExecutionPayloadEnvelopeSsz = new ContainerType(
-  {
-    ...ssz.gloas.ExecutionPayloadEnvelope.fields,
-    payload: compactExecutionPayloadSsz,
-  },
-  {typeName: "CompactExecutionPayloadEnvelope", jsonCase: "eth2"}
-);
-
-export const signedCompactExecutionPayloadEnvelopeSsz = new ContainerType(
-  {
-    message: compactExecutionPayloadEnvelopeSsz,
-    signature: ssz.BLSSignature,
-  },
-  {typeName: "SignedCompactExecutionPayloadEnvelope", jsonCase: "eth2"}
-);
+// Lodestar-internal storage type, not a spec container
 
 /**
- * Archive value: compact (selector 0, default) or full (selector 1, `--chain.dedupePayloads=false`).
+ * Archive value: blinded (selector 0, default) or full (selector 1, `--chain.dedupePayloads=false`).
  * One selector byte then the value, so full entries are servable as `bytes.subarray(1)`.
  */
 export const archivedSignedExecutionPayloadEnvelopeSsz = new UnionType(
-  [signedCompactExecutionPayloadEnvelopeSsz, ssz.gloas.SignedExecutionPayloadEnvelope],
+  [ssz.gloas.SignedBlindedExecutionPayloadEnvelope, ssz.gloas.SignedExecutionPayloadEnvelope],
   {typeName: "ArchivedSignedExecutionPayloadEnvelope"}
 );
 
-export type CompactExecutionPayload = ValueOf<typeof compactExecutionPayloadSsz>;
-export type CompactExecutionPayloadEnvelope = ValueOf<typeof compactExecutionPayloadEnvelopeSsz>;
-export type SignedCompactExecutionPayloadEnvelope = ValueOf<typeof signedCompactExecutionPayloadEnvelopeSsz>;
-
 /** Union selector of `archivedSignedExecutionPayloadEnvelopeSsz` */
 export enum ArchivedEnvelopeKind {
-  /** `SignedCompactExecutionPayloadEnvelope`, bodies reconstructed from the EL on read (default) */
-  Compact = 0,
+  /** `SignedBlindedExecutionPayloadEnvelope`, bodies reconstructed from the EL on read (default) */
+  Blinded = 0,
   /** `SignedExecutionPayloadEnvelope` stored as-is (`--chain.dedupePayloads=false`) */
   Full = 1,
 }
 
 /** Discriminated form of the ssz union value, so `selector` narrows `value` */
 export type ArchivedEnvelope =
-  | {selector: ArchivedEnvelopeKind.Compact; value: SignedCompactExecutionPayloadEnvelope}
+  | {selector: ArchivedEnvelopeKind.Blinded; value: gloas.SignedBlindedExecutionPayloadEnvelope}
   | {selector: ArchivedEnvelopeKind.Full; value: gloas.SignedExecutionPayloadEnvelope};
 
 const ARCHIVED_ENVELOPE_SELECTOR_LENGTH = 1;
@@ -70,13 +34,13 @@ const ARCHIVED_ENVELOPE_SELECTOR_LENGTH = 1;
 /** A raw archive value branched on its selector byte, without deserializing the full form */
 export type ArchivedEnvelopeBinary =
   | {kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
-  | {kind: ArchivedEnvelopeKind.Compact; compact: SignedCompactExecutionPayloadEnvelope};
+  | {kind: ArchivedEnvelopeKind.Blinded; blinded: gloas.SignedBlindedExecutionPayloadEnvelope};
 
 export function decodeArchivedEnvelopeBinary(bytes: Uint8Array): ArchivedEnvelopeBinary {
   const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
   return bytes[0] === ArchivedEnvelopeKind.Full
     ? {kind: ArchivedEnvelopeKind.Full, envelopeBytes: value}
-    : {kind: ArchivedEnvelopeKind.Compact, compact: signedCompactExecutionPayloadEnvelopeSsz.deserialize(value)};
+    : {kind: ArchivedEnvelopeKind.Blinded, blinded: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(value)};
 }
 
 /** Full envelope bytes as they already are in the hot db, prefixed with the selector byte */
@@ -88,7 +52,7 @@ export function encodeArchivedFullEnvelopeBinary(envelopeBytes: Uint8Array): Uin
 }
 
 /**
- * Finalized envelopes, compact or full ({@link ArchivedEnvelopeKind}), indexed by slot
+ * Finalized envelopes, blinded or full ({@link ArchivedEnvelopeKind}), indexed by slot
  */
 export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, ArchivedEnvelope> {
   constructor(config: ChainForkConfig, db: Db) {

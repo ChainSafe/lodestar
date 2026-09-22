@@ -10,12 +10,12 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
-import {toSignedCompactEnvelope} from "../../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelopeKind} from "../../../../src/db/repositories/index.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
+import {toSignedBlindedEnvelope} from "../../../../src/util/blindedEnvelope.js";
 
 describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)", (fork) => {
   const config = createChainForkConfig({FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity});
@@ -74,8 +74,8 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       envelope.message.beaconBlockRoot = root;
       envelope.message.payload.slotNumber = slot;
       await db.executionPayloadEnvelopeArchive.put(slot, {
-        selector: ArchivedEnvelopeKind.Compact,
-        value: toSignedCompactEnvelope(envelope),
+        selector: ArchivedEnvelopeKind.Blinded,
+        value: toSignedBlindedEnvelope(envelope),
       });
     }
     return {block, columns: columns.map(({data}) => data)};
