@@ -106,7 +106,6 @@ describe("options / beaconNodeOptions", () => {
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
-      "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
     } as BeaconNodeArgs;
 
@@ -217,7 +216,6 @@ describe("options / beaconNodeOptions", () => {
         isSingleNode: true,
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
-        backfillBatchSize: 64,
         disableRangeSync: false,
       },
     };
