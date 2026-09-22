@@ -184,10 +184,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const engineUrl = opts.urls?.[0] ?? "http://localhost:8551";
       const baseUrl = stripTrailingSlashes(engineUrl);
       if ((opts.urls?.length ?? 0) > 1) {
-        this.logger.warn("SSZ-REST Engine API uses only the first execution URL; fallback URLs are ignored on the REST transport", {
-          url: baseUrl,
-          ignored: opts.urls.length - 1,
-        });
+        this.logger.warn(
+          "SSZ-REST Engine API uses only the first execution URL; fallback URLs are ignored on the REST transport",
+          {
+            url: baseUrl,
+            ignored: opts.urls.length - 1,
+          }
+        );
       }
       const lodestar = getLodestarClientVersion(opts);
       const client = new SszRestClient({
