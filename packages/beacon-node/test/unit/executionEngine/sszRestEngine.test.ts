@@ -278,6 +278,20 @@ describe("SszRestEngine / hot path", () => {
     const {engine} = makeEngine(url);
     await expect(engine.getPayload(ForkName.deneb, "0x0102030405060708")).rejects.toThrow(/unexpected empty response/);
   });
+
+  it("getPayload rejects a malformed payloadId before making a request", async () => {
+    let hits = 0;
+    const {url} = await elWithForks(["cancun"], (server) => {
+      server.get("/engine/v1/payloads/*", async (_req, reply) => {
+        hits++;
+        reply.code(204).send();
+      });
+    });
+    const {engine} = makeEngine(url);
+
+    await expect(engine.getPayload(ForkName.deneb, "0x12/../etc")).rejects.toThrow(/Invalid payloadId/);
+    expect(hits).toBe(0);
+  });
 });
 
 // Spec oracle containers for /bodies and /blobs/vN — mirrors the fake EL's responses.

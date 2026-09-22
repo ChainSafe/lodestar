@@ -55,14 +55,12 @@ const DEFAULT_LIMITS: RestCapabilities["limits"] = {
  */
 export class SszRestEngine {
   private readonly capabilities: Promise<RestCapabilities | null>;
-  readonly ready: Promise<void>;
 
   constructor(
     private readonly client: SszRestClient,
     private readonly modules: SszRestEngineModules
   ) {
     this.capabilities = this.probe();
-    this.ready = this.capabilities.then(() => undefined);
   }
 
   async isAvailable(): Promise<boolean> {
@@ -128,6 +126,9 @@ export class SszRestEngine {
 
   /** `GET /engine/v1/payloads/{payloadId}` — refactor.md § Payload retrieval. */
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<DecodedBuiltPayload> {
+    if (!/^0x[0-9a-f]{16}$/i.test(payloadId)) {
+      throw Error(`Invalid payloadId=${payloadId}`);
+    }
     const resp = await this.sszRequired("GET", `/engine/v1/payloads/${payloadId}`, {fork: clForkToElFork(fork)});
     return decodeBuiltPayload(fork, resp);
   }
@@ -215,7 +216,7 @@ export class SszRestEngine {
   // Wrappers that mirror JsonRpcHttpClient's event emission so `updateEngineState`
   // and the first-response hook in ExecutionEngineHttp fire for both transports.
 
-  protected async ssz(method: "GET" | "POST", path: string, opts?: SszRequestOpts): Promise<Uint8Array | null> {
+  private async ssz(method: "GET" | "POST", path: string, opts?: SszRequestOpts): Promise<Uint8Array | null> {
     try {
       const response = await this.client.requestSsz(method, path, opts);
       this.modules.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload: path, response});
@@ -227,7 +228,7 @@ export class SszRestEngine {
     }
   }
 
-  protected async json(path: string): Promise<unknown> {
+  private async json(path: string): Promise<unknown> {
     try {
       const response = await this.client.requestJson(path);
       this.modules.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload: path, response});

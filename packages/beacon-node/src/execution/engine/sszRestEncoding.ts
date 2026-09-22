@@ -237,7 +237,7 @@ export function decodeForkchoiceUpdateResponse(data: Uint8Array): DecodedForkcho
 // ---------------------------------------------------------------------------
 
 /** Spec ExecutionPayload{Fork} ≡ consensus ExecutionPayload of the matching CL fork. */
-export const EXECUTION_PAYLOAD_BY_EL_FORK = {
+const EXECUTION_PAYLOAD_BY_EL_FORK = {
   paris: ssz.bellatrix.ExecutionPayload,
   shanghai: ssz.capella.ExecutionPayload,
   cancun: ssz.deneb.ExecutionPayload,

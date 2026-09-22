@@ -80,6 +80,11 @@ function sendSsz(reply: FastifyReply, data: Uint8Array): void {
   reply.send(Buffer.from(data));
 }
 
+function makeSilentLogger(): Logger {
+  const noop = () => undefined;
+  return {debug: noop, info: noop, warn: noop, error: noop, verbose: noop} as unknown as Logger;
+}
+
 async function startEngine(
   opts: StubOpts,
   after: (() => Promise<void>)[]
@@ -113,7 +118,7 @@ async function startEngine(
   const url = await server.listen({host: "127.0.0.1", port: 0});
   const engine = initializeExecutionEngine(
     {mode: "http", urls: [url], retries: 0, retryDelay: defaultExecutionEngineHttpOpts.retryDelay, sszRest: true},
-    {signal: controller.signal, logger: console as unknown as Logger}
+    {signal: controller.signal, logger: makeSilentLogger()}
   );
   return {engine, jsonRpcCalls};
 }
@@ -175,9 +180,9 @@ describe("ExecutionEngineHttp / SSZ-REST dispatch", () => {
       },
       after
     );
-    await expect(
-      engine.notifyNewPayload(ForkName.deneb, denebPayload(), [] /* versionedHashes */)
-    ).rejects.toThrow(/parentBlockRoot required/);
+    await expect(engine.notifyNewPayload(ForkName.deneb, denebPayload(), [] /* versionedHashes */)).rejects.toThrow(
+      /parentBlockRoot required/
+    );
     expect(restHits).toBe(0);
     expect(engine.state).toBe(ExecutionEngineState.ONLINE);
   });
