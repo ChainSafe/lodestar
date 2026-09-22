@@ -5,6 +5,7 @@ import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   clForkToElFork,
+  decodeBuiltPayload,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
   encodeForkchoiceUpdate,
@@ -235,5 +236,86 @@ describe("sszRestEncoding / ForkchoiceUpdate", () => {
     expect(() =>
       encodeForkchoiceUpdate(ForkName.gloas, zero32, zero32, zero32, {...base, parentBeaconBlockRoot: zero32})
     ).toThrow(/slotNumber/);
+  });
+});
+
+// refactor-ssz.md § BuiltPayload per fork — field order is normative:
+// execution_requests precedes should_override_builder.
+const BuiltParis = new ContainerType({payload: ssz.bellatrix.ExecutionPayload, blockValue: ssz.UintBn256});
+const BuiltCancun = new ContainerType({
+  payload: ssz.deneb.ExecutionPayload,
+  blockValue: ssz.UintBn256,
+  blobsBundle: ssz.deneb.BlobsBundle,
+  shouldOverrideBuilder: ssz.Boolean,
+});
+const BuiltPrague = new ContainerType({
+  payload: ssz.deneb.ExecutionPayload,
+  blockValue: ssz.UintBn256,
+  blobsBundle: ssz.deneb.BlobsBundle,
+  executionRequests: ReqList,
+  shouldOverrideBuilder: ssz.Boolean,
+});
+const BuiltOsaka = new ContainerType({
+  payload: ssz.deneb.ExecutionPayload,
+  blockValue: ssz.UintBn256,
+  blobsBundle: ssz.fulu.BlobsBundle,
+  executionRequests: ReqList,
+  shouldOverrideBuilder: ssz.Boolean,
+});
+
+describe("sszRestEncoding / BuiltPayload", () => {
+  it("paris: {payload, block_value}", () => {
+    const bytes = BuiltParis.serialize({payload: payloadFor(ForkName.bellatrix), blockValue: 42n});
+    const d = decodeBuiltPayload(ForkName.bellatrix, bytes);
+    expect(d.blockValue).toBe(42n);
+    expect(d.executionPayload.blockNumber).toBe(7);
+    expect(d.blobsBundle).toBeUndefined();
+    expect(d.executionRequests).toBeUndefined();
+    expect(d.shouldOverrideBuilder).toBeUndefined();
+  });
+
+  it("cancun: adds blobs_bundle V1 and should_override_builder", () => {
+    const bundle = ssz.deneb.BlobsBundle.defaultValue();
+    const bytes = BuiltCancun.serialize({
+      payload: payloadFor(ForkName.deneb),
+      blockValue: 1n,
+      blobsBundle: bundle,
+      shouldOverrideBuilder: true,
+    });
+    const d = decodeBuiltPayload(ForkName.deneb, bytes);
+    expect(d.shouldOverrideBuilder).toBe(true);
+    expect(d.blobsBundle).toEqual(bundle);
+  });
+
+  it("prague: execution_requests BEFORE should_override_builder", () => {
+    const deposit = ssz.electra.DepositRequest.defaultValue();
+    const depositBytes = ssz.electra.DepositRequests.serialize([deposit]);
+    const req = new Uint8Array(1 + depositBytes.length);
+    req[0] = 0;
+    req.set(depositBytes, 1);
+    const bytes = BuiltPrague.serialize({
+      payload: payloadFor(ForkName.deneb),
+      blockValue: 1n,
+      blobsBundle: ssz.deneb.BlobsBundle.defaultValue(),
+      executionRequests: [req],
+      shouldOverrideBuilder: true,
+    });
+    const d = decodeBuiltPayload(ForkName.electra, bytes);
+    expect(d.shouldOverrideBuilder).toBe(true);
+    expect(d.executionRequests?.deposits.length).toBe(1);
+  });
+
+  it("osaka/amsterdam: blobs_bundle is the cell-proof V2 bundle", () => {
+    const bundle = ssz.fulu.BlobsBundle.defaultValue();
+    const bytes = BuiltOsaka.serialize({
+      payload: payloadFor(ForkName.deneb),
+      blockValue: 3n,
+      blobsBundle: bundle,
+      executionRequests: [],
+      shouldOverrideBuilder: false,
+    });
+    const d = decodeBuiltPayload(ForkName.fulu, bytes);
+    expect(d.blobsBundle).toEqual(bundle);
+    expect(d.executionRequests).toEqual({deposits: [], withdrawals: [], consolidations: []});
   });
 });

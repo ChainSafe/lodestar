@@ -17,7 +17,7 @@ import {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, PayloadAttributes} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
@@ -398,4 +398,81 @@ export function encodeForkchoiceUpdate(
     value.custodyColumns = [];
   }
   return ForkchoiceUpdate[elFork].serialize(value as never);
+}
+
+// ---------------------------------------------------------------------------
+// BuiltPayload{Fork} — refactor-ssz.md § BuiltPayload per fork.
+// Field order is normative: execution_requests precedes should_override_builder.
+// ---------------------------------------------------------------------------
+
+function builtPayloadType(elFork: ElForkName) {
+  const payload = EXECUTION_PAYLOAD_BY_EL_FORK[elFork];
+  const name = `BuiltPayload_${elFork}`;
+  switch (elFork) {
+    case "paris":
+    case "shanghai":
+      return new ContainerType({payload, blockValue: ssz.UintBn256}, {typeName: name});
+    case "cancun":
+      return new ContainerType(
+        {payload, blockValue: ssz.UintBn256, blobsBundle: ssz.deneb.BlobsBundle, shouldOverrideBuilder: Boolean},
+        {typeName: name}
+      );
+    case "prague":
+      return new ContainerType(
+        {
+          payload,
+          blockValue: ssz.UintBn256,
+          blobsBundle: ssz.deneb.BlobsBundle,
+          executionRequests: ExecutionRequestsList,
+          shouldOverrideBuilder: Boolean,
+        },
+        {typeName: name}
+      );
+    default:
+      return new ContainerType(
+        {
+          payload,
+          blockValue: ssz.UintBn256,
+          blobsBundle: ssz.fulu.BlobsBundle,
+          executionRequests: ExecutionRequestsList,
+          shouldOverrideBuilder: Boolean,
+        },
+        {typeName: name}
+      );
+  }
+}
+
+const BuiltPayload = Object.fromEntries(EL_FORK_NAMES.map((f) => [f, builtPayloadType(f)])) as Record<
+  ElForkName,
+  ReturnType<typeof builtPayloadType>
+>;
+
+// ---------------------------------------------------------------------------
+// Public: GET /payloads/{payloadId}
+// ---------------------------------------------------------------------------
+
+export interface DecodedBuiltPayload {
+  executionPayload: ExecutionPayload;
+  blockValue: bigint;
+  blobsBundle?: BlobsBundle;
+  executionRequests?: ExecutionRequests;
+  shouldOverrideBuilder?: boolean;
+}
+
+export function decodeBuiltPayload(fork: ForkName, data: Uint8Array): DecodedBuiltPayload {
+  const elFork = clForkToElFork(fork);
+  const parsed = BuiltPayload[elFork].deserialize(data) as {
+    payload: ExecutionPayload;
+    blockValue: bigint;
+    blobsBundle?: BlobsBundle;
+    executionRequests?: Uint8Array[];
+    shouldOverrideBuilder?: boolean;
+  };
+  return {
+    executionPayload: parsed.payload,
+    blockValue: parsed.blockValue,
+    blobsBundle: parsed.blobsBundle,
+    executionRequests: parsed.executionRequests ? parseExecutionRequestsList(parsed.executionRequests) : undefined,
+    shouldOverrideBuilder: parsed.shouldOverrideBuilder,
+  };
 }
