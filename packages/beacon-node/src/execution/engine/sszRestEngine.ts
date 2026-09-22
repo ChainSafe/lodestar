@@ -145,6 +145,9 @@ export class SszRestEngine {
 
   /** `GET /engine/v1/bodies?from=N&count=M` — range past head is truncated, not padded. */
   async bodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]> {
+    if (!Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(count) || count < 0) {
+      throw Error(`Invalid bodies range start=${start} count=${count}`);
+    }
     const resp = await this.sszRequired("GET", `/engine/v1/bodies?from=${start}&count=${count}`, {
       fork: clForkToElFork(fork),
     });

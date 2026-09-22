@@ -344,10 +344,12 @@ describe("SszRestEngine / bodies & blobs", () => {
   it("bodiesByRange GETs /bodies?from&count with no body; truncated response returned as-is", async () => {
     let query: unknown;
     let contentType: unknown;
+    let forkHeader: unknown;
     const {url} = await el((server) => {
       server.get("/engine/v1/bodies", async (req, reply) => {
         query = req.query;
         contentType = req.headers["content-type"];
+        forkHeader = req.headers["eth-execution-version"];
         sendSsz(
           reply,
           BodiesShanghaiT.serialize({entries: [{available: true, body: {transactions: [], withdrawals: []}}]})
@@ -358,7 +360,22 @@ describe("SszRestEngine / bodies & blobs", () => {
     const out = await engine.bodiesByRange(ForkName.deneb, 100, 5);
     expect(query).toEqual({from: "100", count: "5"});
     expect(contentType).toBeUndefined();
+    expect(forkHeader).toBe("cancun");
     expect(out.length).toBe(1);
+  });
+
+  it("bodiesByRange rejects invalid start/count without making an HTTP request", async () => {
+    let requests = 0;
+    const {url} = await el((server) => {
+      server.get("/engine/v1/bodies", async (_req, reply) => {
+        requests++;
+        sendSsz(reply, BodiesShanghaiT.serialize({entries: []}));
+      });
+    });
+    const {engine} = makeEngine(url);
+    await expect(engine.bodiesByRange(ForkName.deneb, 1.5, 2)).rejects.toThrow(/Invalid bodies range/);
+    await expect(engine.bodiesByRange(ForkName.deneb, 1, -1)).rejects.toThrow(/Invalid bodies range/);
+    expect(requests).toBe(0);
   });
 
   it("blobsV1: no fork header; partial -> null; 204 -> all null", async () => {
