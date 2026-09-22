@@ -21,6 +21,7 @@ import {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@l
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, PayloadAttributes} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
+import {ExecutionPayloadBody} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // EL fork names — the `Eth-Execution-Version` header values.
@@ -475,4 +476,73 @@ export function decodeBuiltPayload(fork: ForkName, data: Uint8Array): DecodedBui
     executionRequests: parsed.executionRequests ? parseExecutionRequestsList(parsed.executionRequests) : undefined,
     shouldOverrideBuilder: parsed.shouldOverrideBuilder,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Bodies — refactor-ssz.md § POST /bodies/hash and GET /bodies
+// ---------------------------------------------------------------------------
+
+const BodiesByHashRequest = new ContainerType(
+  {blockHashes: new ListCompositeType(Bytes32, MAX_BODIES_REQUEST)},
+  {typeName: "BodiesByHashRequest"}
+);
+
+function executionPayloadBodyType(elFork: ElForkName) {
+  const name = `ExecutionPayloadBody_${elFork}`;
+  switch (elFork) {
+    case "paris":
+      return new ContainerType({transactions: TransactionsList}, {typeName: name});
+    case "amsterdam":
+      return new ContainerType(
+        {transactions: TransactionsList, withdrawals: ssz.capella.Withdrawals, blockAccessList: BlockAccessListBytes},
+        {typeName: name}
+      );
+    default:
+      return new ContainerType(
+        {transactions: TransactionsList, withdrawals: ssz.capella.Withdrawals},
+        {typeName: name}
+      );
+  }
+}
+
+function bodiesResponseType(elFork: ElForkName) {
+  const bodyEntry = new ContainerType(
+    {available: Boolean, body: executionPayloadBodyType(elFork)},
+    {typeName: `BodyEntry_${elFork}`}
+  );
+  return new ContainerType(
+    {entries: new ListCompositeType(bodyEntry, MAX_BODIES_REQUEST)},
+    {typeName: `BodiesResponse_${elFork}`}
+  );
+}
+
+const BodiesResponse = Object.fromEntries(EL_FORK_NAMES.map((f) => [f, bodiesResponseType(f)])) as Record<
+  ElForkName,
+  ReturnType<typeof bodiesResponseType>
+>;
+
+// ---------------------------------------------------------------------------
+// Public: bodies
+// ---------------------------------------------------------------------------
+
+export function encodeBodiesByHashRequest(blockHashes: Uint8Array[]): Uint8Array {
+  return BodiesByHashRequest.serialize({blockHashes});
+}
+
+/**
+ * `available=false` (pruned, or outside the header fork's era) -> null, matching the
+ * JSON-RPC `null` entries. Range responses may be shorter than requested; the array
+ * is returned as-is.
+ */
+export function decodeBodiesResponse(fork: ForkName, data: Uint8Array): (ExecutionPayloadBody | null)[] {
+  const elFork = clForkToElFork(fork);
+  const parsed = BodiesResponse[elFork].deserialize(data) as {
+    entries: {
+      available: boolean;
+      body: {transactions: Uint8Array[]; withdrawals?: ExecutionPayloadBody["withdrawals"]};
+    }[];
+  };
+  return parsed.entries.map((e) =>
+    e.available ? {transactions: e.body.transactions, withdrawals: e.body.withdrawals ?? null} : null
+  );
 }

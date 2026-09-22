@@ -1,13 +1,15 @@
 import {describe, expect, it} from "vitest";
-import {BitVectorType, ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {BitVectorType, ByteListType, ByteVectorType, ContainerType, ListCompositeType, type Type} from "@chainsafe/ssz";
 import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   clForkToElFork,
+  decodeBodiesResponse,
   decodeBuiltPayload,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
+  encodeBodiesByHashRequest,
   encodeForkchoiceUpdate,
   encodeNewPayload,
 } from "../../../src/execution/engine/sszRestEncoding.js";
@@ -317,5 +319,59 @@ describe("sszRestEncoding / BuiltPayload", () => {
     const d = decodeBuiltPayload(ForkName.fulu, bytes);
     expect(d.blobsBundle).toEqual(bundle);
     expect(d.executionRequests).toEqual({deposits: [], withdrawals: [], consolidations: []});
+  });
+});
+
+const TxList = new ListCompositeType(new ByteListType(MAX_BYTES_PER_TRANSACTION), 1_048_576);
+const BodyParis = new ContainerType({transactions: TxList});
+const BodyShanghai = new ContainerType({transactions: TxList, withdrawals: ssz.capella.Withdrawals});
+const BodyAmsterdam = new ContainerType({
+  transactions: TxList,
+  withdrawals: ssz.capella.Withdrawals,
+  blockAccessList: new ByteListType(MAX_BYTES_PER_TRANSACTION),
+});
+const entry = <T extends ContainerType<Record<string, Type<unknown>>>>(body: T) =>
+  new ContainerType({available: ssz.Boolean, body});
+const response = <T extends ContainerType<Record<string, Type<unknown>>>>(e: T) =>
+  new ContainerType({entries: new ListCompositeType(e, 32)});
+const BodiesParis = response(entry(BodyParis));
+const BodiesShanghai = response(entry(BodyShanghai));
+const BodiesAmsterdam = response(entry(BodyAmsterdam));
+const BodiesByHashReq = new ContainerType({blockHashes: new ListCompositeType(Root, 32)});
+
+describe("sszRestEncoding / bodies", () => {
+  it("encodes BodiesByHashRequest as a single-field container", () => {
+    const h = new Uint8Array(32).fill(9);
+    expect(BodiesByHashReq.deserialize(encodeBodiesByHashRequest([h, h])).blockHashes.length).toBe(2);
+  });
+
+  it("paris body has no withdrawals -> null", () => {
+    const tx = new Uint8Array([1, 2, 3]);
+    const bytes = BodiesParis.serialize({entries: [{available: true, body: {transactions: [tx]}}]});
+    expect(decodeBodiesResponse(ForkName.bellatrix, bytes)).toEqual([{transactions: [tx], withdrawals: null}]);
+  });
+
+  it("available=false -> null regardless of body contents", () => {
+    const bytes = BodiesShanghai.serialize({
+      entries: [
+        {available: false, body: {transactions: [], withdrawals: []}},
+        {available: true, body: {transactions: [], withdrawals: []}},
+      ],
+    });
+    const out = decodeBodiesResponse(ForkName.capella, bytes);
+    expect(out[0]).toBeNull();
+    expect(out[1]).toEqual({transactions: [], withdrawals: []});
+  });
+
+  it("amsterdam body decodes with block_access_list present on the wire", () => {
+    const bytes = BodiesAmsterdam.serialize({
+      entries: [{available: true, body: {transactions: [], withdrawals: [], blockAccessList: new Uint8Array([7])}}],
+    });
+    expect(decodeBodiesResponse(ForkName.gloas, bytes)).toEqual([{transactions: [], withdrawals: []}]);
+  });
+
+  it("truncated range response is returned as a shorter array", () => {
+    const bytes = BodiesShanghai.serialize({entries: []});
+    expect(decodeBodiesResponse(ForkName.deneb, bytes)).toEqual([]);
   });
 });
