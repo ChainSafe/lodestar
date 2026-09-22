@@ -71,14 +71,10 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
+import {ReconstructMismatchPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
-import {
-  ReconstructMismatchPolicy,
-  isRebuildMiss,
-  reconstructArchivedEnvelopes,
-} from "../util/reconstructArchivedEnvelopes.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
@@ -978,7 +974,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (blindedEnvelopes.length > 0) {
-      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, blindedEnvelopes);
+      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, blindedEnvelopes);
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
@@ -1014,7 +1010,7 @@ export class BeaconChain implements IBeaconChain {
     const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
     if (archived === null) return null;
     if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    const [result] = await reconstructArchivedEnvelopes(this.executionEngine, [archived.value]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, [archived.value]);
     if (isRebuildMiss(result)) {
       if (result.reason === "mismatch") throw result.error;
       return null;

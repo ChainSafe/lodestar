@@ -30,7 +30,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
-import {ReconstructMismatchPolicy} from "../util/reconstructArchivedEnvelopes.js";
+import {ReconstructMismatchPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";

@@ -8,7 +8,7 @@ import {gloas} from "@lodestar/types";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {reconstructArchivedEnvelopesByRange} from "../../../util/reconstructArchivedEnvelopes.js";
+import {reconstructExecutionPayloadEnvelopesByRange} from "../../../util/execution.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(
@@ -45,7 +45,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   if (startSlot <= archiveMaxSlot) {
     let yielded = 0;
     try {
-      for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
+      for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
         db,
         chain.executionEngine,
         chain.logger,
