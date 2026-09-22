@@ -247,6 +247,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
+  if (options.chain.nativeStateView && config.GLOAS_FORK_EPOCH !== Infinity) {
+    throw Error(
+      `--chain.nativeStateView does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+    );
+  }
+
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }
 
