@@ -2,6 +2,9 @@ import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, TimeoutError, sleep, withTimeout} from "@lodestar/utils";
 import type {BuildHandle, BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
 
+// Node clamps larger timer delays to 1 ms.
+const MAX_TIMER_DELAY = 2 ** 31 - 1;
+
 export type PayloadBuildJob = {
   /** Stable identity for all build inputs. Jobs with the same ID share one lifecycle and result. */
   id: string;
@@ -90,7 +93,7 @@ export class PayloadOrchestrator {
    * Request contents must remain unchanged until the job settles.
    */
   run(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
-    if (!Number.isSafeInteger(job.getPayloadAt)) {
+    if (!Number.isSafeInteger(job.getPayloadAt) || job.getPayloadAt - Date.now() > MAX_TIMER_DELAY) {
       return Promise.reject(
         new PayloadOrchestratorError(
           {
@@ -185,9 +188,8 @@ export class PayloadOrchestrator {
     }
     const {handle} = prepareResult;
 
-    const waitTime = job.getPayloadAt - Date.now();
-    if (waitTime > 0) {
-      await sleep(waitTime, signal);
+    for (let waitTime = job.getPayloadAt - Date.now(); waitTime > 0; waitTime = job.getPayloadAt - Date.now()) {
+      await sleep(Math.min(waitTime, MAX_TIMER_DELAY), signal);
     }
 
     let payloadResult: {status: "success"; payload: BuiltPayload} | {status: "error"; error: unknown};
@@ -219,7 +221,7 @@ export class PayloadOrchestrator {
   }
 
   private assertOption(option: keyof PayloadOrchestratorOptions, value: number): void {
-    if (!Number.isSafeInteger(value) || value < 1) {
+    if (!Number.isSafeInteger(value) || value < 1 || (option === "getPayloadTimeout" && value > MAX_TIMER_DELAY)) {
       throw new PayloadOrchestratorError(
         {code: PayloadOrchestratorErrorCode.INVALID_OPTION, option, value},
         `Invalid payload orchestrator option option=${option} value=${value}`

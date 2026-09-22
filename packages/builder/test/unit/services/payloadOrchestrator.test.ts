@@ -87,6 +87,7 @@ describe("PayloadOrchestrator", () => {
     ["maxActiveJobs", 0, {maxActiveJobs: 0, getPayloadTimeout: 50}],
     ["getPayloadTimeout", 0, {maxActiveJobs: 1, getPayloadTimeout: 0}],
     ["maxActiveJobs", 1.5, {maxActiveJobs: 1.5, getPayloadTimeout: 50}],
+    ["getPayloadTimeout", 2 ** 31, {maxActiveJobs: 1, getPayloadTimeout: 2 ** 31}],
     [
       "getPayloadTimeout",
       Number.MAX_SAFE_INTEGER + 1,
@@ -100,7 +101,7 @@ describe("PayloadOrchestrator", () => {
     );
   });
 
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1, NOW + 2 ** 31])(
     "rejects an invalid payload retrieval time %s",
     async (getPayloadAt) => {
       const source = new StubPayloadSource();
@@ -115,6 +116,19 @@ describe("PayloadOrchestrator", () => {
       expect(orchestrator.activeJobCount).toBe(0);
     }
   );
+
+  it("accepts the largest supported timer delay", async () => {
+    const source = new StubPayloadSource();
+    const timeout = 2 ** 31 - 1;
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: timeout});
+    const promise = orchestrator.run(buildJob("max-delay", NOW + timeout), new AbortController().signal);
+
+    await vi.advanceTimersByTimeAsync(timeout - 1);
+    expect(source.getPayloadCalls).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toEqual(builtPayload());
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
 
   it("prepares immediately and retrieves at the requested time", async () => {
     const source = new StubPayloadSource();
