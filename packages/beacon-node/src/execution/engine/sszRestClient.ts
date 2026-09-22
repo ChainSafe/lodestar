@@ -1,142 +1,125 @@
-import {fetch, fromHex, isFetchError} from "@lodestar/utils";
+import {fetch, fromHex} from "@lodestar/utils";
+import {HttpRpcError} from "./jsonRpcHttpClient.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
-import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "./utils.js";
+import {ElForkName} from "./sszRestEncoding.js";
 
 export interface SszRestClientOpts {
+  /** Engine URL without trailing slash; paths are appended verbatim. */
   baseUrl: string;
+  /** Value of `X-Engine-Client-Version`, e.g. `LS/v1.40.0`. */
+  clientVersionHeader: string;
   jwtSecretHex?: string;
   jwtId?: string;
-  jwtVersion?: string;
-  /** Request timeout in milliseconds. Defaults to 12000 */
+  /** Request timeout in milliseconds. Defaults to 12000. */
   timeout?: number;
 }
 
-/**
- * Error thrown when the SSZ-REST endpoint returns a non-200 response.
- * The EL returns JSON error bodies of the form {"code": N, "message": "..."}.
- */
-export class SszRestError extends Error {
-  readonly code: number;
-  constructor(code: number, message: string) {
-    super(`SSZ-REST error ${code}: ${message}`);
-    this.code = code;
-  }
-}
-
-/**
- * Determines whether an error is a network-level error (DNS failure, connection
- * refused, timeout, etc.) that should trigger a fallback to JSON-RPC rather than
- * being propagated directly to the caller.
- */
-export function isSszRestNetworkError(e: unknown): boolean {
-  if (e instanceof SszRestError) {
-    // HTTP responses carry Engine API semantics in the SSZ-REST spec. Once an
-    // endpoint has been negotiated, do not hide malformed SSZ, auth failures,
-    // unknown payload IDs, invalid forkchoice state, or EL errors by retrying
-    // the same operation through JSON-RPC.
-    return false;
-  }
-  // Node.js fetch errors (ECONNREFUSED, ENOTFOUND, etc.)
-  if (isFetchError(e)) {
-    const allCodes = [...HTTP_FATAL_ERROR_CODES, ...HTTP_CONNECTION_ERROR_CODES];
-    return allCodes.includes((e as {code: string}).code) || (e as {code: string}).code === "ERR_ABORTED";
-  }
-  // TypeError is thrown by fetch on DNS resolution failure in some runtimes
-  if (e instanceof TypeError) {
-    return true;
-  }
-  // AbortError from timeout
-  if (e instanceof DOMException && e.name === "AbortError") {
-    return true;
-  }
-  return false;
-}
+export type SszRequestOpts = {
+  /** Set only on fork-scoped endpoints; becomes `Eth-Execution-Version`. */
+  fork?: ElForkName;
+  body?: Uint8Array;
+};
 
 const DEFAULT_TIMEOUT = 12_000;
+const OCTET_STREAM = "application/octet-stream";
+const JSON_TYPE = "application/json";
 
 /**
- * SSZ-REST HTTP client for EIP-8161 Engine API transport.
+ * Non-2xx response from the SSZ-REST Engine API.
  *
- * Sends binary (application/octet-stream) POST requests and receives binary
- * responses. JWT authentication is supported identically to the JSON-RPC client.
+ * Extends HttpRpcError so the engine's existing `instanceof HttpRpcError` checks
+ * classify REST failures exactly like JSON-RPC HTTP failures (ELERROR / SYNCING).
+ * `type` is the RFC 7807 problem URI (`/engine-api/errors/...`) when the EL sent one.
+ */
+export class SszRestError extends HttpRpcError {
+  constructor(
+    status: number,
+    readonly type: string | undefined,
+    readonly detail: string | undefined,
+    statusText: string
+  ) {
+    super(status, `SSZ-REST ${status} ${type ?? statusText}${detail ? `: ${detail}` : ""}`);
+  }
+}
+
+/**
+ * SSZ-REST Engine API HTTP client (ethereum/execution-apis#793).
+ *
+ * Transport only: headers, JWT, status handling. Uses the runtime's global fetch
+ * dispatcher (keep-alive pooled) like the JSON-RPC client; no custom agent.
  */
 export class SszRestClient {
   private readonly baseUrl: string;
+  private readonly clientVersionHeader: string;
   private readonly jwtSecret: Uint8Array | undefined;
   private readonly jwtId: string | undefined;
-  private readonly jwtVersion: string | undefined;
   private readonly timeout: number;
 
   constructor(opts: SszRestClientOpts) {
-    // Trailing slash normalisation is the caller's responsibility.
     this.baseUrl = opts.baseUrl;
+    this.clientVersionHeader = opts.clientVersionHeader;
     this.jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
     this.jwtId = opts.jwtId;
-    this.jwtVersion = opts.jwtVersion;
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
   }
 
-  /**
-   * POST binary body to `baseUrl + path` and return the response as Uint8Array.
-   *
-   * - Content-Type: application/octet-stream
-   * - Authorization: Bearer <jwt> (when jwtSecret is configured)
-   * - On 200: returns response body as Uint8Array
-   * - On non-200: attempts to parse JSON error body and throws SszRestError
-   */
-  async doRequest(path: string, body: Uint8Array): Promise<Uint8Array> {
-    return this._fetch(path, "POST", body);
+  /** SSZ endpoint: 200 -> body bytes, 204 -> null, otherwise throws SszRestError. */
+  async requestSsz(method: "GET" | "POST", path: string, opts: SszRequestOpts = {}): Promise<Uint8Array | null> {
+    const res = await this.send(method, path, OCTET_STREAM, opts);
+    if (res.status === 204) return null;
+    return new Uint8Array(await res.arrayBuffer());
   }
 
-  /**
-   * GET request (no body) to `baseUrl + path` and return the response as Uint8Array.
-   * Used for getPayload where payload_id is in the URL path.
-   */
-  async doGetRequest(path: string): Promise<Uint8Array> {
-    return this._fetch(path, "GET", undefined);
+  /** JSON diagnostic endpoint (/capabilities, /identity): 200 -> parsed body, otherwise throws SszRestError. */
+  async requestJson(path: string): Promise<unknown> {
+    const res = await this.send("GET", path, JSON_TYPE, {});
+    return res.json();
   }
 
-  private async _fetch(path: string, method: string, body: Uint8Array | undefined): Promise<Uint8Array> {
-    const url = `${this.baseUrl}${path}`;
+  private async send(method: string, path: string, accept: string, opts: SszRequestOpts): Promise<Response> {
+    const headers: Record<string, string> = {
+      Accept: accept,
+      "X-Engine-Client-Version": this.clientVersionHeader,
+    };
+    if (opts.fork !== undefined) headers["Eth-Execution-Version"] = opts.fork;
+    if (opts.body !== undefined) headers["Content-Type"] = OCTET_STREAM;
+    if (this.jwtSecret) {
+      // Per #793 authentication: `iat` required, `id` optional, `clv` removed.
+      const claim: JwtClaim = {iat: Math.floor(Date.now() / 1000), id: this.jwtId};
+      headers.Authorization = `Bearer ${encodeJwtToken(claim, this.jwtSecret)}`;
+    }
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeout);
-
+    const timer = setTimeout(() => controller.abort(), this.timeout);
     try {
-      const headers: Record<string, string> = {
-        Accept: "application/octet-stream",
-      };
-      if (body) {
-        headers["Content-Type"] = "application/octet-stream";
-      }
-
-      if (this.jwtSecret) {
-        const jwtClaim: JwtClaim = {
-          iat: Math.floor(Date.now() / 1000),
-          id: this.jwtId,
-          clv: this.jwtVersion,
-        };
-        const token = encodeJwtToken(jwtClaim, this.jwtSecret);
-        headers.Authorization = `Bearer ${token}`;
-      }
-
-      const res = await fetch(url, {
+      const res = await fetch(`${this.baseUrl}${path}`, {
         method,
-        body: body ? (body as unknown as BodyInit) : undefined,
         headers,
+        body: opts.body ? (opts.body as unknown as BodyInit) : undefined,
         signal: controller.signal,
       });
-
       if (!res.ok) {
-        // Error responses use text/plain per execution-apis SSZ spec
-        const code = res.status;
-        const message = await res.text().catch(() => res.statusText);
-        throw new SszRestError(code, message);
+        throw await toSszRestError(res);
       }
-
-      const arrayBuf = await res.arrayBuffer();
-      return new Uint8Array(arrayBuf);
+      return res;
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timer);
     }
   }
+}
+
+async function toSszRestError(res: Response): Promise<SszRestError> {
+  const text = await res.text().catch(() => "");
+  let type: string | undefined;
+  let detail: string | undefined = text || undefined;
+  if (res.headers.get("content-type")?.includes("json")) {
+    try {
+      const problem = JSON.parse(text) as {type?: unknown; detail?: unknown};
+      type = typeof problem.type === "string" ? problem.type : undefined;
+      detail = typeof problem.detail === "string" ? problem.detail : undefined;
+    } catch {
+      // Not RFC 7807; keep the raw text as detail.
+    }
+  }
+  return new SszRestError(res.status, type, detail, res.statusText);
 }
