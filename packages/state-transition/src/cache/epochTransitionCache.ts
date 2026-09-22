@@ -466,13 +466,12 @@ export function beforeProcessEpoch(
   if (forkSeq >= ForkSeq.altair) {
     const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
     const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
-    if (currentTargetMismatch || previousTargetMismatch) {
-      metrics?.progressiveBalancesMismatches.inc();
-    }
     if (currentTargetMismatch) {
+      metrics?.progressiveBalancesMismatches.inc({target: "current"});
       epochCtx.currentTargetUnslashedBalanceIncrements = currTargetUnslStake;
     }
     if (previousTargetMismatch) {
+      metrics?.progressiveBalancesMismatches.inc({target: "previous"});
       epochCtx.previousTargetUnslashedBalanceIncrements = prevTargetUnslStake;
     }
   }

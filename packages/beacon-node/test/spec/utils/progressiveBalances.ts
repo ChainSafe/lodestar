@@ -15,9 +15,9 @@ export async function expectNoProgressiveBalancesMismatches(
   register: RegistryMetricCreator,
   testCaseName: string
 ): Promise<void> {
-  const metric = await register.getSingleMetricAsString(progressiveBalancesMismatchesMetricName);
-  const match = metric.match(new RegExp(`^${progressiveBalancesMismatchesMetricName} (\\d+)$`, "m"));
-  const mismatches = match ? Number(match[1]) : 0;
+  const metrics = await register.getMetricsAsJSON();
+  const metric = metrics.find(({name}) => name === progressiveBalancesMismatchesMetricName);
+  const mismatches = metric?.values.reduce((sum, {value}) => sum + value, 0) ?? 0;
 
   expect(mismatches, `${testCaseName} incremented ${progressiveBalancesMismatchesMetricName}`).toBe(0);
 }
