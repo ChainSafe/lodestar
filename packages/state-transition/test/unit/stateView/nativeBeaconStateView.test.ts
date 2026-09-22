@@ -9,7 +9,12 @@ import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
-  const config = createBeaconConfig(defaultChainConfig, new Uint8Array(32));
+  const genesisValidatorsRoot = new Uint8Array(32);
+  const config = createBeaconConfig(defaultChainConfig, genesisValidatorsRoot);
+  const bellatrixConfig = createBeaconConfig(
+    {...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0},
+    genesisValidatorsRoot
+  );
 
   it("throws for Gloas-only fields while native Gloas is unsupported", () => {
     const binding = {} as IBeaconStateViewNative;
@@ -148,16 +153,21 @@ describe("NativeBeaconStateView", () => {
   it.each([
     {
       blockType: "full",
-      block: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      block: ssz.phase0.SignedBeaconBlock.defaultValue(),
       isBlinded: false,
+      config,
+      expectedBytes: ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
     },
     {
       blockType: "blinded",
       block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
       isBlinded: true,
+      config: bellatrixConfig,
+      expectedBytes: ssz.bellatrix.SignedBlindedBeaconBlock.serialize(
+        ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()
+      ),
     },
-  ])("computes a state root from $blockType block bytes", ({block, isBlinded}) => {
-    const blockBytes = new Uint8Array([1, 2, 3]);
+  ])("serializes a $blockType block when bytes are not provided", ({block, isBlinded, config, expectedBytes}) => {
     const stateRoot = new Uint8Array(32).fill(1);
     const postBinding = {
       proposerRewards: {attestations: 1, syncAggregate: 2, slashing: 3},
@@ -167,23 +177,15 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const result = new NativeBeaconStateView(binding, config).computeNewStateRoot({block, ssz: blockBytes}, {});
+    const result = new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {});
 
-    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, computeNewStateRootStateTransitionOpts);
+    expect(binding.stateTransition).toHaveBeenCalledWith(
+      expectedBytes,
+      isBlinded,
+      computeNewStateRootStateTransitionOpts
+    );
     expect(result.newStateRoot).toBe(stateRoot);
     expect(result.proposerReward).toBe(6n);
     expect(result.postState).toBeInstanceOf(NativeBeaconStateView);
-  });
-
-  it("rejects state root computation without serialized block bytes", () => {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const binding = {
-      stateTransition: vi.fn(),
-    } as unknown as IBeaconStateViewNative;
-
-    expect(() => new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {})).toThrow(
-      "Serialized block bytes are required to compute a state root with NativeBeaconStateView"
-    );
-    expect(binding.stateTransition).not.toHaveBeenCalled();
   });
 });

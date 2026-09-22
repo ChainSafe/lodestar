@@ -58,8 +58,6 @@ import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.j
 /** Inputs for computing the state root of a locally produced block. */
 export type ComputeNewStateRootInput = {
   block: SignedBeaconBlock | SignedBlindedBeaconBlock;
-  /** Pre-serialized block bytes for native implementations. */
-  ssz?: Uint8Array;
 };
 
 /** State root computation result. Includes data derived from the post-state. */

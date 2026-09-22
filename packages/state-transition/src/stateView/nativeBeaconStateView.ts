@@ -652,16 +652,17 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // State transition
 
   computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
-    if (input.ssz === undefined) {
-      throw Error("Serialized block bytes are required to compute a state root with NativeBeaconStateView");
-    }
+    const isBlinded = isBlindedBeaconBlock(input.block.message);
+    const signedBlockBytes = isBlinded
+      ? this.config
+          .getPostBellatrixForkTypes(input.block.message.slot)
+          .SignedBlindedBeaconBlock.serialize(input.block as SignedBlindedBeaconBlock)
+      : this.config
+          .getForkTypes(input.block.message.slot)
+          .SignedBeaconBlock.serialize(input.block as SignedBeaconBlock);
 
     const postState = new NativeBeaconStateView(
-      this.binding.stateTransition(
-        input.ssz,
-        isBlindedBeaconBlock(input.block.message),
-        computeNewStateRootStateTransitionOpts
-      ),
+      this.binding.stateTransition(signedBlockBytes, isBlinded, computeNewStateRootStateTransitionOpts),
       this.config
     );
     return getComputeNewStateRootResult(postState, modules);

@@ -4,9 +4,8 @@ import {ssz} from "@lodestar/types";
 import {computeNewStateRoot} from "../../../../src/chain/produceBlock/computeNewStateRoot.js";
 
 describe("computeNewStateRoot", () => {
-  it("delegates to the state view with a signed block and bytes", () => {
+  it("delegates to the state view with a signed block", () => {
     const block = ssz.phase0.BeaconBlock.defaultValue();
-    const blockBytes = new Uint8Array([1, 2, 3]);
     const expectedResult = {
       newStateRoot: new Uint8Array(32),
       proposerReward: 1n,
@@ -15,11 +14,11 @@ describe("computeNewStateRoot", () => {
     const computeNewStateRootMock = vi.fn(() => expectedResult);
     const state = {computeNewStateRoot: computeNewStateRootMock} as unknown as IBeaconStateView;
 
-    const result = computeNewStateRoot(null, state, block, blockBytes);
+    const result = computeNewStateRoot(null, state, block);
 
     expect(result).toBe(expectedResult);
     expect(computeNewStateRootMock).toHaveBeenCalledWith(
-      {block: {message: block, signature: EMPTY_SIGNATURE}, ssz: blockBytes},
+      {block: {message: block, signature: EMPTY_SIGNATURE}},
       {metrics: null}
     );
   });
