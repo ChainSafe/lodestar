@@ -4,6 +4,10 @@ inputs:
   node:
     description: Node version
     required: true
+  zig:
+    description: Zig version
+    default: "0.16.0"
+    required: false
   registry-url:
     description: npm registry URL to write into .npmrc (required for OIDC publish jobs)
     required: false
@@ -24,6 +28,12 @@ runs:
         # https://github.com/pnpm/pnpm/issues/6234
         # cache: pnpm
         package-manager-cache: false
+
+    # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+    - name: Setup Zig
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      with:
+        version: 0.16.0
 
     - name: Node.js version
       id: node

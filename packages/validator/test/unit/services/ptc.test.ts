@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
@@ -46,7 +46,6 @@ describe("PtcService", () => {
     vi.spyOn(validatorStore, "isDoppelgangerSafe");
     vi.spyOn(validatorStore, "hasSomeValidators");
     vi.spyOn(validatorStore, "signPayloadAttestation");
-    vi.spyOn(emitter, "waitForExecutionPayloadAvailableSlot");
 
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.getAllLocalIndices.mockReturnValue([0]);
@@ -54,7 +53,6 @@ describe("PtcService", () => {
     validatorStore.hasVotingPubkey.mockReturnValue(true);
     validatorStore.isDoppelgangerSafe.mockReturnValue(true);
     validatorStore.hasSomeValidators.mockReturnValue(true);
-    emitter.waitForExecutionPayloadAvailableSlot.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -91,6 +89,7 @@ describe("PtcService", () => {
     };
 
     vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
     api.validator.producePayloadAttestationData.mockResolvedValue(
       mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
     );
@@ -99,7 +98,6 @@ describe("PtcService", () => {
 
     await clock.tickSlotFns(slot, controller.signal);
 
-    expect(emitter.waitForExecutionPayloadAvailableSlot).toHaveBeenCalledWith(slot);
     expect(api.validator.producePayloadAttestationData).toHaveBeenCalledWith({slot});
     expect(validatorStore.signPayloadAttestation).toHaveBeenCalledWith(
       duty,
@@ -110,6 +108,42 @@ describe("PtcService", () => {
     expect(api.beacon.submitPayloadAttestationMessages).toHaveBeenCalledWith({
       payloadAttestationMessages: [payloadAttestationMessage],
     });
+  });
+
+  it("Should skip submission when no beacon block has been seen for the assigned slot", async () => {
+    const slot = 0;
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    const duty: routes.validator.PtcDuty = {
+      slot,
+      validatorIndex: 0,
+      pubkey: pubkeys[0],
+    };
+
+    vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
+    // No canonical block at slot
+    api.validator.producePayloadAttestationData.mockResolvedValue(
+      mockApiResponse({data: undefined, meta: {version: config.getForkName(slot)}})
+    );
+
+    await clock.tickSlotFns(slot, controller.signal);
+
+    expect(api.validator.producePayloadAttestationData).toHaveBeenCalledWith({slot});
+    expect(validatorStore.signPayloadAttestation).not.toHaveBeenCalled();
+    expect(api.beacon.submitPayloadAttestationMessages).not.toHaveBeenCalled();
   });
 
   it("Should redownload PTC duties when dependent root changes", async () => {

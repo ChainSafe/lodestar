@@ -1,11 +1,5 @@
-import {
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  IBeaconStateView,
-  StateHashTreeRootSource,
-} from "@lodestar/state-transition";
+import {EMPTY_SIGNATURE, IBeaconStateView} from "@lodestar/state-transition";
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
-import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 
 /**
@@ -19,35 +13,6 @@ export function computeNewStateRoot(
   block: BeaconBlock | BlindedBeaconBlock
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
-  const blockEmptySig = {message: block, signature: ZERO_HASH};
-
-  const postState = state.stateTransition(
-    blockEmptySig,
-    {
-      // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      // DataAvailabilityStatus.available: Assume the blobs to be available, have just been produced by trusted EL
-      dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
-      verifyStateRoot: false,
-      // verifyProposer: false   | as the block signature is zero-ed
-      verifyProposer: false,
-      // verifySignatures: false | since the data to assemble the block is trusted
-      verifySignatures: false,
-      // Preserve cache in source state, since the resulting state is not added to the state cache
-      dontTransferCache: true,
-    },
-    {metrics}
-  );
-
-  const {attestations, syncAggregate, slashing} = postState.proposerRewards;
-  const proposerReward = BigInt(attestations + syncAggregate + slashing);
-
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.computeNewStateRoot,
-  });
-  const newStateRoot = postState.hashTreeRoot();
-  hashTreeRootTimer?.();
-
-  return {newStateRoot, proposerReward, postState};
+  const signedBlock = {message: block, signature: EMPTY_SIGNATURE};
+  return state.computeNewStateRoot({block: signedBlock}, {metrics});
 }

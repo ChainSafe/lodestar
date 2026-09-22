@@ -1,4 +1,4 @@
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -40,6 +40,11 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
     timeliness: false,
+    importedTimely: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
+    payloadStatus: PayloadStatus.FULL,
+    parentBlockHash: null,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,

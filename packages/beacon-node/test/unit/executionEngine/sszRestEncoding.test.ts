@@ -8,7 +8,7 @@ import {
   type ValueOf,
 } from "@chainsafe/ssz";
 import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   clForkToElFork,
@@ -171,8 +171,38 @@ describe("sszRestEncoding / ExecutionPayloadEnvelope", () => {
       deposits: [],
       withdrawals: [],
       consolidations: [],
+      builderDeposits: [],
+      builderExits: [],
     });
     expect(EnvelopeAmsterdam.deserialize(bytes).payload.blockNumber).toBe(7);
+  });
+
+  it("amsterdam: builder requests are type-prefixed 0x03/0x04 and round-trip through BuiltPayload", () => {
+    const root = new Uint8Array(32).fill(4);
+    const reqs = ssz.gloas.ExecutionRequests.defaultValue();
+    reqs.builderDeposits.push(ssz.gloas.BuilderDepositRequest.defaultValue());
+    const bytes = encodeNewPayload(ForkName.gloas, payloadFor(ForkName.gloas), root, reqs);
+    const parsed = EnvelopeAmsterdam.deserialize(bytes);
+    expect(parsed.executionRequests.length).toBe(1);
+    expect(parsed.executionRequests[0][0]).toBe(3); // BUILDER_DEPOSIT_REQUEST_TYPE
+
+    const BuiltAmsterdam = new ContainerType({
+      payload: ssz.gloas.ExecutionPayload,
+      blockValue: ssz.UintBn256,
+      blobsBundle: ssz.fulu.BlobsBundle,
+      executionRequests: ReqList,
+      shouldOverrideBuilder: ssz.Boolean,
+    });
+    const built = BuiltAmsterdam.serialize({
+      payload: payloadFor(ForkName.gloas),
+      blockValue: 1n,
+      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+      executionRequests: parsed.executionRequests,
+      shouldOverrideBuilder: false,
+    });
+    const d = decodeBuiltPayload(ForkName.gloas, built);
+    expect((d.executionRequests as gloas.ExecutionRequests).builderDeposits.length).toBe(1);
+    expect((d.executionRequests as gloas.ExecutionRequests).builderExits.length).toBe(0);
   });
 
   it("requires parent root from cancun and execution requests from prague", () => {
@@ -194,7 +224,7 @@ const PaCancun = new ContainerType({
 const PaAmsterdam = new ContainerType({
   ...PaCancun.fields,
   slotNumber: ssz.UintNum64,
-  targetGasLimit: ssz.UintNum64,
+  targetGasLimit: ssz.UintBn64,
 });
 const FcuCancun = new ContainerType({forkchoiceState: FcState, payloadAttributes: new ListCompositeType(PaCancun, 1)});
 const FcuAmsterdam = new ContainerType({
@@ -236,11 +266,11 @@ describe("sszRestEncoding / ForkchoiceUpdate", () => {
       withdrawals: [],
       parentBeaconBlockRoot: zero32,
       slotNumber: 9,
-      targetGasLimit: 30_000_000,
+      targetGasLimit: 30_000_000n,
     });
     const parsed = FcuAmsterdam.deserialize(bytes);
     expect(parsed.custodyColumns.length).toBe(0);
-    expect(parsed.payloadAttributes[0].targetGasLimit).toBe(30_000_000);
+    expect(parsed.payloadAttributes[0].targetGasLimit).toBe(30_000_000n);
     expect(parsed.payloadAttributes[0].slotNumber).toBe(9);
   });
 

@@ -1,14 +1,18 @@
+import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
+import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRoot(
   requestBody: ExecutionPayloadEnvelopesByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
@@ -20,6 +24,14 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(root);
 
     if (slot === null) {
+      chain.logger.debug(
+        "Cannot serve ExecutionPayloadEnvelopesByRoot: block root not in fork choice or block archive",
+        {
+          root: rootHex,
+          peer: prettyPrintPeerId(peerId),
+          client: peerClient,
+        }
+      );
       continue;
     }
 
@@ -29,6 +41,13 @@ export async function* onExecutionPayloadEnvelopesByRoot(
         data: envelopeBytes,
         boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
+    } else {
+      chain.logger.debug("Cannot serve ExecutionPayloadEnvelopesByRoot: envelope not found", {
+        slot,
+        root: rootHex,
+        peer: prettyPrintPeerId(peerId),
+        client: peerClient,
+      });
     }
   }
 }

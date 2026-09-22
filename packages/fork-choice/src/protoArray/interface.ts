@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
+import {Epoch, RootHex, Slot, UintNum64, ValidatorIndex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -48,7 +48,7 @@ export enum PayloadStatus {
 /**
  * Check if a block is in the Gloas fork (ePBS enabled)
  */
-export function isGloasBlock(block: ProtoBlock): boolean {
+export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBlockHash: RootHex} {
   return block.parentBlockHash !== null;
 }
 
@@ -87,6 +87,14 @@ export type BlockExtraMeta =
       //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
+      // Gas limit of the executed payload identified by executionPayloadBlockHash. Set on
+      // pre-Gloas blocks (from block.body.executionPayload.gasLimit) and on Gloas variants:
+      //   - PENDING/EMPTY: inherited from the parent payload that the bid commits to extend
+      //     (matches executionPayloadBlockHash, which also points to that parent payload)
+      //   - FULL: the actual delivered payload's gasLimit (set in onExecutionPayload)
+      // Consumers (e.g. Gloas bid gas-limit validation) can read this without re-deriving from
+      // state.
+      executionPayloadGasLimit: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
       dataAvailabilityStatus: DataAvailabilityStatus;
     }
@@ -136,6 +144,16 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
+  // Indicate whether block arrives before the PTC deadline
+  // Spec: gloas/fork-choice.md#modified-record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
+  ptcTimeliness: boolean;
+
+  // Indicate whether THIS node finished importing the block before the attestation cutoff
+  importedTimely: boolean;
+
+  // The index of the block proposer. Used by should_apply_proposer_boost to detect proposer equivocations
+  proposerIndex: ValidatorIndex;
+
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
@@ -152,7 +170,13 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  weight: number;
+  /** Total weight in Gwei, ie. attestationScore plus the proposer boost credited to this node */
+  weight: bigint;
+  /**
+   * Weight in Gwei from attester votes only, excluding proposer boost.
+   * Spec: get_attestation_score
+   */
+  attestationScore: bigint;
   bestChild?: number;
   bestDescendant?: number;
 };

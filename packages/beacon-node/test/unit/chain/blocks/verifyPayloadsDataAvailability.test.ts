@@ -36,7 +36,8 @@ function buildPayloadEnvelopeInput({
     forkName: ForkName.gloas,
     sampledColumns,
     custodyColumns: sampledColumns,
-    timeCreatedSec: Date.now() / 1000,
+    seenTimestampSec: Date.now() / 1000,
+    source: PayloadEnvelopeInputSource.byRange,
     daOutOfRange,
   });
 
@@ -192,7 +193,8 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       forkName: ForkName.gloas,
       sampledColumns,
       custodyColumns: sampledColumns,
-      timeCreatedSec: Date.now() / 1000,
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
 

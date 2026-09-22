@@ -7,6 +7,8 @@ import * as keymanager from "./client.js";
 
 export type {
   BuilderBoostFactorData,
+  BuilderConfigData,
+  BuilderEntryConfig,
   Endpoints,
   FeeRecipientData,
   GasLimitData,
@@ -19,7 +21,13 @@ export type {
   SignerDefinition,
   SlashingProtectionData,
 } from "./routes.js";
-export {DeleteRemoteKeyStatus, DeletionStatus, ImportRemoteKeyStatus, ImportStatus} from "./routes.js";
+export {
+  DeleteRemoteKeyStatus,
+  DeletionStatus,
+  ImportRemoteKeyStatus,
+  ImportStatus,
+  builderConfigDataFromJson,
+} from "./routes.js";
 
 export type {ApiClient};
 

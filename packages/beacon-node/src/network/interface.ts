@@ -103,7 +103,9 @@ export interface INetwork extends INetworkCorePublic {
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
-  publishDataColumnSidecar(dataColumnSideCar: DataColumnSidecar): Promise<number>;
+  publishDataColumnSidecar(
+    dataColumnSideCar: DataColumnSidecar
+  ): Promise<{sentPeers: number; alreadyPublished: boolean}>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
@@ -113,6 +115,7 @@ export interface INetwork extends INetworkCorePublic {
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
+  publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
 

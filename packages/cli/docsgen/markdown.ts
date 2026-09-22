@@ -138,8 +138,8 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
     commandOption.push(`default: \`${defaultValue}\``);
   }
 
-  if (option.example) {
-    commandOption.push(`example: ${renderExampleBody(option.example)}`);
+  if (option.example?.description) {
+    commandOption.push(`example: ${sanitizeDescription(option.example.description)}`);
   }
 
   return commandOption.join(DEFAULT_SEPARATOR).concat(LINE_BREAK);

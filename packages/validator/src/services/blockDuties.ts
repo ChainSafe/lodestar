@@ -1,18 +1,21 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostFulu} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {isForkPostGloas} from "@lodestar/params";
+import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /**
- * Pre-Fulu only: poll next-epoch proposer duties ~1s before the boundary. Post-Fulu the 1-epoch
- * deterministic lookahead lets us pre-fetch via `runEveryEpoch`, so this fast path is unused.
+ * Pre-Gloas: poll next-epoch proposer duties ~1s before the boundary. The deterministic 1-epoch
+ * lookahead (EIP-7917) is available post-Fulu, but consuming it requires `getProposerDutiesV2`,
+ * which was added to beacon-APIs only after Fulu shipped. To avoid depending on an endpoint not
+ * all clients implement yet, the VC keeps using v1 + this boundary poll until Gloas; only then
+ * does it switch to the lookahead-based pre-fetch in `runEveryEpoch`.
  *
  * Historical context: starting Jul 2023 we poll 1s before the next epoch because
  * `PrepareNextSlotScheduler` (BN-side) usually finishes the upcoming-epoch transition in ~3s,
@@ -123,9 +126,10 @@ export class BlockDutiesService {
   }
 
   /**
-   * Baseline per-epoch fetch. Fires at epoch boundaries (and once at startup). Post-Fulu the
-   * deterministic 1-epoch lookahead lets us also pre-fetch `epoch + 1`; pre-Fulu the next
-   * epoch's dep_root only stabilizes at the boundary and is handled by `runEverySlotTask`.
+   * Baseline per-epoch fetch. Fires at epoch boundaries (and once at startup). Post-Gloas the
+   * deterministic 1-epoch lookahead (consumed via v2) lets us also pre-fetch `epoch + 1`;
+   * pre-Gloas the next epoch's dep_root only stabilizes at the boundary and is handled by
+   * `runEverySlotTask`.
    *
    * Mid-epoch refreshes (e.g. reorgs) are driven by `onNewHead` instead of polling every slot.
    */
@@ -144,7 +148,7 @@ export class BlockDutiesService {
       await this.pollBeaconProposers(epoch);
 
       const nextEpoch = epoch + 1;
-      if (isForkPostFulu(this.config.getForkName(computeStartSlotAtEpoch(nextEpoch)))) {
+      if (isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(nextEpoch)))) {
         await this.pollBeaconProposers(nextEpoch);
       }
     } catch (e) {
@@ -156,7 +160,7 @@ export class BlockDutiesService {
 
   /**
    * Slot-tick handler. Notifies block production for cached proposers in this slot, and on
-   * the last slot of a pre-Fulu epoch schedules the boundary fetch for `nextEpoch` duties.
+   * the last slot of a pre-Gloas epoch schedules the boundary fetch for `nextEpoch` duties.
    * Reorg detection is handled by `onNewHead`, so this task does not re-poll on every slot.
    */
   private runEverySlotTask = async (slot: Slot, signal: AbortSignal): Promise<void> => {
@@ -169,10 +173,10 @@ export class BlockDutiesService {
 
       const nextEpoch = computeEpochAtSlot(slot) + 1;
       const isLastSlotOfEpoch = computeStartSlotAtEpoch(nextEpoch) === slot + 1;
-      if (isLastSlotOfEpoch && !isForkPostFulu(this.config.getForkName(slot + 1))) {
-        // Pre-Fulu: 0-epoch proposer lookahead, so the next-epoch dep_root only becomes stable
-        // as the last block of the current epoch lands. Sleep until ~1s before the boundary
-        // then fetch — same timing as before this refactor.
+      if (isLastSlotOfEpoch && !isForkPostGloas(this.config.getForkName(slot + 1))) {
+        // Pre-Gloas the VC uses v1 and does not pre-fetch the next epoch on the epoch tick, so
+        // fetch it ~1s before the boundary instead. Pre-Fulu this is required (0-epoch lookahead);
+        // for Fulu the lookahead exists but the v2 path is deferred to Gloas (see top of file).
         this.pollBeaconProposersBeforeBoundary(slot, nextEpoch, signal).catch((e) => {
           this.logger.error("Error on pollBeaconProposersBeforeBoundary", {nextEpoch}, e);
         });
@@ -184,14 +188,15 @@ export class BlockDutiesService {
 
   /**
    * SSE head-event handler. The beacon-API `head` event carries attester-duty dep_roots,
-   * which coincide with the proposer dep_roots at a fork-dependent offset:
+   * which coincide with the proposer dep_roots the VC caches. The offset depends on the
+   * proposer-duties endpoint the VC uses, which is gated on Gloas (v1 before, v2 after):
    *
-   *   Pre-Fulu  (proposer dep_root(E) = block@startSlot(E) - 1):
+   *   Pre-Gloas  (v1 proposer dep_root(E) = block@startSlot(E) - 1):
    *     currentDutyDependentRoot  ≡ proposer_dep_root(currentEpoch)
-   *     (next-epoch proposer dep_root is not exposed; pre-Fulu falls back to the
+   *     (next-epoch proposer dep_root is not exposed; pre-Gloas falls back to the
    *      `runEverySlotTask` boundary poll.)
    *
-   *   Post-Fulu (proposer dep_root(E) = block@startSlot(E - 1) - 1, EIP-7917):
+   *   Post-Gloas (v2 proposer dep_root(E) = block@startSlot(E - 1) - 1, EIP-7917):
    *     previousDutyDependentRoot ≡ proposer_dep_root(currentEpoch)
    *     currentDutyDependentRoot  ≡ proposer_dep_root(nextEpoch)
    *
@@ -204,9 +209,9 @@ export class BlockDutiesService {
     currentDutyDependentRoot,
   }: HeadEventData): Promise<void> => {
     const currentEpoch = computeEpochAtSlot(slot);
-    const isPostFulu = isForkPostFulu(this.config.getForkName(slot));
+    const isPostGloas = isForkPostGloas(this.config.getForkName(slot));
 
-    if (isPostFulu) {
+    if (isPostGloas) {
       await this.refetchIfDepRootChanged(currentEpoch, previousDutyDependentRoot);
       await this.refetchIfDepRootChanged(currentEpoch + 1, currentDutyDependentRoot);
     } else {
@@ -229,11 +234,11 @@ export class BlockDutiesService {
   }
 
   /**
-   * Pre-Fulu boundary fetch. Because pre-Fulu proposer shuffling has 0-epoch look-ahead, a
-   * proposal for the first slot of the new epoch otherwise goes through the slow path every
-   * time: the proposal can only happen *after* we download and process the new duties from
-   * the BN. Polling ~1s before the boundary, while `PrepareNextSlotScheduler` is finishing
-   * the upcoming-epoch transition, lets us land on a hot BN cache and avoid the miss.
+   * Pre-Gloas boundary fetch. Without a pre-fetched next epoch, a proposal for the first slot
+   * of the new epoch otherwise goes through the slow path every time: the proposal can only
+   * happen *after* we download and process the new duties from the BN. Polling ~1s before the
+   * boundary, while `PrepareNextSlotScheduler` is finishing the upcoming-epoch transition, lets
+   * us land on a hot BN cache and avoid the miss.
    *
    * See https://github.com/ChainSafe/lodestar/issues/5792.
    */
@@ -303,8 +308,9 @@ export class BlockDutiesService {
       return;
     }
 
-    // Post-Fulu the proposer dependent root changed (deterministic proposer lookahead)
-    const res = isForkPostFulu(this.config.getForkName(computeStartSlotAtEpoch(epoch)))
+    // Use v2 only post-Gloas: it exposes the post-Fulu deterministic proposer dependent root,
+    // but was added to beacon-APIs after Fulu shipped, so we defer to it until Gloas (see top).
+    const res = isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(epoch)))
       ? await this.api.validator.getProposerDutiesV2({epoch})
       : await this.api.validator.getProposerDuties({epoch});
     const proposerDuties = res.value();

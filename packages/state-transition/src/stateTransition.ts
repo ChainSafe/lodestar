@@ -1,10 +1,10 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
-import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+import {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -16,6 +16,7 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
   upgradeStateToGloas,
+  upgradeStateToHeze,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
@@ -26,6 +27,7 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -34,7 +36,6 @@ import {computeEpochAtSlot} from "./util/index.js";
 
 // NOTE DENEB: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
-  EpochTransitionCacheOpts &
   ProcessBlockOpts & {
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
@@ -108,10 +109,10 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, blockSlot, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.pubkeyCache, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 
@@ -162,11 +163,11 @@ export function stateTransition(
 export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
-  epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
+  opts?: {dontTransferCache?: boolean},
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
-  let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
+  let postState = state.clone(opts?.dontTransferCache);
 
   if (metrics) {
     onStateCloneMetrics(postState, metrics, StateCloneSource.processSlots);
@@ -175,7 +176,7 @@ export function processSlots(
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, slot, {metrics, validatorMonitor});
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -208,7 +209,6 @@ export function processSlots(
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
-  epochTransitionCacheOpts?: EpochTransitionCacheOpts,
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   const {config} = postState;
@@ -229,7 +229,7 @@ function processSlotsWithTransientCache(
       let epochTransitionCache: EpochTransitionCache;
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.beforeProcessEpoch});
-        epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
+        epochTransitionCache = beforeProcessEpoch(postState, metrics);
         timer?.();
       }
 
@@ -276,7 +276,15 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
-        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+        // Timed, unlike the other fork upgrades: this one does unbounded work.
+        // onboardBuildersFromPendingDeposits walks the entire pending deposit queue, so its
+        // cost is set by whatever is sitting in that queue when the fork lands.
+        const timer = metrics?.forkUpgradeTime.startTimer({fork: ForkName.gloas});
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu, metrics) as CachedBeaconStateAllForks;
+        timer?.();
+      }
+      if (stateEpoch === config.HEZE_FORK_EPOCH) {
+        postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
 
       {

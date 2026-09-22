@@ -33,13 +33,13 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       maxConcurrency: 1,
       maxLength: 50,
       dbLocation: modules.opts.dbLocation,
+      dataColumnDir: modules.opts.dataColumnDir,
       metricsEnabled: Boolean(modules.metrics),
       loggerOpts: modules.logger.toOpts(),
       nativeStateView: modules.opts.nativeStateView,
     };
 
     const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
-      suppressTranspileTS: Boolean(globalThis.Bun),
       workerData,
     } as ConstructorParameters<typeof Worker>[1]);
 

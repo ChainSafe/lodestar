@@ -1,6 +1,17 @@
 import {beforeAll, describe, expect, it} from "vitest";
 import {chainConfig} from "../../src/default.js";
-import {ChainConfig, createForkConfig} from "../../src/index.js";
+import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
+
+describe("createChainConfig", () => {
+  it("rejects gas limit schedule entries before Gloas", () => {
+    expect(() =>
+      createChainConfig({
+        GLOAS_FORK_EPOCH: 10,
+        GAS_LIMIT_SCHEDULE: [{EPOCH: 9, GAS_LIMIT: 60_000_000}],
+      })
+    ).toThrow("must be greater than or equal to GLOAS_FORK_EPOCH 10");
+  });
+});
 
 describe("getMaxBlobsPerBlock", () => {
   let defaultConfig: ChainConfig;
@@ -80,5 +91,46 @@ describe("getMaxBlobsPerBlock", () => {
       ],
     });
     expect(config.getMaxBlobsPerBlock(0)).toEqual(defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA);
+  });
+});
+
+describe("getScheduledGasLimit", () => {
+  it("returns undefined before Gloas even when a schedule entry is active", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(9)).toBeUndefined();
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+  });
+
+  it("returns undefined when no schedule entry is active post-Gloas", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 20, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(19)).toBeUndefined();
+  });
+
+  it("selects the latest active entry regardless of input order", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [
+        {EPOCH: 20, GAS_LIMIT: 75_000_000},
+        {EPOCH: 10, GAS_LIMIT: 60_000_000},
+        {EPOCH: 30, GAS_LIMIT: 90_000_000},
+      ],
+    });
+
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(19)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(20)).toBe(75_000_000);
+    expect(config.getScheduledGasLimit(30)).toBe(90_000_000);
+    expect(config.getScheduledGasLimit(100)).toBe(90_000_000);
   });
 });

@@ -30,7 +30,7 @@ export async function* onDataColumnSidecarsByRoot(
     const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
     const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
     if (availableColumns.length === 0) {
-      return;
+      continue;
     }
 
     const blockRootHex = toRootHex(blockRoot);
@@ -81,12 +81,14 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (unavailableColumnIndices.length) {
+      const finalized = !block || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
       await handleColumnSidecarUnavailability({
         chain,
         db,
         metrics: chain.metrics,
         slot,
         blockRoot,
+        finalized,
         unavailableColumnIndices,
         requestedColumns,
         availableColumns,

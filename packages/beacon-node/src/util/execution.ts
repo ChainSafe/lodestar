@@ -199,7 +199,7 @@ export async function getDataColumnSidecarsFromExecution(
   const previouslyMissingColumns = input.getMissingSampledColumnMeta().missing;
   const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
-  // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
+  // for columns we have already seen, publishDataColumnSidecar() catches PublishError.Duplicate and marks alreadyPublished=true
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
 

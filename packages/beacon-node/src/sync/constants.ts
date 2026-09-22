@@ -15,12 +15,13 @@ export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
 export const RATE_LIMITED_PEER_BACKOFF_MS = 5_000;
 
 /**
- * Consider batch faulty after downloading and processing this number of times
- * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if there is unknown parent
- * from prior batch. For example a peer may send us a non-canonical chain segment or not returning all blocks
- * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
+ * Consider a batch faulty once its failed processing attempts EXCEED this number, i.e. the batch is
+ * processed up to `MAX_BATCH_PROCESSING_ATTEMPTS + 1` times before teardown (the check is `>`, same
+ * convention as `MAX_BATCH_DOWNLOAD_ATTEMPTS`).
+ * Some processing failures can be caused by a different batch, so range sync classifies the fault
+ * before deciding which batch to redownload.
  **/
-export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;
+export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
 
 /**
  * Number of slots to offset batches.

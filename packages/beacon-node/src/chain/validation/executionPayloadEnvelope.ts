@@ -35,8 +35,6 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  // TODO GLOAS: Need to review this, we should queue the envelope for later
-  // processing if the block is not yet known, otherwise we would ignore it here
   const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -84,6 +82,8 @@ async function validateExecutionPayloadEnvelope(
   if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
@@ -93,6 +93,8 @@ async function validateExecutionPayloadEnvelope(
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
@@ -102,16 +104,20 @@ async function validateExecutionPayloadEnvelope(
   if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
       bidBlockHash: payloadInput.getBlockHashHex(),
     });
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
     });
@@ -135,7 +141,6 @@ async function validateExecutionPayloadEnvelope(
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    chain.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     payloadInput.proposerIndex
@@ -144,6 +149,8 @@ async function validateExecutionPayloadEnvelope(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot: payload.slotNumber,
+      root: blockRootHex,
     });
   }
 }

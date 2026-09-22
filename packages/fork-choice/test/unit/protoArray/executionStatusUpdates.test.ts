@@ -96,6 +96,7 @@ function setupForkChoice(): ProtoArray {
         : {
             executionPayloadBlockHash: block.root,
             executionPayloadNumber: block.slot,
+            executionPayloadGasLimit: 30000000,
             executionStatus: block.executionStatus,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }
@@ -119,6 +120,9 @@ function setupForkChoice(): ProtoArray {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...executionData,
 
@@ -132,7 +136,7 @@ function setupForkChoice(): ProtoArray {
 
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas,
+    attestationDeltas: deltas,
     proposerBoost: null,
     justifiedEpoch: 0,
     justifiedRoot: "-",

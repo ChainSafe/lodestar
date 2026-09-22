@@ -12,7 +12,6 @@ import {
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -34,7 +33,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
+      const postState = processSlots(state, state.slot + bnToNum(testcase.slots));
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
       return postState;
@@ -68,10 +67,10 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: verify,
+          // Always verify the state root, it is not gated by bls_setting
+          verifyStateRoot: true,
           verifyProposer: verify,
           verifySignatures: verify,
-          assertCorrectProgressiveBalances,
         });
       }
       return wrappedState;
@@ -84,6 +83,9 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
       shouldError: (testCase) => testCase.post === undefined,
+      // Only an ssz list limit violation is an expected input error, anything else is a decode bug
+      shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+        !inputNames.has("post") && /over limit/.test(error.message),
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {

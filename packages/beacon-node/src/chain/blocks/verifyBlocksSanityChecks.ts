@@ -94,7 +94,7 @@ export function verifyBlocksSanityChecks(
       const parentRoot = toRootHex(block.message.parentRoot);
       const parentBlockDefaultStatus = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
       if (!parentBlockDefaultStatus) {
-        throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+        throw new BlockError(block, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
       }
 
       parentBlock = parentBlockDefaultStatus;

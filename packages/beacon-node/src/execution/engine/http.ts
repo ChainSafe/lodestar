@@ -300,7 +300,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
       if (ForkSeq[fork] >= ForkSeq.electra) {
         // executionRequests is validated above, before dispatch
-        const serializedExecutionRequests = serializeExecutionRequests(executionRequests as ExecutionRequests);
+        const serializedExecutionRequests = serializeExecutionRequests(fork, executionRequests as ExecutionRequests);
         engineRequest = {
           method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [

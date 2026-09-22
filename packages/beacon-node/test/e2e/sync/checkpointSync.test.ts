@@ -111,6 +111,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
       bn2Head.blockRoot,
       nodeAHeadFull.executionPayloadBlockHash,
       nodeAHeadFull.executionPayloadNumber,
+      nodeAHeadFull.executionPayloadGasLimit,
       ExecutionStatus.Valid,
       DataAvailabilityStatus.Available
     );

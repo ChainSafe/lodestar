@@ -1,5 +1,5 @@
 import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {altair} from "@lodestar/types";

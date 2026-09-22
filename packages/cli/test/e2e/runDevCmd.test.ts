@@ -5,14 +5,26 @@ import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
 
 describe("Run dev command", () => {
-  vi.setConfig({testTimeout: 30_000});
+  vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});
 
   it("Run dev command with no --dataDir until beacon api is listening", async () => {
     const beaconPort = 39011;
+    const p2pPort = 39021;
+    const discoveryPort = 39022;
+    const quicPort = 39023;
 
     const devProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
-      ["dev", "--reset", "--startValidators=0..7", `--rest.port=${beaconPort}`],
+      [
+        "dev",
+        "--reset",
+        "--startValidators=0..7",
+        "--listenAddress=127.0.0.1",
+        `--port=${p2pPort}`,
+        `--discoveryPort=${discoveryPort}`,
+        `--quicPort=${quicPort}`,
+        `--rest.port=${beaconPort}`,
+      ],
       {pipeStdioToParent: true, logPrefix: "dev"}
     );
     onTestFinished(async () => {

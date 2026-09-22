@@ -40,7 +40,10 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       throw Error("startSlot must be the first slot in the epoch");
     }
 
-    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}), {
+      dataColumnDir: ".tmpdb-data-columns",
+      logger,
+    });
   });
 
   afterAll(async () => {

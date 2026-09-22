@@ -142,13 +142,7 @@ export async function validateGossipAttestationsSameAttData(
   const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => {
-        const publicKey = chain.pubkeyCache.getOrThrow(set.index);
-        return {publicKey, signature: set.signature};
-      }),
-      signatureSets[0].signingRoot
-    );
+    signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(
@@ -316,13 +310,19 @@ async function validateAttestationNoSignatureCheck(
           });
         }
 
-        // [REJECT] If `attestation.data.index == 1` (payload present for a past
-        //   block), the execution payload for `block` passes validation.
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past block),
+        //   the execution payload for `block` passes validation.
         // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
-        // the corresponding execution payload for `block` has been seen (a client MAY queue
-        // attestations for processing once the payload is retrieved and SHOULD request the
-        // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-        if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
+        //   the execution payload for `block` has been fully imported, including its data -- i.e.
+        //   `is_payload_verified(store, attestation.data.beacon_block_root)` returns `True`
+        //   (a client MAY queue attestations for processing until the payload is imported and
+        //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
+        //   `attestation.data.beacon_block_root`).
+        if (
+          block !== null &&
+          attData.index === 1 &&
+          !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
+        ) {
           throw new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
             beaconBlockRoot: toRootHex(attData.beaconBlockRoot),

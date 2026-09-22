@@ -1,5 +1,5 @@
 import {LogData} from "@lodestar/logger";
-import {RespStatus, ResponseError} from "@lodestar/reqresp";
+import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
@@ -16,12 +16,14 @@ export async function handleColumnSidecarUnavailability({
   availableColumns,
   slot,
   blockRoot,
+  finalized,
 }: {
   chain: IBeaconChain;
   db: IBeaconDb;
   metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;
+  finalized: boolean;
   unavailableColumnIndices: ColumnIndex[];
   requestedColumns: ColumnIndex[];
   availableColumns: ColumnIndex[];
@@ -38,10 +40,23 @@ export async function handleColumnSidecarUnavailability({
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
-  const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
+  // Post-gloas, columns exist only for FULL blocks. The envelope may still be hot while finalization
+  // archiving is in progress. Bid blobsCount is unreliable since an EMPTY block's bid may still commit to blobs.
+  if (chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
+    const hasCachedEnvelope = blockRoot ? chain.seenPayloadEnvelopeInputCache.hasPayload(toRootHex(blockRoot)) : false;
+    if (!hasCachedEnvelope) {
+      const hotEnvelopeBytes = blockRoot ? await db.executionPayloadEnvelope.getBinary(blockRoot) : null;
+      const envelopeBytes =
+        hotEnvelopeBytes ?? (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot) : null);
+      if (!envelopeBytes) return;
+    }
+  }
+
+  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot) : null;
+  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot) : null);
   if (!blockBytes) {
     chain.logger.verbose(
-      `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,
+      `Expected ${finalized ? "finalized" : "unfinalized"} block not found while handling unavailable dataColumnSidecar`,
       {
         slot,
         blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown",
@@ -68,12 +83,22 @@ export async function handleColumnSidecarUnavailability({
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
   if (requestedColumns.length === 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+    return [];
   }
 
-  const custodyColumns = chain.custodyConfig.custodyColumns;
-  const availableColumns = requestedColumns.filter((c) => custodyColumns.includes(c));
-  const missingColumns = requestedColumns.filter((c) => !custodyColumns.includes(c));
+  const {custodyColumns, custodyColumnsIndex} = chain.custodyConfig;
+  const availableColumns: ColumnIndex[] = [];
+  const missingColumns: ColumnIndex[] = [];
+  for (const c of requestedColumns) {
+    // `c` is peer-controlled and SSZ-deserialized as `uint64`, so it may exceed
+    // `NUMBER_OF_COLUMNS - 1`; `Uint8Array` returns `undefined` for OOB reads,
+    // and `undefined !== 0` would silently classify OOB indices as custodied.
+    if ((custodyColumnsIndex[c] ?? 0) !== 0) {
+      availableColumns.push(c);
+    } else {
+      missingColumns.push(c);
+    }
+  }
 
   if (missingColumns.length > 0) {
     chain.logger.verbose("Requested dataColumnSidecar for non-custody columns", {

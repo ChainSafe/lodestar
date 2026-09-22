@@ -1,4 +1,4 @@
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
   EpochShuffling,
   IBeaconStateView,
@@ -156,18 +156,34 @@ export class ShufflingCache {
   }
 
   /**
+   * Check if a shuffling is cached by (epoch, decisionRoot).
+   * For native bindings, this avoids having to memoize heavy epoch shufflings within
+   * `NativeBeaconStateView`.
+   */
+  has(epoch: Epoch, decisionRoot: RootHex): boolean {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    return cacheItem !== undefined && isShufflingCacheItem(cacheItem);
+  }
+
+  /**
    * Process a state to extract and cache all shufflings (previous, current, next).
    * Uses the stored decision roots from epochCtx.
    */
   processState(state: IBeaconStateView): void {
-    // Cache previous shuffling
-    this.set(state.getPreviousShuffling(), state.previousDecisionRoot);
+    const currentEpoch = state.epoch;
+    const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
 
-    // Cache current shuffling
-    this.set(state.getCurrentShuffling(), state.currentDecisionRoot);
+    if (!this.has(previousEpoch, state.previousDecisionRoot)) {
+      this.set(state.getPreviousShuffling(), state.previousDecisionRoot);
+    }
 
-    // Cache next shuffling
-    this.set(state.getNextShuffling(), state.nextDecisionRoot);
+    if (!this.has(currentEpoch, state.currentDecisionRoot)) {
+      this.set(state.getCurrentShuffling(), state.currentDecisionRoot);
+    }
+
+    if (!this.has(currentEpoch + 1, state.nextDecisionRoot)) {
+      this.set(state.getNextShuffling(), state.nextDecisionRoot);
+    }
   }
 
   getIndexedAttestation(

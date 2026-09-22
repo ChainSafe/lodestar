@@ -11,7 +11,6 @@ import {
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -61,7 +60,6 @@ const transition =
             verifyStateRoot: true,
             verifyProposer: false,
             verifySignatures: false,
-            assertCorrectProgressiveBalances,
           });
         }
         return state;
@@ -126,6 +124,17 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: forkEpoch,
+      };
+    case ForkName.heze:
+      return {
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: forkEpoch,
       };
   }
 }

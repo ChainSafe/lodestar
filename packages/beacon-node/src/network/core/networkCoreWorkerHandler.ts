@@ -10,6 +10,7 @@ import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -58,6 +59,10 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
+/** `getApi().close()` is an unbounded RPC into the worker and runs before `BeaconNode.close()`
+ * archives chain state to disk, so it is bounded here. Set well above the ~2-4s a close takes on
+ * mainnet, tripping it leaves libp2p half torn down */
+const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -132,10 +137,6 @@ export class WorkerNetworkCore implements INetworkCore {
 
     const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
-    };
-    if (globalThis.Bun) {
-      workerOpts.suppressTranspileTS = true;
-    } else {
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
        * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
@@ -147,8 +148,8 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      workerOpts.resourceLimits = {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb};
-    }
+      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
+    };
 
     const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
 
@@ -169,15 +170,25 @@ export class WorkerNetworkCore implements INetworkCore {
 
   async close(): Promise<void> {
     this.modules.logger.debug("closing network core running in network worker");
-    await this.getApi().close();
+    try {
+      await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
+    } catch (e) {
+      this.modules.logger.debug("Error closing network core", {}, e as Error);
+    }
     this.modules.logger.debug("terminating network worker");
-    await terminateWorkerThread({
+    const terminated = await terminateWorkerThread({
       worker: this.getApi(),
       retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
       retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
       logger: this.modules.logger,
     });
-    this.modules.logger.debug("terminated network worker");
+    if (terminated) {
+      this.modules.logger.debug("terminated network worker");
+    } else {
+      // Nothing more to do, `process.exit()` joins the thread regardless so the process still waits
+      // on it. What matters is returning, so the caller can archive state and close the db
+      this.modules.logger.debug("Network worker did not terminate in time, continuing shutdown without it");
+    }
   }
 
   async test(): Promise<void> {

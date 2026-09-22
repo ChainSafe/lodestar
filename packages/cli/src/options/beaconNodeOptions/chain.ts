@@ -1,9 +1,11 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
+import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
@@ -21,8 +23,9 @@ export type ChainArgs = {
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
-  "chain.assertCorrectProgressiveBalances"?: boolean;
+  "chain.fastConfirmation"?: boolean;
   "chain.maxSkipSlots"?: number;
+  "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -39,9 +42,10 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -60,8 +64,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
-    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
+    fastConfirmation: args["chain.fastConfirmation"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -76,6 +81,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
+    // Circuit breaker thresholds are shared with the pre-gloas builder flow
+    faultInspectionWindow: args["builder.faultInspectionWindow"],
+    allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
   };
 }
@@ -93,6 +101,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  graffitiAppend: {
+    type: "boolean",
+    description: "Append CL/EL client info to graffiti supplied by validator client when space allows",
+    default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },
 
@@ -213,6 +228,13 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.fastConfirmation": {
+    type: "boolean",
+    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    defaultDescription: String(defaultOptions.chain.fastConfirmation),
+    group: "chain",
+  },
+
   "chain.maxSkipSlots": {
     hidden: true,
     type: "number",
@@ -220,10 +242,12 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.assertCorrectProgressiveBalances": {
+  "chain.disableProposerSlashings": {
     hidden: true,
-    description: "Enable asserting the progressive balances",
     type: "boolean",
+    description:
+      "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
+    defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
     group: "chain",
   },
 
@@ -310,7 +334,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
-    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    description:
+      "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",
@@ -318,7 +343,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
 This is useful to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",

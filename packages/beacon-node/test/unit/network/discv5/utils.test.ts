@@ -62,4 +62,12 @@ describe("network / discv5 / enrRelevance", () => {
     enr.set(ENRKey.eth2, fakeEth2);
     expect(enrRelevance(enr as unknown as ENR, config, clock)).toBe(ENRRelevance.unknown_forkDigest);
   });
+
+  it("should return no_transport for ENR with malformed ip instead of throw", async () => {
+    const enr = await createEnr({eth2: true});
+    enr.set("ip", new Uint8Array([1, 2, 3])); // invalid IP, 3 bytes instead of 4 for IPv4
+    enr.set("tcp", new Uint8Array([0x23, 0x28])); // port 9000
+    expect(() => enrRelevance(enr as unknown as ENR, config, clock)).not.toThrow();
+    expect(enrRelevance(enr as unknown as ENR, config, clock)).toBe(ENRRelevance.no_transport);
+  });
 });

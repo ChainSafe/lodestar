@@ -14,8 +14,13 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
-import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {BeaconConfig, ChainConfig, ForkBoundary} from "@lodestar/config";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -35,12 +40,28 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
-import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
+import {GossipTopicCache, getAllowedTopics, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+
+/**
+ * Snappy worst-case compressed length for a payload of `n` bytes
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_compressed_len
+ */
+function maxCompressedLen(n: number): number {
+  return 32 + n + Math.floor(n / 6);
+}
+
+/**
+ * Max size of an inbound gossipsub RPC frame, including all bundled messages and control
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_message_size
+ */
+function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
+  return Math.max(maxCompressedLen(config.MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024);
+}
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -140,6 +161,7 @@ export class Eth2Gossipsub {
     const gossipsubInstance = gossipsub({
       globalSignaturePolicy: StrictNoSign,
       allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
+      allowedTopics: getAllowedTopics(networkConfig),
       D: gossipsubD ?? GOSSIP_D,
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
       Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
@@ -162,7 +184,7 @@ export class Eth2Gossipsub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, metrics),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -170,6 +192,7 @@ export class Eth2Gossipsub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      maxInboundDataLength: getMaxInboundDataLength(config),
       // serialize message once and send to all peers when publishing
       batchPublish: true,
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
@@ -178,7 +201,7 @@ export class Eth2Gossipsub {
       // Only send IDONTWANT messages if the message size is larger than this
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
-      idontwantMinDataSize: 16829,
+      idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
     })(modules.libp2p.services.components) as GossipSubInternal;
 
     if (metrics) {

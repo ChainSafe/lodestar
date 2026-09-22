@@ -1,6 +1,9 @@
+import {ForkName} from "@lodestar/params";
 import {
   BeaconStateTransitionMetrics,
+  BlockProcessStep,
   EpochTransitionStep,
+  ProcessOperationsStep,
   ProposerRewardType,
   StateCloneSource,
   StateHashTreeRootSource,
@@ -45,12 +48,44 @@ export function createHistoricalStateTransitionMetrics(
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    forkUpgradeTime: metricsRegister.histogram<{fork: ForkName}>({
+      name: "lodestar_historical_state_stfn_fork_upgrade_seconds",
+      help: "Time to upgrade the state at a fork boundary in seconds",
+      labelNames: ["fork"],
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_seconds",
+      help: "Time spent in onboardBuildersFromPendingDeposits at the gloas fork transition",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersDeposits: metricsRegister.gauge<{outcome: "onboarded" | "topup" | "kept" | "dropped"}>({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_deposits",
+      help: "Pending deposits handled at the gloas fork transition, by outcome",
+      labelNames: ["outcome"],
+    }),
+    onboardBuildersSignatureChecks: metricsRegister.gauge<{source: "cache" | "verified"}>({
+      name: "lodestar_historical_state_stfn_gloas_onboard_builders_signature_checks",
+      help: "Builder deposit signature checks at the gloas fork transition, by whether the pre-verify cache served them",
+      labelNames: ["source"],
+    }),
     processBlockTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
-      // TODO: Add metrics for each step
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    processBlockStepTime: metricsRegister.histogram<{step: BlockProcessStep}>({
+      name: "lodestar_historical_state_stfn_process_block_step_seconds",
+      help: "Time to call each step of process block in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+    }),
+    processOperationsStepTime: metricsRegister.histogram<{step: ProcessOperationsStep}>({
+      name: "lodestar_historical_state_stfn_process_operations_step_seconds",
+      help: "Time to call each step of process operations in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
     }),
     processBlockCommitTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_commit_seconds",
@@ -127,6 +162,10 @@ export function createHistoricalStateTransitionMetrics(
     attestationsPerBlock: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
+    }),
+    progressiveBalancesMismatches: metricsRegister.counter({
+      name: "lodestar_historical_state_stfn_progressive_balances_mismatches_total",
+      help: "Total count of progressive balance cache mismatches",
     }),
     proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
       name: "lodestar_historical_state_stfn_proposer_rewards_total",

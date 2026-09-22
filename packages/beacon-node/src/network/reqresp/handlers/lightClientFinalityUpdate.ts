@@ -12,7 +12,7 @@ export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIt
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest finality update available");
   }
 
-  const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
+  const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.attestedHeader.beacon.slot));
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](boundary.fork, 0);
   yield {
     data: type.serialize(update),

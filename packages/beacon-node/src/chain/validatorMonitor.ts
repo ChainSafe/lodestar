@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -24,7 +24,17 @@ import {
   deneb,
   gloas,
 } from "@lodestar/types";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {
+  LogData,
+  LogHandler,
+  LogLevel,
+  Logger,
+  MapDef,
+  MapDefMax,
+  prettyGweiToEth,
+  prettyPrintIndices,
+  toRootHex,
+} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {RegistryMetricCreator} from "../metrics/index.js";
 
@@ -66,6 +76,7 @@ export type ValidatorMonitor = {
     delaySec: Seconds,
     envelope: gloas.SignedExecutionPayloadEnvelope
   ): void;
+  registerExecutionPayloadBid(src: OpSource, proposerIndex: ValidatorIndex, bid: gloas.ExecutionPayloadBid): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -457,6 +468,23 @@ export function createValidatorMonitor(
 
     registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {
       // TODO GLOAS: implement execution payload envelope monitoring
+    },
+
+    registerExecutionPayloadBid(src, proposerIndex, bid) {
+      if (!validators.has(proposerIndex)) {
+        return;
+      }
+      log("Received an execution payload bid for monitored proposer", {
+        slot: bid.slot,
+        proposerIndex,
+        src,
+        builderIndex: bid.builderIndex,
+        gasLimit: Number(bid.gasLimit),
+        value: prettyGweiToEth(bid.value),
+        parentBlockRoot: toRootHex(bid.parentBlockRoot),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        blockHash: toRootHex(bid.blockHash),
+      });
     },
 
     registerImportedBlock(block, {proposerBalanceDelta}) {
@@ -1099,7 +1127,11 @@ function isCanonical(rootCache: RootHexCache, block: AttestationBlockInclusion):
 
 /** Returns true if root at slot is the same at slot - 1 == there was no new block at slot */
 function isMissedSlot(rootCache: RootHexCache, slot: Slot): boolean {
-  return slot > 0 && rootCache.getBlockRootAtSlot(slot) === rootCache.getBlockRootAtSlot(slot - 1);
+  if (slot <= 0) {
+    return false;
+  }
+  const root = rootCache.getBlockRootAtSlot(slot);
+  return root !== null && root === rootCache.getBlockRootAtSlot(slot - 1);
 }
 
 function renderBlockProposalSummary(
@@ -1113,7 +1145,11 @@ function renderBlockProposalSummary(
     return "not_submitted";
   }
 
-  if (rootCache.getBlockRootAtSlot(proposalSlot) === proposal.blockRoot) {
+  const canonicalRoot = rootCache.getBlockRootAtSlot(proposalSlot);
+  if (canonicalRoot === null) {
+    return "unknown";
+  }
+  if (canonicalRoot === proposal.blockRoot) {
     // Canonical state includes our block
     return "canonical";
   }
@@ -1139,14 +1175,23 @@ function renderBlockProposalSummary(
  * In normal network conditions the same root is read multiple times, specially the target.
  */
 export class RootHexCache {
-  private readonly blockRootSlotCache = new Map<Slot, RootHex>();
+  private readonly blockRootSlotCache = new Map<Slot, RootHex | null>();
 
   constructor(private readonly state: IBeaconStateView) {}
 
-  getBlockRootAtSlot(slot: Slot): RootHex {
+  /**
+   * Block root at `slot`, null if the state does not cover it: slots at or after the state's own slot (an inclusion
+   * in a block the head state does not know yet, e.g. an orphaned block, or the slot after the last attestation of
+   * the epoch) or slots older than `SLOTS_PER_HISTORICAL_ROOT`. Callers treat null as unknown instead of throwing
+   * and aborting the summaries of all remaining validators.
+   */
+  getBlockRootAtSlot(slot: Slot): RootHex | null {
     let root = this.blockRootSlotCache.get(slot);
-    if (!root) {
-      root = toRootHex(this.state.getBlockRootAtSlot(slot));
+    if (root === undefined) {
+      root =
+        slot < this.state.slot && slot >= this.state.slot - SLOTS_PER_HISTORICAL_ROOT
+          ? toRootHex(this.state.getBlockRootAtSlot(slot))
+          : null;
       this.blockRootSlotCache.set(slot, root);
     }
     return root;

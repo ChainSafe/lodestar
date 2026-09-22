@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
+import {Signature} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
@@ -17,7 +17,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
@@ -36,6 +36,7 @@ export const DENEB_FORK_EPOCH = 10;
 export const ELECTRA_FORK_EPOCH = 20;
 export const FULU_FORK_EPOCH = 30;
 export const GLOAS_FORK_EPOCH = 40;
+export const HEZE_FORK_EPOCH = 50;
 export const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
@@ -43,6 +44,7 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
+  HEZE_FORK_EPOCH,
 });
 export const clock = new Clock({
   config,
@@ -60,6 +62,7 @@ export const slots: Record<ForkPostCapella, number> = {
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
+  heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 
 /**
@@ -115,7 +118,7 @@ function generateBeaconBlock<F extends ForkPostCapella>({
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
   // signature is obviously not valid so can generate it now instead of after commitments are attached
-  block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_UNCOMPRESSED));
+  block.signature = Uint8Array.from(randomBytes(Signature.COMPRESS_SIZE));
   return block;
 }
 
@@ -183,7 +186,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   if (isForkPostGloas(forkName)) {
     (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
 
-    const beaconBlockRoot = ssz[forkName as ForkPostGloas].BeaconBlock.hashTreeRoot(
+    const beaconBlockRoot = sszTypesFor(forkName as ForkPostGloas).BeaconBlock.hashTreeRoot(
       block.message as SignedBeaconBlock<ForkPostGloas>["message"]
     );
     columnSidecars = getGloasDataColumnSidecars(

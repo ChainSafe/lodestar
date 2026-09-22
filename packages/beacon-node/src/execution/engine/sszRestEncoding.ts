@@ -8,15 +8,18 @@ import {
   UintNumberType,
 } from "@chainsafe/ssz";
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   CELLS_PER_EXT_BLOB,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
+  ForkSeq,
   MAX_BYTES_PER_TRANSACTION,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, RootHex, gloas, ssz} from "@lodestar/types";
 import type {BlobAndProof} from "@lodestar/types/deneb";
 import type {BlobAndProofV2} from "@lodestar/types/fulu";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -158,7 +161,11 @@ function toDecodedPayloadStatus(parsed: {
   };
 }
 
-function buildExecutionRequestsList(executionRequests: ExecutionRequests): Uint8Array[] {
+/**
+ * Mirrors get_execution_requests_list: one `type_byte || ssz_bytes` element per non-empty
+ * request list, ascending by type. Gloas adds builder deposits (0x03) and exits (0x04).
+ */
+function buildExecutionRequestsList(fork: ForkName, executionRequests: ExecutionRequests): Uint8Array[] {
   const items: Uint8Array[] = [];
   const prefix = (typeByte: number, body: Uint8Array): Uint8Array => {
     const out = new Uint8Array(1 + body.length);
@@ -179,11 +186,23 @@ function buildExecutionRequestsList(executionRequests: ExecutionRequests): Uint8
       prefix(CONSOLIDATION_REQUEST_TYPE, ssz.electra.ConsolidationRequests.serialize(executionRequests.consolidations))
     );
   }
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {builderDeposits, builderExits} = executionRequests as gloas.ExecutionRequests;
+    if (builderDeposits.length > 0) {
+      items.push(prefix(BUILDER_DEPOSIT_REQUEST_TYPE, ssz.gloas.BuilderDepositRequests.serialize(builderDeposits)));
+    }
+    if (builderExits.length > 0) {
+      items.push(prefix(BUILDER_EXIT_REQUEST_TYPE, ssz.gloas.BuilderExitRequests.serialize(builderExits)));
+    }
+  }
   return items;
 }
 
-function parseExecutionRequestsList(items: Uint8Array[]): ExecutionRequests {
-  const result: ExecutionRequests = {deposits: [], withdrawals: [], consolidations: []};
+function parseExecutionRequestsList(fork: ForkName, items: Uint8Array[]): ExecutionRequests {
+  const isGloas = ForkSeq[fork] >= ForkSeq.gloas;
+  const result: ExecutionRequests = isGloas
+    ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
+    : {deposits: [], withdrawals: [], consolidations: []};
   for (const item of items) {
     if (item.length === 0) throw Error("Execution request with empty data");
     const type = item[0];
@@ -197,6 +216,14 @@ function parseExecutionRequestsList(items: Uint8Array[]): ExecutionRequests {
         break;
       case CONSOLIDATION_REQUEST_TYPE:
         result.consolidations = ssz.electra.ConsolidationRequests.deserialize(body);
+        break;
+      case BUILDER_DEPOSIT_REQUEST_TYPE:
+        if (!isGloas) throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
+        (result as gloas.ExecutionRequests).builderDeposits = ssz.gloas.BuilderDepositRequests.deserialize(body);
+        break;
+      case BUILDER_EXIT_REQUEST_TYPE:
+        if (!isGloas) throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
+        (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(body);
         break;
       default:
         throw Error(`Unknown execution request type=${type}`);
@@ -298,7 +325,7 @@ export function encodeNewPayload(
   return type.serialize({
     payload: executionPayload,
     parentBeaconBlockRoot,
-    executionRequests: buildExecutionRequestsList(executionRequests),
+    executionRequests: buildExecutionRequestsList(fork, executionRequests),
   } as never);
 }
 
@@ -320,7 +347,7 @@ const PayloadAttributesCancun = new ContainerType(
   {typeName: "PayloadAttributes_cancun"}
 );
 const PayloadAttributesAmsterdam = new ContainerType(
-  {...PayloadAttributesCancun.fields, slotNumber: ssz.UintNum64, targetGasLimit: ssz.UintNum64},
+  {...PayloadAttributesCancun.fields, slotNumber: ssz.UintNum64, targetGasLimit: ssz.UintBn64},
   {typeName: "PayloadAttributes_amsterdam"}
 );
 
@@ -475,7 +502,9 @@ export function decodeBuiltPayload(fork: ForkName, data: Uint8Array): DecodedBui
     executionPayload: parsed.payload,
     blockValue: parsed.blockValue,
     blobsBundle: parsed.blobsBundle,
-    executionRequests: parsed.executionRequests ? parseExecutionRequestsList(parsed.executionRequests) : undefined,
+    executionRequests: parsed.executionRequests
+      ? parseExecutionRequestsList(fork, parsed.executionRequests)
+      : undefined,
     shouldOverrideBuilder: parsed.shouldOverrideBuilder,
   };
 }

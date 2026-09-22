@@ -72,6 +72,7 @@ describe("LodestarForkChoice", () => {
       true,
       {},
       (_: CheckpointWithHex) => justifiedBalances,
+      () => null,
       null
     );
   });
@@ -104,6 +105,7 @@ describe("LodestarForkChoice", () => {
         targetBlock.message,
         targetState,
         blockDelaySec,
+        blockDelaySec,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -111,6 +113,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
+        blockDelaySec,
         blockDelaySec,
         currentSlot,
         executionStatus,
@@ -122,6 +125,7 @@ describe("LodestarForkChoice", () => {
         parentBlock.message,
         parentState,
         blockDelaySec,
+        blockDelaySec,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -132,6 +136,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         childBlock.message,
         childState,
+        blockDelaySec,
         blockDelaySec,
         currentSlot,
         executionStatus,
@@ -195,19 +200,75 @@ describe("LodestarForkChoice", () => {
       const currentSlot = 128;
       forkChoice.updateTime(currentSlot);
 
-      forkChoice.onBlock(block08.message, state08, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      forkChoice.onBlock(block12.message, state12, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      forkChoice.onBlock(block16.message, state16, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(
+        block08.message,
+        state08,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        block12.message,
+        state12,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        block16.message,
+        state16,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        block20.message,
+        state20,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        block24.message,
+        state24,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
+      forkChoice.onBlock(
+        block28.message,
+        state28,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL)).toHaveLength(4);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message), PayloadStatus.FULL)).toHaveLength(6);
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block08.message))).not.toBeNull();
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block12.message))).not.toBeNull();
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
-      forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
+      forkChoice.onBlock(
+        block32.message,
+        state32,
+        blockDelaySec,
+        blockDelaySec,
+        currentSlot,
+        executionStatus,
+        dataAvailabilityStatus
+      );
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL).length).toBeWithMessage(
         1,
@@ -241,6 +302,7 @@ describe("LodestarForkChoice", () => {
         targetBlock.message,
         targetState,
         blockDelaySec,
+        blockDelaySec,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -248,6 +310,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
+        blockDelaySec,
         blockDelaySec,
         currentSlot,
         executionStatus,
@@ -257,6 +320,7 @@ describe("LodestarForkChoice", () => {
         parentBlock.message,
         parentState,
         blockDelaySec,
+        blockDelaySec,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -264,6 +328,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         childBlock.message,
         childState,
+        blockDelaySec,
         blockDelaySec,
         currentSlot,
         executionStatus,
@@ -312,6 +377,7 @@ describe("LodestarForkChoice", () => {
         blockW.message,
         stateW,
         blockDelaySec,
+        blockDelaySec,
         blockW.message.slot,
         executionStatus,
         dataAvailabilityStatus
@@ -324,6 +390,7 @@ describe("LodestarForkChoice", () => {
         blockX.message,
         stateX,
         blockDelaySec,
+        blockDelaySec,
         blockX.message.slot,
         executionStatus,
         dataAvailabilityStatus
@@ -335,6 +402,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockY.message,
         stateY,
+        blockDelaySec,
         blockDelaySec,
         blockY.message.slot,
         executionStatus,
@@ -376,6 +444,7 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockZ.message,
         stateZ,
+        blockDelaySec,
         blockDelaySec,
         blockZ.message.slot,
         executionStatus,

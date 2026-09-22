@@ -1,6 +1,13 @@
 import {describe, expect, it} from "vitest";
-import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
-import {ExecutionRequests, ssz} from "@lodestar/types";
+import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
+  CONSOLIDATION_REQUEST_TYPE,
+  DEPOSIT_REQUEST_TYPE,
+  ForkName,
+  WITHDRAWAL_REQUEST_TYPE,
+} from "@lodestar/params";
+import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
 import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
 
@@ -13,7 +20,7 @@ describe("execution / engine / types", () => {
         consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests).map(strip0xPrefix);
 
       // Assert 1-byte request_type prefix is set correctly
       expect(serialized.length).toBe(3);
@@ -40,7 +47,7 @@ describe("execution / engine / types", () => {
         consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests).map(strip0xPrefix);
 
       // Assert withdrawals are omitted
       expect(serialized.length).toBe(2);
@@ -63,7 +70,38 @@ describe("execution / engine / types", () => {
         consolidations: [],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
+
+      expect(serialized.length).toBe(0);
+    });
+
+    it("should serialize builder requests post-gloas", () => {
+      const executionRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
+      };
+
+      const serialized = serializeExecutionRequests(ForkName.gloas, executionRequests).map(strip0xPrefix);
+
+      expect(serialized.length).toBe(2);
+      expect(Number(serialized[0].substring(0, 2))).toBe(BUILDER_DEPOSIT_REQUEST_TYPE);
+      expect(Number(serialized[1].substring(0, 2))).toBe(BUILDER_EXIT_REQUEST_TYPE);
+    });
+
+    it("should skip builder requests pre-gloas", () => {
+      const executionRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
+      };
+
+      // Builder requests (0x03/0x04) only exist post-gloas; pre-gloas they are not emitted
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
 
       expect(serialized.length).toBe(0);
     });
@@ -89,49 +127,85 @@ describe("execution / engine / types", () => {
     ];
 
     it("should deserialize execution requests according to EIP-7685", () => {
-      const executionRequests = deserializeExecutionRequests(serializedRequests);
+      const executionRequests = deserializeExecutionRequests(ForkName.electra, serializedRequests);
 
       expect(executionRequests.deposits.length).toBe(2);
       expect(executionRequests.withdrawals.length).toBe(2);
       expect(executionRequests.consolidations.length).toBe(1);
 
-      expect(serializeExecutionRequests(executionRequests)).toEqual(serializedRequests);
+      expect(serializeExecutionRequests(ForkName.electra, executionRequests)).toEqual(serializedRequests);
     });
 
     it("should correctly deserialize if execution request is omitted", () => {
       const serializedOmitted = [serializedRequests[0], serializedRequests[2]];
 
-      const executionRequests = deserializeExecutionRequests(serializedOmitted);
+      const executionRequests = deserializeExecutionRequests(ForkName.electra, serializedOmitted);
 
       expect(executionRequests.deposits.length).toBe(2);
       expect(executionRequests.withdrawals.length).toBe(0);
       expect(executionRequests.consolidations.length).toBe(1);
 
-      expect(serializeExecutionRequests(executionRequests)).toEqual(serializedOmitted);
+      expect(serializeExecutionRequests(ForkName.electra, executionRequests)).toEqual(serializedOmitted);
     });
 
     it("should throw an error if execution requests order is incorrect", () => {
       const serializedUnordered = [serializedRequests[0], serializedRequests[2], serializedRequests[1]];
 
-      expect(() => deserializeExecutionRequests(serializedUnordered)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedUnordered)).toThrow();
     });
 
     it("should throw an error if execution request is missing type prefix", () => {
       const serializedNoPrefix = [serializedRequests[0], `0x${serializedRequests[1].slice(4)}`];
 
-      expect(() => deserializeExecutionRequests(serializedNoPrefix)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedNoPrefix)).toThrow();
     });
 
     it("should throw an error if execution request has incorrect prefix", () => {
       const serializedWrongPrefix = [serializedRequests[0], `0x05${serializedRequests[1].slice(4)}`];
 
-      expect(() => deserializeExecutionRequests(serializedWrongPrefix)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedWrongPrefix)).toThrow();
     });
 
     it("should throw an error if execution request has no data", () => {
       const serializedNoData = [serializedRequests[0], "0x01", serializedRequests[2]];
 
-      expect(() => deserializeExecutionRequests(serializedNoData)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedNoData)).toThrow();
+    });
+
+    it("should reject builder requests pre-gloas and deserialize them post-gloas", () => {
+      const gloasRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
+      };
+      const serialized = serializeExecutionRequests(ForkName.gloas, gloasRequests);
+
+      // post-gloas: builder requests are accepted and round-trip
+      const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
+      expect(deserialized.builderDeposits).toEqual(gloasRequests.builderDeposits);
+      expect(deserialized.builderExits).toEqual(gloasRequests.builderExits);
+      expect(serializeExecutionRequests(ForkName.gloas, deserialized)).toEqual(serialized);
+
+      // pre-gloas: builder request types must be rejected, not silently accepted
+      expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
+    });
+
+    it("should include empty builder fields when deserializing post-gloas without builder requests", () => {
+      // EL omits builder requests (no 0x03/0x04). Post-gloas result must still carry empty
+      // builderDeposits/builderExits so downstream gloas SSZ/hashTreeRoot never sees undefined.
+      const electraRequests: ExecutionRequests = {
+        deposits: [ssz.electra.DepositRequest.defaultValue()],
+        withdrawals: [ssz.electra.WithdrawalRequest.defaultValue()],
+        consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
+      };
+      const serialized = serializeExecutionRequests(ForkName.electra, electraRequests);
+
+      const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
+      expect(deserialized.deposits).toEqual(electraRequests.deposits);
+      expect(deserialized.builderDeposits).toEqual([]);
+      expect(deserialized.builderExits).toEqual([]);
     });
   });
 });

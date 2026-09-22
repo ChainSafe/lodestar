@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
@@ -29,13 +29,20 @@ export async function* onBeaconBlocksByRange(
   // starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
   const archiveMaxSlot = finalizedSlot;
 
-  const forkName = chain.config.getForkName(startSlot);
-  if (isForkPostFulu(forkName) && startSlot < chain.earliestAvailableSlot) {
-    chain.logger.verbose("Peer did not respect earliestAvailableSlot for BeaconBlocksByRange", {
+  // endSlot is exclusive, so highest served slot is endSlot - 1.
+  // Throw only when the entire requested range is below earliestAvailableSlot.
+  if (endSlot - 1 < chain.earliestAvailableSlot) {
+    chain.logger.verbose("Peer requested range before earliestAvailableSlot for BeaconBlocksByRange", {
       peer: prettyPrintPeerId(peerId),
       client: peerClient,
+      startSlot,
+      count,
+      earliestAvailableSlot: chain.earliestAvailableSlot,
     });
-    return;
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      `Requested range is before earliestAvailableSlot startSlot=${startSlot} count=${count} earliestAvailableSlot=${chain.earliestAvailableSlot}`
+    );
   }
 
   // Finalized range of blocks

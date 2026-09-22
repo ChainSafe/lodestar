@@ -1,8 +1,10 @@
+import {ForkName} from "@lodestar/params";
 import {MetricsRegister} from "@lodestar/utils";
-import {ProposerRewardType} from "./block/types.js";
+import {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
+import {isViewDUNodesPopulated} from "./util/ssz.js";
 
 export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
 
@@ -30,12 +32,45 @@ export function getMetrics(register: MetricsRegister) {
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    forkUpgradeTime: register.histogram<{fork: ForkName}>({
+      name: "lodestar_stfn_fork_upgrade_seconds",
+      help: "Time to upgrade the state at a fork boundary in seconds",
+      labelNames: ["fork"],
+      // The gloas upgrade is unbounded (see onboardBuildersTime), hence the long tail
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersTime: register.histogram({
+      name: "lodestar_stfn_gloas_onboard_builders_seconds",
+      help: "Time spent in onboardBuildersFromPendingDeposits at the gloas fork transition",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersDeposits: register.gauge<{outcome: "onboarded" | "topup" | "kept" | "dropped"}>({
+      name: "lodestar_stfn_gloas_onboard_builders_deposits",
+      help: "Pending deposits handled at the gloas fork transition, by outcome",
+      labelNames: ["outcome"],
+    }),
+    onboardBuildersSignatureChecks: register.gauge<{source: "cache" | "verified"}>({
+      name: "lodestar_stfn_gloas_onboard_builders_signature_checks",
+      help: "Builder deposit signature checks at the gloas fork transition. `verified` means the pre-verify cache missed and BLS ran inline, on the fork transition's critical path",
+      labelNames: ["source"],
+    }),
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
-      // TODO: Add metrics for each step
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    processBlockStepTime: register.histogram<{step: BlockProcessStep}>({
+      name: "lodestar_stfn_process_block_step_seconds",
+      help: "Time to call each step of process block in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+    }),
+    processOperationsStepTime: register.histogram<{step: ProcessOperationsStep}>({
+      name: "lodestar_stfn_process_operations_step_seconds",
+      help: "Time to call each step of process operations in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
     }),
     processBlockCommitTime: register.histogram({
       name: "lodestar_stfn_process_block_commit_seconds",
@@ -113,6 +148,10 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
     }),
+    progressiveBalancesMismatches: register.counter({
+      name: "lodestar_stfn_progressive_balances_mismatches_total",
+      help: "Total count of progressive balance cache mismatches",
+    }),
     proposerRewards: register.gauge<{type: ProposerRewardType}>({
       name: "lodestar_stfn_proposer_rewards_total",
       help: "Proposer reward by type per block",
@@ -159,11 +198,9 @@ export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 function isValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
-  return state.validators["nodesPopulated"] === true;
+  return isViewDUNodesPopulated(state.validators);
 }
 
 function isBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
-  return state.balances["nodesPopulated"] === true;
+  return isViewDUNodesPopulated(state.balances);
 }

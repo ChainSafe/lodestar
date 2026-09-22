@@ -1,7 +1,9 @@
+import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -16,8 +18,6 @@ import {
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
@@ -55,7 +55,10 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}));
+  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}), {
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
+    logger,
+  });
 
   let anchorState = opts.anchorState;
   let wsCheckpoint = opts.wsCheckpoint;
@@ -133,8 +136,7 @@ export async function getDevBeaconNode(
   );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {
@@ -152,7 +154,8 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     privateKey,
-    dataDir: ".",
+    dataDir: tmpDir.name,
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
     peerStoreDir,
     anchorState: new BeaconStateView(cachedState),
     wsCheckpoint,

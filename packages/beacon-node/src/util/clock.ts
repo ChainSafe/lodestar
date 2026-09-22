@@ -94,10 +94,7 @@ export class Clock extends EventEmitter implements IClock {
   }
   /**
    * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
-   * Otherwise return currentSlot
-   *
-   * Spec: phase0/p2p-interface.md - gossip validation uses `current_time + MAXIMUM_GOSSIP_CLOCK_DISPARITY < message_time`
-   * to reject future messages (strict `<`), so the boundary (exactly equal) is accepted, hence `<=` here.
+   * Spec: phase0/p2p-interface.md rejects future messages with strict `<`, hence `<=` here.
    */
   get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
@@ -123,9 +120,7 @@ export class Clock extends EventEmitter implements IClock {
 
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
-   *
-   * Uses `<=` for disparity checks because the spec rejects with strict `<`
-   * (phase0/p2p-interface.md), meaning the boundary (exactly equal) is accepted.
+   * Spec: phase0/p2p-interface.md rejects future messages with strict `<`, hence `<=`.
    */
   isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
     const currentSlot = this.currentSlot;
