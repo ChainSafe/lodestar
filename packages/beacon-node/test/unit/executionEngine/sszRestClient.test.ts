@@ -14,7 +14,9 @@ async function startServer(
   afterCallbacks: (() => Promise<void>)[],
   registerRoutes: (server: FastifyInstance) => void
 ): Promise<{url: string; seen: Seen[]}> {
-  const server = fastify({logger: false});
+  // forceCloseConnections lets afterEach's server.close() tear down promptly even when
+  // a test deliberately leaves a connection open (hijacked, never-ending response body).
+  const server = fastify({logger: false, forceCloseConnections: true});
   const seen: Seen[] = [];
   server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_req, body, done) => done(null, body));
   server.addHook("onRequest", async (req) => {
@@ -143,6 +145,51 @@ describe("SszRestClient", () => {
     let err: unknown;
     try {
       await client.requestJson("/engine/v1/identity");
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).not.toBeInstanceOf(SszRestError);
+    expect((err as {code: string}).code).toBe("ERR_ABORTED");
+  });
+
+  it("falls back to the raw body as detail for non-RFC-7807 JSON error bodies", async () => {
+    const rawBody = '{"code":-32000,"message":"boom"}';
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.get("/engine/v1/capabilities", async (_req, reply) =>
+        reply.code(500).header("Content-Type", "application/json").send(rawBody)
+      );
+    });
+    const client = new SszRestClient({baseUrl: url, clientVersionHeader: "LS/v0"});
+
+    let err: unknown;
+    try {
+      await client.requestJson("/engine/v1/capabilities");
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(SszRestError);
+    const sszErr = err as SszRestError;
+    expect(sszErr.status).toBe(500);
+    expect(sszErr.type).toBeUndefined();
+    expect(sszErr.detail).toBe(rawBody);
+  });
+
+  it("aborts a stalled 200 body read once the timeout elapses", async () => {
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.get("/engine/v1/payloads/1", (_req, reply) => {
+        reply.hijack();
+        reply.raw.writeHead(200, {"content-type": "application/octet-stream"});
+        reply.raw.write(Buffer.from([1]));
+        // Deliberately never end() the response — the client must time out reading it.
+      });
+    });
+    const client = new SszRestClient({baseUrl: url, clientVersionHeader: "LS/v0", timeout: 50});
+
+    let err: unknown;
+    try {
+      await client.requestSsz("GET", "/engine/v1/payloads/1");
     } catch (e) {
       err = e;
     }
