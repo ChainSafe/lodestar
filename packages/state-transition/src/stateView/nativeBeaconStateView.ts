@@ -672,18 +672,16 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     signedBlockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
-    modules: StateTransitionModules
+    _modules: StateTransitionModules
   ): IBeaconStateView {
-    const nativeOptions = modules.validatorMonitor ? {...options, validatorMonitor: true} : options;
     return new NativeBeaconStateView(
-      this.binding.stateTransition(signedBlockBytes, isBlindedBeaconBlock(signedBlock.message), nativeOptions),
+      this.binding.stateTransition(signedBlockBytes, isBlindedBeaconBlock(signedBlock.message), options),
       this.config
     );
   }
 
-  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
-    const nativeOptions = modules?.validatorMonitor ? {...opts, validatorMonitor: true} : opts;
-    return new NativeBeaconStateView(this.binding.processSlots(slot, nativeOptions), this.config);
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
+    return new NativeBeaconStateView(this.binding.processSlots(slot, opts), this.config);
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────
