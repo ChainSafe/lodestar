@@ -681,14 +681,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     );
   }
 
-   processSlots(
-     slot: Slot,
-     opts?: {dontTransferCache?: boolean},
-     modules?: StateTransitionModules
-   ): IBeaconStateView {
-    const nativeOptions = modules?.validatorMonitor
-      ? {...opts, validatorMonitor: true}
-      : opts;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
+    const nativeOptions = modules?.validatorMonitor ? {...opts, validatorMonitor: true} : opts;
     return new NativeBeaconStateView(this.binding.processSlots(slot, nativeOptions), this.config);
   }
 

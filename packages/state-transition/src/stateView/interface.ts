@@ -367,10 +367,7 @@ export type IBeaconStateViewNative = Omit<
     isBlinded: boolean,
     options?: StateTransitionOpts
   ): IBeaconStateViewNative;
-  processSlots(
-    slot: Slot,
-    opts?: {dontTransferCache?: boolean}
-  ): IBeaconStateViewNative;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
   withParentPayloadApplied(
     ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
   ): IBeaconStateViewNative;

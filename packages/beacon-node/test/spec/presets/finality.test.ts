@@ -1,11 +1,7 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
- import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
- import {
-   BeaconStateAllForks,
-   DataAvailabilityStatus,
-   ExecutionPayloadStatus,
- } from "@lodestar/state-transition";
+import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
