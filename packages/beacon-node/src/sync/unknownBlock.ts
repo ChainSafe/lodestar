@@ -173,7 +173,7 @@ export class BlockInputSync {
       this.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayloadImported);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
-      this.chain.clock.on(ClockEvent.slot, this.onClockSlot);
+      this.chain.clock.on(ClockEvent.slot, this.startPayloadPollAtSlot);
 
       // Seed the balancer with peers that connected before we subscribed
       for (const peerId of this.network.getConnectedPeers()) {
@@ -187,14 +187,14 @@ export class BlockInputSync {
       this.subscribedToNetworkEvents = true;
       // we subscribe mid-slot, and a root can be deferred at any point in the slot, so start this
       // slot's loop now instead of waiting for the next ClockEvent.slot
-      this.onClockSlot(this.chain.clock.currentSlot);
+      this.startPayloadPollAtSlot(this.chain.clock.currentSlot);
     }
   }
 
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
-    this.chain.clock.off(ClockEvent.slot, this.onClockSlot);
+    this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
     this.payloadPollAbortController?.abort();
     this.payloadPollAbortController = undefined;
     this.deferredPayloadRoots.clear();
@@ -269,7 +269,7 @@ export class BlockInputSync {
       if (data.slot === this.chain.clock.currentSlot) {
         // we receive the optimistic search, the poll loop searches it at PAYLOAD_DUE or on its next
         // tick. If that loop already returned - every root it watched was imported - this root waits
-        // for the next slot, where onClockSlot moves it to pendingPayloads. That is not the normal
+        // for the next slot, where startPayloadPollAtSlot moves it to pendingPayloads. That is not the normal
         // scenario, and in a forking condition it only delays the search of the extra root
         const deferred = this.deferredPayloadRoots.get(data.rootHex);
         if (deferred === undefined) {
@@ -834,7 +834,11 @@ export class BlockInputSync {
     }
   }
 
-  private onClockSlot = (slot: Slot): void => {
+  /**
+   * Start this slot's payload poll: end the previous slot's loop, move roots it never got to
+   * into pendingPayloads, then poll from PAYLOAD_DUE to the end of the slot.
+   */
+  private startPayloadPollAtSlot = (slot: Slot): void => {
     if (!isForkPostGloas(this.config.getForkName(slot))) {
       return;
     }
@@ -911,7 +915,7 @@ export class BlockInputSync {
         this.triggerUnknownBlockSearch();
         if (polls < tickCount - 1) {
           // no sleep after the last tick: the loop would otherwise end right at the slot boundary,
-          // where onClockSlot aborts it
+          // where startPayloadPollAtSlot aborts it
           await sleep(PAYLOAD_POLL_INTERVAL_MS, signal);
         }
       }
