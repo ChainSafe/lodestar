@@ -621,7 +621,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex, buffers);
+      // Pre-existing: buffers are not forwarded on JSON-RPC (see follow-up); REST path honours them.
+      return await this.getBlobsV2(versionedHashesHex);
     }
     return await this.getBlobsV1(versionedHashesHex);
   }
