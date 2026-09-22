@@ -946,8 +946,8 @@ export class BeaconChain implements IBeaconChain {
     onMismatch: ReconstructMismatchPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
-    const blindedIdxs: number[] = [];
+    const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
+    const blindedEnvelopeIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
       const {blockSlot, blockRootHex} = requests[i];
@@ -973,12 +973,12 @@ export class BeaconChain implements IBeaconChain {
         out[i] = archived.envelopeBytes;
         continue;
       }
-      blindeds.push(archived.blinded);
-      blindedIdxs.push(i);
+      blindedEnvelopes.push(archived.blinded);
+      blindedEnvelopeIdxs.push(i);
     }
 
-    if (blindeds.length > 0) {
-      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, blindeds);
+    if (blindedEnvelopes.length > 0) {
+      const rebuilt = await reconstructArchivedEnvelopes(this.executionEngine, blindedEnvelopes);
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
@@ -992,7 +992,7 @@ export class BeaconChain implements IBeaconChain {
           }
           continue;
         }
-        out[blindedIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[blindedEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
       }
     }
 

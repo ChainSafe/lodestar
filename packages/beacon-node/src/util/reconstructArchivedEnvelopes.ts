@@ -72,11 +72,11 @@ async function* reconstructBatch(
   logger: Logger,
   batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
-  const blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
+  const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Blinded) blindeds.push(entry.blinded);
+    if (entry.kind === ArchivedEnvelopeKind.Blinded) blindedEnvelopes.push(entry.blinded);
   }
-  const rebuilt = await reconstructEnvelopesBatch(executionEngine, blindeds);
+  const rebuilt = await reconstructEnvelopesBatch(executionEngine, blindedEnvelopes);
 
   let blindedIdx = 0;
   for (const entry of batch) {
@@ -108,11 +108,11 @@ async function* reconstructBatch(
  */
 export async function reconstructArchivedEnvelopes(
   executionEngine: IExecutionEngine,
-  blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[]
+  blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
-  for (let i = 0; i < blindeds.length; i += MAX_BODIES_REQUEST) {
-    out.push(...(await reconstructEnvelopesBatch(executionEngine, blindeds.slice(i, i + MAX_BODIES_REQUEST))));
+  for (let i = 0; i < blindedEnvelopes.length; i += MAX_BODIES_REQUEST) {
+    out.push(...(await reconstructEnvelopesBatch(executionEngine, blindedEnvelopes.slice(i, i + MAX_BODIES_REQUEST))));
   }
   return out;
 }
@@ -124,10 +124,10 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
 /** One EL round-trip. Aligned with the input; never throws per envelope, only ENGINE_UNAVAILABLE. */
 async function reconstructEnvelopesBatch(
   executionEngine: IExecutionEngine,
-  blindeds: gloas.SignedBlindedExecutionPayloadEnvelope[]
+  blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
-  if (blindeds.length === 0) return [];
-  const hashes = blindeds.map((blinded) => toRootHex(blinded.message.payload.blockHash));
+  if (blindedEnvelopes.length === 0) return [];
+  const hashes = blindedEnvelopes.map((blindedEnvelope) => toRootHex(blindedEnvelope.message.payload.blockHash));
 
   let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
   try {
@@ -140,15 +140,15 @@ async function reconstructEnvelopesBatch(
     );
   }
 
-  return blindeds.map((blinded, i) => {
-    const slot = blinded.message.payload.slotNumber;
+  return blindedEnvelopes.map((blindedEnvelope, i) => {
+    const slot = blindedEnvelope.message.payload.slotNumber;
     const body = bodies[i];
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
       return {slot, reason: "unavailable"};
     }
     try {
-      return signedBlindedEnvelopeToFull(blinded, {
+      return signedBlindedEnvelopeToFull(blindedEnvelope, {
         transactions: body.transactions,
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,
