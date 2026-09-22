@@ -1,7 +1,10 @@
-import {FastifyInstance, fastify} from "fastify";
+import {FastifyInstance, FastifyReply, fastify} from "fastify";
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, UintNumberType} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
@@ -9,13 +12,11 @@ import {
 import {SszRestClient} from "../../../src/execution/engine/sszRestClient.js";
 import {SszRestEngine} from "../../../src/execution/engine/sszRestEngine.js";
 
-// biome-ignore lint/suspicious/noExportsInTest: reused by Tasks 10-11's test files
-export type FakeEl = {server: FastifyInstance; url: string};
+type FakeEl = {server: FastifyInstance; url: string};
 
 // fastify 5 rejects routes registered after `listen()`, so `setup` must register every
 // route the test needs before the server starts listening.
-// biome-ignore lint/suspicious/noExportsInTest: reused by Tasks 10-11's test files
-export async function startFakeEl(
+async function startFakeEl(
   afterCallbacks: (() => Promise<void>)[],
   setup: (server: FastifyInstance) => void
 ): Promise<FakeEl> {
@@ -27,8 +28,7 @@ export async function startFakeEl(
   return {server, url};
 }
 
-// biome-ignore lint/suspicious/noExportsInTest: reused by Tasks 10-11's test files
-export function makeLogger(): Logger & {calls: {level: string; msg: string}[]} {
+function makeLogger(): Logger & {calls: {level: string; msg: string}[]} {
   const calls: {level: string; msg: string}[] = [];
   const mk = (level: string) => (msg: string) => calls.push({level, msg});
   return {
@@ -41,8 +41,7 @@ export function makeLogger(): Logger & {calls: {level: string; msg: string}[]} {
   } as never;
 }
 
-// biome-ignore lint/suspicious/noExportsInTest: reused by Tasks 10-11's test files
-export function makeEngine(url: string): {
+function makeEngine(url: string): {
   engine: SszRestEngine;
   logger: ReturnType<typeof makeLogger>;
   emitter: JsonRpcHttpClientEventEmitter;
@@ -149,5 +148,134 @@ describe("SszRestEngine / negotiation", () => {
 
     await expect(engine.identity()).rejects.toThrow(/internal/);
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Spec oracle containers for the fake EL's responses.
+const U8 = new UintNumberType(1);
+const R32 = new ByteVectorType(32);
+const OptR32 = new ListCompositeType(R32, 1);
+const OptStr = new ListCompositeType(new ByteListType(1024), 1);
+const OptId = new ListCompositeType(new ByteVectorType(8), 1);
+const PayloadStatusT = new ContainerType({status: U8, latestValidHash: OptR32, validationError: OptStr});
+const FcuRespT = new ContainerType({payloadStatus: PayloadStatusT, payloadId: OptId});
+const ReqListT = new ListCompositeType(new ByteListType(MAX_BYTES_PER_TRANSACTION), 256);
+const BuiltOsakaT = new ContainerType({
+  payload: ssz.deneb.ExecutionPayload,
+  blockValue: ssz.UintBn256,
+  blobsBundle: ssz.fulu.BlobsBundle,
+  executionRequests: ReqListT,
+  shouldOverrideBuilder: ssz.Boolean,
+});
+const sendSsz = (reply: FastifyReply, data: Uint8Array): void => {
+  reply.header("Content-Type", "application/octet-stream");
+  reply.send(Buffer.from(data));
+};
+const zero32 = new Uint8Array(32);
+const zeroHex = `0x${"00".repeat(32)}`;
+
+describe("SszRestEngine / hot path", () => {
+  const afterCallbacks: (() => Promise<void>)[] = [];
+  afterEach(async () => {
+    while (afterCallbacks.length) await afterCallbacks.pop()?.();
+  });
+
+  async function elWithForks(forks: string[], setup: (server: FastifyInstance) => void): Promise<FakeEl> {
+    return startFakeEl(afterCallbacks, (server) => {
+      server.get("/engine/v1/capabilities", async () => ({supported_forks: forks}));
+      setup(server);
+    });
+  }
+
+  it("newPayload posts the envelope with the fork header and decodes PayloadStatus", async () => {
+    let forkHeader: string | undefined;
+    let bodyLen = 0;
+    const {url} = await elWithForks(["cancun"], (server) => {
+      server.post("/engine/v1/payloads", async (req, reply) => {
+        forkHeader = req.headers["eth-execution-version"] as string;
+        bodyLen = (req.body as Buffer).length;
+        sendSsz(
+          reply,
+          PayloadStatusT.serialize({
+            status: 1,
+            latestValidHash: [zero32],
+            validationError: [new TextEncoder().encode("boom")],
+          })
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+
+    const res = await engine.newPayload(ForkName.deneb, ssz.deneb.ExecutionPayload.defaultValue(), zero32);
+
+    expect(forkHeader).toBe("cancun");
+    expect(bodyLen).toBeGreaterThan(0);
+    expect(res).toEqual({status: ExecutionPayloadStatus.INVALID, latestValidHash: zeroHex, validationError: "boom"});
+  });
+
+  it("forkchoiceUpdated returns payload_id as hex DATA", async () => {
+    const {url} = await elWithForks(["prague"], (server) => {
+      server.post("/engine/v1/forkchoice", async (req, reply) => {
+        expect(req.headers["eth-execution-version"]).toBe("prague");
+        sendSsz(
+          reply,
+          FcuRespT.serialize({
+            payloadStatus: {status: 0, latestValidHash: [zero32], validationError: []},
+            payloadId: [new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])],
+          })
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+
+    const res = await engine.forkchoiceUpdated(ForkName.electra, zeroHex, zeroHex, zeroHex, {
+      timestamp: 1,
+      prevRandao: zero32,
+      suggestedFeeRecipient: `0x${"22".repeat(20)}`,
+      withdrawals: [],
+      parentBeaconBlockRoot: zero32,
+    });
+
+    expect(res.payloadStatus.status).toBe(ExecutionPayloadStatus.VALID);
+    expect(res.payloadId).toBe("0x0102030405060708");
+  });
+
+  it("getPayload GETs /payloads/{id} with the fork header and decodes BuiltPayload", async () => {
+    let seenUrl = "";
+    const {url} = await elWithForks(["osaka"], (server) => {
+      server.get("/engine/v1/payloads/:id", async (req, reply) => {
+        seenUrl = req.url;
+        expect(req.headers["eth-execution-version"]).toBe("osaka");
+        const payload = ssz.deneb.ExecutionPayload.defaultValue();
+        payload.blockNumber = 11;
+        sendSsz(
+          reply,
+          BuiltOsakaT.serialize({
+            payload,
+            blockValue: 99n,
+            blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+            executionRequests: [],
+            shouldOverrideBuilder: true,
+          })
+        );
+      });
+    });
+    const {engine} = makeEngine(url);
+
+    const res = await engine.getPayload(ForkName.fulu, "0x0102030405060708");
+
+    expect(seenUrl).toBe("/engine/v1/payloads/0x0102030405060708");
+    expect(res.executionPayload.blockNumber).toBe(11);
+    expect(res.blockValue).toBe(99n);
+    expect(res.shouldOverrideBuilder).toBe(true);
+    expect(res.executionRequests).toEqual({deposits: [], withdrawals: [], consolidations: []});
+  });
+
+  it("a 204 on a hot-path endpoint is an error", async () => {
+    const {url} = await elWithForks(["cancun"], (server) => {
+      server.get("/engine/v1/payloads/:id", async (_req, reply) => reply.code(204).send());
+    });
+    const {engine} = makeEngine(url);
+    await expect(engine.getPayload(ForkName.deneb, "0x0102030405060708")).rejects.toThrow(/unexpected empty response/);
   });
 });

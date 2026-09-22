@@ -1,13 +1,25 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, RootHex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {PayloadAttributes} from "./interface.js";
 import {JsonRpcHttpClientEvent, JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
+import {PayloadId} from "./payloadIdCache.js";
 import {SszRequestOpts, SszRestClient, SszRestError} from "./sszRestClient.js";
 import {
+  DecodedBuiltPayload,
+  DecodedForkchoiceUpdateResponse,
+  DecodedPayloadStatus,
   MAX_BLOBS_REQUEST,
   MAX_BODIES_REQUEST,
   MAX_REQUEST_BODY_SIZE,
   RestCapabilities,
   clForkToElFork,
+  decodeBuiltPayload,
+  decodeForkchoiceUpdateResponse,
+  decodePayloadStatus,
+  encodeForkchoiceUpdate,
+  encodeNewPayload,
   parseCapabilities,
   parseIdentity,
 } from "./sszRestEncoding.js";
@@ -74,6 +86,52 @@ export class SszRestEngine {
       throw Error("SSZ-REST Engine API not available");
     }
     return parseIdentity(await this.json("/engine/v1/identity"));
+  }
+
+  /** `POST /engine/v1/payloads` — refactor.md § Payload submission. */
+  async newPayload(
+    fork: ForkName,
+    executionPayload: ExecutionPayload,
+    parentBeaconBlockRoot?: Uint8Array,
+    executionRequests?: ExecutionRequests
+  ): Promise<DecodedPayloadStatus> {
+    const body = encodeNewPayload(fork, executionPayload, parentBeaconBlockRoot, executionRequests);
+    const resp = await this.sszRequired("POST", "/engine/v1/payloads", {fork: clForkToElFork(fork), body});
+    return decodePayloadStatus(resp);
+  }
+
+  /** `POST /engine/v1/forkchoice` — refactor.md § Forkchoice update. */
+  async forkchoiceUpdated(
+    fork: ForkName,
+    headBlockHash: RootHex,
+    safeBlockHash: RootHex,
+    finalizedBlockHash: RootHex,
+    attributes?: PayloadAttributes
+  ): Promise<DecodedForkchoiceUpdateResponse> {
+    const body = encodeForkchoiceUpdate(
+      fork,
+      fromHex(headBlockHash),
+      fromHex(safeBlockHash),
+      fromHex(finalizedBlockHash),
+      attributes
+    );
+    const resp = await this.sszRequired("POST", "/engine/v1/forkchoice", {fork: clForkToElFork(fork), body});
+    return decodeForkchoiceUpdateResponse(resp);
+  }
+
+  /** `GET /engine/v1/payloads/{payloadId}` — refactor.md § Payload retrieval. */
+  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<DecodedBuiltPayload> {
+    const resp = await this.sszRequired("GET", `/engine/v1/payloads/${payloadId}`, {fork: clForkToElFork(fork)});
+    return decodeBuiltPayload(fork, resp);
+  }
+
+  /** Like `ssz()` but 204 is a protocol violation: only `/blobs/vN` may return it. */
+  private async sszRequired(method: "GET" | "POST", path: string, opts?: SszRequestOpts): Promise<Uint8Array> {
+    const resp = await this.ssz(method, path, opts);
+    if (resp === null) {
+      throw new SszRestError(204, undefined, "unexpected empty response", "No Content");
+    }
+    return resp;
   }
 
   private async probe(): Promise<RestCapabilities | null> {
