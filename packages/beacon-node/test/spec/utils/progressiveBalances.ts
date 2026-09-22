@@ -1,5 +1,11 @@
 import {expect} from "vitest";
-import {getMetrics} from "@lodestar/state-transition";
+import {
+  BeaconStateTransitionMetrics,
+  BeaconStateView,
+  IBeaconStateView,
+  beforeProcessEpoch,
+  getMetrics,
+} from "@lodestar/state-transition";
 import {RegistryMetricCreator} from "../../../src/metrics/index.js";
 
 export const progressiveBalancesMismatchesMetricName = "lodestar_stfn_progressive_balances_mismatches_total";
@@ -20,6 +26,12 @@ export async function expectNoProgressiveBalancesMismatches(
   const mismatches = metric?.values.reduce((sum, {value}) => sum + value, 0) ?? 0;
 
   expect(mismatches, `${testCaseName} incremented ${progressiveBalancesMismatchesMetricName}`).toBe(0);
+}
+
+export function expectValidProgressiveBalances(state: IBeaconStateView, metrics: BeaconStateTransitionMetrics): void {
+  const cachedState = (state as BeaconStateView).cachedState;
+  expect(cachedState, "progressive balance validation expects a BeaconStateView").toBeDefined();
+  beforeProcessEpoch(cachedState.clone(true), metrics);
 }
 
 export async function expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(

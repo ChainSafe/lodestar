@@ -214,7 +214,7 @@ const currentEpochParticipation = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
-  metrics?: BeaconStateTransitionMetrics | null
+  metrics?: Pick<BeaconStateTransitionMetrics, "progressiveBalancesMismatches"> | null
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
@@ -467,11 +467,11 @@ export function beforeProcessEpoch(
     const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
     const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
     if (currentTargetMismatch) {
-      metrics?.progressiveBalancesMismatches.inc({target: "current"});
+      metrics?.progressiveBalancesMismatches?.inc({target: "current"});
       epochCtx.currentTargetUnslashedBalanceIncrements = currTargetUnslStake;
     }
     if (previousTargetMismatch) {
-      metrics?.progressiveBalancesMismatches.inc({target: "previous"});
+      metrics?.progressiveBalancesMismatches?.inc({target: "previous"});
       epochCtx.previousTargetUnslashedBalanceIncrements = prevTargetUnslStake;
     }
   }
