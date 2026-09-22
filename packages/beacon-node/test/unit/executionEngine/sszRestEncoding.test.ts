@@ -1,5 +1,12 @@
 import {describe, expect, it} from "vitest";
-import {BitVectorType, ByteListType, ByteVectorType, ContainerType, ListCompositeType, type Type} from "@chainsafe/ssz";
+import {
+  BitVectorType,
+  ByteListType,
+  ByteVectorType,
+  ContainerType,
+  ListCompositeType,
+  type ValueOf,
+} from "@chainsafe/ssz";
 import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -118,6 +125,11 @@ const EnvelopeAmsterdam = new ContainerType({
   executionRequests: ReqList,
 });
 
+function payloadFor(fork: ForkName.bellatrix): ValueOf<typeof ssz.bellatrix.ExecutionPayload>;
+function payloadFor(
+  fork: ForkName.deneb | ForkName.electra | ForkName.fulu
+): ValueOf<typeof ssz.deneb.ExecutionPayload>;
+function payloadFor(fork: ForkName.gloas): ValueOf<typeof ssz.gloas.ExecutionPayload>;
 function payloadFor(fork: ForkName) {
   const p = ssz[fork as "bellatrix" | "capella" | "deneb" | "gloas"].ExecutionPayload.defaultValue();
   p.blockNumber = 7;
@@ -336,10 +348,10 @@ const BodyAmsterdam = new ContainerType({
   withdrawals: ssz.capella.Withdrawals,
   blockAccessList: new ByteListType(MAX_BYTES_PER_TRANSACTION),
 });
-const entry = <T extends ContainerType<Record<string, Type<unknown>>>>(body: T) =>
-  new ContainerType({available: ssz.Boolean, body});
-const response = <T extends ContainerType<Record<string, Type<unknown>>>>(e: T) =>
-  new ContainerType({entries: new ListCompositeType(e, 32)});
+// `ContainerType<any>` here (not a precisely-typed field bound) avoids ssz's view-variance
+// checks tripping across these differently-shaped concrete containers.
+const entry = (body: ContainerType<any>) => new ContainerType({available: ssz.Boolean, body});
+const response = (e: ContainerType<any>) => new ContainerType({entries: new ListCompositeType(e, 32)});
 const BodiesParis = response(entry(BodyParis));
 const BodiesShanghai = response(entry(BodyShanghai));
 const BodiesAmsterdam = response(entry(BodyAmsterdam));

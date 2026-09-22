@@ -5,67 +5,48 @@ import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
-import {encodeForkchoiceUpdatedRequest} from "../../../src/execution/engine/sszRestEncoding.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
+import {SszRestError} from "../../../src/execution/engine/sszRestClient.js";
 import {parseExecutionPayload} from "../../../src/execution/engine/types.js";
 import {RpcPayload} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
-const Uint8 = new UintNumberType(1);
-const Bytes8 = new ByteVectorType(8);
-const Bytes20 = new ByteVectorType(20);
-const Bytes32 = new ByteVectorType(32);
-const NullableHash = new ListCompositeType(Bytes32, 1);
-const NullablePayloadId = new ListCompositeType(Bytes8, 1);
-const ValidationErrorBytes = new ByteListType(1024);
+// --- spec oracle containers (refactor-ssz.md) ------------------------------------
+const U8 = new UintNumberType(1);
+const R32 = new ByteVectorType(32);
+const PayloadStatusT = new ContainerType({
+  status: U8,
+  latestValidHash: new ListCompositeType(R32, 1),
+  validationError: new ListCompositeType(new ByteListType(1024), 1),
+});
+const FcuRespT = new ContainerType({
+  payloadStatus: PayloadStatusT,
+  payloadId: new ListCompositeType(new ByteVectorType(8), 1),
+});
+const BlobT = new ByteVectorType(131072);
+const B48 = new ByteVectorType(48);
+const BlobsV1T = new ContainerType({
+  entries: new ListCompositeType(
+    new ContainerType({available: ssz.Boolean, contents: new ContainerType({blob: BlobT, proof: B48})}),
+    128
+  ),
+});
 
-const PayloadStatusV1 = new ContainerType(
-  {status: Uint8, latestValidHash: NullableHash, validationError: ValidationErrorBytes},
-  {typeName: "PayloadStatusV1"}
-);
-
-const ForkchoiceUpdatedResponseV1 = new ContainerType(
-  {
-    payloadStatus: PayloadStatusV1,
-    payloadId: NullablePayloadId,
-  },
-  {typeName: "ForkchoiceUpdatedResponseV1"}
-);
-
-const ForkchoiceStateV1 = new ContainerType(
-  {headBlockHash: Bytes32, safeBlockHash: Bytes32, finalizedBlockHash: Bytes32},
-  {typeName: "ForkchoiceStateV1"}
-);
-
-const PayloadAttributesV4 = new ContainerType(
-  {
-    timestamp: ssz.UintNum64,
-    prevRandao: Bytes32,
-    suggestedFeeRecipient: Bytes20,
-    withdrawals: ssz.capella.Withdrawals,
-    parentBeaconBlockRoot: Bytes32,
-    slotNumber: ssz.UintNum64,
-    targetGasLimit: ssz.UintNum64,
-  },
-  {typeName: "PayloadAttributesV4"}
-);
-
-const ForkchoiceUpdatedV4Request = new ContainerType(
-  {
-    forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: new ListCompositeType(PayloadAttributesV4, 1),
-  },
-  {typeName: "ForkchoiceUpdatedV4Request"}
-);
+const zero32 = new Uint8Array(32);
+const zeroHex = `0x${"00".repeat(32)}`;
+const validStatus = (): Uint8Array =>
+  PayloadStatusT.serialize({status: 0, latestValidHash: [zero32], validationError: []});
+const validFcu = (): Uint8Array =>
+  FcuRespT.serialize({payloadStatus: {status: 0, latestValidHash: [zero32], validationError: []}, payloadId: []});
 
 const executionPayloadRpc = {
-  blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-  parentHash: "0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
-  feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-  stateRoot: "0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
-  receiptsRoot: "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-  logsBloom:
-    "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  blockHash: zeroHex,
+  parentHash: zeroHex,
+  feeRecipient: `0x${"a9".repeat(20)}`,
+  stateRoot: zeroHex,
+  receiptsRoot: zeroHex,
+  logsBloom: `0x${"00".repeat(256)}`,
+  prevRandao: zeroHex,
   blockNumber: "0x1",
   gasLimit: "0x989680",
   gasUsed: "0x0",
@@ -73,287 +54,266 @@ const executionPayloadRpc = {
   extraData: "0x",
   baseFeePerGas: "0x7",
   transactions: [],
+  withdrawals: [],
+  blobGasUsed: "0x0",
+  excessBlobGas: "0x0",
 };
+const denebPayload = () => parseExecutionPayload(ForkName.deneb, executionPayloadRpc).executionPayload;
+const bellatrixPayload = () =>
+  parseExecutionPayload(ForkName.bellatrix, {
+    ...executionPayloadRpc,
+    withdrawals: undefined,
+    blobGasUsed: undefined,
+    excessBlobGas: undefined,
+  } as never).executionPayload;
 
-const validExecutionPayloadRpc = {...executionPayloadRpc, logsBloom: `0x${"00".repeat(256)}`};
-
-const forkChoiceHeadData = {
-  headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-  safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-  finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-};
-
-describe("ExecutionEngine / SSZ-REST", () => {
-  const afterCallbacks: (() => Promise<void> | void)[] = [];
-
-  afterEach(async () => {
-    while (afterCallbacks.length > 0) {
-      const callback = afterCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
-
-  it("encodes targetGasLimit in forkchoiceUpdated v4 payload attributes", () => {
-    const root = new Uint8Array(32);
-    const body = encodeForkchoiceUpdatedRequest(ForkName.gloas, root, root, root, {
-      timestamp: 1,
-      prevRandao: root,
-      suggestedFeeRecipient: `0x${"11".repeat(20)}`,
-      withdrawals: [],
-      parentBeaconBlockRoot: root,
-      slotNumber: 2,
-      targetGasLimit: 30_000_000,
-    });
-
-    const parsed = ForkchoiceUpdatedV4Request.deserialize(body);
-
-    expect(parsed.payloadAttributes[0].targetGasLimit).toBe(30_000_000);
-  });
-
-  it("does not call SSZ endpoint unless it is advertised by engine_exchangeCapabilities", async () => {
-    let sszNewPayloadRequests = 0;
-    let jsonRpcNewPayloadRequests = 0;
-
-    const executionEngine = await startExecutionEngine(
-      {
-        capabilities: ["engine_newPayloadV1"],
-        async onJsonRpc(payload) {
-          if (payload.method === "engine_newPayloadV1") {
-            jsonRpcNewPayloadRequests++;
-            return {status: "VALID", latestValidHash: executionPayloadRpc.blockHash, validationError: null};
-          }
-          return [];
-        },
-        sszRoutes: {
-          "/engine/v1/payloads": async (_req, reply) => {
-            sszNewPayloadRequests++;
-            reply.code(500).send("SSZ endpoint should not be called");
-          },
-        },
-      },
-      afterCallbacks
-    );
-
-    await executionEngine.notifyNewPayload(
-      ForkName.bellatrix,
-      parseExecutionPayload(ForkName.bellatrix, validExecutionPayloadRpc).executionPayload
-    );
-
-    expect(sszNewPayloadRequests).toBe(0);
-    expect(jsonRpcNewPayloadRequests).toBe(1);
-  });
-
-  it("does not fall back to JSON-RPC when an advertised SSZ endpoint returns a semantic HTTP error", async () => {
-    let jsonRpcNewPayloadRequests = 0;
-
-    const executionEngine = await startExecutionEngine(
-      {
-        capabilities: ["POST /engine/v1/payloads"],
-        async onJsonRpc(payload) {
-          if (payload.method === "engine_newPayloadV1") {
-            jsonRpcNewPayloadRequests++;
-            return {status: "VALID", latestValidHash: executionPayloadRpc.blockHash, validationError: null};
-          }
-          return [];
-        },
-        sszRoutes: {
-          "/engine/v1/payloads": async (_req, reply) => {
-            reply.code(400).send("Malformed SSZ");
-          },
-        },
-      },
-      afterCallbacks
-    );
-
-    await expect(
-      executionEngine.notifyNewPayload(
-        ForkName.bellatrix,
-        parseExecutionPayload(ForkName.bellatrix, validExecutionPayloadRpc).executionPayload
-      )
-    ).rejects.toThrow("SSZ-REST error 400: Malformed SSZ");
-
-    expect(jsonRpcNewPayloadRequests).toBe(0);
-  });
-
-  it("pads SSZ getBlobsV1 response with null when the EL returns fewer blobs than requested", async () => {
-    let sszGetBlobsRequests = 0;
-    let jsonRpcGetBlobsRequests = 0;
-
-    const executionEngine = await startExecutionEngine(
-      {
-        capabilities: ["POST /engine/v1/blobs"],
-        async onJsonRpc(payload) {
-          if (payload.method === "engine_getBlobsV1") {
-            jsonRpcGetBlobsRequests++;
-            return [null];
-          }
-          return [];
-        },
-        sszRoutes: {
-          "/engine/v1/blobs": async (_req, reply) => {
-            sszGetBlobsRequests++;
-            // Spec v1 has no per-element nullability; we return an empty list
-            // to simulate "no blobs found" and rely on the http.ts path to pad
-            // back up to the request length.
-            sendSsz(reply, emptyGetBlobsV1Response());
-          },
-        },
-      },
-      afterCallbacks
-    );
-
-    const response = await executionEngine.getBlobs(ForkName.deneb, [new Uint8Array(32)]);
-
-    expect(response).toEqual([null]);
-    expect(sszGetBlobsRequests).toBe(1);
-    expect(jsonRpcGetBlobsRequests).toBe(0);
-  });
-
-  it("serializes SSZ newPayload and forkchoiceUpdated through the Engine queue", async () => {
-    const events: string[] = [];
-    let releaseNewPayload = (): void => {
-      throw Error("releaseNewPayload called before request started");
-    };
-
-    const executionEngine = await startExecutionEngine(
-      {
-        capabilities: ["POST /engine/v1/payloads", "POST /engine/v1/forkchoice"],
-        sszRoutes: {
-          "/engine/v1/payloads": async (_req, reply) => {
-            events.push("newPayload:start");
-            await new Promise<void>((resolve) => {
-              releaseNewPayload = resolve;
-            });
-            events.push("newPayload:end");
-            sendSsz(reply, validPayloadStatus());
-          },
-          "/engine/v1/forkchoice": async (_req, reply) => {
-            events.push("forkchoice:start");
-            sendSsz(reply, validForkchoiceUpdatedResponse());
-          },
-        },
-      },
-      afterCallbacks
-    );
-
-    const newPayloadPromise = executionEngine.notifyNewPayload(
-      ForkName.bellatrix,
-      parseExecutionPayload(ForkName.bellatrix, validExecutionPayloadRpc).executionPayload
-    );
-
-    await waitUntil(() => events.includes("newPayload:start"));
-
-    const forkchoicePromise = executionEngine.notifyForkchoiceUpdate(
-      ForkName.bellatrix,
-      forkChoiceHeadData.headBlockHash,
-      forkChoiceHeadData.safeBlockHash,
-      forkChoiceHeadData.finalizedBlockHash
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    expect(events).toEqual(["newPayload:start"]);
-
-    releaseNewPayload();
-    await Promise.all([newPayloadPromise, forkchoicePromise]);
-
-    expect(events).toEqual(["newPayload:start", "newPayload:end", "forkchoice:start"]);
-  });
-});
-
-type SszRouteHandler = (req: FastifyRequest, reply: FastifyReply) => Promise<void> | void;
-
-type EngineStubOpts = {
-  capabilities: string[];
+type Handler = (req: FastifyRequest, reply: FastifyReply) => Promise<unknown> | unknown;
+type StubOpts = {
+  /** undefined -> /capabilities answers 404 (legacy EL) */
+  capabilities?: object;
   onJsonRpc?: (payload: RpcPayload) => Promise<unknown> | unknown;
-  sszRoutes?: Partial<Record<string, SszRouteHandler>>;
+  routes?: {method: "GET" | "POST"; path: string; handler: Handler}[];
 };
-
-async function startExecutionEngine(
-  opts: EngineStubOpts,
-  afterCallbacks: (() => Promise<void> | void)[]
-): Promise<IExecutionEngine> {
-  const controller = new AbortController();
-  const server = fastify({logger: false});
-
-  server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_req, body, done) => {
-    done(null, body);
-  });
-
-  server.post("/", async (req) => {
-    const payload = req.body as RpcPayload;
-    if (payload.method === "engine_exchangeCapabilities") {
-      return {jsonrpc: "2.0", id: 1, result: opts.capabilities};
-    }
-    if (payload.method === "engine_getClientVersionV1") {
-      return {jsonrpc: "2.0", id: 1, result: [{code: "GE", name: "geth", version: "test", commit: "0x00000000"}]};
-    }
-    return {jsonrpc: "2.0", id: 1, result: await opts.onJsonRpc?.(payload)};
-  });
-
-  for (const [path, handler] of Object.entries(opts.sszRoutes ?? {})) {
-    if (!handler) continue;
-    server.post(path, handler);
-  }
-
-  afterCallbacks.push(async () => {
-    controller.abort();
-    await server.close();
-  });
-
-  const baseUrl = await server.listen({host: "127.0.0.1", port: 0});
-
-  return initializeExecutionEngine(
-    {
-      mode: "http",
-      urls: [baseUrl],
-      retries: defaultExecutionEngineHttpOpts.retries,
-      retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-      sszRest: true,
-    },
-    {signal: controller.signal, logger: console as unknown as Logger}
-  );
-}
-
-function validPayloadStatus(): Uint8Array {
-  return PayloadStatusV1.serialize({
-    status: 0,
-    latestValidHash: [new Uint8Array(32)],
-    validationError: new Uint8Array(),
-  });
-}
-
-function validForkchoiceUpdatedResponse(): Uint8Array {
-  return ForkchoiceUpdatedResponseV1.serialize({
-    payloadStatus: {
-      status: 0,
-      latestValidHash: [new Uint8Array(32)],
-      validationError: new Uint8Array(),
-    },
-    payloadId: [],
-  });
-}
-
-const Bytes48 = new ByteVectorType(48);
-const BlobBytes = new ByteVectorType(131072);
-const BlobAndProofV1 = new ContainerType({blob: BlobBytes, proof: Bytes48}, {typeName: "BlobAndProofV1"});
-const GetBlobsV1Response = new ContainerType(
-  {blobsAndProofs: new ListCompositeType(BlobAndProofV1, 128)},
-  {typeName: "GetBlobsV1Response"}
-);
-
-function emptyGetBlobsV1Response(): Uint8Array {
-  return GetBlobsV1Response.serialize({blobsAndProofs: []});
-}
 
 function sendSsz(reply: FastifyReply, data: Uint8Array): void {
   reply.header("Content-Type", "application/octet-stream");
   reply.send(Buffer.from(data));
 }
 
+async function startEngine(
+  opts: StubOpts,
+  after: (() => Promise<void>)[]
+): Promise<{engine: IExecutionEngine; jsonRpcCalls: string[]}> {
+  const controller = new AbortController();
+  const server = fastify({logger: false});
+  const jsonRpcCalls: string[] = [];
+  server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_req, body, done) => done(null, body));
+
+  server.post("/", async (req) => {
+    const payload = req.body as RpcPayload;
+    jsonRpcCalls.push(payload.method);
+    if (payload.method === "engine_getClientVersionV1") {
+      return {jsonrpc: "2.0", id: 1, result: [{code: "GE", name: "geth", version: "test", commit: "0x00000000"}]};
+    }
+    return {jsonrpc: "2.0", id: 1, result: await opts.onJsonRpc?.(payload)};
+  });
+  server.get("/engine/v1/capabilities", async (_req, reply) =>
+    opts.capabilities ? opts.capabilities : reply.code(404).type("text/plain").send("not found")
+  );
+  server.get("/engine/v1/identity", async () => [{code: "GE", name: "geth", version: "test", commit: "0x00000000"}]);
+  for (const r of opts.routes ?? []) {
+    if (r.method === "GET") server.get(r.path, r.handler);
+    else server.post(r.path, r.handler);
+  }
+
+  after.push(async () => {
+    controller.abort();
+    await server.close();
+  });
+  const url = await server.listen({host: "127.0.0.1", port: 0});
+  const engine = initializeExecutionEngine(
+    {mode: "http", urls: [url], retries: 0, retryDelay: defaultExecutionEngineHttpOpts.retryDelay, sszRest: true},
+    {signal: controller.signal, logger: console as unknown as Logger}
+  );
+  return {engine, jsonRpcCalls};
+}
+
 async function waitUntil(predicate: () => boolean): Promise<void> {
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 100; i++) {
     if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((r) => setTimeout(r, 10));
   }
   throw Error("Timed out waiting for condition");
 }
+
+describe("ExecutionEngineHttp / SSZ-REST dispatch", () => {
+  const after: (() => Promise<void>)[] = [];
+  afterEach(async () => {
+    while (after.length) await after.pop()?.();
+  });
+
+  it("uses JSON-RPC for everything when /capabilities is 404", async () => {
+    let restHits = 0;
+    const {engine, jsonRpcCalls} = await startEngine(
+      {
+        onJsonRpc: (p) =>
+          p.method === "engine_newPayloadV3"
+            ? {status: "VALID", latestValidHash: zeroHex, validationError: null}
+            : null,
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/payloads",
+            handler: () => {
+              restHits++;
+            },
+          },
+        ],
+      },
+      after
+    );
+    const res = await engine.notifyNewPayload(ForkName.deneb, denebPayload(), [], zero32);
+    expect(res.status).toBe(ExecutionPayloadStatus.VALID);
+    expect(restHits).toBe(0);
+    expect(jsonRpcCalls).toContain("engine_newPayloadV3");
+  });
+
+  it("routes advertised forks to REST and unadvertised forks to JSON-RPC", async () => {
+    let restHits = 0;
+    const {engine, jsonRpcCalls} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"]},
+        onJsonRpc: (p) =>
+          p.method === "engine_newPayloadV1"
+            ? {status: "VALID", latestValidHash: zeroHex, validationError: null}
+            : null,
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/payloads",
+            handler: (_r, reply) => {
+              restHits++;
+              sendSsz(reply, validStatus());
+            },
+          },
+        ],
+      },
+      after
+    );
+    await engine.notifyNewPayload(ForkName.deneb, denebPayload(), [], zero32);
+    expect(restHits).toBe(1);
+    await engine.notifyNewPayload(ForkName.bellatrix, bellatrixPayload());
+    expect(restHits).toBe(1);
+    expect(jsonRpcCalls).toContain("engine_newPayloadV1");
+    expect(jsonRpcCalls).not.toContain("engine_newPayloadV3");
+  });
+
+  it("does not fall back to JSON-RPC on a REST error; engine state becomes SYNCING", async () => {
+    const {engine, jsonRpcCalls} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"]},
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/forkchoice",
+            handler: (_r, reply) =>
+              reply
+                .code(409)
+                .header("Content-Type", "application/problem+json")
+                .send({type: "/engine-api/errors/invalid-forkchoice"}),
+          },
+        ],
+      },
+      after
+    );
+    const err = await engine.notifyForkchoiceUpdate(ForkName.deneb, zeroHex, zeroHex, zeroHex).catch((e) => e);
+    expect(err).toBeInstanceOf(SszRestError);
+    expect(err.type).toBe("/engine-api/errors/invalid-forkchoice");
+    expect(jsonRpcCalls.filter((m) => m.startsWith("engine_forkchoiceUpdated"))).toEqual([]);
+    expect(engine.state).toBe(ExecutionEngineState.SYNCING);
+  });
+
+  it("REST newPayload INVALID maps to the same response as JSON-RPC and is not ELERROR", async () => {
+    const {engine} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"]},
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/payloads",
+            handler: (_r, reply) =>
+              sendSsz(
+                reply,
+                PayloadStatusT.serialize({
+                  status: 1,
+                  latestValidHash: [zero32],
+                  validationError: [new TextEncoder().encode("nope")],
+                })
+              ),
+          },
+        ],
+      },
+      after
+    );
+    const res = await engine.notifyNewPayload(ForkName.deneb, denebPayload(), [], zero32);
+    expect(res).toEqual({status: ExecutionPayloadStatus.INVALID, latestValidHash: zeroHex, validationError: "nope"});
+  });
+
+  it("blobs: v1 partial -> null at index; revision not advertised -> JSON-RPC", async () => {
+    let restHits = 0;
+    const {engine, jsonRpcCalls} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"], independently_versioned: {blobs: ["v1"]}},
+        onJsonRpc: (p) => (p.method === "engine_getBlobsV2" ? null : undefined),
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/blobs/v1",
+            handler: (_r, reply) => {
+              restHits++;
+              sendSsz(
+                reply,
+                BlobsV1T.serialize({
+                  entries: [
+                    {available: false, contents: {blob: new Uint8Array(131072), proof: new Uint8Array(48)}},
+                    {available: true, contents: {blob: new Uint8Array(131072), proof: new Uint8Array(48)}},
+                  ],
+                })
+              );
+            },
+          },
+        ],
+      },
+      after
+    );
+    const v1 = await engine.getBlobs(ForkName.deneb, [zero32, zero32]);
+    expect(v1[0]).toBeNull();
+    expect(v1[1]).not.toBeNull();
+    expect(restHits).toBe(1);
+
+    const v2 = await engine.getBlobs(ForkName.fulu, [zero32]);
+    expect(v2).toBeNull();
+    expect(jsonRpcCalls).toContain("engine_getBlobsV2");
+  });
+
+  it("serializes REST newPayload and forkchoiceUpdated through the engine queue", async () => {
+    const events: string[] = [];
+    let release = (): void => undefined;
+    const {engine} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"]},
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/payloads",
+            handler: async (_r, reply) => {
+              events.push("newPayload:start");
+              await new Promise<void>((resolve) => {
+                release = resolve;
+              });
+              events.push("newPayload:end");
+              sendSsz(reply, validStatus());
+            },
+          },
+          {
+            method: "POST",
+            path: "/engine/v1/forkchoice",
+            handler: (_r, reply) => {
+              events.push("forkchoice:start");
+              sendSsz(reply, validFcu());
+            },
+          },
+        ],
+      },
+      after
+    );
+    const np = engine.notifyNewPayload(ForkName.deneb, denebPayload(), [], zero32);
+    await waitUntil(() => events.includes("newPayload:start"));
+    const fcu = engine.notifyForkchoiceUpdate(ForkName.deneb, zeroHex, zeroHex, zeroHex);
+    await new Promise((r) => setTimeout(r, 25));
+    expect(events).toEqual(["newPayload:start"]);
+    release();
+    await Promise.all([np, fcu]);
+    expect(events).toEqual(["newPayload:start", "newPayload:end", "forkchoice:start"]);
+  });
+});
