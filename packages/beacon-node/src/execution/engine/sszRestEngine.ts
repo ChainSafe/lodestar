@@ -70,11 +70,20 @@ export class SszRestEngine {
 
   /** `GET /engine/v1/identity` — same shape as `engine_getClientVersionV1`'s result. */
   async identity(): Promise<ClientVersionRpc[]> {
+    if ((await this.capabilities) === null) {
+      throw Error("SSZ-REST Engine API not available");
+    }
     return parseIdentity(await this.json("/engine/v1/identity"));
   }
 
   private async probe(): Promise<RestCapabilities | null> {
     try {
+      // Deliberately uses `this.client` directly, not `this.json()`: negotiation
+      // failures (404 from a legacy JSON-RPC-only EL, connection refused, malformed
+      // body) are a normal outcome here, not an engine call failure, and must not
+      // feed `this.modules.emitter` — emitting ERROR would make
+      // ExecutionEngineHttp.updateEngineState flip to SYNCING/OFFLINE against an
+      // otherwise healthy EL that simply doesn't speak SSZ-REST.
       const caps = parseCapabilities(await this.client.requestJson("/engine/v1/capabilities"));
       this.modules.logger.info("SSZ-REST Engine API available", {
         forks: [...caps.supportedForks].join(","),

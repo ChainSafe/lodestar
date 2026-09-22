@@ -121,6 +121,21 @@ describe("SszRestEngine / negotiation", () => {
     expect(onResponse).toHaveBeenCalledTimes(1);
   });
 
+  it("identity rejects without an HTTP request when REST is unavailable", async () => {
+    let identityRequests = 0;
+    const {url} = await startFakeEl(afterCallbacks, (server) => {
+      server.get("/engine/v1/capabilities", async (_req, reply) => reply.code(404).send("legacy"));
+      server.get("/engine/v1/identity", async () => {
+        identityRequests++;
+        return [];
+      });
+    });
+    const {engine} = makeEngine(url);
+
+    await expect(engine.identity()).rejects.toThrow(/not available/);
+    expect(identityRequests).toBe(0);
+  });
+
   it("emits ERROR and rethrows on a failed request", async () => {
     const {url} = await startFakeEl(afterCallbacks, (server) => {
       server.get("/engine/v1/capabilities", async () => ({supported_forks: []}));
