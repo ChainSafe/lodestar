@@ -1,12 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {LogLevel} from "@lodestar/logger";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toSignedCompactEnvelope} from "../../../src/chain/archiveStore/utils/compactEnvelope.js";
 import {
-  ReconstructByRangeOpts,
   isRebuildMiss,
   reconstructArchivedEnvelopes,
   reconstructArchivedEnvelopesByRange,
@@ -53,15 +51,11 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
   }
 
-  // Everything in the archive is inside the serving window unless a test says otherwise
-  const inWindow: ReconstructByRangeOpts = {servingWindowStartSlot: 0};
-
   // Collect the range as deserialized envelopes (the generator yields serialized bytes, as served on the wire),
   // plus the slot the stream stopped short at, if any. Any other error propagates.
   async function rangeWith(
     start: number,
-    end: number,
-    opts: ReconstructByRangeOpts = inWindow
+    end: number
   ): Promise<{out: {slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]; unservableSlot: number | null}> {
     const out = [];
     try {
@@ -70,8 +64,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
         executionEngine,
         logger,
         start,
-        end,
-        opts
+        end
       )) {
         out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
       }
@@ -201,36 +194,6 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
   });
 
-  it("still attempts compact entries below the serving window: the EL's retention is the floor, not the spec window", async () => {
-    // window starts at 12, but the EL still has 10 and 11 → served; the window is advisory
-    const fulls = [await seed(10), await seed(11), await seed(12)];
-    elServes(fulls);
-    const {out, unservableSlot} = await rangeWith(10, 13, {servingWindowStartSlot: 12});
-    expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
-    expect(unservableSlot).toBeNull();
-  });
-
-  it("logs a miss below the serving window at debug and inside it at warn", async () => {
-    const debug = vi.spyOn(logger, LogLevel.debug);
-    const warn = vi.spyOn(logger, LogLevel.warn);
-    const fulls = [await seed(10), await seed(20)];
-    elServes([]); // EL has neither
-
-    await rangeWith(10, 11, {servingWindowStartSlot: 15});
-    expect(warn).not.toHaveBeenCalled();
-    expect(debug).toHaveBeenCalledWith(
-      expect.stringContaining("below serving window"),
-      expect.objectContaining({slot: 10})
-    );
-
-    await rangeWith(20, 21, {servingWindowStartSlot: 15});
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("inside serving window"),
-      expect.objectContaining({slot: 20})
-    );
-    expect(fulls).toHaveLength(2);
-  });
-
   it("wraps an EL transport error as ENGINE_UNAVAILABLE (transient)", async () => {
     await seed(10);
     getPayloadBodiesByHashV2.mockRejectedValue(new Error("ECONNREFUSED"));
@@ -252,7 +215,7 @@ describe("reconstructArchivedEnvelopesByRange", () => {
     const yielded: number[] = [];
     let err: unknown = null;
     try {
-      for await (const {slot} of reconstructArchivedEnvelopesByRange(db, executionEngine, logger, 0, 33, inWindow)) {
+      for await (const {slot} of reconstructArchivedEnvelopesByRange(db, executionEngine, logger, 0, 33)) {
         yielded.push(slot);
       }
     } catch (e) {

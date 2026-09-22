@@ -30,19 +30,12 @@ export type RebuildMiss =
   /** EL bodies do not hash to the archived payloadRoot (local inconsistency) */
   | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
 
-export type ReconstructByRangeOpts = {
-  /**
-   * Start of the MIN_EPOCHS_FOR_BLOCK_REQUESTS window. Does not gate what is attempted (every compact
-   * entry is tried; the EL's null is the floor), only the log level of a miss: debug below the window,
-   * warn inside it since the EL is then failing to serve what the CL must.
-   */
-  servingWindowStartSlot: Slot;
-};
-
 /**
  * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes. Full entries are served
  * as `bytes.subarray(1)` without deserializing; compact ones are rebuilt from EL bodies, 32 per
- * round-trip.
+ * round-trip. Every compact entry is attempted regardless of age: the spec requires serving
+ * MIN_EPOCHS_FOR_BLOCK_REQUESTS and allows more, and how much more is decided by the EL's block
+ * access list retention.
  *
  * The by-range spec inherits BeaconBlocksByRange v2 semantics: consecutive, MAY be short. A hole
  * looks like a lying peer to one that already holds the blocks, so the stream ends at the first
@@ -58,8 +51,7 @@ export async function* reconstructArchivedEnvelopesByRange(
   executionEngine: IExecutionEngine,
   logger: Logger,
   startSlot: Slot,
-  endSlot: Slot,
-  opts: ReconstructByRangeOpts
+  endSlot: Slot
 ): AsyncIterable<SlotEnvelopeBytes> {
   const archive = db.executionPayloadEnvelopeArchive;
   let batch: RangeEntry[] = [];
@@ -67,12 +59,12 @@ export async function* reconstructArchivedEnvelopesByRange(
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelopeBinary(bytes)});
     if (batch.length === MAX_BODIES_REQUEST) {
-      yield* reconstructBatch(executionEngine, logger, batch, opts);
+      yield* reconstructBatch(executionEngine, logger, batch);
       batch = [];
     }
   }
   if (batch.length > 0) {
-    yield* reconstructBatch(executionEngine, logger, batch, opts);
+    yield* reconstructBatch(executionEngine, logger, batch);
   }
 }
 
@@ -83,8 +75,7 @@ export async function* reconstructArchivedEnvelopesByRange(
 async function* reconstructBatch(
   executionEngine: IExecutionEngine,
   logger: Logger,
-  batch: RangeEntry[],
-  {servingWindowStartSlot}: ReconstructByRangeOpts
+  batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
   const compacts: SignedCompactExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
@@ -100,18 +91,11 @@ async function* reconstructBatch(
     }
     const result = rebuilt[compactIdx++];
     if (isRebuildMiss(result)) {
+      // Peer-triggered, so debug: a persistent local mismatch would otherwise log on every request
       if (result.reason === "mismatch") {
-        logger.error("Archived envelope failed payload root check against EL bodies", {slot: entry.slot}, result.error);
-      } else if (entry.slot < servingWindowStartSlot) {
-        logger.debug("EL cannot serve bodies for archived envelope below serving window, ending range", {
-          slot: entry.slot,
-          servingWindowStartSlot,
-        });
+        logger.debug("Archived envelope failed payload root check against EL bodies", {slot: entry.slot}, result.error);
       } else {
-        logger.warn("EL cannot serve bodies for archived envelope inside serving window, ending range", {
-          slot: entry.slot,
-          servingWindowStartSlot,
-        });
+        logger.debug("EL cannot serve bodies for archived envelope, ending range", {slot: entry.slot});
       }
       throw new EnvelopeReconstructionError(
         {code: EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE, slot: entry.slot},

@@ -988,7 +988,7 @@ export class BeaconChain implements IBeaconChain {
         if (isRebuildMiss(result)) {
           if (result.reason === "mismatch") {
             if (onMismatch === "throw") throw result.error;
-            this.logger.error(
+            this.logger.debug(
               "Archived envelope failed payload root check against EL bodies",
               {slot: result.slot},
               result.error

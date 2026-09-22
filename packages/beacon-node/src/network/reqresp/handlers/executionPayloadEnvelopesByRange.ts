@@ -1,9 +1,9 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {reconstructArchivedEnvelopesByRange} from "../../../chain/archiveStore/utils/reconstructArchivedEnvelopes.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../chain/errors/index.js";
@@ -43,9 +43,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
   const archiveMaxSlot = finalizedSlot - 1;
 
   if (startSlot <= archiveMaxSlot) {
-    const servingWindowStartSlot = computeStartSlotAtEpoch(
-      Math.max(chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, GENESIS_EPOCH)
-    );
     let yielded = 0;
     try {
       for await (const {slot, envelopeBytes} of reconstructArchivedEnvelopesByRange(
@@ -53,8 +50,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
         chain.executionEngine,
         chain.logger,
         startSlot,
-        Math.min(endSlot, archiveMaxSlot + 1),
-        {servingWindowStartSlot}
+        Math.min(endSlot, archiveMaxSlot + 1)
       )) {
         yielded++;
         yield {
