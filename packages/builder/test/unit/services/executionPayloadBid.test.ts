@@ -66,6 +66,40 @@ describe("createExecutionPayloadBid", () => {
     expect(bid.executionRequestsRoot).toEqual(ssz.heze.ExecutionRequests.hashTreeRoot(payload.executionRequests));
   });
 
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number("0x20000000000001"), Number("0xffffffffffffffff")])(
+    "rejects an inexact or invalid payload gas limit %s",
+    (gasLimit) => {
+      const payload = createBuiltPayload(ForkName.gloas);
+      payload.executionPayload.gasLimit = gasLimit;
+      expect(() =>
+        createExecutionPayloadBid({
+          fork: ForkName.gloas,
+          slot,
+          parentBlockRoot,
+          builderIndex,
+          feeRecipient,
+          value: 1,
+          payload,
+        })
+      ).toThrowError(expect.objectContaining({type: {code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT, gasLimit}}));
+    }
+  );
+
+  it("preserves the maximum safely representable gas limit", () => {
+    const payload = createBuiltPayload(ForkName.gloas);
+    payload.executionPayload.gasLimit = Number.MAX_SAFE_INTEGER;
+    const bid = createExecutionPayloadBid({
+      fork: ForkName.gloas,
+      slot,
+      parentBlockRoot,
+      builderIndex,
+      feeRecipient,
+      value: 1,
+      payload,
+    });
+    expect(bid.gasLimit).toBe(BigInt(Number.MAX_SAFE_INTEGER));
+  });
+
   it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
     "rejects invalid bid value %s",
     (value) => {

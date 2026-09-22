@@ -25,11 +25,13 @@ export type ExecutionPayloadBidInput = GloasBidInput | HezeBidInput;
 export enum ExecutionPayloadBidErrorCode {
   FORK_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_FORK_MISMATCH",
   INVALID_VALUE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_VALUE",
+  INVALID_GAS_LIMIT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_GAS_LIMIT",
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_SLOT_MISMATCH",
   BLOCK_HASH_EQUALS_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT",
 }
 
 export type ExecutionPayloadBidErrorType =
+  | {code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT; gasLimit: number}
   | {code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH; slot: Slot; payloadSlot: Slot}
   | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT}
   | {
@@ -62,6 +64,12 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
   }
 
   const {executionPayload, executionRequests, blobsBundle} = input.payload;
+  if (!Number.isSafeInteger(executionPayload.gasLimit) || executionPayload.gasLimit < 0) {
+    throw new ExecutionPayloadBidError({
+      code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT,
+      gasLimit: executionPayload.gasLimit,
+    });
+  }
   if (executionPayload.slotNumber !== input.slot) {
     throw new ExecutionPayloadBidError({
       code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH,
