@@ -155,8 +155,22 @@ export class SszRestEngine {
     return decodeBodiesResponse(fork, resp);
   }
 
-  /** `/blobs/vN` revision Lodestar uses for a fork: v1 (whole-blob proof) pre-Fulu, v2 (cell proofs) from Fulu. */
-  static blobsRevision(fork: ForkName): 1 | 2 {
+  /**
+   * `/blobs/vN` revision Lodestar uses for a fork: v1 (whole-blob proof) pre-Fulu,
+   * v2 (cell proofs) from Fulu.
+   *
+   * `null` when the fork has no EL fork name. `/blobs/vN` is unscoped, so nothing in
+   * the request depends on the mapping — but a fork this transport cannot name is one
+   * whose blob semantics it cannot vouch for, and every other method already falls to
+   * JSON-RPC for such a fork. Returning `null` keeps blobs consistent with them
+   * instead of silently putting an unmapped fork on half the REST surface.
+   */
+  static blobsRevision(fork: ForkName): 1 | 2 | null {
+    try {
+      clForkToElFork(fork);
+    } catch {
+      return null;
+    }
     return ForkSeq[fork] >= ForkSeq.fulu ? 2 : 1;
   }
 

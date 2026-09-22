@@ -443,4 +443,10 @@ describe("SszRestEngine / bodies & blobs", () => {
     expect(SszRestEngine.blobsRevision(ForkName.fulu)).toBe(2);
     expect(SszRestEngine.blobsRevision(ForkName.gloas)).toBe(2);
   });
+
+  it("blobsRevision is null for forks with no EL fork mapping", () => {
+    // heze has no Eth-Execution-Version value yet; pre-merge forks have no Engine API.
+    expect(SszRestEngine.blobsRevision(ForkName.heze)).toBeNull();
+    expect(SszRestEngine.blobsRevision(ForkName.phase0)).toBeNull();
+  });
 });

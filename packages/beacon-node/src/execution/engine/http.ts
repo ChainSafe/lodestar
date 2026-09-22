@@ -626,7 +626,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (this.rest) {
       const revision = SszRestEngine.blobsRevision(fork);
-      if (await this.rest.supportsBlobs(revision)) {
+      if (revision !== null && (await this.rest.supportsBlobs(revision))) {
         assertReqSizeLimit(versionedHashes.length, (await this.rest.limits()).blobsMaxVersionedHashes);
         return revision === 2 ? this.rest.blobsV2(versionedHashes, buffers) : this.rest.blobsV1(versionedHashes);
       }
