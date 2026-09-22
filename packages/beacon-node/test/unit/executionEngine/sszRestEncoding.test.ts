@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {BitVectorType, ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {ForkName, MAX_BYTES_PER_TRANSACTION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -7,6 +7,7 @@ import {
   clForkToElFork,
   decodeForkchoiceUpdateResponse,
   decodePayloadStatus,
+  encodeForkchoiceUpdate,
   encodeNewPayload,
 } from "../../../src/execution/engine/sszRestEncoding.js";
 
@@ -158,5 +159,81 @@ describe("sszRestEncoding / ExecutionPayloadEnvelope", () => {
     expect(() => encodeNewPayload(ForkName.electra, payloadFor(ForkName.deneb), new Uint8Array(32))).toThrow(
       /executionRequests/
     );
+  });
+});
+
+const FcState = new ContainerType({headBlockHash: Root, safeBlockHash: Root, finalizedBlockHash: Root});
+const PaCancun = new ContainerType({
+  timestamp: ssz.UintNum64,
+  prevRandao: Root,
+  suggestedFeeRecipient: new ByteVectorType(20),
+  withdrawals: ssz.capella.Withdrawals,
+  parentBeaconBlockRoot: Root,
+});
+const PaAmsterdam = new ContainerType({
+  ...PaCancun.fields,
+  slotNumber: ssz.UintNum64,
+  targetGasLimit: ssz.UintNum64,
+});
+const FcuCancun = new ContainerType({forkchoiceState: FcState, payloadAttributes: new ListCompositeType(PaCancun, 1)});
+const FcuAmsterdam = new ContainerType({
+  forkchoiceState: FcState,
+  payloadAttributes: new ListCompositeType(PaAmsterdam, 1),
+  custodyColumns: new ListCompositeType(new BitVectorType(128), 1),
+});
+
+const zero32 = new Uint8Array(32);
+const feeRecipient = `0x${"11".repeat(20)}`;
+
+describe("sszRestEncoding / ForkchoiceUpdate", () => {
+  it("cancun without attributes encodes payload_attributes as absent", () => {
+    const bytes = encodeForkchoiceUpdate(ForkName.deneb, zero32, zero32, zero32);
+    const parsed = FcuCancun.deserialize(bytes);
+    expect(parsed.payloadAttributes.length).toBe(0);
+    // fixed part: 96 (state) + 4 (offset) = 100; no attribute content follows
+    expect(bytes.length).toBe(100);
+  });
+
+  it("cancun with attributes round-trips the fields", () => {
+    const bytes = encodeForkchoiceUpdate(ForkName.deneb, zero32, zero32, zero32, {
+      timestamp: 5,
+      prevRandao: zero32,
+      suggestedFeeRecipient: feeRecipient,
+      withdrawals: [],
+      parentBeaconBlockRoot: zero32,
+    });
+    const [attrs] = FcuCancun.deserialize(bytes).payloadAttributes;
+    expect(attrs.timestamp).toBe(5);
+    expect(attrs.suggestedFeeRecipient).toEqual(new Uint8Array(20).fill(0x11));
+  });
+
+  it("amsterdam carries custody_columns as an absent Optional and the v4 attributes", () => {
+    const bytes = encodeForkchoiceUpdate(ForkName.gloas, zero32, zero32, zero32, {
+      timestamp: 5,
+      prevRandao: zero32,
+      suggestedFeeRecipient: feeRecipient,
+      withdrawals: [],
+      parentBeaconBlockRoot: zero32,
+      slotNumber: 9,
+      targetGasLimit: 30_000_000,
+    });
+    const parsed = FcuAmsterdam.deserialize(bytes);
+    expect(parsed.custodyColumns.length).toBe(0);
+    expect(parsed.payloadAttributes[0].targetGasLimit).toBe(30_000_000);
+    expect(parsed.payloadAttributes[0].slotNumber).toBe(9);
+  });
+
+  it("amsterdam without attributes is 4 bytes longer than cancun (extra offset for custody_columns)", () => {
+    const cancun = encodeForkchoiceUpdate(ForkName.deneb, zero32, zero32, zero32);
+    const amsterdam = encodeForkchoiceUpdate(ForkName.gloas, zero32, zero32, zero32);
+    expect(amsterdam.length).toBe(cancun.length + 4);
+  });
+
+  it("requires fork-specific attribute fields", () => {
+    const base = {timestamp: 1, prevRandao: zero32, suggestedFeeRecipient: feeRecipient, withdrawals: []};
+    expect(() => encodeForkchoiceUpdate(ForkName.deneb, zero32, zero32, zero32, base)).toThrow(/parentBeaconBlockRoot/);
+    expect(() =>
+      encodeForkchoiceUpdate(ForkName.gloas, zero32, zero32, zero32, {...base, parentBeaconBlockRoot: zero32})
+    ).toThrow(/slotNumber/);
   });
 });

@@ -18,8 +18,8 @@ import {
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {ExecutionPayloadStatus} from "./interface.js";
+import {fromHex, toHex} from "@lodestar/utils";
+import {ExecutionPayloadStatus, PayloadAttributes} from "./interface.js";
 import {PayloadId} from "./payloadIdCache.js";
 
 // ---------------------------------------------------------------------------
@@ -297,4 +297,105 @@ export function encodeNewPayload(
     parentBeaconBlockRoot,
     executionRequests: buildExecutionRequestsList(executionRequests),
   } as never);
+}
+
+// ---------------------------------------------------------------------------
+// PayloadAttributes{Fork} — cannot reuse ssz.{fork}.PayloadAttributes from
+// @lodestar/types: those declare `suggestedFeeRecipient: stringType` (JSON only).
+// ---------------------------------------------------------------------------
+
+const PayloadAttributesParis = new ContainerType(
+  {timestamp: ssz.UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: Bytes20},
+  {typeName: "PayloadAttributes_paris"}
+);
+const PayloadAttributesShanghai = new ContainerType(
+  {...PayloadAttributesParis.fields, withdrawals: ssz.capella.Withdrawals},
+  {typeName: "PayloadAttributes_shanghai"}
+);
+const PayloadAttributesCancun = new ContainerType(
+  {...PayloadAttributesShanghai.fields, parentBeaconBlockRoot: Bytes32},
+  {typeName: "PayloadAttributes_cancun"}
+);
+const PayloadAttributesAmsterdam = new ContainerType(
+  {...PayloadAttributesCancun.fields, slotNumber: ssz.UintNum64, targetGasLimit: ssz.UintNum64},
+  {typeName: "PayloadAttributes_amsterdam"}
+);
+
+const PAYLOAD_ATTRIBUTES_BY_EL_FORK = {
+  paris: PayloadAttributesParis,
+  shanghai: PayloadAttributesShanghai,
+  cancun: PayloadAttributesCancun,
+  prague: PayloadAttributesCancun,
+  osaka: PayloadAttributesCancun,
+  amsterdam: PayloadAttributesAmsterdam,
+} as const;
+
+function forkchoiceUpdateType(elFork: ElForkName) {
+  const payloadAttributes = new ListCompositeType(PAYLOAD_ATTRIBUTES_BY_EL_FORK[elFork], 1);
+  if (elFork === "amsterdam") {
+    return new ContainerType(
+      {forkchoiceState: ForkchoiceState, payloadAttributes, custodyColumns: OptionalCustodyColumns},
+      {typeName: "ForkchoiceUpdate_amsterdam"}
+    );
+  }
+  return new ContainerType(
+    {forkchoiceState: ForkchoiceState, payloadAttributes},
+    {typeName: `ForkchoiceUpdate_${elFork}`}
+  );
+}
+
+const ForkchoiceUpdate = Object.fromEntries(EL_FORK_NAMES.map((f) => [f, forkchoiceUpdateType(f)])) as Record<
+  ElForkName,
+  ReturnType<typeof forkchoiceUpdateType>
+>;
+
+function buildPayloadAttributesValue(
+  fork: ForkName,
+  elFork: ElForkName,
+  attrs: PayloadAttributes
+): Record<string, unknown> {
+  const base = {
+    timestamp: attrs.timestamp,
+    prevRandao: attrs.prevRandao,
+    suggestedFeeRecipient: fromHex(attrs.suggestedFeeRecipient),
+  };
+  if (elFork === "paris") return base;
+  const shanghai = {...base, withdrawals: attrs.withdrawals ?? []};
+  if (elFork === "shanghai") return shanghai;
+  if (attrs.parentBeaconBlockRoot === undefined) {
+    throw Error(`parentBeaconBlockRoot required in PayloadAttributes for fork=${fork}`);
+  }
+  const cancun = {...shanghai, parentBeaconBlockRoot: attrs.parentBeaconBlockRoot};
+  if (elFork !== "amsterdam") return cancun;
+  if (attrs.slotNumber === undefined) {
+    throw Error(`slotNumber required in PayloadAttributes for fork=${fork}`);
+  }
+  if (attrs.targetGasLimit === undefined) {
+    throw Error(`targetGasLimit required in PayloadAttributes for fork=${fork}`);
+  }
+  return {...cancun, slotNumber: attrs.slotNumber, targetGasLimit: attrs.targetGasLimit};
+}
+
+// ---------------------------------------------------------------------------
+// Public: POST /forkchoice
+// ---------------------------------------------------------------------------
+
+export function encodeForkchoiceUpdate(
+  fork: ForkName,
+  headBlockHash: Uint8Array,
+  safeBlockHash: Uint8Array,
+  finalizedBlockHash: Uint8Array,
+  attributes?: PayloadAttributes
+): Uint8Array {
+  const elFork = clForkToElFork(fork);
+  const value: Record<string, unknown> = {
+    forkchoiceState: {headBlockHash, safeBlockHash, finalizedBlockHash},
+    payloadAttributes: attributes ? [buildPayloadAttributesValue(fork, elFork, attributes)] : [],
+  };
+  if (elFork === "amsterdam") {
+    // custody_columns is out of scope for this transport (needs IExecutionEngine changes);
+    // encode as absent so the wire shape matches ForkchoiceUpdateAmsterdam.
+    value.custodyColumns = [];
+  }
+  return ForkchoiceUpdate[elFork].serialize(value as never);
 }
