@@ -28,7 +28,9 @@ Range sync involves syncing blocks within a specified range, beneficial when a n
 
 ### Backfill Sync
 
-Backfill sync downloads historical blocks preceding a checkpoint. Lodestar does not currently support backfill sync.
+🚧 Work in progress. Backfill sync is not yet available in Lodestar.
+
+Backfill sync downloads historical blocks preceding a checkpoint.
 
 ## Syncing Lodestar
 
