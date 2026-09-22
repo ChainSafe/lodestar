@@ -163,9 +163,10 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
     }),
-    progressiveBalancesMismatches: metricsRegister.counter({
+    progressiveBalancesMismatches: metricsRegister.counter<{target: "current" | "previous"}>({
       name: "lodestar_historical_state_stfn_progressive_balances_mismatches_total",
-      help: "Total count of progressive balance cache mismatches",
+      help: "Total count of progressive balance cache mismatches by target balance",
+      labelNames: ["target"],
     }),
     proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
       name: "lodestar_historical_state_stfn_proposer_rewards_total",
