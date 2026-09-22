@@ -56,7 +56,7 @@ export class NativeNetworkCore implements INetworkCore {
       });
     assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
-    const {application, network, executionLimits, directPeers} = createNativeConfig(
+    const {application, network, directPeers} = createNativeConfig(
       opts,
       config,
       privateKey,
@@ -87,14 +87,7 @@ export class NativeNetworkCore implements INetworkCore {
       );
       core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
       const diagnostics = core.runtime.diagnostics();
-      core.gossip = new NativeGossip(
-        core.runtime,
-        config,
-        modules.events,
-        core.modules.opts,
-        core.onFailure,
-        executionLimits
-      );
+      core.gossip = new NativeGossip(core.runtime, config, modules.events, core.modules.opts, core.onFailure);
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(
         core.runtime,
@@ -300,14 +293,14 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async scrapeMetrics(): Promise<string> {
     const diagnostics = this.runtime.diagnostics();
-    const gossip = this.gossip.snapshot();
+    const gossip = diagnostics.gossip;
     const gauges = {
       network_requested_bytes: diagnostics.liveNativeRequestedBytes,
       bridge_requested_bytes: diagnostics.liveBridgeRequestedBytes,
       network_peers: diagnostics.peerCount,
-      host_gossip_environment_items: gossip.items,
-      host_gossip_environment_backing_bytes: gossip.bytes,
-      host_gossip_active_items: gossip.activeItems,
+      host_gossip_environment_items: gossip.executing,
+      host_gossip_environment_backing_bytes: gossip.executingBytes,
+      host_gossip_active_items: gossip.executing,
       gossip_processor_queued_items: diagnostics.gossip.queued,
       gossip_processor_waiting_items: diagnostics.gossip.waiting,
       gossip_processor_checking_items: diagnostics.gossip.checking,
@@ -319,9 +312,10 @@ export class NativeNetworkCore implements INetworkCore {
     const counters = {
       log_delivery_errors_total: this.logs?.deliveryErrors ?? 0,
       peer_status_range_refusals_total: this.peers.statusRefusals,
-      host_gossip_capacity_refusals_total: gossip.refused,
       gossip_messages_copied_total: diagnostics.gossip.messagesCopied,
       gossip_processor_kind_refusals_total: diagnostics.gossip.kindRefusals,
+      gossip_processor_source_refusals_total: diagnostics.gossip.sourceRefusals,
+      gossip_processor_freshness_replacements_total: diagnostics.gossip.freshnessReplacements,
       gossip_processor_dependency_refusals_total: diagnostics.gossip.dependencyRefusals,
       gossip_processor_slot_refusals_total: diagnostics.gossip.slotRefusals,
       gossip_verdicts_applied_total:

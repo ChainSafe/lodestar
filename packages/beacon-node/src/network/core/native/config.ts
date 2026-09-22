@@ -301,7 +301,6 @@ export function createNativeConfig(
 ): {
   application: NativeApplicationConfig;
   network: NetworkConfig;
-  executionLimits: {items: number; bytes: number}[];
   directPeers: NativeDirectPeer[];
 } {
   validateOptions(opts, config);
@@ -435,6 +434,9 @@ export function createNativeConfig(
     65535,
     1
   );
-  const executionLimits = gossipExecutionLimits(opts, topicPolicy);
-  return {application, network, executionLimits, directPeers};
+  application.gossipPolicy.execution = gossipExecutionLimits(opts, topicPolicy).map((limit, i) => ({
+    items: Math.min(limit.items, application.gossipPolicy.processor?.[i].items ?? limit.items),
+    bytes: limit.bytes,
+  }));
+  return {application, network, directPeers};
 }

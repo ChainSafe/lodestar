@@ -109,10 +109,10 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const gossip = new NativeGossip(
       {
         publishGossip,
-        drainGossip: () => ({messages: [], more: false, grouped: false}),
+        drainGossip: () => ({messages: [], more: false, jobs: []}),
         reportGossip: () => true,
         drainGossipChecks: () => [],
-        classifyGossip: () => true,
+        classifyGossip: () => 0,
         notifyGossipBlock: () => {},
         dropQueuedGossip: () => {},
         trackGossipSearch: () => false,

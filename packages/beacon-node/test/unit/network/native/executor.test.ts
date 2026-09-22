@@ -184,21 +184,56 @@ describe("native gossip host execution", () => {
     const search = vi.fn();
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
     try {
-      expect(f.executor.check(check)).toBe(false);
+      expect(f.executor.check([check])).toEqual([{handle: check.handle, available: false}]);
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({rootHex: toRootHex(root), source: BlockInputSource.network_processor})
       );
       f.gossip.trackSearch.mockReturnValue(false);
-      expect(f.executor.check(check)).toBe(false);
+      expect(f.executor.check([check])).toEqual([{handle: check.handle, available: false}]);
       expect(search).toHaveBeenCalledOnce();
       f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
-      expect(f.executor.check(check)).toBe(true);
+      expect(f.executor.check([check])).toEqual([{handle: check.handle, available: true}]);
       f.chain.emitter.emit(routes.events.EventType.block, {
         block: toRootHex(root),
         slot: 64,
         executionOptimistic: false,
       });
       expect(f.gossip.notifyBlock).toHaveBeenCalledWith(Buffer.from(root));
+    } finally {
+      f.executor.stop();
+    }
+  });
+  it("coalesces root lookups within a batch while forwarding every source hint", async () => {
+    const f = fixture();
+    const search = vi.fn();
+    f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
+    const checks = [0, 1, 2].map((index) => ({
+      handle: {index, generation: 1n},
+      root: new Uint8Array(32),
+      slot: 64n,
+      peerId: `peer-${index}`,
+      topic: "test",
+    }));
+    try {
+      expect(f.executor.check(checks)).toEqual(checks.map(({handle}) => ({handle, available: false})));
+      expect(f.chain.forkChoice.hasBlockHexUnsafe).toHaveBeenCalledOnce();
+      expect(search.mock.calls.map(([event]) => event.peer)).toEqual(["peer-0", "peer-1", "peer-2"]);
+      f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
+      expect(f.executor.check(checks).every(({available}) => available)).toBe(true);
+      expect(f.chain.forkChoice.hasBlockHexUnsafe).toHaveBeenCalledTimes(2);
+      expect(search).toHaveBeenCalledTimes(3);
+    } finally {
+      f.executor.stop();
+    }
+  });
+
+  it("rejects a non-attestation job containing more than one message", async () => {
+    const f = fixture();
+    try {
+      await expect(f.executor.execute([message("first"), message("second")], false)).rejects.toThrow(
+        "native gossip validator job"
+      );
+      expect(f.single).not.toHaveBeenCalled();
     } finally {
       f.executor.stop();
     }

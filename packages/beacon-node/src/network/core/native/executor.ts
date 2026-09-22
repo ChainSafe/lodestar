@@ -1,5 +1,5 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
-import {NativeGossipDependencyCheck} from "@chainsafe/lodestar-z/network";
+import {NativeGossipClassification, NativeGossipDependencyCheck} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
 import {SlotRootHex} from "@lodestar/types";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
@@ -29,18 +29,24 @@ export class NativeGossipExecutor {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
     this.validate = getGossipValidatorFn(handlers, modules);
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules);
-    gossip.attach(this, wake);
+    gossip.attach(this);
     modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
     modules.chain.clock.on(ClockEvent.slot, this.onSlot);
   }
 
-  check(check: NativeGossipDependencyCheck): boolean {
-    const root = `0x${Buffer.from(check.root).toString("hex")}`;
-    const available = this.modules.chain.forkChoice.hasBlockHexUnsafe(root);
-    if (!available) {
-      this.searchUnknownBlock({slot: Number(check.slot), root}, BlockInputSource.network_processor, check.peerId);
-    }
-    return available;
+  check(checks: NativeGossipDependencyCheck[]): NativeGossipClassification[] {
+    const roots = new Map<string, boolean>();
+    return checks.map((check) => {
+      const root = `0x${Buffer.from(check.root).toString("hex")}`;
+      let available = roots.get(root);
+      if (available === undefined) {
+        available = this.modules.chain.forkChoice.hasBlockHexUnsafe(root);
+        roots.set(root, available);
+      }
+      if (!available)
+        this.searchUnknownBlock({slot: Number(check.slot), root}, BlockInputSource.network_processor, check.peerId);
+      return {handle: check.handle, available};
+    });
   }
 
   canExecute(): boolean {
@@ -68,7 +74,12 @@ export class NativeGossipExecutor {
       return {...message, msgSlot: message.msgSlot ?? null};
     });
     this.modules.metrics?.networkProcessor.jobsSubmitted.observe(messages.length);
-    return grouped || infos[0].topic.type === GossipType.beacon_attestation
+    if (infos[0].topic.type !== GossipType.beacon_attestation && (grouped || infos.length !== 1))
+      throw new NativeNetworkError({
+        code: NativeNetworkErrorCode.CONFIGURATION,
+        resource: "native gossip validator job",
+      });
+    return infos[0].topic.type === GossipType.beacon_attestation
       ? this.validateBatch(infos)
       : [await this.validate(infos[0])];
   }
