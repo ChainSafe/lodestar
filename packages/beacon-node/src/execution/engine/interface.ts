@@ -160,8 +160,18 @@ export interface IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }>;
 
+  /**
+   * `fork` selects the response schema and — on the SSZ-REST transport — the block era:
+   * blocks whose timestamp falls outside `fork`'s range are returned as `null`
+   * (ethereum/execution-apis#793 § Historical bodies). Pass the fork of the blocks requested.
+   */
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
+  /**
+   * `fork` selects the response schema and — on the SSZ-REST transport — the block era:
+   * blocks whose timestamp falls outside `fork`'s range are returned as `null`
+   * (ethereum/execution-apis#793 § Historical bodies). Pass the fork of the blocks requested.
+   */
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   getBlobs(

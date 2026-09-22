@@ -84,14 +84,12 @@ export type ExecutionEngineHttpOpts = {
    */
   commit?: string;
   /**
-   * EIP-8161 / ethereum/execution-apis#764: opt-in to the binary SSZ-REST
-   * Engine API transport.
+   * ethereum/execution-apis#793: opt-in to the SSZ-REST Engine API transport.
    *
-   * When enabled, the CL negotiates SSZ-REST endpoint support through
-   * engine_exchangeCapabilities, uses binary SSZ for mutually advertised
-   * endpoints, and falls back to JSON-RPC on network errors. Off by default
-   * until the spec stabilises and ELs we test against advertise support
-   * consistently.
+   * When enabled, the CL probes `GET /engine/v1/capabilities` once at startup and uses
+   * binary SSZ over `/engine/v1/...` for every fork the EL advertises; other forks and
+   * ELs without the REST surface use JSON-RPC. No per-request fallback. Off by default
+   * until the spec containers are finalised and an EL ships the endpoint.
    */
   sszRest?: boolean;
 };
