@@ -524,3 +524,48 @@ describe("sszRestEncoding / JSON diagnostics", () => {
     expect(() => parseIdentity([{code: "GE"}])).toThrow();
   });
 });
+
+describe("sszRestEncoding / Amsterdam ExecutionPayload pinned to #793", () => {
+  // refactor-ssz.md § `ExecutionPayload` (Amsterdam). The codec reuses
+  // `ssz.gloas.ExecutionPayload`, but consensus-specs and the Engine API spec are
+  // versioned independently: these two checks make a consensus-specs change fail
+  // here instead of silently moving the Engine API wire format away from #793.
+  const SPEC_AMSTERDAM_FIELDS = [
+    "parentHash",
+    "feeRecipient",
+    "stateRoot",
+    "receiptsRoot",
+    "logsBloom",
+    "prevRandao",
+    "blockNumber",
+    "gasLimit",
+    "gasUsed",
+    "timestamp",
+    "extraData",
+    "baseFeePerGas",
+    "blockHash",
+    "transactions",
+    "withdrawals",
+    "blobGasUsed",
+    "excessBlobGas",
+    "blockAccessList",
+    "slotNumber",
+  ];
+
+  it("carries exactly the spec's fields, in the spec's order", () => {
+    expect(Object.keys(ssz.gloas.ExecutionPayload.fields)).toEqual(SPEC_AMSTERDAM_FIELDS);
+  });
+
+  it("serializes identically to a plain SSZ container", () => {
+    // The spec defines Amsterdam as a plain Container; consensus-specs models gloas
+    // with EIP-7688 progressive types, whose framing must stay serialization-identical.
+    const plain = new ContainerType(ssz.gloas.ExecutionPayload.fields);
+    const value = ssz.gloas.ExecutionPayload.defaultValue();
+    value.blockNumber = 7;
+    value.slotNumber = 11;
+    value.blockAccessList = new Uint8Array([1, 2, 3]);
+    value.transactions = [new Uint8Array([9, 9])];
+    value.withdrawals = [ssz.capella.Withdrawal.defaultValue()];
+    expect(ssz.gloas.ExecutionPayload.serialize(value)).toEqual(plain.serialize(value));
+  });
+});
