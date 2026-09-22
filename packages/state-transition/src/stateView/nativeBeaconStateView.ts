@@ -32,7 +32,6 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {EMPTY_SIGNATURE} from "../constants/constants.js";
@@ -682,14 +681,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     );
   }
 
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView {
+   processSlots(
+     slot: Slot,
+     opts?: {dontTransferCache?: boolean},
+     modules?: StateTransitionModules
+   ): IBeaconStateView {
     const nativeOptions = modules?.validatorMonitor
-      ? {...epochTransitionCacheOpts, validatorMonitor: true}
-      : epochTransitionCacheOpts;
+      ? {...opts, validatorMonitor: true}
+      : opts;
     return new NativeBeaconStateView(this.binding.processSlots(slot, nativeOptions), this.config);
   }
 

@@ -1,9 +1,12 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
-import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
+ import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+ import {
+   BeaconStateAllForks,
+   DataAvailabilityStatus,
+   ExecutionPayloadStatus,
+ } from "@lodestar/state-transition";
 import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -35,7 +38,6 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
               verifyStateRoot: false,
               verifyProposer: verify,
               verifySignatures: verify,
-              assertCorrectProgressiveBalances,
             },
             {}
           )

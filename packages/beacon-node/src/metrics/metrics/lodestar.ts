@@ -26,7 +26,13 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {DownloadResult, DroppedItemReason, FetchResult, PendingBlockType} from "../../sync/types.js";
+import {
+  DeferredPayloadResult,
+  DownloadResult,
+  DroppedItemReason,
+  FetchResult,
+  PendingBlockType,
+} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -654,6 +660,16 @@ export function createLodestarMetrics(
         name: "lodestar_payload_input_sync_source_total",
         help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
         labelNames: ["source"],
+      }),
+      deferredPayloadResult: register.counter<{result: DeferredPayloadResult}>({
+        name: "lodestar_sync_deferred_payload_result_total",
+        help: "Outcome of a slot's deferred optimistic payload searches, by result",
+        labelNames: ["result"],
+      }),
+      deferredPayloadPolls: register.histogram({
+        name: "lodestar_sync_deferred_payload_polls_count",
+        help: "Poll ticks after PAYLOAD_DUE until a searched payload was imported",
+        buckets: [0, 1, 2, 3, 6],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",

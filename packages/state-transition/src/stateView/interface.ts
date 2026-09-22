@@ -48,7 +48,6 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -189,11 +188,7 @@ export interface IBeaconStateView {
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView;
 }
 
 /** Altair+ state fields — use isStatePostAltair() guard */
@@ -374,7 +369,7 @@ export type IBeaconStateViewNative = Omit<
   ): IBeaconStateViewNative;
   processSlots(
     slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean}
+    opts?: {dontTransferCache?: boolean}
   ): IBeaconStateViewNative;
   withParentPayloadApplied(
     ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>

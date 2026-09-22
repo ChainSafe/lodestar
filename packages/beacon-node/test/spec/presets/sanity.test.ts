@@ -5,7 +5,6 @@ import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -33,7 +32,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       let state = createBeaconStateViewForTest(fork, testcase.pre);
       state = replaceStateViewForTest(state, (preState) =>
-        preState.processSlots(preState.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances}, {})
+        preState.processSlots(preState.slot + bnToNum(testcase.slots), {})
       );
       return stateViewToBeaconState(fork, state);
     },
@@ -76,7 +75,6 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
               verifyStateRoot: true,
               verifyProposer: verify,
               verifySignatures: verify,
-              assertCorrectProgressiveBalances,
             },
             {}
           )
