@@ -158,6 +158,30 @@ describe("ExecutionEngineHttp / SSZ-REST dispatch", () => {
     expect(jsonRpcCalls).toContain("engine_newPayloadV3");
   });
 
+  it("validates notifyNewPayload preconditions before dispatching to REST", async () => {
+    let restHits = 0;
+    const {engine} = await startEngine(
+      {
+        capabilities: {supported_forks: ["cancun"]},
+        routes: [
+          {
+            method: "POST",
+            path: "/engine/v1/payloads",
+            handler: () => {
+              restHits++;
+            },
+          },
+        ],
+      },
+      after
+    );
+    await expect(
+      engine.notifyNewPayload(ForkName.deneb, denebPayload(), [] /* versionedHashes */)
+    ).rejects.toThrow(/parentBlockRoot required/);
+    expect(restHits).toBe(0);
+    expect(engine.state).toBe(ExecutionEngineState.ONLINE);
+  });
+
   it("routes advertised forks to REST and unadvertised forks to JSON-RPC", async () => {
     let restHits = 0;
     const {engine, jsonRpcCalls} = await startEngine(

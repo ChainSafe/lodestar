@@ -183,6 +183,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (opts?.sszRest) {
       const engineUrl = opts.urls?.[0] ?? "http://localhost:8551";
       const baseUrl = stripTrailingSlashes(engineUrl);
+      if ((opts.urls?.length ?? 0) > 1) {
+        this.logger.warn("SSZ-REST Engine API uses only the first execution URL; fallback URLs are ignored on the REST transport", {
+          url: baseUrl,
+          ignored: opts.urls.length - 1,
+        });
+      }
       const lodestar = getLodestarClientVersion(opts);
       const client = new SszRestClient({
         baseUrl,
@@ -253,6 +259,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
+    if (ForkSeq[fork] >= ForkSeq.deneb) {
+      if (versionedHashes === undefined) {
+        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
+      }
+      if (parentBlockRoot === undefined) {
+        throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
+      }
+      if (ForkSeq[fork] >= ForkSeq.electra && executionRequests === undefined) {
+        throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+      }
+    }
+
     if (this.rest && (await this.rest.supportsFork(fork))) {
       const rest = this.rest;
       const {status, latestValidHash, validationError} = await this.rpcFetchQueue
@@ -273,21 +291,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
-      if (versionedHashes === undefined) {
-        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
-      }
-      if (parentBlockRoot === undefined) {
-        throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
-      }
-
-      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
-      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
+      // versionedHashes and parentBlockRoot are validated above, before dispatch
+      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes as VersionedHashes);
+      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot as Root);
 
       if (ForkSeq[fork] >= ForkSeq.electra) {
-        if (executionRequests === undefined) {
-          throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
-        }
-        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+        // executionRequests is validated above, before dispatch
+        const serializedExecutionRequests = serializeExecutionRequests(executionRequests as ExecutionRequests);
         engineRequest = {
           method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
