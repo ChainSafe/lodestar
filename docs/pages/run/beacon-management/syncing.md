@@ -28,7 +28,7 @@ Range sync involves syncing blocks within a specified range, beneficial when a n
 
 ### Backfill Sync
 
-This is another version of checkpoint sync that allows a node that has not been historically synchronized to verify data prior to the checkpoint. It is done via downloading a checkpoint and then fetch blocks backwards from that point until the desired data can be verified. It is a relatively inexpensive sync from a cpu perspective because it only checks the block hashes and verifies the proposer signatures along the way.
+Backfill sync downloads historical blocks preceding a checkpoint. Lodestar does not currently support backfill sync.
 
 ## Syncing Lodestar
 
