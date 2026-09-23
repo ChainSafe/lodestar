@@ -165,8 +165,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   } | null = null;
 
   constructor(
-    readonly binding: IBeaconStateViewNative,
-    private readonly config: BeaconConfig
+    private readonly config: BeaconConfig,
+    readonly binding: IBeaconStateViewNative
   ) {}
 
   release(): void {
@@ -595,7 +595,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts), this.config);
+    return new NativeBeaconStateView(this.config, this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts));
   }
 
   toValue(): BeaconState {
@@ -668,11 +668,11 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
             .getPostBellatrixForkTypes(block.message.slot)
             .SignedBlindedBeaconBlock.serialize(block as SignedBlindedBeaconBlock)
         : this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block as SignedBeaconBlock));
-    return new NativeBeaconStateView(this.binding.stateTransition(signedBlockBytes, isBlinded, options), this.config);
+    return new NativeBeaconStateView(this.config, this.binding.stateTransition(signedBlockBytes, isBlinded, options));
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.processSlots(slot, opts), this.config);
+    return new NativeBeaconStateView(this.config, this.binding.processSlots(slot, opts));
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────

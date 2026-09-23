@@ -18,7 +18,7 @@ describe("NativeBeaconStateView", () => {
 
   it("throws for Gloas-only fields while native Gloas is unsupported", () => {
     const binding = {} as IBeaconStateViewNative;
-    const view = new NativeBeaconStateView(binding, config);
+    const view = new NativeBeaconStateView(config, binding);
 
     expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
     expect(() => view.latestBlockHash).toThrow("NativeBeaconStateView does not support Gloas");
@@ -55,7 +55,7 @@ describe("NativeBeaconStateView", () => {
       },
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding, config);
+    const view = new NativeBeaconStateView(config, binding);
     expect(view.fork).toBe(fakeFork);
     expect(view.fork).toBe(fakeFork);
     expect(view.latestBlockHeader).toBe(fakeHeader);
@@ -72,7 +72,7 @@ describe("NativeBeaconStateView", () => {
       release: vi.fn(),
     } as unknown as IBeaconStateViewNative;
 
-    new NativeBeaconStateView(binding, config).release();
+    new NativeBeaconStateView(config, binding).release();
 
     expect(binding.release).toHaveBeenCalledOnce();
   });
@@ -86,7 +86,7 @@ describe("NativeBeaconStateView", () => {
       getBalance: (index: number) => 32_000_000_000 + index,
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding, config);
+    const view = new NativeBeaconStateView(config, binding);
     expect(view.slot).toBe(123);
     expect(view.epoch).toBe(4);
     expect(view.validatorCount).toBe(17);
@@ -117,7 +117,7 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding, config);
+    const view = new NativeBeaconStateView(config, binding);
     const postState = view.stateTransition({block, ssz: blockBytes}, options, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
@@ -140,7 +140,7 @@ describe("NativeBeaconStateView", () => {
       computeBlockRewards: vi.fn(() => blockRewards),
     } as unknown as IBeaconStateViewNative;
 
-    const result = await new NativeBeaconStateView(binding, config).computeBlockRewards(block, proposerRewards);
+    const result = await new NativeBeaconStateView(config, binding).computeBlockRewards(block, proposerRewards);
 
     expect(binding.computeBlockRewards).toHaveBeenCalledWith(
       ssz.phase0.SignedBeaconBlock.serialize({message: block, signature: new Uint8Array(96)}),
@@ -177,7 +177,7 @@ describe("NativeBeaconStateView", () => {
       stateTransition: vi.fn(() => postBinding),
     } as unknown as IBeaconStateViewNative;
 
-    const result = new NativeBeaconStateView(binding, config).computeNewStateRoot({block}, {});
+    const result = new NativeBeaconStateView(config, binding).computeNewStateRoot({block}, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(
       expectedBytes,

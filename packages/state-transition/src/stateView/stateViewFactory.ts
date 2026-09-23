@@ -34,8 +34,8 @@ type NativeOpts = {
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
     return new NativeBeaconStateView(
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
-      opts.config
+      opts.config,
+      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative
     );
   }
   const {anchorState, config, pubkeyCache} = opts;
@@ -65,8 +65,8 @@ type RegenNativeOpts = {
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
     return new NativeBeaconStateView(
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
-      opts.config
+      opts.config,
+      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative
     );
   }
   const {config, stateBytes} = opts;
