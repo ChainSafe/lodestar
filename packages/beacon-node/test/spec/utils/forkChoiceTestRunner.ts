@@ -71,7 +71,7 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {
-  createSpecTestMetrics,
+  createSpecTestBeaconMetrics,
   expectNoProgressiveBalancesMismatches,
   expectValidProgressiveBalances,
 } from "./progressiveBalances.js";
@@ -102,7 +102,7 @@ export const forkChoiceTestRunner =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const {metrics, register} = createSpecTestMetrics();
+        const metrics = createSpecTestBeaconMetrics(anchorState.genesisTime);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isGloasStateType(anchorState)
@@ -158,7 +158,7 @@ export const forkChoiceTestRunner =
             logger,
             processShutdownCallback: () => {},
             clock,
-            metrics: null,
+            metrics,
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
@@ -520,12 +520,7 @@ export const forkChoiceTestRunner =
                 if (protoBlock === null) {
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
-                const postState = await chain.regen.getBlockSlotState(
-                  protoBlock,
-                  slot,
-                  {dontTransferCache: true},
-                  RegenCaller.processBlock
-                );
+                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
                 expectValidProgressiveBalances(postState, metrics);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
@@ -768,7 +763,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
-          await expectNoProgressiveBalancesMismatches(register, testCaseName);
+          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
         } finally {
           await chain.close();
         }

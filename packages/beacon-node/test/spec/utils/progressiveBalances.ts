@@ -6,15 +6,22 @@ import {
   beforeProcessEpoch,
   getMetrics,
 } from "@lodestar/state-transition";
-import {RegistryMetricCreator} from "../../../src/metrics/index.js";
+import {Metrics, RegistryMetricCreator, createMetrics} from "../../../src/metrics/index.js";
 
 export const progressiveBalancesMismatchesMetricName = "lodestar_stfn_progressive_balances_mismatches_total";
 
-export function createSpecTestMetrics() {
+export function createSpecTestMetrics(): {metrics: BeaconStateTransitionMetrics; register: RegistryMetricCreator} {
   const register = new RegistryMetricCreator();
   const metrics = getMetrics(register);
 
   return {metrics, register};
+}
+
+export function createSpecTestBeaconMetrics(genesisTime: number): Metrics {
+  const metrics = createMetrics({enabled: true, port: 0}, genesisTime);
+  // The spec tests inspect counters directly; keep the registry but do not leave process-level collectors active.
+  metrics.close();
+  return metrics;
 }
 
 export async function expectNoProgressiveBalancesMismatches(
