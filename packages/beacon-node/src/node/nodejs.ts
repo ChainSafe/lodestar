@@ -29,7 +29,6 @@ import {initializeExecutionBuilder, initializeExecutionEngine} from "../executio
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
-import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
@@ -48,7 +47,6 @@ export type BeaconNodeModules = {
   chain: IBeaconChain;
   api: BeaconApiMethods;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
@@ -68,7 +66,6 @@ export type BeaconNodeInitModules = {
   peerStoreDir?: string;
   anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
-  wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 };
 
@@ -80,7 +77,6 @@ export enum BeaconNodeStatus {
 
 enum LoggerModule {
   api = "api",
-  backfill = "backfill",
   chain = "chain",
   execution = "execution",
   metrics = "metrics",
@@ -115,7 +111,6 @@ export class BeaconNode {
   api: BeaconApiMethods;
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -133,7 +128,6 @@ export class BeaconNode {
     api,
     restApi,
     sync,
-    backfillSync,
     controller,
   }: BeaconNodeModules) {
     this.opts = opts;
@@ -148,7 +142,6 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
-    this.backfillSync = backfillSync;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -171,7 +164,6 @@ export class BeaconNode {
     peerStoreDir,
     anchorState,
     isAnchorStateFinalized,
-    wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
@@ -323,24 +315,8 @@ export class BeaconNode {
       chain,
       metrics,
       network,
-      wsCheckpoint,
       logger: logger.child({module: LoggerModule.sync}),
     });
-
-    const backfillSync =
-      opts.sync.backfillBatchSize > 0
-        ? await BackfillSync.init(opts.sync, {
-            config,
-            db,
-            chain,
-            metrics,
-            network,
-            wsCheckpoint,
-            anchorState,
-            logger: logger.child({module: LoggerModule.backfill}),
-            signal,
-          })
-        : null;
 
     const api = getApi(opts.api, {
       config,
@@ -399,7 +375,6 @@ export class BeaconNode {
       api,
       restApi,
       sync,
-      backfillSync,
       controller,
     }) as T;
   }
@@ -411,7 +386,6 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
-      this.backfillSync?.close();
       if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
