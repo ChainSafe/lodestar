@@ -24,7 +24,7 @@ export function getComputeNewStateRootResult(postState: IBeaconStateView): Compu
 
   const start = Date.now();
   const newStateRoot = postState.hashTreeRoot();
-  const hashTreeRootMs = Date.now() - start;
+  const hashTreeRootTime = (Date.now() - start) / 1000;
 
-  return {newStateRoot, proposerReward, postState, hashTreeRootMs};
+  return {newStateRoot, proposerReward, postState, hashTreeRootTime};
 }

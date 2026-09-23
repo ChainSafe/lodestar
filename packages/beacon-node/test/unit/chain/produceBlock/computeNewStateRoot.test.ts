@@ -10,7 +10,7 @@ describe("computeNewStateRoot", () => {
       newStateRoot: new Uint8Array(32),
       proposerReward: 1n,
       postState: {} as IBeaconStateView,
-      hashTreeRootMs: 10,
+      hashTreeRootTime: 0.01,
     };
     const computeNewStateRootMock = vi.fn(() => viewResult);
     const state = {computeNewStateRoot: computeNewStateRootMock} as unknown as IBeaconStateView;

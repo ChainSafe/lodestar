@@ -14,13 +14,12 @@ export function computeNewStateRoot(
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const signedBlock = {message: block, signature: EMPTY_SIGNATURE};
-  const {newStateRoot, proposerReward, postState, hashTreeRootMs} = state.computeNewStateRoot(
+  const {newStateRoot, proposerReward, postState, hashTreeRootTime} = state.computeNewStateRoot(
     {block: signedBlock},
     {metrics}
   );
 
-  const hashTreeRootSec = hashTreeRootMs / 1000;
-  metrics?.stateHashTreeRootTime.observe({source: StateHashTreeRootSource.computeNewStateRoot}, hashTreeRootSec);
+  metrics?.stateHashTreeRootTime.observe({source: StateHashTreeRootSource.computeNewStateRoot}, hashTreeRootTime);
 
   return {newStateRoot, proposerReward, postState};
 }

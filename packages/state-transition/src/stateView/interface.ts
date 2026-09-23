@@ -67,7 +67,7 @@ export type ComputeNewStateRootResult = {
   newStateRoot: Root;
   proposerReward: Gwei;
   postState: IBeaconStateView;
-  hashTreeRootMs: number;
+  hashTreeRootTime: number;
 };
 
 /**
