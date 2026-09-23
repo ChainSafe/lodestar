@@ -55,9 +55,14 @@ import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 
-/** Inputs for computing the state root of a locally produced block. */
-export type ComputeNewStateRootInput = {
+/** Signed block to apply in a state transition. */
+export type BlockSTFInput = {
   block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+  /**
+   * Fork-specific SSZ serialization of `block`, using the matching full or blinded block type. Native
+   * implementations serialize `block` when omitted.
+   */
+  ssz?: Uint8Array;
 };
 
 /** State root computation result. Includes data derived from the post-state. */
@@ -182,14 +187,9 @@ export interface IBeaconStateView {
   hashTreeRoot(): Uint8Array;
 
   // State transition
-  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
-  /**
-   * `signedBlockBytes` must be the fork-specific SSZ serialization of `signedBlock`, using the matching full or
-   * blinded block type.
-   */
+  computeNewStateRoot(input: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult;
   stateTransition(
-    signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    input: BlockSTFInput,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;

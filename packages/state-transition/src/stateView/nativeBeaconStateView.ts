@@ -41,7 +41,7 @@ import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
-  ComputeNewStateRootInput,
+  BlockSTFInput,
   ComputeNewStateRootResult,
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -651,33 +651,25 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
-  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
-    const isBlinded = isBlindedBeaconBlock(input.block.message);
-    const signedBlockBytes = isBlinded
-      ? this.config
-          .getPostBellatrixForkTypes(input.block.message.slot)
-          .SignedBlindedBeaconBlock.serialize(input.block as SignedBlindedBeaconBlock)
-      : this.config
-          .getForkTypes(input.block.message.slot)
-          .SignedBeaconBlock.serialize(input.block as SignedBeaconBlock);
-
-    const postState = new NativeBeaconStateView(
-      this.binding.stateTransition(signedBlockBytes, isBlinded, computeNewStateRootStateTransitionOpts),
-      this.config
-    );
+  computeNewStateRoot(input: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = this.stateTransition(input, computeNewStateRootStateTransitionOpts, modules);
     return getComputeNewStateRootResult(postState, modules);
   }
 
   stateTransition(
-    signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block, ssz}: BlockSTFInput,
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(
-      this.binding.stateTransition(signedBlockBytes, isBlindedBeaconBlock(signedBlock.message), options),
-      this.config
-    );
+    const isBlinded = isBlindedBeaconBlock(block.message);
+    const signedBlockBytes =
+      ssz ??
+      (isBlinded
+        ? this.config
+            .getPostBellatrixForkTypes(block.message.slot)
+            .SignedBlindedBeaconBlock.serialize(block as SignedBlindedBeaconBlock)
+        : this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block as SignedBeaconBlock));
+    return new NativeBeaconStateView(this.binding.stateTransition(signedBlockBytes, isBlinded, options), this.config);
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {

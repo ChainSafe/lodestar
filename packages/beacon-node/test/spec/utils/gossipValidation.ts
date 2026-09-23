@@ -292,8 +292,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    sszTypesFor(fork).SignedBeaconBlock.serialize(signedBlock),
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,

@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -71,7 +69,7 @@ import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
-  ComputeNewStateRootInput,
+  BlockSTFInput,
   ComputeNewStateRootResult,
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -848,7 +846,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
-  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+  computeNewStateRoot({block}: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult {
     const postState = new BeaconStateView(
       stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
     );
@@ -856,12 +854,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   stateTransition(
-    _signedBlockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block}: BlockSTFInput,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView {
-    return new BeaconStateView(stateTransition(this.cachedState, signedBlock, options, modules));
+    return new BeaconStateView(stateTransition(this.cachedState, block, options, modules));
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {

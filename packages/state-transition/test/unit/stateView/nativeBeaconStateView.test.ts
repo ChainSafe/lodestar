@@ -105,7 +105,7 @@ describe("NativeBeaconStateView", () => {
       block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
       isBlinded: true,
     },
-  ])("derives the blinded flag for a $blockType block", ({block, isBlinded}) => {
+  ])("uses provided bytes and derives the blinded flag for a $blockType block", ({block, isBlinded}) => {
     const blockBytes = new Uint8Array([1, 2, 3]);
     const options: StateTransitionOpts = {
       verifyStateRoot: false,
@@ -118,7 +118,7 @@ describe("NativeBeaconStateView", () => {
     } as unknown as IBeaconStateViewNative;
 
     const view = new NativeBeaconStateView(binding, config);
-    const postState = view.stateTransition(blockBytes, block, options, {});
+    const postState = view.stateTransition({block, ssz: blockBytes}, options, {});
 
     expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
     expect(postState).toBeInstanceOf(NativeBeaconStateView);

@@ -4,7 +4,6 @@ import {
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -51,11 +50,7 @@ export async function verifyBlocksStateTransitionOnly(
     let postState: IBeaconStateView;
     try {
       postState = preState.stateTransition(
-        // We should have the serialized block from gossip in the hot path.
-        // Otherwise, fall back to serializing from block for the less latency critical paths like
-        // syncing/download.
-        serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block),
-        block,
+        {block, ssz: serializedCache.get(block)},
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
