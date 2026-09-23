@@ -587,6 +587,12 @@ export function decodeBodiesResponse(fork: ForkName, data: Uint8Array): (Executi
       body: {transactions: Uint8Array[]; withdrawals?: ExecutionPayloadBody["withdrawals"]};
     }[];
   };
+  // Amsterdam bodies also carry `block_access_list` on the wire, and it is decoded into
+  // `parsed` — but deliberately not surfaced. `ExecutionPayloadBody` is shared with the
+  // JSON-RPC transport, whose `ExecutionPayloadBodyRpc` has no equivalent field, so
+  // adding one here would give callers a value only this transport can ever populate and
+  // no way to tell "the EL sent nothing" from "we are on JSON-RPC". Revisit when a caller
+  // needs the BAL; today `getPayloadBodiesByHash/ByRange` have none.
   return parsed.entries.map((e) =>
     e.available ? {transactions: e.body.transactions, withdrawals: e.body.withdrawals ?? null} : null
   );
