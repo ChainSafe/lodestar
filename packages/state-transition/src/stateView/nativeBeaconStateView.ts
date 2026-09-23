@@ -314,7 +314,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     const key = `${slot}:${index}`;
     let cached = this._getBeaconCommittee.get(key);
     if (cached === undefined) {
-      cached = Uint32Array.from(this.binding.getBeaconCommittee(slot, index));
+      cached = this.binding.getBeaconCommittee(slot, index);
       this._getBeaconCommittee.set(key, cached);
     }
     return cached;

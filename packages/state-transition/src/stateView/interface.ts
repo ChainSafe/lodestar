@@ -362,7 +362,7 @@ export type IBeaconStateViewNative = Omit<
     isBlinded: boolean,
     proposerRewards?: RewardCache
   ): rewards.BlockRewards;
-  getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
   getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
