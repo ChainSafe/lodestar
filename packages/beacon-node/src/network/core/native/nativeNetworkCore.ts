@@ -11,6 +11,7 @@ import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
+import {AggregatorTracker} from "../../processor/aggregatorTracker.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {assertBoundedReqRespHandlers} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
@@ -48,7 +49,7 @@ export class NativeNetworkCore implements INetworkCore {
   private closePromise: Promise<void> | undefined;
   private constructor(private readonly modules: BaseNetworkInit) {}
 
-  static init(modules: BaseNetworkInit): NativeNetworkCore {
+  static init(modules: BaseNetworkInit & {aggregatorTracker: AggregatorTracker}): NativeNetworkCore {
     if (modules.peerStoreDir)
       throw new NativeNetworkError({
         code: NativeNetworkErrorCode.CONFIGURATION,
@@ -83,6 +84,7 @@ export class NativeNetworkCore implements INetworkCore {
         clock,
         core.modules.opts,
         initialStatus,
+        modules.aggregatorTracker,
         core.onFailure
       );
       core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));

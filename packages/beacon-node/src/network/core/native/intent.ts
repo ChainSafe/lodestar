@@ -10,7 +10,6 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostFulu,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
@@ -22,23 +21,31 @@ import {GossipTopicTypeMap, GossipType} from "../../gossip/interface.js";
 import {getCoreTopicsAtFork, getDataColumnSidecarTopics} from "../../gossip/topic.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
+import {AggregatorTracker} from "../../processor/aggregatorTracker.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {computeSubscribedSubnet} from "../../subnets/util.js";
+import {
+  CommitteeDemand,
+  committeeDemand,
+  mergeCommitteeDemand,
+  normalizeCommitteeSubscriptions,
+  pruneCommitteeDemand,
+} from "./committee.js";
 import {kinds, nativeLocalState} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-type Desired = {
+type Desired = CommitteeDemand & {
   status: Status;
   custodyGroupCount: number;
   coreTopics: boolean;
   custodyTopics: boolean;
-  attDuties: Map<number, Set<number>>;
-  attDemand: Map<number, number>;
-  syncDuties: Map<number, number>;
 };
 type Change = (desired: Desired) => void;
-type Update = {type: "intent"; change: Change} | {type: "status"; status: Status};
-type Command = Update & {resolve: () => void; reject: (error: unknown) => void};
+type Update =
+  | {type: "intent"; change: Change}
+  | {type: "status"; status: Status}
+  | {type: "committee"; demand: CommitteeDemand};
+type Command = Update & {promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void};
 
 function snapshotStatus(status: Status): Status {
   const copyRoot = (value: Uint8Array, length: number): Uint8Array => {
@@ -58,20 +65,6 @@ function snapshotStatus(status: Status): Status {
   };
 }
 
-export function snapshotCommitteeSubscriptions(subscriptions: CommitteeSubscription[], sync: boolean) {
-  nativeInteger(subscriptions.length, "committee subscriptions", 4096);
-  return subscriptions.map(({slot, subnet, validatorIndex, isAggregator}) => {
-    if (typeof isAggregator !== "boolean")
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "aggregator flag"});
-    return {
-      slot: nativeInteger(slot, "duty slot", Number.MAX_SAFE_INTEGER - 1),
-      subnet: nativeInteger(subnet, "duty subnet", (sync ? SYNC_COMMITTEE_SUBNET_COUNT : ATTESTATION_SUBNET_COUNT) - 1),
-      validatorIndex: nativeInteger(validatorIndex, "validator index"),
-      isAggregator,
-    };
-  });
-}
-
 export class NativeIntent {
   private desired: Desired;
   private readonly commands: Command[] = [];
@@ -86,6 +79,7 @@ export class NativeIntent {
     private readonly clock: IClock,
     private readonly opts: NetworkOptions,
     status: Status,
+    private readonly aggregatorTracker: AggregatorTracker,
     private readonly onFailure: (error: unknown) => void
   ) {
     this.appliedSlot = Number(application.initialSlot);
@@ -94,9 +88,7 @@ export class NativeIntent {
       custodyGroupCount: network.custodyConfig.targetCustodyGroupCount,
       coreTopics: false,
       custodyTopics: false,
-      attDuties: new Map(),
-      attDemand: new Map(),
-      syncDuties: new Map(),
+      ...committeeDemand(),
     };
   }
   updateStatus(status: Status): Promise<void> {
@@ -121,31 +113,9 @@ export class NativeIntent {
     });
   }
   committee(subscriptions: CommitteeSubscription[], sync: boolean): Promise<void> {
-    const copies = snapshotCommitteeSubscriptions(subscriptions, sync);
     return this.enqueue({
-      type: "intent",
-      change: (state) => {
-        for (const {slot, subnet, isAggregator} of copies) {
-          if (sync) {
-            state.syncDuties.set(subnet, Math.max(state.syncDuties.get(subnet) ?? 0, slot));
-          } else {
-            state.attDemand.set(subnet, Math.max(state.attDemand.get(subnet) ?? 0, slot + 1));
-            if (isAggregator) {
-              let subnets = state.attDuties.get(slot);
-              if (!subnets) {
-                if (state.attDuties.size >= 2 * SLOTS_PER_EPOCH)
-                  throw new NativeNetworkError({
-                    code: NativeNetworkErrorCode.CAPACITY,
-                    resource: "aggregator duty slots",
-                  });
-                subnets = new Set();
-                state.attDuties.set(slot, subnets);
-              }
-              subnets.add(subnet);
-            }
-          }
-        }
-      },
+      type: "committee",
+      demand: normalizeCommitteeSubscriptions(subscriptions, sync, this.clock, this.network.config),
     });
   }
   refresh(): void {
@@ -156,12 +126,23 @@ export class NativeIntent {
   private enqueue(update: Update): Promise<void> {
     if (this.closed)
       return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"}));
+    const pending = this.commands.at(-1);
+    if (update.type === "committee" && pending?.type === "committee") {
+      pruneCommitteeDemand(pending.demand, this.clock.currentSlot, 2 * SLOTS_PER_EPOCH - 1);
+      mergeCommitteeDemand(pending.demand, update.demand);
+      return pending.promise;
+    }
     if (this.commands.length >= 16)
       return Promise.reject(
-        new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "local intent waiters"})
+        new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "local intent commands"})
       );
     const completion = defer<void>();
-    this.commands.push({...update, resolve: () => completion.resolve(), reject: completion.reject});
+    this.commands.push({
+      ...update,
+      promise: completion.promise,
+      resolve: () => completion.resolve(),
+      reject: completion.reject,
+    });
     this.start();
     return completion.promise;
   }
@@ -195,21 +176,26 @@ export class NativeIntent {
         } else {
           const desired: Desired = {
             ...this.desired,
-            attDuties: new Map(Array.from(this.desired.attDuties, ([slot, subnets]) => [slot, new Set(subnets)])),
+            attDuties: new Map(this.desired.attDuties),
             attDemand: new Map(this.desired.attDemand),
             syncDuties: new Map(this.desired.syncDuties),
           };
-          for (const key of desired.attDuties.keys()) if (key < slot) desired.attDuties.delete(key);
-          for (const [key, expiry] of desired.attDemand) if (expiry < slot) desired.attDemand.delete(key);
-          const epochSlot = Math.floor(slot / SLOTS_PER_EPOCH) * SLOTS_PER_EPOCH;
-          for (const [key, expiry] of desired.syncDuties) if (expiry < epochSlot) desired.syncDuties.delete(key);
           if (command?.type === "status") desired.status = command.status;
+          else if (command?.type === "committee") mergeCommitteeDemand(desired, command.demand);
           else command?.change(desired);
+          pruneCommitteeDemand(desired, slot);
           await this.runtime.applyIntent(this.render(desired, slot), BigInt(Math.max(0, slot)));
           if (this.closed)
             throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
           this.desired = desired;
           this.appliedSlot = slot;
+        }
+        if (command?.type === "committee") {
+          pruneCommitteeDemand(command.demand, this.clock.currentSlot, 2 * SLOTS_PER_EPOCH - 1);
+          for (const [dutySlot, mask] of command.demand.attDuties)
+            for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
+              if ((mask & (1n << BigInt(subnet))) !== 0n) this.aggregatorTracker.addAggregator(subnet, dutySlot);
+          this.aggregatorTracker.prune();
         }
         if (slot !== this.clock.currentSlot) this.dirty = true;
         command?.resolve();
@@ -227,7 +213,7 @@ export class NativeIntent {
     const local = nativeLocalState(config, state.status, slot, state.custodyGroupCount);
     const boundaries = getActiveForkBoundaries(config, epoch).filter((boundary) => {
       const next = getCurrentAndNextForkBoundary(config, boundary.epoch).nextBoundary;
-      return !isForkPostGloas(boundary.fork) && (!next || epoch < next.epoch + FORK_EPOCH_LOOKAHEAD);
+      return !next || epoch < next.epoch + FORK_EPOCH_LOOKAHEAD;
     });
     const longLived = computeSubscribedSubnet(config, nodeId, Math.max(0, epoch));
     const attnets = new Uint8Array(8);
@@ -272,10 +258,13 @@ export class NativeIntent {
             add({type: GossipType.sync_committee, subnet});
       }
       for (const subnet of longLived) add({type: GossipType.beacon_attestation, subnet});
-      for (const [dutySlot, subnets] of state.attDuties) {
+      let aggregatorSubnets = 0n;
+      for (const [dutySlot, mask] of state.attDuties) {
         if (dutySlot >= slot && dutySlot <= slot + this.opts.slotsToSubscribeBeforeAggregatorDuty)
-          for (const subnet of subnets) add({type: GossipType.beacon_attestation, subnet});
+          aggregatorSubnets |= mask;
       }
+      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
+        if ((aggregatorSubnets & (1n << BigInt(subnet))) !== 0n) add({type: GossipType.beacon_attestation, subnet});
       if (isForkPostAltair(boundary.fork))
         for (const subnet of state.syncDuties.keys()) add({type: GossipType.sync_committee, subnet});
     }

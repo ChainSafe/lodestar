@@ -18,7 +18,6 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   SLOTS_PER_EPOCH,
   isForkPostFulu,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
@@ -240,6 +239,9 @@ function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoin
 }
 
 function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
+  for (const fork of config.forksAscendingEpochOrder) {
+    if (fork.epoch !== Infinity) nativeFork(fork.name);
+  }
   if (opts.tcp !== false || opts.quic === false) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
@@ -268,7 +270,7 @@ function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
       resource: "native control RPC timeout overrides",
     });
   nativeInteger(opts.maxPeers, "max peers", 256, 2);
-  nativeInteger(opts.targetPeers, "target peers", opts.maxPeers, 1);
+  nativeInteger(opts.targetPeers, "target peers", opts.maxPeers - 1, 1);
   nativeInteger(opts.targetGroupPeers, "target group peers", opts.maxPeers, 1);
   nativeInteger(opts.slotsToSubscribeBeforeAggregatorDuty, "aggregator lookahead", 2 * SLOTS_PER_EPOCH);
   nativeInteger(config.MAX_PAYLOAD_SIZE, "max payload", 10 * MiB, 1);
@@ -281,7 +283,11 @@ function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA, "electra blob subnets", 128, 1);
   nativeInteger(config.forkBoundariesAscendingEpochOrder.length, "fork boundaries", 64, 1);
   nativeInteger(config.BLOB_SCHEDULE.length, "blob schedule", 62);
-  nativeInteger(opts.directPeers?.length ?? 0, "direct peers", opts.maxPeers);
+  nativeInteger(
+    opts.directPeers?.length ?? 0,
+    "direct peers",
+    opts.targetPeers - Math.max(1, Math.floor(opts.targetPeers / 4))
+  );
   nativeInteger(opts.bootMultiaddrs?.length ?? 0, "bootstrap peers", 64);
   for (const address of opts.bootMultiaddrs ?? []) {
     if (typeof address !== "string" || address.length > 256 || !address.startsWith("/"))
@@ -320,8 +326,7 @@ export function createNativeConfig(
     ...computeGossipPeerScoreParamsByKind(config, activeValidatorCount),
   };
   const boundaries = config.forkBoundariesAscendingEpochOrder.filter(
-    (boundary, index, all) =>
-      boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch && !isForkPostGloas(boundary.fork)
+    (boundary, index, all) => boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch
   );
   const small = opts.native?.profile === "small";
   const connections = Math.min(256, Math.max(16, opts.maxPeers + (small ? 4 : 32)));
@@ -364,7 +369,7 @@ export function createNativeConfig(
       outboundReserve: Math.min(small ? 4 : 32, opts.targetPeers),
       connectionCapacity: connections,
       handshakingCapacity: Math.min(connections, small ? 8 : 32),
-      dialingCapacity: Math.min(connections, small ? 4 : 16),
+      dialingCapacity: Math.min(4, opts.maxPeers - opts.targetPeers),
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? (small ? 64 : 512) * MiB,
       nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 512 : 768) * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,

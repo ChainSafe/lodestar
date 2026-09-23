@@ -44,6 +44,25 @@ async function fixture() {
 }
 
 describe("native configuration boundary", () => {
+  it.each([0, 1, 1_000_000, Number.MAX_SAFE_INTEGER])(
+    "rejects unsupported forks scheduled at epoch %s before startup",
+    async (epoch) => {
+      const {key} = await fixture();
+      const scheduled = createBeaconConfig({...config, GLOAS_FORK_EPOCH: epoch}, config.genesisValidatorsRoot);
+      expect(() =>
+        createNativeConfig(
+          {...defaultNetworkOptions, tcp: false},
+          scheduled,
+          key,
+          0,
+          ssz.fulu.Status.defaultValue(),
+          scheduled.CUSTODY_REQUIREMENT,
+          16
+        )
+      ).toThrow("Unsupported native fork gloas");
+    }
+  );
+
   it("fits the fixed native plan for a million-validator Fulu workload", async () => {
     const node = await fixture();
     const application = node.create({}, 0, 1_000_000);
@@ -90,12 +109,29 @@ describe("native configuration boundary", () => {
     {maxGossipTopicConcurrency: Number.NaN},
     {native: {hostGossipBytes: 1024}},
     {maxPeers: 257},
+    {maxPeers: 200, targetPeers: 200},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
     {directPeers: ["/ip4/127.0.0.1/udp/9001/quic-v1"]},
     {directPeers: ["x".repeat(405)]},
   ])("rejects unmappable options: %j", async (opts) => {
     const node = await fixture();
     expect(() => node.create(opts)).toThrow(NativeNetworkError);
+  });
+
+  it("resolves dial headroom from the difference between target and maximum", async () => {
+    const node = await fixture();
+    for (const [maxPeers, targetPeers, expected] of [
+      [210, 200, 4],
+      [201, 200, 1],
+      [256, 255, 1],
+    ]) {
+      const application = node.create({maxPeers, targetPeers});
+      try {
+        expect(application.resources.dialingCapacity).toBe(expected);
+      } finally {
+        application.identitySecretKey.fill(0);
+      }
+    }
   });
 
   it("resolves configured direct peers into copied identities and both QUIC endpoints", async () => {

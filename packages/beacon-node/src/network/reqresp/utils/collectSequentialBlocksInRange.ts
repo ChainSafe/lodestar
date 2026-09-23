@@ -12,13 +12,14 @@ import {sszDeserializeResponse} from "./collect.js";
 export async function collectSequentialBlocksInRange(
   blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: () => void
 ): Promise<SignedBeaconBlock[]> {
   const blocks: SignedBeaconBlock[] = [];
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
-    const block = sszDeserializeResponse(blockType, chunk.data);
+    const block = sszDeserializeResponse(blockType, chunk.data, onInvalidResponse);
 
     const blockSlot = block.message.slot;
 

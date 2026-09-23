@@ -12,11 +12,12 @@ import {ResponseTypeGetter} from "../types.js";
  */
 export async function collectExactOneTyped<T>(
   source: AsyncIterable<ResponseIncoming>,
-  typeFn: ResponseTypeGetter<T>
+  typeFn: ResponseTypeGetter<T>,
+  onInvalidResponse?: () => void
 ): Promise<T> {
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const response = sszDeserializeResponse(type, chunk.data, onInvalidResponse);
     return response;
   }
   throw new RequestError({code: RequestErrorCode.EMPTY_RESPONSE});
@@ -33,13 +34,14 @@ export async function collectMaxResponseTyped<T>(
   source: AsyncIterable<ResponseIncoming>,
   maxResponses: number,
   typeFn: ResponseTypeGetter<T>,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: () => void
 ): Promise<T[]> {
   // else: zero or more responses
   const responses: T[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const response = sszDeserializeResponse(type, chunk.data, onInvalidResponse);
     // optionally cache the serialized response if the cache is available
     serializedCache?.set(response as object, chunk.data);
     responses.push(response);
@@ -62,13 +64,14 @@ export async function collectMaxResponseTypedWithBytes<T>(
   source: AsyncIterable<ResponseIncoming>,
   maxResponses: number,
   typeFn: ResponseTypeGetter<T>,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: () => void
 ): Promise<T[]> {
   // else: zero or more responses
   const responses: T[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const data = sszDeserializeResponse(type, chunk.data);
+    const data = sszDeserializeResponse(type, chunk.data, onInvalidResponse);
     responses.push(data);
     // optionally cache the serialized response if the cache is available
     serializedCache?.set(data as object, chunk.data);
@@ -81,10 +84,11 @@ export async function collectMaxResponseTypedWithBytes<T>(
 }
 
 /** Light wrapper on type to wrap deserialize errors */
-export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array): T {
+export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array, onInvalidResponse?: () => void): T {
   try {
     return type.deserialize(bytes);
   } catch (e) {
+    onInvalidResponse?.();
     throw new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: (e as Error).message});
   }
 }
