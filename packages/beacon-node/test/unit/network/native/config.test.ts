@@ -216,14 +216,39 @@ describe("native configuration boundary", () => {
       {family: 4, port: 9000},
       {family: 6, port: 19000},
     ]);
-    expect(application.discovery?.advertisement).toMatchObject({udp: 9000, quic: 9001, udp6: 19000, quic6: 19001});
-    expect(() => node.create({discv5, localMultiaddrs: [localMultiaddrs[1]]})).toThrow("no listener");
-    expect(() => node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip4}}, localMultiaddrs})).toThrow(
-      "no listener"
-    );
+    expect(application.discovery?.advertisement).toMatchObject({udp: 9000, udp6: 19000});
+    expect(node.create({discv5, localMultiaddrs: [localMultiaddrs[1]]}).discovery?.fixed).toEqual({});
+    expect(() =>
+      node.create({discv5, localMultiaddrs: [localMultiaddrs[1]], native: {discovery: {fixed: {quic6: 19001}}}})
+    ).toThrow("no listener");
+    expect(
+      node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip4}}, localMultiaddrs}).discovery
+        ?.advertisement?.ip6
+    ).toBeUndefined();
     expect(() => node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip6}}, localMultiaddrs})).toThrow(
       "address family"
     );
+  });
+
+  it("distinguishes persisted hints from explicit startup pins and allows address-less startup", async () => {
+    const node = await fixture();
+    const empty = SignableENR.createFromPrivateKey(node.key);
+    const cached = SignableENR.createFromPrivateKey(node.key);
+    cached.ip = "198.51.100.1";
+    cached.udp = 41000;
+    const discv5 = {enr: empty.encodeTxt(), bindAddrs: {ip4: "/ip4/0.0.0.0/udp/0"}, bootEnrs: [], config: {}};
+    const localMultiaddrs = ["/ip4/0.0.0.0/udp/0/quic-v1"];
+    const bare = node.create({discv5, localMultiaddrs});
+    expect(bare.discovery?.advertisement).toEqual({});
+    expect(bare.discovery?.fixed).toEqual({});
+    const seeded = node.create({discv5, localMultiaddrs, native: {discovery: {initialEnr: cached.encodeTxt()}}});
+    expect(seeded.discovery?.advertisement).toEqual({ip4: Uint8Array.of(198, 51, 100, 1), udp: 41000});
+    expect(seeded.discovery?.fixed).toEqual({});
+    const pinned = node.create({discv5, native: {discovery: {fixed: {ip4: "192.0.2.1", udp: 443, quic: 444}}}});
+    expect(pinned.discovery?.fixed).toEqual({ip4: Uint8Array.of(192, 0, 2, 1), udp: 443, quic: 444});
+    const portOnly = node.create({discv5, native: {discovery: {fixed: {udp: 443}}}});
+    expect(portOnly.discovery?.fixed).toEqual({udp: 443});
+    for (const application of [bare, seeded, pinned, portOnly]) application.identitySecretKey.fill(0);
   });
 
   it("accepts IPv6-only QUIC and discovery", async () => {
@@ -241,7 +266,6 @@ describe("native configuration boundary", () => {
     expect(application.discovery?.advertisement).toEqual({
       ip6: new Uint8Array(16).fill(1, 15),
       udp6: 9000,
-      quic6: 9001,
     });
   });
 });

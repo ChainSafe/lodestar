@@ -74,7 +74,7 @@ export class NativeIntent {
   private appliedSlot: number;
   constructor(
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "applyIntent" | "updateStatus">,
-    private readonly application: NativeApplicationConfig,
+    application: NativeApplicationConfig,
     private readonly network: NetworkConfig,
     private readonly clock: IClock,
     private readonly opts: NetworkOptions,
@@ -284,7 +284,6 @@ export class NativeIntent {
     return {
       update: {
         local,
-        endpoints: this.application.discovery?.advertisement ?? null,
       },
       subscriptions,
       demand: {

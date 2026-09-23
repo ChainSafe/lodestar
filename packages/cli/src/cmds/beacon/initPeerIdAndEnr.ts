@@ -143,7 +143,7 @@ export async function initPrivateKeyAndEnr(
   beaconDir: string,
   logger: Logger,
   bootnode?: boolean
-): Promise<{privateKey: PrivateKey; enr: SignableENR}> {
+): Promise<{privateKey: PrivateKey; enr: SignableENR; initialEnr?: string}> {
   const {persistNetworkIdentity} = args;
 
   const newPrivateKeyAndENR = async (): Promise<{privateKey: PrivateKey; enr: SignableENR}> => {
@@ -191,11 +191,24 @@ export async function initPrivateKeyAndEnr(
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
     const {privateKey, enr, newEnr} = await readPersistedPrivateKeyAndENR(peerIdFile, enrFile);
+    let initialEnr: string | undefined;
+    if (args["network.backend"] === "native" && !bootnode) {
+      const initial = SignableENR.decodeTxt(enr.encodeTxt(), privateKey.raw);
+      if (args["enr.ip"] !== undefined) {
+        initial.delete("ip");
+        initial.delete("udp");
+      }
+      if (args["enr.ip6"] !== undefined) {
+        initial.delete("ip6");
+        initial.delete("udp6");
+      }
+      initialEnr = initial.encodeTxt();
+    }
     overwriteEnrWithCliArgs(enr, args, logger, {newEnr, bootnode});
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(privateKey));
     writeFile600Perm(enrFile, enr.encodeTxt());
-    return {privateKey, enr};
+    return {privateKey, enr, initialEnr};
   }
   const {privateKey, enr} = await newPrivateKeyAndENR();
   overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});

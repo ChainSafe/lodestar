@@ -202,8 +202,27 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({api: {commit, version}});
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
+  const {privateKey, enr, initialEnr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
+  if (args["network.backend"] === "native") {
+    beaconNodeOptions.set({
+      network: {
+        native: {
+          discovery: {
+            initialEnr,
+            fixed: {
+              ip4: args["enr.ip"] !== undefined ? enr.ip : undefined,
+              ip6: args["enr.ip6"] !== undefined ? enr.ip6 : undefined,
+              udp: args["enr.udp"],
+              udp6: args["enr.udp6"],
+              quic: args["enr.quic"],
+              quic6: args["enr.quic6"],
+            },
+          },
+        },
+      },
+    });
+  }
   if (args.discv5 !== false) {
     // Inject ENR to beacon options
     beaconNodeOptions.set({

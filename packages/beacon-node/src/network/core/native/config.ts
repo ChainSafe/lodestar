@@ -174,40 +174,46 @@ function discovery(
       });
     }
   }
-  const advertisement: AdvertisedEndpoints = {};
-  for (const family of [4, 6] as const) {
-    const udp = enr.getLocationMultiaddr(family === 4 ? "udp4" : "udp6");
-    const quic = enr.getLocationMultiaddr(family === 4 ? "quic4" : "quic6");
+  const fixed: AdvertisedEndpoints = {};
+  const explicit = opts.native?.discovery?.fixed;
+  for (const [family, ipKey, udpKey, quicKey] of [
+    [4, "ip4", "udp", "quic"],
+    [6, "ip6", "udp6", "quic6"],
+  ] as const) {
+    const ip = explicit?.[ipKey];
+    if (ip !== undefined) fixed[ipKey] = parseNativeEndpoint(`/ip${family}/${ip}/udp/1`, false).address;
+    for (const portKey of [udpKey, quicKey]) {
+      const port = explicit?.[portKey];
+      if (port !== undefined) fixed[portKey] = nativeInteger(port, "advertised port", 65535, 1);
+    }
     if (
-      (udp && !bind.some((endpoint) => endpoint.family === family)) ||
-      (quic && !listeners.some((endpoint) => endpoint.family === family))
+      ((ip !== undefined || explicit?.[udpKey] !== undefined || explicit?.[quicKey] !== undefined) &&
+        !bind.some((endpoint) => endpoint.family === family)) ||
+      (explicit?.[quicKey] !== undefined && !listeners.some((endpoint) => endpoint.family === family))
     ) {
       throw new NativeNetworkError({
         code: NativeNetworkErrorCode.CONFIGURATION,
-        resource: "advertised address family has no listener",
+        resource: "fixed address family has no listener",
       });
     }
-    const address = quic ?? udp;
-    if (!address) continue;
-    const endpoint = parseNativeEndpoint(address.toString(), quic !== undefined);
-    if (family === 4) {
-      advertisement.ip4 = endpoint.address;
-      if (udp) advertisement.udp = parseNativeEndpoint(udp.toString(), false).port;
-      if (quic) advertisement.quic = endpoint.port;
-    } else {
-      advertisement.ip6 = endpoint.address;
-      if (udp) advertisement.udp6 = parseNativeEndpoint(udp.toString(), false).port;
-      if (quic) advertisement.quic6 = endpoint.port;
-    }
   }
-  if (
-    (advertisement.quic === undefined && advertisement.quic6 === undefined) ||
-    (advertisement.udp === undefined && advertisement.udp6 === undefined)
-  ) {
-    throw new NativeNetworkError({
-      code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "missing advertised discovery or QUIC address",
-    });
+  const initialText = opts.native?.discovery?.initialEnr;
+  if (initialText !== undefined && initialText.length > 404)
+    throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "initial ENR length"});
+  const initial = initialText === undefined ? enr : ENR.decodeTxt(initialText);
+  if (!initial.publicKey.every((byte, index) => byte === key.publicKey.raw[index]))
+    throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "initial ENR identity"});
+  const advertisement: AdvertisedEndpoints = {};
+  for (const [family, ipKey, udpKey] of [
+    [4, "ip4", "udp"],
+    [6, "ip6", "udp6"],
+  ] as const) {
+    if (!bind.some((endpoint) => endpoint.family === family)) continue;
+    const udp = initial.getLocationMultiaddr(family === 4 ? "udp4" : "udp6");
+    if (!udp) continue;
+    const endpoint = parseNativeEndpoint(udp.toString(), false);
+    advertisement[ipKey] = endpoint.address;
+    if (endpoint.port > 0) advertisement[udpKey] = endpoint.port;
   }
   return {
     bind,
@@ -218,6 +224,7 @@ function discovery(
       return ENR.decodeTxt(text).encode();
     }),
     advertisement,
+    fixed,
   };
 }
 

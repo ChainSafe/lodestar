@@ -468,7 +468,6 @@ function emptyIntent(application: NativeApplicationConfig): NativeLocalIntent {
   return {
     update: {
       local: application.local,
-      endpoints: null,
     },
     subscriptions: [],
     demand: {
