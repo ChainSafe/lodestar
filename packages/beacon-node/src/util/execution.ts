@@ -278,20 +278,15 @@ export type RebuildMiss =
   | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
 
 /**
- * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes. Full entries are served
- * as `bytes.subarray(1)` without deserializing; blinded ones are rebuilt from EL bodies, 32 per
- * round-trip. Every blinded entry is attempted regardless of age: the spec requires serving
- * MIN_EPOCHS_FOR_BLOCK_REQUESTS and allows more, and how much more is decided by the EL's block
- * access list retention.
+ * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes, rebuilding blinded
+ * entries from EL bodies 32 per round-trip.
  *
- * The by-range spec inherits BeaconBlocksByRange v2 semantics: consecutive, MAY be short. A hole
- * looks like a lying peer to one that already holds the blocks, so the stream ends at the first
- * entry that cannot be served (EL miss, or body root mismatch, which is logged at debug but to the
- * peer is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with
- * that slot; everything yielded before it is still a valid response.
+ * Ends at the first entry that cannot be served by throwing RANGE_UNSERVABLE with that slot: the
+ * by-range spec inherits BeaconBlocksByRange v2 semantics (consecutive, MAY be short), and a hole
+ * looks like a lying peer to one that already holds the blocks. Entries are attempted regardless of
+ * age; the EL's block access list retention is the floor, not MIN_EPOCHS_FOR_BLOCK_REQUESTS.
  *
- * Also throws ENGINE_UNAVAILABLE if the EL call itself fails. Either may surface after some
- * envelopes were already yielded.
+ * Throws ENGINE_UNAVAILABLE if the EL call fails. Either may surface after envelopes were yielded.
  */
 export async function* reconstructExecutionPayloadEnvelopesByRange(
   db: IBeaconDb,
