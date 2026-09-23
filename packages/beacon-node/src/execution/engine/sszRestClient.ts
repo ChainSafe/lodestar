@@ -12,6 +12,8 @@ export interface SszRestClientOpts {
   jwtId?: string;
   /** Request timeout in milliseconds. Defaults to 12000. */
   timeout?: number;
+  /** Node shutdown signal; aborts in-flight requests instead of leaving them to time out. */
+  signal?: AbortSignal;
 }
 
 export type SszRequestOpts = {
@@ -54,6 +56,7 @@ export class SszRestClient {
   private readonly jwtSecret: Uint8Array | undefined;
   private readonly jwtId: string | undefined;
   private readonly timeout: number;
+  private readonly signal: AbortSignal | undefined;
 
   constructor(opts: SszRestClientOpts) {
     this.baseUrl = opts.baseUrl;
@@ -61,6 +64,7 @@ export class SszRestClient {
     this.jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
     this.jwtId = opts.jwtId;
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
+    this.signal = opts.signal;
   }
 
   /** SSZ endpoint: 200 -> body bytes, 204 -> null, otherwise throws SszRestError. */
@@ -102,12 +106,16 @@ export class SszRestClient {
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
+    // Abort on whichever comes first: the per-request timeout or node shutdown. Without
+    // the shutdown signal an in-flight request outlives the queue drain and keeps the
+    // process alive for up to `timeout`, unlike the JSON-RPC client which forwards it.
+    const signal = this.signal ? AbortSignal.any([controller.signal, this.signal]) : controller.signal;
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method,
         headers,
         body: opts.body ? (opts.body as unknown as BodyInit) : undefined,
-        signal: controller.signal,
+        signal,
       });
       if (!res.ok) {
         throw await toSszRestError(res);

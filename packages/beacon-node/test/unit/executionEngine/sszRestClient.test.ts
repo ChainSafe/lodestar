@@ -136,6 +136,34 @@ describe("SszRestClient", () => {
     expect(sszErr.detail).toBe("not found");
   });
 
+  it("aborts an in-flight request when the shutdown signal fires, well before the timeout", async () => {
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.get("/engine/v1/identity", async () => new Promise(() => undefined));
+    });
+    const shutdown = new AbortController();
+    // Timeout far longer than the test: only the shutdown signal can end this request.
+    const client = new SszRestClient({
+      baseUrl: url,
+      clientVersionHeader: "LS/v0",
+      timeout: 60_000,
+      signal: shutdown.signal,
+    });
+
+    const started = Date.now();
+    const pending = client.requestJson("/engine/v1/identity");
+    setTimeout(() => shutdown.abort(), 20);
+
+    let err: unknown;
+    try {
+      await pending;
+    } catch (e) {
+      err = e;
+    }
+
+    expect((err as {code: string}).code).toBe("ERR_ABORTED");
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
   it("propagates timeout as a fetch error, not an SszRestError", async () => {
     const {url} = await startServer(afterCallbacks, (server) => {
       server.get("/engine/v1/identity", async () => new Promise(() => undefined));

@@ -199,6 +199,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         jwtSecretHex: opts.jwtSecretHex,
         jwtId: opts.jwtId,
         timeout: opts.timeout,
+        signal,
       });
       this.rest = new SszRestEngine(client, {logger, emitter: this.rpc.emitter});
       this.logger.info("SSZ-REST Engine API transport enabled (execution-apis#793)", {url: baseUrl});
