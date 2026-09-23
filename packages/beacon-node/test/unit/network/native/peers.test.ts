@@ -63,6 +63,19 @@ async function fixture() {
 }
 
 describe("native peer projection", () => {
+  it.each([
+    ["Lighthouse/v8.2.2", "Lighthouse"],
+    ["peer-controlled-unique-agent", "Unknown"],
+    ["", "Unknown"],
+  ])("bounds the client label for %s while preserving diagnostic agent text", async (agent, clientAgent) => {
+    const node = await fixture();
+    node.state.identify = {agent, protocolVersion: null, protocols: []};
+    node.drain({type: "ready", state: node.state, ownerSequence: 1n});
+    expect(node.connected).toHaveBeenCalledWith(expect.objectContaining({clientAgent}));
+    expect(formatNativePeer(node.state).agentVersion).toBe(agent);
+    node.peers.close();
+  });
+
   it("formats peer diagnostics without narrowing remote uint64 values or inventing timestamps", async () => {
     const {state} = await fixture();
     if (!state.status) throw new Error("Missing test status");

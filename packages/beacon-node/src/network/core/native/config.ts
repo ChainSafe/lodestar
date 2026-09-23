@@ -7,9 +7,7 @@ import {
   NativeApplicationConfig,
   NativeDiscoveryConfig,
   NativeLocalState,
-  NativeTopicBoundary,
   NativeTopicKind,
-  NativeTopicRule,
   NativeTopicScoreParams,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
@@ -50,7 +48,7 @@ export const kinds: readonly NativeTopicKind[] = [
 
 export function gossipExecutionLimits(
   opts: NetworkOptions,
-  policy: readonly NativeTopicBoundary[]
+  maxSszSizes: Readonly<Record<NativeTopicKind, number>>
 ): {items: number; bytes: number}[] {
   const byteWeights = [32, 4, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 24];
   const itemWeights = [1, 8, 32, 1, 1, 1, 2, 4, 1, 1, 1, 4, 8];
@@ -62,7 +60,7 @@ export function gossipExecutionLimits(
   return kinds.map((kind, i) => {
     const items = Math.min(concurrency, Math.floor((itemBudget * itemWeights[i]) / itemTotal));
     const bytes = Math.floor((byteBudget * byteWeights[i]) / byteTotal);
-    const largest = Math.max(0, ...policy.map((boundary) => boundary.rules[kind].sszMax));
+    const largest = maxSszSizes[kind];
     if (items < 1 || bytes < largest)
       throw new NativeNetworkError({
         code: NativeNetworkErrorCode.CONFIGURATION,
@@ -338,11 +336,8 @@ export function createNativeConfig(
   const small = opts.native?.profile === "small";
   const connections = Math.min(256, Math.max(16, opts.maxPeers + (small ? 4 : 32)));
   const listeners = nativeListeners(opts.localMultiaddrs, true);
-  const topicPolicy = boundaries.map((boundary) => {
-    const rules = Object.fromEntries(kinds.map((kind) => [kind, {count: 0, sszMin: 0, sszMax: 0}])) as Record<
-      NativeTopicKind,
-      NativeTopicRule
-    >;
+  const maxSszSizes = Object.fromEntries(kinds.map((kind) => [kind, 0])) as Record<NativeTopicKind, number>;
+  for (const boundary of boundaries) {
     for (const type of getCoreTopicsAtFork(network, boundary.fork, {
       subscribeAllSubnets: true,
       subscribeAllColumnSubnets: true,
@@ -352,14 +347,12 @@ export function createNativeConfig(
         throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: `topic ${type.type}`});
       const topic = {...type, boundary};
       const schema = getGossipSSZType(topic);
-      rules[kind] = {
-        count: rules[kind].count + 1,
-        sszMin: schema.minSize,
-        sszMax: Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE, schema)),
-      };
+      maxSszSizes[kind] = Math.max(
+        maxSszSizes[kind],
+        Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE, schema))
+      );
     }
-    return {digest: config.forkBoundary2ForkDigest(boundary), rules};
-  });
+  }
   const application: NativeApplicationConfig = {
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
@@ -435,7 +428,7 @@ export function createNativeConfig(
   };
   const byteWeights = [24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16];
   application.gossipPolicy.processor = kinds.map((kind, i) => {
-    const largest = Math.max(0, ...topicPolicy.map((boundary) => boundary.rules[kind].sszMax));
+    const largest = maxSszSizes[kind];
     const compressedMax = 32 + largest + Math.floor(largest / 6);
     const pages = Math.ceil(Math.max(4096, compressedMax, byteWeights[i] * MiB) / 4096);
     return {items: items[kind], bytes: pages * 4096};
@@ -446,7 +439,7 @@ export function createNativeConfig(
     65535,
     1
   );
-  application.gossipPolicy.execution = gossipExecutionLimits(opts, topicPolicy).map((limit, i) => ({
+  application.gossipPolicy.execution = gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => ({
     items: Math.min(limit.items, application.gossipPolicy.processor?.[i].items ?? limit.items),
     bytes: limit.bytes,
   }));

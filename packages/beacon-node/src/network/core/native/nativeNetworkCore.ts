@@ -267,7 +267,7 @@ export class NativeNetworkCore implements INetworkCore {
     return (await this.runtime.getPeers()).counts.connected;
   }
   connectToPeer(peer: string, addresses: string[]): Promise<void> {
-    nativeInteger(addresses.length, "dial addresses", 8, 1);
+    nativeInteger(addresses.length, "dial addresses", 2, 1);
     return this.runtime.connect(
       peer,
       addresses.map((address) => parseNativeEndpoint(address, true, peer)),

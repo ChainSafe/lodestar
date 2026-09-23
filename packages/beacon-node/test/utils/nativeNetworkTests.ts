@@ -314,6 +314,12 @@ describe("native Lodestar integration", () => {
         ]);
         expect((await left.network.getNetworkIdentity()).p2pAddresses).toHaveLength(2);
         const remote = await right.network.getNetworkIdentity();
+        await expect(
+          left.network.connectToPeer(
+            remote.peerId,
+            Array.from({length: 3}, () => remote.p2pAddresses[0])
+          )
+        ).rejects.toThrow("dial addresses");
         await left.network.connectToPeer(remote.peerId, remote.p2pAddresses);
         expect(await left.network.dumpPeer(remote.peerId)).toMatchObject({peerId: remote.peerId, state: "connected"});
         expect(await left.network.dumpPeers()).toMatchObject([{peerId: remote.peerId, state: "connected"}]);

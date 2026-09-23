@@ -10,7 +10,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {Status} from "@lodestar/types";
 import {computeColumnsForCustodyGroup} from "../../../util/dataColumns.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
-import {getKnownClientFromAgentVersion} from "../../peers/client.js";
+import {ClientKind, getKnownClientFromAgentVersion} from "../../peers/client.js";
 import {nativeMultiaddr} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
@@ -148,7 +148,7 @@ export class NativePeers {
         peer,
         status,
         custodyColumns,
-        clientAgent: getKnownClientFromAgentVersion(state.identify?.agent ?? "") ?? state.identify?.agent ?? "unknown",
+        clientAgent: getKnownClientFromAgentVersion(state.identify?.agent ?? "") ?? ClientKind.Unknown,
       });
     } else if (previous?.state.relevant) {
       this.events.emit(NetworkEvent.peerDisconnected, {peer});
