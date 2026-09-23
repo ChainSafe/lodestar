@@ -184,12 +184,15 @@ export class SlashingProtectionAttestationService {
       });
     }
 
-    await this.attestationByTarget.set(pubkey, attestations);
+    const overlay = this.minMaxSurround.createOverlay();
 
     // Pre-compute spans for all attestations
     for (const attestation of attestations) {
-      await this.minMaxSurround.insertAttestation(pubkey, attestation);
+      await overlay.minMaxSurround.insertAttestation(pubkey, attestation);
     }
+
+    await this.attestationByTarget.set(pubkey, attestations);
+    await overlay.commit(pubkey);
 
     // Pre-compute and store lower-bound
     const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
