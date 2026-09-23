@@ -54,7 +54,7 @@ const sszStatic = (fork: ForkName, typeName: string, _testSuite: string, testSui
   const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
   for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-    // Do not manually skip tests here; use defaultSkipOpts in ../utils/specTestIterator.js.
+    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     it(testCase, () => {
       // Mainnet must deal with big full states and hash each one multiple times
       if (ACTIVE_PRESET === "mainnet") {

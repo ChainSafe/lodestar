@@ -699,12 +699,12 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Put shared skips in defaultSkipOpts in ../utils/specTestIterator.js.
-        // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
-        // be applied. Passing them requires skipping deposit signature verification inside epoch
-        // processing, which Lodestar does not support. Unskip if upstream signs deposits for
-        // real, or if full bls_setting=2 support is ever added.
-        shouldSkip: (_testcase, name) =>
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
+        shouldSkip: (_testcase, name, _index) =>
+          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
+          // be applied. Passing them requires skipping deposit signature verification inside epoch
+          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
+          // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
           name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
