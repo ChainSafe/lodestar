@@ -18,8 +18,14 @@ export function createSpecTestMetrics(): {metrics: BeaconStateTransitionMetrics;
 }
 
 export function createSpecTestBeaconMetrics(genesisTime: number): Metrics {
-  const metrics = createMetrics({enabled: true, port: 0}, genesisTime);
-  // The spec tests inspect counters directly; keep the registry but do not leave process-level collectors active.
+  // Skip Node.js/default process metrics: `collectDefaultMetrics` enables a perf_hooks
+  // event-loop-delay monitor that is never disabled, which keeps the whole registry alive.
+  // Building one full `Metrics` per fork-choice test case and wiring it into `BeaconChain`
+  // then retains every closed chain (and its cached states) via the gauge `addCollect`
+  // closures, growing unbounded and OOM-ing the mainnet spec-test worker. The assertions
+  // only read counters, so process-level collectors are not needed.
+  const metrics = createMetrics({enabled: true, port: 0}, genesisTime, [], {collectNodeMetrics: false});
+  // `close()` removes the `unhandledRejection` listener added by `createMetrics`.
   metrics.close();
   return metrics;
 }
