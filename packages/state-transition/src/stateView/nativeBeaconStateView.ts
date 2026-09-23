@@ -230,8 +230,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get eth1Data(): phase0.Eth1Data {
     if (this._eth1Data === null) {
-      const eth1Data = this.binding.eth1Data;
-      this._eth1Data = {...eth1Data, depositCount: BigInt(eth1Data.depositCount)};
+      this._eth1Data = this.binding.eth1Data;
     }
     return this._eth1Data;
   }

@@ -355,7 +355,7 @@ export type IBeaconStateViewNative = Omit<
   pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
   // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
-  eth1Data: Omit<phase0.Eth1Data, "depositCount"> & {depositCount: number};
+  eth1Data: phase0.Eth1Data;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   computeBlockRewards(
     signedBlockBytes: Uint8Array,
