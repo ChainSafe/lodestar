@@ -203,10 +203,23 @@ function parseExecutionRequestsList(fork: ForkName, items: Uint8Array[]): Execut
   const result: ExecutionRequests = isGloas
     ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
     : {deposits: [], withdrawals: [], consolidations: []};
+  // Same canonical-form checks as the JSON-RPC decoder in types.ts: EIP-7685 requires
+  // strictly increasing type bytes and forbids empty request groups. Accepting either
+  // would let a malformed EL response produce a different request set — and therefore a
+  // wrong executionRequestsRoot — on a block we propose.
+  let prevRequestType: number | undefined;
   for (const item of items) {
     if (item.length === 0) throw Error("Execution request with empty data");
     const type = item[0];
     const body = item.subarray(1);
+    if (body.length === 0) {
+      throw Error(`Request with empty data must be excluded from execution requests currentRequestType=${type}`);
+    }
+    if (prevRequestType !== undefined && prevRequestType >= type) {
+      throw Error(
+        `Current request type must be larger than previous request type prevRequestType=${prevRequestType} currentRequestType=${type}`
+      );
+    }
     switch (type) {
       case DEPOSIT_REQUEST_TYPE:
         result.deposits = ssz.electra.DepositRequests.deserialize(body);
@@ -228,6 +241,7 @@ function parseExecutionRequestsList(fork: ForkName, items: Uint8Array[]): Execut
       default:
         throw Error(`Unknown execution request type=${type}`);
     }
+    prevRequestType = type;
   }
   return result;
 }

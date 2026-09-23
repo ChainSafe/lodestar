@@ -525,6 +525,51 @@ describe("sszRestEncoding / JSON diagnostics", () => {
   });
 });
 
+describe("sszRestEncoding / execution_requests canonical form", () => {
+  // EIP-7685: strictly increasing type bytes, no empty request groups. Mirrors the
+  // checks the JSON-RPC decoder in types.ts already applies.
+  const req = (type: number, body: Uint8Array): Uint8Array => {
+    const out = new Uint8Array(1 + body.length);
+    out[0] = type;
+    out.set(body, 1);
+    return out;
+  };
+  const deposits = ssz.electra.DepositRequests.serialize([ssz.electra.DepositRequest.defaultValue()]);
+  const withdrawals = ssz.electra.WithdrawalRequests.serialize([ssz.electra.WithdrawalRequest.defaultValue()]);
+  const built = (items: Uint8Array[]): Uint8Array =>
+    BuiltPrague.serialize({
+      payload: payloadFor(ForkName.deneb),
+      blockValue: 1n,
+      blobsBundle: ssz.deneb.BlobsBundle.defaultValue(),
+      executionRequests: items,
+      shouldOverrideBuilder: false,
+    });
+
+  it("accepts a strictly increasing list", () => {
+    const d = decodeBuiltPayload(ForkName.electra, built([req(0, deposits), req(1, withdrawals)]));
+    expect(d.executionRequests?.deposits.length).toBe(1);
+    expect(d.executionRequests?.withdrawals.length).toBe(1);
+  });
+
+  it("rejects an empty request group", () => {
+    expect(() => decodeBuiltPayload(ForkName.electra, built([req(0, new Uint8Array())]))).toThrow(
+      /must be excluded from execution requests/
+    );
+  });
+
+  it("rejects a duplicate type", () => {
+    expect(() => decodeBuiltPayload(ForkName.electra, built([req(0, deposits), req(0, deposits)]))).toThrow(
+      /must be larger than previous request type/
+    );
+  });
+
+  it("rejects out-of-order types", () => {
+    expect(() => decodeBuiltPayload(ForkName.electra, built([req(1, withdrawals), req(0, deposits)]))).toThrow(
+      /must be larger than previous request type/
+    );
+  });
+});
+
 describe("sszRestEncoding / Amsterdam ExecutionPayload pinned to #793", () => {
   // refactor-ssz.md § `ExecutionPayload` (Amsterdam). The codec reuses
   // `ssz.gloas.ExecutionPayload`, but consensus-specs and the Engine API spec are
