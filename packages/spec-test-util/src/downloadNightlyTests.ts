@@ -1,6 +1,8 @@
 import {LodestarError, fetch, retry} from "@lodestar/utils";
 import {downloadGenericSpecTests} from "./downloadTests.js";
 
+// Allow yesterday's nightly if today's is delayed or fails. Upstream starts at 00:00 UTC,
+// so yesterday's run is already ~30 hours old when Lodestar runs at 06:00 UTC.
 const MAX_NIGHTLY_AGE_MS = 48 * 60 * 60 * 1000;
 
 type WorkflowRun = {id: number; created_at: string; head_sha: string};
