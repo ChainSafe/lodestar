@@ -268,7 +268,7 @@ export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
 type RangeEntry = ArchivedEnvelopeEntry & {slot: Slot};
 
-/** What a payload root mismatch means on a given serving path */
+/** What a body root mismatch means on a given serving path */
 export type ReconstructMismatchPolicy = "throw" | "omit";
 
 export type RebuildMiss =
@@ -286,8 +286,8 @@ export type RebuildMiss =
  *
  * The by-range spec inherits BeaconBlocksByRange v2 semantics: consecutive, MAY be short. A hole
  * looks like a lying peer to one that already holds the blocks, so the stream ends at the first
- * entry that cannot be served (EL miss, or payload root mismatch, which is logged at error but to
- * the peer is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with
+ * entry that cannot be served (EL miss, or body root mismatch, which is logged at debug but to the
+ * peer is simply missing) by throwing {@link EnvelopeReconstructionError} RANGE_UNSERVABLE with
  * that slot; everything yielded before it is still a valid response.
  *
  * Also throws ENGINE_UNAVAILABLE if the EL call itself fails. Either may surface after some
@@ -397,8 +397,7 @@ async function reconstructEnvelopesBatch(
   } catch (e) {
     throw new EnvelopeReconstructionError(
       {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
-      `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`,
-      {cause: e}
+      `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`
     );
   }
 

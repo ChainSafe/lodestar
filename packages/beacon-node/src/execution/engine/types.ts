@@ -181,7 +181,7 @@ export type ExecutionPayloadBody = {
 
 /** engine_getPayloadBodiesByHashV2 (Amsterdam): adds the RLP-encoded block access list, or null if the EL has pruned it */
 export type ExecutionPayloadBodyV2Rpc = ExecutionPayloadBodyRpc & {
-  blockAccessList: DATA | null | undefined;
+  blockAccessList?: DATA | null;
 };
 
 export type ExecutionPayloadBodyV2 = ExecutionPayloadBody & {

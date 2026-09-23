@@ -19,14 +19,4 @@ export type EnvelopeReconstructionErrorType =
     }
   | {code: EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE; slot: Slot};
 
-export class EnvelopeReconstructionError extends LodestarError<EnvelopeReconstructionErrorType> {
-  constructor(type: EnvelopeReconstructionErrorType, message?: string, options?: {cause?: unknown}) {
-    super(type, message);
-    if (options?.cause !== undefined) this.cause = options.cause;
-  }
-
-  /** Transient EL outage vs. a real local inconsistency. Callers map this to their transport's error status. */
-  isTransient(): boolean {
-    return this.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE;
-  }
-}
+export class EnvelopeReconstructionError extends LodestarError<EnvelopeReconstructionErrorType> {}

@@ -201,7 +201,6 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     const err = await rejection(range(10, 11));
     expect(err).toBeInstanceOf(EnvelopeReconstructionError);
     expect(err?.type.code).toBe(EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE);
-    expect(err?.isTransient()).toBe(true);
   });
 
   it("yields the first batch before an EL failure on the second batch surfaces", async () => {
@@ -232,7 +231,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
 
     expect(yielded).toHaveLength(32);
     expect(err).toBeInstanceOf(EnvelopeReconstructionError);
-    expect((err as EnvelopeReconstructionError).isTransient()).toBe(true);
+    expect((err as EnvelopeReconstructionError).type.code).toBe(EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE);
   });
 
   it.each<[string, Partial<ExecutionPayloadBodyV2>]>([
@@ -255,7 +254,6 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
-    expect(result.error.isTransient()).toBe(false);
   });
 
   it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {

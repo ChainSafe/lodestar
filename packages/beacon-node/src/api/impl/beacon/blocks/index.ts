@@ -48,6 +48,7 @@ import {
   BlockErrorCode,
   BlockGossipError,
   EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -1118,7 +1119,7 @@ export function getBeaconBlockApi({
       } catch (e) {
         if (e instanceof EnvelopeReconstructionError) {
           throw new ApiError(
-            e.isTransient() ? 503 : 500,
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ? 503 : 500,
             `Failed to reconstruct execution payload envelope: ${e.message}`
           );
         }
