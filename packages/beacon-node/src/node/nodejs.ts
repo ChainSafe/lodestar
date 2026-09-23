@@ -13,11 +13,7 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
- import {
-   IBeaconStateView,
-   isStatePostBellatrix,
-   isStatePostGloas,
- } from "@lodestar/state-transition";
+import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
@@ -25,12 +21,7 @@ import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
-import {
-  HttpMetricsServer,
-  Metrics,
-  createMetrics,
-  getHttpMetricsServer,
-} from "../metrics/index.js";
+import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
@@ -187,11 +178,7 @@ export class BeaconNode {
       opts.monitoring.endpoint
     ) {
       if (opts.chain.nativeStateView) {
-        try {
-          initNativeMetrics();
-        } catch (e) {
-          logger.warn("Failed to initialize native state-transition metrics", {}, e as Error);
-        }
+        initNativeMetrics();
       }
 
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
@@ -211,7 +198,7 @@ export class BeaconNode {
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
             opts.validatorMonitor,
-            opts.chain.nativeStateView 
+            opts.chain.nativeStateView
               ? {
                   registerLocalValidator: registerNativeLocalValidator,
                   unregisterLocalValidator: unregisterNativeLocalValidator,
