@@ -42,7 +42,7 @@ export type ServingLimits = Readonly<{
   }>;
 }>;
 
-/** The four source lanes and decoded allowance belong to the task until retirement. */
+/** Retained sources survive yields; temporary source work stays charged until all reads settle. */
 export class ServingContext {
   private operations = 0;
   private pendingSourceLimitBytes = 0;

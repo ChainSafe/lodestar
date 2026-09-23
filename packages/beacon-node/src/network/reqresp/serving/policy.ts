@@ -15,10 +15,12 @@ import {ServingConfigurationError, ServingLimits} from "../../../chain/serving/c
 import {blobSidecarsWrapperSsz} from "../../../db/repositories/blobSidecars.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../../db/repositories/lightclientSyncCommitteeWitness.js";
 import * as protocols from "../protocols.js";
+import {ReqRespMethod} from "../types.js";
 
 const MiB = 1024 * 1024;
 export type ServingOptions = {
   totalBytes?: number;
+  /** Maximum simultaneous source operations, excluding quota and response-write waits. */
   maxTasks?: number;
   ancestrySteps?: number;
   transactionVisits?: number;
@@ -28,11 +30,14 @@ export type ServingPolicy = ServingLimits &
     totalBytes: number;
     maxTasks: number;
     capacity: number;
-    reservationBytes: number;
     wireBytes: number;
     wrapperBytes: number;
     columnBatchBytes: number;
+    workingBytes: number;
+    stateBytes: number;
+    methods: Readonly<Partial<Record<ReqRespMethod, ServingWork>>>;
   }>;
+export type ServingWork = Readonly<{limits: ServingLimits; retainedBytes: number; workingBytes: number}>;
 function integer(value: number, name: string, zero = false): number {
   if (!Number.isSafeInteger(value) || value < (zero ? 0 : 1)) throw new ServingConfigurationError(`Invalid ${name}`);
   return value;
@@ -179,16 +184,13 @@ export function resolveServingPolicy(
     throw new ServingConfigurationError("Serving policy exceeds native DB v1 limits");
   const totalBytes = integer(options.totalBytes ?? 256 * MiB, "total bytes");
   const maxTasks = integer(options.maxTasks ?? 6, "tasks");
-  const reservationBytes = integer(4 * sourceBytes + decodedBytes, "reservation");
-  const capacity = Math.min(maxTasks, nativeIncomingCapacity, Math.floor(totalBytes / reservationBytes));
-  if (capacity < 1) throw new ServingConfigurationError("No maximum serving task fits");
   const transactionVisits = integer(
     options.transactionVisits ?? Math.min(MAX_TRANSACTIONS_PER_PAYLOAD, 65536),
     "transaction visits"
   );
   if (transactionVisits > MAX_TRANSACTIONS_PER_PAYLOAD)
     throw new ServingConfigurationError("Transaction work exceeds schema");
-  return Object.freeze({
+  const limits: ServingLimits = {
     sourceBytes,
     decodedBytes,
     requestDecodedBytes,
@@ -201,12 +203,53 @@ export function resolveServingPolicy(
     maxEntries: NUMBER_OF_COLUMNS,
     maxIteratorRows: maxRange,
     lightClient,
+  };
+  const work = (bytes: number, retainedSources = 1): ServingWork => {
+    const source = Math.max(1, Math.ceil(bytes / MiB)) * MiB;
+    return {
+      limits: {...limits, sourceBytes: source},
+      retainedBytes: retainedSources * source,
+      // A production step can hold native read output, its JS copy, and serialized replacement bytes.
+      workingBytes: 3 * source,
+    };
+  };
+  const blocks = work(blockBytes);
+  const columns = work(Math.max(blockBytes, columnBatchBytes));
+  // The range generator retains the wrapper, copied sidecar list and yielded sidecar across a write.
+  const blobs = work(wrapperBytes, 3);
+  const light = work(Math.max(witness + 2 * committee + header, update));
+  const methods = {
+    [ReqRespMethod.BeaconBlocksByRoot]: blocks,
+    [ReqRespMethod.BeaconBlocksByRange]: blocks,
+    [ReqRespMethod.BeaconBlocksByHead]: blocks,
+    [ReqRespMethod.BlobSidecarsByRoot]: blobs,
+    [ReqRespMethod.BlobSidecarsByRange]: blobs,
+    [ReqRespMethod.DataColumnSidecarsByRoot]: columns,
+    [ReqRespMethod.DataColumnSidecarsByRange]: columns,
+    [ReqRespMethod.LightClientBootstrap]: light,
+    [ReqRespMethod.LightClientUpdatesByRange]: light,
+    [ReqRespMethod.LightClientFinalityUpdate]: light,
+    [ReqRespMethod.LightClientOptimisticUpdate]: light,
+  };
+  const workingBytes = Math.max(...Object.values(methods).map((entry) => entry.workingBytes));
+  const largestRetained = Math.max(...Object.values(methods).map((entry) => entry.retainedBytes));
+  const requestBytes = Math.max(32 * blockRoots, 40 * blobIdentifiers, 40 * columnRoots + 8 * requestScalars);
+  const stateBytes = decodedBytes + requestBytes;
+  const capacity = Math.min(
+    nativeIncomingCapacity,
+    Math.floor((totalBytes - workingBytes - largestRetained) / stateBytes)
+  );
+  if (capacity < 1) throw new ServingConfigurationError("No maximum serving task fits");
+  return Object.freeze({
+    ...limits,
     totalBytes,
     maxTasks,
     capacity,
-    reservationBytes,
     wireBytes,
     wrapperBytes,
     columnBatchBytes,
+    workingBytes,
+    stateBytes,
+    methods,
   });
 }

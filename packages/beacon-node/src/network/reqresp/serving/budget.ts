@@ -1,6 +1,7 @@
 import {defer} from "@lodestar/utils";
 import {ServingCapacityError, ServingConfigurationError, ServingContext} from "../../../chain/serving/context.js";
-import {ServingPolicy} from "./policy.js";
+import {ReqRespMethod} from "../types.js";
+import {ServingPolicy, ServingWork} from "./policy.js";
 
 export class ServingLease {
   readonly context: ServingContext;
@@ -10,14 +11,20 @@ export class ServingLease {
   private finished = false;
   private released = false;
   private retiring = false;
+  working = false;
+  retained = false;
+  waiting: {kind: "retained" | "work"; completion: ReturnType<typeof defer<void>>} | undefined;
+
   constructor(
     readonly policy: ServingPolicy,
+    readonly work: ServingWork,
+    readonly peer: string,
     private readonly budget: HostServingBudget
   ) {
     const retired = defer<void>();
     this.retired = retired.promise;
     this.resolveRetired = retired.resolve;
-    this.context = new ServingContext(policy, () => this.tryRelease());
+    this.context = new ServingContext(work.limits, () => this.tryRelease());
   }
   track<T>(operation: () => Promise<T>): Promise<T> {
     if (this.released || this.pending >= 2) throw new ServingConfigurationError("Serving operation cardinality");
@@ -33,8 +40,19 @@ export class ServingLease {
       this.tryRelease();
     });
   }
+  async startWork(): Promise<void> {
+    this.context.assertActive();
+    if (!this.working) await this.budget.schedule(this, "work");
+    this.context.assertActive();
+  }
+  async prepare(): Promise<void> {
+    this.context.assertActive();
+    if (!this.retained) await this.budget.schedule(this, "retained");
+    this.context.assertActive();
+  }
   cancel(): void {
     this.context.cancel();
+    this.budget.cancelWaiting(this);
     if (!this.retiring && !this.released) {
       this.retiring = true;
       this.budget.retiring++;
@@ -49,9 +67,11 @@ export class ServingLease {
     this.tryRelease();
   }
   private tryRelease(): void {
-    if (!this.released && this.finished && this.pending === 0 && this.context.pendingOperations === 0) {
+    if (this.released || this.pending !== 0 || this.context.pendingOperations !== 0) return;
+    if (this.working) this.budget.releaseWork(this);
+    if (this.finished) {
       this.released = true;
-      this.budget.release(this.policy.reservationBytes, this.retiring);
+      this.budget.release(this, this.retiring);
       this.resolveRetired();
     }
   }
@@ -59,8 +79,11 @@ export class ServingLease {
 
 /** A module instance belongs to one JS environment, including retiring adapter instances. */
 export class HostServingBudget {
-  private occupancy = 0;
-  private reservedBytes = 0;
+  private readonly leases = new Set<ServingLease>();
+  private readonly waiting: ServingLease[] = [];
+  private retainedBytes = 0;
+  private workingBytes = 0;
+  private working = 0;
   private refused = 0;
   retiring = 0;
   private constructor(private policy: ServingPolicy) {}
@@ -73,38 +96,114 @@ export class HostServingBudget {
       return created;
     }
     if (JSON.stringify(policy) !== JSON.stringify(budget.policy)) {
-      if (budget.occupancy !== 0)
+      if (budget.leases.size !== 0)
         throw new ServingConfigurationError("Serving policy changed with outstanding reservations");
       budget.policy = policy;
     }
     return budget;
   }
   canAcquire(): boolean {
-    return this.occupancy < this.policy.capacity;
+    return this.leases.size < this.policy.capacity;
   }
-  acquire(): ServingLease {
+  acquire(peer = "", method = ReqRespMethod.BeaconBlocksByRoot): ServingLease {
     if (!this.canAcquire()) {
       this.refused++;
       throw new ServingCapacityError("handler admission");
     }
-    this.occupancy++;
-    this.reservedBytes += this.policy.reservationBytes;
-    return new ServingLease(this.policy, this);
+    const work = this.policy.methods[method];
+    if (!work) throw new ServingConfigurationError(`Unsupported serving method ${method}`);
+    const lease = new ServingLease(this.policy, work, peer, this);
+    this.leases.add(lease);
+    return lease;
   }
-  release(bytes: number, retiring: boolean): void {
-    if (this.occupancy < 1 || this.reservedBytes < bytes)
+  schedule(lease: ServingLease, kind: "retained" | "work"): Promise<void> {
+    if (!this.leases.has(lease) || lease.waiting || this.waiting.length >= this.policy.capacity)
+      throw new ServingConfigurationError("Serving work queue invariant");
+    const pending = defer<void>();
+    lease.waiting = {kind, completion: pending};
+    this.waiting.push(lease);
+    this.drain();
+    return pending.promise;
+  }
+  cancelWaiting(lease: ServingLease): void {
+    if (!lease.waiting) return;
+    const index = this.waiting.indexOf(lease);
+    if (index < 0) throw new ServingConfigurationError("Missing serving waiter");
+    this.waiting.splice(index, 1);
+    const pending = lease.waiting;
+    lease.waiting = undefined;
+    pending.completion.resolve();
+  }
+  releaseWork(lease: ServingLease): void {
+    if (!lease.working || this.working < 1 || this.workingBytes < lease.work.workingBytes)
+      throw new ServingConfigurationError("Serving work accounting invariant");
+    lease.working = false;
+    this.working--;
+    this.workingBytes -= lease.work.workingBytes;
+    this.drain();
+  }
+  release(lease: ServingLease, retiring: boolean): void {
+    if (lease.working || lease.waiting || !this.leases.delete(lease))
       throw new ServingConfigurationError("Serving lease accounting invariant");
-    this.occupancy--;
-    this.reservedBytes -= bytes;
+    if (lease.retained) this.retainedBytes -= lease.work.retainedBytes;
     if (retiring) this.retiring--;
+    this.drain();
+  }
+  private drain(): void {
+    const stateBytes = this.policy.capacity * this.policy.stateBytes;
+    // Retained responses must leave room for a maximum production step to finish.
+    const retainedLimit = this.policy.totalBytes - stateBytes - this.policy.workingBytes;
+    for (let turn = 0; turn < this.policy.capacity; turn++) {
+      let selected = -1;
+      let active = Infinity;
+      for (let i = 0; i < this.waiting.length; i++) {
+        const lease = this.waiting[i];
+        const retained = lease.retained ? 0 : lease.work.retainedBytes;
+        const work = lease.waiting?.kind === "work";
+        if (
+          (work && this.working >= this.policy.maxTasks) ||
+          this.retainedBytes + retained > retainedLimit ||
+          stateBytes + this.retainedBytes + retained + this.workingBytes + (work ? lease.work.workingBytes : 0) >
+            this.policy.totalBytes
+        )
+          continue;
+        let peerWork = 0;
+        for (const other of this.leases) if (other.working && other.peer === lease.peer) peerWork++;
+        if (peerWork < active) {
+          selected = i;
+          active = peerWork;
+        }
+      }
+      if (selected < 0) break;
+      const [lease] = this.waiting.splice(selected, 1);
+      if (!lease.retained) {
+        this.retainedBytes += lease.work.retainedBytes;
+        lease.retained = true;
+      }
+      const pending = lease.waiting;
+      lease.waiting = undefined;
+      if (!pending) throw new ServingConfigurationError("Missing serving work promise");
+      if (pending.kind === "work") {
+        this.workingBytes += lease.work.workingBytes;
+        this.working++;
+        lease.working = true;
+      }
+      pending.completion.resolve();
+    }
   }
   snapshot() {
+    const decoded = this.leases.size * this.policy.decodedBytes;
+    const state = this.leases.size * this.policy.stateBytes;
     return {
       limits: this.policy,
-      occupancy: this.occupancy,
-      reservedBytes: this.reservedBytes,
-      reservedSourceBytes: this.occupancy * 4 * this.policy.sourceBytes,
-      reservedDecodedBytes: this.occupancy * this.policy.decodedBytes,
+      occupancy: this.leases.size,
+      working: this.working,
+      waiting: this.waiting.length,
+      reservedBytes: state + this.retainedBytes + this.workingBytes,
+      reservedSourceBytes: this.retainedBytes + this.workingBytes,
+      retainedBytes: this.retainedBytes,
+      workingBytes: this.workingBytes,
+      reservedDecodedBytes: decoded,
       refusedAdmission: this.refused,
       outstandingRetirements: this.retiring,
     };

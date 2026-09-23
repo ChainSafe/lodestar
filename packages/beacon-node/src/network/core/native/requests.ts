@@ -136,6 +136,8 @@ async function serve(
   maxChunks: number
 ): Promise<void> {
   try {
+    // Reserve retained data before native credit so new requests cannot block existing responses from finishing.
+    await handler.prepare();
     for (let chunks = 0; chunks <= maxChunks; chunks++) {
       if (!route.request) return;
       await route.request.ready();

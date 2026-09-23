@@ -187,7 +187,9 @@ describe("actual serving sources", () => {
         await pending;
         await first.retired;
       }
-      expect(() => actual({data: new Uint8Array(31), version: 2}, peer, "test")).toThrow();
+      const invalid = actual({data: new Uint8Array(31), version: 2}, peer, "test");
+      await expect(invalid.next()).rejects.toThrow();
+      await invalid.retired;
       expect(budget.snapshot().occupancy).toBe(0);
     }));
 

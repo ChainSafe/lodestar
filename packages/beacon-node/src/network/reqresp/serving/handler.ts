@@ -15,6 +15,7 @@ export class LocalServingResponseError extends ResponseError {
 }
 
 export interface ServingHandler extends AsyncIterableIterator<ResponseOutgoing> {
+  prepare(): Promise<void>;
   cancel(): void;
   readonly retired: Promise<void>;
 }
@@ -39,11 +40,13 @@ export function assertBoundedReqRespHandlers(factory: GetReqRespHandlerFn): asse
 export function startServingHandler(
   budget: HostServingBudget,
   factory: (context: ServingContext) => AsyncIterable<ResponseOutgoing>,
-  route: (() => void) | undefined = undefined
+  route: (() => void) | undefined = undefined,
+  peer = "",
+  method = ReqRespMethod.BeaconBlocksByRoot
 ): ServingHandler {
   let lease: ServingLease;
   try {
-    lease = budget.acquire();
+    lease = budget.acquire(peer, method);
   } catch (error) {
     if (isServingCapacityError(error)) throw new LocalServingResponseError();
     throw error;
@@ -70,19 +73,11 @@ export function startServingHandler(
     }
     return returning;
   };
-  try {
-    iterator = factory(lease.context)[Symbol.asyncIterator]();
-  } catch (error) {
-    try {
-      clear();
-    } finally {
-      lease.finish();
-    }
-    if (isServingCapacityError(error)) throw new LocalServingResponseError();
-    throw error;
-  }
   const handler: ServingHandler = {
     retired: lease.retired,
+    prepare() {
+      return lease.track(() => lease.prepare());
+    },
     [Symbol.asyncIterator]() {
       return this;
     },
@@ -108,7 +103,8 @@ export function startServingHandler(
       pulling = true;
       try {
         const result = await lease.track(async () => {
-          if (!iterator) throw new ServingConfigurationError("Missing serving iterator");
+          await lease.startWork();
+          iterator ??= factory(lease.context)[Symbol.asyncIterator]();
           return iterator.next();
         });
         if (closed) return {done: true, value: undefined};
@@ -151,11 +147,19 @@ export function getBoundedReqRespHandlers(
   assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
   const factory: BoundedReqRespHandlers =
     (method) =>
-    (...args) =>
-      startServingHandler(budget, (context) => {
-        assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
-        return getReqRespHandlers(modules, context)(method)(...args);
-      });
+    (...args) => {
+      assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
+      return startServingHandler(
+        budget,
+        (context) => {
+          assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
+          return getReqRespHandlers(modules, context)(method)(...args);
+        },
+        undefined,
+        args[1].toString(),
+        method
+      );
+    };
   boundedFactories.set(factory, budget);
   return factory;
 }

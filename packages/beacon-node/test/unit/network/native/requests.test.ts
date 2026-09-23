@@ -148,3 +148,96 @@ it("waits on an earlier adapter's reservation with one cancellable retry", async
     owner.close();
   }
 });
+
+it("two peers waiting on eight response writes do not prevent a third peer from producing", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 32, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const inputs = await Promise.all(Array.from({length: 9}, () => incoming()));
+  for (let i = 1; i < 8; i++) inputs[i].request = {...inputs[i].request, peerId: inputs[i < 4 ? 0 : 4].request.peerId};
+  const queue = inputs.map((input) => input.request);
+  const active: handlers.ServingHandler[] = [];
+  const factory: handlers.BoundedReqRespHandlers = (method) => (_request, peer) => {
+    const handler = handlers.startServingHandler(
+      budget,
+      async function* () {
+        yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
+      },
+      undefined,
+      peer.toString(),
+      method
+    );
+    active.push(handler);
+    return handler;
+  };
+  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 32);
+  try {
+    owner.drain(32);
+    expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
+    for (const input of inputs.slice(0, 8)) input.permission.resolve();
+    await vi.waitFor(() => {
+      for (const input of inputs.slice(0, 8)) expect(input.request.respond).toHaveBeenCalledOnce();
+    });
+    expect(budget.snapshot().working).toBe(0);
+    inputs[8].permission.resolve();
+    await vi.waitFor(() => expect(inputs[8].request.respond).toHaveBeenCalledOnce());
+    expect(budget.snapshot().reservedBytes).toBeLessThanOrEqual(budget.snapshot().limits.totalBytes);
+  } finally {
+    for (const input of inputs) input.written.resolve();
+    owner.close();
+    await Promise.all(active.map((handler) => handler.retired));
+  }
+});
+
+it("requests waiting for retained memory leave native credit available to existing responses", async () => {
+  const config = servingConfig();
+  const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0);
+  const budget = HostServingBudget.forEnvironment(
+    resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0, {
+      totalBytes: 3 * basic.stateBytes + 5 * basic.sourceBytes,
+    })
+  );
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const inputs = await Promise.all(Array.from({length: 3}, () => incoming()));
+  const queue = inputs.map((input) => input.request);
+  const active: handlers.ServingHandler[] = [];
+  const factory: handlers.BoundedReqRespHandlers = (method) => (_request, peer) => {
+    const handler = handlers.startServingHandler(
+      budget,
+      async function* () {
+        yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
+      },
+      undefined,
+      peer.toString(),
+      method
+    );
+    active.push(handler);
+    return handler;
+  };
+  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 3);
+  try {
+    owner.drain(3);
+    inputs[0].permission.resolve();
+    inputs[1].permission.resolve();
+    await vi.waitFor(() => {
+      expect(inputs[0].request.respond).toHaveBeenCalledOnce();
+      expect(inputs[1].request.respond).toHaveBeenCalledOnce();
+    });
+    expect(budget.snapshot()).toMatchObject({working: 0, waiting: 1});
+    expect(inputs[2].request.ready).not.toHaveBeenCalled();
+    inputs[0].written.resolve();
+    await vi.waitFor(() => expect(inputs[2].request.ready).toHaveBeenCalledOnce());
+    expect(inputs[0].request.finish).toHaveBeenCalledOnce();
+    expect(budget.snapshot().working).toBe(0);
+    inputs[2].permission.resolve();
+    await vi.waitFor(() => expect(inputs[2].request.respond).toHaveBeenCalledOnce());
+  } finally {
+    for (const input of inputs) {
+      input.permission.resolve();
+      input.written.resolve();
+    }
+    owner.close();
+    await Promise.all(active.map((handler) => handler.retired));
+  }
+  expect(budget.snapshot()).toMatchObject({occupancy: 0, working: 0, waiting: 0, reservedBytes: 0});
+});

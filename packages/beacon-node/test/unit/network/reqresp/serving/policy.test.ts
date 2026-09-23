@@ -38,17 +38,18 @@ describe("serving policy", () => {
       expect(policy.requestDecodedBytes).toBeGreaterThanOrEqual(blobs.length * 32);
     }
   });
-  for (const [blobs, cap, tasks] of [
-    [21, 10, 6],
-    [39, 11, 5],
-    [64, 17, 3],
-    [128, 34, 1],
+  for (const [blobs, cap] of [
+    [21, 10],
+    [39, 11],
+    [64, 17],
+    [128, 34],
   ]) {
-    it(`resolves B${blobs} C${cap} with ${tasks} tasks`, () => {
+    it(`separates B${blobs} C${cap} request capacity from production work`, () => {
       const policy = resolveServingPolicy(servingConfig(blobs), {boundedReadVersion: 1}, 16, 0);
       expect(policy.sourceBytes).toBe(cap * MiB);
-      expect(policy.capacity).toBe(tasks);
-      expect(policy.reservationBytes).toBe(4 * cap * MiB + 128 * 1024);
+      expect(policy.capacity).toBe(16);
+      expect(policy.maxTasks).toBe(6);
+      expect(policy.workingBytes).toBe(3 * cap * MiB);
       expect(policy.ancestrySteps).toBe(Math.max(256 * SLOTS_PER_EPOCH, servingConfig().MAX_REQUEST_BLOCKS));
       if (blobs === 21) expect(policy.columnBatchBytes).toBe(5808640);
     });
@@ -62,7 +63,8 @@ describe("serving policy", () => {
       transactionVisits: 17,
     });
     expect(policy.sourceBytes).toBe(68 * MiB);
-    expect(policy.capacity).toBe(1);
+    expect(policy.capacity).toBe(16);
+    expect(policy.maxTasks).toBe(2);
     expect(policy.ancestrySteps).toBe(20000);
     expect(policy.transactionVisits).toBe(17);
   });
