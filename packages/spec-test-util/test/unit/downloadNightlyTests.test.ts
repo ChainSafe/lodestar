@@ -12,7 +12,7 @@ describe("downloadNightlyTests", () => {
     outputDir: "/unused/spec-tests",
     testsToDownload: ["minimal"],
   };
-  const recentRun = {id: 35671698955, created_at: "2026-09-22T00:22:43Z", head_sha: "recent-sha"};
+  const recentRun = {id: 35671698955, created_at: "2026-09-20T06:00:00Z", head_sha: "recent-sha"};
   const staleRun = {id: 33283281270, created_at: "2026-08-30T00:25:25Z", head_sha: "stale-sha"};
   const artifacts = {
     artifacts: [{name: "minimal.tar.gz", expired: false, archive_download_url: "https://example.com/minimal.zip"}],
@@ -31,9 +31,12 @@ describe("downloadNightlyTests", () => {
     vi.unstubAllEnvs();
   });
 
-  it("retries a stale response and downloads the fresh run", async () => {
+  it.each([
+    {name: "stale", runs: [staleRun]},
+    {name: "empty", runs: []},
+  ])("retries a $name response and accepts a run exactly 48 hours old", async ({runs}) => {
     fetchMock
-      .mockResolvedValueOnce(Response.json({workflow_runs: [staleRun]}))
+      .mockResolvedValueOnce(Response.json({workflow_runs: runs}))
       .mockResolvedValueOnce(Response.json({workflow_runs: [recentRun]}))
       .mockResolvedValueOnce(Response.json(artifacts));
 
@@ -48,13 +51,21 @@ describe("downloadNightlyTests", () => {
     );
   });
 
-  it("rejects repeated stale responses without requesting artifacts", async () => {
+  it.each([
+    {name: "stale", runs: [staleRun], code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE"},
+    {
+      name: "just over 48 hours old",
+      runs: [{...recentRun, created_at: "2026-09-20T05:59:59.999Z"}],
+      code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE",
+    },
+    {name: "empty", runs: [], code: "NIGHTLY_RUN_NOT_FOUND"},
+  ])("rejects repeated $name responses without requesting artifacts", async ({runs, code}) => {
     fetchMock.mockImplementation(async (url) =>
-      Response.json(String(url).includes("/artifacts") ? artifacts : {workflow_runs: [staleRun]})
+      Response.json(String(url).includes("/artifacts") ? artifacts : {workflow_runs: runs})
     );
 
     const assertion = expect(downloadNightlyTests(opts, log, "latest")).rejects.toMatchObject({
-      type: {code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE"},
+      type: {code},
     });
     await Promise.all([assertion, vi.runAllTimersAsync()]);
 
