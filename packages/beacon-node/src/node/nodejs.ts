@@ -18,7 +18,6 @@ import {
   isStatePostGloas,
   scrapeNativeMetrics,
 } from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
