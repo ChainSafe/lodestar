@@ -37,7 +37,7 @@ const sszStatic =
       return;
     }
 
-    // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
+    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     if (skippedTypes?.includes(typeName)) {
       return;
     }
@@ -65,7 +65,7 @@ const sszStatic =
     const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-      // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
       it(testCase, () => {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
