@@ -831,7 +831,9 @@ export const forkChoiceTestRunner =
         // Gloas compliance vectors have up to ~650 steps and need the extra headroom.
         timeout: 60000,
         expectFunc: () => {},
-        // Blob proof validation is not exercised by the fork-choice runner.
+        // Put shared skips in defaultSkipOpts in ./specTestIterator.js.
+        // This runner checks blob/proof counts but does not validate blob KZG proofs.
+        // Re-enable once blob KZG verification is integrated with support for minimal-preset blobs.
         shouldSkip: (_testcase, name) => name.endsWith("/invalid_incorrect_proof"),
       },
     };
