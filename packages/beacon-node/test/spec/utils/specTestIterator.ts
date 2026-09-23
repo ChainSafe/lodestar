@@ -4,7 +4,7 @@ import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {useNativeStateTransition} from "./stateTransition.js";
+import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
 
 let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
@@ -198,7 +198,7 @@ export function specTestIterator(
                 testId,
                 testSuiteDirpath,
                 async (testCase, directoryName, testCaseName) => {
-                  if (useNativeStateTransition) {
+                  if (nativeStateTransition) {
                     await resetNativeStateTransition();
                   }
                   pubkeyCache.reset();

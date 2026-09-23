@@ -279,5 +279,5 @@ jobs:
       # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
       - name: Spec tests ${{ matrix.preset }}
-        run: LODESTAR_NATIVE_STF=true NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:${{ matrix.preset }}
+        run: LODESTAR_NATIVE_STATE_TRANSITION=true NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:${{ matrix.preset }}
         working-directory: packages/beacon-node

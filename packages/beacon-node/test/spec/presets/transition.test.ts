@@ -12,7 +12,7 @@ import {
   createBeaconStateViewForTest,
   replaceStateViewForTest,
   stateViewToBeaconState,
-  useNativeStateTransition,
+  nativeStateTransition,
 } from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
@@ -88,7 +88,7 @@ const transition =
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         shouldSkip: (_testcase, name, _index) =>
-          (useNativeStateTransition && isForkPostGloas(forkNext)) ||
+          (nativeStateTransition && isForkPostGloas(forkNext)) ||
           (skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false),
       },
     };

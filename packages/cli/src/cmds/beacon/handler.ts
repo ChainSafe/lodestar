@@ -89,12 +89,12 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
     pubkeyCache.ensureCapacity(anchorState.validators.length + pubkeyCacheHeadroom);
     pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
-    if (args["chain.nativeStateView"]) {
+    if (args["chain.nativeStateTransition"]) {
       bindings.config.set(beaconConfig, beaconConfig.genesisValidatorsRoot);
     }
-    const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, config: beaconConfig, stateBytes: anchorStateBytes})
-      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+    const anchorStateView = args["chain.nativeStateTransition"]
+      ? createBeaconStateView({nativeStateTransition: true, config: beaconConfig, stateBytes: anchorStateBytes})
+      : createBeaconStateView({nativeStateTransition: false, anchorState, config: beaconConfig, pubkeyCache});
 
     const node = await BeaconNode.init({
       opts: options,
@@ -245,9 +245,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  if (options.chain.nativeStateView && config.GLOAS_FORK_EPOCH !== Infinity) {
+  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
     throw Error(
-      `--chain.nativeStateView does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
     );
   }
 

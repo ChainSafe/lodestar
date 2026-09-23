@@ -14,7 +14,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 /**
  * Creates the state-view implementation used by state-transition spec tests.
  *
- * When `LODESTAR_NATIVE_STF=true`, this wraps the fixture state bytes in a
+ * When `LODESTAR_NATIVE_STATE_TRANSITION=true`, this wraps the fixture state bytes in a
  * `NativeBeaconStateView` and uses the native view for `stateTransition` and
  * `processSlots` instance methods.
  *
@@ -26,9 +26,13 @@ export function createBeaconStateViewForTest(
   chainConfig: ChainForkConfig = getConfig(fork)
 ): IBeaconStateView {
   const cachedState = createCachedBeaconStateTest(state, chainConfig);
-  if (useNativeStateTransition) {
+  if (nativeStateTransition) {
     bindings.config.set(cachedState.config, cachedState.genesisValidatorsRoot);
-    return createBeaconStateView({useNative: true, config: cachedState.config, stateBytes: cachedState.serialize()});
+    return createBeaconStateView({
+      nativeStateTransition: true,
+      config: cachedState.config,
+      stateBytes: cachedState.serialize(),
+    });
   }
 
   return new BeaconStateView(cachedState);
@@ -75,4 +79,4 @@ export function replaceStateViewForTest(
  * at boot. Spec tests still start from SSZ fixtures so we need an environment variable to opt
  * into the native runner.
  */
-export const useNativeStateTransition = process.env.LODESTAR_NATIVE_STF === "true";
+export const nativeStateTransition = process.env.LODESTAR_NATIVE_STATE_TRANSITION === "true";

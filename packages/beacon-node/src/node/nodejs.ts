@@ -177,12 +177,12 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      if (opts.chain.nativeStateView) {
+      if (opts.chain.nativeStateTransition) {
         initNativeMetrics();
       }
 
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
-        includeStateTransitionMetrics: !opts.chain.nativeStateView,
+        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
       });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
@@ -198,7 +198,7 @@ export class BeaconNode {
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
             opts.validatorMonitor,
-            opts.chain.nativeStateView
+            opts.chain.nativeStateTransition
               ? {
                   registerLocalValidator: registerNativeLocalValidator,
                   unregisterLocalValidator: unregisterNativeLocalValidator,
@@ -323,7 +323,7 @@ export class BeaconNode {
           register: (metrics as Metrics).register,
           getOtherMetrics: async () => {
             const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
-            if (opts.chain.nativeStateView) {
+            if (opts.chain.nativeStateTransition) {
               try {
                 otherMetrics.push(scrapeNativeMetrics());
               } catch (e) {

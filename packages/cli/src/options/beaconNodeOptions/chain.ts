@@ -34,7 +34,7 @@ export type ChainArgs = {
   "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
-  "chain.nativeStateView"?: boolean;
+  "chain.nativeStateTransition"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -77,7 +77,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
-    nativeStateView: args["chain.nativeStateView"] ?? defaultOptions.chain.nativeStateView,
+    nativeStateTransition: args["chain.nativeStateTransition"] ?? defaultOptions.chain.nativeStateTransition,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -308,11 +308,11 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.nativeStateView": {
+  "chain.nativeStateTransition": {
     hidden: true,
-    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    description: "Use native (Zig) state transition instead of JS implementation",
     type: "boolean",
-    default: defaultOptions.chain.nativeStateView,
+    default: defaultOptions.chain.nativeStateTransition,
     group: "chain",
   },
 

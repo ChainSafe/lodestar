@@ -124,7 +124,7 @@ export class ArchiveStore {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
           dataColumnDir: this.opts.dataColumnDir,
-          nativeStateView: this.opts.nativeStateView ?? false,
+          nativeStateTransition: this.opts.nativeStateTransition ?? false,
         },
         config: this.chain.config,
         metrics: this.metrics,

@@ -12,7 +12,7 @@ import {
   createBeaconStateViewForTest,
   replaceStateViewForTest,
   stateViewToBeaconState,
-  useNativeStateTransition,
+  nativeStateTransition,
 } from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -49,7 +49,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
+      shouldSkip: () => nativeStateTransition && isForkPostGloas(fork),
     },
   };
 };
@@ -98,7 +98,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => useNativeStateTransition && isForkPostGloas(fork),
+      shouldSkip: () => nativeStateTransition && isForkPostGloas(fork),
     },
   };
 };
