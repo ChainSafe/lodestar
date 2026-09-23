@@ -264,7 +264,7 @@ export async function getDataColumnSidecarsFromExecution(
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
-export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
+type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
 type RangeEntry = ArchivedEnvelopeEntry & {slot: Slot};
 
