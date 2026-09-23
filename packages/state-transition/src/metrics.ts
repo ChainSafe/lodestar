@@ -2,7 +2,7 @@ import {ForkName} from "@lodestar/params";
 import {MetricsRegister} from "@lodestar/utils";
 import {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
-import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
+import {StateCloneSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {isViewDUNodesPopulated} from "./util/ssz.js";
 
@@ -76,12 +76,6 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_process_block_commit_seconds",
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
-    }),
-    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
-      name: "lodestar_stfn_hash_tree_root_seconds",
-      help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-      labelNames: ["source"],
     }),
     numEffectiveBalanceUpdates: register.gauge({
       name: "lodestar_stfn_effective_balance_updates_count",

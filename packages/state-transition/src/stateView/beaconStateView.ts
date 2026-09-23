@@ -850,7 +850,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     const postState = new BeaconStateView(
       stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
     );
-    return getComputeNewStateRootResult(postState, modules);
+    return getComputeNewStateRootResult(postState);
   }
 
   stateTransition(

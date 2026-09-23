@@ -6,17 +6,22 @@ import {computeNewStateRoot} from "../../../../src/chain/produceBlock/computeNew
 describe("computeNewStateRoot", () => {
   it("delegates to the state view with a signed block", () => {
     const block = ssz.phase0.BeaconBlock.defaultValue();
-    const expectedResult = {
+    const viewResult = {
       newStateRoot: new Uint8Array(32),
       proposerReward: 1n,
       postState: {} as IBeaconStateView,
+      hashTreeRootMs: 10,
     };
-    const computeNewStateRootMock = vi.fn(() => expectedResult);
+    const computeNewStateRootMock = vi.fn(() => viewResult);
     const state = {computeNewStateRoot: computeNewStateRootMock} as unknown as IBeaconStateView;
 
     const result = computeNewStateRoot(null, state, block);
 
-    expect(result).toBe(expectedResult);
+    expect(result).toEqual({
+      newStateRoot: viewResult.newStateRoot,
+      proposerReward: viewResult.proposerReward,
+      postState: viewResult.postState,
+    });
     expect(computeNewStateRootMock).toHaveBeenCalledWith(
       {block: {message: block, signature: EMPTY_SIGNATURE}},
       {metrics: null}
