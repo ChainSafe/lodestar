@@ -701,7 +701,7 @@ const fastConfirmationTest =
         expectFunc: () => {},
         // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         shouldSkip: (_testcase, name, _index) =>
-          // EXCEPTION: These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
+          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
           // be applied. Passing them requires skipping deposit signature verification inside epoch
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
           // real, or if full bls_setting=2 support is ever added.
