@@ -61,7 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
-import {ArchivedEnvelopeKind, decodeArchivedEnvelopeBinary} from "../db/repositories/index.js";
+import {ArchivedEnvelopeKind, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -964,12 +964,12 @@ export class BeaconChain implements IBeaconChain {
       const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
       if (archivedBytes === null) continue;
 
-      const archived = decodeArchivedEnvelopeBinary(archivedBytes);
-      if (archived.kind === ArchivedEnvelopeKind.Full) {
+      const archived = decodeArchivedEnvelope(archivedBytes);
+      if (archived.selector === ArchivedEnvelopeKind.Full) {
         out[i] = archived.envelopeBytes;
         continue;
       }
-      blindedEnvelopes.push(archived.blinded);
+      blindedEnvelopes.push(archived.value);
       blindedEnvelopeIdxs.push(i);
     }
 

@@ -11,7 +11,7 @@ import {
   ArchivedEnvelopeKind,
   BlockArchiveBatchPutBinaryItem,
   archivedSignedExecutionPayloadEnvelopeSsz,
-  encodeArchivedFullEnvelopeBinary,
+  encodeArchivedFullEnvelope,
 } from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {toSignedBlindedEnvelope} from "../../../util/blindedEnvelope.js";
@@ -520,7 +520,7 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
               });
         }
         const envelopeBytes = await db.executionPayloadEnvelope.getBinary(root);
-        return envelopeBytes === null ? null : encodeArchivedFullEnvelopeBinary(envelopeBytes);
+        return envelopeBytes === null ? null : encodeArchivedFullEnvelope(envelopeBytes);
       })
     );
 

@@ -13,7 +13,7 @@ import {
   EnvelopeReconstructionErrorCode,
 } from "../chain/errors/envelopeReconstructionError.js";
 import {IBeaconDb} from "../db/index.js";
-import {ArchivedEnvelopeBinary, ArchivedEnvelopeKind, decodeArchivedEnvelopeBinary} from "../db/repositories/index.js";
+import {ArchivedEnvelopeEntry, ArchivedEnvelopeKind, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {signedBlindedEnvelopeToFull} from "./blindedEnvelope.js";
@@ -266,7 +266,7 @@ const MAX_BODIES_REQUEST = 32;
 
 export type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
-type RangeEntry = ArchivedEnvelopeBinary & {slot: Slot};
+type RangeEntry = ArchivedEnvelopeEntry & {slot: Slot};
 
 /** What a payload root mismatch means on a given serving path */
 export type ReconstructMismatchPolicy = "throw" | "omit";
@@ -305,7 +305,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
   let batch: RangeEntry[] = [];
 
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-    batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelopeBinary(bytes)});
+    batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelope(bytes)});
     if (batch.length === MAX_BODIES_REQUEST) {
       yield* reconstructBatch(executionEngine, logger, metrics, batch);
       batch = [];
@@ -328,13 +328,13 @@ async function* reconstructBatch(
 ): AsyncIterable<SlotEnvelopeBytes> {
   const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Blinded) blindedEnvelopes.push(entry.blinded);
+    if (entry.selector === ArchivedEnvelopeKind.Blinded) blindedEnvelopes.push(entry.value);
   }
   const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes);
 
   let blindedIdx = 0;
   for (const entry of batch) {
-    if (entry.kind === ArchivedEnvelopeKind.Full) {
+    if (entry.selector === ArchivedEnvelopeKind.Full) {
       yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
       continue;
     }

@@ -31,20 +31,26 @@ export type ArchivedEnvelope =
 
 const ARCHIVED_ENVELOPE_SELECTOR_LENGTH = 1;
 
-/** A raw archive value branched on its selector byte, without deserializing the full form */
-export type ArchivedEnvelopeBinary =
-  | {kind: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
-  | {kind: ArchivedEnvelopeKind.Blinded; blinded: gloas.SignedBlindedExecutionPayloadEnvelope};
+/**
+ * An archive entry as the serving paths need it: full ones stay bytes (served as-is),
+ * blinded ones are deserialized for reconstruction
+ */
+export type ArchivedEnvelopeEntry =
+  | {selector: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
+  | {selector: ArchivedEnvelopeKind.Blinded; value: gloas.SignedBlindedExecutionPayloadEnvelope};
 
-export function decodeArchivedEnvelopeBinary(bytes: Uint8Array): ArchivedEnvelopeBinary {
+export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelopeEntry {
   const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
   return bytes[0] === ArchivedEnvelopeKind.Full
-    ? {kind: ArchivedEnvelopeKind.Full, envelopeBytes: value}
-    : {kind: ArchivedEnvelopeKind.Blinded, blinded: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(value)};
+    ? {selector: ArchivedEnvelopeKind.Full, envelopeBytes: value}
+    : {
+        selector: ArchivedEnvelopeKind.Blinded,
+        value: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(value),
+      };
 }
 
 /** Full envelope bytes as they already are in the hot db, prefixed with the selector byte */
-export function encodeArchivedFullEnvelopeBinary(envelopeBytes: Uint8Array): Uint8Array {
+export function encodeArchivedFullEnvelope(envelopeBytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(ARCHIVED_ENVELOPE_SELECTOR_LENGTH + envelopeBytes.length);
   out[0] = ArchivedEnvelopeKind.Full;
   out.set(envelopeBytes, ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
