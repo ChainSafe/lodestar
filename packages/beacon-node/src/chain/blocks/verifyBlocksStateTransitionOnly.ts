@@ -26,10 +26,10 @@ export async function verifyBlocksStateTransitionOnly(
   preState0: IBeaconStateView,
   blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
+  serializedCache: SerializedCache,
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
-  serializedCache: SerializedCache,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: IBeaconStateView[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
