@@ -13,8 +13,9 @@ import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
  * have special formats that require custom handling, or are not yet implemented.
  */
 const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
-  // BLOB_SCHEDULE is an array/JSON format that requires special parsing
+  // Schedule fields use array/JSON formats that require special parsing
   "BLOB_SCHEDULE" as keyof ChainConfig,
+  "GAS_LIMIT_SCHEDULE" as keyof ChainConfig,
   // Networking params that may be in presets instead of chainConfig
   "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
   "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,

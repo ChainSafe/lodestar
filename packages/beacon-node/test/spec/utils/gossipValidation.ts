@@ -3,8 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
-import snappy from "snappy";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
@@ -19,9 +20,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
@@ -46,7 +45,6 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 
 /**
  * A test clock that models gossip clock disparity from a millisecond timestamp.
@@ -202,8 +200,7 @@ function loadTestCaseChainConfig(testCaseDir: string, fork: ForkName) {
 
 function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
   const compressed = fs.readFileSync(path.join(testCaseDir, `${name}.ssz_snappy`));
-  const decompressed = snappy.uncompressSync(compressed);
-  return typeof decompressed === "string" ? Buffer.from(decompressed) : decompressed;
+  return snappyWasm.decompress(compressed);
 }
 
 function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {
@@ -341,11 +338,6 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   if (e instanceof GossipActionError) {
     return e.action === GossipAction.IGNORE ? "ignore" : "reject";
   }
-  // Some validation paths throw raw errors instead of GossipActionError
-  // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError) {
-    return "reject";
-  }
   throw e;
 }
 
@@ -382,9 +374,7 @@ export async function runGossipValidationTest(
     signal: controller.signal,
     logger: testLogger("executionEngine"),
   });
-
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {config: beaconConfig, pubkeyCache},
@@ -402,7 +392,6 @@ export async function runGossipValidationTest(
       disableLightClientServerOnImportBlockHead: true,
       disableOnBlockError: true,
       disablePrepareNextSlot: true,
-      assertCorrectProgressiveBalances,
       proposerBoost: true,
       proposerBoostReorg: true,
     },
@@ -484,6 +473,7 @@ export async function runGossipValidationTest(
             signedBlock.message,
             postState,
             0,
+            0,
             slot,
             ExecutionStatus.Valid,
             getDataAvailabilityStatusForFork(fork)
@@ -498,6 +488,7 @@ export async function runGossipValidationTest(
           chain.forkChoice.onBlock(
             signedBlock.message,
             postState,
+            0,
             0,
             slot,
             ExecutionStatus.Syncing,

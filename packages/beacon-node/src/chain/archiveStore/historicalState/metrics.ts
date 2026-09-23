@@ -1,10 +1,11 @@
 import {ForkName} from "@lodestar/params";
 import {
   BeaconStateTransitionMetrics,
+  BlockProcessStep,
   EpochTransitionStep,
+  ProcessOperationsStep,
   ProposerRewardType,
   StateCloneSource,
-  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/index.js";
@@ -70,20 +71,25 @@ export function createHistoricalStateTransitionMetrics(
     processBlockTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
-      // TODO: Add metrics for each step
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    processBlockStepTime: metricsRegister.histogram<{step: BlockProcessStep}>({
+      name: "lodestar_historical_state_stfn_process_block_step_seconds",
+      help: "Time to call each step of process block in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+    }),
+    processOperationsStepTime: metricsRegister.histogram<{step: ProcessOperationsStep}>({
+      name: "lodestar_historical_state_stfn_process_operations_step_seconds",
+      help: "Time to call each step of process operations in seconds",
+      labelNames: ["step"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
     }),
     processBlockCommitTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_commit_seconds",
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
-    }),
-    stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
-      name: "lodestar_historical_state_stfn_hash_tree_root_seconds",
-      help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-      labelNames: ["source"],
     }),
     numEffectiveBalanceUpdates: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
@@ -149,6 +155,10 @@ export function createHistoricalStateTransitionMetrics(
     attestationsPerBlock: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
+    }),
+    progressiveBalancesMismatches: metricsRegister.counter({
+      name: "lodestar_historical_state_stfn_progressive_balances_mismatches_total",
+      help: "Total count of progressive balance cache mismatches",
     }),
     proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
       name: "lodestar_historical_state_stfn_proposer_rewards_total",

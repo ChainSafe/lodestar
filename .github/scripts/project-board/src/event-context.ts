@@ -8,12 +8,13 @@ export interface EventContext {
   eventName: string;
   actor: string;
   repository: string;
+  repositoryOwner: string | null;
   pullRequest: PullRequestRef | null;
   isForkPullRequest: boolean;
   isDependabotPullRequest: boolean;
 }
 
-export type MissingTokenSkipReason = "fork_pull_request_review" | "dependabot_event";
+export type MissingTokenSkipReason = "unmanaged_repository" | "fork_pull_request_review" | "dependabot_event";
 
 export const MISSING_TOKEN_ERROR_CODE = "PROJECT_BOARD_CONFIG_TOKEN_MISSING";
 
@@ -63,13 +64,18 @@ export function buildEventContext(
     eventName,
     actor,
     repository,
+    repositoryOwner: repositoryName?.owner ?? null,
     pullRequest,
     isForkPullRequest,
     isDependabotPullRequest: stringValue(authorNode?.login) === "dependabot[bot]",
   };
 }
 
-export function missingTokenSkipReason(context: EventContext): MissingTokenSkipReason | null {
+export function missingTokenSkipReason(context: EventContext, projectOrg = "ChainSafe"): MissingTokenSkipReason | null {
+  if (context.repositoryOwner !== null && context.repositoryOwner.toLowerCase() !== projectOrg.toLowerCase()) {
+    return "unmanaged_repository";
+  }
+
   if (context.eventName === "pull_request_review" && context.isForkPullRequest) {
     return "fork_pull_request_review";
   }

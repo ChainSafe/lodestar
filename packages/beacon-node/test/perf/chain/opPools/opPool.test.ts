@@ -1,4 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {
@@ -8,7 +9,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {BeaconStateView, CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {BlockType} from "../../../../src/chain/interface.js";

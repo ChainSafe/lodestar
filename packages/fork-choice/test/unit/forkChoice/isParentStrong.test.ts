@@ -40,7 +40,7 @@ describe("Forkchoice / isParentStrong", () => {
         isGloas: false,
         config: defaultConfig,
         parentVotes: 100,
-        proposerBoost: {root: getBlockRoot(headSlot), score: 200},
+        proposerBoost: {root: getBlockRoot(headSlot), score: 200_000_000_000n},
       });
       expect(isParentStrong(forkChoice, parentRoot)).toBe(true);
     });
@@ -54,7 +54,7 @@ describe("Forkchoice / isParentStrong", () => {
         isGloas: true,
         config: gloasConfig,
         parentVotes: 100,
-        proposerBoost: {root: getBlockRoot(headSlot), score: 200},
+        proposerBoost: {root: getBlockRoot(headSlot), score: 200_000_000_000n},
       });
       expect(isParentStrong(forkChoice, parentRoot)).toBe(false);
     });

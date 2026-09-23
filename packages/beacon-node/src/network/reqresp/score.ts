@@ -44,17 +44,11 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
         // failure, so keep the stronger penalty (Fatal for Ping, as before).
         return method === ReqRespMethod.Ping ? PeerAction.Fatal : PeerAction.LowToleranceError;
       }
-      switch (method) {
-        // Ping and Status are liveness probes; their dial timeouts are dominated by transient
-        // network congestion rather than peer misbehavior, so penalize leniently to avoid
-        // self-inflicted peer starvation (https://github.com/ChainSafe/lodestar/issues/9562),
-        // while still applying some penalty so genuinely dead peers eventually free the slot.
-        case ReqRespMethod.Ping:
-        case ReqRespMethod.Status:
-          return PeerAction.HighToleranceError;
-        default:
-          return PeerAction.LowToleranceError;
-      }
+      // A dial failure means we could not open a stream. That is evidence about the transport, not
+      // about the peer's behavior, and it is dominated by transient congestion on our side, so
+      // penalize leniently for every method to avoid self-inflicted peer starvation (#9562). A
+      // genuinely dead peer still accumulates penalty and is eventually evicted, freeing the slot.
+      return PeerAction.HighToleranceError;
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
     case RequestErrorCode.RESP_TIMEOUT:

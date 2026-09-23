@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {
@@ -34,7 +35,7 @@ vi.mock("../../../src/util/gloas.js", async (importOriginal) => {
 });
 
 const {processBuilderDepositRequest} = await import("../../../src/block/processBuilderDepositRequest.js");
-const {createCachedBeaconState, createPubkeyCache} = await import("../../../src/index.js");
+const {createCachedBeaconState} = await import("../../../src/index.js");
 
 function buildGloasState(slot = 0) {
   const config = getConfig(ForkName.gloas);
@@ -49,7 +50,7 @@ function buildGloasState(slot = 0) {
     view,
     {
       config: createBeaconConfig(config, view.genesisValidatorsRoot),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
     },
     {skipSyncCommitteeCache: true}
   );

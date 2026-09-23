@@ -1,5 +1,5 @@
 import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
@@ -39,6 +39,8 @@ describe("BlockDutiesService", () => {
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
     vi.spyOn(validatorStore, "getBuilderSelectionParams");
+    vi.spyOn(validatorStore, "getBuilderMinBid");
+    vi.spyOn(validatorStore, "getResolvedBuilderEntries");
     vi.spyOn(validatorStore, "getGraffiti");
     vi.spyOn(validatorStore, "getFeeRecipient");
     vi.spyOn(validatorStore, "strictFeeRecipientCheck");
@@ -237,6 +239,8 @@ describe("BlockDutiesService", () => {
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
     });
+    validatorStore.getBuilderMinBid.mockReturnValue(0n);
+    validatorStore.getResolvedBuilderEntries.mockReturnValue([]);
     validatorStore.getGraffiti.mockReturnValue("aaaa");
     validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
     validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
@@ -265,7 +269,7 @@ describe("BlockDutiesService", () => {
       feeRecipient,
       strictFeeRecipientCheck: true,
       includePayload: true,
-      builderBoostFactor: BigInt(0),
+      builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
     });
   });
 });

@@ -1,17 +1,20 @@
 import {describe, expect, it} from "vitest";
+import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 import {
   ATTESTATION_SUBNET_COUNT,
+  BYTES_PER_CELL,
   ForkName,
   GENESIS_EPOCH,
   MAX_ATTESTER_SLASHING_SIZE,
-  MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  SLOTS_PER_EPOCH,
   ZERO_HASH,
 } from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {
@@ -20,17 +23,22 @@ import {
   getCoreTopicsAtFork,
   getGossipSSZMaxSize,
   getGossipSSZType,
+  gossipTopicAllowPublishToZeroPeers,
   parseGossipTopic,
   stringifyGossipTopic,
 } from "../../../../src/network/gossip/topic.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {computeNodeId} from "../../../../src/network/subnets/index.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszBytes.js";
 import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / gossip / topic", () => {
   const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
+  const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
+  const getMaxSize = (topic: Parameters<typeof getGossipSSZType>[0], cfg = config): number =>
+    getGossipSSZMaxSize(topic, cfg, getGossipSSZType(topic));
 
   // Enforce with Typescript that we test all GossipType
   const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
@@ -242,55 +250,152 @@ describe("network / gossip / topic", () => {
 
   it("should provide finite gossip size limits for every gossip type", () => {
     for (const {topic} of Object.values(testCases).flat()) {
-      const maxSize = getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE);
+      const maxSize = getMaxSize(topic);
 
       expect(Number.isFinite(maxSize)).toBe(true);
       expect(maxSize).toBeGreaterThanOrEqual(getGossipSSZType(topic).minSize);
     }
   });
 
-  it("should use preset-defined gossip size limits for Gloas progressive objects", () => {
+  it("should match the preset p2p size bounds for Gloas progressive objects", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     expect({
-      [GossipType.beacon_block]: getGossipSSZMaxSize(
-        {type: GossipType.beacon_block, boundary, encoding},
-        config.MAX_PAYLOAD_SIZE
-      ),
-      [GossipType.data_column_sidecar]: getGossipSSZMaxSize(
-        {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
-        config.MAX_PAYLOAD_SIZE
-      ),
-      [GossipType.beacon_aggregate_and_proof]: getGossipSSZMaxSize(
-        {type: GossipType.beacon_aggregate_and_proof, boundary, encoding},
-        config.MAX_PAYLOAD_SIZE
-      ),
-      [GossipType.attester_slashing]: getGossipSSZMaxSize(
-        {type: GossipType.attester_slashing, boundary, encoding},
-        config.MAX_PAYLOAD_SIZE
-      ),
-      [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
-        {type: GossipType.execution_payload_bid, boundary, encoding},
-        config.MAX_PAYLOAD_SIZE
-      ),
+      [GossipType.beacon_block]: getMaxSize({type: GossipType.beacon_block, boundary, encoding}),
+      [GossipType.beacon_aggregate_and_proof]: getMaxSize({
+        type: GossipType.beacon_aggregate_and_proof,
+        boundary,
+        encoding,
+      }),
+      [GossipType.attester_slashing]: getMaxSize({
+        type: GossipType.attester_slashing,
+        boundary,
+        encoding,
+      }),
+      [GossipType.execution_payload_bid]: getMaxSize({
+        type: GossipType.execution_payload_bid,
+        boundary,
+        encoding,
+      }),
     }).toEqual({
       [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
-      [GossipType.data_column_sidecar]: MAX_DATA_COLUMN_SIDECAR_SIZE,
       [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
       [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
       [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
     });
   });
 
+  it("should match the serialized size of a sidecar with the maximum scheduled blobs", () => {
+    const maxBlobs = config.BLOB_SCHEDULE.reduce(
+      (max, e) => Math.max(max, e.MAX_BLOBS_PER_BLOCK),
+      config.MAX_BLOBS_PER_BLOCK_ELECTRA
+    );
+    const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+    sidecar.column = Array.from({length: maxBlobs}, () => new Uint8Array(BYTES_PER_CELL));
+    sidecar.kzgProofs = Array.from({length: maxBlobs}, () => new Uint8Array(ssz.deneb.KZGProof.fixedSize));
+    expect(maxDataColumnSidecarSize).toBe(ssz.gloas.DataColumnSidecar.serialize(sidecar).length);
+  });
+
+  it("should bound Gloas sidecars by the blob schedule and preserve Fulu bounds", () => {
+    const gossipTopicCache = new GossipTopicCache(config);
+    const transform = new DataTransformSnappy(gossipTopicCache, null);
+
+    const gloasTopic = {
+      type: GossipType.data_column_sidecar,
+      boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+      subnet: 1,
+      encoding,
+    } as const;
+    const gloasTopicStr = stringifyGossipTopic(config, gloasTopic);
+    gossipTopicCache.setTopic(gloasTopicStr, gloasTopic);
+    expect(getMaxSize(gloasTopic)).toBe(maxDataColumnSidecarSize);
+    expect(() => transform.outboundTransform(gloasTopicStr, new Uint8Array(maxDataColumnSidecarSize))).not.toThrow();
+    expect(() => transform.outboundTransform(gloasTopicStr, new Uint8Array(maxDataColumnSidecarSize + 1))).toThrow(
+      `ssz_snappy encoded data length ${maxDataColumnSidecarSize + 1}`
+    );
+    expect(
+      transform.inboundTransform(gloasTopicStr, snappyWasm.compress(new Uint8Array(maxDataColumnSidecarSize))).length
+    ).toBe(maxDataColumnSidecarSize);
+    expect(() =>
+      transform.inboundTransform(gloasTopicStr, snappyWasm.compress(new Uint8Array(maxDataColumnSidecarSize + 1)))
+    ).toThrow(`ssz_snappy decoded data length ${maxDataColumnSidecarSize + 1}`);
+
+    const fuluTopic = {
+      type: GossipType.data_column_sidecar,
+      boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+      subnet: 1,
+      encoding,
+    } as const;
+    const fuluTopicStr = stringifyGossipTopic(config, fuluTopic);
+    gossipTopicCache.setTopic(fuluTopicStr, fuluTopic);
+    const fuluMaxSize = Math.min(getGossipSSZType(fuluTopic).maxSize, config.MAX_PAYLOAD_SIZE);
+    expect(fuluMaxSize).toBeGreaterThan(maxDataColumnSidecarSize);
+    expect(() => transform.outboundTransform(fuluTopicStr, new Uint8Array(maxDataColumnSidecarSize + 1))).not.toThrow();
+    expect(() => transform.outboundTransform(fuluTopicStr, new Uint8Array(fuluMaxSize + 1))).toThrow(
+      `ssz_snappy encoded data length ${fuluMaxSize + 1}`
+    );
+    expect(
+      transform.inboundTransform(fuluTopicStr, snappyWasm.compress(new Uint8Array(maxDataColumnSidecarSize + 1))).length
+    ).toBe(maxDataColumnSidecarSize + 1);
+  });
+
+  it("should use MAX_BLOBS_PER_BLOCK_ELECTRA when the blob schedule is empty", () => {
+    const config = createBeaconConfig({...chainConfig, BLOB_SCHEDULE: []}, ZERO_HASH);
+    const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+    sidecar.column = Array.from({length: config.MAX_BLOBS_PER_BLOCK_ELECTRA}, () => new Uint8Array(BYTES_PER_CELL));
+    sidecar.kzgProofs = Array.from(
+      {length: config.MAX_BLOBS_PER_BLOCK_ELECTRA},
+      () => new Uint8Array(ssz.deneb.KZGProof.fixedSize)
+    );
+    expect(computeMaxGloasDataColumnSidecarSize(config)).toBe(ssz.gloas.DataColumnSidecar.serialize(sidecar).length);
+  });
+
+  it("should accept the largest future blob limit even when a later entry decreases it", () => {
+    const config = createBeaconConfig(
+      {
+        ...chainConfig,
+        GLOAS_FORK_EPOCH: 700000,
+        BLOB_SCHEDULE: [
+          {EPOCH: 700001, MAX_BLOBS_PER_BLOCK: 32},
+          {EPOCH: 700002, MAX_BLOBS_PER_BLOCK: 12},
+        ],
+      },
+      ZERO_HASH
+    );
+    const gossipTopicCache = new GossipTopicCache(config);
+    const transform = new DataTransformSnappy(gossipTopicCache, null);
+    const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+    sidecar.slot = 700001 * SLOTS_PER_EPOCH;
+    sidecar.column = Array.from({length: 32}, () => new Uint8Array(BYTES_PER_CELL));
+    sidecar.kzgProofs = Array.from({length: 32}, () => new Uint8Array(ssz.deneb.KZGProof.fixedSize));
+    const serialized = ssz.gloas.DataColumnSidecar.serialize(sidecar);
+
+    for (const epoch of [700000, 700001, 700002]) {
+      const topicStr = stringifyGossipTopic(config, {
+        type: GossipType.data_column_sidecar,
+        boundary: config.getForkBoundaryAtEpoch(epoch),
+        subnet: 0,
+        encoding,
+      });
+      expect(gossipTopicCache.getTypeSizes(topicStr).maxSize, `epoch ${epoch}`).toBe(serialized.length);
+      const compressed = transform.outboundTransform(topicStr, serialized);
+      expect(new Uint8Array(transform.inboundTransform(topicStr, compressed)), `epoch ${epoch}`).toEqual(serialized);
+      expect(
+        () => transform.inboundTransform(topicStr, snappyWasm.compress(new Uint8Array(serialized.length + 1))),
+        `epoch ${epoch}`
+      ).toThrow(`ssz_snappy decoded data length ${serialized.length + 1}`);
+    }
+  });
+
   it("should use the Heze bid size limit post-Heze", () => {
     const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
 
-    expect(
-      getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config.MAX_PAYLOAD_SIZE)
-    ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
+    expect(getMaxSize({type: GossipType.execution_payload_bid, boundary, encoding})).toBe(
+      MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE
+    );
   });
 
-  it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {
+  it("should cap Gloas progressive gossip objects at or below their theoretical SSZ max", () => {
     const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
 
     for (const topic of [
@@ -301,7 +406,7 @@ describe("network / gossip / topic", () => {
       {type: GossipType.execution_payload_bid, boundary, encoding},
       {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
     ] as const) {
-      expect(getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE)).toBeLessThan(getGossipSSZType(topic).maxSize);
+      expect(getMaxSize(topic)).toBeLessThanOrEqual(getGossipSSZType(topic).maxSize);
     }
   });
 
@@ -313,7 +418,7 @@ describe("network / gossip / topic", () => {
     } as const;
     const topicStr = stringifyGossipTopic(config, topic);
     const gossipTopicCache = new GossipTopicCache(config);
-    const transform = new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, null);
+    const transform = new DataTransformSnappy(gossipTopicCache, null);
 
     gossipTopicCache.setTopic(topicStr, topic);
 
@@ -404,6 +509,28 @@ describe("network / gossip / topic", () => {
       expect(allowedTopics.has("/eth2/ffffffff/beacon_attestation_5/ssz_snappy")).toBe(false);
       // Garbage
       expect(allowedTopics.has("/attacker/garbage/topic")).toBe(false);
+    });
+  });
+
+  describe("gossipTopicAllowPublishToZeroPeers", () => {
+    it("has an entry for every gossip type", () => {
+      for (const gossipType of Object.values(GossipType)) {
+        expect(gossipTopicAllowPublishToZeroPeers[gossipType]).toBeTypeOf("boolean");
+      }
+    });
+
+    it("only opts out for topics that tolerate reaching no peer", () => {
+      const allowed = Object.values(GossipType).filter((type) => gossipTopicAllowPublishToZeroPeers[type]);
+
+      // A publish that reached no peer is a failed broadcast and must surface to the caller. Adding a
+      // topic here silently turns that failure into a success, so it should be a deliberate change.
+      expect(allowed.sort()).toEqual(
+        [
+          GossipType.data_column_sidecar,
+          GossipType.light_client_finality_update,
+          GossipType.light_client_optimistic_update,
+        ].sort()
+      );
     });
   });
 });

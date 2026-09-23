@@ -25,6 +25,7 @@ import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
+import {PayloadAttributes} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
@@ -44,6 +45,14 @@ const PREPARE_EPOCH_LIMIT = 1;
  * 2000 = 20% of slot (2.4s on mainnet), within the spare window left after PREPARE_NEXT_SLOT_BPS.
  * Expressed in bps so it scales with slot duration (mainnet vs minimal/devnet). */
 const BUILDER_PREVERIFY_LIMIT_BPS = 2000;
+
+/**
+ * How far before the next slot builder connections are pre-established, see `checkBuilderStatusBeforeSlot`.
+ *
+ * 1667 = 16.67% of slot (2s on mainnet). Must stay under the few seconds an idle connection survives,
+ * while leaving room for a round trip to a distant builder to complete before the slot begins.
+ */
+const BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS = 1667;
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -151,25 +160,41 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = await getProposerIndex();
         feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
 
-        if (feeRecipient) {
-          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const proposerHead = this.chain.predictProposerHead(clockSlot);
+        // Predict the proposer head of the next slot when either:
+        //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
+        //  - this is an epoch transition: post-Fulu the next proposer may reorg a weak
+        //    last-block-of-epoch and build slot 0 on the strong parent (epoch-boundary reorg),
+        //    so we should dial the strong parent through the boundary instead of the weak head.
+        if (feeRecipient || isEpochTransition) {
+          const proposerHead = this.chain.predictProposerHead();
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
-          // If we predict we can reorg, we build on the proposer head (parent) block instead
+          // If we predict a reorg, we build the epoch transition on the proposer head (parent) instead
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on parent block instead", {
+            // feeRecipient set => WE propose the next slot and may reorg it out ourselves;
+            // otherwise it's a predicted reorg by another proposer (epoch-boundary reorg).
+            const logMessage = feeRecipient
+              ? "Weak head detected. We may build on parent block instead"
+              : "Weak head detected. Another proposer may build on parent block instead";
+            this.logger.verbose(logMessage, {
               proposerHeadSlot,
               proposerHeadRoot,
               headSlot,
               headRoot,
+              isEpochTransition,
             });
             this.metrics?.weakHeadDetected.inc();
+            if (isEpochTransition) {
+              this.metrics?.precomputeNextEpochTransition.predictedReorg.inc();
+            }
             updatedHead = proposerHead;
           }
+        }
 
+        if (feeRecipient) {
           if (isForkPostGloas(fork)) {
             this.chain.builderCircuitBreaker.update(clockSlot, updatedHead);
+            this.checkBuilderStatusBeforeSlot(prepareSlot);
           } else {
             // Update the builder status, if enabled shoot an api call to check status
             this.chain.updateBuilderStatus(clockSlot);
@@ -182,6 +207,7 @@ export class PrepareNextSlotScheduler {
         }
 
         // post-fulu we'll always reach here because preparedState is undefined
+        // we may run epoch transition not with headBlock if it's weak
         if (preparedState === undefined || updatedHead !== headBlock) {
           preparedState = await this.chain.regen.getBlockSlotState(
             updatedHead,
@@ -218,6 +244,24 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
+        let payloadAttributes: PayloadAttributes | undefined;
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
+        if (
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
+          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
+            prepareState: stateAfterParentPayload,
+            prepareSlot,
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
+            parentBlockHash,
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          payloadAttributes = data.payloadAttributes;
+        }
+
         if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
@@ -238,7 +282,8 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             stateAfterParentPayload,
-            feeRecipient
+            feeRecipient,
+            payloadAttributes
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
@@ -248,22 +293,6 @@ export class PrepareNextSlotScheduler {
         }
 
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
-
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-        if (
-          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
-          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-        ) {
-          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: stateAfterParentPayload,
-            prepareSlot,
-            parentBlockRoot: fromHex(updatedHead.blockRoot),
-            parentBlockHash,
-            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
-          });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
-        }
       } else {
         // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state
         const preparedState = await this.chain.regen.getBlockSlotState(
@@ -280,7 +309,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(updatedHead.blockRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
@@ -289,6 +318,8 @@ export class PrepareNextSlotScheduler {
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
+          headRoot,
+          updatedHeadRoot: updatedHead.blockRoot,
           prepareSlot,
           previousHits,
           durationMs: Date.now() - start,
@@ -371,6 +402,22 @@ export class PrepareNextSlotScheduler {
       }
     }
   };
+
+  /**
+   * Pre-establish the builder connections so the handshake lands outside the bid deadline. Scheduled
+   * later in the slot, connecting at PREPARE_NEXT_SLOT_BPS would go cold before bids are requested.
+   */
+  private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
+    const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+    const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
+    sleep(Math.max(0, msUntilCheck), this.signal)
+      .then(() => this.chain.builderApiClient.checkStatus())
+      .catch((e) => {
+        if (!isErrorAborted(e)) {
+          this.logger.debug("Failed to check builder status", {prepareSlot}, e as Error);
+        }
+      });
+  }
 
   computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch

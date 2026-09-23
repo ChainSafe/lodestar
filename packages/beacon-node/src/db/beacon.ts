@@ -1,12 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Slot} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
+import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
+import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
+import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -24,9 +28,10 @@ import {
   VoluntaryExitRepository,
 } from "./repositories/index.js";
 
-export type BeaconDbModules = {
-  config: ChainForkConfig;
-  db: Db;
+export type BeaconDbOpts = {
+  dataColumnDir: string;
+  logger: Logger;
+  metrics?: FlatFileStoreMetrics | null;
 };
 
 export class BeaconDb implements IBeaconDb {
@@ -55,11 +60,14 @@ export class BeaconDb implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
+  readonly dataColumns: IDataColumnStore;
+  lastLegacyArchiveSlot: Slot | null = null;
+  private readonly flatFileStore: FlatFileStore;
 
   constructor(
     config: ChainForkConfig,
-    protected readonly db: Db
+    protected readonly db: Db,
+    opts: BeaconDbOpts
   ) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(config, db);
@@ -86,15 +94,29 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommittee = new SyncCommitteeRepository(config, db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
-    this.backfilledRanges = new BackfilledRanges(config, db);
+    this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);
+    this.dataColumns = new LegacyDataColumnStore(
+      this.flatFileStore,
+      this.dataColumnSidecar,
+      this.dataColumnSidecarArchive,
+      this.blockArchive
+    );
   }
 
-  close(): Promise<void> {
+  async init(): Promise<void> {
+    await this.flatFileStore.init();
+    const [lastLegacyKey] = await this.dataColumnSidecarArchive.keys({reverse: true, limit: 1});
+    this.lastLegacyArchiveSlot = lastLegacyKey?.prefix ?? null;
+  }
+
+  async close(): Promise<void> {
+    await this.flatFileStore.close();
     return this.db.close();
   }
 
-  setMetrics(metrics: LevelDbControllerMetrics): void {
+  setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics: FlatFileStoreMetrics | null = null): void {
     this.db.setMetrics(metrics);
+    this.flatFileStore.setMetrics(flatFileStoreMetrics);
   }
 
   async pruneHotDb(): Promise<void> {

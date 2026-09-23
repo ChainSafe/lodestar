@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BUILDER_INDEX_FLAG,
@@ -23,6 +22,7 @@ import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {createSingleSignatureSetFromComponents, verifySignatureSet} from "./signatureSets.js";
 import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
@@ -220,6 +220,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[]
         state,
         epoch,
         shuffling.committees,
+        shuffling.shuffling,
         state.epochCtx.effectiveBalanceIncrements
       )
     );
@@ -339,9 +340,7 @@ export function isValidBuilderDepositSignature(
   const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    const publicKey = PublicKey.fromBytes(pubkey, true);
-    const sig = Signature.fromBytes(signature, true);
-    return verify(signingRoot, publicKey, sig);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signature));
   } catch (_e) {
     return false;
   }

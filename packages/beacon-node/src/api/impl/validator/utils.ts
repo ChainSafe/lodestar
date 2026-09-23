@@ -89,7 +89,7 @@ export function selectBlockProductionSourceByBoostFactor({
     return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
   }
 
-  if (engineExecutionPayloadValue >= (builderExecutionPayloadValue * builderBoostFactor) / BigInt(100)) {
+  if (engineExecutionPayloadValue * 100n >= builderExecutionPayloadValue * builderBoostFactor) {
     return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
   }
 

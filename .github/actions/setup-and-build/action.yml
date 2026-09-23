@@ -4,6 +4,10 @@ inputs:
   node:
     description: Node version
     required: true
+  zig:
+    description: Zig version
+    default: "0.16.0"
+    required: false
   registry-url:
     description: npm registry URL to write into .npmrc (required for OIDC publish jobs)
     required: false

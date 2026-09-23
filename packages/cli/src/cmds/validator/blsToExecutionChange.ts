@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {getClient} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";

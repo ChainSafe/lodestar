@@ -15,8 +15,8 @@ describe("beacon-node / network / reqresp / score / onOutgoingReqRespError", () 
     new RequestError({code: RequestErrorCode.DIAL_ERROR, error: new Error(innerMessage)});
 
   const testCases: {id: string; method: ReqRespMethod; error: RequestError; expected: PeerAction | null}[] = [
-    // Ping/Status dial timeouts are dominated by transient network congestion, not misbehavior,
-    // so they get the lenient HighToleranceError to avoid self-inflicted peer starvation. See #9562.
+    // Dial timeouts are dominated by transient network congestion, not misbehavior, so every method
+    // gets the lenient HighToleranceError to avoid self-inflicted peer starvation. See #9562.
     {
       id: "Ping DIAL_TIMEOUT -> HighToleranceError",
       method: ReqRespMethod.Ping,
@@ -62,19 +62,26 @@ describe("beacon-node / network / reqresp / score / onOutgoingReqRespError", () 
       error: dialError(PROTOCOL_SELECTION_FAILED),
       expected: PeerAction.LowToleranceError,
     },
-    // Non-liveness methods keep the stronger LowToleranceError penalty on dial timeouts;
-    // the #9562 evidence only supports loosening Ping/Status.
+    // Sync methods are issued far more often than the liveness probes, so a single transient
+    // produces most of its penalties here. They must be lenient too, otherwise a request loop
+    // retrying at a high rate bans the whole peer set in seconds.
     {
-      id: "BeaconBlocksByRange DIAL_TIMEOUT -> LowToleranceError",
+      id: "BeaconBlocksByRange DIAL_TIMEOUT -> HighToleranceError",
       method: ReqRespMethod.BeaconBlocksByRange,
       error: dialTimeout(),
-      expected: PeerAction.LowToleranceError,
+      expected: PeerAction.HighToleranceError,
     },
     {
-      id: "Metadata DIAL_TIMEOUT -> LowToleranceError",
+      id: "ExecutionPayloadEnvelopesByRoot DIAL_TIMEOUT -> HighToleranceError",
+      method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
+      error: dialTimeout(),
+      expected: PeerAction.HighToleranceError,
+    },
+    {
+      id: "Metadata DIAL_TIMEOUT -> HighToleranceError",
       method: ReqRespMethod.Metadata,
       error: dialTimeout(),
-      expected: PeerAction.LowToleranceError,
+      expected: PeerAction.HighToleranceError,
     },
   ];
 

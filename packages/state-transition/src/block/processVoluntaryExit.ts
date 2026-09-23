@@ -93,10 +93,7 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (
-    verifySignature &&
-    !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, new BeaconStateView(state), signedVoluntaryExit)
-  ) {
+  if (verifySignature && !verifyVoluntaryExitSignature(config, new BeaconStateView(state), signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 

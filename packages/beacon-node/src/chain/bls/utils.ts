@@ -1,33 +1,32 @@
-import {PublicKey, aggregatePublicKeys} from "@chainsafe/blst";
-import {ISignatureSet, PubkeyCache, SignatureSetType} from "@lodestar/state-transition";
-import {Metrics} from "../../metrics/metrics.js";
+import {
+  BLS_VERIFIER_MAX_BATCH_SIZE,
+  BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE,
+  verifySignatureSets,
+} from "@chainsafe/lodestar-z/bls-verifier";
+import {ISignatureSet, SignatureSetType, toBlsSignatureSet} from "@lodestar/state-transition";
+import {SameMessageSignatureSet} from "./interface.js";
 
-export function getAggregatedPubkey(
-  signatureSet: ISignatureSet,
-  pubkeyCache: PubkeyCache,
-  metrics: Metrics | null = null
-): PublicKey {
-  switch (signatureSet.type) {
-    case SignatureSetType.single:
-      return signatureSet.pubkey;
-
-    case SignatureSetType.indexed: {
-      return pubkeyCache.getOrThrow(signatureSet.index);
-    }
-
-    case SignatureSetType.aggregate: {
-      const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
-      const pubkeys = signatureSet.indices.map((i) => {
-        return pubkeyCache.getOrThrow(i);
-      });
-      const aggregated = aggregatePublicKeys(pubkeys);
-      timer?.();
-      return aggregated;
-    }
-
-    default:
-      throw Error("Unknown signature set type");
+export function verifySignatureSetsInBatches(signatureSets: ISignatureSet[]): boolean {
+  if (signatureSets.length === 0) {
+    return false;
   }
+
+  for (let start = 0; start < signatureSets.length; start += BLS_VERIFIER_MAX_BATCH_SIZE) {
+    const sets = signatureSets.slice(start, start + BLS_VERIFIER_MAX_BATCH_SIZE).map(toBlsSignatureSet);
+    if (!verifySignatureSets(sets)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function chunkSameMessageSignatureSets(sets: SameMessageSignatureSet[]): SameMessageSignatureSet[][] {
+  const chunks: SameMessageSignatureSet[][] = [];
+  for (let start = 0; start < sets.length; start += BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE) {
+    chunks.push(sets.slice(start, start + BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE));
+  }
+  return chunks;
 }
 
 export function getAggregatedPubkeysCount(signatureSets: ISignatureSet[]): number {

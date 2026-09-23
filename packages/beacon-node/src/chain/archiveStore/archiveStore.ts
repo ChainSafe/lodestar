@@ -1,5 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -15,7 +16,6 @@ import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.j
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
-import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -24,7 +24,11 @@ type ArchiveStoreModules = {
   metrics: Metrics | null;
 };
 
-type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
+type ArchiveStoreInitOpts = ArchiveStoreOpts & {
+  dbName: string;
+  dataColumnDir: string;
+  anchorState: {finalizedCheckpoint: Checkpoint};
+};
 
 export enum ArchiveStoreTask {
   ArchiveBlocks = "archive_blocks",
@@ -32,7 +36,6 @@ export enum ArchiveStoreTask {
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
   ForkchoicePrune = "forkchoice_prune",
-  UpdateBackfillRange = "update_backfill_range",
 }
 
 /**
@@ -120,6 +123,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          dataColumnDir: this.opts.dataColumnDir,
           nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,
@@ -192,7 +196,7 @@ export class ArchiveStore {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
+    this.chain.regen.onCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot
@@ -208,6 +212,9 @@ export class ArchiveStore {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
+      // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
+      const isNodeSynced = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot <= SLOTS_PER_EPOCH;
+
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
@@ -217,6 +224,8 @@ export class ArchiveStore {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
+        this.metrics,
+        isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
         this.chain.opts.persistOrphanedBlocksDir
@@ -249,10 +258,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
-      timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

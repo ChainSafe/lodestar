@@ -1,45 +1,54 @@
 import {type CompositeTypeAny} from "@chainsafe/ssz";
-import {ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
-  MAX_ATTESTER_SLASHING_SIZE,
-  MAX_DATA_COLUMN_SIDECAR_SIZE,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
-  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
-  isForkPostHeze,
 } from "@lodestar/params";
+import {TypeSizes} from "@lodestar/reqresp";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {computeMaxGloasDataColumnSidecarSize} from "../../util/sszBytes.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;
+  getTypeSizes(topicStr: string): TypeSizes;
 }
 
 export class GossipTopicCache implements IGossipTopicCache {
   private topicsByTopicStr = new Map<string, Required<GossipTopic>>();
+  private typeSizesByTopicStr = new Map<string, TypeSizes>();
 
-  constructor(private readonly forkDigestContext: ForkDigestContext) {}
+  constructor(private readonly config: BeaconConfig) {}
 
   /** Returns cached GossipTopic, otherwise attempts to parse it from the str */
   getTopic(topicStr: string): GossipTopic {
     let topic = this.topicsByTopicStr.get(topicStr);
     if (topic === undefined) {
-      topic = parseGossipTopic(this.forkDigestContext, topicStr);
+      topic = parseGossipTopic(this.config, topicStr);
       // TODO: Consider just throwing here. We should only receive messages from known subscribed topics
       this.topicsByTopicStr.set(topicStr, topic);
     }
     return topic;
+  }
+
+  getTypeSizes(topicStr: string): TypeSizes {
+    let typeSizes = this.typeSizesByTopicStr.get(topicStr);
+    if (typeSizes === undefined) {
+      const topic = this.getTopic(topicStr);
+      const sszType = getGossipSSZType(topic);
+      typeSizes = {minSize: sszType.minSize, maxSize: getGossipSSZMaxSize(topic, this.config, sszType)};
+      this.typeSizesByTopicStr.set(topicStr, typeSizes);
+    }
+    return typeSizes;
   }
 
   /** Returns cached GossipTopic, otherwise returns undefined */
@@ -139,27 +148,14 @@ export function getGossipSSZType(topic: GossipTopic) {
 }
 
 /**
- * Return the maximum uncompressed SSZ byte length accepted for a gossip object.
+ * Return the maximum uncompressed SSZ byte length allowed by the type and configured network bounds.
  */
-export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
-  const {fork} = topic.boundary;
-  // Gloas progressive containers have broad theoretical SSZ max sizes; use the preset p2p bounds instead.
-  switch (topic.type) {
-    case GossipType.beacon_block:
-      return maxPayloadSize;
-    case GossipType.beacon_aggregate_and_proof:
-      return isForkPostGloas(fork) ? MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
-    case GossipType.attester_slashing:
-      return isForkPostGloas(fork) ? MAX_ATTESTER_SLASHING_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
-    case GossipType.data_column_sidecar:
-      return isForkPostGloas(fork) ? MAX_DATA_COLUMN_SIDECAR_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
-    case GossipType.execution_payload:
-      return maxPayloadSize;
-    case GossipType.execution_payload_bid:
-      return isForkPostHeze(fork) ? MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE : MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE;
-    default:
-      return (sszType ?? getGossipSSZType(topic)).maxSize;
+export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig, sszType: CompositeTypeAny): number {
+  const maxSize = Math.min(sszType.maxSize, config.MAX_PAYLOAD_SIZE);
+  if (isForkPostGloas(topic.boundary.fork) && topic.type === GossipType.data_column_sidecar) {
+    return Math.min(maxSize, computeMaxGloasDataColumnSidecarSize(config));
   }
+  return maxSize;
 }
 
 /**
@@ -413,4 +409,42 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+};
+
+/**
+ * Whether a publish that reached zero subscribed peers is an acceptable outcome for a topic.
+ *
+ * Publishing to a topic with no subscribed peers throws `PublishError.NoPeersSubscribedToTopic`, which
+ * propagates to the caller and, for messages submitted through the beacon API, is surfaced to the
+ * validator client. That is the right default: a message that reached nobody is a failed broadcast, and a
+ * VC configured with several beacon nodes can fall back to another one.
+ *
+ * Only topics that have a concrete reason to tolerate it opt out here, ie. are set to `true`, and the
+ * reason is named on the entry. Everything else is `false` and keeps raising. Note this is applied per
+ * publish, a topic set to `false` still honors the global `--network.allowPublishToZeroPeers` flag.
+ */
+export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: false,
+  [GossipType.blob_sidecar]: false,
+  // data_column_sidecar: we ensure having all topic peers via prioritizePeers(). Even with 0 peers on the
+  // topic the overall publish can still succeed, because a supernode rebuilds and publishes the missing
+  // columns for us, so track sent peers as 0 instead of raising
+  [GossipType.data_column_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: false,
+  [GossipType.beacon_attestation]: false,
+  [GossipType.voluntary_exit]: false,
+  [GossipType.proposer_slashing]: false,
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: false,
+  [GossipType.sync_committee]: false,
+  // light_client_finality_update and light_client_optimistic_update: non-mandatory route on most of the
+  // network as of Oct 2022, there may be no peer subscribed to the topic at all. Reason carried over from
+  // the handlers in network.ts, which used to swallow the error instead
+  [GossipType.light_client_finality_update]: true,
+  [GossipType.light_client_optimistic_update]: true,
+  [GossipType.bls_to_execution_change]: false,
+  [GossipType.execution_payload]: false,
+  [GossipType.payload_attestation_message]: false,
+  [GossipType.execution_payload_bid]: false,
+  [GossipType.proposer_preferences]: false,
 };

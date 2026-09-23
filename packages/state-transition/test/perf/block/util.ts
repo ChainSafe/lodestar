@@ -1,4 +1,3 @@
-import {SecretKey} from "@chainsafe/blst";
 import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -14,6 +13,7 @@ import {
   getBlockRoot,
   getBlockRootAtSlot,
 } from "../../../src/index.js";
+import {interopSecretKey} from "../../../src/util/interop.js";
 
 export type BlockOpts = {
   proposerSlashingLen: number;
@@ -42,7 +42,7 @@ export function getBlockPhase0(
 
   // Space out exited indexes through the max available range to force expensive tree navigation
   const minActiveIndex = 0;
-  const maxActiveIndex = 200_000;
+  const maxActiveIndex = Math.min(200_000, preState.validators.length - 1);
   const totalExits = proposerSlashingLen + attesterSlashingLen * bitsLen + voluntaryExitLen;
   const exitedIndexStep = Math.floor((maxActiveIndex - minActiveIndex) / totalExits);
   const proposerSlashingStartIndex = minActiveIndex;
@@ -211,7 +211,8 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {
-    const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+    // Keep synthetic deposits aligned with their future validator index in the global pubkey cache.
+    const sk = interopSecretKey(depositCount + i);
     const pubkey = sk.toPublicKey().toBytes();
     const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: 32e9};
     // Sign with disposable keys

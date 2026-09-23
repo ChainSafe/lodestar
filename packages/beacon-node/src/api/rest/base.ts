@@ -104,6 +104,13 @@ export class RestApiServer {
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler<FastifyError | Error>((err, _req, res) => {
+      if (res.raw.headersSent) {
+        // A status code can no longer be written, e.g. if a long-lived SSE stream failed mid-flight.
+        // End the response instead, else the socket is left open and the client never notices.
+        if (!res.raw.writableEnded && !res.raw.destroyed) res.raw.end();
+        return;
+      }
+
       const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
       if ("validation" in err && err.validation) {
         const {instancePath = "unknown", message} = err.validation?.[0] ?? {};

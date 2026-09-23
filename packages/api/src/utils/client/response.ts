@@ -90,7 +90,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           const metaJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
-          this._meta = this.definition.resp.meta.fromJson(metaJson);
+          this._meta = this.definition.resp.meta.fromJson(metaJson, new HeadersExtra(this.headers));
           break;
         }
         case WireFormat.ssz:

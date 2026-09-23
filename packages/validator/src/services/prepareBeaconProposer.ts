@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {Epoch, bellatrix} from "@lodestar/types";
 import {Metrics} from "../metrics.js";
@@ -80,6 +80,9 @@ export function pollBuilderValidatorRegistration(
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
     const slot = epoch * SLOTS_PER_EPOCH;
 
+    // Validator registrations are pre-gloas only, replaced by builder preferences
+    if (config.getForkSeq(slot) >= ForkSeq.gloas) return;
+
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
@@ -91,7 +94,7 @@ export function pollBuilderValidatorRegistration(
       .filter(
         (pubkeyHex): pubkeyHex is string =>
           pubkeyHex !== undefined &&
-          validatorStore.getBuilderSelectionParams(pubkeyHex).selection !==
+          validatorStore.getBuilderSelectionParams(pubkeyHex, slot).selection !==
             routes.validator.BuilderSelection.ExecutionOnly
       );
 

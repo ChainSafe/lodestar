@@ -1,19 +1,53 @@
+import {getCiphers} from "node:crypto";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
-import type {PrivateKey} from "@libp2p/interface";
+import type {Address, PrivateKey} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
+import {loopbackAddressLast, publicAddressesFirst, reliableTransportsFirst} from "@libp2p/utils";
+import type {Multiaddr} from "@multiformats/multiaddr";
 import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
-import {defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
 import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
+
+const noiseCrypto = getCiphers().includes("chacha20-poly1305")
+  ? defaultCrypto
+  : {
+      ...defaultCrypto,
+      chaCha20Poly1305Encrypt: asCrypto.chaCha20Poly1305Encrypt,
+      chaCha20Poly1305Decrypt: asCrypto.chaCha20Poly1305Decrypt,
+    };
+
+function quicAddressesFirst(a: Multiaddr, b: Multiaddr): -1 | 0 | 1 {
+  const aQuic = a.getComponents().some((c) => c.name === "quic-v1");
+  const bQuic = b.getComponents().some((c) => c.name === "quic-v1");
+  if (aQuic === bQuic) return 0;
+  return aQuic ? -1 : 1;
+}
+
+/**
+ * Custom sorter for libp2p's `addressSorter`.
+ *
+ * Prefers QUIC > TCP addresses before dialing, per p2p spec.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/f21dac06e99743b1e98bb80297897b96520c942b/specs/phase0/p2p-interface.md#transport
+ */
+export function quicFirstAddressSorter(a: Address, b: Address): -1 | 0 | 1 {
+  return (
+    loopbackAddressLast(a.multiaddr, b.multiaddr) ||
+    publicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    quicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    reliableTransportsFirst(a.multiaddr, b.multiaddr)
+  );
+}
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -122,7 +156,7 @@ export async function createNodeJsLibp2p(
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncrypters: [noise({crypto: defaultCrypto})],
+    connectionEncrypters: [noise({crypto: noiseCrypto})],
     transports,
     streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,
@@ -141,6 +175,8 @@ export async function createNodeJsLibp2p(
       // the maximum number of pending connections libp2p will accept before it starts rejecting incoming connections.
       // make it the same to backlog option above
       maxIncomingPendingConnections: 5,
+      // Prefer dialing QUIC > TCP for a peer address if QUIC is enabled
+      addressSorter: quicEnabled ? quicFirstAddressSorter : undefined,
     },
     // rely on lodestar's peer manager to ping peers
     connectionMonitor: {

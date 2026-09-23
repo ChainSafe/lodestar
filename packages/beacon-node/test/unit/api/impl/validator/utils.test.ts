@@ -1,14 +1,13 @@
 import {beforeAll, describe, expect, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {BeaconStateAllForks, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {BLSPubkey, ProducedBlockSource, ValidatorIndex, ssz} from "@lodestar/types";
 import {
-  BeaconStateAllForks,
-  BeaconStateView,
-  createCachedBeaconState,
-  createPubkeyCache,
-} from "@lodestar/state-transition";
-import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
-import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
+  getPubkeysForIndices,
+  selectBlockProductionSourceByBoostFactor,
+} from "../../../../../src/api/impl/validator/utils.js";
 
 describe("api / impl / validator / utils", () => {
   const vc = 32;
@@ -34,11 +33,21 @@ describe("api / impl / validator / utils", () => {
       state,
       {
         config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache,
       },
       {skipSyncPubkeys: true}
     );
     const pubkeysRes = getPubkeysForIndices(new BeaconStateView(cachedState), indexes);
     expect(pubkeysRes.map(toHexString)).toEqual(pubkeys.map(toHexString));
+  });
+
+  it("compares boosted values without truncating", () => {
+    expect(
+      selectBlockProductionSourceByBoostFactor({
+        engineExecutionPayloadValue: 1n,
+        builderExecutionPayloadValue: 1n,
+        builderBoostFactor: 150n,
+      }).source
+    ).toBe(ProducedBlockSource.builder);
   });
 });

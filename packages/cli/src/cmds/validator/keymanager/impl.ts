@@ -1,7 +1,8 @@
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   BuilderBoostFactorData,
+  BuilderConfigData,
   DeleteRemoteKeyStatus,
   DeletionStatus,
   FeeRecipientData,
@@ -32,12 +33,13 @@ export class KeymanagerApi implements Api {
     private readonly validator: Validator,
     private readonly persistedKeysBackend: IPersistedKeysBackend,
     private readonly signal: AbortSignal,
-    private readonly proposerConfigWriteDisabled?: boolean
+    private readonly proposerConfigWriteDisabled?: boolean,
+    private readonly allowDangerousTrustedPayments?: boolean
   ) {}
 
   private checkIfProposerWriteEnabled(): void {
     if (this.proposerConfigWriteDisabled === true) {
-      throw Error("proposerSettingsFile option activated");
+      throw new ApiError(403, "proposerSettingsFile option activated");
     }
   }
 
@@ -379,6 +381,48 @@ export class KeymanagerApi implements Api {
     return {status: 204};
   }
 
+  async getBuilderConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getBuilderConfig"]> {
+    this.assertValidKnownPubkey(pubkey);
+    return {data: this.validator.validatorStore.getBuilderConfig(pubkey)};
+  }
+
+  async setBuilderConfig({
+    pubkey,
+    builderConfig,
+  }: {
+    pubkey: PubkeyHex;
+    builderConfig: BuilderConfigData;
+  }): ReturnType<Api["setBuilderConfig"]> {
+    this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
+
+    if (
+      this.allowDangerousTrustedPayments !== true &&
+      builderConfig.builders?.some((entry) => (entry.maxExecutionPayment ?? 0n) > 0n)
+    ) {
+      throw new ApiError(
+        400,
+        "Configuring a builder max execution payment above 0 requires --allowDangerousTrustedPayments"
+      );
+    }
+
+    try {
+      this.validator.validatorStore.setBuilderConfig(pubkey, builderConfig);
+    } catch (e) {
+      throw new ApiError(400, (e as Error).message);
+    }
+    this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
+  }
+
+  async deleteBuilderConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilderConfig"]> {
+    this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
+    this.validator.validatorStore.deleteBuilderConfig(pubkey);
+    this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
+  }
+
   async getProposerConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getProposerConfig"]> {
     this.assertValidKnownPubkey(pubkey);
 
@@ -390,7 +434,15 @@ export class KeymanagerApi implements Api {
         ? {
             ...config.builder,
             // Default JSON serialization can't handle BigInt
-            boostFactor: config.builder.boostFactor ? config.builder.boostFactor.toString() : undefined,
+            boostFactor: config.builder.boostFactor?.toString(),
+            minBid: config.builder.minBid?.toString(),
+            maxExecutionPayment: config.builder.maxExecutionPayment?.toString(),
+            builders: config.builder.builders?.map((entry) => ({
+              ...entry,
+              maxExecutionPayment: entry.maxExecutionPayment?.toString(),
+              minBid: entry.minBid?.toString(),
+              builderBoostFactor: entry.builderBoostFactor?.toString(),
+            })),
           }
         : undefined,
     };

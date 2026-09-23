@@ -37,7 +37,7 @@ async function validateProposerSlashing(
   try {
     const proposer = state.getValidator(proposerSlashing.signedHeader1.message.proposerIndex);
     // verifySignature = false, verified in batch below
-    assertValidProposerSlashing(chain.config, chain.pubkeyCache, state.slot, proposerSlashing, proposer, false);
+    assertValidProposerSlashing(chain.config, state.slot, proposerSlashing, proposer, false);
   } catch (e) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
@@ -48,8 +48,7 @@ async function validateProposerSlashing(
   const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
-      code: ProposerSlashingErrorCode.INVALID,
-      error: Error("Invalid signature"),
+      code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
     });
   }
 }

@@ -1,15 +1,19 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
-import {Logger, fromHex} from "@lodestar/utils";
-import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
@@ -17,6 +21,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
@@ -153,6 +158,89 @@ describe("sync / range / chain", () => {
       });
     });
   }
+
+  it.each([
+    {receivedSlots: [1, 3], expectedEnvelopeSlots: "[1, 3]"},
+    {receivedSlots: [], expectedEnvelopeSlots: "[]"},
+  ])("logs only received envelope slots: $expectedEnvelopeSlots", async ({receivedSlots, expectedEnvelopeSlots}) => {
+    const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+    const gloasCustodyConfig = new CustodyConfig({nodeId, config: gloasConfig});
+    const log = getMockedLogger();
+    const blocks: IBlockInput[] = [];
+    const payloadEnvelopes = new Map<Slot, PayloadEnvelopeInput>();
+
+    for (const slot of [3, 1, 2]) {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      blocks.push(
+        BlockInputNoData.createFromBlock({
+          block,
+          blockRootHex,
+          forkName: ForkName.gloas,
+          daOutOfRange: false,
+          source: BlockInputSource.byRange,
+          seenTimestampSec: 0,
+        })
+      );
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: gloasCustodyConfig.sampledColumns,
+        custodyColumns: gloasCustodyConfig.custodyColumns,
+        daOutOfRange: false,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      if (receivedSlots.includes(slot)) {
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.beaconBlockRoot = blockRoot;
+        envelope.message.payload.slotNumber = slot;
+        payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0});
+      }
+      payloadEnvelopes.set(slot, payloadInput);
+    }
+
+    const target: ChainTarget = {slot: 3, root: ZERO_HASH};
+    const processChainSegment = vi.fn<SyncChainFns["processChainSegment"]>().mockResolvedValue(undefined);
+    await new Promise<void>((resolve, reject) => {
+      const chain = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        {
+          processChainSegment,
+          downloadByRange: async () => ({result: {blocks, payloadEnvelopes}, warnings: null}),
+          getConnectedPeerSyncMeta: (peerId) => ({
+            ...getConnectedPeerSyncMeta(peerId),
+            custodyColumns: gloasCustodyConfig.sampledColumns,
+            earliestAvailableSlot: 0,
+          }),
+          reportPeer,
+          pruneBlockInputs,
+          onEnd: (err) => (err ? reject(err) : resolve()),
+        },
+        {
+          config: gloasConfig,
+          clock: new Clock({config: gloasConfig, genesisTime: 0, signal: new AbortController().signal}),
+          custodyConfig: gloasCustodyConfig,
+          logger: log,
+          metrics: null,
+        },
+        undefined
+      );
+      chain.addPeer(peer, target);
+      chain.startSyncing(0);
+    });
+
+    expect(processChainSegment).toHaveBeenCalledExactlyOnceWith(blocks, payloadEnvelopes, RangeSyncType.Finalized);
+    const expectedLog = expect.objectContaining({envelopeSlots: expectedEnvelopeSlots, blockSlots: "[1-3]"});
+    expect(log.debug).toHaveBeenCalledWith("Finished downloading batch by range", expectedLog);
+    expect(log.verbose).toHaveBeenCalledWith("Processing batch", expectedLog);
+    expect(log.verbose).toHaveBeenCalledWith("Processed batch", expectedLog);
+  });
 
   it("does not self-register a metrics collect fn per SyncChain (leak regression)", () => {
     const headSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
@@ -399,8 +487,10 @@ describe("sync / range / chain", () => {
   describe("batch teardown peer reporting", () => {
     async function runToTeardown(
       syncType: RangeSyncType,
-      processChainSegment: SyncChainFns["processChainSegment"] = async () => {
-        throw Error("always reject to force teardown");
+      // Default: a peer-attributable processing failure (the batch's own blocks are bad), so teardown
+      // trips MAX_PROCESSING_ATTEMPTS and reports the offending peers.
+      processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.NON_LINEAR_SLOTS});
       }
     ): Promise<{reportPeerSpy: ReturnType<typeof vi.fn>; err: Error | null}> {
       const reportPeerSpy = vi.fn();
@@ -477,6 +567,73 @@ describe("sync / range / chain", () => {
 
       expect(err).toBeInstanceOf(BatchError);
       expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+    });
+
+    it("does not report peers when teardown is caused by execution engine errors", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: ExecutionPayloadStatus.ELERROR,
+          errorMessage: "el is down",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      // our EL malfunctioning is not evidence against any peer
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+    });
+
+    it("reports only the offending peers when teardown is caused by INVALID payloads", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      expect(reportPeerSpy).toHaveBeenCalled();
+
+      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
+      // only the peers that actually served an INVALID attempt, each reported once
+      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
+      expect(reportedPeers.length).toBeLessThan(6);
+      for (const call of reportPeerSpy.mock.calls) {
+        expect(call[2]).toBe("SyncChainMaxExecutionEngineErrorAttempts");
+      }
+    });
+
+    it("reports only the offending peers when teardown trips MAX_PROCESSING_ATTEMPTS", async () => {
+      // default processChainSegment throws a peer-attributable NON_LINEAR_SLOTS
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+      expect(reportPeerSpy).toHaveBeenCalled();
+
+      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
+      // only the peers that served a bad attempt, each reported once — not the whole peerset
+      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
+      expect(reportedPeers.length).toBeLessThan(6);
+      for (const call of reportPeerSpy.mock.calls) {
+        expect(call[2]).toBe("SyncChainMaxProcessingAttempts");
+      }
+    });
+
+    it("does not report peers when teardown is caused by our own internal error", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("boom")});
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+      // repeated internal errors tear the chain down, but blaming a peer for our own bug would risk self-isolation
+      expect(reportPeerSpy).not.toHaveBeenCalled();
     });
   });
 

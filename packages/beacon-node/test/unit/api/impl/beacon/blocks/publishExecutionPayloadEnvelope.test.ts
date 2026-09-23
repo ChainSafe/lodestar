@@ -8,6 +8,7 @@ import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
@@ -53,7 +54,8 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         forkName: ForkName.gloas,
         sampledColumns: [],
         custodyColumns: [],
-        timeCreatedSec: 0,
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.byRange,
         daOutOfRange: false,
       });
       const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();

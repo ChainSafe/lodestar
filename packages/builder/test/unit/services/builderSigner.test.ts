@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {SecretKey, Signature, verify} from "@chainsafe/blst";
+import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";

@@ -1,8 +1,14 @@
+import os from "node:os";
 import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
-import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
+import {
+  NetworkArgs,
+  hasGlobalIPv6Address,
+  parseListenArgs,
+  parseArgs as parseNetworkArgs,
+} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -30,7 +36,6 @@ describe("options / beaconNodeOptions", () => {
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
@@ -101,7 +106,6 @@ describe("options / beaconNodeOptions", () => {
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
-      "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
     } as BeaconNodeArgs;
 
@@ -132,7 +136,6 @@ describe("options / beaconNodeOptions", () => {
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
         disableProposerSlashings: true,
         archiveStateEpochFrequency: 1024,
@@ -213,7 +216,6 @@ describe("options / beaconNodeOptions", () => {
         isSingleNode: true,
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
-        backfillBatchSize: 64,
         disableRangeSync: false,
       },
     };
@@ -327,5 +329,76 @@ describe("options / network / tcp and quic flags", () => {
         quic: true,
       } as NetworkArgs)
     ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
+  });
+});
+
+describe("options / network / listen address defaults", () => {
+  it("should bind IPv4 and IPv6 by default when the host has a global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, true);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBe("::");
+    expect(result.port6).toBe(9000);
+  });
+
+  it("should bind IPv4 only by default when the host has no global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, false);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBeUndefined();
+    expect(result.port6).toBeUndefined();
+    expect(result.discoveryPort6).toBeUndefined();
+  });
+
+  it("should bind IPv6 when listenAddress6 is set explicitly without a global IPv6 address", () => {
+    const result = parseListenArgs({listenAddress6: "::"} as NetworkArgs, false);
+    expect(result.listenAddress6).toBe("::");
+    expect(result.listenAddress).toBeUndefined();
+  });
+
+  it("should not bind IPv6 when listenAddress is set explicitly", () => {
+    const result = parseListenArgs({listenAddress: "0.0.0.0"} as NetworkArgs, true);
+    expect(result.listenAddress6).toBeUndefined();
+  });
+});
+
+describe("options / network / hasGlobalIPv6Address", () => {
+  const iface = (address: string, family: "IPv4" | "IPv6", internal = false): os.NetworkInterfaceInfo =>
+    ({address, family, internal, netmask: "", mac: "", cidr: null, scopeid: 0}) as os.NetworkInterfaceInfo;
+
+  it("should be false with only loopback, link-local and unique local IPv6 addresses", () => {
+    const interfaces = {
+      lo: [iface("127.0.0.1", "IPv4", true), iface("::1", "IPv6", true)],
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::42:acff:fe12:3", "IPv6"), iface("fd00::3", "IPv6")],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
+
+  it("should be false with no IPv6 address", () => {
+    expect(hasGlobalIPv6Address({eth0: [iface("172.18.0.3", "IPv4")]})).toBe(false);
+  });
+
+  it("should be false with only special-purpose addresses", () => {
+    const interfaces = {
+      eth0: [
+        iface("2001:db8::1", "IPv6"),
+        iface("3fff::1", "IPv6"),
+        iface("2001:2::1", "IPv6"),
+        iface("2001::1", "IPv6"),
+        iface("2001:0:1234::1", "IPv6"),
+        iface("2002:c000:201::1", "IPv6"),
+        iface("fec0::1", "IPv6"),
+        iface("::ffff:10.0.0.1", "IPv6"),
+        iface("100::1", "IPv6"),
+        iface("64:ff9b::a00:1", "IPv6"),
+      ],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
+
+  it("should be true with a global unicast IPv6 address", () => {
+    const interfaces = {
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::1", "IPv6"), iface("2a01:4ff:f4:3c4a::1", "IPv6")],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(true);
+    expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
   });
 });

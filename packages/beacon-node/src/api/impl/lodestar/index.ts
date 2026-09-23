@@ -147,7 +147,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.regen.dropCache();
+      await chain.regen.dropCache();
     },
 
     async connectPeer({peerId, multiaddrs}) {

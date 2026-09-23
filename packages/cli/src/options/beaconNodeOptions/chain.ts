@@ -24,7 +24,6 @@ export type ChainArgs = {
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
-  "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
@@ -66,7 +65,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
-    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -253,13 +251,6 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.assertCorrectProgressiveBalances": {
-    hidden: true,
-    description: "Enable asserting the progressive balances",
-    type: "boolean",
-    group: "chain",
-  },
-
   "chain.archiveStateEpochFrequency": {
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
@@ -343,7 +334,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
-    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    description:
+      "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",
@@ -351,7 +343,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
 This is useful to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",

@@ -32,6 +32,21 @@ test("missing token is tolerated for a confirmed fork pull_request_review event"
   assert.deepEqual(context.pullRequest, {owner: "ChainSafe", repo: "lodestar", number: 9732});
 });
 
+test("missing token is tolerated when the workflow runs in an unmanaged repository", () => {
+  const context = buildEventContext("schedule", "github-actions[bot]", "external_contributor/lodestar", null);
+
+  assert.equal(context.repositoryOwner, "external_contributor");
+  assert.equal(missingTokenSkipReason(context), "unmanaged_repository");
+  assert.equal(missingTokenSkipReason(context, "external_contributor"), null);
+});
+
+test("missing token is not hidden when the workflow repository is unknown", () => {
+  const context = buildEventContext("schedule", "github-actions[bot]", "", null);
+
+  assert.equal(context.repositoryOwner, null);
+  assert.equal(missingTokenSkipReason(context), null);
+});
+
 test("missing token fails for a fork pull_request_target event", () => {
   const context = buildEventContext(
     "pull_request_target",
@@ -80,6 +95,7 @@ test("missing token configuration errors carry a stable code and context", () =>
   const context = buildEventContext("schedule", "github-actions[bot]", "ChainSafe/lodestar", null);
   const error = new ProjectBoardConfigurationError(context);
 
+  assert.equal(missingTokenSkipReason(context), null);
   assert.equal(error.code, MISSING_TOKEN_ERROR_CODE);
   assert.deepEqual(error.metadata, {eventName: "schedule", repository: "ChainSafe/lodestar"});
   assert.match(error.message, /PROJECT_BOARD_CONFIG_TOKEN_MISSING/);
