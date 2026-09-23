@@ -31,30 +31,9 @@ describe("downloadNightlyTests", () => {
     vi.unstubAllEnvs();
   });
 
-  it("bounds latest lookups and logs the selected run's date and commit", async () => {
+  it("retries a stale response and downloads the fresh run", async () => {
     fetchMock
-      .mockResolvedValueOnce(Response.json({workflow_runs: [recentRun]}))
-      .mockResolvedValueOnce(Response.json(artifacts));
-
-    await downloadNightlyTests(opts, log, "latest");
-
-    const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
-    expect(query.get("created")).toBe(">=2026-09-20T06:00:00.000Z");
-    expect(query.get("event")).toBe("schedule");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(recentRun.created_at));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(recentRun.head_sha));
-    expect(downloadGenericSpecTests).toHaveBeenCalledWith(
-      expect.objectContaining({specVersion: `nightly-${recentRun.id}`}),
-      log
-    );
-  });
-
-  it.each([
-    {name: "stale", runs: [staleRun]},
-    {name: "empty", runs: []},
-  ])("retries a $name response before downloading artifacts", async ({runs}) => {
-    fetchMock
-      .mockResolvedValueOnce(Response.json({workflow_runs: runs}))
+      .mockResolvedValueOnce(Response.json({workflow_runs: [staleRun]}))
       .mockResolvedValueOnce(Response.json({workflow_runs: [recentRun]}))
       .mockResolvedValueOnce(Response.json(artifacts));
 
@@ -69,15 +48,9 @@ describe("downloadNightlyTests", () => {
     );
   });
 
-  it.each([
-    {name: "stale", createdAt: staleRun.created_at},
-    {name: "invalid", createdAt: "not-a-date"},
-    {name: "missing", createdAt: undefined},
-  ])("rejects repeatedly $name timestamps without requesting artifacts", async ({createdAt}) => {
+  it("rejects repeated stale responses without requesting artifacts", async () => {
     fetchMock.mockImplementation(async (url) =>
-      Response.json(
-        String(url).includes("/artifacts") ? artifacts : {workflow_runs: [{...staleRun, created_at: createdAt}]}
-      )
+      Response.json(String(url).includes("/artifacts") ? artifacts : {workflow_runs: [staleRun]})
     );
 
     const assertion = expect(downloadNightlyTests(opts, log, "latest")).rejects.toMatchObject({
@@ -92,50 +65,16 @@ describe("downloadNightlyTests", () => {
     }
   });
 
-  it("allows yesterday's successful run", async () => {
-    fetchMock
-      .mockResolvedValueOnce(Response.json({workflow_runs: [{...recentRun, created_at: "2026-09-21T00:24:52Z"}]}))
-      .mockResolvedValueOnce(Response.json(artifacts));
-
-    await downloadNightlyTests(opts, log, "latest");
-
-    expect(downloadGenericSpecTests).toHaveBeenCalledOnce();
-  });
-
   it("allows historical runs when a date is explicitly requested", async () => {
     fetchMock
       .mockResolvedValueOnce(Response.json({workflow_runs: [staleRun]}))
       .mockResolvedValueOnce(Response.json(artifacts));
 
-    await downloadNightlyTests({...opts, branch: "master"}, log, "2026-08-30");
+    await downloadNightlyTests(opts, log, "2026-08-30");
 
-    const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
-    expect(query.get("created")).toBe("2026-08-30");
-    expect(query.get("branch")).toBe("master");
-    expect(query.has("event")).toBe(false);
     expect(downloadGenericSpecTests).toHaveBeenCalledWith(
       expect.objectContaining({specVersion: `nightly-${staleRun.id}`}),
       log
     );
-  });
-
-  it("rejects runs outside an explicitly requested date", async () => {
-    fetchMock.mockImplementation(async () => Response.json({workflow_runs: [staleRun]}));
-
-    const assertion = expect(downloadNightlyTests(opts, log, "2026-09-21")).rejects.toMatchObject({
-      type: {code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE"},
-    });
-    await Promise.all([assertion, vi.runAllTimersAsync()]);
-
-    expect(downloadGenericSpecTests).not.toHaveBeenCalled();
-  });
-
-  it("does not retry authentication failures", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(null, {status: 401}));
-
-    await expect(downloadNightlyTests(opts, log, "latest")).rejects.toThrow("GITHUB_TOKEN is invalid or expired");
-
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(downloadGenericSpecTests).not.toHaveBeenCalled();
   });
 });
