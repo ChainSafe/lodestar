@@ -35,6 +35,8 @@ allowBuilds:
   ssh2: true
 
 overrides:
+  # Share the PeerMap type with stable libp2p while gossipsub uses a prerelease.
+  "@libp2p/peer-collections@7.0.28-fb139d1c8": "7.0.27"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"
