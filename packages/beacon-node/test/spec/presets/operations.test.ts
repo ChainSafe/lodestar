@@ -15,10 +15,10 @@ import {
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
 import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {loadSpecTestConfig} from "../utils/loadSpecTestConfig.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {BaseSpecTest, RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -143,11 +143,12 @@ export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, tes
 
 export type OperationsTestCase = {
   meta?: {bls_setting?: bigint};
-  config?: {GLOAS_FORK_EPOCH?: bigint};
   pre: BeaconStateAllForks;
   post: BeaconStateAllForks;
   execution: {execution_valid: boolean};
 };
+
+const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
 
 const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
   const operationFn = operationFns[testName];
@@ -156,14 +157,12 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   }
 
   return {
-    testFunction: (testcase) => {
+    testFunction: (testcase, directoryName, testCaseName) => {
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
       const config = createChainForkConfig({
         ...getConfig(fork, epoch),
-        ...(testcase.config?.GLOAS_FORK_EPOCH !== undefined && {
-          GLOAS_FORK_EPOCH: bnToNum(testcase.config.GLOAS_FORK_EPOCH),
-        }),
+        ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
       });
       const cachedState = createCachedBeaconStateTest(state, config);
 
@@ -176,7 +175,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       return state;
     },
     options: {
-      inputTypes: {...inputTypeSszTreeViewDU, execution: InputType.YAML, config: InputType.YAML},
+      inputTypes: {...inputTypeSszTreeViewDU, execution: InputType.YAML},
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
@@ -220,6 +219,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   };
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(specTestDir, {
   operations: {type: RunnerType.default, fn: operations},
 });

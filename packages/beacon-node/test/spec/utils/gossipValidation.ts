@@ -2,11 +2,10 @@ import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import jsyaml from "js-yaml";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import snappyWasm from "@chainsafe/snappy-wasm";
-import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -45,6 +44,7 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 
 /**
  * A test clock that models gossip clock disparity from a millisecond timestamp.
@@ -174,28 +174,6 @@ function getGossipTopic(topicHandler: string): GossipType {
 function loadMeta(testCaseDir: string): MetaYaml {
   const raw = fs.readFileSync(path.join(testCaseDir, "meta.yaml"), "utf8");
   return loadYaml<MetaYaml>(raw);
-}
-
-function loadTestCaseChainConfig(testCaseDir: string, fork: ForkName) {
-  const configPath = path.join(testCaseDir, "config.yaml");
-  if (!fs.existsSync(configPath)) return getConfig(fork);
-
-  // Parse config scalars as raw strings so byte values such as `0x00000001`
-  // keep their leading zeros before passing through `chainConfigFromJson()`.
-  // FAILSAFE_SCHEMA produces strings for scalars and preserves arrays/objects
-  // (e.g. `BLOB_SCHEDULE`) as-is for `chainConfigFromJson` to deserialize.
-  const parsed = jsyaml.load(fs.readFileSync(configPath, "utf8"), {
-    schema: jsyaml.FAILSAFE_SCHEMA,
-  }) as Record<string, unknown>;
-  const configJson: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(parsed)) {
-    if (key in chainConfigTypes) {
-      configJson[key] = value;
-    }
-  }
-
-  return {...getConfig(fork), ...chainConfigFromJson(configJson)};
 }
 
 function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
@@ -353,7 +331,7 @@ export async function runGossipValidationTest(
   }
 
   const anchorState = loadState(testCaseDir, fork);
-  const testCaseConfig = loadTestCaseChainConfig(testCaseDir, fork);
+  const testCaseConfig = {...getConfig(fork), ...loadSpecTestConfig(testCaseDir)};
   const beaconConfig = createBeaconConfig(testCaseConfig, anchorState.genesisValidatorsRoot);
 
   const genesisTimeSec = Number(anchorState.genesisTime);
