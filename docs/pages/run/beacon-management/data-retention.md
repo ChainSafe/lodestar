@@ -13,6 +13,7 @@ $dataDir # specified by --dataDir on the beacon command
 ├── beacon.log # there can be many of these
 ├── enr
 ├── peer-id.json
+├── pubkeys
 ├── chain-db # default if --dbDir not specified
 │   └── (db files)
 ├── data_columns # default if --dataColumnDir not specified
