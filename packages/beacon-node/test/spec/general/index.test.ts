@@ -5,10 +5,17 @@ import {RunnerType} from "../utils/types.js";
 import {blsTestRunner} from "./bls.js";
 import {kzgTestRunner} from "./kzg.js";
 
-// NOTE: Every skipped test must include a detailed reason, a tracking issue, and
-// an approximate timeline or condition for re-enabling it.
-// Skip the smallest possible set of tests, e.g. one fork or case instead of an entire runner.
-// Preset skips belong in defaultSkipOpts in ../utils/specTestIterator.js.
+// NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
+// to an issue marking it as pending to re-enable and an aproximate timeline of when it will
+// be fixed.
+// NOTE: Comment the minimum set of test necessary to unblock PRs: For example, instead of
+// skipping all `bls_to_execution_change` tests, just skip for a fork setting:
+// ```
+// skippedPrefixes: [
+//    // Skipped since this only test that withdrawals are de-activated
+//    "eip4844/operations/bls_to_execution_change",
+// ],
+// ```
 const skipOpts: SkipOpts = {
   skippedHandlers: [],
   skippedTests: [],
