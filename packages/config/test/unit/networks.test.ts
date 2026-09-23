@@ -21,10 +21,10 @@ describe("plataberget network", () => {
 });
 
 describe("ephemery network", () => {
-  // ephemery-genesis values.env, bundled base iteration (164)
+  // ephemery-genesis values.env base iteration (164)
   const RESET_INTERVAL_SECONDS = 2419200;
-  const baseMinGenesisTime = 1790276400; // GENESIS_TIMESTAMP
-  const baseDepositChainId = 39438164; // CHAIN_ID
+  const baseMinGenesisTime = 1790276400;
+  const baseDepositChainId = 39438164;
 
   it("derives the base iteration values as whole-second integers", () => {
     const config = getEphemeryChainConfig(baseMinGenesisTime * 1000);
@@ -34,17 +34,13 @@ describe("ephemery network", () => {
     expect(config.DEPOSIT_CHAIN_ID).toBe(baseDepositChainId);
     expect(config.DEPOSIT_NETWORK_ID).toBe(baseDepositChainId);
 
-    // Regression (#10160): DEPOSIT_CHAIN_ID must be an integer, not fractional
     expect(Number.isInteger(config.DEPOSIT_CHAIN_ID)).toBe(true);
     expect(Number.isInteger(config.DEPOSIT_NETWORK_ID)).toBe(true);
-    // Regression (#10160): MIN_GENESIS_TIME is in seconds, not ms (was ~Date.now())
     expect(Number.isInteger(config.MIN_GENESIS_TIME)).toBe(true);
     expect(config.MIN_GENESIS_TIME).toBeLessThan(1e11);
   });
 
   it("is identical for every process within an iteration, independent of start time", () => {
-    // Two processes started far apart within the same iteration must agree. The
-    // reported bug leaked per-process start time into MIN_GENESIS_TIME (#10160).
     const early = getEphemeryChainConfig((baseMinGenesisTime + 60) * 1000 + 123);
     const late = getEphemeryChainConfig((baseMinGenesisTime + RESET_INTERVAL_SECONDS - 60) * 1000 + 456);
 
@@ -66,17 +62,14 @@ describe("ephemery network", () => {
   });
 
   it("resolves the live iteration when values.env has staged the next one", () => {
-    // values.env publishes the upcoming iteration ahead of activation; a node
-    // started before that activation must still derive the live iteration (#10160).
     const beforeBaseActivates = getEphemeryChainConfig((baseMinGenesisTime - 1) * 1000);
     expect(beforeBaseActivates.MIN_GENESIS_TIME).toBe(baseMinGenesisTime - RESET_INTERVAL_SECONDS);
     expect(beforeBaseActivates.DEPOSIT_CHAIN_ID).toBe(baseDepositChainId - 1);
   });
 
   it("matches the live ephemery network reported in #10160", () => {
-    // Reporter's synced BN (2026-09-23) served genesis_time 1787857800, i.e.
-    // MIN_GENESIS_TIME 1787857200 + GENESIS_DELAY 600, DEPOSIT_CHAIN_ID 39438163
-    // (iteration 163). Use the reporter's VC start time.
+    // Input is the reporter's VC start time; expected values are their live iteration 163
+    // (genesis_time 1787857800 = MIN_GENESIS_TIME 1787857200 + GENESIS_DELAY 600).
     const atReport = getEphemeryChainConfig(1790188665039);
     expect(atReport.MIN_GENESIS_TIME).toBe(1787857200);
     expect(atReport.MIN_GENESIS_TIME + atReport.GENESIS_DELAY).toBe(1787857800);
