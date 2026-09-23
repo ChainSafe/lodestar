@@ -265,7 +265,7 @@ importers:
         version: 11.0.27
       '@libp2p/utils':
         specifier: ^7.4.0
-        version: 7.4.0
+        version: 7.4.1
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -699,7 +699,7 @@ importers:
         version: 3.3.0
       '@libp2p/utils':
         specifier: ^7.4.0
-        version: 7.4.0
+        version: 7.4.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -2083,9 +2083,6 @@ packages:
 
   '@libp2p/tcp@11.0.27':
     resolution: {integrity: sha512-+w6CfCoeqNW4Y8XntZDLZQ+boZ6KA7HnSnHW53SPpu1PHQsj+XKPPymgQA7QDGx84w5IM807356ar2g/rYecIw==}
-
-  '@libp2p/utils@7.4.0':
-    resolution: {integrity: sha512-9tHz8kWiFiCG0hVqVKYEduQnt5kMhla/6dsaGsDPckFjO7vYC0Yy24lp88wG3X5Ap3rde/Dj1ErU1xN6Jp3N9Q==}
 
   '@libp2p/utils@7.4.1':
     resolution: {integrity: sha512-e9cZeop+awI0rFczG4DvAwVeHqBhuCZfTyskvgONfKQrsT7L0BSlTlTTzZoFF8Dnb+QrzHsoIpnl0PrCr0h+Hg==}
@@ -6844,7 +6841,7 @@ snapshots:
       '@libp2p/crypto': 5.1.23
       '@libp2p/interface': 3.3.0
       '@libp2p/peer-id': 6.0.15
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@noble/ciphers': 2.1.1
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
@@ -6879,7 +6876,7 @@ snapshots:
       '@libp2p/crypto': 5.1.23
       '@libp2p/interface': 3.3.0
       '@libp2p/peer-id': 6.0.15
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
       race-signal: 1.1.3
@@ -7829,7 +7826,7 @@ snapshots:
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/peer-id': 6.0.15
       '@libp2p/peer-record': 9.0.16
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
       it-drain: 3.0.10
@@ -7875,7 +7872,7 @@ snapshots:
       '@libp2p/interface': 3.3.0
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/peer-id': 6.0.15
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
       '@types/multicast-dns': 7.2.4
       dns-packet: 5.6.1
@@ -7885,7 +7882,7 @@ snapshots:
   '@libp2p/mplex@12.0.30':
     dependencies:
       '@libp2p/interface': 3.3.0
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       it-pushable: 3.2.3
       uint8-varint: 3.0.0
       uint8arraylist: 3.0.2
@@ -7894,7 +7891,7 @@ snapshots:
   '@libp2p/multistream-select@7.0.27':
     dependencies:
       '@libp2p/interface': 3.3.0
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       it-length-prefixed: 11.0.1
       uint8arraylist: 3.0.2
       uint8arrays: 6.1.1
@@ -7950,41 +7947,13 @@ snapshots:
   '@libp2p/tcp@11.0.27':
     dependencies:
       '@libp2p/interface': 3.3.0
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
       main-event: 1.0.1
       p-event: 7.1.0
       progress-events: 1.1.0
       uint8arraylist: 3.0.2
-
-  '@libp2p/utils@7.4.0':
-    dependencies:
-      '@chainsafe/is-ip': 2.1.0
-      '@chainsafe/netmask': 2.0.0
-      '@libp2p/interface': 3.3.0
-      '@libp2p/logger': 6.2.13
-      '@multiformats/multiaddr': 13.0.3
-      '@multiformats/multiaddr-matcher': 3.0.2
-      '@sindresorhus/fnv1a': 3.1.0
-      any-signal: 4.2.0
-      cborg: 6.1.1
-      delay: 7.0.0
-      is-loopback-addr: 2.0.2
-      it-length-prefixed: 11.0.1
-      it-pipe: 3.0.1
-      it-pushable: 3.2.3
-      it-stream-types: 2.0.2
-      main-event: 1.0.1
-      netmask: 2.0.2
-      p-defer: 4.0.1
-      p-event: 7.1.0
-      progress-events: 1.1.0
-      protons-runtime: 7.0.0
-      race-signal: 2.0.0
-      uint8-varint: 3.0.0
-      uint8arraylist: 3.0.2
-      uint8arrays: 6.1.1
 
   '@libp2p/utils@7.4.1':
     dependencies:
@@ -10715,7 +10684,7 @@ snapshots:
       '@libp2p/peer-collections': 7.0.28
       '@libp2p/peer-id': 6.0.15
       '@libp2p/peer-store': 12.0.27
-      '@libp2p/utils': 7.4.0
+      '@libp2p/utils': 7.4.1
       '@multiformats/dns': 1.0.13
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
