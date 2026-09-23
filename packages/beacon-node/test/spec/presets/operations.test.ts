@@ -1,4 +1,5 @@
 import path from "node:path";
+import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -14,6 +15,7 @@ import {
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
 import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -141,6 +143,7 @@ export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, tes
 
 export type OperationsTestCase = {
   meta?: {bls_setting?: bigint};
+  config?: {GLOAS_FORK_EPOCH?: bigint};
   pre: BeaconStateAllForks;
   post: BeaconStateAllForks;
   execution: {execution_valid: boolean};
@@ -156,7 +159,13 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
     testFunction: (testcase) => {
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+      const config = createChainForkConfig({
+        ...getConfig(fork, epoch),
+        ...(testcase.config?.GLOAS_FORK_EPOCH !== undefined && {
+          GLOAS_FORK_EPOCH: bnToNum(testcase.config.GLOAS_FORK_EPOCH),
+        }),
+      });
+      const cachedState = createCachedBeaconStateTest(state, config);
 
       const postState = operationFn(cachedState, testcase);
       if (postState !== undefined) {
@@ -167,7 +176,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       return state;
     },
     options: {
-      inputTypes: {...inputTypeSszTreeViewDU, execution: InputType.YAML},
+      inputTypes: {...inputTypeSszTreeViewDU, execution: InputType.YAML, config: InputType.YAML},
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,

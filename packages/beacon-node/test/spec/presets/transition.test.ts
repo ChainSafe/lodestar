@@ -1,4 +1,5 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
@@ -14,11 +15,11 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
 const transition =
-  (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =>
+  (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks | undefined> =>
   (forkNext) => {
     if (forkNext === ForkName.phase0) {
       throw Error("fork phase0 not supported");
@@ -49,18 +50,25 @@ const transition =
         // testConfig is used here to load forkEpoch from meta.yaml
         const forkEpoch = bnToNum(meta.fork_epoch);
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
+        const verify = shouldVerify(testcase);
 
         let state = createCachedBeaconStateTest(testcase.pre, testConfig);
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-          state = stateTransition(state, signedBlock, {
-            // Assume valid and available for this test
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyStateRoot: true,
-            verifyProposer: false,
-            verifySignatures: false,
-          });
+          const transitionState = () =>
+            stateTransition(state, signedBlock, {
+              // Assume valid and available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyStateRoot: true,
+              verifyProposer: verify,
+              verifySignatures: verify,
+            });
+          if (testcase.post === undefined && i === bnToNum(meta.blocks_count) - 1) {
+            expect(transitionState, `Expected block ${i} at slot ${signedBlock.message.slot} to be invalid`).toThrow();
+            return undefined;
+          }
+          state = transitionState();
         }
         return state;
       },
@@ -73,11 +81,14 @@ const transition =
             ...generateBlocksSZZTypeMapping(meta),
           };
         },
-        shouldError: (testCase) => testCase.post === undefined,
         timeout: 10000,
         getExpected: (testCase) => testCase.post,
         expectFunc: (_testCase, expected, actual) => {
-          expectEqualBeaconState(forkNext, expected, actual);
+          if (expected === undefined) {
+            expect(actual).toBeUndefined();
+          } else {
+            expectEqualBeaconState(forkNext, expected, actual);
+          }
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         shouldSkip: (_testcase, name, _index) =>
@@ -151,7 +162,7 @@ type TransitionTestCase = {
     bls_setting?: bigint;
   };
   pre: BeaconStateAllForks;
-  post: BeaconStateAllForks;
+  post?: BeaconStateAllForks;
 };
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {

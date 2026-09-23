@@ -2598,6 +2598,65 @@
         row_index: RowIndex
     </spec>
 
+- name: NewPayloadRequest#bellatrix
+  sources:
+    - file: packages/types/src/bellatrix/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="bellatrix" hash="dce5dbc8">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+    </spec>
+
+- name: NewPayloadRequest#deneb
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="deneb" hash="8ecf6448">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+        # [New in Deneb:EIP4844]
+        versioned_hashes: VersionedHashes
+        # [New in Deneb:EIP4788]
+        parent_beacon_block_root: Root
+    </spec>
+
+- name: NewPayloadRequest#electra
+  sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="electra" hash="3f66e4a3">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+        versioned_hashes: VersionedHashes
+        parent_beacon_block_root: Root
+        # [New in Electra]
+        execution_requests: ExecutionRequests
+    </spec>
+
+- name: NewPayloadRequest#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const NewPayloadRequest"
+  spec: |
+    <spec container="NewPayloadRequest" fork="gloas" hash="153a25cf">
+    class NewPayloadRequest(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=4)
+
+        execution_payload: ExecutionPayload
+        versioned_hashes: VersionedHashes
+        parent_beacon_block_root: Root
+        execution_requests: ExecutionRequests
+    </spec>
+
 - name: NextSyncCommitteeBranch#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
@@ -3531,6 +3590,20 @@
         """
         The validator registry.
         """
+    </spec>
+
+- name: VersionedHashes#deneb
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: "export const VersionedHashes"
+  spec: |
+    <spec container="VersionedHashes" fork="deneb" hash="05d6c47e">
+    class VersionedHashes(List[VersionedHash]):
+        """
+        The versioned hashes for blobs associated with an execution payload.
+        """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: VoluntaryExit#phase0

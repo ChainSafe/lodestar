@@ -30,58 +30,46 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-const sszStatic =
-  (skippedFork: string, skippedTypes?: string[]) =>
-  (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
-    if (fork === skippedFork) {
-      return;
-    }
+const sszStatic = (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
+  const sszType =
+    (sszTypesFor(fork) as Types)[typeName] ||
+    (ssz.gloas as Types)[typeName] ||
+    (ssz.fulu as Types)[typeName] ||
+    (ssz.electra as Types)[typeName] ||
+    (ssz.deneb as Types)[typeName] ||
+    (ssz.capella as Types)[typeName] ||
+    (ssz.bellatrix as Types)[typeName] ||
+    (ssz.altair as Types)[typeName] ||
+    (ssz.phase0 as Types)[typeName];
 
+  it(`${fork} - ${typeName} type exists`, () => {
+    expect(sszType).toEqualWithMessage(expect.any(Type), `SSZ type ${typeName} for fork ${fork} is not defined`);
+  });
+
+  if (!sszType) {
+    // Return instead of throwing an error to only skip ssz_static tests associated to missing type
+    return;
+  }
+
+  const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
+
+  for (const testCase of fs.readdirSync(testSuiteDirpath)) {
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-    if (skippedTypes?.includes(typeName)) {
-      return;
-    }
+    it(testCase, () => {
+      // Mainnet must deal with big full states and hash each one multiple times
+      if (ACTIVE_PRESET === "mainnet") {
+        vi.setConfig({testTimeout: 30 * 1000});
+      }
 
-    const sszType =
-      (sszTypesFor(fork) as Types)[typeName] ||
-      (ssz.gloas as Types)[typeName] ||
-      (ssz.fulu as Types)[typeName] ||
-      (ssz.electra as Types)[typeName] ||
-      (ssz.deneb as Types)[typeName] ||
-      (ssz.capella as Types)[typeName] ||
-      (ssz.bellatrix as Types)[typeName] ||
-      (ssz.altair as Types)[typeName] ||
-      (ssz.phase0 as Types)[typeName];
-
-    it(`${fork} - ${typeName} type exists`, () => {
-      expect(sszType).toEqualWithMessage(expect.any(Type), `SSZ type ${typeName} for fork ${fork} is not defined`);
+      const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
+      runValidSszTest(sszTypeNoUint, testData);
     });
-
-    if (!sszType) {
-      // Return instead of throwing an error to only skip ssz_static tests associated to missing type
-      return;
-    }
-
-    const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
-
-    for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      it(testCase, () => {
-        // Mainnet must deal with big full states and hash each one multiple times
-        if (ACTIVE_PRESET === "mainnet") {
-          vi.setConfig({testTimeout: 30 * 1000});
-        }
-
-        const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
-        runValidSszTest(sszTypeNoUint, testData);
-      });
-    }
-  };
+  }
+};
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   ssz_static: {
     type: RunnerType.custom,
-    // starting from v1.5.0-beta.3, there is "eip7441" fork in ssz_static tests but we ignore them
-    fn: sszStatic("eip7441"),
+    fn: sszStatic,
   },
 });

@@ -1,4 +1,4 @@
-version: v1.7.0-beta.0
+version: v1.7.0-beta.2
 style: full
 
 specrefs:
@@ -79,12 +79,8 @@ exceptions:
     - GetInclusionListResponse#heze
     - InclusionListEntry#heze
     - InclusionListStore#heze
+    - Seen#heze
     - Store#heze
-
-  presets:
-    # TODO GLOAS: Remove these exceptions once the spec pin includes consensus-specs#5613
-    - MAX_DATA_COLUMN_SIDECAR_SIZE#gloas
-    - MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE#gloas
 
   functions:
     # phase0
@@ -135,6 +131,7 @@ exceptions:
     - validate_partial_data_column_sidecar_gossip#fulu
 
     # gloas
+    - compute_max_partial_data_column_sidecar_size#gloas
     - get_node_children#gloas
     - get_upcoming_proposal_slots#gloas
     - is_current_or_next_slot#gloas
@@ -171,6 +168,8 @@ exceptions:
     - process_inclusion_list#heze
     - record_payload_inclusion_list_satisfaction#heze
     - should_extend_payload#heze
+    - validate_execution_payload_bid_gossip#heze
+    - validate_inclusion_list_gossip#heze
 
   custom_types:
     # phase0
