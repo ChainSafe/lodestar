@@ -2,8 +2,8 @@ import {fromHex as b} from "@lodestar/utils";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
-// Ephemery is a periodically-resetting testnet (EIP-6916): https://eips.ethereum.org/EIPS/eip-6916
-// Base constants are pinned to the ephemery-genesis `values.env` iteration 164:
+// Ephemery is a periodically-resetting testnet (EIP-6916). These values track the
+// current iteration in ephemery-genesis values.env, pinned to iteration 164:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/a4b5a2ee5c1c40e378edc92f2ccd9938cf9207d0/values.env
 const baseChainConfig: ChainConfig = {
   ...mainnet,
@@ -63,16 +63,13 @@ const baseChainConfig: ChainConfig = {
   ],
 };
 
-// Ephemery reset interval, from ephemery-genesis `values.env` GENESIS_INTERVAL (28 days).
+// values.env GENESIS_INTERVAL
 const RESET_INTERVAL_SECONDS = 2419200;
 
 /**
- * Resolve the ephemery chain config for the iteration live at `nowMs`.
- *
- * Each reset advances `MIN_GENESIS_TIME` by one interval and increments the deposit
- * chain/network id by one. `values.env` stages the upcoming iteration ahead of its
- * activation, so `iterations` is negative while that staged iteration is still in the
- * future and the previous one is live.
+ * Resolve the ephemery config for the iteration active at `nowMs`, in whole seconds so
+ * every process within an iteration agrees (#10160). values.env publishes the next
+ * iteration ahead of activation, so `iterations` can be negative.
  */
 export function getEphemeryChainConfig(nowMs: number = Date.now()): ChainConfig {
   const nowSeconds = Math.floor(nowMs / 1000);
