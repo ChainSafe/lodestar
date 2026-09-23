@@ -518,8 +518,6 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
 export const BlindedExecutionPayload = new ProgressiveContainerType(
   {
     ...electraSsz.ExecutionPayloadHeader.fields,
-    blobGasUsed: electraSsz.ExecutionPayload.fields.blobGasUsed,
-    excessBlobGas: electraSsz.ExecutionPayload.fields.excessBlobGas,
     blockAccessListRoot: Root, // New in GLOAS:EIP-7928
     slotNumber: Slot, // New in GLOAS:EIP-7843
   },
