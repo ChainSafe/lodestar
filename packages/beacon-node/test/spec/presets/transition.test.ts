@@ -90,7 +90,7 @@ const transition =
             expectEqualBeaconState(forkNext, expected, actual);
           }
         },
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
+        // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         shouldSkip: (_testcase, name, _index) =>
           skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
       },

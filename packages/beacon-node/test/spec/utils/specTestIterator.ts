@@ -62,6 +62,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
+  skippedForks: [],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -81,6 +82,8 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
+  skippedTests: [],
+  skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [
     "gossip_blob_sidecar",

@@ -82,6 +82,8 @@ exceptions:
     - Seen#heze
     - Store#heze
 
+  presets: []
+
   functions:
     # phase0
     - compute_time_at_slot_ms#phase0
