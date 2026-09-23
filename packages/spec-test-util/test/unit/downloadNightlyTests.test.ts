@@ -12,7 +12,7 @@ describe("downloadNightlyTests", () => {
     outputDir: "/unused/spec-tests",
     testsToDownload: ["minimal"],
   };
-  const recentRun = {id: 35671698955, created_at: "2026-09-20T06:00:00Z", head_sha: "recent-sha"};
+  const recentRun = {id: 35671698955, created_at: "2026-09-22T00:00:00Z", head_sha: "recent-sha"};
   const staleRun = {id: 33283281270, created_at: "2026-08-30T00:25:25Z", head_sha: "stale-sha"};
   const artifacts = {
     artifacts: [{name: "minimal.tar.gz", expired: false, archive_download_url: "https://example.com/minimal.zip"}],
@@ -34,7 +34,7 @@ describe("downloadNightlyTests", () => {
   it.each([
     {name: "stale", runs: [staleRun]},
     {name: "empty", runs: []},
-  ])("retries a $name response and accepts a run exactly 48 hours old", async ({runs}) => {
+  ])("retries a $name response and downloads today's UTC run", async ({runs}) => {
     fetchMock
       .mockResolvedValueOnce(Response.json({workflow_runs: runs}))
       .mockResolvedValueOnce(Response.json({workflow_runs: [recentRun]}))
@@ -44,6 +44,7 @@ describe("downloadNightlyTests", () => {
     await Promise.all([assertion, vi.runAllTimersAsync()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get("created")).toBe("2026-09-22");
     expect(fetchMock.mock.calls[2][0]).toContain(`/runs/${recentRun.id}/artifacts`);
     expect(downloadGenericSpecTests).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({specVersion: `nightly-${recentRun.id}`}),
@@ -54,8 +55,13 @@ describe("downloadNightlyTests", () => {
   it.each([
     {name: "stale", runs: [staleRun], code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE"},
     {
-      name: "just over 48 hours old",
-      runs: [{...recentRun, created_at: "2026-09-20T05:59:59.999Z"}],
+      name: "yesterday's",
+      runs: [{...recentRun, created_at: "2026-09-21T23:59:59.999Z"}],
+      code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE",
+    },
+    {
+      name: "tomorrow's",
+      runs: [{...recentRun, created_at: "2026-09-23T00:00:00Z"}],
       code: "NIGHTLY_RUN_OUTSIDE_DATE_RANGE",
     },
     {name: "empty", runs: [], code: "NIGHTLY_RUN_NOT_FOUND"},

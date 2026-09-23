@@ -1,10 +1,6 @@
 import {LodestarError, fetch, retry} from "@lodestar/utils";
 import {downloadGenericSpecTests} from "./downloadTests.js";
 
-// Allow yesterday's nightly if today's is delayed or fails. Upstream starts at 00:00 UTC,
-// so yesterday's run is already ~30 hours old when Lodestar runs at 06:00 UTC.
-const MAX_NIGHTLY_AGE_MS = 48 * 60 * 60 * 1000;
-
 type WorkflowRun = {id: number; created_at: string; head_sha: string};
 type WorkflowRunsResponse = {workflow_runs: WorkflowRun[]};
 type ArtifactsListResponse = {artifacts: {archive_download_url: string; expired: boolean; name: string}[]};
@@ -37,9 +33,10 @@ async function resolveNightlyRun(
   // a PR's successful run on consensus-specs can't outrank the latest master
   // nightly. When a date is given, allow manual re-runs on that day too.
   else if (!date) params.append("event", "schedule");
-  const minCreatedAt = date ? Date.parse(date) : Date.now() - MAX_NIGHTLY_AGE_MS;
-  const maxCreatedAt = date ? minCreatedAt + 24 * 60 * 60 * 1000 : Infinity;
-  const createdFilter = date ?? `>=${new Date(minCreatedAt).toISOString()}`;
+  // Require today's UTC run so upstream delays or failures surface in our nightly.
+  const createdFilter = date ?? new Date().toISOString().slice(0, 10);
+  const minCreatedAt = Date.parse(createdFilter);
+  const maxCreatedAt = minCreatedAt + 24 * 60 * 60 * 1000;
   params.append("created", createdFilter);
 
   return retry(
