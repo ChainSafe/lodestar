@@ -21,12 +21,12 @@ describe("plataberget network", () => {
 });
 
 describe("ephemery network", () => {
-  // ephemery-genesis values.env, current published iteration (164)
+  // ephemery-genesis values.env, bundled base iteration (164)
   const RESET_INTERVAL_SECONDS = 2419200;
   const baseMinGenesisTime = 1790276400; // GENESIS_TIMESTAMP
   const baseDepositChainId = 39438164; // CHAIN_ID
 
-  it("derives the published iteration values as whole-second integers", () => {
+  it("derives the base iteration values as whole-second integers", () => {
     const config = getEphemeryChainConfig(baseMinGenesisTime * 1000);
 
     expect(config.MIN_GENESIS_TIME).toBe(baseMinGenesisTime);
@@ -65,10 +65,23 @@ describe("ephemery network", () => {
     expect(inFive.DEPOSIT_CHAIN_ID).toBe(baseDepositChainId + 5);
   });
 
-  it("does not roll backwards before the bundled base iteration", () => {
-    const before = getEphemeryChainConfig((baseMinGenesisTime - 10 * RESET_INTERVAL_SECONDS) * 1000);
-    expect(before.MIN_GENESIS_TIME).toBe(baseMinGenesisTime);
-    expect(before.DEPOSIT_CHAIN_ID).toBe(baseDepositChainId);
+  it("resolves the live iteration when values.env has staged the next one", () => {
+    // values.env publishes the upcoming iteration ahead of activation; a node
+    // started before that activation must still derive the live iteration (#10160).
+    const beforeBaseActivates = getEphemeryChainConfig((baseMinGenesisTime - 1) * 1000);
+    expect(beforeBaseActivates.MIN_GENESIS_TIME).toBe(baseMinGenesisTime - RESET_INTERVAL_SECONDS);
+    expect(beforeBaseActivates.DEPOSIT_CHAIN_ID).toBe(baseDepositChainId - 1);
+  });
+
+  it("matches the live ephemery network reported in #10160", () => {
+    // Reporter's synced BN (2026-09-23) served genesis_time 1787857800, i.e.
+    // MIN_GENESIS_TIME 1787857200 + GENESIS_DELAY 600, DEPOSIT_CHAIN_ID 39438163
+    // (iteration 163). Use the reporter's VC start time.
+    const atReport = getEphemeryChainConfig(1790188665039);
+    expect(atReport.MIN_GENESIS_TIME).toBe(1787857200);
+    expect(atReport.MIN_GENESIS_TIME + atReport.GENESIS_DELAY).toBe(1787857800);
+    expect(atReport.DEPOSIT_CHAIN_ID).toBe(39438163);
+    expect(atReport.DEPOSIT_NETWORK_ID).toBe(39438163);
   });
 
   it("exposes whole-second genesis data wired to the chain config", () => {
