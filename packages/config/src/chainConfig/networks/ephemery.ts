@@ -4,11 +4,16 @@ import {ChainConfig} from "../types.js";
 
 // Ephemery dynamic beacon chain config:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
-
+//
 // Ephemery specification:
 // https://eips.ethereum.org/EIPS/eip-6916
 
-// iteration 0, "base"-genesis
+// Base config for the ephemery iteration currently published in
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/master/values.env
+// (iteration 164: GENESIS_TIMESTAMP=1790276400, CHAIN_ID=39438164, GENESIS_DELAY=600).
+// The network periodically resets; `getEphemeryChainConfig` rolls these values
+// forward from this base so a node started in a later iteration still derives the
+// correct values without requiring a Lodestar release.
 const baseChainConfig: ChainConfig = {
   ...mainnet,
 
@@ -17,10 +22,10 @@ const baseChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
-  // Thu Dec 02 2021 19:00:00 GMT+0000
-  MIN_GENESIS_TIME: 1638471600,
+  // Thu Sep 24 2026 19:00:00 GMT+0000
+  MIN_GENESIS_TIME: 1790276400,
   GENESIS_FORK_VERSION: b("0x1000101b"),
-  GENESIS_DELAY: 300,
+  GENESIS_DELAY: 600,
 
   // Forking
   // ---------------------------------------------------------------
@@ -49,8 +54,8 @@ const baseChainConfig: ChainConfig = {
 
   // Deposit contract
   // ---------------------------------------------------------------
-  DEPOSIT_CHAIN_ID: 39438000,
-  DEPOSIT_NETWORK_ID: 39438000,
+  DEPOSIT_CHAIN_ID: 39438164,
+  DEPOSIT_NETWORK_ID: 39438164,
 
   ETH1_FOLLOW_DISTANCE: 12,
 
@@ -68,15 +73,29 @@ const baseChainConfig: ChainConfig = {
   ],
 };
 
-// Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
-// https://github.com/ephemery-testnet/ephemery-genesis/blob/9a28fbef950c8547d78785f8a0ea49a95ce19a48/values.env#L5
-const RESET_INTERVAL_MS = 604800000;
-const iteration = Math.floor(Date.now() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS;
+// Ephemery reset interval (28 days) in seconds, from ephemery-genesis values.env
+// `GENESIS_INTERVAL`:
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/master/values.env
+const RESET_INTERVAL_SECONDS = 2419200;
 
-export const ephemeryChainConfig: ChainConfig = {
-  ...baseChainConfig,
+/**
+ * Ephemery periodically resets its genesis. Each reset advances `MIN_GENESIS_TIME`
+ * by one reset interval and increments the deposit chain/network id by one.
+ *
+ * Derive the config for the iteration active at `nowMs` from the bundled base
+ * iteration. All processes started within the same iteration compute identical
+ * whole-second values, regardless of when in the iteration they start (see #10160).
+ */
+export function getEphemeryChainConfig(nowMs: number = Date.now()): ChainConfig {
+  const nowSeconds = Math.floor(nowMs / 1000);
+  const iterations = Math.max(0, Math.floor((nowSeconds - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_SECONDS));
 
-  MIN_GENESIS_TIME: RESET_INTERVAL_MS * iteration + baseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
-  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
-};
+  return {
+    ...baseChainConfig,
+    MIN_GENESIS_TIME: baseChainConfig.MIN_GENESIS_TIME + iterations * RESET_INTERVAL_SECONDS,
+    DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iterations,
+    DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iterations,
+  };
+}
+
+export const ephemeryChainConfig: ChainConfig = getEphemeryChainConfig();
