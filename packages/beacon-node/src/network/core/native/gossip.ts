@@ -43,7 +43,8 @@ export class NativeGossip {
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
-    private readonly onError: (error: unknown) => void
+    private readonly onError: (error: unknown) => void,
+    private readonly onFailure: (error: unknown) => void
   ) {}
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
@@ -135,6 +136,7 @@ export class NativeGossip {
     const pending: PendingGossipsubMessage[] = [];
     const executing: GossipJob[] = [];
     let results: TopicValidatorResult[] = [];
+    const completionErrors: unknown[] = [];
     try {
       for (const job of jobs)
         if (job.message) {
@@ -152,10 +154,16 @@ export class NativeGossip {
         try {
           this.complete(job);
         } catch (error) {
-          errors.push(error);
+          completionErrors.push(error);
         }
       }
     }
+    if (completionErrors.length > 0)
+      this.onFailure(
+        completionErrors.length === 1
+          ? completionErrors[0]
+          : new AggregateError(completionErrors, "Native gossip retirement failed")
+      );
     // Observers may throw or dispatch more work. Every handle and credit must be retired first.
     try {
       processor.observe(pending, results);

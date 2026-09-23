@@ -95,6 +95,9 @@ export async function getNetworkForTest(
     config: beaconConfig,
     chain,
     db,
+    processShutdownCallback: (error) => {
+      throw error;
+    },
     getReqRespHandler: opts.getReqRespHandler ?? getReqRespHandlers({db, chain}),
     gossipHandlers: opts.gossipHandlersPartial as GossipHandlers,
     privateKey,

@@ -30,6 +30,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
+import type {ProcessShutdownCallback} from "@lodestar/validator";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -87,6 +88,7 @@ type NetworkModules = {
 };
 
 export type NetworkInitModules = {
+  processShutdownCallback: ProcessShutdownCallback;
   opts: NetworkOptions;
   config: BeaconConfig;
   privateKey: PrivateKey;
@@ -166,6 +168,7 @@ export class Network implements INetwork {
     privateKey,
     peerStoreDir,
     getReqRespHandler,
+    processShutdownCallback,
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
@@ -255,7 +258,13 @@ export class Network implements INetwork {
       });
       if (core instanceof NativeNetworkCore) {
         void core.terminated
-          .then(() => network?.close())
+          .then(async (failure) => {
+            try {
+              if (failure && !network?.closed) processShutdownCallback(failure);
+            } finally {
+              await network?.close();
+            }
+          })
           .catch((error: unknown) => logger.error("Native network stopped unexpectedly", {}, error as Error));
       }
       return network;

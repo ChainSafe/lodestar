@@ -21,7 +21,7 @@ import {INetworkCore} from "../types.js";
 import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
-import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
+import {NativeNetworkError, NativeNetworkErrorCode, isNativeResultAllocationError, nativeInteger} from "./errors.js";
 import {NativeGossipExecutor} from "./executor.js";
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
@@ -46,6 +46,7 @@ export class NativeNetworkCore implements INetworkCore {
   private logs: NativeLogs | undefined;
   private scheduled: NodeJS.Immediate | undefined;
   private closed = false;
+  private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
   private constructor(private readonly modules: BaseNetworkInit) {}
 
@@ -89,13 +90,21 @@ export class NativeNetworkCore implements INetworkCore {
       );
       core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
       const diagnostics = core.runtime.diagnostics();
-      core.gossip = new NativeGossip(core.runtime, config, modules.events, core.modules.opts, core.onFailure);
+      core.gossip = new NativeGossip(
+        core.runtime,
+        config,
+        modules.events,
+        core.modules.opts,
+        core.onOperationError,
+        core.onFailure
+      );
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(
         core.runtime,
         config,
         modules.getReqRespHandler,
-        diagnostics.incoming.capacity
+        diagnostics.incoming.capacity,
+        core.onFailure
       );
       void core.runtime.closed
         .then((result) => {
@@ -145,12 +154,24 @@ export class NativeNetworkCore implements INetworkCore {
     }
   }
 
-  get terminated() {
-    return this.runtime.closed;
+  get terminated(): Promise<Error | null> {
+    return this.runtime.closed.then((result) => {
+      if (this.failure) return this.failure;
+      if (result.reason !== "failed") return null;
+      let resource = "native owner";
+      try {
+        resource = this.runtime.diagnostics().terminalErrorCode ?? resource;
+      } catch {}
+      return new NativeNetworkError({code: NativeNetworkErrorCode.FAILED, resource});
+    });
   }
 
   private readonly onSlot = (): void => {
-    this.intent.refresh();
+    try {
+      this.intent.refresh();
+    } catch (error) {
+      this.onFailure(error);
+    }
   };
   private readonly onWorkAvailable = (): void => {
     if (this.closed || this.scheduled) return;
@@ -163,15 +184,28 @@ export class NativeNetworkCore implements INetworkCore {
         const gossip = this.gossip.drain();
         if (peers || requests || gossip) this.onWorkAvailable();
       } catch (error) {
-        this.onFailure(error);
+        if (isNativeResultAllocationError(error)) {
+          this.onOperationError(error);
+          this.onWorkAvailable();
+        } else this.onFailure(error);
       }
     });
   };
   private readonly onFailure = (error: unknown): void => {
-    this.modules.logger.error("Native network failed", {}, error as Error);
+    if (this.closed) return;
+    this.failure =
+      error instanceof Error ? error : new NativeNetworkError({code: NativeNetworkErrorCode.FAILED, resource: "host"});
+    if (!(error instanceof Error)) this.failure.cause = error;
+    this.onOperationError(this.failure);
     void this.close().catch((error: unknown) =>
       this.modules.logger.error("Native network close failed", {}, error as Error)
     );
+  };
+
+  private readonly onOperationError = (error: unknown): void => {
+    try {
+      this.modules.logger.error("Native network operation failed", {}, error as Error);
+    } catch {}
   };
 
   close(): Promise<void> {

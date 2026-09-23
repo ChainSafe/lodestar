@@ -120,6 +120,7 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
       createBeaconConfig(config, new Uint8Array(32)),
       new NetworkEventBus(),
       defaultNetworkOptions,
+      vi.fn(),
       vi.fn()
     );
     const data = ssz.electra.SingleAttestation.serialize(ssz.electra.SingleAttestation.defaultValue());

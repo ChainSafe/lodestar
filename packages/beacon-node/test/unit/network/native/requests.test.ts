@@ -69,6 +69,37 @@ async function incoming() {
   return {request, closed, permission, written};
 }
 
+it.each([true, false])("contains request-copy failure but escalates an invariant failure: local=%s", (local) => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const error = Object.assign(new Error("copy failed"), {
+    code: local ? "NetworkResultAllocationFailed" : "InvalidIncomingHandle",
+  });
+  const takeIncomingRequest = vi
+    .fn<() => NativeIncomingRequest | null>()
+    .mockImplementationOnce(() => {
+      throw error;
+    })
+    .mockReturnValue(null);
+  const onFailure = vi.fn();
+  const owner = new NativeRequests(
+    {takeIncomingRequest},
+    config,
+    vi.fn<handlers.BoundedReqRespHandlers>(),
+    1,
+    onFailure
+  );
+  try {
+    expect(owner.drain(8)).toBe(false);
+    expect(takeIncomingRequest).toHaveBeenCalledTimes(local ? 2 : 1);
+    if (local) expect(onFailure).not.toHaveBeenCalled();
+    else expect(onFailure).toHaveBeenCalledExactlyOnceWith(error);
+  } finally {
+    owner.close();
+  }
+});
+
 it("waits for quota before producing data and for host retirement before taking another request", async () => {
   const config = servingConfig();
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
@@ -91,7 +122,7 @@ it("waits for quota before producing data and for host retirement before taking 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32);
+  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn());
   try {
     expect(owner.drain(8)).toBe(false);
     expect(takeIncomingRequest).toHaveBeenCalledTimes(1);
@@ -128,7 +159,7 @@ it("waits on an earlier adapter's reservation with one cancellable retry", async
     throw Error("No request available");
   };
   vi.useFakeTimers();
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32);
+  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn());
   try {
     for (let turn = 0; turn < 100; turn++) expect(owner.drain(8)).toBe(false);
     expect(takeIncomingRequest).not.toHaveBeenCalled();
@@ -170,7 +201,7 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 32);
+  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 32, vi.fn());
   try {
     owner.drain(32);
     expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
@@ -214,7 +245,7 @@ it("requests waiting for retained memory leave native credit available to existi
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 3);
+  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 3, vi.fn());
   try {
     owner.drain(3);
     inputs[0].permission.resolve();

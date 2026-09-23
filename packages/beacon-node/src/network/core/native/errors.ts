@@ -4,7 +4,12 @@ export enum NativeNetworkErrorCode {
   CONFIGURATION = "NATIVE_NETWORK_CONFIGURATION",
   CAPACITY = "NATIVE_NETWORK_CAPACITY",
   CLOSED = "NATIVE_NETWORK_CLOSED",
+  FAILED = "NATIVE_NETWORK_FAILED",
   UNAVAILABLE = "NATIVE_NETWORK_UNAVAILABLE",
+}
+
+export function isNativeResultAllocationError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "NetworkResultAllocationFailed";
 }
 
 export class NativeNetworkError extends LodestarError<{code: NativeNetworkErrorCode; resource: string}> {

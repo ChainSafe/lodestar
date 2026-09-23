@@ -61,6 +61,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    process.exitCode = 1;
     logger.error("Process shutdown requested", {}, err);
     process.kill(process.pid, "SIGINT");
   };
@@ -154,7 +155,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           logger.debug("Beacon node closed");
           // Explicitly exit until active handles issue is resolved
           // See https://github.com/ChainSafe/lodestar/issues/5642
-          process.exit(0);
+          process.exit(process.exitCode ?? 0);
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"

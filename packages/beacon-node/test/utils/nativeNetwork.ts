@@ -25,7 +25,10 @@ export async function nativeNetworkFixture(
   config: BeaconConfig,
   backend: "native" | "libp2p" = "native",
   native: NativeBackendOptions = {},
-  localMultiaddrs = ["/ip4/127.0.0.1/udp/0/quic-v1"]
+  localMultiaddrs = ["/ip4/127.0.0.1/udp/0/quic-v1"],
+  processShutdownCallback: (error: Error) => void = (error) => {
+    throw error;
+  }
 ) {
   const directory = await mkdtemp(join(tmpdir(), "lodestar-native-integration-"));
   const logger = testLogger(backend);
@@ -89,6 +92,7 @@ export async function nativeNetworkFixture(
     );
     const budget = HostServingBudget.forEnvironment(resolveServingPolicy(beaconConfig, db, 6, clock.currentSlot));
     network = await Network.init({
+      processShutdownCallback,
       opts: {
         ...defaultNetworkOptions,
         backend,

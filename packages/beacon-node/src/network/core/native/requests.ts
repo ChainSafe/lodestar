@@ -20,7 +20,7 @@ import {
 } from "@lodestar/reqresp";
 import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
-import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
+import {NativeNetworkError, NativeNetworkErrorCode, isNativeResultAllocationError, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
 function requestError(error: unknown): unknown {
@@ -186,7 +186,8 @@ export class NativeRequests {
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "takeIncomingRequest">,
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
-    capacity: number
+    capacity: number,
+    private readonly onFailure: (error: unknown) => void
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
     this.budget = servingBudget(getHandler);
@@ -221,7 +222,14 @@ export class NativeRequests {
         }
         return false;
       }
-      const request = this.runtime.takeIncomingRequest();
+      let request: NativeIncomingRequest | null;
+      try {
+        request = this.runtime.takeIncomingRequest();
+      } catch (error) {
+        if (isNativeResultAllocationError(error)) continue;
+        this.onFailure(error);
+        return false;
+      }
       if (!request) return false;
       const protocol = this.protocols.get(request.protocol);
       if (!protocol) {

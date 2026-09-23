@@ -56,7 +56,8 @@ async function fixture(events = new NetworkEventBus(), attach = true) {
     trackGossipSearch: () => true,
   };
   const onError = vi.fn();
-  const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError);
+  const onFailure = vi.fn();
+  const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError, onFailure);
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
@@ -82,6 +83,7 @@ async function fixture(events = new NetworkEventBus(), attach = true) {
     pending,
     processor,
     onError,
+    onFailure,
     async retire(message: PendingGossipsubMessage, result = TopicValidatorResult.Accept): Promise<void> {
       completions.get(message)?.resolve(result);
       await flush();
@@ -204,6 +206,7 @@ describe("native gossip host ownership", () => {
           [node.message(2).handle, "ignore"],
         ]);
         expect(node.onError).toHaveBeenCalledWith(error);
+        expect(node.onFailure).not.toHaveBeenCalled();
       } finally {
         await node.close();
       }
@@ -249,6 +252,7 @@ describe("native gossip host ownership", () => {
       ]);
       expect(observer).toHaveBeenCalledTimes(3);
       expect(node.onError).toHaveBeenCalledWith(expect.any(AggregateError));
+      expect(node.onFailure).not.toHaveBeenCalled();
     } finally {
       await node.close();
     }
@@ -265,7 +269,8 @@ describe("native gossip host ownership", () => {
       await node.retire(node.pending[0]);
       await node.retire(node.pending[1]);
       expect(node.runtime.reportGossip).toHaveBeenCalledTimes(2);
-      expect(node.onError).toHaveBeenCalledWith(error);
+      expect(node.onFailure).toHaveBeenCalledWith(error);
+      expect(node.onError).not.toHaveBeenCalled();
     } finally {
       await node.close();
     }

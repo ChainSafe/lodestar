@@ -279,6 +279,7 @@ export class BeaconNode {
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
     const network = await Network.init({
+      processShutdownCallback,
       opts: opts.network,
       config,
       logger: logger.child({module: LoggerModule.network}),

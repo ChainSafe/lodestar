@@ -17,15 +17,72 @@ import {defer, withTimeout} from "@lodestar/utils";
 import {WorkerNetworkCore} from "../../src/network/core/index.js";
 import {nativeMultiaddr} from "../../src/network/core/native/addresses.js";
 import {createNativeConfig} from "../../src/network/core/native/config.js";
+import {NativeNetworkErrorCode} from "../../src/network/core/native/errors.js";
+import {NativeIntent} from "../../src/network/core/native/intent.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {ClockStopped} from "../mocks/clock.js";
 import {nativeBindingProcess} from "./nativeBindingProcess.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import {nativeNetworkProcess} from "./nativeNetworkProcess.js";
 
+const faultBindings = bindings as unknown as {networkTestFail?: (stage: string) => void};
+
 describe("native Lodestar integration", () => {
+  it.skipIf(!faultBindings.networkTestFail)(
+    "requests node shutdown with the native terminal error",
+    async () => {
+      const shutdown = vi.fn();
+      const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
+      try {
+        faultBindings.networkTestFail?.("wake_signal");
+        await node.network.getNetworkIdentity().catch(() => {});
+        await vi.waitFor(() =>
+          expect(shutdown).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({
+              type: {code: NativeNetworkErrorCode.FAILED, resource: "NetworkWakeFailed"},
+            })
+          )
+        );
+        expect(node.network.closed).toBe(true);
+      } finally {
+        await node.close();
+      }
+    },
+    15000
+  );
+  it("requests node shutdown once with the original host failure", async () => {
+    const shutdown = vi.fn();
+    const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
+    const failure = new Error("test slot update failed");
+    const refresh = vi.spyOn(NativeIntent.prototype, "refresh").mockImplementation(() => {
+      throw failure;
+    });
+    try {
+      node.chain.clock.emit(ClockEvent.slot, 1);
+      await vi.waitFor(() => expect(shutdown).toHaveBeenCalledExactlyOnceWith(failure));
+      await vi.waitFor(() => expect(node.network.closed).toBe(true));
+      node.chain.clock.emit(ClockEvent.slot, 2);
+      await node.network.close();
+      expect(shutdown).toHaveBeenCalledOnce();
+    } finally {
+      refresh.mockRestore();
+      await node.close();
+    }
+  }, 15000);
+
+  it("ordinary network shutdown does not request process failure", async () => {
+    const shutdown = vi.fn();
+    const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
+    try {
+      await node.network.close();
+      expect(shutdown).not.toHaveBeenCalled();
+    } finally {
+      await node.close();
+    }
+  }, 15000);
   it("rejects malformed configured direct peers before native initialization", async () => {
     const originalInit = NativeNetworkCore.init;
     const initialize = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) =>

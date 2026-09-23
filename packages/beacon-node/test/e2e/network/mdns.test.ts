@@ -91,6 +91,9 @@ describe.skip("mdns", () => {
       config,
       chain,
       db,
+      processShutdownCallback: (error) => {
+        throw error;
+      },
       getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
       metrics: null,
