@@ -1,4 +1,4 @@
-import {FetchError, fetch, fromHex} from "@lodestar/utils";
+import {FetchError, fetch, fromHex, retry} from "@lodestar/utils";
 import {HttpRpcError} from "./jsonRpcHttpClient.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 import {ElForkName} from "./sszRestEncoding.js";
@@ -14,12 +14,18 @@ export interface SszRestClientOpts {
   timeout?: number;
   /** Node shutdown signal; aborts in-flight requests instead of leaving them to time out. */
   signal?: AbortSignal;
+  /** Retries for transport-level failures, mirroring `--execution.retries`. Defaults to 0. */
+  retries?: number;
+  /** Delay between retries in milliseconds, mirroring `--execution.retryDelay`. */
+  retryDelay?: number;
 }
 
 export type SszRequestOpts = {
   /** Set only on fork-scoped endpoints; becomes `Eth-Execution-Version`. */
   fork?: ElForkName;
   body?: Uint8Array;
+  /** Overrides the client default for this call; 0 disables retries. */
+  retries?: number;
 };
 
 const DEFAULT_TIMEOUT = 12_000;
@@ -57,6 +63,8 @@ export class SszRestClient {
   private readonly jwtId: string | undefined;
   private readonly timeout: number;
   private readonly signal: AbortSignal | undefined;
+  private readonly retries: number;
+  private readonly retryDelay: number | undefined;
 
   constructor(opts: SszRestClientOpts) {
     this.baseUrl = opts.baseUrl;
@@ -65,6 +73,8 @@ export class SszRestClient {
     this.jwtId = opts.jwtId;
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
     this.signal = opts.signal;
+    this.retries = opts.retries ?? 0;
+    this.retryDelay = opts.retryDelay;
   }
 
   /** SSZ endpoint: 200 -> body bytes, 204 -> null, otherwise throws SszRestError. */
@@ -81,11 +91,32 @@ export class SszRestClient {
   }
 
   /**
+   * Retries transport-level failures the way the JSON-RPC client does, so enabling the
+   * REST transport does not quietly make a call less resilient than it was. Retrying
+   * happens inside the caller's queue slot, so #793's ordering rule still holds for
+   * `newPayload` / `forkchoiceUpdated`.
+   */
+  private async send<T>(
+    method: string,
+    path: string,
+    accept: string,
+    opts: SszRequestOpts,
+    read: (res: Response) => Promise<T>
+  ): Promise<T> {
+    return retry((_attempt) => this.sendOnce(method, path, accept, opts, read), {
+      retries: opts.retries ?? this.retries,
+      retryDelay: this.retryDelay,
+      signal: this.signal,
+      shouldRetry: isRetriableRestError,
+    });
+  }
+
+  /**
    * Reads `read(res)` inside the same try/finally as `fetch()` so the abort timer also
    * bounds body consumption — a stalled 200/204 body is aborted just like a stalled
    * connection, instead of hanging forever once the timer is cleared.
    */
-  private async send<T>(
+  private async sendOnce<T>(
     method: string,
     path: string,
     accept: string,
@@ -156,4 +187,18 @@ async function toSszRestError(res: Response): Promise<SszRestError> {
     }
   }
   return new SszRestError(res.status, type, detail, res.statusText);
+}
+
+/**
+ * Retry transport-level failures only: a network error, a timeout, or a 5xx the EL
+ * reports as internal. A 4xx is semantic under #793's error model — unknown payload,
+ * invalid forkchoice, unsupported fork — and means the same however many times we ask,
+ * so retrying it would only delay surfacing a real bug. Deliberately stricter than the
+ * JSON-RPC client, which retries on any error.
+ */
+function isRetriableRestError(e: Error): boolean {
+  if (e instanceof SszRestError) {
+    return e.status >= 500;
+  }
+  return true;
 }

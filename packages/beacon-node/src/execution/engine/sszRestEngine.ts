@@ -120,7 +120,13 @@ export class SszRestEngine {
       fromHex(finalizedBlockHash),
       attributes
     );
-    const resp = await this.sszRequired("POST", "/engine/v1/forkchoice", {fork: clForkToElFork(fork), body});
+    const resp = await this.sszRequired("POST", "/engine/v1/forkchoice", {
+      fork: clForkToElFork(fork),
+      body,
+      // Mirrors the JSON-RPC path: a forkchoice without attributes is superseded by the
+      // next slot's, so it is not worth retrying; one that starts a build is.
+      retries: attributes === undefined ? 0 : undefined,
+    });
     return decodeForkchoiceUpdateResponse(resp);
   }
 

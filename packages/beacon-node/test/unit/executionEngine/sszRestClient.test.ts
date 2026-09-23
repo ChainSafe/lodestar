@@ -164,6 +164,68 @@ describe("SszRestClient", () => {
     expect(Date.now() - started).toBeLessThan(5_000);
   });
 
+  it("retries a 5xx and succeeds on a later attempt", async () => {
+    let attempts = 0;
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.post("/engine/v1/payloads", async (_req, reply) => {
+        attempts++;
+        if (attempts < 3) {
+          return reply.code(500).header("Content-Type", "application/problem+json").send({
+            type: "/engine-api/errors/internal",
+          });
+        }
+        reply.header("Content-Type", "application/octet-stream").send(Buffer.from([7]));
+      });
+    });
+    const client = new SszRestClient({baseUrl: url, clientVersionHeader: "LS/v0", retries: 2, retryDelay: 1});
+
+    const out = await client.requestSsz("POST", "/engine/v1/payloads", {body: new Uint8Array([1])});
+
+    expect(out).toEqual(new Uint8Array([7]));
+    expect(attempts).toBe(3);
+  });
+
+  it("does not retry a 4xx, which is semantic under the #793 error model", async () => {
+    let attempts = 0;
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.post("/engine/v1/forkchoice", async (_req, reply) => {
+        attempts++;
+        return reply.code(409).header("Content-Type", "application/problem+json").send({
+          type: "/engine-api/errors/invalid-forkchoice",
+        });
+      });
+    });
+    const client = new SszRestClient({baseUrl: url, clientVersionHeader: "LS/v0", retries: 3, retryDelay: 1});
+
+    let err: unknown;
+    try {
+      await client.requestSsz("POST", "/engine/v1/forkchoice", {body: new Uint8Array()});
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(SszRestError);
+    expect((err as SszRestError).status).toBe(409);
+    expect(attempts).toBe(1);
+  });
+
+  it("honours a per-call retries override", async () => {
+    let attempts = 0;
+    const {url} = await startServer(afterCallbacks, (server) => {
+      server.post("/engine/v1/forkchoice", async (_req, reply) => {
+        attempts++;
+        return reply.code(500).send({});
+      });
+    });
+    const client = new SszRestClient({baseUrl: url, clientVersionHeader: "LS/v0", retries: 3, retryDelay: 1});
+
+    await client
+      .requestSsz("POST", "/engine/v1/forkchoice", {body: new Uint8Array(), retries: 0})
+      .catch(() => undefined);
+
+    expect(attempts).toBe(1);
+  });
+
   it("propagates timeout as a fetch error, not an SszRestError", async () => {
     const {url} = await startServer(afterCallbacks, (server) => {
       server.get("/engine/v1/identity", async () => new Promise(() => undefined));
