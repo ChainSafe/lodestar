@@ -28,7 +28,7 @@ describe("SlashingProtection interchange import of attestations after the curren
     rimraf.sync(dbLocation);
   });
 
-  function importAttestation(sourceEpoch: number, targetEpoch: number): Promise<void> {
+  function importAttestation(sourceEpoch: number, targetEpoch: number, epoch = currentEpoch): Promise<void> {
     return slashingProtection.importInterchange(
       {
         metadata: {interchange_format_version: "5", genesis_validators_root: toHex(genesisValidatorsRoot)},
@@ -42,7 +42,7 @@ describe("SlashingProtection interchange import of attestations after the curren
       },
       genesisValidatorsRoot,
       undefined,
-      currentEpoch
+      epoch
     );
   }
 
@@ -52,6 +52,12 @@ describe("SlashingProtection interchange import of attestations after the curren
 
   it("Should reject a target epoch more than one epoch after the current epoch", async () => {
     await expect(importAttestation(0, currentEpoch + 2)).rejects.toThrow(InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH);
+  });
+
+  it("Should accept a target epoch up to epoch 1 before genesis", async () => {
+    await expect(importAttestation(0, 0, -10)).resolves.toBeUndefined();
+    await expect(importAttestation(0, 1, -10)).resolves.toBeUndefined();
+    await expect(importAttestation(0, 2, -10)).rejects.toThrow(InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH);
   });
 
   // Updating the min-max spans of this attestation would take one database read per epoch between source and target

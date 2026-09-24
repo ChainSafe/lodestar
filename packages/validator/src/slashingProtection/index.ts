@@ -1,3 +1,4 @@
+import {GENESIS_EPOCH} from "@lodestar/params";
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger, toPubkeyHex} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
@@ -70,9 +71,10 @@ export class SlashingProtection implements ISlashingProtection {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     if (currentEpoch !== undefined) {
       // Min-max span updates read the db for each epoch between source and target, allow one epoch of clock disparity
+      const maxTargetEpoch = Math.max(currentEpoch, GENESIS_EPOCH) + 1;
       for (const validator of data) {
         for (const {targetEpoch} of validator.signedAttestations) {
-          if (targetEpoch > currentEpoch + 1) {
+          if (targetEpoch > maxTargetEpoch) {
             throw new InterchangeError({
               code: InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH,
               targetEpoch,

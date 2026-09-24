@@ -20,6 +20,7 @@ export interface ISlashingProtection {
 
   /**
    * Import an EIP-3076 interchange, rejects attestations with a target epoch more than one epoch after `currentEpoch`
+   * (or genesis if earlier)
    */
   importInterchange(
     interchange: Interchange,
