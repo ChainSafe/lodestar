@@ -1,4 +1,5 @@
 import {BLSPubkey, Slot} from "@lodestar/types";
+import {defer, toPubkeyHex} from "@lodestar/utils";
 import {SlashingProtectionBlock} from "../types.js";
 import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";
@@ -12,6 +13,7 @@ enum SafeStatus {
 
 export class SlashingProtectionBlockService {
   private blockBySlot: BlockBySlotRepository;
+  private readonly pendingProposals = new Map<string, Promise<void>>();
 
   constructor(blockBySlot: BlockBySlotRepository) {
     this.blockBySlot = blockBySlot;
@@ -22,10 +24,25 @@ export class SlashingProtectionBlockService {
    * This is the safe, externally-callable interface for checking block proposals.
    */
   async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
-    const safeStatus = await this.checkBlockProposal(pubkey, block);
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const previous = this.pendingProposals.get(pubkeyHex);
+    const {promise, resolve} = defer<void>();
+    this.pendingProposals.set(pubkeyHex, promise);
 
-    if (safeStatus !== SafeStatus.SAME_DATA) {
-      await this.insertBlockProposal(pubkey, block);
+    try {
+      if (previous !== undefined) {
+        await previous;
+      }
+      const safeStatus = await this.checkBlockProposal(pubkey, block);
+
+      if (safeStatus !== SafeStatus.SAME_DATA) {
+        await this.insertBlockProposal(pubkey, block);
+      }
+    } finally {
+      resolve();
+      if (this.pendingProposals.get(pubkeyHex) === promise) {
+        this.pendingProposals.delete(pubkeyHex);
+      }
     }
 
     // TODO: Implement safe clean-up of stored blocks
@@ -78,17 +95,32 @@ export class SlashingProtectionBlockService {
    * Interchange import / export functionality
    */
   async importBlocks(pubkey: BLSPubkey, blocks: SlashingProtectionBlock[]): Promise<void> {
-    // Never replace a recorded block with a different signing root, a zero root refuses any block at that slot
-    const blocksBySlot = new Map<Slot, SlashingProtectionBlock>();
-    for (const block of blocks) {
-      const prevBlock = blocksBySlot.get(block.slot) ?? (await this.blockBySlot.get(pubkey, block.slot));
-      if (prevBlock === null || isEqualRoot(prevBlock.signingRoot, block.signingRoot)) {
-        blocksBySlot.set(block.slot, block);
-      } else {
-        blocksBySlot.set(block.slot, {slot: block.slot, signingRoot: ZERO_ROOT});
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const previous = this.pendingProposals.get(pubkeyHex);
+    const {promise, resolve} = defer<void>();
+    this.pendingProposals.set(pubkeyHex, promise);
+
+    try {
+      if (previous !== undefined) {
+        await previous;
+      }
+      // Never replace a recorded block with a different signing root, a zero root refuses any block at that slot
+      const blocksBySlot = new Map<Slot, SlashingProtectionBlock>();
+      for (const block of blocks) {
+        const prevBlock = blocksBySlot.get(block.slot) ?? (await this.blockBySlot.get(pubkey, block.slot));
+        if (prevBlock === null || isEqualRoot(prevBlock.signingRoot, block.signingRoot)) {
+          blocksBySlot.set(block.slot, block);
+        } else {
+          blocksBySlot.set(block.slot, {slot: block.slot, signingRoot: ZERO_ROOT});
+        }
+      }
+      await this.blockBySlot.set(pubkey, Array.from(blocksBySlot.values()));
+    } finally {
+      resolve();
+      if (this.pendingProposals.get(pubkeyHex) === promise) {
+        this.pendingProposals.delete(pubkeyHex);
       }
     }
-    await this.blockBySlot.set(pubkey, Array.from(blocksBySlot.values()));
   }
 
   /**

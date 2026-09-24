@@ -91,15 +91,8 @@ describe.skip("doppelganger / doppelganger test", () => {
     const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(
-        fromHexString(pubKey),
-        {...beaconBlock, slot: bn.chain.clock.currentSlot},
-        bn.chain.clock.currentSlot
-      )
-    ).resolves.toBeWithMessage(
-      undefined,
-      "Signing should be possible if starting at genesis since doppelganger should be off"
-    );
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, beaconBlock.slot)
+    ).resolves.toMatchObject({message: beaconBlock});
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
@@ -245,34 +238,24 @@ describe.skip("doppelganger / doppelganger test", () => {
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
+    const dutySlot = bn.chain.clock.currentSlot;
     const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
+    beaconBlock.slot = dutySlot;
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(
-        fromHexString(pubKey),
-        {...beaconBlock, slot: bn.chain.clock.currentSlot},
-        bn.chain.clock.currentSlot
-      )
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, dutySlot)
     ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(
-        fromHexString(pubKey),
-        {...beaconBlock, slot: bn.chain.clock.currentSlot},
-        bn.chain.clock.currentSlot
-      )
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, dutySlot)
     ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     // Signing should be possible after doppelganger check has elapsed
     await expect(
-      validatorUnderTest.validatorStore.signBlock(
-        fromHexString(pubKey),
-        {...beaconBlock, slot: bn.chain.clock.currentSlot},
-        bn.chain.clock.currentSlot
-      )
-    ).resolves.toBeUndefined();
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, dutySlot)
+    ).resolves.toMatchObject({message: beaconBlock});
   });
 
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async () => {
