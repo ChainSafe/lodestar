@@ -844,7 +844,7 @@ export class BlockInputSync {
         this.logger.verbose("Dropping downloaded block, entry pruned during fetch", logCtx);
         return;
       }
-      this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
+      this.pendingBlocks.set(rootHex, pending);
       const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
       const delaySec = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.chain.genesisTime);
