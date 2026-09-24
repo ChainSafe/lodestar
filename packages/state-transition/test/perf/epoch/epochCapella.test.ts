@@ -20,8 +20,8 @@ import {
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
 import {capellaState} from "../../../src/testUtils/params.js";
-import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(capellaState.epoch) - 1;
@@ -34,7 +34,7 @@ describe(`capella processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(capellaState.network, slot, 300_000);
+    const state = await getNetworkCachedState(capellaState.network, slot);
     state.hashTreeRoot();
     return state;
   }, 300_000);

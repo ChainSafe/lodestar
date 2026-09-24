@@ -357,6 +357,9 @@ importers:
       '@lodestar/spec-test-util':
         specifier: workspace:^
         version: link:../spec-test-util
+      '@lodestar/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
       '@types/js-yaml':
         specifier: ^4.0.5
         version: 4.0.5
@@ -789,6 +792,9 @@ importers:
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
+      '@lodestar/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
 
   packages/test-utils:
     dependencies:
@@ -801,6 +807,9 @@ importers:
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
+      '@lodestar/config':
+        specifier: workspace:^
+        version: link:../config
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
