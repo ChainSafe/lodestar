@@ -20,6 +20,7 @@ describe("Metrics", () => {
     });
     metrics.close();
 
+    expect(metrics.stateTransition).toBeNull();
     const metricsAsText = await metrics.register.metrics();
     expect(metricsAsText).not.toContain("lodestar_stfn_process_block_seconds");
     expect(metricsAsText).not.toContain("lodestar_stfn_validators_in_activation_queue");

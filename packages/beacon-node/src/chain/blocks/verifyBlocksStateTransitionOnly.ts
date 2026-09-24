@@ -63,7 +63,7 @@ export async function verifyBlocksStateTransitionOnly(
           verifySignatures: !useBlsBatchVerify && !validSignatures,
           dontTransferCache: false,
         },
-        {metrics, validatorMonitor}
+        {metrics: metrics?.stateTransition, validatorMonitor}
       );
     } catch (e) {
       throw new BlockError(block, {

@@ -247,7 +247,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifySignatures: false,
             dontTransferCache: false,
           },
-          this.modules
+          {metrics: this.modules.metrics?.stateTransition, validatorMonitor: this.modules.validatorMonitor}
         );
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
@@ -318,7 +318,10 @@ async function processSlotsByCheckpoint(
 ): Promise<IBeaconStateView> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = postState.processSlots(slot, opts, modules);
+    postState = postState.processSlots(slot, opts, {
+      metrics: modules.metrics?.stateTransition,
+      validatorMonitor: modules.validatorMonitor,
+    });
   }
   return postState;
 }
@@ -363,7 +366,10 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = postState.processSlots(nextEpochSlot, opts, modules);
+    postState = postState.processSlots(nextEpochSlot, opts, {
+      metrics: metrics?.stateTransition,
+      validatorMonitor: modules.validatorMonitor,
+    });
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block

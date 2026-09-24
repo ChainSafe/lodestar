@@ -1,7 +1,6 @@
-import {Counter, Gauge, Histogram, Metric, Registry} from "prom-client";
+import {Metric, Registry} from "prom-client";
 import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
 import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
-import {CounterConfig, GaugeConfig, HistogramConfig, LabelKeys, LabelsGeneric, NoLabels} from "@lodestar/utils";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
@@ -10,8 +9,12 @@ import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
   ForkChoiceMetrics &
-  BeaconStateTransitionMetrics &
-  LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
+  LodestarMetrics & {
+    /** Null when we use native state transition metrics instead */
+    stateTransition: BeaconStateTransitionMetrics | null;
+    register: RegistryMetricCreator;
+    close: () => void;
+  };
 
 export type CreateMetricsOptions = {
   /*
@@ -33,8 +36,7 @@ export function createMetrics(
   const beacon = createBeaconMetrics(register);
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const stateTransitionRegister = createOpts.includeStateTransitionMetrics === false ? unregisteredMetrics : register;
-  const stateTransition = getMetrics(stateTransitionRegister);
+  const stateTransition = createOpts.includeStateTransitionMetrics === false ? null : getMetrics(register);
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
@@ -58,20 +60,8 @@ export function createMetrics(
     ...beacon,
     ...forkChoice,
     ...lodestar,
-    ...stateTransition,
+    stateTransition,
     register,
     close,
   };
 }
-
-const unregisteredMetrics = {
-  gauge<Labels extends LabelsGeneric = NoLabels>(configuration: GaugeConfig<Labels>) {
-    return new Gauge<LabelKeys<Labels>>({...configuration, registers: []});
-  },
-  histogram<Labels extends LabelsGeneric = NoLabels>(configuration: HistogramConfig<Labels>) {
-    return new Histogram<LabelKeys<Labels>>({...configuration, registers: []});
-  },
-  counter<Labels extends LabelsGeneric = NoLabels>(configuration: CounterConfig<Labels>) {
-    return new Counter<LabelKeys<Labels>>({...configuration, registers: []});
-  },
-};
