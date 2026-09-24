@@ -4,7 +4,7 @@ import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
-import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+import {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -36,7 +36,6 @@ import {computeEpochAtSlot} from "./util/index.js";
 
 // NOTE DENEB: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
-  EpochTransitionCacheOpts &
   ProcessBlockOpts & {
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
@@ -110,7 +109,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, blockSlot, {metrics, validatorMonitor});
 
   // Verify proposer signature only
   if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
@@ -137,12 +136,10 @@ export function stateTransition(
   }
 
   // Verify state root
+  // Only spec tests enable verifyStateRoot. beacon-node always passes false and computes the root at the
+  // call site, where it is timed per source, so there is nothing to record here.
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.stateTransition,
-    });
     const stateRoot = postState.hashTreeRoot();
-    hashTreeRootTimer?.();
 
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(
@@ -164,11 +161,11 @@ export function stateTransition(
 export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
-  epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
+  opts?: {dontTransferCache?: boolean},
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
-  let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
+  let postState = state.clone(opts?.dontTransferCache);
 
   if (metrics) {
     onStateCloneMetrics(postState, metrics, StateCloneSource.processSlots);
@@ -177,7 +174,7 @@ export function processSlots(
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, slot, {metrics, validatorMonitor});
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -210,7 +207,6 @@ export function processSlots(
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
-  epochTransitionCacheOpts?: EpochTransitionCacheOpts,
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   const {config} = postState;
@@ -231,7 +227,7 @@ function processSlotsWithTransientCache(
       let epochTransitionCache: EpochTransitionCache;
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.beforeProcessEpoch});
-        epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
+        epochTransitionCache = beforeProcessEpoch(postState, metrics);
         timer?.();
       }
 

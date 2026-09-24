@@ -45,7 +45,6 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 
 /**
  * A test clock that models gossip clock disparity from a millisecond timestamp.
@@ -339,11 +338,6 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   if (e instanceof GossipActionError) {
     return e.action === GossipAction.IGNORE ? "ignore" : "reject";
   }
-  // Some validation paths throw raw errors instead of GossipActionError
-  // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError) {
-    return "reject";
-  }
   throw e;
 }
 
@@ -398,7 +392,6 @@ export async function runGossipValidationTest(
       disableLightClientServerOnImportBlockHead: true,
       disableOnBlockError: true,
       disablePrepareNextSlot: true,
-      assertCorrectProgressiveBalances,
       proposerBoost: true,
       proposerBoostReorg: true,
     },

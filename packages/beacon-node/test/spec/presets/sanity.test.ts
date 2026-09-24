@@ -12,7 +12,6 @@ import {
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -34,7 +33,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
+      const postState = processSlots(state, state.slot + bnToNum(testcase.slots));
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
       return postState;
@@ -72,7 +71,6 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           verifyStateRoot: true,
           verifyProposer: verify,
           verifySignatures: verify,
-          assertCorrectProgressiveBalances,
         });
       }
       return wrappedState;

@@ -10,8 +10,13 @@ import {
   ZERO_HASH,
 } from "@lodestar/params";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
-import {GossipEncoding, GossipType} from "../../../../src/network/gossip/index.js";
-import {GossipTopicCache, getGossipSSZMaxSize, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
+import {GossipEncoding, GossipTopic, GossipType} from "../../../../src/network/gossip/index.js";
+import {
+  GossipTopicCache,
+  getGossipSSZMaxSize,
+  getGossipSSZType,
+  stringifyGossipTopic,
+} from "../../../../src/network/gossip/topic.js";
 import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszBytes.js";
 
 describe("network / gossip / topic", () => {
@@ -32,36 +37,31 @@ describe("network / gossip / topic", () => {
     ZERO_HASH
   );
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
+  function getMaxSize(topic: GossipTopic, cfg = config): number {
+    const sszType = getGossipSSZType(topic);
+    return getGossipSSZMaxSize(topic, cfg, sszType);
+  }
 
   for (const fork of [ForkName.gloas, ForkName.heze]) {
     it(`should match the preset p2p size bounds for ${fork} progressive objects`, () => {
       const boundary = {fork, epoch: 0};
 
       expect({
-        [GossipType.beacon_aggregate_and_proof]: getGossipSSZMaxSize(
-          {
-            type: GossipType.beacon_aggregate_and_proof,
-            boundary,
-            encoding,
-          },
-          config
-        ),
-        [GossipType.attester_slashing]: getGossipSSZMaxSize(
-          {
-            type: GossipType.attester_slashing,
-            boundary,
-            encoding,
-          },
-          config
-        ),
-        [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
-          {
-            type: GossipType.execution_payload_bid,
-            boundary,
-            encoding,
-          },
-          config
-        ),
+        [GossipType.beacon_aggregate_and_proof]: getMaxSize({
+          type: GossipType.beacon_aggregate_and_proof,
+          boundary,
+          encoding,
+        }),
+        [GossipType.attester_slashing]: getMaxSize({
+          type: GossipType.attester_slashing,
+          boundary,
+          encoding,
+        }),
+        [GossipType.execution_payload_bid]: getMaxSize({
+          type: GossipType.execution_payload_bid,
+          boundary,
+          encoding,
+        }),
       }).toEqual({
         [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
         [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,

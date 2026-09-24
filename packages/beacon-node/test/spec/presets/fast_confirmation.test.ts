@@ -69,7 +69,6 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -140,7 +139,6 @@ const fastConfirmationTest =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
             fastConfirmation: true,
@@ -171,7 +169,8 @@ const fastConfirmationTest =
         logger.debug("Fork choice test", {steps: stepsLen});
 
         try {
-          for (const [i, step] of steps.entries()) {
+          for (const i of getExecutionOrder(steps)) {
+            const step = steps[i];
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
               const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
@@ -838,6 +837,29 @@ type FastConfirmationTestCase = {
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
+
+/**
+ * Attestation steps following a tick must reach fork choice before it, so that its attestation
+ * queue applies them at the tick, ahead of the fast confirmation rule that runs there.
+ * Indices are returned so assertion messages keep the `steps.yaml` numbering.
+ */
+function getExecutionOrder(steps: Step[]): number[] {
+  const order: number[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (!isTick(steps[i])) {
+      order.push(i);
+      continue;
+    }
+    let next = i + 1;
+    while (next < steps.length && isAttestation(steps[next])) {
+      order.push(next);
+      next++;
+    }
+    order.push(i);
+    i = next - 1;
+  }
+  return order;
+}
 
 function isTick(step: Step): step is OnTick {
   return (step as OnTick).tick >= 0;
