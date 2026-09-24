@@ -69,10 +69,16 @@ export class SlashingProtection implements ISlashingProtection {
   ): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     if (currentEpoch !== undefined) {
-      // Updating min-max spans reads the db for each epoch between source and target, allow one epoch of clock disparity
-      for (const {targetEpoch} of data.flatMap((validator) => validator.signedAttestations)) {
-        if (targetEpoch > currentEpoch + 1) {
-          throw new InterchangeError({code: InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH, targetEpoch, currentEpoch});
+      // Min-max span updates read the db for each epoch between source and target, allow one epoch of clock disparity
+      for (const validator of data) {
+        for (const {targetEpoch} of validator.signedAttestations) {
+          if (targetEpoch > currentEpoch + 1) {
+            throw new InterchangeError({
+              code: InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH,
+              targetEpoch,
+              currentEpoch,
+            });
+          }
         }
       }
     }
