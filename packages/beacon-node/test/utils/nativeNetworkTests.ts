@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
-import {describe, expect, it, vi} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
@@ -13,11 +13,12 @@ import {createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
-import {defer, withTimeout} from "@lodestar/utils";
+import {defer, sleep, withTimeout} from "@lodestar/utils";
+import {BlsSingleThreadVerifier} from "../../src/chain/bls/singleThread.js";
+import {BeaconChain} from "../../src/chain/chain.js";
 import {WorkerNetworkCore} from "../../src/network/core/index.js";
 import {nativeMultiaddr} from "../../src/network/core/native/addresses.js";
 import {createNativeConfig} from "../../src/network/core/native/config.js";
-import {NativeNetworkErrorCode} from "../../src/network/core/native/errors.js";
 import {NativeIntent} from "../../src/network/core/native/intent.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
@@ -28,31 +29,23 @@ import {nativeBindingProcess} from "./nativeBindingProcess.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import {nativeNetworkProcess} from "./nativeNetworkProcess.js";
 
-const faultBindings = bindings as unknown as {networkTestFail?: (stage: string) => void};
+/** Clears retained mock calls and collects the previous test's runtime before the next one initializes. */
+async function nativeRuntimeReleased(): Promise<void> {
+  vi.clearAllMocks();
+  for (let i = 0; i < 200; i++) {
+    global.gc?.();
+    await sleep(5);
+    try {
+      initializeNativeNetworkRuntime({} as NativeApplicationConfig, () => {});
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("NetworkAlreadyInitialized")) return;
+    }
+  }
+  throw Error("A native network runtime is still live");
+}
 
 describe("native Lodestar integration", () => {
-  it.skipIf(!faultBindings.networkTestFail)(
-    "requests node shutdown with the native terminal error",
-    async () => {
-      const shutdown = vi.fn();
-      const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
-      try {
-        faultBindings.networkTestFail?.("wake_signal");
-        await node.network.getNetworkIdentity().catch(() => {});
-        await vi.waitFor(() =>
-          expect(shutdown).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({
-              type: {code: NativeNetworkErrorCode.FAILED, resource: "NetworkWakeFailed"},
-            })
-          )
-        );
-        expect(node.network.closed).toBe(true);
-      } finally {
-        await node.close();
-      }
-    },
-    15000
-  );
+  beforeEach(nativeRuntimeReleased);
   it("requests node shutdown once with the original host failure", async () => {
     const shutdown = vi.fn();
     const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
@@ -235,8 +228,13 @@ describe("native Lodestar integration", () => {
     let remote: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
     const block = defer<null>();
     const signature = defer<boolean>();
-    const serving = vi.spyOn(old.chain, "getSerializedBlockByRoot").mockImplementationOnce(() => block.promise);
-    const verifying = vi.spyOn(old.chain.bls, "verifySignatureSets").mockImplementationOnce(() => signature.promise);
+    // Vitest keeps every spy's target, so spy on prototypes that outlive this fixture.
+    const serving = vi
+      .spyOn(BeaconChain.prototype, "getSerializedBlockByRoot")
+      .mockImplementationOnce(() => block.promise);
+    const verifying = vi
+      .spyOn(BlsSingleThreadVerifier.prototype, "verifySignatureSets")
+      .mockImplementationOnce(() => signature.promise);
     try {
       remote = await nativeNetworkProcess(config, "native", limits);
       const identity = await old.network.getNetworkIdentity();

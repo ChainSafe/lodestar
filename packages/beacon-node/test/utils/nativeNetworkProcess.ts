@@ -3,6 +3,7 @@ import {mkdtemp, readFile, rename, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
+import {fileURLToPath} from "node:url";
 import {deserialize, serialize} from "node:v8";
 import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
@@ -51,6 +52,7 @@ export async function nativeNetworkProcess(
       "--maxWorkers=1",
     ],
     {
+      cwd: fileURLToPath(new URL("../../../../", import.meta.url)),
       env: {...process.env, LODESTAR_NATIVE_CASE: "peer", LODESTAR_NATIVE_PEER_DIRECTORY: directory},
       stdio: ["ignore", "ignore", "inherit"],
     }

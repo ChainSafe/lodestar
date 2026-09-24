@@ -18,7 +18,7 @@ export const e2eMinimalProject = defineProject({
       LODESTAR_PRESET: "minimal",
     },
     pool: "forks",
-    runner: path.join(import.meta.dirname, "../scripts/vitest/nativeNetworkRunner.mjs"),
+    execArgv: ["--expose-gc"],
     maxWorkers: 1,
     isolate: true,
     sequence: {
@@ -43,7 +43,6 @@ export const e2eMainnetProject = defineProject({
       LODESTAR_PRESET: "mainnet",
     },
     pool: "forks",
-    runner: path.join(import.meta.dirname, "../scripts/vitest/nativeNetworkRunner.mjs"),
     maxWorkers: 1,
     isolate: true,
     sequence: {
