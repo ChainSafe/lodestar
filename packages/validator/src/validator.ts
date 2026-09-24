@@ -430,7 +430,12 @@ export class Validator {
   }
 
   async importInterchange(interchange: Interchange): Promise<void> {
-    return this.slashingProtection.importInterchange(interchange, this.genesis.genesisValidatorsRoot);
+    return this.slashingProtection.importInterchange(
+      interchange,
+      this.genesis.genesisValidatorsRoot,
+      undefined,
+      this.clock.currentEpoch
+    );
   }
 
   async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
