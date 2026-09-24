@@ -30,7 +30,9 @@ export class SlashingProtectionBlockService {
     this.pendingProposals.set(pubkeyHex, promise);
 
     try {
-      await previous;
+      if (previous !== undefined) {
+        await previous;
+      }
       const safeStatus = await this.checkBlockProposal(pubkey, block);
 
       if (safeStatus !== SafeStatus.SAME_DATA) {
