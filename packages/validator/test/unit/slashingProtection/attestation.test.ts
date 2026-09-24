@@ -131,4 +131,24 @@ describe("SlashingProtection attestation min-span lookback", () => {
     await sign(10_000, 10_001);
     await rejectsWith(sign(5_902, 10_000), InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK);
   });
+
+  it("atomically rejects an interchange import with surrounding attestation without corrupting spans or rows", async () => {
+    await sign(10, 11);
+    await sign(11, 12);
+
+    // [(12, 13), (9, 14)] fails on (9, 14) which surrounds (10, 11) and (11, 12)
+    await expect(
+      importInterchange([
+        [12, 13],
+        [9, 14],
+      ])
+    ).rejects.toThrow();
+
+    // Verify attestation rows from rejected batch were not stored
+    expect(await slashingProtection.hasAttestedInEpoch(pubkey, 13)).toBe(false);
+    expect(await slashingProtection.hasAttestedInEpoch(pubkey, 14)).toBe(false);
+
+    // Verify (11, 14) is not falsely rejected by leftover spans from (12, 13)
+    await expect(sign(11, 14)).resolves.toBeUndefined();
+  });
 });

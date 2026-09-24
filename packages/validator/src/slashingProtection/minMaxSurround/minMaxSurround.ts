@@ -1,6 +1,7 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestation} from "./interface.js";
+import {MemoryOverlayDistanceStore} from "./memoryOverlayDistanceStore.js";
 
 // surround vote checking with min-max surround
 // https://github.com/protolambda/eth2-surround#min-max-surround
@@ -29,6 +30,15 @@ export class MinMaxSurround implements IMinMaxSurround {
   constructor(store: IDistanceStore, options?: {maxEpochLookback?: number}) {
     this.store = store;
     this.maxEpochLookback = options?.maxEpochLookback ?? DEFAULT_MAX_EPOCH_LOOKBACK;
+  }
+
+  createOverlay(): {minMaxSurround: MinMaxSurround; commit(pubKey: BLSPubkey): Promise<void>} {
+    const overlayStore = new MemoryOverlayDistanceStore(this.store);
+    const minMaxSurround = new MinMaxSurround(overlayStore, {maxEpochLookback: this.maxEpochLookback});
+    return {
+      minMaxSurround,
+      commit: (pubKey: BLSPubkey) => overlayStore.commit(pubKey),
+    };
   }
 
   /** Lowest epoch with a min-span entry after inserting an attestation with `sourceEpoch` */
