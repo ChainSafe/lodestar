@@ -6,7 +6,7 @@ export type AttestingIndices = ValueOf<typeof ssz.AttestingIndices>;
 export type Transaction = ValueOf<typeof ssz.Transaction>;
 export type Transactions = ValueOf<typeof ssz.Transactions>;
 export type Withdrawals = ValueOf<typeof ssz.Withdrawals>;
-export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
+export type BlobKZGCommitments = ValueOf<typeof ssz.BlobKZGCommitments>;
 export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
 export type DataColumn = ValueOf<typeof ssz.DataColumn>;
 

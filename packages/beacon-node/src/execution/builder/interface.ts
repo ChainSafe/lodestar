@@ -41,7 +41,7 @@ export interface IExecutionBuilder {
   ): Promise<{
     header: ExecutionPayloadHeader;
     executionPayloadValue: Wei;
-    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    blobKzgCommitments?: deneb.BlobKZGCommitments;
     executionRequests?: electra.ExecutionRequests;
   }>;
   submitBlindedBlock(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<SignedBlockContents>;

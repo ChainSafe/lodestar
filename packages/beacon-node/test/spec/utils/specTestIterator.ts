@@ -80,6 +80,8 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // CellsBitList belongs to partial data columns which are not implemented yet, see above
+    /^(gloas|heze)\/ssz_static\/CellsBitList\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,

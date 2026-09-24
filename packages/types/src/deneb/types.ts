@@ -13,7 +13,7 @@ export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayload
 export type BlobsBundle = ValueOf<typeof ssz.BlobsBundle>;
 
 export type KzgCommitmentInclusionProof = ValueOf<typeof ssz.KzgCommitmentInclusionProof>;
-export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
+export type BlobKZGCommitments = ValueOf<typeof ssz.BlobKZGCommitments>;
 export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
 export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 

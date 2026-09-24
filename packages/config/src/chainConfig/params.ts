@@ -332,9 +332,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
-    MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
-    MAX_ATTESTER_SLASHING_SIZE: false,
-    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
     GAS_LIMIT_SCHEDULE: false,
 
@@ -344,7 +341,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: false,
     MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
     INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
-    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
     MAX_SIGNED_INCLUSION_LIST_SIZE: false,
 
     // FastConfirmationRule
