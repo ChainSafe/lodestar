@@ -3,7 +3,6 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
-  StateHashTreeRootSource,
   createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
@@ -68,10 +67,7 @@ export async function getHistoricalState(
       throw e;
     }
     blockCount++;
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: StateHashTreeRootSource.regenState});
-    const stateRoot = state.hashTreeRoot();
-    hashTreeRootTimer?.();
-    if (!byteArrayEquals(stateRoot, block.message.stateRoot)) {
+    if (!byteArrayEquals(state.hashTreeRoot(), block.message.stateRoot)) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }

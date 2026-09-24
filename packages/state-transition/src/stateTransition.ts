@@ -136,12 +136,10 @@ export function stateTransition(
   }
 
   // Verify state root
+  // Only spec tests enable verifyStateRoot. beacon-node always passes false and computes the root at the
+  // call site, where it is timed per source, so there is nothing to record here.
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.stateTransition,
-    });
     const stateRoot = postState.hashTreeRoot();
-    hashTreeRootTimer?.();
 
     if (!ssz.Root.equals(block.stateRoot, stateRoot)) {
       throw new Error(

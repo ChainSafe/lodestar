@@ -34,7 +34,7 @@ export function createMetrics(
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
   const stateTransitionRegister = createOpts.includeStateTransitionMetrics === false ? unregisteredMetrics : register;
-  const stateTransition = getMetrics(stateTransitionRegister, {stateHashTreeRootRegister: register});
+  const stateTransition = getMetrics(stateTransitionRegister);
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();

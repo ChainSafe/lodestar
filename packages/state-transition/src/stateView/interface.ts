@@ -70,6 +70,7 @@ export type ComputeNewStateRootResult = {
   newStateRoot: Root;
   proposerReward: Gwei;
   postState: IBeaconStateView;
+  hashTreeRootTime: number;
 };
 
 /**

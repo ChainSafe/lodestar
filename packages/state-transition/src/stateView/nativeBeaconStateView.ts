@@ -652,7 +652,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   computeNewStateRoot(input: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult {
     const postState = this.stateTransition(input, computeNewStateRootStateTransitionOpts, modules);
-    return getComputeNewStateRootResult(postState, modules);
+    return getComputeNewStateRootResult(postState);
   }
 
   stateTransition(

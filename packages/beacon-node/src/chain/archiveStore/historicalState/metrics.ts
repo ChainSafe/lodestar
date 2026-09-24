@@ -6,7 +6,6 @@ import {
   ProcessOperationsStep,
   ProposerRewardType,
   StateCloneSource,
-  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/index.js";
@@ -91,12 +90,6 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_process_block_commit_seconds",
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
-    }),
-    stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
-      name: "lodestar_historical_state_stfn_hash_tree_root_seconds",
-      help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-      labelNames: ["source"],
     }),
     numEffectiveBalanceUpdates: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",

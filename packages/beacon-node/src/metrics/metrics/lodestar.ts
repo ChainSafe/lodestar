@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
+import {StateHashTreeRootSource} from "@lodestar/state-transition";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
@@ -406,6 +407,15 @@ export function createLodestarMetrics(
       name: "lodestar_epoch_transition_by_caller_total",
       help: "Total count of epoch transition by caller",
       labelNames: ["caller"],
+    }),
+
+    // this metrics stay here instead of @lodestar/state-transition in order to prepare
+    // for the native zig state-transition in the future
+    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
+      name: "lodestar_stfn_hash_tree_root_seconds",
+      help: "Time to compute the hash tree root of a post state in seconds",
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.3, 0.5],
+      labelNames: ["source"],
     }),
 
     // BLS verifier thread pool and queue
