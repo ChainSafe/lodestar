@@ -5,7 +5,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {DOMAIN_BUILDER_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
@@ -262,6 +262,28 @@ describe("ValidatorStore", () => {
     const otherSlot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, {data, slot: proposalSlot + 1}, domain);
     expect(toHexString(otherData)).not.toBe(toHexString(signingRoot));
     expect(toHexString(otherSlot)).not.toBe(toHexString(signingRoot));
+  });
+
+  it("Should only sign an attestation with a target epoch matching the attestation slot", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const epoch = computeEpochAtSlot(slot);
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const data = {...ssz.phase0.AttestationData.defaultValue(), slot};
+
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch: epoch - 1, root: ZERO_HASH}}, epoch)
+    ).rejects.toThrow("Inconsistent attestation data during signing");
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch, root: ZERO_HASH}}, epoch)
+    ).resolves.toBeDefined();
   });
 
   it("Should reject builder request auth data with invalid length", async () => {

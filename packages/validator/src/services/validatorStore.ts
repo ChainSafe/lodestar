@@ -1187,6 +1187,11 @@ export class ValidatorStore {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
+    if (data.target.epoch !== computeEpochAtSlot(data.slot)) {
+      throw Error(
+        `Inconsistent attestation data during signing: att.target.epoch ${data.target.epoch} != epoch of att.slot ${data.slot}`
+      );
+    }
 
     const forkSeq = this.config.getForkSeq(data.slot);
     const isPostElectra = forkSeq >= ForkSeq.electra;

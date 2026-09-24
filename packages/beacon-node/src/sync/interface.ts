@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {Slot, phase0} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -51,5 +51,4 @@ export interface SyncModules {
   metrics: Metrics | null;
   logger: Logger;
   chain: IBeaconChain;
-  wsCheckpoint?: phase0.Checkpoint;
 }
