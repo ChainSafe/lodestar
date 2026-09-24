@@ -1,7 +1,7 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";
-import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
+import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot, minEpoch} from "../utils.js";
 import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
 import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository.js";
 import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
@@ -184,7 +184,24 @@ export class SlashingProtectionAttestationService {
       });
     }
 
-    await this.attestationByTarget.set(pubkey, attestations);
+    // Never replace a recorded attestation with a different source or signing root, a zero root refuses any attestation
+    // with that target. The highest source epoch is kept as the latest attestation must have it, see above.
+    const attestationsByTarget = new Map<Epoch, SlashingProtectionAttestation>();
+    for (const attestation of attestations) {
+      const {sourceEpoch, targetEpoch, signingRoot} = attestation;
+      const prevAtt =
+        attestationsByTarget.get(targetEpoch) ?? (await this.attestationByTarget.get(pubkey, targetEpoch));
+      if (prevAtt === null || (prevAtt.sourceEpoch === sourceEpoch && isEqualRoot(prevAtt.signingRoot, signingRoot))) {
+        attestationsByTarget.set(targetEpoch, attestation);
+      } else {
+        attestationsByTarget.set(targetEpoch, {
+          sourceEpoch: Math.max(prevAtt.sourceEpoch, sourceEpoch),
+          targetEpoch,
+          signingRoot: ZERO_ROOT,
+        });
+      }
+    }
+    await this.attestationByTarget.set(pubkey, Array.from(attestationsByTarget.values()));
 
     // Pre-compute spans for all attestations
     for (const attestation of attestations) {
