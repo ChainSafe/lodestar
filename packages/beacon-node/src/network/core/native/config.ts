@@ -353,6 +353,38 @@ export function createNativeConfig(
       );
     }
   }
+  const items: Record<NativeTopicKind, number> = {
+    beacon_block: 8,
+    beacon_attestation: Math.max(128, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1)),
+    beacon_aggregate_and_proof: 2048,
+    blob_sidecar: 256,
+    data_column_sidecar: 256,
+    sync_committee: 1024,
+    sync_committee_contribution_and_proof: 128,
+    proposer_slashing: 32,
+    attester_slashing: 32,
+    voluntary_exit: 128,
+    bls_to_execution_change: 128,
+    light_client_finality_update: 8,
+    light_client_optimistic_update: 8,
+  };
+  const byteWeights = [24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16];
+  const processor = kinds.map((kind, i) => {
+    const largest = maxSszSizes[kind];
+    const compressedMax = 32 + largest + Math.floor(largest / 6);
+    const pages = Math.ceil(Math.max(4096, compressedMax, byteWeights[i] * MiB) / 4096);
+    return {items: items[kind], bytes: pages * 4096};
+  });
+  nativeInteger(
+    processor.reduce((sum, limit) => sum + limit.items, 0),
+    "gossip work capacity",
+    65535,
+    1
+  );
+  const execution = gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => ({
+    items: Math.min(limit.items, processor[i].items),
+    bytes: limit.bytes,
+  }));
   const application: NativeApplicationConfig = {
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
@@ -375,6 +407,8 @@ export function createNativeConfig(
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
     gossipPolicy: {
+      processor,
+      execution,
       heartbeatIntervalMs: 700n,
       iwantFollowupMs: 12000n,
       idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
@@ -411,37 +445,5 @@ export function createNativeConfig(
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };
-  const items: Record<NativeTopicKind, number> = {
-    beacon_block: 8,
-    beacon_attestation: Math.max(128, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1)),
-    beacon_aggregate_and_proof: 2048,
-    blob_sidecar: 256,
-    data_column_sidecar: 256,
-    sync_committee: 1024,
-    sync_committee_contribution_and_proof: 128,
-    proposer_slashing: 32,
-    attester_slashing: 32,
-    voluntary_exit: 128,
-    bls_to_execution_change: 128,
-    light_client_finality_update: 8,
-    light_client_optimistic_update: 8,
-  };
-  const byteWeights = [24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16];
-  application.gossipPolicy.processor = kinds.map((kind, i) => {
-    const largest = maxSszSizes[kind];
-    const compressedMax = 32 + largest + Math.floor(largest / 6);
-    const pages = Math.ceil(Math.max(4096, compressedMax, byteWeights[i] * MiB) / 4096);
-    return {items: items[kind], bytes: pages * 4096};
-  });
-  nativeInteger(
-    application.gossipPolicy.processor.reduce((sum, limit) => sum + limit.items, 0),
-    "gossip work capacity",
-    65535,
-    1
-  );
-  application.gossipPolicy.execution = gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => ({
-    items: Math.min(limit.items, application.gossipPolicy.processor?.[i].items ?? limit.items),
-    bytes: limit.bytes,
-  }));
   return {application, network, directPeers};
 }
