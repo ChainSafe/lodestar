@@ -29,10 +29,10 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       preState,
       [blockInput],
       [DataAvailabilityStatus.Available],
+      serializedCache,
       testLogger(),
       null,
       null,
-      serializedCache,
       new AbortController().signal,
       {}
     ).then(
