@@ -77,7 +77,6 @@
     "@vekexasia/bigint-buffer2": "^1.1.1"
   },
   "devDependencies": {
-    "@lodestar/api": "workspace:^",
     "@lodestar/test-utils": "workspace:^"
   },
   "keywords": [

@@ -792,9 +792,6 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
     devDependencies:
-      '@lodestar/api':
-        specifier: workspace:^
-        version: link:../api
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
