@@ -31,6 +31,11 @@ describe("downloadNightlyTests", () => {
     vi.unstubAllEnvs();
   });
 
+  it.each(["2026-02-30", "2026-13-01", "2026-9-01"])("rejects invalid date %s before requesting runs", async (date) => {
+    await expect(downloadNightlyTests(opts, log, date)).rejects.toThrow(`Invalid date: "${date}"`);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     {name: "stale", runs: [staleRun]},
     {name: "empty", runs: []},
@@ -44,7 +49,9 @@ describe("downloadNightlyTests", () => {
     await Promise.all([assertion, vi.runAllTimersAsync()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get("created")).toBe("2026-09-22");
+    const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
+    expect(query.get("created")).toBe("2026-09-22");
+    expect(query.get("event")).toBe("schedule");
     expect(fetchMock.mock.calls[2][0]).toContain(`/runs/${recentRun.id}/artifacts`);
     expect(downloadGenericSpecTests).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({specVersion: `nightly-${recentRun.id}`}),
@@ -89,6 +96,9 @@ describe("downloadNightlyTests", () => {
 
     await downloadNightlyTests(opts, log, "2026-08-30");
 
+    const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
+    expect(query.get("created")).toBe("2026-08-30");
+    expect(query.has("event")).toBe(false);
     expect(downloadGenericSpecTests).toHaveBeenCalledWith(
       expect.objectContaining({specVersion: `nightly-${staleRun.id}`}),
       log

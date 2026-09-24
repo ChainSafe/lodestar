@@ -24,7 +24,7 @@ async function resolveNightlyRun(
   repo: string,
   token: string,
   log: (msg: string) => void,
-  date?: string,
+  date: Date | "latest",
   branch?: string
 ): Promise<WorkflowRun> {
   const params = new URLSearchParams({status: "success", per_page: "1"});
@@ -32,9 +32,9 @@ async function resolveNightlyRun(
   // If neither branch nor date narrow the query, restrict to scheduled runs so
   // a PR's successful run on consensus-specs can't outrank the latest master
   // nightly. When a date is given, allow manual re-runs on that day too.
-  else if (!date) params.append("event", "schedule");
+  else if (date === "latest") params.append("event", "schedule");
   // Require today's UTC run so upstream delays or failures surface in our nightly.
-  const createdFilter = date ?? new Date().toISOString().slice(0, 10);
+  const createdFilter = (date === "latest" ? new Date() : date).toISOString().slice(0, 10);
   const minCreatedAt = Date.parse(createdFilter);
   const maxCreatedAt = minCreatedAt + 24 * 60 * 60 * 1000;
   params.append("created", createdFilter);
@@ -85,8 +85,11 @@ export async function downloadNightlyTests(
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error("GITHUB_TOKEN is required for nightly downloads");
 
-  const resolvedDate = date === "latest" || !date ? undefined : date;
-  if (resolvedDate && !/^\d{4}-\d{2}-\d{2}$/.test(resolvedDate)) {
+  const resolvedDate = date === "latest" || !date ? "latest" : new Date(date);
+  if (
+    resolvedDate !== "latest" &&
+    (!Number.isFinite(resolvedDate.getTime()) || resolvedDate.toISOString().slice(0, 10) !== date)
+  ) {
     throw new Error(`Invalid date: "${date}". Expected "latest" or YYYY-MM-DD`);
   }
 
@@ -94,7 +97,7 @@ export async function downloadNightlyTests(
   const run = await resolveNightlyRun(repo, token, log, resolvedDate, opts.branch);
   const runId = run.id;
   log(
-    `Resolved nightly${resolvedDate ? ` ${resolvedDate}` : ""} to run ${runId} (created_at=${run.created_at}, head_sha=${run.head_sha})`
+    `Resolved nightly${resolvedDate === "latest" ? "" : ` ${date}`} to run ${runId} (created_at=${run.created_at}, head_sha=${run.head_sha})`
   );
 
   const {artifacts} = await ghApiFetch<ArtifactsListResponse>(`/repos/${repo}/actions/runs/${runId}/artifacts`, token);
