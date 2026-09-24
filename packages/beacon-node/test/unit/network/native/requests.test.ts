@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
-import {NativeIncomingRequest} from "@chainsafe/lodestar-z/network";
+import {NativeIncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {RequestErrorCode} from "@lodestar/reqresp";
 import {defer} from "@lodestar/utils";
 import {nativeProtocols} from "../../../../src/network/core/native/protocols.js";
@@ -36,6 +36,38 @@ it("maps native admission refusal to local request rate limiting", async () => {
       {}
     )
   ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
+});
+
+it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
+  const key = await generateKeyPair("secp256k1");
+  const config = servingConfig();
+  const failure = Object.assign(new Error("empty"), {
+    code: "NetworkRequestFailed",
+    reason: "empty_response",
+    phase: "response",
+    detail: null,
+    context: null,
+    peerStatus: null,
+    peerMessage: null,
+  });
+  const response: AsyncIterableIterator<NativeResponseChunk> = {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(failure),
+  };
+  const iterator = outgoingNativeRequest(
+    {request: vi.fn(() => response)},
+    nativeProtocols(config, config.getForkName(0)),
+    {
+      peerId: peerIdFromPublicKey(key.publicKey).toString(),
+      method: ReqRespMethod.BeaconBlocksByRoot,
+      versions: [2],
+      requestData: new Uint8Array(32),
+    },
+    {}
+  );
+  await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.EMPTY_RESPONSE}});
 });
 
 async function incoming() {

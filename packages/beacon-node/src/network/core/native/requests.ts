@@ -53,6 +53,9 @@ function requestError(error: unknown): unknown {
             : RequestErrorCode.RESP_TIMEOUT,
     });
   }
+  if (native.reason === "empty_response") {
+    return new RequestError({code: RequestErrorCode.EMPTY_RESPONSE});
+  }
   if (["invalid_response", "too_many_chunks", "unknown_context"].includes(native.reason)) {
     return new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: native.reason});
   }
