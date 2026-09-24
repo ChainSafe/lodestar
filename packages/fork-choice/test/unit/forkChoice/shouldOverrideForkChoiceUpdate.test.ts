@@ -161,6 +161,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         rootHex: genesisBlock.blockRoot,
       },
       balances: new Uint16Array(Array(32).fill(150)),
+      totalBalance: 32 * 150,
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
@@ -172,7 +173,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
     },
-    justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
+    justifiedBalancesGetter: () => ({balances: new Uint16Array(Array(32).fill(150)), totalBalance: 32 * 150}),
     equivocatingIndices: new Set(),
     confirmedRoot: genesisBlock.blockRoot,
     previousEpochObservedJustifiedCheckpoint: {

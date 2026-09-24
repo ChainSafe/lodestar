@@ -24,6 +24,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {getJustifiedBalances} from "../balancesCache.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
@@ -101,7 +102,7 @@ export function initializeForkChoiceFromFinalizedState(
     epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
   };
 
-  const justifiedBalances = state.getEffectiveBalanceIncrementsZeroInactive();
+  const justifiedBalances = getJustifiedBalances(state);
 
   // forkchoiceConstructor is only used for some test cases
   // production code use ForkChoice constructor directly
@@ -206,7 +207,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   logger?.warn("Initializing fork choice from unfinalized state", logCtx);
 
   // this is not the justified state, but there is no other ways to get justified balances
-  const justifiedBalances = unfinalizedState.getEffectiveBalanceIncrementsZeroInactive();
+  const justifiedBalances = getJustifiedBalances(unfinalizedState);
 
   const isForkPostGloas = computeEpochAtSlot(unfinalizedState.slot) >= config.GLOAS_FORK_EPOCH;
 

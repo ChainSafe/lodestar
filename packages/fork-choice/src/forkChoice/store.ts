@@ -2,7 +2,7 @@ import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-tran
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.js";
-import {CheckpointWithBalance, CheckpointWithTotalBalance} from "./interface.js";
+import {CheckpointWithTotalBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -13,6 +13,12 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
+export type JustifiedBalancesWithTotal = {
+  balances: JustifiedBalances;
+  /** `get_total_active_balance` by increment, unlike `balances` it counts active slashed validators */
+  totalBalance: number;
+};
+
 /**
  * Returns the justified balances of checkpoint.
  * MUST not throw an error in any case, related to cache miss. Either trigger regen or approximate from a close state.
@@ -22,7 +28,7 @@ export type JustifiedBalances = EffectiveBalanceIncrements;
 export type JustifiedBalancesGetter = (
   checkpoint: CheckpointWithHex,
   blockState: IBeaconStateView
-) => JustifiedBalances;
+) => JustifiedBalancesWithTotal;
 
 /**
  * Approximates the `Store` in "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -39,8 +45,8 @@ export type JustifiedBalancesGetter = (
 export interface IForkChoiceStore extends IFastConfirmationStore {
   currentSlot: Slot;
   get justified(): CheckpointWithTotalBalance;
-  set justified(justified: CheckpointWithBalance);
-  unrealizedJustified: CheckpointWithBalance;
+  set justified(justified: CheckpointWithTotalBalance);
+  unrealizedJustified: CheckpointWithTotalBalance;
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
@@ -53,7 +59,7 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
  */
 export class ForkChoiceStore implements IForkChoiceStore {
   private _justified: CheckpointWithTotalBalance;
-  unrealizedJustified: CheckpointWithBalance;
+  unrealizedJustified: CheckpointWithTotalBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
@@ -78,7 +84,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     currentSlot: Slot,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
-    justifiedBalances: EffectiveBalanceIncrements,
+    justifiedBalances: JustifiedBalancesWithTotal,
     justifiedBalancesGetter: JustifiedBalancesGetter,
     stateGetter: ForkChoiceStateGetter,
     private readonly events?: {
@@ -92,8 +98,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this.stateGetter = stateGetter;
     const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
-      balances: justifiedBalances,
-      totalBalance: computeTotalBalance(justifiedBalances),
+      balances: justifiedBalances.balances,
+      totalBalance: justifiedBalances.totalBalance,
     };
     this._justified = justified;
     this.unrealizedJustified = justified;
@@ -104,7 +110,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     // the spec's get_fast_confirmation_store() behavior.
     const finalizedCheckpointWithHex = toCheckpointWithHex(finalizedCheckpoint);
     const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithHex});
-    const finalizedBalances = finalizedState?.effectiveBalanceIncrements ?? justifiedBalances;
+    const finalizedBalances = finalizedState?.effectiveBalanceIncrements ?? justifiedBalances.balances;
     const anchorRoot = finalizedCheckpointWithHex.rootHex;
     this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
     this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
@@ -120,8 +126,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
   get justified(): CheckpointWithTotalBalance {
     return this._justified;
   }
-  set justified(justified: CheckpointWithBalance) {
-    this._justified = {...justified, totalBalance: computeTotalBalance(justified.balances)};
+  set justified(justified: CheckpointWithTotalBalance) {
+    this._justified = justified;
     this.events?.onJustified(justified.checkpoint);
   }
 

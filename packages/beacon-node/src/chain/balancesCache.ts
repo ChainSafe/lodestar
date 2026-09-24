@@ -1,5 +1,5 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {EffectiveBalanceIncrements, IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {CheckpointWithHex, JustifiedBalancesWithTotal} from "@lodestar/fork-choice";
+import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
@@ -9,8 +9,17 @@ const MAX_BALANCE_CACHE_SIZE = 4;
 type BalancesCacheItem = {
   rootHex: RootHex;
   epoch: Epoch;
-  balances: EffectiveBalanceIncrements;
+  justifiedBalances: JustifiedBalancesWithTotal;
 };
+
+export function getJustifiedBalances(state: IBeaconStateView): JustifiedBalancesWithTotal {
+  const {effectiveBalanceIncrements} = state;
+  let totalBalance = 0;
+  for (const index of state.getCurrentShuffling().activeIndices) {
+    totalBalance += effectiveBalanceIncrements[index];
+  }
+  return {balances: state.getEffectiveBalanceIncrementsZeroInactive(), totalBalance};
+}
 
 /**
  * Cache EffectiveBalanceIncrements of checkpoint blocks
@@ -35,12 +44,12 @@ export class CheckpointBalancesCache {
         this.items.shift();
       }
       // expect to reach this once per epoch
-      this.items.push({epoch, rootHex: epochBoundaryRoot, balances: state.getEffectiveBalanceIncrementsZeroInactive()});
+      this.items.push({epoch, rootHex: epochBoundaryRoot, justifiedBalances: getJustifiedBalances(state)});
     }
   }
 
-  get(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
+  get(checkpoint: CheckpointWithHex): JustifiedBalancesWithTotal | undefined {
     const {rootHex, epoch} = checkpoint;
-    return this.items.find((item) => item.epoch === epoch && item.rootHex === rootHex)?.balances;
+    return this.items.find((item) => item.epoch === epoch && item.rootHex === rootHex)?.justifiedBalances;
   }
 }

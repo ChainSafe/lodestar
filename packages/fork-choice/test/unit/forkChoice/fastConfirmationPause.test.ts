@@ -57,10 +57,10 @@ describe("fast confirmation pause/resume", () => {
     return {
       currentSlot: genesisSlot + 1,
       justified: {checkpoint, balances: new Uint16Array([32]), totalBalance: 32},
-      unrealizedJustified: {checkpoint, balances: new Uint16Array([32])},
+      unrealizedJustified: {checkpoint, balances: new Uint16Array([32]), totalBalance: 32},
       finalizedCheckpoint: checkpoint,
       unrealizedFinalizedCheckpoint: checkpoint,
-      justifiedBalancesGetter: () => new Uint16Array([32]),
+      justifiedBalancesGetter: () => ({balances: new Uint16Array([32]), totalBalance: 32}),
       equivocatingIndices: new Set(),
       confirmedRoot: finalizedRoot,
       previousEpochObservedJustifiedCheckpoint: checkpoint,

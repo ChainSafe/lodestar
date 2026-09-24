@@ -107,10 +107,10 @@ export function makeStore({
   return {
     currentSlot: headSlot + 1,
     justified: {checkpoint, balances, totalBalance: VALIDATOR_COUNT * BALANCE_INCREMENT},
-    unrealizedJustified: {checkpoint, balances},
+    unrealizedJustified: {checkpoint, balances, totalBalance: VALIDATOR_COUNT * BALANCE_INCREMENT},
     finalizedCheckpoint: checkpoint,
     unrealizedFinalizedCheckpoint: checkpoint,
-    justifiedBalancesGetter: () => balances,
+    justifiedBalancesGetter: () => ({balances, totalBalance: VALIDATOR_COUNT * BALANCE_INCREMENT}),
     equivocatingIndices,
     confirmedRoot: genesisRoot,
     previousEpochObservedJustifiedCheckpoint: checkpoint,
