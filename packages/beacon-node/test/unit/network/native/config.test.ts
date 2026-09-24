@@ -224,9 +224,6 @@ describe("native configuration boundary", () => {
     ]);
     expect(application.discovery?.advertisement).toMatchObject({udp: 9000, udp6: 19000});
     expect(node.create({discv5, localMultiaddrs: [localMultiaddrs[1]]}).discovery?.fixed).toEqual({});
-    expect(() =>
-      node.create({discv5, localMultiaddrs: [localMultiaddrs[1]], native: {discovery: {fixed: {quic6: 19001}}}})
-    ).toThrow("no listener");
     expect(
       node.create({discv5: {...discv5, bindAddrs: {ip4: discv5.bindAddrs.ip4}}, localMultiaddrs}).discovery
         ?.advertisement?.ip6

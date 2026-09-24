@@ -126,11 +126,7 @@ export function nativeLocalState(
   };
 }
 
-function discovery(
-  opts: NetworkOptions,
-  key: PrivateKey,
-  listeners: readonly IpEndpoint[]
-): NativeDiscoveryConfig | null {
+function discovery(opts: NetworkOptions, key: PrivateKey): NativeDiscoveryConfig | null {
   if (!opts.discv5) return null;
   const {bindAddrs, bootEnrs, config} = opts.discv5;
   if (config && Object.keys(config).length > 0) {
@@ -183,16 +179,6 @@ function discovery(
     for (const portKey of [udpKey, quicKey]) {
       const port = explicit?.[portKey];
       if (port !== undefined) fixed[portKey] = nativeInteger(port, "advertised port", 65535, 1);
-    }
-    if (
-      ((ip !== undefined || explicit?.[udpKey] !== undefined || explicit?.[quicKey] !== undefined) &&
-        !bind.some((endpoint) => endpoint.family === family)) ||
-      (explicit?.[quicKey] !== undefined && !listeners.some((endpoint) => endpoint.family === family))
-    ) {
-      throw new NativeNetworkError({
-        code: NativeNetworkErrorCode.CONFIGURATION,
-        resource: "fixed address family has no listener",
-      });
     }
   }
   const initialText = opts.native?.discovery?.initialEnr;
@@ -278,16 +264,12 @@ function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
   nativeInteger(opts.targetPeers, "target peers", opts.maxPeers - 1, 1);
   nativeInteger(opts.targetGroupPeers, "target group peers", opts.maxPeers, 1);
   nativeInteger(opts.slotsToSubscribeBeforeAggregatorDuty, "aggregator lookahead", 2 * SLOTS_PER_EPOCH);
-  nativeInteger(config.MAX_PAYLOAD_SIZE, "max payload", 10 * MiB, 1);
   nativeInteger(config.SUBNETS_PER_NODE, "long lived subnets", ATTESTATION_SUBNET_COUNT, 1);
   nativeInteger(config.EPOCHS_PER_SUBNET_SUBSCRIPTION, "subnet subscription epochs", Number.MAX_SAFE_INTEGER, 1);
-  nativeInteger(config.NUMBER_OF_CUSTODY_GROUPS, "custody group count", 128, 1);
-  nativeInteger(config.SAMPLES_PER_SLOT, "sampling groups", config.NUMBER_OF_CUSTODY_GROUPS, 1);
   nativeInteger(config.DATA_COLUMN_SIDECAR_SUBNET_COUNT, "column subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT, "blob subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA, "electra blob subnets", 128, 1);
   nativeInteger(config.forkBoundariesAscendingEpochOrder.length, "fork boundaries", 64, 1);
-  nativeInteger(config.BLOB_SCHEDULE.length, "blob schedule", 62);
   nativeInteger(
     opts.directPeers?.length ?? 0,
     "direct peers",
@@ -388,7 +370,7 @@ export function createNativeConfig(
   const application: NativeApplicationConfig = {
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
-    discovery: discovery(opts, key, listeners),
+    discovery: discovery(opts, key),
     initialSlot: BigInt(Math.max(0, slot)),
     local,
     serveLightClients: !(opts.disableLightClientServer ?? false),

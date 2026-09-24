@@ -326,44 +326,12 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    const diagnostics = this.runtime.diagnostics();
-    const gossip = diagnostics.gossip;
-    const gauges = {
-      network_requested_bytes: diagnostics.liveNativeRequestedBytes,
-      bridge_requested_bytes: diagnostics.liveBridgeRequestedBytes,
-      network_peers: diagnostics.peerCount,
-      host_gossip_environment_items: gossip.executing,
-      host_gossip_environment_backing_bytes: gossip.executingBytes,
-      host_gossip_active_items: gossip.executing,
-      gossip_processor_queued_items: diagnostics.gossip.queued,
-      gossip_processor_waiting_items: diagnostics.gossip.waiting,
-      gossip_processor_checking_items: diagnostics.gossip.checking,
-      gossip_processor_executing_items: diagnostics.gossip.executing,
-      gossip_processor_fixed_payload_bytes: diagnostics.gossip.fixedPayloadBytes,
-      requests_occupied: diagnostics.requests.occupied,
-      incoming_occupied: diagnostics.incoming.occupied,
-    };
     const counters = {
       log_delivery_errors_total: this.logs?.deliveryErrors ?? 0,
       peer_status_range_refusals_total: this.peers.statusRefusals,
-      gossip_messages_copied_total: diagnostics.gossip.messagesCopied,
-      gossip_processor_kind_refusals_total: diagnostics.gossip.kindRefusals,
-      gossip_processor_source_refusals_total: diagnostics.gossip.sourceRefusals,
-      gossip_processor_freshness_replacements_total: diagnostics.gossip.freshnessReplacements,
-      gossip_processor_dependency_refusals_total: diagnostics.gossip.dependencyRefusals,
-      gossip_processor_slot_refusals_total: diagnostics.gossip.slotRefusals,
-      gossip_verdicts_applied_total:
-        diagnostics.gossip.reportsAppliedAccept +
-        diagnostics.gossip.reportsAppliedReject +
-        diagnostics.gossip.reportsAppliedIgnore,
-      request_chunks_copied_total: diagnostics.requests.chunksCopied,
-      response_chunks_written_total: diagnostics.incoming.chunksWritten,
     };
     return [
       this.runtime.getMetrics(),
-      ...Object.entries(gauges).map(
-        ([name, value]) => `# TYPE lodestar_native_${name} gauge\nlodestar_native_${name} ${value}\n`
-      ),
       ...Object.entries(counters).map(
         ([name, value]) => `# TYPE lodestar_native_${name} counter\nlodestar_native_${name} ${value}\n`
       ),

@@ -401,7 +401,7 @@ describe("native Lodestar integration", () => {
             expect(metrics).toContain("lodestar_native_gossip_scored_peers 1\n");
             expect(metrics).toMatch(/lodestar_native_quic_udp_sent_bytes_total [1-9]\d*\n/);
             expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
-            expect(metrics).toContain("lodestar_native_network_peers 1\n");
+            expect(metrics).toContain("libp2p_peers 1\n");
             expect(metrics).toMatch(
               /lodestar_native_logs_emitted_total\{scope="network_reqresp",level="debug"\} [1-9]\d*\n/
             );
