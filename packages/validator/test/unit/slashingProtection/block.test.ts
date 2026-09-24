@@ -4,7 +4,7 @@ import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
+import {defer, sleep, toHex} from "@lodestar/utils";
 import {BlockBySlotRepository} from "../../../src/slashingProtection/block/index.js";
 import {InvalidBlockErrorCode, SlashingProtection} from "../../../src/slashingProtection/index.js";
 import {testLogger} from "../../utils/logger.js";
@@ -95,6 +95,43 @@ describe("SlashingProtection overlapping block proposal checks", () => {
       {status: "fulfilled", value: undefined},
     ]);
     expect(await blocks.getAll(pubkey)).toEqual([conflict]);
+  });
+
+  it("does not lose an imported block when an import overlaps a check for the same slot", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+    const pending = slashingProtection.checkAndInsertBlockProposal(pubkey, block);
+    await started.promise;
+
+    const genesisValidatorsRoot = ssz.Root.defaultValue();
+    const imported = slashingProtection.importInterchange(
+      {
+        metadata: {interchange_format_version: "5", genesis_validators_root: toHex(genesisValidatorsRoot)},
+        data: [
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [{slot: String(conflict.slot), signing_root: toHex(conflict.signingRoot)}],
+            signed_attestations: [],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    // An import that does not wait for the pending check writes its block before the check does
+    await Promise.race([imported, sleep(10)]);
+    release.resolve();
+    await Promise.all([pending, imported]);
+
+    expect(await blocks.getAll(pubkey)).toEqual([{slot: block.slot, signingRoot: Buffer.alloc(32)}]);
+    await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, conflict)).rejects.toMatchObject({
+      type: {code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL},
+    });
   });
 
   it("does not block other validators while a write is pending", async () => {
