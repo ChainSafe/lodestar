@@ -118,19 +118,25 @@ describe("native configuration boundary", () => {
     expect(() => node.create(opts)).toThrow(NativeNetworkError);
   });
 
-  it("resolves dial headroom from the difference between target and maximum", async () => {
+  it("resolves dial concurrency independently of peer headroom", async () => {
     const node = await fixture();
-    for (const [maxPeers, targetPeers, expected] of [
-      [210, 200, 4],
-      [201, 200, 1],
-      [256, 255, 1],
+    for (const [maxPeers, targetPeers] of [
+      [210, 200],
+      [201, 200],
+      [256, 255],
     ]) {
       const application = node.create({maxPeers, targetPeers});
       try {
-        expect(application.resources.dialingCapacity).toBe(expected);
+        expect(application.resources.dialingCapacity).toBe(32);
       } finally {
         application.identitySecretKey.fill(0);
       }
+    }
+    const small = node.create({native: {profile: "small"}});
+    try {
+      expect(small.resources.dialingCapacity).toBe(4);
+    } finally {
+      small.identitySecretKey.fill(0);
     }
   });
 

@@ -369,7 +369,7 @@ export function createNativeConfig(
       outboundReserve: Math.min(small ? 4 : 32, opts.targetPeers),
       connectionCapacity: connections,
       handshakingCapacity: Math.min(connections, small ? 8 : 32),
-      dialingCapacity: Math.min(4, opts.maxPeers - opts.targetPeers),
+      dialingCapacity: small ? 4 : 32,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? (small ? 64 : 512) * MiB,
       nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 512 : 768) * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
