@@ -669,9 +669,9 @@ export class ValidatorStore {
     currentSlot: Slot,
     logger?: LoggerVc
   ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    // Make sure the block is for the proposal slot to avoid potential attacks.
+    if (blindedOrFull.slot !== currentSlot) {
+      throw Error(`Not signing block with slot ${blindedOrFull.slot} different from proposal slot ${currentSlot}`);
     }
 
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
@@ -1187,6 +1187,11 @@ export class ValidatorStore {
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
+    }
+    if (data.target.epoch !== computeEpochAtSlot(data.slot)) {
+      throw Error(
+        `Inconsistent attestation data during signing: att.target.epoch ${data.target.epoch} != epoch of att.slot ${data.slot}`
+      );
     }
 
     const forkSeq = this.config.getForkSeq(data.slot);
