@@ -50,8 +50,9 @@ export function processSlashings(
   );
   const increment = EFFECTIVE_BALANCE_INCREMENT;
 
-  const penaltyPerEffectiveBalanceIncrement = Math.floor(
-    (adjustedTotalSlashingBalanceByIncrement * increment) / totalBalanceByIncrement
+  // total slashing balance can exceed Number.MAX_SAFE_INTEGER at mainnet scale, keep the intermediate math in bigint
+  const penaltyPerEffectiveBalanceIncrement = Number(
+    (BigInt(adjustedTotalSlashingBalanceByIncrement) * BigInt(increment)) / BigInt(totalBalanceByIncrement)
   );
   const penalties: number[] = [];
 
