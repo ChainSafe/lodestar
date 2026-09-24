@@ -29,7 +29,6 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -652,7 +651,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     const postState = new NativeBeaconStateView(
       this.binding.stateTransition(input.block, computeNewStateRootStateTransitionOpts, modules)
     );
-    return getComputeNewStateRootResult(postState, modules);
+    return getComputeNewStateRootResult(postState);
   }
 
   stateTransition(
@@ -663,12 +662,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return new NativeBeaconStateView(this.binding.stateTransition(signedBlock, options, modules));
   }
 
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.processSlots(slot, epochTransitionCacheOpts, modules));
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
+    return new NativeBeaconStateView(this.binding.processSlots(slot, opts, modules));
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────

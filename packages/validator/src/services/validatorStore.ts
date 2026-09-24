@@ -475,7 +475,7 @@ export class ValidatorStore {
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
    * builders. A value omitted on an entry takes this key's default, then the validator
-   * client's configuration, while omitted auth data is derived from the entry url instead.
+   * client's configuration, while omitted auth data is derived from the entry url hostname instead.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -493,7 +493,8 @@ export class ValidatorStore {
     const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
     return builders.map((entry) => ({
       url: entry.url,
-      authData: entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(entry.url),
+      authData:
+        entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(new URL(entry.url).hostname),
       builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
       maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
       minBid: entry.minBid ?? keyMinBid,
@@ -544,7 +545,9 @@ export class ValidatorStore {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
       const authData =
-        entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(new TextEncoder().encode(entry.url));
+        entry.authData !== undefined
+          ? toHex(fromHex(entry.authData))
+          : toHex(new TextEncoder().encode(new URL(entry.url).hostname));
       const entryKey = `${entry.url}|${authData}`;
       if (seenEntries.has(entryKey)) {
         throw Error(`Duplicate builder entry url=${entry.url} authData=${authData}`);

@@ -252,7 +252,7 @@ describe("ValidatorStore", () => {
     const entries = validatorStore.getResolvedBuilderEntries(pubkey);
     expect(entries).toHaveLength(2);
     // Omitted auth data derives from the entry url, omitted min bid takes the key default
-    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
     expect(entries[0].minBid).toBe(10n);
     expect(entries[0].maxExecutionPayment).toBe(5n);
     // Per-entry values win over the key defaults
@@ -279,6 +279,17 @@ describe("ValidatorStore", () => {
     expect(validatorStore.getBuilderMinBid(pubkey)).toBe(0n);
   });
 
+  it("Should derive an omitted auth data from the url hostname", () => {
+    const pubkey = toHexString(pubkeys[0]);
+    validatorStore.setBuilderConfig(pubkey, {
+      builders: [{url: "https://Builder.Example.com:443/bids/?x=1"}, {url: "https://builder.example.com"}],
+    });
+
+    const entries = validatorStore.getResolvedBuilderEntries(pubkey);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
+    expect(entries[0].authData).toEqual(entries[1].authData);
+  });
+
   it("Should resolve the validator client's default builder entries with key defaults applied", async () => {
     const pubkey = toHexString(pubkeys[0]);
     const builderUrl = "https://builder.example.com";
@@ -301,7 +312,7 @@ describe("ValidatorStore", () => {
     // A key without its own builders follows the default entries, its key defaults still apply
     const entries = store.getResolvedBuilderEntries(pubkey);
     expect(entries).toHaveLength(2);
-    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
     expect(entries[0].minBid).toBe(30n);
     expect(entries[0].builderBoostFactor).toBe(150n);
     // Explicit auth data (e.g. from a --builder.urls fragment) is used as is

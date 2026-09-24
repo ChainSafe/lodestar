@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {processEpoch} from "../../../src/epoch/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";
-import {processHistoricalRootsUpdate} from "../../../src/epoch/processHistoricalRootsUpdate.js";
+import {processHistoricalSummariesUpdate} from "../../../src/epoch/processHistoricalSummariesUpdate.js";
 import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";
 import {processParticipationFlagUpdates} from "../../../src/epoch/processParticipationFlagUpdates.js";
@@ -26,7 +26,7 @@ import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(capellaState.epoch) - 1;
 const stateId = `${capellaState.network}_e${capellaState.epoch}`;
-const fork = ForkSeq.altair;
+const fork = ForkSeq.capella;
 
 describe(`capella processEpoch - ${stateId}`, () => {
   setBenchOpts({
@@ -58,11 +58,11 @@ describe(`capella processEpoch - ${stateId}`, () => {
   describe(`capella processEpoch steps - ${stateId}`, () => {
     setBenchOpts({noThreshold: true});
 
-    benchmarkAltairEpochSteps(stateOg, stateId);
+    benchmarkCapellaEpochSteps(stateOg, stateId);
   });
 });
 
-function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>, stateId: string): void {
+function benchmarkCapellaEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>, stateId: string): void {
   const cache = beforeValue(() => beforeProcessEpoch(stateOg.value));
 
   // const getPerfState = (): CachedBeaconStateCapella => {
@@ -139,9 +139,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   });
 
   bench({
-    id: `${stateId} - capella processHistoricalRootsUpdate`,
+    id: `${stateId} - capella processHistoricalSummariesUpdate`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processHistoricalRootsUpdate(state, cache.value),
+    fn: (state) => processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, cache.value),
   });
 
   bench({
