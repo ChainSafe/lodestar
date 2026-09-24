@@ -10,7 +10,6 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
@@ -538,13 +537,8 @@ export async function importBlock(
       if (this.emitter.listenerCount(routes.events.EventType.block)) {
         let gloasFields: undefined | {blockHash: string; builderIndex: BuilderIndex};
         if (isGloasBeaconBlock(block.message)) {
-          const builderIndex = block.message.body.signedExecutionPayloadBid.message.builderIndex;
-          if (builderIndex !== BUILDER_INDEX_SELF_BUILD) {
-            gloasFields = {
-              blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
-              builderIndex,
-            };
-          }
+          const bid = block.message.body.signedExecutionPayloadBid.message;
+          gloasFields = {blockHash: toRootHex(bid.blockHash), builderIndex: bid.builderIndex};
         }
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
