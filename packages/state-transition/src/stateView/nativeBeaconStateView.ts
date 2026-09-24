@@ -1,5 +1,6 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
+import type {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
@@ -23,38 +24,38 @@ import {
   electra,
   fulu,
   gloas,
+  isBlindedBeaconBlock,
   phase0,
   rewards,
+  ssz,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
+import {EMPTY_SIGNATURE} from "../constants/constants.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
-  ComputeNewStateRootInput,
+  BlockSTFInput,
   ComputeNewStateRootResult,
   IBeaconStateView,
   IBeaconStateViewGloas,
   IBeaconStateViewLatestFork,
   IBeaconStateViewNative,
-  isStatePostGloas,
 } from "./interface.js";
 
 /**
  * Wraps a native binding (the auto-generated JS interface produced by a `.node`
  * file) and exposes it as a fully-conformant `IBeaconStateViewLatestFork`.
  *
- * The binding is typed `IBeaconStateViewNative` — identical to
- * `IBeaconStateViewLatestFork` except `executionPayloadAvailability` is a raw
- * `{uint8Array, bitLen}` POJO. The `executionPayloadAvailability` getter lifts
- * that POJO back to a `BitArray` so beacon-node consumers see no difference from
- * the TS-side `BeaconStateView`.
+ * The binding is typed `IBeaconStateViewNative`. This type models FFI-specific
+ * inputs and outputs, such as serialized blocks and typed arrays. The wrapper
+ * converts those values to the forms used by `IBeaconStateViewLatestFork`.
  *
  * Every getter that returns a value stable for the view's lifetime is cached so
  * the binding is hit at most once per field per view. Only mutable counters
@@ -113,12 +114,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _pendingConsolidationsCount: number | null = null;
   // fulu
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
-  // gloas
-  private _executionPayloadAvailability: BitArray | null = null;
-  private _latestBlockHash: Bytes32 | null = null;
-  private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
-  private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
-
   // Per-argument caches for argument-taking methods. The binding is treated as
   // immutable for the view's lifetime, so a given argument always yields the
   // same result. Maps grow only with touched arguments — typical call patterns
@@ -137,8 +132,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getIndexedSyncCommitteeAtEpoch = new Map<Epoch, SyncCommitteeCache>();
   private readonly _getIndexedSyncCommittee = new Map<Slot, SyncCommitteeCache>();
   private readonly _getSingleProof = new Map<bigint, Uint8Array[]>();
-  private readonly _getEpochPTCs = new Map<Epoch, Uint32Array[]>();
-  private readonly _getBuilder = new Map<BuilderIndex, gloas.Builder>();
 
   // No-arg method caches
   private _getPreviousShuffling: EpochShuffling | null = null;
@@ -146,7 +139,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _getNextShuffling: EpochShuffling | null = null;
   private _getEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   private _getAllValidators: phase0.Validator[] | null = null;
-  private _getBuildersLength: number | null = null;
   private _getAllBalances: number[] | null = null;
   private _getLatestWeakSubjectivityCheckpointEpoch: Epoch | null = null;
   private _getFinalizedRootProof: Uint8Array[] | null = null;
@@ -172,17 +164,17 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     processedValidatorSweepCount: number;
   } | null = null;
 
-  constructor(readonly binding: IBeaconStateViewNative) {}
+  constructor(
+    private readonly config: BeaconConfig,
+    readonly binding: IBeaconStateViewNative
+  ) {}
 
-  // Binding returns pojo object {uint8Array: Uint8Array; bitLen: number}
-  // this class wrap it with BitArray to conform to the api
+  release(): void {
+    this.binding.release();
+  }
+
   get executionPayloadAvailability(): BitArray {
-    if (this._executionPayloadAvailability === null) {
-      const pojo = this.binding.executionPayloadAvailability;
-      this._executionPayloadAvailability = new BitArray(pojo.uint8Array, pojo.bitLen);
-    }
-
-    return this._executionPayloadAvailability;
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   // ─── phase0 ──────────────────────────────────────────────────────────────
@@ -492,8 +484,19 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.proposerRewards;
   }
 
-  computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
-    return this.binding.computeBlockRewards(block, proposerRewards);
+  async computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
+    const isBlinded = isBlindedBeaconBlock(block);
+    const signedBlockBytes = isBlinded
+      ? this.config.getPostBellatrixForkTypes(block.slot).SignedBlindedBeaconBlock.serialize({
+          message: block as BlindedBeaconBlock,
+          signature: EMPTY_SIGNATURE,
+        } as SignedBlindedBeaconBlock)
+      : this.config.getForkTypes(block.slot).SignedBeaconBlock.serialize({
+          message: block,
+          signature: EMPTY_SIGNATURE,
+        } as SignedBeaconBlock);
+
+    return this.binding.computeBlockRewards(signedBlockBytes, isBlinded, proposerRewards);
   }
 
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
@@ -592,7 +595,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts));
+    return new NativeBeaconStateView(this.config, this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts));
   }
 
   toValue(): BeaconState {
@@ -647,23 +650,29 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
-  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
-    const postState = new NativeBeaconStateView(
-      this.binding.stateTransition(input.block, computeNewStateRootStateTransitionOpts, modules)
-    );
+  computeNewStateRoot(input: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = this.stateTransition(input, computeNewStateRootStateTransitionOpts, modules);
     return getComputeNewStateRootResult(postState);
   }
 
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block, ssz}: BlockSTFInput,
     options: StateTransitionOpts,
-    modules: StateTransitionModules
+    _modules: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.stateTransition(signedBlock, options, modules));
+    const isBlinded = isBlindedBeaconBlock(block.message);
+    const signedBlockBytes =
+      ssz ??
+      (isBlinded
+        ? this.config
+            .getPostBellatrixForkTypes(block.message.slot)
+            .SignedBlindedBeaconBlock.serialize(block as SignedBlindedBeaconBlock)
+        : this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block as SignedBeaconBlock));
+    return new NativeBeaconStateView(this.config, this.binding.stateTransition(signedBlockBytes, isBlinded, options));
   }
 
-  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.processSlots(slot, opts, modules));
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
+    return new NativeBeaconStateView(this.config, this.binding.processSlots(slot, opts));
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────
@@ -810,7 +819,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingDeposits(): electra.PendingDeposits {
     if (this._pendingDeposits === null) {
-      this._pendingDeposits = this.binding.pendingDeposits;
+      this._pendingDeposits = ssz.electra.PendingDeposits.deserialize(this.binding.pendingDeposits);
     }
     return this._pendingDeposits;
   }
@@ -824,7 +833,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this._pendingPartialWithdrawals === null) {
-      this._pendingPartialWithdrawals = this.binding.pendingPartialWithdrawals;
+      this._pendingPartialWithdrawals = ssz.electra.PendingPartialWithdrawals.deserialize(
+        this.binding.pendingPartialWithdrawals
+      );
     }
     return this._pendingPartialWithdrawals;
   }
@@ -838,7 +849,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingConsolidations(): electra.PendingConsolidations {
     if (this._pendingConsolidations === null) {
-      this._pendingConsolidations = this.binding.pendingConsolidations;
+      this._pendingConsolidations = ssz.electra.PendingConsolidations.deserialize(this.binding.pendingConsolidations);
     }
     return this._pendingConsolidations;
   }
@@ -854,86 +865,61 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get proposerLookahead(): fulu.ProposerLookahead {
     if (this._proposerLookahead === null) {
-      this._proposerLookahead = this.binding.proposerLookahead;
+      this._proposerLookahead = Array.from(this.binding.proposerLookahead);
     }
     return this._proposerLookahead;
   }
 
-  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
-    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
+  preVerifyBuilderDepositsPreGloas(
+    _maxBuilderDeposits: number,
+    _maxDurationMs: number
+  ): PreVerifyBuilderDepositsResult {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   clearPreGloasBuilderDepositCache(): void {
-    this.binding.clearPreGloasBuilderDepositCache();
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────
 
   get latestBlockHash(): Bytes32 {
-    if (this._latestBlockHash === null) {
-      this._latestBlockHash = this.binding.latestBlockHash;
-    }
-    return this._latestBlockHash;
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  // executionPayloadAvailability getter is defined near the top of the class.
-
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
-    if (this._latestExecutionPayloadBid === null) {
-      this._latestExecutionPayloadBid = this.binding.latestExecutionPayloadBid;
-    }
-    return this._latestExecutionPayloadBid;
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   get payloadExpectedWithdrawals(): capella.Withdrawal[] {
-    if (this._payloadExpectedWithdrawals === null) {
-      this._payloadExpectedWithdrawals = this.binding.payloadExpectedWithdrawals;
-    }
-    return this._payloadExpectedWithdrawals;
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  getBuilder(index: BuilderIndex): gloas.Builder {
-    let cached = this._getBuilder.get(index);
-    if (cached === undefined) {
-      cached = this.binding.getBuilder(index);
-      this._getBuilder.set(index, cached);
-    }
-    return cached;
+  getBuilder(_index: BuilderIndex): gloas.Builder {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
   getBuildersLength(): number {
-    if (this._getBuildersLength === null) {
-      this._getBuildersLength = this.binding.getBuildersLength();
-    }
-    return this._getBuildersLength;
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
-    return this.binding.canBuilderCoverBid(builderIndex, bidAmount);
+  canBuilderCoverBid(_builderIndex: BuilderIndex, _bidAmount: number): boolean {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  getEpochPTCs(epoch: Epoch): Uint32Array[] {
-    let cached = this._getEpochPTCs.get(epoch);
-    if (cached === undefined) {
-      cached = this.binding.getEpochPTCs(epoch);
-      this._getEpochPTCs.set(epoch, cached);
-    }
-    return cached;
+  getEpochPTCs(_epoch: Epoch): Uint32Array[] {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
-    return this.binding.getPayloadTimelinessCommittee(slot);
+  getPayloadTimelinessCommittee(_slot: Slot): Uint32Array {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
-    return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
+  getIndicesInPayloadTimelinessCommittee(_validatorIndex: ValidatorIndex, _slot: Slot): number[] {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
-  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
-    const view = new NativeBeaconStateView(this.binding.withParentPayloadApplied(executionRequests));
-    if (!isStatePostGloas(view)) {
-      throw new Error("Expected gloas state from withParentPayloadApplied");
-    }
-    return view;
+  withParentPayloadApplied(_executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
+    throw new Error("NativeBeaconStateView does not support Gloas");
   }
 }

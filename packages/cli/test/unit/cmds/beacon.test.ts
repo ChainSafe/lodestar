@@ -94,6 +94,17 @@ describe("cmds / beacon / args handler", () => {
     expect(network).toBe(networkName);
   });
 
+  it("rejects the native state view when Gloas is scheduled", async () => {
+    const paramsFile = path.join(testFilesDir, "gloas_config.yaml");
+    fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100})));
+
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Gloas"
+    );
+    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
+    await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
+  });
+
   it("resolves the data column directory independently of the database directory", async () => {
     const customDbDir = path.join(testFilesDir, "custom-db");
     const defaultResult = await runBeaconHandlerInit({dbDir: customDbDir});

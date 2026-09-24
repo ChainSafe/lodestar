@@ -1,6 +1,7 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
+import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
@@ -88,9 +89,12 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
     pubkeyCache.ensureCapacity(anchorState.validators.length + pubkeyCacheHeadroom);
     pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
-    const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
-      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+    if (args["chain.nativeStateTransition"]) {
+      bindings.config.set(beaconConfig, beaconConfig.genesisValidatorsRoot);
+    }
+    const anchorStateView = args["chain.nativeStateTransition"]
+      ? createBeaconStateView({nativeStateTransition: true, config: beaconConfig, stateBytes: anchorStateBytes})
+      : createBeaconStateView({nativeStateTransition: false, anchorState, config: beaconConfig, pubkeyCache});
 
     const node = await BeaconNode.init({
       opts: options,
@@ -240,6 +244,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
+
+  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
+    throw Error(
+      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+    );
+  }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }

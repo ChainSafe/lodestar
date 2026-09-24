@@ -17,7 +17,7 @@ export async function getNearestState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  nativeStateView: boolean
+  nativeStateTransition: boolean
 ): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
@@ -25,9 +25,7 @@ export async function getNearestState(
   }
 
   const stateBytes = stateBytesArr[0];
-  return nativeStateView
-    ? createBeaconStateViewForHistoricalRegen({useNative: true, stateBytes})
-    : createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes});
+  return createBeaconStateViewForHistoricalRegen({nativeStateTransition: nativeStateTransition, config, stateBytes});
 }
 
 /**
@@ -37,13 +35,13 @@ export async function getHistoricalState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  nativeStateView: boolean,
+  nativeStateTransition: boolean,
   metrics?: HistoricalStateRegenMetrics
 ): Promise<Uint8Array> {
   const regenTimer = metrics?.regenTime.startTimer();
 
   const loadStateTimer = metrics?.loadStateTime.startTimer();
-  let state = await getNearestState(slot, config, db, nativeStateView).catch((e) => {
+  let state = await getNearestState(slot, config, db, nativeStateTransition).catch((e) => {
     metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
     throw e;
   });
@@ -54,7 +52,7 @@ export async function getHistoricalState(
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     try {
       state = state.stateTransition(
-        block,
+        {block},
         {
           verifyProposer: false,
           verifySignatures: false,

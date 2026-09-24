@@ -70,6 +70,7 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {nativeStateTransition} from "./stateTransition.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -840,6 +841,7 @@ export const forkChoiceTestRunner =
         // integrated
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
+          (nativeStateTransition && (name.includes("gloas") || name.includes("heze"))) ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
           ((name.includes("gloas") || name.includes("heze")) &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||

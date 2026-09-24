@@ -1,6 +1,12 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import {
+  init as initNativeMetrics,
+  registerLocalValidator as registerNativeLocalValidator,
+  scrapeMetrics as scrapeNativeMetrics,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -171,7 +177,13 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
+      if (opts.chain.nativeStateTransition) {
+        initNativeMetrics();
+      }
+
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
+        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
+      });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db, metrics.flatFileStore);
@@ -185,7 +197,13 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            opts.validatorMonitor,
+            opts.chain.nativeStateTransition
+              ? {
+                  registerLocalValidator: registerNativeLocalValidator,
+                  unregisterLocalValidator: unregisterNativeLocalValidator,
+                }
+              : null
           )
         : null;
 
@@ -303,7 +321,17 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
+          getOtherMetrics: async () => {
+            const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
+            if (opts.chain.nativeStateTransition) {
+              try {
+                otherMetrics.push(scrapeNativeMetrics());
+              } catch (e) {
+                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+              }
+            }
+            return otherMetrics;
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

@@ -430,6 +430,7 @@ export class BeaconChain implements IBeaconChain {
       blockStateCache,
       checkpointStateCache,
       seenBlockInputCache: this.seenBlockInputCache,
+      serializedCache: this.serializedCache,
       db,
       metrics,
       validatorMonitor,
