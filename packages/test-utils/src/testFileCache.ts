@@ -25,7 +25,7 @@ export function getNetworkConfig(network: NetworkName): ChainForkConfig {
 }
 
 /**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ * Get a state fixture from `cacheDir`, downloading it from `TEST_FILES_BASE_URL` on first use. Cached by network and slot so it is only downloaded once.
  */
 export async function getNetworkCachedStateBytes(
   network: NetworkName,
@@ -46,30 +46,6 @@ export async function getNetworkCachedStateBytes(
 
   fs.writeFileSync(filepath, stateSsz);
   return {config, bytes: stateSsz};
-}
-
-/**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
- */
-export async function getNetworkCachedBlockBytes(
-  network: NetworkName,
-  slot: number,
-  cacheDir: string
-): Promise<NetworkCachedBytes> {
-  const config = getNetworkConfig(network);
-  const fileId = `block_${network}_${slot}.ssz`;
-
-  const filepath = path.join(cacheDir, fileId);
-
-  if (fs.existsSync(filepath)) {
-    const blockSsz = fs.readFileSync(filepath);
-    return {config, bytes: blockSsz};
-  }
-
-  const blockSsz = await downloadTestFile(fileId);
-
-  fs.writeFileSync(filepath, blockSsz);
-  return {config, bytes: blockSsz};
 }
 
 async function downloadTestFile(fileId: string): Promise<Uint8Array> {
