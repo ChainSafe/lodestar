@@ -1,6 +1,6 @@
-import {BLSPubkey} from "@lodestar/types";
+import {BLSPubkey, Slot} from "@lodestar/types";
 import {SlashingProtectionBlock} from "../types.js";
-import {isEqualNonZeroRoot} from "../utils.js";
+import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
@@ -78,7 +78,17 @@ export class SlashingProtectionBlockService {
    * Interchange import / export functionality
    */
   async importBlocks(pubkey: BLSPubkey, blocks: SlashingProtectionBlock[]): Promise<void> {
-    await this.blockBySlot.set(pubkey, blocks);
+    // Never replace a recorded block with a different signing root, a zero root refuses any block at that slot
+    const blocksBySlot = new Map<Slot, SlashingProtectionBlock>();
+    for (const block of blocks) {
+      const prevBlock = blocksBySlot.get(block.slot) ?? (await this.blockBySlot.get(pubkey, block.slot));
+      if (prevBlock === null || isEqualRoot(prevBlock.signingRoot, block.signingRoot)) {
+        blocksBySlot.set(block.slot, block);
+      } else {
+        blocksBySlot.set(block.slot, {slot: block.slot, signingRoot: ZERO_ROOT});
+      }
+    }
+    await this.blockBySlot.set(pubkey, Array.from(blocksBySlot.values()));
   }
 
   /**
