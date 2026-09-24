@@ -5,11 +5,13 @@ export enum InterchangeErrorErrorCode {
   UNSUPPORTED_FORMAT = "ERR_INTERCHANGE_UNSUPPORTED_FORMAT",
   UNSUPPORTED_VERSION = "ERR_INTERCHANGE_UNSUPPORTED_VERSION",
   GENESIS_VALIDATOR_MISMATCH = "ERR_INTERCHANGE_GENESIS_VALIDATOR_MISMATCH",
+  INVALID_VALUE = "ERR_INTERCHANGE_INVALID_VALUE",
 }
 
 type InterchangeErrorErrorType =
   | {code: InterchangeErrorErrorCode.UNSUPPORTED_FORMAT; format: string}
   | {code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION; version: string}
-  | {code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH; root: Root; expectedRoot: Root};
+  | {code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH; root: Root; expectedRoot: Root}
+  | {code: InterchangeErrorErrorCode.INVALID_VALUE; value: string};
 
 export class InterchangeError extends LodestarError<InterchangeErrorErrorType> {}
