@@ -3,7 +3,7 @@ name: Kurtosis Builder Nightly Smoke Test
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *" # midnight UTC
+    - cron: "0 2 * * *" # 2 am UTC
 
 concurrency:
   group: builder-nightly
