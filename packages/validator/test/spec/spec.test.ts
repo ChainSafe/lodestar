@@ -52,9 +52,7 @@ describe("slashing-protection-interchange-tests", () => {
         );
         if (!step.should_succeed) {
           expect(importError, `step ${i} import should fail`).toBeInstanceOf(InterchangeError);
-          continue;
-        }
-        if (importError !== null) {
+        } else if (importError !== null) {
           // Clients may refuse to import slashable data, the checks of this step assume it was imported
           expect(step.contains_slashable_data, `step ${i} import should succeed: ${importError.message}`).toBe(true);
           expect(importError, `step ${i} import should only be refused as slashable`).toBeInstanceOf(
