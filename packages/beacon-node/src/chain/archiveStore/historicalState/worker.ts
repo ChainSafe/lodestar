@@ -58,9 +58,7 @@ const api: HistoricalStateWorkerApi = {
     abortController.abort();
   },
   async scrapeMetrics() {
-    if (!metricsRegister) return "";
-
-    return await metricsRegister.metrics();
+    return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot) {
     historicalStateRegenMetrics?.regenRequestCount.inc();
