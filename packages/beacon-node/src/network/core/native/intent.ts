@@ -21,7 +21,6 @@ import {GossipTopicTypeMap, GossipType} from "../../gossip/interface.js";
 import {getCoreTopicsAtFork, getDataColumnSidecarTopics} from "../../gossip/topic.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
-import {AggregatorTracker} from "../../processor/aggregatorTracker.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {computeSubscribedSubnet} from "../../subnets/util.js";
 import {
@@ -79,7 +78,6 @@ export class NativeIntent {
     private readonly clock: IClock,
     private readonly opts: NetworkOptions,
     status: Status,
-    private readonly aggregatorTracker: AggregatorTracker,
     private readonly onFailure: (error: unknown) => void
   ) {
     this.appliedSlot = Number(application.initialSlot);
@@ -189,13 +187,6 @@ export class NativeIntent {
             throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
           this.desired = desired;
           this.appliedSlot = slot;
-        }
-        if (command?.type === "committee") {
-          pruneCommitteeDemand(command.demand, this.clock.currentSlot, 2 * SLOTS_PER_EPOCH - 1);
-          for (const [dutySlot, mask] of command.demand.attDuties)
-            for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
-              if ((mask & (1n << BigInt(subnet))) !== 0n) this.aggregatorTracker.addAggregator(subnet, dutySlot);
-          this.aggregatorTracker.prune();
         }
         if (slot !== this.clock.currentSlot) this.dirty = true;
         command?.resolve();

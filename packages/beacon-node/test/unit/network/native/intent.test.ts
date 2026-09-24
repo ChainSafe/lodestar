@@ -8,7 +8,6 @@ import {defer} from "@lodestar/utils";
 import {createNativeConfig} from "../../../../src/network/core/native/config.js";
 import {NativeIntent} from "../../../../src/network/core/native/intent.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
-import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
 async function fixture(
@@ -58,17 +57,7 @@ async function fixture(
   }));
   const updateStatus = vi.fn<NativeNetworkApplicationRuntime["updateStatus"]>(async () => undefined);
   const failed = vi.fn();
-  const aggregatorTracker = new AggregatorTracker();
-  const intent = new NativeIntent(
-    {applyIntent, updateStatus},
-    application,
-    network,
-    clock,
-    opts,
-    status,
-    aggregatorTracker,
-    failed
-  );
+  const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, status, failed);
   if (refreshInitialState) {
     intent.refresh();
     await Promise.resolve();
@@ -80,7 +69,6 @@ async function fixture(
     applyIntent,
     updateStatus,
     intent,
-    aggregatorTracker,
     failed,
     latest: () => {
       const last = applyIntent.mock.calls.at(-1);
@@ -91,7 +79,7 @@ async function fixture(
 }
 
 describe("native local intent transactions", () => {
-  it("coalesces pending committee batches and updates aggregation only after native acceptance", async () => {
+  it("coalesces pending committee batches", async () => {
     const node = await fixture();
     const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
     try {
@@ -107,16 +95,12 @@ describe("native local intent transactions", () => {
       );
       for (const completion of pending) expect(completion).toBe(pending[0]);
       expect(sync).toBe(pending[0]);
-      expect(node.aggregatorTracker.shouldAggregate(0, 0)).toBe(false);
-      expect(node.aggregatorTracker.shouldAggregate(63, 1)).toBe(false);
       expect(node.applyIntent).toHaveBeenCalledTimes(started + 1);
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       await Promise.all([active, ...pending, sync]);
       expect(node.applyIntent).toHaveBeenCalledTimes(started + 2);
       expect(node.latest().demand.attnets).toEqual(new Uint8Array(8).fill(255));
       expect(node.latest().demand.syncnets).toBe(8);
-      expect(node.aggregatorTracker.shouldAggregate(0, 0)).toBe(true);
-      expect(node.aggregatorTracker.shouldAggregate(63, 1)).toBe(true);
     } finally {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       node.intent.close();
@@ -139,9 +123,6 @@ describe("native local intent transactions", () => {
       const rejected = expect(first).rejects.toThrow("batch refused");
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       await Promise.all([active, rejected, unsubscribing, last]);
-      expect(node.aggregatorTracker.shouldAggregate(1, 1)).toBe(false);
-      expect(node.aggregatorTracker.shouldAggregate(2, 1)).toBe(false);
-      expect(node.aggregatorTracker.shouldAggregate(3, 1)).toBe(true);
       expect(subscriptionNames(node.latest()).some((name) => name.includes("/beacon_block/"))).toBe(false);
       const standing = node.latest().update.local.metadata.attnets[0];
       expect(node.latest().demand.attnets[0]).toBe(standing | (1 << 3));
@@ -152,7 +133,7 @@ describe("native local intent transactions", () => {
     }
   });
 
-  it("rejects coalesced work at close without publishing aggregation demand", async () => {
+  it("rejects coalesced work at close", async () => {
     const node = await fixture();
     const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
     node.applyIntent.mockImplementationOnce(() => held.promise);
@@ -165,9 +146,6 @@ describe("native local intent transactions", () => {
     await expect(first).rejects.toThrow("CLOSED");
     held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
     await expect(active).rejects.toThrow("CLOSED");
-    expect(node.aggregatorTracker.shouldAggregate(1, 1)).toBe(false);
-    expect(node.aggregatorTracker.shouldAggregate(2, 1)).toBe(false);
-    expect(node.aggregatorTracker.shouldAggregate(3, 1)).toBe(false);
   });
 
   it("rejects a malformed batch atomically without contaminating pending demand", async () => {
@@ -184,13 +162,9 @@ describe("native local intent transactions", () => {
       expect(() => node.intent.committee(rejected, false)).toThrow("validator index");
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       await Promise.all([active, accepted]);
-      expect(node.aggregatorTracker.shouldAggregate(1, 1)).toBe(true);
-      expect(node.aggregatorTracker.shouldAggregate(2, 1)).toBe(false);
       node.applyIntent.mockRejectedValueOnce(new Error("committee refused"));
       await expect(node.intent.committee([duty], false)).rejects.toThrow("committee refused");
-      expect(node.aggregatorTracker.shouldAggregate(2, 1)).toBe(false);
       await node.intent.coreTopics(false);
-      expect(node.aggregatorTracker.shouldAggregate(2, 1)).toBe(false);
       expect(node.failed).not.toHaveBeenCalled();
     } finally {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
@@ -198,7 +172,7 @@ describe("native local intent transactions", () => {
     }
   });
 
-  it("does not revive expired queued duties and preserves recent aggregation history", async () => {
+  it("does not revive expired queued duties", async () => {
     const node = await fixture();
     const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
     try {
@@ -209,11 +183,9 @@ describe("native local intent transactions", () => {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       await Promise.all([active, pending]);
       expect(node.latest().demand.attnets).toEqual(node.latest().update.local.metadata.attnets);
-      expect(node.aggregatorTracker.shouldAggregate(63, 1)).toBe(true);
       node.clock.setSlot(100 * SLOTS_PER_EPOCH);
       await node.intent.committee([{slot: 1, subnet: 62, validatorIndex: 0, isAggregator: true}], false);
       expect(node.latest().demand.attnets).toEqual(node.latest().update.local.metadata.attnets);
-      expect(node.aggregatorTracker.shouldAggregate(62, 1)).toBe(false);
     } finally {
       held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
       node.intent.close();

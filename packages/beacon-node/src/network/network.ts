@@ -185,7 +185,6 @@ export class Network implements INetwork {
     const core =
       opts.backend === "native"
         ? NativeNetworkCore.init({
-            aggregatorTracker,
             opts,
             config,
             privateKey,
@@ -317,9 +316,6 @@ export class Network implements INetwork {
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
-    if (this.core instanceof NativeNetworkCore) {
-      return this.core.prepareBeaconCommitteeSubnets(subscriptions);
-    }
     for (const subscription of subscriptions) {
       if (subscription.isAggregator) {
         this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
