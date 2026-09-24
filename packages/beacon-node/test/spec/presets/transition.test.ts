@@ -10,9 +10,9 @@ import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqu
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
+  nativeStateTransition,
   replaceStateViewForTest,
   stateViewToBeaconState,
-  nativeStateTransition,
 } from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
