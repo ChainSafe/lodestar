@@ -2,7 +2,6 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
-import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -10,6 +9,7 @@ import {UINT64_MAX, createNativeConfig, kinds, nativeTopicScore} from "../../../
 import {NativeNetworkError} from "../../../../src/network/core/native/errors.js";
 import {computeGossipPeerScoreParams} from "../../../../src/network/gossip/scoringParameters.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
+import {initializeSettlingRuntime} from "../../../utils/nativeRuntime.js";
 
 const config = createBeaconConfig(
   {
@@ -67,7 +67,7 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     const application = node.create({}, 0, 1_000_000);
     bindings.config.set(config, config.genesisValidatorsRoot);
-    const runtime = initializeNativeNetworkRuntime(application, () => {});
+    const runtime = initializeSettlingRuntime(application);
     try {
       await runtime.identity;
       const diagnostics = runtime.diagnostics();

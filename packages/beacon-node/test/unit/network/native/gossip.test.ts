@@ -24,6 +24,7 @@ const topic = stringifyGossipTopic(config, {
   type: GossipType.voluntary_exit,
   boundary: {fork: ForkName.phase0, epoch: 0},
 });
+const unbounded = {items: 64, bytes: 16 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
 
 async function fixture(events = new NetworkEventBus(), attach = true) {
   const peer = await generateKeyPair("secp256k1");
@@ -101,15 +102,15 @@ async function fixture(events = new NetworkEventBus(), attach = true) {
         attestationData: null,
       };
     },
-    drain(messages: NativeGossipMessage[], batchGroup = false): void {
+    drain(messages: NativeGossipMessage[], batchGroup = false, limits = unbounded): boolean {
       queued = messages.slice();
       grouped = batchGroup;
-      gossip.drain();
+      return gossip.drain(limits);
     },
     dependencyChecks(values: NativeGossipDependencyCheck[], immediate = false): boolean {
       checks = values.slice();
       more = immediate;
-      return gossip.drain();
+      return gossip.drain(unbounded);
     },
     async close(): Promise<void> {
       gossip.close();
@@ -133,6 +134,35 @@ describe("native gossip host ownership", () => {
       await node.retire(node.pending[0]);
       expect(node.runtime.reportGossip).toHaveBeenLastCalledWith(node.message().handle, "accept");
     } finally {
+      await node.close();
+    }
+  });
+
+  it("starts claimed jobs until the drain budget and resumes them before claiming more", async () => {
+    const node = await fixture();
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const execute = node.processor.execute.getMockImplementation();
+    node.processor.execute.mockImplementation((messages, grouped) => {
+      now += 5;
+      return execute ? execute(messages, grouped) : Promise.resolve([]);
+    });
+    try {
+      const limits = {items: 16, bytes: 2 * 1024 * 1024, deadline: 8};
+      expect(node.drain([node.message(), node.message(2), node.message(3)], false, limits)).toBe(true);
+      expect(node.processor.execute).toHaveBeenCalledTimes(2);
+      expect(node.runtime.drainGossip).toHaveBeenCalledExactlyOnceWith({
+        items: 16,
+        bytes: 2 * 1024 * 1024,
+        ordinary: true,
+      });
+      expect(node.gossip.drain({...limits, deadline: now + 8})).toBe(false);
+      expect(node.processor.execute).toHaveBeenCalledTimes(3);
+      expect(node.runtime.drainGossip).toHaveBeenCalledTimes(2);
+      for (const message of node.pending.slice()) await node.retire(message);
+      expect(node.runtime.reportGossip).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.restoreAllMocks();
       await node.close();
     }
   });
@@ -165,7 +195,7 @@ describe("native gossip host ownership", () => {
       node.drain([node.message()]);
       expect(node.runtime.drainGossip).not.toHaveBeenCalled();
       node.gossip.attach(node.processor);
-      node.gossip.drain();
+      node.gossip.drain(unbounded);
       expect(node.pending).toHaveLength(1);
       expect(() => node.gossip.attach(node.processor)).toThrow("gossip executor attachment");
     } finally {

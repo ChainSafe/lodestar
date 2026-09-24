@@ -120,7 +120,8 @@ it.each([true, false])("contains request-copy failure but escalates an invariant
     config,
     vi.fn<handlers.BoundedReqRespHandlers>(),
     1,
-    onFailure
+    onFailure,
+    vi.fn()
   );
   try {
     expect(owner.drain(8)).toBe(false);
@@ -154,7 +155,13 @@ it("waits for quota before producing data and for host retirement before taking 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn());
+  // Retirement schedules the core drain instead of taking the next request inline.
+  const takenAtWake: number[] = [];
+  const wake = vi.fn(() => {
+    takenAtWake.push(takeIncomingRequest.mock.calls.length);
+    setImmediate(() => owner.drain(8));
+  });
+  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn(), wake);
   try {
     expect(owner.drain(8)).toBe(false);
     expect(takeIncomingRequest).toHaveBeenCalledTimes(1);
@@ -170,6 +177,7 @@ it("waits for quota before producing data and for host retirement before taking 
     ancillary.resolve();
     first.written.resolve();
     await vi.waitFor(() => expect(second.request.ready).toHaveBeenCalledOnce());
+    expect(takenAtWake).toEqual([1]);
     expect(takeIncomingRequest).toHaveBeenCalledTimes(2);
     expect(first.request.fail).not.toHaveBeenCalled();
   } finally {
@@ -191,13 +199,17 @@ it("waits on an earlier adapter's reservation with one cancellable retry", async
     throw Error("No request available");
   };
   vi.useFakeTimers();
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn());
+  const wake = vi.fn();
+  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn(), wake);
   try {
     for (let turn = 0; turn < 100; turn++) expect(owner.drain(8)).toBe(false);
     expect(takeIncomingRequest).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(1);
     previous.finish();
     await vi.advanceTimersByTimeAsync(25);
+    expect(wake).toHaveBeenCalledOnce();
+    expect(takeIncomingRequest).not.toHaveBeenCalled();
+    expect(owner.drain(8)).toBe(false);
     expect(takeIncomingRequest).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
     const held = budget.acquire();
@@ -233,7 +245,14 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 32, vi.fn());
+  const owner = new NativeRequests(
+    {takeIncomingRequest: () => queue.shift() ?? null},
+    config,
+    factory,
+    32,
+    vi.fn(),
+    vi.fn()
+  );
   try {
     owner.drain(32);
     expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
@@ -277,7 +296,14 @@ it("requests waiting for retained memory leave native credit available to existi
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests({takeIncomingRequest: () => queue.shift() ?? null}, config, factory, 3, vi.fn());
+  const owner = new NativeRequests(
+    {takeIncomingRequest: () => queue.shift() ?? null},
+    config,
+    factory,
+    3,
+    vi.fn(),
+    vi.fn()
+  );
   try {
     owner.drain(3);
     inputs[0].permission.resolve();

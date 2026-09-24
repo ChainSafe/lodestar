@@ -3,6 +3,17 @@ import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 
 let runtime;
 let active = 0;
+let scheduled = false;
+// The least a host drain does: settle results in later macrotasks until endDrain releases the latch.
+function drain() {
+  scheduled = false;
+  if (runtime.settle(32) || runtime.endDrain()) schedule();
+}
+function schedule() {
+  if (scheduled) return;
+  scheduled = true;
+  setImmediate(drain);
+}
 process.on("message", async ({id, method, args}) => {
   if (++active > 16) process.exit(2);
   try {
@@ -10,7 +21,7 @@ process.on("message", async ({id, method, args}) => {
     switch (method) {
       case "initialize":
         bindings.config.set(args[1], args[2]);
-        runtime = initializeNativeNetworkRuntime(args[0], () => {});
+        runtime = initializeNativeNetworkRuntime(args[0], schedule);
         value = runtime.identity;
         break;
       case "applyIntent":

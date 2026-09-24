@@ -34,10 +34,14 @@ type GossipJob = {
   result: TopicValidatorResult;
   completed: boolean;
 };
+/** One validator job: a single message, or an attestation group validated together. */
+type GossipExecution = {jobs: GossipJob[]; grouped: boolean};
 
 export class NativeGossip {
   private closed = false;
   private processor: GossipExecutor | undefined;
+  /** Claimed jobs a spent drain budget left for the next drain, at most one batch. */
+  private queued: GossipExecution[] = [];
   constructor(
     private readonly runtime: GossipRuntime,
     private readonly config: BeaconConfig,
@@ -66,14 +70,28 @@ export class NativeGossip {
       this.runtime.trackGossipSearch(Buffer.from(root.slice(2), "hex"), peer === undefined ? null : peer)
     );
   }
-  drain(): boolean {
+  /** Starts claimed jobs until `deadline`, then claims at most `items`/`bytes` more. Returns whether work remains. */
+  drain({items, bytes, deadline}: {items: number; bytes: number; deadline: number}): boolean {
     const processor = this.processor;
     if (this.closed || !processor) return false;
+    if (this.start(processor, deadline)) return true;
     const checks = this.runtime.drainGossipChecks();
     if (checks.length > 0) this.runtime.classifyGossip(processor.check(checks));
-    const batch = this.runtime.drainGossip({items: 64, bytes: 16 * 1024 * 1024, ordinary: processor.canExecute()});
+    if (performance.now() >= deadline) return true;
+    const batch = this.runtime.drainGossip({items, bytes, ordinary: processor.canExecute()});
     if (batch.messages.length > 0) this.dispatch(batch, processor);
-    return batch.more;
+    return this.start(processor, deadline) || batch.more;
+  }
+  /** Starts queued jobs, at least one, until `deadline`. Returns whether any remain. */
+  private start(processor: GossipExecutor, deadline: number): boolean {
+    let started = 0;
+    for (const {jobs, grouped} of this.queued) {
+      if (started > 0 && performance.now() >= deadline) break;
+      started++;
+      void this.execute(jobs, grouped, processor, []).catch(this.onError);
+    }
+    this.queued = this.queued.slice(started);
+    return this.queued.length > 0;
   }
   private prepare(job: GossipJob, message: NativeGossipMessage): void {
     const topic = parseGossipTopic(this.config, message.topic);
@@ -123,9 +141,7 @@ export class NativeGossip {
       return;
     }
     for (const job of batch.jobs)
-      void this.execute(messages.slice(job.start, job.start + job.length), job.grouped, processor, []).catch(
-        this.onError
-      );
+      this.queued.push({jobs: messages.slice(job.start, job.start + job.length), grouped: job.grouped});
   }
   private async execute(
     jobs: GossipJob[],
@@ -231,5 +247,6 @@ export class NativeGossip {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    this.queued = [];
   }
 }

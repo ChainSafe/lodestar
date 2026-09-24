@@ -9,7 +9,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
-import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
@@ -21,6 +20,7 @@ import {INetworkCore} from "../types.js";
 import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
+import {NativeDrain, NativeDrainLimits, NativeDrainStages} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode, isNativeResultAllocationError, nativeInteger} from "./errors.js";
 import {NativeGossipExecutor} from "./executor.js";
 import {NativeGossip} from "./gossip.js";
@@ -37,28 +37,15 @@ const actions: Record<PeerAction, NativePeerAction> = {
   [PeerAction.HighToleranceError]: "high_tolerance",
 };
 
-type NativeDrainMetrics = ReturnType<typeof createNativeDrainMetrics>;
-
-function createNativeDrainMetrics(register: RegistryMetricCreator) {
-  const buckets = [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2];
-  return {
-    duration: register.histogram({
-      name: "lodestar_native_drain_seconds",
-      help: "Duration of each native drain macrotask",
-      buckets,
-    }),
-    yields: register.counter<{reason: "budget" | "caps" | "idle"}>({
-      name: "lodestar_native_drain_yields_total",
-      help: "Native drains that ended with work left by the time budget or a cap, or with none left",
-      labelNames: ["reason"],
-    }),
-    notifyToDrain: register.histogram({
-      name: "lodestar_native_notify_to_drain_seconds",
-      help: "Delay from a native work notification to the start of the drain it scheduled",
-      buckets,
-    }),
-  };
-}
+/** Bounds of one native drain macrotask; the rest yields to the next one. */
+const drainLimits: NativeDrainLimits = {
+  budgetMs: 8,
+  peers: 32,
+  settle: 32,
+  servingStarts: 8,
+  gossipItems: 16,
+  gossipBytes: 2 * 1024 * 1024,
+};
 
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
@@ -67,15 +54,11 @@ export class NativeNetworkCore implements INetworkCore {
   private requests!: NativeRequests;
   private runtime!: NativeNetworkApplicationRuntime;
   private logs: NativeLogs | undefined;
-  private scheduled: NodeJS.Immediate | undefined;
-  private notifiedAt: number | undefined;
-  private readonly drainMetrics: NativeDrainMetrics | null;
+  private drain!: NativeDrain;
   private closed = false;
   private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
-  private constructor(private readonly modules: BaseNetworkInit) {
-    this.drainMetrics = modules.metricsRegistry ? createNativeDrainMetrics(modules.metricsRegistry) : null;
-  }
+  private constructor(private readonly modules: BaseNetworkInit) {}
 
   static init(modules: BaseNetworkInit): NativeNetworkCore {
     if (modules.peerStoreDir)
@@ -105,6 +88,13 @@ export class NativeNetworkCore implements INetworkCore {
     });
     try {
       core.runtime = initializeNativeNetworkRuntime(application, core.onWorkAvailable);
+      core.drain = new NativeDrain(
+        core.runtime,
+        drainLimits,
+        core.drainStages,
+        core.onDrainError,
+        modules.metricsRegistry
+      );
       core.intent = new NativeIntent(
         core.runtime,
         application,
@@ -130,7 +120,8 @@ export class NativeNetworkCore implements INetworkCore {
         config,
         modules.getReqRespHandler,
         diagnostics.incoming.capacity,
-        core.onFailure
+        core.onFailure,
+        core.onWorkAvailable
       );
       void core.runtime.closed
         .then((result) => {
@@ -199,36 +190,24 @@ export class NativeNetworkCore implements INetworkCore {
       this.onFailure(error);
     }
   };
+  /** Only schedules; native results settle in the drain, which also runs after close until native has none left. */
   private readonly onWorkAvailable = (): void => {
-    this.notifiedAt ??= performance.now();
-    this.schedule();
+    this.drain.request();
   };
-  private schedule(): void {
-    if (this.closed || this.scheduled) return;
-    this.scheduled = setImmediate(() => {
-      this.scheduled = undefined;
-      if (this.closed) return;
-      const started = performance.now();
-      if (this.notifiedAt !== undefined) this.drainMetrics?.notifyToDrain.observe((started - this.notifiedAt) / 1000);
-      this.notifiedAt = undefined;
-      let more = false;
-      try {
-        const peers = this.peers.drain(32);
-        const requests = this.requests.drain(8);
-        const gossip = this.gossip.drain();
-        more = peers || requests || gossip;
-        if (more) this.schedule();
-      } catch (error) {
-        if (isNativeResultAllocationError(error)) {
-          more = true;
-          this.onOperationError(error);
-          this.schedule();
-        } else this.onFailure(error);
-      }
-      this.drainMetrics?.duration.observe((performance.now() - started) / 1000);
-      this.drainMetrics?.yields.inc({reason: more ? "caps" : "idle"});
-    });
-  }
+  private readonly stages: NativeDrainStages = {
+    peers: (limit) => this.peers.drain(limit),
+    requests: (limit) => this.requests.drain(limit),
+    gossip: (limits) => this.gossip.drain(limits),
+  };
+  private readonly drainStages = (): NativeDrainStages | null => (this.closed ? null : this.stages);
+  private readonly onDrainError = (error: unknown): boolean => {
+    if (!isNativeResultAllocationError(error)) {
+      this.onFailure(error);
+      return false;
+    }
+    this.onOperationError(error);
+    return true;
+  };
   private readonly onFailure = (error: unknown): void => {
     if (this.closed) return;
     this.failure =
@@ -252,8 +231,6 @@ export class NativeNetworkCore implements INetworkCore {
     this.closePromise = completion.promise;
     this.closed = true;
     this.modules.clock.off(ClockEvent.slot, this.onSlot);
-    if (this.scheduled) clearImmediate(this.scheduled);
-    this.scheduled = undefined;
     this.gossip?.close();
     this.requests?.close();
     this.peers?.close();

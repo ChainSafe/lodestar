@@ -190,7 +190,9 @@ export class NativeRequests {
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
     capacity: number,
-    private readonly onFailure: (error: unknown) => void
+    private readonly onFailure: (error: unknown) => void,
+    /** Schedules the core drain, which takes the next requests within its per-macrotask cap. */
+    private readonly wake: () => void
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
     this.budget = servingBudget(getHandler);
@@ -210,6 +212,7 @@ export class NativeRequests {
       1
     );
   }
+  /** Starts up to `max` requests. Returns whether it stopped at `max`. */
   drain(max: number): boolean {
     nativeInteger(max, "incoming drain", 32, 1);
     if (this.closed) return false;
@@ -219,7 +222,7 @@ export class NativeRequests {
         if (!this.retry) {
           this.retry = setTimeout(() => {
             this.retry = undefined;
-            this.drain(this.capacity);
+            this.wake();
           }, 25);
           this.retry.unref();
         }
@@ -256,7 +259,7 @@ export class NativeRequests {
         request.retainUntil(handler.retired);
         void handler.retired.then(() => {
           this.routes.delete(route);
-          this.drain(this.capacity);
+          this.wake();
         });
         void serve(route, handler, protocol, this.config, this.maxChunks).catch(() => {});
       } catch (error) {
@@ -266,7 +269,7 @@ export class NativeRequests {
         route.clear();
         void request.closed.then(() => {
           this.routes.delete(route);
-          this.drain(this.capacity);
+          this.wake();
         });
       }
     }

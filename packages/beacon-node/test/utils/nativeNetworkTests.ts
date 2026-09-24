@@ -28,6 +28,7 @@ import {ClockStopped} from "../mocks/clock.js";
 import {nativeBindingProcess} from "./nativeBindingProcess.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import {nativeNetworkProcess} from "./nativeNetworkProcess.js";
+import {initializeSettlingRuntime} from "./nativeRuntime.js";
 
 /** Clears retained mock calls and collects the previous test's runtime before the next one initializes. */
 async function nativeRuntimeReleased(): Promise<void> {
@@ -453,7 +454,7 @@ describe("native Lodestar integration", () => {
         16384
       );
       bindings.config.set(config, config.genesisValidatorsRoot);
-      const runtime = initializeNativeNetworkRuntime(application, () => {});
+      const runtime = initializeSettlingRuntime(application);
       try {
         const identity = await runtime.identity;
         expect(runtime.state).toBe("running");
