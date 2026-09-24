@@ -990,7 +990,7 @@ export function createLodestarMetrics(
         recvToValidation: register.histogram({
           name: "lodestar_gossip_execution_payload_envelope_received_to_execution_payload_verification_seconds",
           help: "Time elapsed between execution payload envelope received and execution payload verification",
-          buckets: [0.05, 0.1, 0.25, 0.5, 1],
+          buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 4, 6],
         }),
       },
     },
