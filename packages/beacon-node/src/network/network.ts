@@ -193,7 +193,7 @@ export class Network implements INetwork {
             clock: chain.clock,
             events,
             getReqRespHandler,
-            metricsRegistry: null,
+            metricsRegistry: metrics ? new RegistryMetricCreator() : null,
             initialStatus,
             initialCustodyGroupCount,
             activeValidatorCount,

@@ -9,6 +9,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
+import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
@@ -36,6 +37,29 @@ const actions: Record<PeerAction, NativePeerAction> = {
   [PeerAction.HighToleranceError]: "high_tolerance",
 };
 
+type NativeDrainMetrics = ReturnType<typeof createNativeDrainMetrics>;
+
+function createNativeDrainMetrics(register: RegistryMetricCreator) {
+  const buckets = [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2];
+  return {
+    duration: register.histogram({
+      name: "lodestar_native_drain_seconds",
+      help: "Duration of each native drain macrotask",
+      buckets,
+    }),
+    yields: register.counter<{reason: "budget" | "caps" | "idle"}>({
+      name: "lodestar_native_drain_yields_total",
+      help: "Native drains that ended with work left by the time budget or a cap, or with none left",
+      labelNames: ["reason"],
+    }),
+    notifyToDrain: register.histogram({
+      name: "lodestar_native_notify_to_drain_seconds",
+      help: "Delay from a native work notification to the start of the drain it scheduled",
+      buckets,
+    }),
+  };
+}
+
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
   private gossip!: NativeGossip;
@@ -44,10 +68,14 @@ export class NativeNetworkCore implements INetworkCore {
   private runtime!: NativeNetworkApplicationRuntime;
   private logs: NativeLogs | undefined;
   private scheduled: NodeJS.Immediate | undefined;
+  private notifiedAt: number | undefined;
+  private readonly drainMetrics: NativeDrainMetrics | null;
   private closed = false;
   private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
-  private constructor(private readonly modules: BaseNetworkInit) {}
+  private constructor(private readonly modules: BaseNetworkInit) {
+    this.drainMetrics = modules.metricsRegistry ? createNativeDrainMetrics(modules.metricsRegistry) : null;
+  }
 
   static init(modules: BaseNetworkInit): NativeNetworkCore {
     if (modules.peerStoreDir)
@@ -172,23 +200,35 @@ export class NativeNetworkCore implements INetworkCore {
     }
   };
   private readonly onWorkAvailable = (): void => {
+    this.notifiedAt ??= performance.now();
+    this.schedule();
+  };
+  private schedule(): void {
     if (this.closed || this.scheduled) return;
     this.scheduled = setImmediate(() => {
       this.scheduled = undefined;
       if (this.closed) return;
+      const started = performance.now();
+      if (this.notifiedAt !== undefined) this.drainMetrics?.notifyToDrain.observe((started - this.notifiedAt) / 1000);
+      this.notifiedAt = undefined;
+      let more = false;
       try {
         const peers = this.peers.drain(32);
         const requests = this.requests.drain(8);
         const gossip = this.gossip.drain();
-        if (peers || requests || gossip) this.onWorkAvailable();
+        more = peers || requests || gossip;
+        if (more) this.schedule();
       } catch (error) {
         if (isNativeResultAllocationError(error)) {
+          more = true;
           this.onOperationError(error);
-          this.onWorkAvailable();
+          this.schedule();
         } else this.onFailure(error);
       }
+      this.drainMetrics?.duration.observe((performance.now() - started) / 1000);
+      this.drainMetrics?.yields.inc({reason: more ? "caps" : "idle"});
     });
-  };
+  }
   private readonly onFailure = (error: unknown): void => {
     if (this.closed) return;
     this.failure =
@@ -335,6 +375,7 @@ export class NativeNetworkCore implements INetworkCore {
       ...Object.entries(counters).map(
         ([name, value]) => `# TYPE lodestar_native_${name} counter\nlodestar_native_${name} ${value}\n`
       ),
+      (await this.modules.metricsRegistry?.metrics()) ?? "",
     ].join("");
   }
   private unavailable(resource: string): Promise<never> {
