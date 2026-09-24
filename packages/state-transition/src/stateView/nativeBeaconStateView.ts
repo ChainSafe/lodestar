@@ -485,8 +485,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.proposerRewards;
   }
 
-  computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
-    return this.binding.computeBlockRewards(block, proposerRewards);
+  async computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
+    assertNativeForkSupported(this.config, block.slot);
+    // Reward calculation ignores the signature in the native signed-block encoding.
+    const bytes = this.config.getForkTypes(block.slot).SignedBeaconBlock.serialize({
+      message: block,
+      signature: ssz.BLSSignature.defaultValue(),
+    });
+    return this.binding.computeBlockRewards(bytes, false, proposerRewards);
   }
 
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {

@@ -25,10 +25,10 @@ export function createStateViewFactory(
   {native = false}: {native?: boolean} = {}
 ): StateViewFactory {
   if (native) {
-    const setup = new bindings.StateTransition(config, config.genesisValidatorsRoot);
+    const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
     const createFromBytes = (stateBytes: Uint8Array): IBeaconStateView => {
       assertNativeForkSupported(config, getStateSlotFromBytes(stateBytes));
-      return new NativeBeaconStateView(setup.createFromBytes(stateBytes), config);
+      return new NativeBeaconStateView(bindings.BeaconStateView.createFromBytes(stateBytes, nativeConfig), config);
     };
     return Object.freeze({
       native: true,

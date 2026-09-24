@@ -115,6 +115,30 @@ describe("state view factory", () => {
     }
   });
 
+  it.each([undefined, {attestations: 3, syncAggregate: 7, slashing: 0}])(
+    "matches TypeScript block rewards with cached rewards %s",
+    async (cachedRewards) => {
+      const fixture = createFixture();
+      const altairConfig = createBeaconConfig(
+        {...getConfig(ForkName.phase0), ALTAIR_FORK_EPOCH: 1},
+        new Uint8Array(32)
+      );
+      const native = createStateViewFactory(altairConfig, pubkeyCache, {native: true})
+        .createFromState(fixture)
+        .processSlots(SLOTS_PER_EPOCH);
+      const typescript = createStateViewFactory(altairConfig, pubkeyCache)
+        .createFromState(fixture)
+        .processSlots(SLOTS_PER_EPOCH);
+      const block = ssz.altair.BeaconBlock.defaultValue();
+      block.slot = SLOTS_PER_EPOCH;
+      block.proposerIndex = native.getBeaconProposer(block.slot);
+      block.body.syncAggregate.syncCommitteeBits.set(0, true);
+      const actual = await native.computeBlockRewards(block, cachedRewards);
+      expect(actual).toEqual(await typescript.computeBlockRewards(block, cachedRewards));
+      expect(actual.syncAggregate).toBeGreaterThan(0);
+    }
+  );
+
   it("keeps native factory and descendant configuration after another setup", () => {
     const fixture = createFixture();
     const altairConfig = createBeaconConfig({...getConfig(ForkName.phase0), ALTAIR_FORK_EPOCH: 1}, new Uint8Array(32));

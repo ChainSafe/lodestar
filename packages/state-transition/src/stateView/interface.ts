@@ -328,6 +328,7 @@ export type IBeaconStateViewLatestFork = Omit<
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
+  | "computeBlockRewards"
   | "computeNewStateRoot"
   | "eth1Data"
   | "executionPayloadAvailability"
@@ -345,6 +346,11 @@ export type IBeaconStateViewNative = Omit<
   | "stateTransition"
   | "withParentPayloadApplied"
 > & {
+  computeBlockRewards(
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
+    proposerRewards?: RewardCache
+  ): rewards.BlockRewards;
   release(): void;
   pendingDeposits: Uint8Array;
   pendingPartialWithdrawals: Uint8Array;

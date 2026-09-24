@@ -280,8 +280,8 @@ jobs:
       - name: Verify installed native preset
         run: >-
           node --input-type=module -e
-          'import {StateTransition} from "@chainsafe/lodestar-z/state-transition";
-          new StateTransition({PRESET_BASE: process.env.LODESTAR_PRESET}, new Uint8Array(32));'
+          'import {BeaconConfig} from "@chainsafe/lodestar-z/state-transition";
+          new BeaconConfig({PRESET_BASE: process.env.LODESTAR_PRESET}, new Uint8Array(32));'
       - name: Native state-view spec tests (${{ matrix.preset }})
         run: >-
           pnpm vitest run --project spec-${{ matrix.preset }}
