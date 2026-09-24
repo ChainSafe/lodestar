@@ -10,6 +10,8 @@ import {
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
   Interchange,
+  InterchangeError,
+  InterchangeErrorErrorCode,
   InterchangeFormatVersion,
   InterchangeLodestar,
   parseInterchange,
@@ -59,8 +61,21 @@ export class SlashingProtection implements ISlashingProtection {
     return (await this.attestationService.getAttestationForEpoch(pubKey, epoch)) !== null;
   }
 
-  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {
+  async importInterchange(
+    interchange: Interchange,
+    genesisValidatorsRoot: Root,
+    logger?: Logger,
+    currentEpoch?: Epoch
+  ): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
+    if (currentEpoch !== undefined) {
+      // Updating min-max spans reads the db for each epoch between source and target, allow one epoch of clock disparity
+      for (const {targetEpoch} of data.flatMap((validator) => validator.signedAttestations)) {
+        if (targetEpoch > currentEpoch + 1) {
+          throw new InterchangeError({code: InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH, targetEpoch, currentEpoch});
+        }
+      }
+    }
     for (const validator of data) {
       logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
