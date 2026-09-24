@@ -91,7 +91,11 @@ describe.skip("doppelganger / doppelganger test", () => {
     const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+      validatorUnderTest.validatorStore.signBlock(
+        fromHexString(pubKey),
+        {...beaconBlock, slot: bn.chain.clock.currentSlot},
+        bn.chain.clock.currentSlot
+      )
     ).resolves.toBeWithMessage(
       undefined,
       "Signing should be possible if starting at genesis since doppelganger should be off"
@@ -244,18 +248,30 @@ describe.skip("doppelganger / doppelganger test", () => {
     const beaconBlock = ssz.phase0.BeaconBlock.defaultValue();
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+      validatorUnderTest.validatorStore.signBlock(
+        fromHexString(pubKey),
+        {...beaconBlock, slot: bn.chain.clock.currentSlot},
+        bn.chain.clock.currentSlot
+      )
     ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+      validatorUnderTest.validatorStore.signBlock(
+        fromHexString(pubKey),
+        {...beaconBlock, slot: bn.chain.clock.currentSlot},
+        bn.chain.clock.currentSlot
+      )
     ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     // Signing should be possible after doppelganger check has elapsed
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+      validatorUnderTest.validatorStore.signBlock(
+        fromHexString(pubKey),
+        {...beaconBlock, slot: bn.chain.clock.currentSlot},
+        bn.chain.clock.currentSlot
+      )
     ).resolves.toBeUndefined();
   });
 
