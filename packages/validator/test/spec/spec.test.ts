@@ -11,6 +11,7 @@ import {
   SlashingProtectionAttestation,
   SlashingProtectionBlock,
 } from "../../src/slashingProtection/index.js";
+import {SurroundAttestationError} from "../../src/slashingProtection/minMaxSurround/index.js";
 import {testLogger} from "../utils/logger.js";
 import {loadTestCases} from "../utils/spec.js";
 import {SPEC_TEST_CASES_LOCATION} from "./params.js";
@@ -55,9 +56,10 @@ describe("slashing-protection-interchange-tests", () => {
         } else if (importError !== null) {
           // Clients may refuse to import slashable data, the checks of this step assume it was imported
           expect(step.contains_slashable_data, `step ${i} import should succeed: ${importError.message}`).toBe(true);
-          expect(importError, `step ${i} import should only be refused as slashable`).toBeInstanceOf(
-            InvalidAttestationError
-          );
+          expect(
+            importError instanceof InvalidAttestationError || importError instanceof SurroundAttestationError,
+            `step ${i} import should only be refused as slashable: ${importError.message}`
+          ).toBe(true);
           continue;
         }
 
