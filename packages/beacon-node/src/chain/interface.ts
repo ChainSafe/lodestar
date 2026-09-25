@@ -96,7 +96,7 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly earliestAvailableSlot: Slot;
+  earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
