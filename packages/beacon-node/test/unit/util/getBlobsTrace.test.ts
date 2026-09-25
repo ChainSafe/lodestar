@@ -33,6 +33,7 @@ describe("getDataColumnSidecarsFromExecution / block trace", () => {
       custodyColumns: [0, 1],
     });
     const trace = new BlockTrace(config, new ClockStopped(slot), null);
+    trace.observeDataAvailable(input);
     const executionEngine = {
       getBlobs: async (_fork: ForkName, _hashes: Uint8Array[], _buffers?: Uint8Array[], times?: HttpRequestTimes) => {
         if (times) times.sent = performance.now();
@@ -61,6 +62,7 @@ describe("getDataColumnSidecarsFromExecution / block trace", () => {
     const {result, root, milestones} = await run(() => null);
     expect(result).toBe(DataColumnEngineResult.NullResponse);
     expect(root.getBlobsResult).toBe("null");
+    expect(root.dataAvailableVia).toBeNull();
     const {getblobs_request, getblobs_dispatch, getblobs_receipt, getblobs_response} = milestones;
     expect([getblobs_request, getblobs_dispatch, getblobs_receipt, getblobs_response]).not.toContain(null);
     expect((getblobs_receipt as number) - (getblobs_dispatch as number)).toBeGreaterThanOrEqual(5);
@@ -73,5 +75,7 @@ describe("getDataColumnSidecarsFromExecution / block trace", () => {
     expect(result).toBe(DataColumnEngineResult.SuccessResolved);
     expect(root.getBlobsResult).toBe("full");
     expect(milestones.getblobs_usable).toBeGreaterThanOrEqual(milestones.getblobs_response as number);
+    expect(milestones.data_available).toBeGreaterThanOrEqual(milestones.getblobs_usable as number);
+    expect(root.dataAvailableVia).toEqual({source: BlockInputSource.engine, reconstructable: false});
   });
 });

@@ -129,6 +129,11 @@ export type BlockTraceRoot = {
   signatureDispatchSets: number | null;
   /** What the first getBlobs call returned: every blob, null for a missing one, or an error */
   getBlobsResult: "full" | "null" | "error" | null;
+  /**
+   * What first completed the data: the source of the completing item, `none` when the block needed no data, and whether
+   * it completed as enough columns to reconstruct before all sampled columns arrived
+   */
+  dataAvailableVia: {source: string; reconstructable: boolean} | null;
   waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
 };
 

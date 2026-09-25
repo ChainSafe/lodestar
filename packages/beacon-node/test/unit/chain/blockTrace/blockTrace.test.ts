@@ -3,7 +3,7 @@ import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
-import {IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputSource, DataAvailableVia, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
   BlockMilestone,
   BlockTrace,
@@ -46,6 +46,7 @@ function mockMetrics() {
       milestoneLate: counter(),
       milestoneMissing: counter(),
       blocks: counter(),
+      dataAvailable: counter(),
       rootsOverflow: counter(),
       wait: histogram(),
       interval: histogram(),
@@ -90,15 +91,18 @@ function setup(slot: Slot, attestationTiming = false) {
 
 /** A block input whose data becomes available when `available` is called */
 function block(slot: Slot, blockRootHex: string) {
-  let observer: ((at: number) => void) | null = null;
+  let observer: ((at: number, via: DataAvailableVia) => void) | null = null;
   const input = {
     slot,
     blockRootHex,
-    observeDataAvailable: (fn: (at: number) => void) => {
+    observeDataAvailable: (fn: (at: number, via: DataAvailableVia) => void) => {
       observer = fn;
     },
   } as unknown as IBlockInput;
-  return Object.assign(input, {available: () => observer?.(performance.now())});
+  return Object.assign(input, {
+    available: (via: DataAvailableVia = {source: BlockInputSource.gossip, reconstructable: false}) =>
+      observer?.(performance.now(), via),
+  });
 }
 
 /** The first slot at or after `from` whose attestation segments are timed, or not */
@@ -365,15 +369,19 @@ describe("BlockTrace", () => {
     expect(t.slot(findSlot(100, true)).attestationWork).toEqual({starts: 0, continuations: 1, jsMs: 7});
   });
 
-  it("records data availability when the block input's data arrives, whatever verification does", () => {
+  it("records data availability and what completed it when the block input's data arrives", () => {
     const slot = 100;
     const t = setup(slot);
     const input = block(slot, "0xaa");
     t.at(900);
     t.trace.enqueued([input], performance.now());
     t.at(1200);
-    input.available();
+    input.available({source: BlockInputSource.engine, reconstructable: true});
     expect(t.milestones(slot)).toMatchObject({processor_enqueue: 900, data_available: 1200, processor_start: null});
+    expect(t.slot(slot).roots[0].dataAvailableVia).toEqual({source: "engine", reconstructable: true});
+
+    t.toSlot(slot + 2);
+    expect(t.metrics.dataAvailable.inc).toHaveBeenCalledWith({source: "engine", completion: "reconstructable"});
   });
 
   it("keeps a job still queued when its slot closes, and rejects an attempt's marks after the close", () => {

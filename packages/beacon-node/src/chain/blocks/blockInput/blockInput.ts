@@ -15,6 +15,7 @@ import {
   CreateBlockInputMeta,
   DAData,
   DAType,
+  DataAvailableVia,
   IBlockInput,
   LogMetaBasic,
   LogMetaBlobs,
@@ -25,6 +26,9 @@ import {
 } from "./types.js";
 
 export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputNoData;
+
+/** Data complete without any item: no blobs or sampled columns, or out of the availability window */
+const NO_DATA_NEEDED: DataAvailableVia = {source: "none", reconstructable: false};
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -93,7 +97,8 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   abstract state: BlockInputState<F>;
   /** `performance.now()` when `hasAllData` first became true, null before */
   dataAvailableAt: number | null = null;
-  private dataAvailableObserver: ((at: number) => void) | null = null;
+  private dataAvailableVia: DataAvailableVia = NO_DATA_NEEDED;
+  private dataAvailableObserver: ((at: number, via: DataAvailableVia) => void) | null = null;
 
   protected blockPromise = createPromise<SignedBeaconBlock<F>>();
   protected dataPromise = createPromise<TData>();
@@ -179,15 +184,16 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
 
-  observeDataAvailable(observer: (at: number) => void): void {
-    if (this.dataAvailableAt !== null) observer(this.dataAvailableAt);
+  observeDataAvailable(observer: (at: number, via: DataAvailableVia) => void): void {
+    if (this.dataAvailableAt !== null) observer(this.dataAvailableAt, this.dataAvailableVia);
     else this.dataAvailableObserver = observer;
   }
 
-  protected resolveData(data: TData): void {
+  protected resolveData(data: TData, via: DataAvailableVia = NO_DATA_NEEDED): void {
     if (this.dataAvailableAt === null) {
       this.dataAvailableAt = performance.now();
-      this.dataAvailableObserver?.(this.dataAvailableAt);
+      this.dataAvailableVia = via;
+      this.dataAvailableObserver?.(this.dataAvailableAt, via);
       this.dataAvailableObserver = null;
     }
     this.dataPromise.resolve(data);
@@ -430,7 +436,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
-      this.resolveData(this.getBlobs());
+      this.resolveData(this.getBlobs(), {source, reconstructable: false});
     }
   }
 
@@ -487,7 +493,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         hasAllData: true,
         timeCompleteSec: seenTimestampSec,
       };
-      this.resolveData([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
+      this.resolveData(
+        [...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar),
+        {source, reconstructable: false}
+      );
     }
   }
 
@@ -854,7 +863,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     } as BlockInputColumnsState;
 
     if (hasAllData && sampledColumns !== null) {
-      this.resolveData(sampledColumns);
+      this.resolveData(sampledColumns, {source, reconstructable: !hasComputedAllData});
     }
 
     if (hasComputedAllData && sampledColumns !== null) {

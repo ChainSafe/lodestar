@@ -5,7 +5,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import type {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
-import type {IBlockInput} from "../blocks/blockInput/types.js";
+import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
 import type {BlsJobTimes} from "../bls/index.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
@@ -274,6 +274,10 @@ export class BlockTrace {
   private readonly signatureDispatchSets = new Uint16Array(ENTRIES);
   /** The first getBlobs call's result, 1 + its index in GETBLOBS_RESULTS, 0 when not recorded */
   private readonly getBlobsResult = new Uint8Array(ENTRIES);
+  /** What first completed each root's data, null when not recorded */
+  private readonly dataAvailableVia: (DataAvailableVia | null)[] = new Array<DataAvailableVia | null>(ENTRIES).fill(
+    null
+  );
   /** Per root and wait: `performance.now()` begin and end, NaN when not recorded */
   private readonly waitBegin = new Float64Array(ENTRIES * WAIT_COUNT);
   private readonly waitEnd = new Float64Array(ENTRIES * WAIT_COUNT);
@@ -307,10 +311,15 @@ export class BlockTrace {
     if (e >= 0) this.setMilestone(e, milestone, at - this.slotStart[slotIndexOf(e)]);
   }
 
-  /** Records the block input's data availability when it happens, or now if it has */
+  /** Records the block input's data availability and what completed it when it happens, or now if it has */
   observeDataAvailable(block: IBlockInput): void {
     const {slot, blockRootHex} = block;
-    block.observeDataAvailable((at) => this.mark(slot, blockRootHex, BlockMilestone.dataAvailable, at));
+    block.observeDataAvailable((at, via) => {
+      const e = this.entry(slot, blockRootHex);
+      if (e >= 0 && this.setMilestone(e, BlockMilestone.dataAvailable, at - this.slotStart[slotIndexOf(e)])) {
+        this.dataAvailableVia[e] = via;
+      }
+    });
   }
 
   /** Records a block processor job's enqueue at `at`, a `performance.now()` time */
@@ -594,6 +603,7 @@ export class BlockTrace {
     this.attempts[e] = 0;
     this.signatureDispatchSets[e] = 0;
     this.getBlobsResult[e] = 0;
+    this.dataAvailableVia[e] = null;
     this.waitBegin.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     this.waitEnd.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     return e;
@@ -701,6 +711,13 @@ export class BlockTrace {
         const ms = this.milestones[offset + to] - this.milestones[offset + from];
         if (!Number.isNaN(ms)) metrics.interval.observe({interval}, ms / 1000);
       }
+      const via = this.dataAvailableVia[e];
+      if (via !== null) {
+        metrics.dataAvailable.inc({
+          source: via.source,
+          completion: via.reconstructable ? "reconstructable" : "complete",
+        });
+      }
 
       for (let wait = 0; wait < WAIT_COUNT; wait++) {
         const w = e * WAIT_COUNT + wait;
@@ -754,6 +771,7 @@ export class BlockTrace {
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,
+        dataAvailableVia: this.dataAvailableVia[e],
         waits: {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),
           processor: this.waitSnapshot(e, BlockWait.processor, start),

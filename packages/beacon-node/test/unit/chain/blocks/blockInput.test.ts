@@ -195,7 +195,7 @@ describe("BlockInput", () => {
       vi.useRealTimers();
     });
 
-    it("stamps the first time enough columns to reconstruct are available", () => {
+    it("stamps the first time enough columns to reconstruct are available, and what completed them", () => {
       vi.useFakeTimers({toFake: ["performance"]});
       const {block, rootHex} = buildBlockTestSet(ForkName.fulu);
       (block.message.body as BeaconBlockBody<ForkName.fulu>).blobKzgCommitments = [
@@ -212,26 +212,24 @@ describe("BlockInput", () => {
         sampledColumns,
         custodyColumns: sampledColumns,
       });
-      const addColumn = (index: number): void => {
+      const addColumn = (index: number, source = BlockInputSource.gossip): void => {
         const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
         columnSidecar.index = index;
-        blockInput.addColumn({
-          blockRootHex: rootHex,
-          columnSidecar,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
-        });
+        blockInput.addColumn({blockRootHex: rootHex, columnSidecar, source, seenTimestampSec: Date.now() / 1000});
       };
 
       for (let i = 0; i < NUMBER_OF_COLUMNS / 2 - 1; i++) addColumn(i);
       expect(blockInput.dataAvailableAt).toBeNull();
       vi.advanceTimersByTime(10);
       const availableAt = performance.now();
-      addColumn(NUMBER_OF_COLUMNS / 2 - 1);
+      addColumn(NUMBER_OF_COLUMNS / 2 - 1, BlockInputSource.engine);
       vi.advanceTimersByTime(10);
       addColumn(NUMBER_OF_COLUMNS / 2);
       expect(blockInput.hasAllData()).toBe(true);
       expect(blockInput.dataAvailableAt).toBe(availableAt);
+      const observer = vi.fn();
+      blockInput.observeDataAvailable(observer);
+      expect(observer).toHaveBeenCalledWith(availableAt, {source: BlockInputSource.engine, reconstructable: true});
     });
   });
 });

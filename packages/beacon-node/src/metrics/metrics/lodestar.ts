@@ -1085,6 +1085,11 @@ export function createLodestarMetrics(
         help: "Traced block roots by outcome when their slot closed at slot + 2",
         labelNames: ["outcome"],
       }),
+      dataAvailable: register.counter<{source: string; completion: string}>({
+        name: "lodestar_block_trace_data_available_total",
+        help: "Traced block roots whose data became available, when their slot closed, by the source of the item that completed it and whether it completed as enough columns to reconstruct",
+        labelNames: ["source", "completion"],
+      }),
       rootsOverflow: register.counter({
         name: "lodestar_block_trace_roots_overflow_total",
         help: "Changes of untraced overflowing root in a slot that already traced its maximum roots, not distinct roots",
