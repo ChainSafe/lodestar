@@ -1136,6 +1136,18 @@ export function createLodestarMetrics(
         labelNames: ["selected"],
       }),
     },
+    getBlobsComputation: {
+      blobCells: register.histogram({
+        name: "lodestar_getblobs_blob_cells_seconds",
+        help: "Per blob of a getBlobsV2 response, from submitting its cell computation to the KZG library to its JS continuation resuming; blobs run one after another",
+        buckets: [0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.5, 1],
+      }),
+      sidecarAssembly: register.histogram({
+        name: "lodestar_getblobs_sidecar_assembly_seconds",
+        help: "Assembly of the data column sidecars of a getBlobsV2 response from its computed cells",
+        buckets: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25],
+      }),
+    },
     eventLoopDelayByPhase: register.histogram<{phase_bps: string}>({
       name: "lodestar_event_loop_delay_by_slot_phase_seconds",
       help: "How late a timer probe due every 10 ms ran, by the slot phase bucket of the time it was due, labeled by the bucket's first basis point of the slot",

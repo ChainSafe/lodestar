@@ -5,6 +5,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
+import type {CellComputeTimes} from "../../util/dataColumns.js";
 import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
 import {DispatchArm, DispatchGateResult} from "../blocks/dispatchGate.js";
 import {BlsJobTimes} from "../bls/interface.js";
@@ -328,6 +329,9 @@ export class BlockTrace {
   private readonly arms = new Uint8Array(ENTRIES);
   /** The latest attempt's treatment wait before the state transition */
   private readonly gates: (DispatchGateResult | null)[] = new Array<DispatchGateResult | null>(ENTRIES).fill(null);
+  /** The first getBlobs call's cell computation times, and its sidecar assembly's duration in ms */
+  private readonly getBlobsCells: (CellComputeTimes | null)[] = new Array<CellComputeTimes | null>(ENTRIES).fill(null);
+  private readonly getBlobsAssemblyMs = new Float64Array(ENTRIES);
   /**
    * Stage records of each root's operations in flight: the latest attempt's signature job and newPayload request, and
    * the first getBlobs call. Snapshots read them, and the slot's close reads them a last time and drops them.
@@ -424,6 +428,14 @@ export class BlockTrace {
     }
     this.getBlobsRequests[e] = times;
     return true;
+  }
+
+  /** Records the cell computation of the root's first getBlobs call and its sidecar assembly's duration */
+  getBlobsComputed(slot: Slot, root: RootHex, cells: CellComputeTimes, assemblyMs: number): void {
+    const e = this.entry(slot, root);
+    if (e < 0 || this.getBlobsCells[e] !== null) return;
+    this.getBlobsCells[e] = cells;
+    this.getBlobsAssemblyMs[e] = assemblyMs;
   }
 
   /** Records the root's first getBlobs response now and what it returned */
@@ -708,6 +720,7 @@ export class BlockTrace {
     this.getBlobsResult[e] = 0;
     this.arms[e] = 0;
     this.gates[e] = null;
+    this.getBlobsCells[e] = null;
     this.signatureJobs[e] = null;
     this.executionRequests[e] = null;
     this.getBlobsRequests[e] = null;
@@ -881,6 +894,16 @@ export class BlockTrace {
     }
   }
 
+  private cellsSnapshot(e: number, start: number): routes.lodestar.BlockTraceRoot["getBlobsCells"] {
+    const cells = this.getBlobsCells[e];
+    if (cells === null) return null;
+    return {
+      submittedMs: cells.submitted.map((at) => round(at - start)),
+      resumedMs: cells.resumed.map((at) => round(at - start)),
+      assemblyMs: round(this.getBlobsAssemblyMs[e]),
+    };
+  }
+
   private waitSnapshot(e: number, wait: BlockWait, start: number): routes.lodestar.BlockTraceWait | null {
     const w = e * WAIT_COUNT + wait;
     if (Number.isNaN(this.waitBegin[w])) return null;
@@ -919,6 +942,7 @@ export class BlockTrace {
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,
+        getBlobsCells: this.cellsSnapshot(e, start),
         dataAvailableVia: this.dataAvailableVia[e],
         waits: {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),

@@ -55,7 +55,7 @@ describe("getDataColumnSidecarsFromExecution / block trace", () => {
     const {milestoneNames, slots: traced} = trace.getSnapshot();
     const root = traced[0].roots[0];
     const milestones = Object.fromEntries(milestoneNames.map((name, i) => [name, root.milestones[i]]));
-    return {result, root, milestones};
+    return {result, root, milestones, blobCount: blobs.length};
   }
 
   it("records a null response with its request's transport times", async () => {
@@ -68,13 +68,26 @@ describe("getDataColumnSidecarsFromExecution / block trace", () => {
     expect((getblobs_receipt as number) - (getblobs_dispatch as number)).toBeGreaterThanOrEqual(5);
     expect(getblobs_response).toBeGreaterThanOrEqual(getblobs_receipt as number);
     expect(milestones.getblobs_usable).toBeNull();
+    expect(root.getBlobsCells).toBeNull();
   });
 
   it("records a full response and when its sidecars could satisfy availability", async () => {
-    const {result, root, milestones} = await run((blobs) => blobs);
+    const {result, root, milestones, blobCount} = await run((blobs) => blobs);
     expect(result).toBe(DataColumnEngineResult.SuccessResolved);
     expect(root.getBlobsResult).toBe("full");
     expect(milestones.getblobs_usable).toBeGreaterThanOrEqual(milestones.getblobs_response as number);
+    // Each blob's cells are submitted once the previous blob's continuation resumed
+    const cells = root.getBlobsCells;
+    if (cells === null) throw Error("No cell computation");
+    expect(cells.submittedMs).toHaveLength(blobCount);
+    expect(cells.resumedMs).toHaveLength(blobCount);
+    const stamps = cells.submittedMs.flatMap((submitted, i) => [submitted, cells.resumedMs[i]]);
+    expect(stamps).toEqual([...stamps].sort((a, b) => a - b));
+    expect(cells.submittedMs[0]).toBeGreaterThanOrEqual(milestones.getblobs_response as number);
+    // Within the snapshot's rounding to 1 us
+    expect(milestones.getblobs_usable).toBeGreaterThanOrEqual(
+      (cells.resumedMs.at(-1) as number) + cells.assemblyMs - 0.002
+    );
     expect(milestones.data_available).toBeGreaterThanOrEqual(milestones.getblobs_usable as number);
     expect(root.dataAvailableVia).toEqual({source: BlockInputSource.engine, reconstructable: false});
   });

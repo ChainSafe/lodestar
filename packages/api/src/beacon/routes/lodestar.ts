@@ -148,6 +148,11 @@ export type BlockTraceRoot = {
   /** What the first getBlobs call returned: every blob, null for a missing one, or an error */
   getBlobsResult: "full" | "null" | "error" | null;
   /**
+   * The first getBlobs call's cell computation, in ms from the slot start: each blob's submission to the KZG library and
+   * the resumption of its JS continuation, in blob order, then the duration of the sidecar assembly that followed
+   */
+  getBlobsCells: {submittedMs: number[]; resumedMs: number[]; assemblyMs: number} | null;
+  /**
    * What first completed the data: the source of the completing item, `none` when the block needed no data, and whether
    * it completed as enough columns to reconstruct before all sampled columns arrived
    */

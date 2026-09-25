@@ -14,6 +14,7 @@ import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
 import {
+  CellComputeTimes,
   getCellsAndProofs,
   getDataColumnSidecarsFromBlock,
   getDataColumnSidecarsFromColumnSidecar,
@@ -193,8 +194,11 @@ export async function getDataColumnSidecarsFromExecution(
 
   let dataColumnSidecars: DataColumnSidecar[];
   const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+  const cellTimes: CellComputeTimes = {submitted: [], resumed: []};
+  let assemblyStart = NaN;
   try {
-    const cellsAndProofs = await getCellsAndProofs(blobs);
+    const cellsAndProofs = await getCellsAndProofs(blobs, cellTimes);
+    assemblyStart = performance.now();
     if (isPayloadInput) {
       dataColumnSidecars = getGloasDataColumnSidecars(input.slot, fromHex(input.blockRootHex), cellsAndProofs);
     } else if (input.hasBlock()) {
@@ -210,7 +214,15 @@ export async function getDataColumnSidecarsFromExecution(
   } finally {
     compTimer?.();
   }
-  if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsUsable);
+  const assemblyMs = performance.now() - assemblyStart;
+  for (let i = 0; i < cellTimes.resumed.length; i++) {
+    metrics?.getBlobsComputation.blobCells.observe((cellTimes.resumed[i] - cellTimes.submitted[i]) / 1000);
+  }
+  metrics?.getBlobsComputation.sidecarAssembly.observe(assemblyMs / 1000);
+  if (traced) {
+    blockTrace?.getBlobsComputed(input.slot, input.blockRootHex, cellTimes, assemblyMs);
+    blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsUsable);
+  }
 
   // Publish columns if and only if subscribed to them
   const previouslyMissingColumns = input.getMissingSampledColumnMeta().missing;
