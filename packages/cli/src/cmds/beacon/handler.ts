@@ -100,7 +100,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       processShutdownCallback,
       privateKey,
       dataDir: beaconPaths.dataDir,
-      peerStoreDir: options.network.backend === "native" ? undefined : beaconPaths.peerStoreDir,
+      peerStoreDir: beaconPaths.peerStoreDir,
       anchorState: anchorStateView,
       isAnchorStateFinalized: isFinalized,
       wsCheckpoint,

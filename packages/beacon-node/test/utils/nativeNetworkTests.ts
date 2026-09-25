@@ -1,5 +1,10 @@
+import {readFileSync, writeFileSync} from "node:fs";
+import {mkdtemp, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
@@ -13,7 +18,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
-import {defer, sleep, withTimeout} from "@lodestar/utils";
+import {defer, sleep, toHex, withTimeout} from "@lodestar/utils";
 import {BlsSingleThreadVerifier} from "../../src/chain/bls/singleThread.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {WorkerNetworkCore} from "../../src/network/core/index.js";
@@ -75,6 +80,42 @@ describe("native Lodestar integration", () => {
       expect(shutdown).not.toHaveBeenCalled();
     } finally {
       await node.close();
+    }
+  }, 15000);
+  it("seeds the runtime from peerStoreDir and writes its remembered peers before it closes", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "lodestar-native-peerstore-"));
+    const file = join(directory, "native-remembered-peers.json");
+    const [peerId, expiredPeerId] = await Promise.all(
+      [0, 1].map(async () => peerIdFromPrivateKey(await generateKeyPair("secp256k1")).toString())
+    );
+    const nowS = Math.floor(Date.now() / 1000);
+    const remembered = {peerId, endpoint: {family: 4, address: "0x7f000001", port: 9}, qualifiedAtUnixS: nowS - 60};
+    const expired = {...remembered, peerId: expiredPeerId, qualifiedAtUnixS: nowS - 24 * 60 * 60};
+    let written: string | undefined;
+    const originalInit = NativeNetworkCore.init;
+    const initialize = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) => {
+      const seed = {
+        version: 1,
+        genesisValidatorsRoot: toHex(modules.config.genesisValidatorsRoot),
+        peers: [remembered],
+      };
+      written = JSON.stringify(seed);
+      // The host drops the expired record, and native rewrites the indented file compactly.
+      writeFileSync(file, JSON.stringify({...seed, peers: [remembered, expired]}, null, 2));
+      return originalInit({...modules, peerStoreDir: directory});
+    });
+    let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
+    try {
+      node = await nativeNetworkFixture(fuluConfig());
+      const metrics = await node.network.scrapeMetrics();
+      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="loaded"} 1\n');
+      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="expired"} 0\n');
+      await node.network.close();
+      expect(readFileSync(file, "utf8")).toBe(written);
+    } finally {
+      await node?.close();
+      initialize.mockRestore();
+      await rm(directory, {recursive: true, force: true});
     }
   }, 15000);
   it("rejects malformed configured direct peers before native initialization", async () => {

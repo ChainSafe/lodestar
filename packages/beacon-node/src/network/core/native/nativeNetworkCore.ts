@@ -28,6 +28,7 @@ import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
 import {NativePeers, formatNativePeer} from "./peers.js";
 import {nativeProtocols} from "./protocols.js";
+import {RememberedPeersWriter, readRememberedPeers} from "./rememberedPeers.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
 
 const actions: Record<PeerAction, NativePeerAction> = {
@@ -54,6 +55,7 @@ export class NativeNetworkCore implements INetworkCore {
   private requests!: NativeRequests;
   private runtime!: NativeNetworkApplicationRuntime;
   private logs: NativeLogs | undefined;
+  private remembered: RememberedPeersWriter | undefined;
   private drain!: NativeDrain;
   private closed = false;
   private failure: Error | undefined;
@@ -61,13 +63,9 @@ export class NativeNetworkCore implements INetworkCore {
   private constructor(private readonly modules: BaseNetworkInit) {}
 
   static init(modules: BaseNetworkInit): NativeNetworkCore {
-    if (modules.peerStoreDir)
-      throw new NativeNetworkError({
-        code: NativeNetworkErrorCode.CONFIGURATION,
-        resource: "native peer-store persistence",
-      });
     assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
+    const {peerStoreDir, logger} = modules;
     const {application, network, directPeers} = createNativeConfig(
       opts,
       config,
@@ -87,7 +85,10 @@ export class NativeNetworkCore implements INetworkCore {
       },
     });
     try {
-      core.runtime = initializeNativeNetworkRuntime(application, core.onWorkAvailable);
+      const rememberedPeers = peerStoreDir
+        ? readRememberedPeers(peerStoreDir, config.genesisValidatorsRoot, logger)
+        : null;
+      core.runtime = initializeNativeNetworkRuntime({...application, rememberedPeers}, core.onWorkAvailable);
       core.drain = new NativeDrain(
         core.runtime,
         drainLimits,
@@ -134,6 +135,7 @@ export class NativeNetworkCore implements INetworkCore {
       queueMicrotask(() => {
         if (!core.closed) void core.connectConfiguredPeers(directPeers).catch(core.onFailure);
       });
+      if (peerStoreDir) core.remembered = new RememberedPeersWriter(peerStoreDir, core.runtime, logger);
       return core;
     } catch (error) {
       void core
@@ -238,17 +240,11 @@ export class NativeNetworkCore implements INetworkCore {
     this.requests?.close();
     this.peers?.close();
     this.intent?.close();
-    try {
-      if (this.runtime)
-        void this.runtime
-          .close()
-          .finally(() => this.logs?.close())
-          .then(() => completion.resolve(), completion.reject);
-      else completion.resolve();
-    } catch (error) {
-      this.logs?.close();
-      completion.reject(error);
-    }
+    // The runtime refuses the final remembered peers snapshot once it closes.
+    void (this.remembered?.close() ?? Promise.resolve())
+      .then(() => this.runtime?.close())
+      .finally(() => this.logs?.close())
+      .then(() => completion.resolve(), completion.reject);
     return this.closePromise;
   }
   prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
