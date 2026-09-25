@@ -10,6 +10,7 @@ import {
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {defer} from "@lodestar/utils";
+import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
 import {nativeLanes} from "../../../../src/network/core/native/drain.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
@@ -31,7 +32,7 @@ const blockTopic = stringifyGossipTopic(config, {
 });
 const unbounded = {items: 64, bytes: 16 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
 
-async function fixture(events = new NetworkEventBus(), attach = true) {
+async function fixture(events = new NetworkEventBus(), attach = true, register: RegistryMetricCreator | null = null) {
   const peer = await generateKeyPair("secp256k1");
   let queued: NativeGossipMessage[] = [];
   let checks: NativeGossipDependencyCheck[] = [];
@@ -71,7 +72,7 @@ async function fixture(events = new NetworkEventBus(), attach = true) {
   };
   const onError = vi.fn();
   const onFailure = vi.fn();
-  const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError, onFailure);
+  const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError, onFailure, register);
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
@@ -296,6 +297,23 @@ describe("native gossip host ownership", () => {
       );
       expect(node.runtime.drainGossip).toHaveBeenCalledOnce();
       expect(node.processor.execute).not.toHaveBeenCalled();
+    } finally {
+      await node.close();
+    }
+  });
+
+  it("measures a checked message's delay from its dependency check to its job's dispatch", async () => {
+    const register = new RegistryMetricCreator();
+    const node = await fixture(undefined, true, register);
+    try {
+      const message = node.message();
+      node.admit(message);
+      node.dependencyChecks([
+        {handle: message.handle, root: new Uint8Array(32), slot: 1n, peerId: message.peerId, topic},
+      ]);
+      expect(await register.getSingleMetricAsString("lodestar_native_gossip_check_to_dispatch_seconds")).toContain(
+        'lodestar_native_gossip_check_to_dispatch_seconds_count{kind="voluntary_exit"} 1'
+      );
     } finally {
       await node.close();
     }

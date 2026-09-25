@@ -112,7 +112,8 @@ export class NativeNetworkCore implements INetworkCore {
         modules.events,
         core.modules.opts,
         core.onOperationError,
-        core.onFailure
+        core.onFailure,
+        modules.metricsRegistry
       );
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(

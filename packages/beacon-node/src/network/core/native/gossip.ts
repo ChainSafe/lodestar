@@ -6,8 +6,11 @@ import {
   NativeGossipHandle,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
+  NativeTopicKind,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
+import {Histogram} from "@lodestar/utils";
+import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
@@ -45,14 +48,25 @@ export class NativeGossip {
   private queued: GossipExecution[] = [];
   /** Whether native claims ordinary work, as the last drainGossip asked. */
   private ordinary = true;
+  /** When each processor slot's latest dependency check reached the host; bounded by the processor capacity. */
+  private readonly checked = new Map<number, {generation: bigint; at: number}>();
+  private readonly checkToDispatch: Histogram<{kind: NativeTopicKind}> | undefined;
   constructor(
     private readonly runtime: GossipRuntime,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
     private readonly onError: (error: unknown) => void,
-    private readonly onFailure: (error: unknown) => void
-  ) {}
+    private readonly onFailure: (error: unknown) => void,
+    register: RegistryMetricCreator | null = null
+  ) {
+    this.checkToDispatch = register?.histogram<{kind: NativeTopicKind}>({
+      name: "lodestar_native_gossip_check_to_dispatch_seconds",
+      help: "Delay from a gossip message's latest dependency check reaching the host to the dispatch of its job",
+      labelNames: ["kind"],
+      buckets: [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+    });
+  }
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
       throw new NativeNetworkError({
@@ -86,6 +100,10 @@ export class NativeGossip {
     let ordinaryWork = (lanes & nativeLanes.gossipOrdinary) !== 0;
     if (lanes & nativeLanes.gossipChecks) {
       const checks = this.runtime.drainGossipChecks();
+      if (this.checkToDispatch) {
+        const at = performance.now();
+        for (const {handle} of checks) this.checked.set(handle.index, {generation: handle.generation, at});
+      }
       if (checks.length > 0) {
         this.runtime.classifyGossip(processor.check(checks));
         // Available dependencies can make work of any kind claimable.
@@ -169,8 +187,15 @@ export class NativeGossip {
       void this.execute(messages, false, processor, errors).catch(this.onError);
       return;
     }
+    const at = performance.now();
     for (const job of batch.jobs) {
       const jobs = messages.slice(job.start, job.start + job.length);
+      for (const {handle} of jobs) {
+        const check = this.checked.get(handle.index);
+        if (check?.generation !== handle.generation) continue;
+        this.checked.delete(handle.index);
+        this.checkToDispatch?.observe({kind: job.kind}, (at - check.at) / 1000);
+      }
       // Claims come in priority order, so urgent jobs start first and none waits for the budget.
       if (job.urgent) void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
       else this.queued.push({jobs, grouped: job.grouped});
