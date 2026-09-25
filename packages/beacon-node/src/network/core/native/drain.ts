@@ -53,6 +53,11 @@ function createNativeDrainMetrics(register: RegistryMetricCreator) {
       help: "Delay from a native work notification to the start of the drain it scheduled",
       buckets,
     }),
+    burst: register.histogram({
+      name: "lodestar_native_drain_burst_seconds",
+      help: "Time from a native drain macrotask's start to the next setImmediate checkpoint, including the promise continuations it triggered",
+      buckets,
+    }),
   };
 }
 
@@ -123,6 +128,12 @@ export class NativeDrain {
     }
     this.metrics?.duration.observe((performance.now() - started) / 1000);
     this.metrics?.yields.inc({reason});
+    // Queued ahead of the next drain, so the burst covers only this one.
+    if (this.metrics) setImmediate(this.burstEnd, started);
     if (more) this.schedule();
+  };
+
+  private readonly burstEnd = (started: number): void => {
+    this.metrics?.burst.observe((performance.now() - started) / 1000);
   };
 }

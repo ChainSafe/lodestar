@@ -14,6 +14,12 @@ async function yields(register: RegistryMetricCreator): Promise<Record<string, n
   return Object.fromEntries((metric?.values ?? []).map(({labels, value}) => [String(labels.reason), value]));
 }
 
+async function histogram(register: RegistryMetricCreator, name: string): Promise<{sum: number; count: number}> {
+  const text = await register.getSingleMetricAsString(name);
+  const read = (suffix: string) => Number(new RegExp(`^${name}_${suffix} (\\S+)$`, "m").exec(text)?.[1]);
+  return {sum: read("sum"), count: read("count")};
+}
+
 function fixture() {
   let now = 0;
   vi.spyOn(performance, "now").mockImplementation(() => now);
@@ -156,6 +162,27 @@ describe("native drain", () => {
     expect(node.runtime.settle).toHaveBeenCalledTimes(2);
     expect(node.runtime.endDrain).toHaveBeenCalledOnce();
     expect(node.stages.peers).not.toHaveBeenCalled();
+  });
+
+  it("measures each drain's burst through its continuations up to the next macrotask checkpoint", async () => {
+    const node = fixture();
+    node.stages.peers.mockImplementation(() => {
+      node.advance(1);
+      void Promise.resolve().then(() => node.advance(2));
+      return false;
+    });
+    node.stages.gossip.mockReturnValueOnce(true);
+    node.drain.request();
+    await macrotask();
+    await macrotask();
+    await macrotask();
+    const burst = await histogram(node.register, "lodestar_native_drain_burst_seconds");
+    const duration = await histogram(node.register, "lodestar_native_drain_seconds");
+    // Two drains: each burst adds the continuation's 2 ms to the drain's own 1 ms, and neither includes the other.
+    expect(burst.count).toBe(2);
+    expect(duration.count).toBe(2);
+    expect(duration.sum).toBeCloseTo(0.002, 9);
+    expect(burst.sum).toBeCloseTo(0.006, 9);
   });
 
   it("retries after a failure its handler recovers and otherwise still ends the drain", async () => {
