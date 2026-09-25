@@ -163,9 +163,12 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsRequest);
-  const blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
-  blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsResponse);
+  const traced = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex) === true;
+  const blobs = await executionEngine
+    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers)
+    .finally(() => {
+      if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsResponse);
+    });
   timer?.();
 
   // Execution engine was unable to find one or more blobs

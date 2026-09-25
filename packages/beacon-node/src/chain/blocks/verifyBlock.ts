@@ -9,7 +9,7 @@ import {
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {BlockMilestone} from "../blockTrace/index.js";
+import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -44,7 +44,8 @@ export async function verifyBlocksInEpoch(
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
-  opts: BlockProcessOpts & ImportBlockOpts
+  opts: BlockProcessOpts & ImportBlockOpts,
+  attempt: BlockAttempt | null = null
 ): Promise<{
   postStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
@@ -73,8 +74,7 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  const trace = this.blockTrace;
-  trace?.markAll(blockInputs, BlockMilestone.prestateRequest);
+  attempt?.mark(BlockMilestone.prestateRequest);
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
   const preState0 = await this.regen
@@ -83,7 +83,7 @@ export async function verifyBlocksInEpoch(
     .catch((e) => {
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
-  trace?.markAll(blockInputs, BlockMilestone.prestateReady);
+  attempt?.mark(BlockMilestone.prestateReady);
 
   // in forky condition, make sure to populate ShufflingCache with regened state
   // otherwise it may fail to get indexed attestations from shuffling cache later
@@ -170,8 +170,54 @@ export async function verifyBlocksInEpoch(
             };
           })();
 
-    // The state transition below runs synchronously from this call
-    trace?.markAll(blockInputs, BlockMilestone.stateTransitionStart);
+    attempt?.mark(BlockMilestone.stateTransitionStart);
+    // Run state transition only
+    // TODO: Ensure it yields to allow flushing to workers and engine API
+    const stateTransitionPromise = verifyBlocksStateTransitionOnly(
+      preState0,
+      blockInputs,
+      // hack availability for state transition eval as availability is separately determined
+      blocks.map(() => DataAvailabilityStatus.Available),
+      this.logger,
+      this.metrics,
+      this.validatorMonitor,
+      abortController.signal,
+      opts
+    );
+
+    // All signatures at once
+    // TODO GLOAS: can verify payload signatures in batch too
+    // maybe chain with the above verifyBlocksSignatures()
+    const signaturesPromise = verifyBlocksSignatures(
+      this.config,
+      this.bls,
+      this.logger,
+      this.metrics,
+      preState0,
+      blocks,
+      indexedAttestationsByBlock,
+      opts
+    );
+
+    if (attempt) {
+      // Each branch records its completion when it happens, so a stalled or failed branch leaves the others' evidence
+      const ignore = (): void => {};
+      stateTransitionPromise.then(
+        ({verifyStateTime}) => attempt.markUnixMs(BlockMilestone.stateTransitionEnd, verifyStateTime),
+        ignore
+      );
+      signaturesPromise.then(
+        ({verifySignaturesTime}) => attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime),
+        ignore
+      );
+      verifyExecutionPayloadsPromise.then((status) => {
+        if (status.execAborted === null && status.executionTime !== undefined) {
+          attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);
+        }
+      }, ignore);
+      daAvailabilityPromise.then(() => this.blockTrace?.markDataAvailable(blockInputs), ignore);
+    }
+
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
@@ -180,57 +226,11 @@ export async function verifyBlocksInEpoch(
       {verifySignaturesTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
-
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
-
-      // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(
-        preState0,
-        blockInputs,
-        // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailabilityStatus.Available),
-        this.logger,
-        this.metrics,
-        this.validatorMonitor,
-        abortController.signal,
-        opts
-      ),
-
-      // All signatures at once
-      verifyBlocksSignatures(
-        this.config,
-        this.bls,
-        this.logger,
-        this.metrics,
-        preState0,
-        blocks,
-        indexedAttestationsByBlock,
-        opts
-      ),
-
-      // TODO GLOAS: can verify payload signatures in batch too
-      // maybe chain with the above verifyBlocksSignatures()
+      stateTransitionPromise,
+      signaturesPromise,
     ]);
-
-    if (trace) {
-      trace.markAllUnixMs(blockInputs, BlockMilestone.stateTransitionEnd, verifyStateTime);
-      trace.markAllUnixMs(blockInputs, BlockMilestone.signaturesDone, verifySignaturesTime);
-      if (segmentExecStatus.execAborted === null && segmentExecStatus.executionTime !== undefined) {
-        trace.markAllUnixMs(blockInputs, BlockMilestone.executionDone, segmentExecStatus.executionTime);
-      }
-      for (const blockInput of blockInputs) {
-        if (blockInput.dataAvailableAt !== null) {
-          trace.mark(
-            blockInput.slot,
-            blockInput.blockRootHex,
-            BlockMilestone.dataAvailable,
-            blockInput.dataAvailableAt
-          );
-        }
-      }
-    }
 
     for (const blockInput of blockInputs) {
       const block = blockInput.getBlock();

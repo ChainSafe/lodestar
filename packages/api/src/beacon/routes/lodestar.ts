@@ -93,40 +93,54 @@ export type BlockProcessorQueueItem = {
   addedTimeMs: number;
 };
 
-/** A traced block root; times are ms from the start of its slot */
+/**
+ * A wait that proxies runnable import work, in ms from its slot's start, and the gossip attestation segments that
+ * started during it. Attestation work during a wait co-occurred with it; that does not establish it delayed the block.
+ */
+export type BlockTraceWait = {
+  beginMs: number;
+  endMs: number;
+  attestationStarts: number;
+  attestationContinuations: number;
+  /**
+   * Synchronous time of the segments timed in sampled time. It excludes promise resolution between segments, so it
+   * undercounts attestation JS time: by about 2 to 16% in a local harness.
+   */
+  attestationJsMs: number;
+  /** Fraction of the wait inside sampled time; `attestationJsMs` is complete only at 1 */
+  sampledCoverage: number;
+  /** Whether the attestation log no longer covered the start of the wait */
+  attestationLogTruncated: boolean;
+};
+
+/** A traced block root */
 export type BlockTraceRoot = {
   root: RootHex;
+  /** By the slot's close at the start of slot + 2; `pending` while open */
   outcome: "pending" | "head" | "imported" | "not_imported";
-  /** Recorded milestones by name */
-  milestones: Record<string, number>;
-  /** Union of the intervals in which import work was runnable and waiting for the JS thread */
-  runnableImport: {
-    ms: number;
-    intervals: [number, number][];
-    intervalsDropped: boolean;
-    /** Attestation batch starts and continuations that ran inside the union */
-    attestationStarts: number;
-    attestationContinuations: number;
-    /** Attestation segments inside the union timed in a sampled slot, and their synchronous time */
-    attestationTimedSegments: number;
-    attestationJsMs: number;
-    /** Whether the attestation log no longer covered the start of an interval */
-    attestationLogTruncated: boolean;
-  };
+  /**
+   * Processing attempts started before import; attempt milestones are the latest attempt's, and a multi-block job's
+   * verification milestones are shared by its blocks
+   */
+  attempts: number;
+  /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
+  milestones: (number | null)[];
+  waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
 };
 
 /** A slot of the block trace; times are ms from the slot start */
 export type BlockTraceSlot = {
   slot: Slot;
   fork: ForkName;
-  finalized: boolean;
+  closed: boolean;
   /** Whether attestation segments were timed in this slot */
   sampled: boolean;
   targetsMs: Record<string, number | null>;
-  /** The first head root the attestation data API selected for this slot, before its state regen */
+  /** The first head root the attestation data API returned for this slot and when it selected it */
   attestationData: {ms: number; root: RootHex; count: number; rootChanged: boolean} | null;
-  /** Attestation batch work that ran during this clock slot */
+  /** Gossip attestation batch work that ran during this clock slot */
   attestationWork: {starts: number; continuations: number; jsMs: number | null};
+  /** Changes of overflowing root, not distinct roots */
   rootsOverflow: number;
   roots: BlockTraceRoot[];
 };
@@ -136,7 +150,7 @@ export type BlockTrace = {
   slotDurationMs: number;
   sampleEverySlots: number;
   /** Milestone names in critical-path order */
-  milestones: string[];
+  milestoneNames: string[];
   /** Milestones stamped when the JS continuation ran after an external result, whose callback delay is unknown */
   observedReadiness: string[];
   slots: BlockTraceSlot[];

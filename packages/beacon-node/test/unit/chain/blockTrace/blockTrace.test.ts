@@ -1,7 +1,9 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
+import {SignatureSetType} from "@lodestar/state-transition";
+import {Slot, ssz} from "@lodestar/types";
+import {IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
   AttestationSegment,
   BlockMilestone,
@@ -10,6 +12,13 @@ import {
   getConsumerTargetsMs,
   isSampledSlot,
 } from "../../../../src/chain/blockTrace/index.js";
+import {IBeaconChain} from "../../../../src/chain/index.js";
+import {SeenAttesters} from "../../../../src/chain/seenCache/seenAttesters.js";
+import {
+  GossipAttestation,
+  Step0Result,
+  validateGossipAttestationsSameAttData,
+} from "../../../../src/chain/validation/index.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -37,11 +46,10 @@ function mockMetrics() {
       milestoneMissing: counter(),
       blocks: counter(),
       rootsOverflow: counter(),
-      stage: histogram(),
-      verifyLast: counter(),
-      runnableImport: histogram(),
-      runnableImportAttestationSegments: histogram(),
-      runnableImportAttestationJs: histogram(),
+      wait: histogram(),
+      waitAttestationSegments: histogram(),
+      waitAttestationJs: histogram(),
+      waitSampling: counter(),
       attestationLogTruncated: counter(),
       attestationData: counter(),
     },
@@ -65,12 +73,21 @@ function setup(slot: Slot) {
       clock.setSlot(next);
       clock.emit(ClockEvent.slot, next);
     },
-    root(ofSlot: Slot) {
+    slot(ofSlot: Slot) {
       const snapshot = trace.getSnapshot().slots.find((s) => s.slot === ofSlot);
       if (!snapshot) throw Error(`No slot ${ofSlot}`);
       return snapshot;
     },
+    milestones(ofSlot: Slot, index = 0): Record<string, number | null> {
+      const {milestoneNames} = trace.getSnapshot();
+      const {milestones} = this.slot(ofSlot).roots[index];
+      return Object.fromEntries(milestoneNames.map((name, i) => [name, milestones[i]]));
+    },
   };
+}
+
+function block(slot: Slot, blockRootHex: string, dataAvailableAt: number | null = null): IBlockInput {
+  return {slot, blockRootHex, dataAvailableAt} as IBlockInput;
 }
 
 /** The first slot at or after `from` whose attestation segments are timed, or not */
@@ -85,179 +102,242 @@ describe("BlockTrace", () => {
     vi.useRealTimers();
   });
 
-  it("records milestones in ms from the slot start, from monotonic and Unix stamps", () => {
+  it("records arrival milestones and the dispatch wait in ms from the slot start", () => {
     const slot = 100;
     const t = setup(slot);
-    const root = "0xaa";
-    const seenTimestampSec = (slot * slotMs + 1000) / 1000;
     t.at(1200);
-    t.trace.gossipValidationStart(slot, root, seenTimestampSec, performance.now());
+    t.trace.gossipValidationStart(slot, "0xaa", (slot * slotMs + 1000) / 1000, performance.now());
     t.at(1250);
-    t.trace.mark(slot, root, BlockMilestone.gossipValidationEnd);
-    t.trace.markAllUnixMs([{slot, blockRootHex: root}], BlockMilestone.stateTransitionEnd, slot * slotMs + 1400);
-    // A milestone keeps its first value
+    t.trace.mark(slot, "0xaa", BlockMilestone.gossipValidationEnd);
+    // An arrival milestone keeps its first value
     t.at(1500);
-    t.trace.mark(slot, root, BlockMilestone.gossipValidationEnd);
+    t.trace.mark(slot, "0xaa", BlockMilestone.gossipValidationEnd);
 
-    const [traced] = t.root(slot).roots;
-    expect(traced.root).toBe(root);
-    expect(traced.outcome).toBe("pending");
-    expect(traced.milestones).toEqual({
+    expect(t.milestones(slot)).toMatchObject({
       gossip_admission: 1000,
       gossip_validation_start: 1200,
       gossip_validation_end: 1250,
-      state_transition_end: 1400,
+      processor_start: null,
     });
-    expect(traced.runnableImport.intervals).toEqual([[1000, 1200]]);
-    expect(traced.runnableImport.ms).toBe(200);
+    expect(t.slot(slot).roots[0].outcome).toBe("pending");
+    expect(t.slot(slot).roots[0].waits).toMatchObject({dispatch: {beginMs: 1000, endMs: 1200}, processor: null});
   });
 
-  it("counts attestation segments inside the union of runnable-import intervals", () => {
+  it("records each branch of an attempt when it completes and keeps the pending work when the slot closes", () => {
+    const slot = 100;
+    const t = setup(slot);
+    t.at(1000);
+    const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    t.at(1100);
+    attempt?.mark(BlockMilestone.stateTransitionStart);
+    attempt?.markUnixMs(BlockMilestone.stateTransitionEnd, slot * slotMs + 1300);
+    attempt?.markUnixMs(BlockMilestone.signaturesDone, slot * slotMs + 1400);
+
+    t.toSlot(slot + 2);
+    expect(t.slot(slot).closed).toBe(true);
+    expect(t.slot(slot).roots[0].outcome).toBe("not_imported");
+    expect(t.milestones(slot)).toMatchObject({state_transition_end: 1300, signatures_done: 1400, data_available: null});
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "not_imported"});
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "signatures_done"}, 1.4);
+    expect(t.metrics.milestoneMissing.inc).toHaveBeenCalledWith({milestone: "data_available", outcome: "not_imported"});
+    expect(t.metrics.milestoneMissing.inc).not.toHaveBeenCalledWith({
+      milestone: "signatures_done",
+      outcome: "not_imported",
+    });
+    expect(t.metrics.wait.observe).toHaveBeenCalledWith({wait: "processor"}, 0);
+  });
+
+  it("clears a failed attempt, drops its late marks, and takes no attempt after import", () => {
     const slot = 100;
     const t = setup(slot);
     const root = "0xaa";
-    const block = {slot, blockRootHex: root};
-    t.at(500);
-    t.trace.attestationSegmentStart(AttestationSegment.start);
-    t.at(1050);
-    t.trace.attestationSegmentStart(AttestationSegment.start);
-    t.at(1100);
-    t.trace.attestationSegmentStart(AttestationSegment.start);
-    t.at(1150);
-    t.trace.attestationSegmentStart(AttestationSegment.continuation);
-    t.at(1200);
-    t.trace.gossipValidationStart(slot, root, (slot * slotMs + 1000) / 1000, performance.now());
+    t.at(1000);
+    const first = t.trace.startAttempt([block(slot, root)], performance.now());
+    first?.mark(BlockMilestone.prestateRequest);
+    t.trace.processorLaneFree();
 
-    // Enqueued while the processor ran another job; its wait counts from the lane freeing
+    t.at(1200);
+    const second = t.trace.startAttempt([block(slot, root)], performance.now());
+    t.at(1300);
+    first?.markUnixMs(BlockMilestone.signaturesDone, Date.now());
+    second?.mark(BlockMilestone.prestateRequest);
+    t.at(1400);
+    t.trace.mark(slot, root, BlockMilestone.forkChoice);
+    t.trace.processorLaneFree();
+
+    // A duplicate job after import neither restarts the attempt nor extends its wait
+    t.at(1500);
+    t.trace.attestationSegmentStart(AttestationSegment.start);
+    expect(t.trace.startAttempt([block(slot, root)], performance.now() - 100)).toBeNull();
+
+    expect(t.slot(slot).roots[0].attempts).toBe(2);
+    expect(t.milestones(slot)).toMatchObject({processor_start: 1200, prestate_request: 1300, signatures_done: null});
+    expect(t.slot(slot).roots[0].waits.processor).toMatchObject({beginMs: 1200, endMs: 1200, attestationStarts: 0});
+  });
+
+  it("counts attestation segments during the processor wait from the lane freeing", () => {
+    const slot = 100;
+    const t = setup(slot);
     t.at(1300);
     const enqueuedAt = performance.now();
-    t.trace.markAll([block], BlockMilestone.processorEnqueue, enqueuedAt);
     t.at(1400);
-    t.trace.processorIdle();
+    t.trace.processorLaneFree();
+    t.trace.attestationSegmentStart(AttestationSegment.start);
     t.at(1420);
     t.trace.attestationSegmentStart(AttestationSegment.continuation);
+    t.trace.attestationSegmentStart(AttestationSegment.start);
     t.at(1450);
-    t.trace.processorStart([block], enqueuedAt);
+    t.trace.startAttempt([block(slot, "0xaa")], enqueuedAt);
 
-    const {runnableImport, milestones} = t.root(slot).roots[0];
-    expect(milestones.processor_enqueue).toBe(1300);
-    expect(milestones.processor_start).toBe(1450);
-    expect(runnableImport.intervals).toEqual([
-      [1000, 1200],
-      [1400, 1450],
-    ]);
-    expect(runnableImport.ms).toBe(250);
-    expect(runnableImport.attestationStarts).toBe(2);
-    expect(runnableImport.attestationContinuations).toBe(2);
-    expect(runnableImport.attestationLogTruncated).toBe(false);
-    expect(t.root(slot).attestationWork).toMatchObject({starts: 3, continuations: 2});
+    expect(t.milestones(slot)).toMatchObject({processor_enqueue: 1300, processor_start: 1450});
+    expect(t.slot(slot).roots[0].waits.processor).toMatchObject({
+      beginMs: 1400,
+      endMs: 1450,
+      attestationStarts: 2,
+      attestationContinuations: 1,
+      attestationLogTruncated: false,
+    });
   });
 
-  it("times attestation segments only in sampled slots", () => {
-    const sampled = findSlot(100, true);
-    const t = setup(sampled);
+  it("marks attestation time complete only for waits wholly in sampled slots", () => {
+    const sampled = findSlot(101, true);
+    const t = setup(sampled - 1);
+    t.toSlot(sampled);
     t.at(1000);
-    const start = t.trace.attestationSegmentStart(AttestationSegment.start);
+    const segment = t.trace.attestationSegmentStart(AttestationSegment.start);
     t.at(1005);
-    t.trace.attestationSegmentEnd(start);
-    const microtask = t.trace.attestationSegmentStart(AttestationSegment.microtask);
-    t.at(1007);
-    t.trace.attestationSegmentEnd(microtask);
-    expect(t.root(sampled).sampled).toBe(true);
-    expect(t.root(sampled).attestationWork).toEqual({starts: 1, continuations: 0, jsMs: 7});
+    t.trace.attestationSegmentEnd(segment);
+    t.at(1100);
+    t.trace.gossipValidationStart(sampled, "0xaa", (sampled * slotMs + 900) / 1000, performance.now());
+    expect(t.slot(sampled).roots[0].waits.dispatch).toMatchObject({attestationJsMs: 5, sampledCoverage: 1});
 
-    const unsampled = findSlot(sampled + 1, false);
-    t.toSlot(unsampled);
-    t.at(1000);
-    const later = t.trace.attestationSegmentStart(AttestationSegment.start);
-    t.at(1005);
-    t.trace.attestationSegmentEnd(later);
-    expect(t.trace.attestationSegmentStart(AttestationSegment.microtask)).toBe(-1);
-    expect(t.root(unsampled).attestationWork).toEqual({starts: 1, continuations: 0, jsMs: null});
+    // A wait that runs into the next, unsampled slot has partial coverage
+    t.at(slotMs - 100);
+    const late = t.trace.attestationSegmentStart(AttestationSegment.start);
+    t.at(slotMs - 90);
+    t.trace.attestationSegmentEnd(late);
+    t.toSlot(sampled + 1);
+    t.at(100);
+    t.trace.gossipValidationStart(sampled, "0xbb", (sampled * slotMs + slotMs - 200) / 1000, performance.now());
+    expect(t.slot(sampled).roots[1].waits.dispatch).toMatchObject({
+      attestationStarts: 1,
+      attestationJsMs: 10,
+      sampledCoverage: 0.667,
+    });
+    expect(t.slot(sampled + 1).attestationWork.jsMs).toBeNull();
+
+    t.toSlot(sampled + 3);
+    expect(t.metrics.waitSampling.inc).toHaveBeenCalledWith({wait: "dispatch", coverage: "full"});
+    expect(t.metrics.waitSampling.inc).toHaveBeenCalledWith({wait: "dispatch", coverage: "partial"});
+    expect(t.metrics.waitAttestationJs.observe).toHaveBeenCalledTimes(1);
   });
 
-  it("bounds competing roots per slot and counts the overflow once per root", () => {
+  it("times each resume of batch validation up to its next await", async () => {
+    const t = setup(findSlot(100, true));
+    const signingRoot = Buffer.alloc(32, 1);
+    const chain = {
+      blockTrace: t.trace,
+      seenAttesters: new SeenAttesters(),
+      opts: {minSameMessageSignatureSetsToBatch: 2},
+      bls: {
+        verifySignatureSetsSameMessage: (sets: unknown[]) => {
+          vi.advanceTimersByTime(3);
+          return Promise.resolve(sets.map(() => true));
+        },
+      },
+    } as unknown as IBeaconChain;
+    let validatorIndex = 0;
+    const step0 = async (): Promise<Step0Result> => {
+      vi.advanceTimersByTime(2);
+      return {
+        attestation: ssz.phase0.Attestation.defaultValue(),
+        signatureSet: {type: SignatureSetType.indexed, index: 0, signingRoot, signature: new Uint8Array(96)},
+        validatorIndex: validatorIndex++,
+      } as Partial<Step0Result> as Step0Result;
+    };
+
+    await validateGossipAttestationsSameAttData(
+      ForkName.phase0,
+      chain,
+      new Array<GossipAttestation>(3).fill({} as GossipAttestation),
+      step0
+    );
+
+    // The first step0 runs in the caller's segment; the other two and the signature submission are timed
+    expect(t.slot(findSlot(100, true)).attestationWork).toEqual({starts: 0, continuations: 1, jsMs: 7});
+  });
+
+  it("bounds competing roots per slot and counts changes of overflowing root", () => {
     const slot = 100;
     const t = setup(slot);
     for (const root of ["0x01", "0x02", "0x03", "0x04", "0x05", "0x05"]) {
-      t.trace.mark(slot, root, BlockMilestone.processorEnqueue);
+      t.trace.mark(slot, root, BlockMilestone.gossipValidationEnd);
     }
-    expect(t.root(slot).roots.map((r) => r.root)).toEqual(["0x01", "0x02", "0x03", "0x04"]);
-    expect(t.root(slot).rootsOverflow).toBe(1);
+    expect(t.slot(slot).roots.map((r) => r.root)).toEqual(["0x01", "0x02", "0x03", "0x04"]);
+    expect(t.slot(slot).rootsOverflow).toBe(1);
     expect(t.metrics.rootsOverflow.inc).toHaveBeenCalledTimes(1);
   });
 
   it("ignores slots outside the open window", () => {
     const slot = 100;
     const t = setup(slot);
-    t.trace.mark(slot - 2, "0xaa", BlockMilestone.processorEnqueue);
-    t.trace.mark(slot + 2, "0xbb", BlockMilestone.processorEnqueue);
+    t.trace.mark(slot - 2, "0xaa", BlockMilestone.gossipValidationEnd);
+    t.trace.mark(slot + 2, "0xbb", BlockMilestone.gossipValidationEnd);
     expect(t.trace.getSnapshot().slots.map((s) => s.slot)).toEqual([slot]);
   });
 
-  it("observes outcomes and metrics when a slot is finalized", () => {
+  it("pairs the first getBlobs call and commits attestation data when returned", () => {
     const slot = 100;
     const t = setup(slot);
-    const head = "0xaa";
-    const other = "0xbb";
-    const dropped = "0xcc";
     t.at(1000);
-    for (const root of [head, other]) {
-      for (const milestone of [BlockMilestone.processorEnqueue, BlockMilestone.forkChoice]) {
-        t.trace.mark(slot, root, milestone);
-      }
-    }
-    t.trace.mark(slot, dropped, BlockMilestone.processorEnqueue);
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(true);
     t.at(1100);
-    t.trace.mark(slot, head, BlockMilestone.head);
-    t.at(attestationDueMs + 10);
-    t.trace.attestationData(slot, head);
-    t.trace.attestationData(slot, other);
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(false);
+    t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsResponse);
+    t.at(1200);
+    t.trace.mark(slot, "0xaa", BlockMilestone.head);
+    t.at(attestationDueMs + 20);
+    t.trace.attestationData(slot, "0xaa", performance.now() - 10);
+    t.trace.attestationData(slot, "0xbb", performance.now());
+    expect(t.milestones(slot)).toMatchObject({getblobs_request: 1000, getblobs_response: 1100});
+    expect(t.slot(slot).attestationData).toEqual({
+      ms: attestationDueMs + 10,
+      root: "0xaa",
+      count: 2,
+      rootChanged: true,
+    });
 
-    t.toSlot(slot + 1);
-    expect(t.root(slot).finalized).toBe(false);
     t.toSlot(slot + 2);
-
-    const {roots, finalized, attestationData} = t.root(slot);
-    expect(finalized).toBe(true);
-    expect(roots.map((r) => r.outcome)).toEqual(["head", "imported", "not_imported"]);
-    expect(attestationData).toEqual({ms: attestationDueMs + 10, root: head, count: 2, rootChanged: true});
-    expect(t.metrics.blocks.inc.mock.calls).toEqual([
-      [{outcome: "head"}],
-      [{outcome: "imported"}],
-      [{outcome: "not_imported"}],
-    ]);
-    expect(t.metrics.milestoneMissing.inc).toHaveBeenCalledWith({milestone: "head"});
-    expect(t.metrics.milestoneToTarget.observe).toHaveBeenCalledWith(
-      {milestone: "fork_choice", target: ConsumerTarget.attestationDue},
-      (1000 - attestationDueMs) / 1000
-    );
-    expect(t.metrics.milestoneLate.inc).toHaveBeenCalledWith({milestone: "attestation_data"});
     expect(t.metrics.attestationData.inc).toHaveBeenCalledWith({selected: "slot_block"});
-    expect(t.metrics.stage.observe).toHaveBeenCalledWith({stage: "head"}, 0.1);
+    expect(t.metrics.milestoneLate.inc).toHaveBeenCalledWith({milestone: "attestation_data"});
+    expect(t.metrics.milestoneToTarget.observe).toHaveBeenCalledWith(
+      {milestone: "head", target: ConsumerTarget.attestationDue},
+      (1200 - attestationDueMs) / 1000
+    );
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "head"});
   });
 });
 
 describe("getConsumerTargetsMs", () => {
   it("derives each fork's targets from the slot duration", () => {
-    const gloasConfig = createChainForkConfig({...defaultChainConfig, SLOT_DURATION_MS: 6000});
+    const shortSlots = createChainForkConfig({...defaultChainConfig, SLOT_DURATION_MS: 6000});
     const bps = (bps: number): number => Math.round((bps * 6000) / 10000);
-    expect(getConsumerTargetsMs(gloasConfig, ForkName.fulu)).toEqual({
-      [ConsumerTarget.attestationDue]: bps(gloasConfig.ATTESTATION_DUE_BPS),
-      [ConsumerTarget.aggregateDue]: bps(gloasConfig.AGGREGATE_DUE_BPS),
-      [ConsumerTarget.syncMessageDue]: bps(gloasConfig.SYNC_MESSAGE_DUE_BPS),
-      [ConsumerTarget.contributionDue]: bps(gloasConfig.CONTRIBUTION_DUE_BPS),
+    expect(getConsumerTargetsMs(shortSlots, ForkName.fulu)).toEqual({
+      [ConsumerTarget.attestationDue]: bps(shortSlots.ATTESTATION_DUE_BPS),
+      [ConsumerTarget.aggregateDue]: bps(shortSlots.AGGREGATE_DUE_BPS),
+      [ConsumerTarget.syncMessageDue]: bps(shortSlots.SYNC_MESSAGE_DUE_BPS),
+      [ConsumerTarget.contributionDue]: bps(shortSlots.CONTRIBUTION_DUE_BPS),
       [ConsumerTarget.payloadDue]: null,
       [ConsumerTarget.payloadAttestationDue]: null,
     });
-    expect(getConsumerTargetsMs(gloasConfig, ForkName.gloas)).toEqual({
-      [ConsumerTarget.attestationDue]: bps(gloasConfig.ATTESTATION_DUE_BPS_GLOAS),
-      [ConsumerTarget.aggregateDue]: bps(gloasConfig.AGGREGATE_DUE_BPS_GLOAS),
-      [ConsumerTarget.syncMessageDue]: bps(gloasConfig.SYNC_MESSAGE_DUE_BPS_GLOAS),
-      [ConsumerTarget.contributionDue]: bps(gloasConfig.CONTRIBUTION_DUE_BPS_GLOAS),
-      [ConsumerTarget.payloadDue]: bps(gloasConfig.PAYLOAD_DUE_BPS),
-      [ConsumerTarget.payloadAttestationDue]: bps(gloasConfig.PAYLOAD_ATTESTATION_DUE_BPS),
+    expect(getConsumerTargetsMs(shortSlots, ForkName.gloas)).toEqual({
+      [ConsumerTarget.attestationDue]: bps(shortSlots.ATTESTATION_DUE_BPS_GLOAS),
+      [ConsumerTarget.aggregateDue]: bps(shortSlots.AGGREGATE_DUE_BPS_GLOAS),
+      [ConsumerTarget.syncMessageDue]: bps(shortSlots.SYNC_MESSAGE_DUE_BPS_GLOAS),
+      [ConsumerTarget.contributionDue]: bps(shortSlots.CONTRIBUTION_DUE_BPS_GLOAS),
+      [ConsumerTarget.payloadDue]: bps(shortSlots.PAYLOAD_DUE_BPS),
+      [ConsumerTarget.payloadAttestationDue]: bps(shortSlots.PAYLOAD_ATTESTATION_DUE_BPS),
     });
-    expect(getConsumerTargetsMs(gloasConfig, ForkName.phase0)[ConsumerTarget.syncMessageDue]).toBeNull();
+    expect(getConsumerTargetsMs(shortSlots, ForkName.phase0)[ConsumerTarget.syncMessageDue]).toBeNull();
   });
 });

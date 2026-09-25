@@ -117,16 +117,15 @@ export async function validateGossipAttestationsSameAttData(
   // for seen AttestationData, it's the same to await Promise.all() pattern
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
   const trace = chain.blockTrace;
-  const timed = trace?.sampling === true;
+  // Each resume after an await is timed until the next await; the first runs in the caller's segment
+  let segment = -1;
   const step0ResultOrErrors: Result<Step0Result>[] = [];
-  for (let i = 0; i < attestationOrBytesArr.length; i++) {
-    const attestationOrBytes = attestationOrBytesArr[i];
+  for (const attestationOrBytes of attestationOrBytesArr) {
     const {subnet} = attestationOrBytes;
-    // The first step0 runs in the caller's segment, each later one in a microtask after the previous
-    const segment = timed && i > 0 ? (trace?.attestationSegmentStart(AttestationSegment.microtask) ?? -1) : -1;
     const step0 = wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
     if (segment >= 0) trace?.attestationSegmentEnd(segment);
     step0ResultOrErrors.push(await step0);
+    segment = trace?.sampling ? trace.attestationSegmentStart(AttestationSegment.microtask) : -1;
   }
 
   // step1: verify signatures of all valid attestations
@@ -145,17 +144,14 @@ export async function validateGossipAttestationsSameAttData(
     newIndex++;
   }
 
-  let signatureValids: boolean[];
   const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
-  if (batchableBls) {
-    // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
-  } else {
-    // don't want to block the main thread if there are too few signatures
-    signatureValids = await Promise.all(
-      signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true}))
-    );
-  }
+  const verification = batchableBls
+    ? // all signature sets should have same signing root since we filtered in network processor
+      chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot)
+    : // don't want to block the main thread if there are too few signatures
+      Promise.all(signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true})));
+  if (segment >= 0) trace?.attestationSegmentEnd(segment);
+  const signatureValids = await verification;
   const continuation = trace?.attestationSegmentStart(AttestationSegment.continuation) ?? -1;
 
   // phase0 post validation
@@ -295,6 +291,8 @@ async function validateAttestationNoSignatureCheck(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
   let committeeIndex: number | null;
+  // The segment this validation resumes in after awaiting the shuffling, timed in sampled slots
+  let resumed = -1;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation
@@ -446,6 +444,7 @@ async function validateAttestationNoSignatureCheck(
       attHeadBlock,
       RegenCaller.validateGossipAttestation
     );
+    resumed = chain.blockTrace?.sampling ? chain.blockTrace.attestationSegmentStart(AttestationSegment.microtask) : -1;
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
@@ -590,6 +589,7 @@ async function validateAttestationNoSignatureCheck(
           signature,
         };
 
+  if (resumed >= 0) chain.blockTrace?.attestationSegmentEnd(resumed);
   return {
     attestation,
     indexedAttestation,
