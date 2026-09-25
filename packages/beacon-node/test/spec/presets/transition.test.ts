@@ -20,7 +20,7 @@ import {
   expectNoProgressiveBalancesMismatches,
 } from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
 const transition =
@@ -55,13 +55,14 @@ const transition =
         // testConfig is used here to load forkEpoch from meta.yaml
         const forkEpoch = bnToNum(meta.fork_epoch);
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
+        const verify = shouldVerify(testcase);
 
         let state = createCachedBeaconStateTest(testcase.pre, testConfig);
         const {metrics, register} = createSpecTestMetrics();
-        const runStateTransition = (): void => {
-          for (let i = 0; i < meta.blocks_count; i++) {
-            const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-            state = stateTransition(
+        for (let i = 0; i < meta.blocks_count; i++) {
+          const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
+          const transitionState = () =>
+            stateTransition(
               state,
               signedBlock,
               {
@@ -69,24 +70,22 @@ const transition =
                 executionPayloadStatus: ExecutionPayloadStatus.valid,
                 dataAvailabilityStatus: DataAvailabilityStatus.Available,
                 verifyStateRoot: true,
-                verifyProposer: false,
-                verifySignatures: false,
+                verifyProposer: verify,
+                verifySignatures: verify,
               },
               {metrics}
             );
+          if (testcase.post === undefined && i === bnToNum(meta.blocks_count) - 1) {
+            await expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(
+              transitionState,
+              register,
+              testCaseName
+            );
+            return undefined;
           }
-        };
-
-        if (testcase.post === undefined) {
-          await expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(
-            runStateTransition,
-            register,
-            testCaseName
-          );
-          return undefined;
+          state = transitionState();
         }
 
-        runStateTransition();
         await expectNoProgressiveBalancesMismatches(register, testCaseName);
         return state;
       },
@@ -108,7 +107,7 @@ const transition =
           }
           expectEqualBeaconState(forkNext, expected, actual);
         },
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
         shouldSkip: (_testcase, name, _index) =>
           skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
       },

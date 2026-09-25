@@ -1,4 +1,5 @@
 import path from "node:path";
+import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -17,6 +18,7 @@ import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ss
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {loadSpecTestConfig} from "../utils/loadSpecTestConfig.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {BaseSpecTest, RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -146,6 +148,8 @@ export type OperationsTestCase = {
   execution: {execution_valid: boolean};
 };
 
+const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+
 const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
   const operationFn = operationFns[testName];
   if (operationFn === undefined) {
@@ -153,10 +157,14 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   }
 
   return {
-    testFunction: (testcase) => {
+    testFunction: (testcase, directoryName, testCaseName) => {
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+      const config = createChainForkConfig({
+        ...getConfig(fork, epoch),
+        ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+      });
+      const cachedState = createCachedBeaconStateTest(state, config);
 
       const postState = operationFn(cachedState, testcase);
       if (postState !== undefined) {
@@ -211,6 +219,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   };
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(specTestDir, {
   operations: {type: RunnerType.default, fn: operations},
 });

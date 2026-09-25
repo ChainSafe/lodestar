@@ -699,20 +699,8 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
+        // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
-          // and these tests are failing until we update our implementation.
-          name.includes("voting_source_beyond_two_epoch") ||
-          name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
           // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
           // be applied. Passing them requires skipping deposit signature verification inside epoch
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
