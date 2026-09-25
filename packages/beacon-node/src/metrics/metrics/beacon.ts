@@ -347,6 +347,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time taken to compute data column sidecars, including cells and inclusion proof",
         buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
       }),
+      dataColumnSidecarProposerSignatureChecks: register.counter<{result: "cache_hit" | "verification"}>({
+        name: "beacon_data_column_sidecar_proposer_signature_checks_total",
+        help: "Gossip data column proposer signature checks answered by the cache or by a started verification",
+        labelNames: ["result"],
+      }),
+      dataColumnSidecarProposerSignatureBlocks: register.counter({
+        name: "beacon_data_column_sidecar_proposer_signature_blocks_total",
+        help: "Blocks whose proposer signature a gossip data column verified and cached first",
+      }),
       dataColumnSidecarInclusionProofVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
         help: "Time taken to verify data_column sidecar inclusion proof",

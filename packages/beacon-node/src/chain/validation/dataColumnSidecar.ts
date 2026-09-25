@@ -147,12 +147,15 @@ export async function validateGossipFuluDataColumnSidecar(
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
   const signature = dataColumnSidecar.signedBlockHeader.signature;
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+  if (chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+    metrics?.peerDas.dataColumnSidecarProposerSignatureChecks.inc({result: "cache_hit"});
+  } else {
     const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
       chain.config,
       dataColumnSidecar.signedBlockHeader
     );
 
+    metrics?.peerDas.dataColumnSidecarProposerSignatureChecks.inc({result: "verification"});
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         // verify on main thread so that we only need to verify block proposer signature once per block
@@ -167,6 +170,9 @@ export async function validateGossipFuluDataColumnSidecar(
       });
     }
 
+    if (metrics && !chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+      metrics.peerDas.dataColumnSidecarProposerSignatureBlocks.inc();
+    }
     chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
