@@ -1095,6 +1095,12 @@ export function createLodestarMetrics(
         labelNames: ["wait"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
+      interval: register.histogram<{interval: string}>({
+        name: "lodestar_block_trace_interval_seconds",
+        help: "Traced block intervals between two milestones of the same root, `<from>_to_<to>`, negative when the second came first",
+        labelNames: ["interval"],
+        buckets: [-1, -0.25, -0.1, -0.025, 0, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 4],
+      }),
       waitAttestationSegments: register.histogram<{wait: string; kind: string}>({
         name: "lodestar_block_trace_wait_attestation_segments",
         help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch or processor wait",

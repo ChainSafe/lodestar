@@ -10,6 +10,7 @@ import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
+import {BlsJobTimes} from "../bls/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -188,6 +189,7 @@ export async function verifyBlocksInEpoch(
     // All signatures at once
     // TODO GLOAS: can verify payload signatures in batch too
     // maybe chain with the above verifyBlocksSignatures()
+    const signatureJobs = attempt ? blocks.map(() => new BlsJobTimes()) : undefined;
     const signaturesPromise = verifyBlocksSignatures(
       this.config,
       this.bls,
@@ -196,7 +198,8 @@ export async function verifyBlocksInEpoch(
       preState0,
       blocks,
       indexedAttestationsByBlock,
-      opts
+      opts,
+      signatureJobs
     );
 
     if (attempt) {
@@ -206,10 +209,14 @@ export async function verifyBlocksInEpoch(
         ({verifyStateTime}) => attempt.markUnixMs(BlockMilestone.stateTransitionEnd, verifyStateTime),
         ignore
       );
-      signaturesPromise.then(
-        ({verifySignaturesTime}) => attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime),
-        ignore
-      );
+      // A branch's stages are recorded however it ends
+      const recordSignatureJobs = (): void => {
+        signatureJobs?.forEach((times, i) => attempt.signatureJob(blockInputs[i].blockRootHex, times));
+      };
+      signaturesPromise.then(({verifySignaturesTime}) => {
+        recordSignatureJobs();
+        attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime);
+      }, recordSignatureJobs);
       verifyExecutionPayloadsPromise.then((status) => {
         if (status.execAborted === null && status.executionTime !== undefined) {
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);

@@ -11,6 +11,7 @@ import {
   getConsumerTargetsMs,
   isSampledSlot,
 } from "../../../../src/chain/blockTrace/index.js";
+import {BlsJobTimes} from "../../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenAttesters} from "../../../../src/chain/seenCache/seenAttesters.js";
 import {
@@ -46,6 +47,7 @@ function mockMetrics() {
       blocks: counter(),
       rootsOverflow: counter(),
       wait: histogram(),
+      interval: histogram(),
       waitAttestationSegments: histogram(),
       waitAttestationJs: histogram(),
       waitSampling: counter(),
@@ -153,6 +155,53 @@ describe("BlockTrace", () => {
       outcome: "not_imported",
     });
     expect(t.metrics.wait.observe).toHaveBeenCalledWith({wait: "processor"}, 0);
+  });
+
+  it("records a block's signature job stages per root, and drops a replaced attempt's", () => {
+    const slot = 100;
+    const t = setup(slot);
+    const [a, b] = [block(slot, "0xaa"), block(slot, "0xbb")];
+    t.at(1000);
+    const first = t.trace.startAttempt([a], performance.now());
+    t.at(1100);
+    const second = t.trace.startAttempt([a, b], performance.now());
+    const times = (at: number): BlsJobTimes =>
+      Object.assign(new BlsJobTimes(), {
+        built: performance.now() + at,
+        selected: performance.now() + at + 5,
+        prepared: performance.now() + at + 6,
+        workerStart: performance.now() + at + 8,
+        workerEnd: performance.now() + at + 40,
+        received: performance.now() + at + 45,
+        dispatchSets: 12,
+      });
+    first?.signatureJob("0xaa", times(-50));
+    second?.signatureJob("0xbb", times(100));
+    // A verification the pool never dispatched leaves its later stages unrecorded
+    second?.signatureJob("0xaa", Object.assign(new BlsJobTimes(), {built: performance.now() + 100}));
+
+    expect(t.milestones(slot, 0)).toMatchObject({
+      signature_sets_built: 1200,
+      signature_job_selected: null,
+      signature_receipt: null,
+    });
+    expect(t.slot(slot).roots[0].signatureDispatchSets).toBeNull();
+    expect(t.milestones(slot, 1)).toMatchObject({
+      signature_sets_built: 1200,
+      signature_job_selected: 1205,
+      signature_job_prepared: 1206,
+      signature_worker_start: 1208,
+      signature_worker_end: 1240,
+      signature_receipt: 1245,
+    });
+    expect(t.slot(slot).roots[1].signatureDispatchSets).toBe(12);
+
+    t.toSlot(slot + 2);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "signature_sets_built_to_worker_end"}, 0.04);
+    expect(t.metrics.milestoneMissing.inc).not.toHaveBeenCalledWith({
+      milestone: "signature_job_selected",
+      outcome: "not_imported",
+    });
   });
 
   it("clears a failed attempt, drops its late marks, and takes no attempt after import", () => {

@@ -26,6 +26,28 @@ export type VerifySignatureOpts = {
   priority?: boolean;
 };
 
+/**
+ * Stage times of one traced verification in `performance.now()` ms, NaN until reached. The submitter stamps `built`;
+ * the worker pool stamps the rest, keeping each stage's latest time when it splits the sets into several jobs. A
+ * verification on the main thread records none of the pool's stages.
+ */
+export class BlsJobTimes {
+  /** The signature sets were built, just before submission */
+  built = NaN;
+  /** The pool picked the job for a worker dispatch */
+  selected = NaN;
+  /** The dispatch's work requests were prepared, before posting them to the worker */
+  prepared = NaN;
+  /** The worker started the dispatch, as the worker stamped it */
+  workerStart = NaN;
+  /** The worker finished the dispatch, as the worker stamped it; the dispatch's results return together */
+  workerEnd = NaN;
+  /** The dispatch's result reached JS */
+  received = NaN;
+  /** Signature sets in the dispatch, the job's own included; 0 before */
+  dispatchSets = 0;
+}
+
 export interface IBlsVerifier {
   /**
    * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
@@ -47,8 +69,10 @@ export interface IBlsVerifier {
    * Public keys have already been checked for subgroup and infinity
    * Signatures have already been checked for subgroup
    * Signature checks above could be done here for convienence as well
+   *
+   * `times`, when given, receives the verification's stage times.
    */
-  verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
+  verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts, times?: BlsJobTimes): Promise<boolean>;
 
   /**
    * Similar to verifySignatureSets but:

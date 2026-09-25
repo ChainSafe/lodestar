@@ -9,7 +9,7 @@ import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
-import {IBlsVerifier} from "../bls/index.js";
+import {BlsJobTimes, IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -19,6 +19,8 @@ import {ImportBlockOpts} from "./types.js";
  * epoch as `preState0`. Otherwise the shufflings won't be correct.
  *
  * Since all data is known in advance all signatures are verified at once in parallel.
+ *
+ * `jobTimes`, when given, has an entry per block that receives its verification's stage times.
  */
 export async function verifyBlocksSignatures(
   config: BeaconConfig,
@@ -28,7 +30,8 @@ export async function verifyBlocksSignatures(
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
-  opts: ImportBlockOpts
+  opts: ImportBlockOpts,
+  jobTimes?: BlsJobTimes[]
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -42,16 +45,23 @@ export async function verifyBlocksSignatures(
   // so the attester and proposer shufflings are correct.
   for (const [i, block] of blocks.entries()) {
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
-    isValidPromises[i] = opts.validSignatures
-      ? // Skip all signature verification
-        Promise.resolve(true)
-      : //
-        // Verify signatures per block to track which block is invalid
-        bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          })
-        );
+    if (opts.validSignatures) {
+      // Skip all signature verification
+      isValidPromises[i] = Promise.resolve(true);
+    } else {
+      // Verify signatures per block to track which block is invalid
+      const sets = getBlockSignatureSets(
+        config,
+        currentSyncCommitteeIndexed,
+        preState0,
+        block,
+        indexedAttestationsByBlock[i],
+        {skipProposerSignature: opts.validProposerSignature}
+      );
+      const times = jobTimes?.[i];
+      if (times !== undefined) times.built = performance.now();
+      isValidPromises[i] = bls.verifySignatureSets(sets, undefined, times);
+    }
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to

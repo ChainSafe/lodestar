@@ -5,6 +5,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {IBlockInput} from "../blocks/blockInput/types.js";
+import type {BlsJobTimes} from "../bls/index.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
 /** Block critical-path milestones in pipeline order */
@@ -22,6 +23,18 @@ export enum BlockMilestone {
   prestateReady,
   stateTransitionStart,
   stateTransitionEnd,
+  /** The block's signature sets were built, just before submission to the BLS verifier */
+  signatureSetsBuilt,
+  /** The BLS pool picked the block's job for a worker dispatch */
+  signatureJobSelected,
+  /** The dispatch's work requests were prepared, before posting them to the worker */
+  signatureJobPrepared,
+  /** The worker started the dispatch carrying the job, as the worker stamped it */
+  signatureWorkerStart,
+  /** The worker finished that dispatch, as the worker stamped it; the dispatch's results return together */
+  signatureWorkerEnd,
+  /** Observed readiness: when the dispatch's result reached JS */
+  signatureReceipt,
   /** Observed readiness: when the JS continuation ran, after an unknown worker callback delay */
   signaturesDone,
   /** Observed readiness: when the JS continuation ran, after an unknown execution client callback delay */
@@ -68,6 +81,8 @@ export type BlockAttempt = {
   /** Records `milestone` for every block from an existing Unix timestamp in ms */
   markUnixMs(milestone: BlockMilestone, unixMs: number): void;
   markBlock(root: RootHex, milestone: BlockMilestone): void;
+  /** Records the stages of `root`'s signature job */
+  signatureJob(root: RootHex, times: BlsJobTimes): void;
 };
 
 const MILESTONE_COUNT = BlockMilestone.head + 1;
@@ -81,6 +96,12 @@ const MILESTONE_NAMES: Record<BlockMilestone, string> = {
   [BlockMilestone.prestateReady]: "prestate_ready",
   [BlockMilestone.stateTransitionStart]: "state_transition_start",
   [BlockMilestone.stateTransitionEnd]: "state_transition_end",
+  [BlockMilestone.signatureSetsBuilt]: "signature_sets_built",
+  [BlockMilestone.signatureJobSelected]: "signature_job_selected",
+  [BlockMilestone.signatureJobPrepared]: "signature_job_prepared",
+  [BlockMilestone.signatureWorkerStart]: "signature_worker_start",
+  [BlockMilestone.signatureWorkerEnd]: "signature_worker_end",
+  [BlockMilestone.signatureReceipt]: "signature_receipt",
   [BlockMilestone.signaturesDone]: "signatures_done",
   [BlockMilestone.executionDone]: "execution_done",
   [BlockMilestone.dataAvailable]: "data_available",
@@ -93,6 +114,7 @@ const MILESTONE_NAMES: Record<BlockMilestone, string> = {
 };
 const OBSERVED_READINESS = [
   BlockMilestone.prestateReady,
+  BlockMilestone.signatureReceipt,
   BlockMilestone.signaturesDone,
   BlockMilestone.executionDone,
   BlockMilestone.getBlobsResponse,
@@ -110,6 +132,18 @@ const ATTEMPT_MILESTONES = [
   BlockMilestone.persistenceRequest,
   BlockMilestone.persistenceUnblock,
 ];
+/**
+ * Stages inside an attempt's verification branches, also cleared when a later attempt starts. An imported block may
+ * lack them: trusted signatures skip the BLS job, and main-thread verification has no pool stages.
+ */
+const ATTEMPT_STAGES = [
+  BlockMilestone.signatureSetsBuilt,
+  BlockMilestone.signatureJobSelected,
+  BlockMilestone.signatureJobPrepared,
+  BlockMilestone.signatureWorkerStart,
+  BlockMilestone.signatureWorkerEnd,
+  BlockMilestone.signatureReceipt,
+];
 /** Milestones an imported block records; the gossip ones only when it arrived by gossip */
 const EXPECTED_MILESTONES = [
   BlockMilestone.processorEnqueue,
@@ -117,6 +151,10 @@ const EXPECTED_MILESTONES = [
   BlockMilestone.dataAvailable,
   BlockMilestone.forkChoice,
   BlockMilestone.head,
+];
+/** Intervals observed when a slot closes, from the first milestone to the second */
+const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
+  ["signature_sets_built_to_worker_end", BlockMilestone.signatureSetsBuilt, BlockMilestone.signatureWorkerEnd],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
 const WAIT_COUNT = BlockWait.processor + 1;
@@ -198,6 +236,8 @@ export class BlockTrace {
   /** The generation of each root's latest attempt, unique across roots */
   private readonly generation = new Float64Array(ENTRIES);
   private readonly attempts = new Uint16Array(ENTRIES);
+  /** Signature sets in the worker dispatch that carried the latest attempt's signature job, 0 when not recorded */
+  private readonly signatureDispatchSets = new Uint16Array(ENTRIES);
   /** Per root and wait: `performance.now()` begin and end, NaN when not recorded */
   private readonly waitBegin = new Float64Array(ENTRIES * WAIT_COUNT);
   private readonly waitEnd = new Float64Array(ENTRIES * WAIT_COUNT);
@@ -284,6 +324,8 @@ export class BlockTrace {
       this.generation[e] = generation;
       this.attempts[e]++;
       for (const m of ATTEMPT_MILESTONES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
+      for (const m of ATTEMPT_STAGES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
+      this.signatureDispatchSets[e] = 0;
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
       this.setWait(e, BlockWait.processor, waitFrom, now);
       entries.push(e);
@@ -308,6 +350,20 @@ export class BlockTrace {
         const at = performance.now();
         for (let i = 0; i < entries.length; i++)
           if (this.roots[entries[i]] === root) markEntry(i, milestone, at, false);
+      },
+      signatureJob: (root, times) => {
+        for (let i = 0; i < entries.length; i++) {
+          if (this.roots[entries[i]] !== root) continue;
+          markEntry(i, BlockMilestone.signatureSetsBuilt, times.built, false);
+          markEntry(i, BlockMilestone.signatureJobSelected, times.selected, false);
+          markEntry(i, BlockMilestone.signatureJobPrepared, times.prepared, false);
+          markEntry(i, BlockMilestone.signatureWorkerStart, times.workerStart, false);
+          markEntry(i, BlockMilestone.signatureWorkerEnd, times.workerEnd, false);
+          markEntry(i, BlockMilestone.signatureReceipt, times.received, false);
+          if (this.generation[entries[i]] === generations[i] && this.closed[slotIndexOf(entries[i])] === 0) {
+            this.signatureDispatchSets[entries[i]] = times.dispatchSets;
+          }
+        }
       },
     };
   }
@@ -481,6 +537,7 @@ export class BlockTrace {
     this.milestones.fill(NaN, e * MILESTONE_COUNT, (e + 1) * MILESTONE_COUNT);
     this.generation[e] = ++this.generations;
     this.attempts[e] = 0;
+    this.signatureDispatchSets[e] = 0;
     this.waitBegin.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     this.waitEnd.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     return e;
@@ -584,6 +641,10 @@ export class BlockTrace {
         this.milestones[offset + BlockMilestone.persistenceUnblock] -
         this.milestones[offset + BlockMilestone.persistenceRequest];
       if (!Number.isNaN(persistence)) metrics.wait.observe({wait: "persistence"}, Math.max(0, persistence) / 1000);
+      for (const [interval, from, to] of INTERVALS) {
+        const ms = this.milestones[offset + to] - this.milestones[offset + from];
+        if (!Number.isNaN(ms)) metrics.interval.observe({interval}, ms / 1000);
+      }
 
       for (let wait = 0; wait < WAIT_COUNT; wait++) {
         const w = e * WAIT_COUNT + wait;
@@ -635,6 +696,7 @@ export class BlockTrace {
         outcome: outcome === "not_imported" && this.closed[s] === 0 ? "pending" : outcome,
         attempts: this.attempts[e],
         milestones,
+        signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         waits: {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),
           processor: this.waitSnapshot(e, BlockWait.processor, start),

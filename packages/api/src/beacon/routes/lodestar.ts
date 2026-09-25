@@ -125,6 +125,8 @@ export type BlockTraceRoot = {
   attempts: number;
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];
+  /** Signature sets in the BLS worker dispatch that carried the latest attempt's signature job, own sets included */
+  signatureDispatchSets: number | null;
   waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
 };
 

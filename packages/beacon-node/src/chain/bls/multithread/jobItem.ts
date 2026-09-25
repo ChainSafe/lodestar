@@ -1,5 +1,5 @@
 import {ISignatureSet, toBlsSignatureSet} from "@lodestar/state-transition";
-import {SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
+import {BlsJobTimes, SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 import {BlsWorkReq, JobQueueItemType} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
@@ -11,6 +11,8 @@ export type JobQueueItemDefault = {
   addedTimeMs: number;
   opts: VerifySignatureOpts;
   sets: ISignatureSet[];
+  /** Receives the job's stage times when traced */
+  times?: BlsJobTimes;
 };
 
 export type JobQueueItemSameMessage = {
