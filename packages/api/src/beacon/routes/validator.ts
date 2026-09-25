@@ -536,6 +536,20 @@ export type Endpoints = {
     ProduceBlockV4Meta
   >;
 
+  /** Produce a post-Gloas block with best-effort inclusion of a supplied signed bid. */
+  produceBlockV4WithBid: Endpoint<
+    "POST",
+    Omit<Endpoints["produceBlockV4"]["args"], "builderConfig"> & {
+      signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid;
+      builderBoostFactor: UintBn64;
+    },
+    Omit<Endpoints["produceBlockV4"]["request"], "query"> & {
+      query: Endpoints["produceBlockV4"]["request"]["query"] & {builder_boost_factor: string};
+    },
+    Endpoints["produceBlockV4"]["return"],
+    ProduceBlockV4Meta
+  >;
+
   /**
    * Get execution payload envelope.
    * Retrieves the cached execution payload envelope for a given slot and beacon block root,
@@ -776,6 +790,38 @@ export type Endpoints = {
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  const produceBlockV4Response = {
+    data: WithMeta(
+      ({version, executionPayloadIncluded}) =>
+        (executionPayloadIncluded
+          ? getPostGloasForkTypes(version).BlockContents
+          : getPostGloasForkTypes(version).BeaconBlock) as Type<
+          BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>
+        >
+    ),
+    meta: {
+      toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
+      fromJson: (val, headers) => ({
+        ...ProduceBlockV4MetaType.fromJson(val),
+        builderUrl: headers?.get(MetaHeader.BuilderUrl) ?? undefined,
+      }),
+      toHeadersObject: (meta) => ({
+        [MetaHeader.Version]: meta.version,
+        [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+        [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+        [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
+        ...(meta.builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: meta.builderUrl} : {}),
+      }),
+      fromHeaders: (headers) => ({
+        version: toForkName(headers.getRequired(MetaHeader.Version)),
+        consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+        executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+        executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
+        builderUrl: headers.get(MetaHeader.BuilderUrl) ?? undefined,
+      }),
+    },
+  } satisfies RouteDefinitions<Endpoints>["produceBlockV4"]["resp"];
+
   return {
     getAttesterDuties: {
       url: "/eth/v1/validator/duties/attester/{epoch}",
@@ -1084,37 +1130,107 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       init: {
         requestWireFormat: WireFormat.ssz,
       },
-      resp: {
-        data: WithMeta(
-          ({version, executionPayloadIncluded}) =>
-            (executionPayloadIncluded
-              ? getPostGloasForkTypes(version).BlockContents
-              : getPostGloasForkTypes(version).BeaconBlock) as Type<
-              BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>
-            >
-        ),
-        meta: {
-          toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
-          fromJson: (val, headers) => ({
-            ...ProduceBlockV4MetaType.fromJson(val),
-            builderUrl: headers?.get(MetaHeader.BuilderUrl) ?? undefined,
-          }),
-          toHeadersObject: (meta) => ({
-            [MetaHeader.Version]: meta.version,
-            [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
-            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
-            [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
-            ...(meta.builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: meta.builderUrl} : {}),
-          }),
-          fromHeaders: (headers) => ({
-            version: toForkName(headers.getRequired(MetaHeader.Version)),
-            consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
-            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
-            executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
-            builderUrl: headers.get(MetaHeader.BuilderUrl) ?? undefined,
-          }),
+      resp: produceBlockV4Response,
+    },
+    produceBlockV4WithBid: {
+      url: "/eth/v4/validator/blocks/{slot}/with_bid",
+      method: "POST",
+      req: {
+        writeReqJson: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          strictFeeRecipientCheck,
+          includePayload,
+          signedExecutionPayloadBid,
+          builderBoostFactor,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHex(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            include_payload: includePayload,
+            builder_boost_factor: builderBoostFactor.toString(),
+          },
+          body: ssz.gloas.SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
+          headers: {[MetaHeader.Version]: config.getForkName(slot)},
+        }),
+        parseReqJson: ({params, query, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            randaoReveal: fromHex(query.randao_reveal),
+            graffiti: fromGraffitiHex(query.graffiti),
+            skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+            feeRecipient: query.fee_recipient,
+            strictFeeRecipientCheck: query.strict_fee_recipient_check,
+            includePayload: query.include_payload,
+            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.fromJson(body),
+            builderBoostFactor: BigInt(query.builder_boost_factor),
+          };
+        },
+        writeReqSsz: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          strictFeeRecipientCheck,
+          includePayload,
+          signedExecutionPayloadBid,
+          builderBoostFactor,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHex(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            include_payload: includePayload,
+            builder_boost_factor: builderBoostFactor.toString(),
+          },
+          body: ssz.gloas.SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
+          headers: {[MetaHeader.Version]: config.getForkName(slot)},
+        }),
+        parseReqSsz: ({params, query, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            randaoReveal: fromHex(query.randao_reveal),
+            graffiti: fromGraffitiHex(query.graffiti),
+            skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+            feeRecipient: query.fee_recipient,
+            strictFeeRecipientCheck: query.strict_fee_recipient_check,
+            includePayload: query.include_payload,
+            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.deserialize(body),
+            builderBoostFactor: BigInt(query.builder_boost_factor),
+          };
+        },
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            skip_randao_verification: Schema.String,
+            fee_recipient: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+            include_payload: Schema.BooleanRequired,
+            builder_boost_factor: Schema.StringRequired,
+          },
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       },
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+      resp: produceBlockV4Response,
     },
     getExecutionPayloadEnvelope: {
       url: "/eth/v1/validator/execution_payload_envelopes/{slot}/{beacon_block_root}",
