@@ -25,7 +25,7 @@ import {
   WorkResultError,
   WorkerData,
 } from "./types.js";
-import {chunkifyMaxChunkSize} from "./utils.js";
+import {chunkifyMaxChunkSize, measureHrtimeOffsetMs} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
@@ -104,10 +104,7 @@ type WorkerDescriptor = {
 type BufferFlushReason = "size" | "timeout";
 
 /** `process.hrtime()` in ms minus `performance.now()`, to express worker result times on the `performance.now()` scale */
-const HRTIME_OFFSET_MS = (() => {
-  const [sec, ns] = process.hrtime();
-  return sec * 1000 + ns / 1e6 - performance.now();
-})();
+const HRTIME_OFFSET_MS = measureHrtimeOffsetMs();
 type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 
 /**
