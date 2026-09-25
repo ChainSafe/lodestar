@@ -4,10 +4,10 @@ import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 let runtime;
 let active = 0;
 let scheduled = false;
-// The least a host drain does: settle results in later macrotasks until endDrain releases the latch.
+// The least a host drain does: settle results in later macrotasks until an exchange releases the latch.
 function drain() {
   scheduled = false;
-  if (runtime.settle(32) || runtime.endDrain()) schedule();
+  if (runtime.exchange({settle: 32, peers: 0, serving: 0, gossip: null}).more) schedule();
 }
 function schedule() {
   if (scheduled) return;

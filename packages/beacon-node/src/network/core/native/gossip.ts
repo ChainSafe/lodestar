@@ -2,7 +2,9 @@ import {setTimeout as delay, setImmediate as yieldToIO} from "node:timers/promis
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {
+  NativeExchangeDemand,
   NativeGossipBatch,
+  NativeGossipDependencyCheck,
   NativeGossipHandle,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
@@ -15,23 +17,17 @@ import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
-import {NativeGossipDrainLimits, nativeLanes} from "./drain.js";
+import {NativeGossipDrainLimits} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
 
 type GossipRuntime = Pick<
   NativeNetworkApplicationRuntime,
-  | "drainGossip"
-  | "reportGossip"
-  | "publishGossip"
-  | "drainGossipChecks"
-  | "classifyGossip"
-  | "notifyGossipBlock"
-  | "dropQueuedGossip"
-  | "trackGossipSearch"
+  "reportGossip" | "publishGossip" | "classifyGossip" | "notifyGossipBlock" | "dropQueuedGossip" | "trackGossipSearch"
 >;
 
-type GossipExecutor = Pick<NativeGossipExecutor, "check" | "canExecute" | "execute" | "observe">;
+type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "canExecute" | "execute" | "observe">;
+type GossipDemand = NativeExchangeDemand["gossip"];
 type GossipJob = {
   handle: NativeGossipHandle;
   message?: PendingGossipsubMessage;
@@ -46,7 +42,7 @@ export class NativeGossip {
   private processor: GossipExecutor | undefined;
   /** Claimed ordinary jobs a spent drain budget left for the next drain, at most one batch. */
   private queued: GossipExecution[] = [];
-  /** Whether native claims ordinary work, as the last drainGossip asked. */
+  /** Whether native claims ordinary work, as the last claim set its gate. */
   private ordinary = true;
   /** When each processor slot's latest dependency check reached the host; bounded by the processor capacity. */
   private readonly checked = new Map<number, {generation: bigint; at: number}>();
@@ -88,46 +84,42 @@ export class NativeGossip {
     );
   }
   /**
-   * Answers dependency checks, claims at most `items`/`bytes` and starts the claimed jobs. Urgent jobs (blocks, blob
-   * sidecars, data columns) all start in this drain whatever the budget. Ordinary jobs start until `deadline`, at
-   * least one per drain, and native claims ordinary work only while none is queued, the budget lasts and the executor
-   * can take it. Native lanes without work are not called. Returns whether work remains.
+   * The next exchange's dependency checks and claim of at most `items`/`bytes`. Native claims ordinary work only
+   * while no claimed job waits, the budget lasts and the executor can take it.
    */
-  drain({items, bytes, deadline, lanes}: NativeGossipDrainLimits): boolean {
+  demand({items, bytes, deadline}: NativeGossipDrainLimits): GossipDemand {
     const processor = this.processor;
-    if (this.closed || !processor) return false;
-    let urgentWork = (lanes & nativeLanes.gossipUrgent) !== 0;
-    let ordinaryWork = (lanes & nativeLanes.gossipOrdinary) !== 0;
-    if (lanes & nativeLanes.gossipChecks) {
-      const checks = this.runtime.drainGossipChecks();
+    if (this.closed || !processor) return null;
+    const ready = processor.ready();
+    return {items, bytes, ready, ordinary: ready && this.queued.length === 0 && performance.now() < deadline};
+  }
+  /**
+   * Answers dependency checks and starts the claimed jobs. Urgent jobs (blocks, blob sidecars, data columns) all start
+   * now whatever the budget; ordinary jobs start until `deadline`, at least one per drain. Returns whether claimed
+   * jobs wait for a later drain.
+   */
+  deliver(
+    checks: NativeGossipDependencyCheck[],
+    batch: NativeGossipBatch | null,
+    demand: GossipDemand,
+    deadline: number
+  ): boolean {
+    const processor = this.processor;
+    if (this.closed || !processor || !demand) return false;
+    if (checks.length > 0) {
       if (this.checkToDispatch) {
         const at = performance.now();
         for (const {handle} of checks) this.checked.set(handle.index, {generation: handle.generation, at});
       }
-      if (checks.length > 0) {
-        this.runtime.classifyGossip(processor.check(checks));
-        // Available dependencies can make work of any kind claimable.
-        urgentWork = true;
-        ordinaryWork = true;
-      }
+      this.runtime.classifyGossip(processor.check(checks));
     }
-    let more = false;
-    if (urgentWork || ordinaryWork || !this.ordinary) {
-      const ready = processor.canExecute();
-      const ordinary = ready && this.queued.length === 0 && performance.now() < deadline;
-      // A claim also sets native's ordinary gate. It stays closed only while the executor cannot take ordinary work,
-      // whose retry drains again; a gate closed for queued jobs or the budget reopens in a later drain.
-      if (urgentWork || (ordinary && (ordinaryWork || !this.ordinary)) || (!ready && this.ordinary && ordinaryWork)) {
-        // Native sets the gate before copying, so a failed copy leaves it as asked.
-        this.ordinary = ordinary;
-        const batch = this.runtime.drainGossip({items, bytes, ordinary});
-        if (batch.messages.length > 0) this.dispatch(batch, processor);
-        more = batch.more;
-      }
-      // Ordinary work held back for queued jobs or the budget, or a gate left closed, needs a later drain.
-      more ||= ready && !ordinary && (ordinaryWork || !this.ordinary);
+    // A claim, or ordinary work behind a closed gate, waits on the executor; its retry drains again.
+    if (!demand.ready && (batch !== null || !this.ordinary)) processor.canExecute();
+    if (batch) {
+      this.ordinary = demand.ordinary;
+      if (batch.messages.length > 0) this.dispatch(batch, processor);
     }
-    return this.start(processor, deadline) || more;
+    return this.start(processor, deadline);
   }
   /** Starts queued ordinary jobs, at least one, until `deadline`. Returns whether any remain. */
   private start(processor: GossipExecutor, deadline: number): boolean {

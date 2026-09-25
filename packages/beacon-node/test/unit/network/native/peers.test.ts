@@ -37,12 +37,8 @@ async function fixture() {
     goodbyeUntilMs: 0n,
     redialUntilMs: 0n,
   };
-  const queue: NativePeerObservation[] = [];
   const disconnect = vi.fn(async () => {});
-  const runtime = {
-    disconnect,
-    drainPeers: () => ({events: queue.splice(0), more: false, ownerSequence: 100n, updatesReplaceState: true as const}),
-  };
+  const runtime = {disconnect};
   const events = new NetworkEventBus();
   const connected = vi.fn();
   const disconnected = vi.fn();
@@ -56,8 +52,7 @@ async function fixture() {
     disconnect,
     peers,
     drain(...events: NativePeerObservation[]) {
-      queue.push(...events);
-      peers.drain(32);
+      peers.deliver(events);
     },
   };
 }

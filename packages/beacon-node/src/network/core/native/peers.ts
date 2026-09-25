@@ -89,19 +89,16 @@ export class NativePeers {
   private readonly peers = new Map<string, {state: NativePeerState; sequence: bigint; rejected?: true}>();
   private closed = false;
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "drainPeers" | "disconnect">,
+    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "disconnect">,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly capacity: number
   ) {
     nativeInteger(capacity, "peer projection capacity", 4096, 1);
   }
-  drain(max: number): boolean {
-    nativeInteger(max, "peer drain", 256, 1);
-    if (this.closed) return false;
-    const batch = this.runtime.drainPeers(max);
-    for (const event of batch.events) this.observe(event);
-    return batch.more;
+  deliver(events: NativePeerObservation[]): void {
+    if (this.closed) return;
+    for (const event of events) this.observe(event);
   }
   private observe(event: NativePeerObservation): void {
     if (event.type === "closed") {

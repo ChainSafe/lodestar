@@ -101,37 +101,12 @@ async function incoming() {
   return {request, closed, permission, written};
 }
 
-it.each([true, false])("contains request-copy failure but escalates an invariant failure: local=%s", (local) => {
-  const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
-  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
-  const error = Object.assign(new Error("copy failed"), {
-    code: local ? "NetworkResultAllocationFailed" : "InvalidIncomingHandle",
-  });
-  const takeIncomingRequest = vi
-    .fn<() => NativeIncomingRequest | null>()
-    .mockImplementationOnce(() => {
-      throw error;
-    })
-    .mockReturnValue(null);
-  const onFailure = vi.fn();
-  const owner = new NativeRequests(
-    {takeIncomingRequest},
-    config,
-    vi.fn<handlers.BoundedReqRespHandlers>(),
-    1,
-    onFailure,
-    vi.fn()
-  );
-  try {
-    expect(owner.drain(8)).toBe(false);
-    expect(takeIncomingRequest).toHaveBeenCalledTimes(local ? 2 : 1);
-    if (local) expect(onFailure).not.toHaveBeenCalled();
-    else expect(onFailure).toHaveBeenCalledExactlyOnceWith(error);
-  } finally {
-    owner.close();
-  }
-});
+/** One drain's serving: the host's demand, native's delivery from `queue`, and the starts. */
+function serveTurn(owner: NativeRequests, queue: NativeIncomingRequest[], max = 8): number {
+  const taken = queue.splice(0, owner.demand(max));
+  owner.start(taken, queue.length > 0);
+  return taken.length;
+}
 
 it("waits for quota before producing data and for host retirement before taking another request", async () => {
   const config = servingConfig();
@@ -141,7 +116,7 @@ it("waits for quota before producing data and for host retirement before taking 
   const first = await incoming();
   const second = await incoming();
   const queue = [first.request, second.request];
-  const takeIncomingRequest = vi.fn(() => queue.shift() ?? null);
+  let taken = 0;
   let produced = 0;
   const active: handlers.ServingHandler[] = [];
   const factory: handlers.BoundedReqRespHandlers = () => () => {
@@ -158,13 +133,15 @@ it("waits for quota before producing data and for host retirement before taking 
   // Retirement schedules the core drain instead of taking the next request inline.
   const takenAtWake: number[] = [];
   const wake = vi.fn(() => {
-    takenAtWake.push(takeIncomingRequest.mock.calls.length);
-    setImmediate(() => owner.drain(8));
+    takenAtWake.push(taken);
+    setImmediate(() => {
+      taken += serveTurn(owner, queue);
+    });
   });
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn(), wake);
+  const owner = new NativeRequests(config, factory, 32, wake);
   try {
-    expect(owner.drain(8)).toBe(false);
-    expect(takeIncomingRequest).toHaveBeenCalledTimes(1);
+    taken += serveTurn(owner, queue);
+    expect(taken).toBe(1);
     expect(first.request.retainUntil).toHaveBeenCalledWith(active[0].retired);
     expect(produced).toBe(0);
     first.permission.resolve();
@@ -172,13 +149,13 @@ it("waits for quota before producing data and for host retirement before taking 
     expect(produced).toBe(1);
     first.closed.resolve();
     await vi.waitFor(() => expect(budget.snapshot().outstandingRetirements).toBe(1));
-    expect(owner.drain(8)).toBe(false);
-    expect(takeIncomingRequest).toHaveBeenCalledTimes(1);
+    taken += serveTurn(owner, queue);
+    expect(taken).toBe(1);
     ancillary.resolve();
     first.written.resolve();
     await vi.waitFor(() => expect(second.request.ready).toHaveBeenCalledOnce());
     expect(takenAtWake).toEqual([1]);
-    expect(takeIncomingRequest).toHaveBeenCalledTimes(2);
+    expect(taken).toBe(2);
     expect(first.request.fail).not.toHaveBeenCalled();
   } finally {
     ancillary.resolve();
@@ -194,26 +171,26 @@ it("waits on an earlier adapter's reservation with one cancellable retry", async
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const previous = budget.acquire();
-  const takeIncomingRequest = vi.fn(() => null);
   const factory: handlers.BoundedReqRespHandlers = () => () => {
     throw Error("No request available");
   };
   vi.useFakeTimers();
   const wake = vi.fn();
-  const owner = new NativeRequests({takeIncomingRequest}, config, factory, 32, vi.fn(), wake);
+  const owner = new NativeRequests(config, factory, 32, wake);
   try {
-    for (let turn = 0; turn < 100; turn++) expect(owner.drain(8)).toBe(false);
-    expect(takeIncomingRequest).not.toHaveBeenCalled();
+    for (let turn = 0; turn < 100; turn++) {
+      expect(owner.demand(8)).toBe(0);
+      owner.start([], true);
+    }
     expect(vi.getTimerCount()).toBe(1);
     previous.finish();
     await vi.advanceTimersByTimeAsync(25);
     expect(wake).toHaveBeenCalledOnce();
-    expect(takeIncomingRequest).not.toHaveBeenCalled();
-    expect(owner.drain(8)).toBe(false);
-    expect(takeIncomingRequest).toHaveBeenCalledOnce();
+    expect(owner.demand(8)).toBe(1);
+    owner.start([], false);
     expect(vi.getTimerCount()).toBe(0);
     const held = budget.acquire();
-    owner.drain(8);
+    owner.start([], true);
     expect(vi.getTimerCount()).toBe(1);
     owner.close();
     expect(vi.getTimerCount()).toBe(0);
@@ -245,16 +222,9 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(
-    {takeIncomingRequest: () => queue.shift() ?? null},
-    config,
-    factory,
-    32,
-    vi.fn(),
-    vi.fn()
-  );
+  const owner = new NativeRequests(config, factory, 32, vi.fn());
   try {
-    owner.drain(32);
+    serveTurn(owner, queue, 32);
     expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
     for (const input of inputs.slice(0, 8)) input.permission.resolve();
     await vi.waitFor(() => {
@@ -296,16 +266,9 @@ it("requests waiting for retained memory leave native credit available to existi
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(
-    {takeIncomingRequest: () => queue.shift() ?? null},
-    config,
-    factory,
-    3,
-    vi.fn(),
-    vi.fn()
-  );
+  const owner = new NativeRequests(config, factory, 3, vi.fn());
   try {
-    owner.drain(3);
+    serveTurn(owner, queue, 3);
     inputs[0].permission.resolve();
     inputs[1].permission.resolve();
     await vi.waitFor(() => {

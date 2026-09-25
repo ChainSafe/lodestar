@@ -3,6 +3,8 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {
+  NativeExchangeDemand,
+  NativeGossipBatch,
   NativeGossipDependencyCheck,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
@@ -11,7 +13,6 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {defer} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
-import {nativeLanes} from "../../../../src/network/core/native/drain.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
@@ -37,7 +38,7 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
   let queued: NativeGossipMessage[] = [];
   let checks: NativeGossipDependencyCheck[] = [];
   let grouped = false;
-  let more = false;
+  let gate = true;
   const reportGossip = vi.fn<NativeNetworkApplicationRuntime["reportGossip"]>(() => true);
   const publishGossip = vi.fn<NativeNetworkApplicationRuntime["publishGossip"]>(async () => ({
     queued: 1,
@@ -46,30 +47,32 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
     pressured: 0,
     duplicate: false,
   }));
-  // Like native, claims urgent blocks first and ordinary work only while the ordinary gate is open.
   const runtime = {
-    drainGossip: vi.fn<NativeNetworkApplicationRuntime["drainGossip"]>((demand) => {
-      const urgent = queued.filter((message) => message.topic === blockTopic);
-      const ordinary = demand?.ordinary === false ? [] : queued.filter((message) => message.topic !== blockTopic);
-      const messages = [...urgent, ...ordinary].slice(0, demand?.items ?? 64);
-      queued = queued.filter((message) => !messages.includes(message));
-      const jobs = grouped
-        ? [{kind: "beacon_attestation" as const, start: 0, length: messages.length, grouped: true, urgent: false}]
-        : messages.map((message, start) =>
-            message.topic === blockTopic
-              ? {kind: "beacon_block" as const, start, length: 1, grouped: false, urgent: true}
-              : {kind: "voluntary_exit" as const, start, length: 1, grouped: false, urgent: false}
-          );
-      return {messages, jobs: messages.length > 0 ? jobs : [], more};
-    }),
     reportGossip,
     publishGossip,
-    drainGossipChecks: vi.fn<NativeNetworkApplicationRuntime["drainGossipChecks"]>(() => checks.splice(0)),
     classifyGossip: vi.fn<NativeNetworkApplicationRuntime["classifyGossip"]>((answers) => answers.length),
     notifyGossipBlock: () => {},
     dropQueuedGossip: () => {},
     trackGossipSearch: () => true,
   };
+  // Like native, claims urgent blocks whenever queued and ordinary work only while the ordinary gate is open.
+  const claim = vi.fn((demand: NonNullable<NativeExchangeDemand["gossip"]>): NativeGossipBatch | null => {
+    const urgent = queued.filter((message) => message.topic === blockTopic);
+    const ordinary = queued.filter((message) => message.topic !== blockTopic);
+    const reopen = demand.ordinary && (ordinary.length > 0 || !gate);
+    if (urgent.length === 0 && !reopen && (demand.ready || !gate || ordinary.length === 0)) return null;
+    gate = demand.ordinary;
+    const messages = [...urgent, ...(gate ? ordinary : [])].slice(0, demand.items);
+    queued = queued.filter((message) => !messages.includes(message));
+    const jobs = grouped
+      ? [{kind: "beacon_attestation" as const, start: 0, length: messages.length, grouped: true, urgent: false}]
+      : messages.map((message, start) =>
+          message.topic === blockTopic
+            ? {kind: "beacon_block" as const, start, length: 1, grouped: false, urgent: true}
+            : {kind: "voluntary_exit" as const, start, length: 1, grouped: false, urgent: false}
+        );
+    return {messages, jobs: messages.length > 0 ? jobs : []};
+  });
   const onError = vi.fn();
   const onFailure = vi.fn();
   const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError, onFailure, register);
@@ -77,6 +80,7 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
     check: vi.fn<NativeGossipExecutor["check"]>((checks) => checks.map(({handle}) => ({handle, available: true}))),
+    ready: vi.fn<NativeGossipExecutor["ready"]>(() => true),
     canExecute: vi.fn<NativeGossipExecutor["canExecute"]>(() => true),
     execute: vi.fn<NativeGossipExecutor["execute"]>((messages) => {
       pending.push(...messages);
@@ -91,15 +95,21 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
     observe: vi.fn<NativeGossipExecutor["observe"]>(),
   };
   if (attach) gossip.attach(processor);
-  /** The gossip lanes native would report for the queued messages and checks. */
-  const lanes = (): number =>
-    (queued.some((message) => message.topic === blockTopic) ? nativeLanes.gossipUrgent : 0) |
-    (queued.some((message) => message.topic !== blockTopic) ? nativeLanes.gossipOrdinary : 0) |
-    (checks.length > 0 ? nativeLanes.gossipChecks : 0);
+  /** One drain's gossip: the host's demand, native's checks and claim, and the delivery. */
+  const turn = (limits = unbounded): boolean => {
+    const demand = gossip.demand(limits);
+    const batch = demand ? claim(demand) : null;
+    return gossip.deliver(demand ? checks.splice(0) : [], batch, demand, limits.deadline);
+  };
   return {
     gossip,
     events,
     runtime,
+    claim,
+    turn,
+    get gate() {
+      return gate;
+    },
     pending,
     processor,
     onError,
@@ -108,7 +118,6 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
       completions.get(message)?.resolve(result);
       await flush();
     },
-    lanes,
     /** Adds messages to the native queue. */
     admit(...messages: NativeGossipMessage[]): void {
       queued.push(...messages);
@@ -129,12 +138,11 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
     drain(messages: NativeGossipMessage[], batchGroup = false, limits = unbounded): boolean {
       queued = messages.slice();
       grouped = batchGroup;
-      return gossip.drain({...limits, lanes: lanes()});
+      return turn(limits);
     },
-    dependencyChecks(values: NativeGossipDependencyCheck[], immediate = false): boolean {
+    dependencyChecks(values: NativeGossipDependencyCheck[]): boolean {
       checks = values.slice();
-      more = immediate;
-      return gossip.drain({...unbounded, lanes: lanes()});
+      return turn();
     },
     async close(): Promise<void> {
       gossip.close();
@@ -149,7 +157,7 @@ describe("native gossip host ownership", () => {
     const node = await fixture();
     try {
       node.drain([node.message(), node.message(2)]);
-      expect(node.runtime.drainGossip).toHaveBeenCalledOnce();
+      expect(node.claim).toHaveBeenCalledOnce();
       expect(node.processor.execute).toHaveBeenCalledTimes(2);
       expect(node.processor.execute.mock.calls.map(([messages]) => messages.length)).toEqual([1, 1]);
       expect(node.pending[0].seenTimestampSec).toBe(12.345);
@@ -175,19 +183,21 @@ describe("native gossip host ownership", () => {
       const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: 8};
       expect(node.drain([node.message(), node.message(2), node.message(3)], false, limits)).toBe(true);
       expect(node.processor.execute).toHaveBeenCalledTimes(2);
-      expect(node.runtime.drainGossip).toHaveBeenCalledExactlyOnceWith({
+      expect(node.claim).toHaveBeenCalledExactlyOnceWith({
         items: 64,
         bytes: 8 * 1024 * 1024,
         ordinary: true,
+        ready: true,
       });
       node.admit(node.message(4));
       // One queued job starts even past the budget; native ordinary work waits for the queue to empty.
-      expect(node.gossip.drain({...limits, deadline: now, lanes: node.lanes()})).toBe(true);
+      expect(node.turn({...limits, deadline: now})).toBe(false);
       expect(node.processor.execute).toHaveBeenCalledTimes(3);
-      expect(node.runtime.drainGossip).toHaveBeenCalledOnce();
-      expect(node.gossip.drain({...limits, deadline: now + 8, lanes: node.lanes()})).toBe(false);
+      expect(node.claim).toHaveBeenLastCalledWith(expect.objectContaining({ordinary: false}));
+      expect(node.claim).toHaveLastReturnedWith(null);
+      expect(node.turn({...limits, deadline: now + 8})).toBe(false);
       expect(node.processor.execute).toHaveBeenCalledTimes(4);
-      expect(node.runtime.drainGossip).toHaveBeenCalledTimes(2);
+      expect(node.claim).toHaveLastReturnedWith(expect.objectContaining({jobs: [expect.anything()]}));
       for (const message of node.pending.slice()) await node.retire(message);
       expect(node.runtime.reportGossip).toHaveBeenCalledTimes(4);
     } finally {
@@ -217,15 +227,17 @@ describe("native gossip host ownership", () => {
       );
       // Urgent work is claimed while ordinary jobs wait, with native's ordinary gate closed for the queue.
       node.admit(node.message(7, blockTopic), node.message(8));
-      expect(node.gossip.drain({...limits, deadline: now, lanes: node.lanes()})).toBe(true);
-      expect(node.runtime.drainGossip).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: false});
+      expect(node.turn({...limits, deadline: now})).toBe(true);
+      expect(node.claim).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: false, ready: true});
+      expect(node.gate).toBe(false);
       expect(node.processor.execute).toHaveBeenCalledTimes(6);
       expect(node.pending.at(-2)?.topic.type).toBe(GossipType.beacon_block);
       // The next drain starts the last queued job; the one after reopens the gate and claims the ordinary work.
-      expect(node.gossip.drain({...limits, deadline: now + 8, lanes: node.lanes()})).toBe(true);
-      expect(node.runtime.drainGossip).toHaveBeenCalledTimes(2);
-      expect(node.gossip.drain({...limits, deadline: now + 8, lanes: node.lanes()})).toBe(false);
-      expect(node.runtime.drainGossip).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: true});
+      expect(node.turn({...limits, deadline: now + 8})).toBe(false);
+      expect(node.claim).toHaveLastReturnedWith(null);
+      expect(node.turn({...limits, deadline: now + 8})).toBe(false);
+      expect(node.claim).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: true, ready: true});
+      expect(node.gate).toBe(true);
       expect(node.processor.execute).toHaveBeenCalledTimes(8);
       for (const message of node.pending.slice()) await node.retire(message);
       expect(node.runtime.reportGossip).toHaveBeenCalledTimes(8);
@@ -241,11 +253,7 @@ describe("native gossip host ownership", () => {
       const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
       const block = {...node.message(1, blockTopic), data: new Uint8Array(9 * 1024 * 1024)};
       expect(node.drain([block], false, limits)).toBe(false);
-      expect(node.runtime.drainGossip).toHaveBeenCalledExactlyOnceWith({
-        items: 64,
-        bytes: limits.bytes,
-        ordinary: true,
-      });
+      expect(node.claim).toHaveBeenCalledExactlyOnceWith({items: 64, bytes: limits.bytes, ordinary: true, ready: true});
       expect(node.pending.map(({msg}) => msg.data.length)).toEqual([9 * 1024 * 1024]);
       await node.retire(node.pending[0]);
       expect(node.runtime.reportGossip).toHaveBeenCalledExactlyOnceWith(block.handle, "accept");
@@ -254,33 +262,33 @@ describe("native gossip host ownership", () => {
     }
   });
 
-  it("calls no native lane without work and closes the ordinary gate once while the executor is busy", async () => {
+  it("retries a busy executor only for gossip work and mirrors the ordinary gate a claim sets", async () => {
     const node = await fixture();
+    const all = {items: 64, bytes: 16 * 1024 * 1024};
     try {
-      expect(node.gossip.drain({...unbounded, lanes: 0})).toBe(false);
-      expect(node.runtime.drainGossipChecks).not.toHaveBeenCalled();
-      expect(node.runtime.drainGossip).not.toHaveBeenCalled();
+      node.processor.ready.mockReturnValue(false);
+      expect(node.turn()).toBe(false);
+      expect(node.claim).toHaveLastReturnedWith(null);
       expect(node.processor.canExecute).not.toHaveBeenCalled();
-      node.processor.canExecute.mockReturnValue(false);
       node.admit(node.message());
-      expect(node.gossip.drain({...unbounded, lanes: node.lanes()})).toBe(false);
-      expect(node.runtime.drainGossip).toHaveBeenCalledExactlyOnceWith({
-        items: 64,
-        bytes: 16 * 1024 * 1024,
-        ordinary: false,
-      });
-      expect(node.gossip.drain({...unbounded, lanes: node.lanes()})).toBe(false);
-      expect(node.runtime.drainGossip).toHaveBeenCalledOnce();
-      node.processor.canExecute.mockReturnValue(true);
-      expect(node.gossip.drain({...unbounded, lanes: node.lanes()})).toBe(false);
-      expect(node.runtime.drainGossip).toHaveBeenLastCalledWith({items: 64, bytes: 16 * 1024 * 1024, ordinary: true});
+      expect(node.turn()).toBe(false);
+      expect(node.claim).toHaveBeenLastCalledWith({...all, ordinary: false, ready: false});
+      expect(node.gate).toBe(false);
+      expect(node.processor.canExecute).toHaveBeenCalledOnce();
+      expect(node.turn()).toBe(false);
+      expect(node.claim).toHaveLastReturnedWith(null);
+      expect(node.processor.canExecute).toHaveBeenCalledTimes(2);
+      node.processor.ready.mockReturnValue(true);
+      expect(node.turn()).toBe(false);
+      expect(node.claim).toHaveBeenLastCalledWith({...all, ordinary: true, ready: true});
       expect(node.pending).toHaveLength(1);
+      expect(node.processor.canExecute).toHaveBeenCalledTimes(2);
     } finally {
       await node.close();
     }
   });
 
-  it("classifies dependency answers in one call and continues a check-only turn", async () => {
+  it("classifies dependency answers in one call", async () => {
     const node = await fixture();
     const checks = [1, 2].map((id) => ({
       handle: node.message(id).handle,
@@ -290,12 +298,11 @@ describe("native gossip host ownership", () => {
       topic,
     }));
     try {
-      expect(node.dependencyChecks(checks, true)).toBe(true);
+      expect(node.dependencyChecks(checks)).toBe(false);
       expect(node.processor.check).toHaveBeenCalledWith(checks);
       expect(node.runtime.classifyGossip).toHaveBeenCalledExactlyOnceWith(
         checks.map(({handle}) => ({handle, available: true}))
       );
-      expect(node.runtime.drainGossip).toHaveBeenCalledOnce();
       expect(node.processor.execute).not.toHaveBeenCalled();
     } finally {
       await node.close();
@@ -306,11 +313,13 @@ describe("native gossip host ownership", () => {
     const register = new RegistryMetricCreator();
     const node = await fixture(undefined, true, register);
     try {
+      // Native claims a classified message in the exchange after the one that delivered its check.
       const message = node.message();
-      node.admit(message);
       node.dependencyChecks([
         {handle: message.handle, root: new Uint8Array(32), slot: 1n, peerId: message.peerId, topic},
       ]);
+      node.admit(message);
+      node.turn();
       expect(await register.getSingleMetricAsString("lodestar_native_gossip_check_to_dispatch_seconds")).toContain(
         'lodestar_native_gossip_check_to_dispatch_seconds_count{kind="voluntary_exit"} 1'
       );
@@ -323,9 +332,9 @@ describe("native gossip host ownership", () => {
     const node = await fixture(undefined, false);
     try {
       node.drain([node.message()]);
-      expect(node.runtime.drainGossip).not.toHaveBeenCalled();
+      expect(node.claim).not.toHaveBeenCalled();
       node.gossip.attach(node.processor);
-      node.gossip.drain({...unbounded, lanes: node.lanes()});
+      node.turn();
       expect(node.pending).toHaveLength(1);
       expect(() => node.gossip.attach(node.processor)).toThrow("gossip executor attachment");
     } finally {

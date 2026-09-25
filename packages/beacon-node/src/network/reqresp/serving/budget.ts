@@ -103,7 +103,11 @@ export class HostServingBudget {
     return budget;
   }
   canAcquire(): boolean {
-    return this.leases.size < this.policy.capacity;
+    return this.remaining() > 0;
+  }
+  /** Leases acquirable now. */
+  remaining(): number {
+    return this.policy.capacity - this.leases.size;
   }
   acquire(peer = "", method = ReqRespMethod.BeaconBlocksByRoot): ServingLease {
     if (!this.canAcquire()) {

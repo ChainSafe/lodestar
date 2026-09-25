@@ -117,11 +117,9 @@ export class NativeNetworkCore implements INetworkCore {
       );
       core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
       core.requests = new NativeRequests(
-        core.runtime,
         config,
         modules.getReqRespHandler,
         diagnostics.incoming.capacity,
-        core.onFailure,
         core.onWorkAvailable
       );
       void core.runtime.closed
@@ -196,9 +194,13 @@ export class NativeNetworkCore implements INetworkCore {
     this.drain.request();
   };
   private readonly stages: NativeDrainStages = {
-    peers: (limit) => this.peers.drain(limit),
-    requests: (limit) => this.requests.drain(limit),
-    gossip: (limits) => this.gossip.drain(limits),
+    serving: (max) => this.requests.demand(max),
+    gossip: (limits) => this.gossip.demand(limits),
+    deliver: (result, gossip, deadline) => {
+      this.peers.deliver(result.peers);
+      this.requests.start(result.serving, result.servingQueued);
+      return this.gossip.deliver(result.checks, result.gossip, gossip, deadline);
+    },
   };
   private readonly drainStages = (): NativeDrainStages | null => (this.closed ? null : this.stages);
   private readonly onDrainError = (error: unknown): boolean => {

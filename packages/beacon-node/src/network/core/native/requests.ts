@@ -20,7 +20,7 @@ import {
 } from "@lodestar/reqresp";
 import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
-import {NativeNetworkError, NativeNetworkErrorCode, isNativeResultAllocationError, nativeInteger} from "./errors.js";
+import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
 function requestError(error: unknown): unknown {
@@ -186,11 +186,9 @@ export class NativeRequests {
   private readonly budget;
   private retry: NodeJS.Timeout | undefined;
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "takeIncomingRequest">,
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
     capacity: number,
-    private readonly onFailure: (error: unknown) => void,
     /** Schedules the core drain, which takes the next requests within its per-macrotask cap. */
     private readonly wake: () => void
   ) {
@@ -212,68 +210,64 @@ export class NativeRequests {
       1
     );
   }
-  /** Starts up to `max` requests. Returns whether it stopped at `max`. */
-  drain(max: number): boolean {
+  /** Serving starts to take now: the drain's quantum, free routes and the host serving budget bound them. */
+  demand(max: number): number {
     nativeInteger(max, "incoming drain", 32, 1);
-    if (this.closed) return false;
-    for (let count = 0; count < max; count++) {
-      if (this.routes.size >= this.capacity) return false;
-      if (!this.budget.canAcquire()) {
-        if (!this.retry) {
-          this.retry = setTimeout(() => {
-            this.retry = undefined;
-            this.wake();
-          }, 25);
-          this.retry.unref();
-        }
-        return false;
-      }
-      let request: NativeIncomingRequest | null;
-      try {
-        request = this.runtime.takeIncomingRequest();
-      } catch (error) {
-        if (isNativeResultAllocationError(error)) continue;
-        this.onFailure(error);
-        return false;
-      }
-      if (!request) return false;
-      const protocol = this.protocols.get(request.protocol);
-      if (!protocol) {
-        void request
-          .fail(RespStatus.SERVER_ERROR, new TextEncoder().encode("Local serving capacity exhausted"))
-          .catch(() => {});
-        continue;
-      }
-      const route = new IncomingRoute(request);
-      this.routes.add(route);
-      void request.closed.then(() => {
-        route.clear();
-      });
-      try {
-        const handler = this.getHandler(protocol.method)(
-          {data: request.data, version: protocol.version},
-          peerIdFromString(request.peerId),
-          "unknown"
-        );
-        route.handler = handler;
-        request.retainUntil(handler.retired);
-        void handler.retired.then(() => {
-          this.routes.delete(route);
-          this.wake();
-        });
-        void serve(route, handler, protocol, this.config, this.maxChunks).catch(() => {});
-      } catch (error) {
-        const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
-        const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
-        void request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
-        route.clear();
-        void request.closed.then(() => {
-          this.routes.delete(route);
-          this.wake();
-        });
-      }
+    if (this.closed) return 0;
+    return Math.max(0, Math.min(max, this.capacity - this.routes.size, this.budget.remaining()));
+  }
+  /**
+   * Starts delivered requests. While queued requests wait on the serving budget, which other adapters share, drains
+   * again after 25 ms.
+   */
+  start(requests: NativeIncomingRequest[], queued: boolean): void {
+    for (const request of requests) {
+      if (this.closed) void request.cancel().catch(() => {});
+      else this.serve(request);
     }
-    return true;
+    if (this.closed || !queued || this.routes.size >= this.capacity || this.budget.canAcquire() || this.retry) return;
+    this.retry = setTimeout(() => {
+      this.retry = undefined;
+      this.wake();
+    }, 25);
+    this.retry.unref();
+  }
+  private serve(request: NativeIncomingRequest): void {
+    const protocol = this.protocols.get(request.protocol);
+    if (!protocol) {
+      void request
+        .fail(RespStatus.SERVER_ERROR, new TextEncoder().encode("Local serving capacity exhausted"))
+        .catch(() => {});
+      return;
+    }
+    const route = new IncomingRoute(request);
+    this.routes.add(route);
+    void request.closed.then(() => {
+      route.clear();
+    });
+    try {
+      const handler = this.getHandler(protocol.method)(
+        {data: request.data, version: protocol.version},
+        peerIdFromString(request.peerId),
+        "unknown"
+      );
+      route.handler = handler;
+      request.retainUntil(handler.retired);
+      void handler.retired.then(() => {
+        this.routes.delete(route);
+        this.wake();
+      });
+      void serve(route, handler, protocol, this.config, this.maxChunks).catch(() => {});
+    } catch (error) {
+      const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
+      const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
+      void request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
+      route.clear();
+      void request.closed.then(() => {
+        this.routes.delete(route);
+        this.wake();
+      });
+    }
   }
   close(): void {
     if (this.closed) return;

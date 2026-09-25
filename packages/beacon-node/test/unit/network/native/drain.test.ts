@@ -1,9 +1,19 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {NativeExchange, NativeExchangeDemand} from "@chainsafe/lodestar-z/network";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
-import {NativeDrain, NativeDrainStages, nativeLanes} from "../../../../src/network/core/native/drain.js";
+import {NativeDrain, NativeDrainStages} from "../../../../src/network/core/native/drain.js";
 
 const limits = {budgetMs: 8, peers: 32, settle: 32, servingStarts: 8, gossipItems: 64, gossipBytes: 8 * 1024 * 1024};
-const allLanes = Object.values(nativeLanes).reduce((lanes, lane) => lanes | lane, 0);
+const gossip = {items: 64, bytes: 8 * 1024 * 1024, ordinary: true, ready: true};
+const idle: NativeExchange = {
+  settled: 0,
+  peers: [],
+  serving: [],
+  servingQueued: false,
+  checks: [],
+  gossip: null,
+  more: false,
+};
 
 function macrotask(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
@@ -23,11 +33,11 @@ async function histogram(register: RegistryMetricCreator, name: string): Promise
 function fixture() {
   let now = 0;
   vi.spyOn(performance, "now").mockImplementation(() => now);
-  const runtime = {pendingLanes: vi.fn(() => allLanes), settle: vi.fn(() => false), endDrain: vi.fn(() => false)};
+  const runtime = {exchange: vi.fn((_demand: NativeExchangeDemand): NativeExchange => idle)};
   const stages = {
-    peers: vi.fn<NativeDrainStages["peers"]>(() => false),
-    requests: vi.fn<NativeDrainStages["requests"]>(() => false),
-    gossip: vi.fn<NativeDrainStages["gossip"]>(() => false),
+    serving: vi.fn<NativeDrainStages["serving"]>(() => 3),
+    gossip: vi.fn<NativeDrainStages["gossip"]>(() => gossip),
+    deliver: vi.fn<NativeDrainStages["deliver"]>(() => false),
   };
   let open = true;
   const onError = vi.fn((_error: unknown) => false);
@@ -53,125 +63,74 @@ afterEach(() => {
 });
 
 describe("native drain", () => {
-  it("only schedules on notification and coalesces notifications into one drain", async () => {
+  it("only schedules on notification and makes one exchange per drain", async () => {
     const node = fixture();
     node.drain.request();
     node.drain.request();
-    expect(node.runtime.settle).not.toHaveBeenCalled();
+    expect(node.runtime.exchange).not.toHaveBeenCalled();
     await macrotask();
-    expect(node.runtime.settle).toHaveBeenCalledExactlyOnceWith(limits.settle);
-    expect(node.stages.peers).toHaveBeenCalledExactlyOnceWith(limits.peers);
-    expect(node.stages.requests).toHaveBeenCalledExactlyOnceWith(limits.servingStarts);
+    expect(node.stages.serving).toHaveBeenCalledExactlyOnceWith(limits.servingStarts);
     expect(node.stages.gossip).toHaveBeenCalledExactlyOnceWith({
       items: limits.gossipItems,
       bytes: limits.gossipBytes,
       deadline: limits.budgetMs,
-      lanes: allLanes,
     });
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
+    expect(node.runtime.exchange).toHaveBeenCalledExactlyOnceWith({settle: 32, peers: 32, serving: 3, gossip});
+    expect(node.stages.deliver).toHaveBeenCalledExactlyOnceWith(idle, gossip, limits.budgetMs);
     await macrotask();
-    expect(node.runtime.settle).toHaveBeenCalledOnce();
+    expect(node.runtime.exchange).toHaveBeenCalledOnce();
     expect(await yields(node.register)).toEqual({idle: 1});
   });
 
-  it("stops starting serving once the budget is spent and resumes in the next macrotask", async () => {
+  it("drains again for host work native does not hold, and yields it to the time budget", async () => {
     const node = fixture();
-    node.stages.peers.mockImplementationOnce(() => {
+    node.stages.deliver.mockImplementationOnce(() => {
       node.advance(limits.budgetMs);
-      return false;
+      return true;
     });
     node.drain.request();
     await macrotask();
-    expect(node.stages.requests).not.toHaveBeenCalled();
-    // Gossip applies the spent budget to its ordinary work itself.
-    expect(node.stages.gossip).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({deadline: limits.budgetMs}));
-    expect(node.runtime.endDrain).not.toHaveBeenCalled();
     await macrotask();
-    expect(node.stages.requests).toHaveBeenCalledOnce();
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+    expect(node.stages.gossip).toHaveBeenLastCalledWith(expect.objectContaining({deadline: 2 * limits.budgetMs}));
+    await macrotask();
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
     expect(await yields(node.register)).toEqual({budget: 1, idle: 1});
   });
 
-  it("does not call native lanes without work", async () => {
+  it("drains again while native reports more", async () => {
     const node = fixture();
-    node.runtime.pendingLanes.mockReturnValue(0);
+    node.runtime.exchange.mockReturnValueOnce({...idle, more: true}).mockReturnValueOnce({...idle, more: true});
     node.drain.request();
-    await macrotask();
-    expect(node.runtime.pendingLanes).toHaveBeenCalledOnce();
-    expect(node.runtime.settle).not.toHaveBeenCalled();
-    expect(node.stages.peers).not.toHaveBeenCalled();
-    expect(node.stages.requests).not.toHaveBeenCalled();
-    // Gossip may hold claimed jobs, so it always runs and skips its own empty lanes.
-    expect(node.stages.gossip).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({lanes: 0}));
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
-    node.runtime.pendingLanes.mockReturnValue(nativeLanes.settle | nativeLanes.incoming);
-    node.drain.request();
-    await macrotask();
-    expect(node.runtime.settle).toHaveBeenCalledOnce();
-    expect(node.stages.peers).not.toHaveBeenCalled();
-    expect(node.stages.requests).toHaveBeenCalledOnce();
-    expect(node.stages.gossip).toHaveBeenLastCalledWith(
-      expect.objectContaining({lanes: nativeLanes.settle | nativeLanes.incoming})
-    );
-    expect(await yields(node.register)).toEqual({idle: 2});
-  });
-
-  it("releases the latch only through an idle endDrain", async () => {
-    const node = fixture();
-    node.runtime.pendingLanes.mockReturnValue(0);
-    node.stages.gossip.mockReturnValueOnce(true);
-    node.drain.request();
-    await macrotask();
-    // Queued gossip leaves work, so the latch stays held without an endDrain.
-    expect(node.runtime.endDrain).not.toHaveBeenCalled();
-    node.runtime.endDrain.mockReturnValueOnce(true);
-    await macrotask();
-    // An idle drain ends, and native keeps the latch for work that arrived meanwhile.
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
-    await macrotask();
-    expect(node.runtime.endDrain).toHaveBeenCalledTimes(2);
-    await macrotask();
-    expect(node.runtime.pendingLanes).toHaveBeenCalledTimes(3);
-    expect(node.runtime.endDrain).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps the latch while a cap leaves work and drains again until native reports none", async () => {
-    const node = fixture();
-    node.stages.peers.mockReturnValueOnce(true);
-    node.runtime.endDrain.mockReturnValueOnce(true);
-    node.drain.request();
-    await macrotask();
-    expect(node.runtime.endDrain).not.toHaveBeenCalled();
-    await macrotask();
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
-    await macrotask();
-    expect(node.runtime.endDrain).toHaveBeenCalledTimes(2);
-    await macrotask();
-    expect(node.stages.peers).toHaveBeenCalledTimes(3);
+    for (let i = 0; i < 4; i++) await macrotask();
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(3);
+    expect(node.stages.deliver).toHaveBeenCalledTimes(3);
     expect(await yields(node.register)).toEqual({caps: 2, idle: 1});
   });
 
   it("settles only after the host closes, until native has nothing left", async () => {
     const node = fixture();
     node.close();
-    node.runtime.settle.mockReturnValueOnce(true);
+    node.runtime.exchange.mockReturnValueOnce({...idle, more: true});
     node.drain.request();
-    await macrotask();
-    await macrotask();
-    await macrotask();
-    expect(node.runtime.settle).toHaveBeenCalledTimes(2);
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
-    expect(node.stages.peers).not.toHaveBeenCalled();
+    for (let i = 0; i < 3; i++) await macrotask();
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+    expect(node.runtime.exchange).toHaveBeenLastCalledWith({settle: 32, peers: 0, serving: 0, gossip: null});
+    expect(node.stages.deliver).not.toHaveBeenCalled();
   });
 
   it("measures each drain's burst through its continuations up to the next macrotask checkpoint", async () => {
     const node = fixture();
-    node.stages.peers.mockImplementation(() => {
+    node.stages.deliver.mockImplementation(() => {
       node.advance(1);
       void Promise.resolve().then(() => node.advance(2));
       return false;
     });
-    node.stages.gossip.mockReturnValueOnce(true);
+    node.stages.deliver.mockImplementationOnce(() => {
+      node.advance(1);
+      void Promise.resolve().then(() => node.advance(2));
+      return true;
+    });
     node.drain.request();
     await macrotask();
     await macrotask();
@@ -185,24 +144,28 @@ describe("native drain", () => {
     expect(burst.sum).toBeCloseTo(0.006, 9);
   });
 
-  it("retries after a failure its handler recovers and otherwise still ends the drain", async () => {
+  it("retries a failure its handler recovers, and a failed delivery while native holds more", async () => {
     const node = fixture();
     const failure = new Error("drain failed");
-    node.stages.gossip.mockImplementationOnce(() => {
+    node.runtime.exchange.mockImplementationOnce(() => {
       throw failure;
     });
     node.onError.mockReturnValueOnce(true);
     node.drain.request();
     await macrotask();
     expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
-    expect(node.runtime.endDrain).not.toHaveBeenCalled();
-    node.runtime.settle.mockImplementationOnce(() => {
+    node.runtime.exchange.mockReturnValueOnce({...idle, more: true});
+    node.stages.deliver.mockImplementationOnce(() => {
       throw failure;
     });
     await macrotask();
     expect(node.onError).toHaveBeenCalledTimes(2);
-    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
+    node.stages.deliver.mockImplementationOnce(() => {
+      throw failure;
+    });
     await macrotask();
-    expect(node.runtime.settle).toHaveBeenCalledTimes(2);
+    await macrotask();
+    expect(node.onError).toHaveBeenCalledTimes(3);
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(3);
   });
 });

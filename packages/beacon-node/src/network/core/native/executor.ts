@@ -49,9 +49,15 @@ export class NativeGossipExecutor {
     });
   }
 
-  canExecute(): boolean {
+  /** Whether the chain takes validation work now. */
+  ready(): boolean {
     const {chain} = this.modules;
-    const ready = chain.blsThreadPoolCanAcceptWork() && chain.regenCanAcceptWork();
+    return chain.blsThreadPoolCanAcceptWork() && chain.regenCanAcceptWork();
+  }
+
+  /** As `ready`, and drains again once the chain may take work while it cannot. */
+  canExecute(): boolean {
+    const ready = this.ready();
     if (!ready && !this.retry && !this.stopped) {
       this.retry = setTimeout(() => {
         this.retry = undefined;
