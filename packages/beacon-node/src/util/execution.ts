@@ -2,12 +2,18 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecar, SignedBeaconBlock, deneb, isGloasDataColumnSidecar} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {
+  EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
+} from "../chain/errors/envelopeReconstructionError.js";
+import {IBeaconDb} from "../db/index.js";
+import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
@@ -17,6 +23,7 @@ import {
   getDataColumnSidecarsFromColumnSidecar,
   getGloasDataColumnSidecars,
 } from "./dataColumns.js";
+import {signedHeaderEnvelopeToFull} from "./headerEnvelope.js";
 
 export enum DataColumnEngineResult {
   PreFulu = "pre_fulu",
@@ -250,4 +257,170 @@ export async function getDataColumnSidecarsFromExecution(
     previouslyMissingColumns.length - alreadyAddedColumnsCount
   );
   return DataColumnEngineResult.SuccessResolved;
+}
+
+/** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
+const MAX_BODIES_REQUEST = 32;
+
+type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
+
+type RangeEntry = ArchivedEnvelope & {slot: Slot};
+
+/** What a body root mismatch means on a given serving path */
+export type ReconstructMismatchPolicy = "throw" | "omit";
+
+export type RebuildMiss =
+  /** EL does not have the block, or has pruned its block access list */
+  | {slot: Slot; reason: "unavailable"}
+  /** An EL body does not hash to its stored root (local inconsistency) */
+  | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
+
+/**
+ * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes, rebuilding header
+ * entries from EL bodies 32 per round-trip.
+ *
+ * Ends at the first entry that cannot be served by throwing RANGE_UNSERVABLE with that slot: the
+ * by-range spec inherits BeaconBlocksByRange v2 semantics (consecutive, MAY be short), and a hole
+ * looks like a lying peer to one that already holds the blocks. Entries are attempted regardless of
+ * age; the EL's block access list retention is the floor, not MIN_EPOCHS_FOR_BLOCK_REQUESTS.
+ *
+ * Throws ENGINE_UNAVAILABLE if the EL call fails. Either may surface after envelopes were yielded.
+ */
+export async function* reconstructExecutionPayloadEnvelopesByRange(
+  db: IBeaconDb,
+  executionEngine: IExecutionEngine,
+  logger: Logger,
+  metrics: Metrics | null,
+  startSlot: Slot,
+  endSlot: Slot
+): AsyncIterable<SlotEnvelopeBytes> {
+  const archive = db.executionPayloadEnvelopeArchive;
+  let batch: RangeEntry[] = [];
+
+  for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+    batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelope(bytes)});
+    if (batch.length === MAX_BODIES_REQUEST) {
+      yield* reconstructBatch(executionEngine, logger, metrics, batch);
+      batch = [];
+    }
+  }
+  if (batch.length > 0) {
+    yield* reconstructBatch(executionEngine, logger, metrics, batch);
+  }
+}
+
+/**
+ * Rebuild a range batch, yielding what precedes the first unservable entry before throwing
+ * RANGE_UNSERVABLE for it
+ */
+async function* reconstructBatch(
+  executionEngine: IExecutionEngine,
+  logger: Logger,
+  metrics: Metrics | null,
+  batch: RangeEntry[]
+): AsyncIterable<SlotEnvelopeBytes> {
+  const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+  for (const entry of batch) {
+    if (entry.headerEnvelope !== undefined) headerEnvelopes.push(entry.headerEnvelope);
+  }
+  const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes);
+
+  let rebuiltIdx = 0;
+  for (const entry of batch) {
+    if (entry.envelopeBytes !== undefined) {
+      yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
+      continue;
+    }
+    const result = rebuilt[rebuiltIdx++];
+    if (isRebuildMiss(result)) {
+      // Peer-triggered, so debug: a persistent local mismatch would otherwise log on every request
+      if (result.reason === "mismatch") {
+        logger.debug("Archived envelope failed body root check against EL bodies", {slot: entry.slot}, result.error);
+      } else {
+        logger.debug("EL cannot serve bodies for archived envelope, ending range", {slot: entry.slot});
+      }
+      throw new EnvelopeReconstructionError(
+        {code: EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE, slot: entry.slot},
+        `archived envelope range unservable from slot=${entry.slot}`
+      );
+    }
+    yield {slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)};
+  }
+}
+
+/**
+ * Rebuild header envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
+ * {@link RebuildMiss} where the envelope could not be rebuilt; the caller decides what a miss means
+ * on its path. Throws ENGINE_UNAVAILABLE only.
+ */
+export async function reconstructExecutionPayloadEnvelopes(
+  executionEngine: IExecutionEngine,
+  metrics: Metrics | null,
+  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
+): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
+  const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
+  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_REQUEST) {
+    out.push(
+      ...(await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
+    );
+  }
+  return out;
+}
+
+export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
+  return "reason" in result;
+}
+
+/**
+ * One EL round-trip. Aligned with the input; never throws per envelope, only ENGINE_UNAVAILABLE.
+ * Every serving path (by-range, by-root, REST) comes through here, so the outcome metrics are
+ * incremented once, in this function.
+ */
+async function reconstructEnvelopesBatch(
+  executionEngine: IExecutionEngine,
+  metrics: Metrics | null,
+  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
+): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
+  if (headerEnvelopes.length === 0) return [];
+  const hashes = headerEnvelopes.map((headerEnvelope) => toRootHex(headerEnvelope.message.payloadHeader.blockHash));
+
+  let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
+  try {
+    bodies = await executionEngine.getPayloadBodiesByHashV2(hashes);
+  } catch (e) {
+    metrics?.payloadEnvelopeReconstruction.engineErrors.inc();
+    throw new EnvelopeReconstructionError(
+      {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
+      `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`
+    );
+  }
+
+  return headerEnvelopes.map((headerEnvelope, i) => {
+    const slot = headerEnvelope.message.payloadHeader.slotNumber;
+    const body = bodies[i];
+    // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
+    if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "unavailable"});
+      return {slot, reason: "unavailable"};
+    }
+    try {
+      const envelope = signedHeaderEnvelopeToFull(headerEnvelope, {
+        transactions: body.transactions,
+        withdrawals: body.withdrawals,
+        blockAccessList: body.blockAccessList,
+      });
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "ok"});
+      return envelope;
+    } catch (e) {
+      if (
+        e instanceof EnvelopeReconstructionError &&
+        e.type.code === EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH
+      ) {
+        metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "mismatch"});
+        metrics?.payloadEnvelopeReconstruction.mismatchByField.inc({field: e.type.field});
+        return {slot, reason: "mismatch", error: e};
+      }
+      throw e;
+    }
+  });
 }

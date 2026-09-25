@@ -31,11 +31,11 @@ describe("chain / archiveStore / pruneHistory", () => {
         return {key: slot, value: block};
       })
     );
-    await db.executionPayloadEnvelopeArchive.batchPut(
+    await db.executionPayloadEnvelopeArchive.batchPutBinary(
       slots.map((slot) => {
         const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
         envelope.message.payload.slotNumber = slot;
-        return {key: slot, value: envelope};
+        return {key: slot, value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)};
       })
     );
 
