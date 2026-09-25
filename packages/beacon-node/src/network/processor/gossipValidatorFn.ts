@@ -1,23 +1,121 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  AttesterSlashingErrorCode,
+  BlobSidecarErrorCode,
+  BlockErrorCode,
+  BlsToExecutionChangeErrorCode,
+  DataColumnSidecarErrorCode,
+  ExecutionPayloadBidErrorCode,
+  ExecutionPayloadEnvelopeErrorCode,
+  GossipAction,
+  GossipActionError,
+  PayloadAttestationErrorCode,
+  ProposerPreferencesErrorCode,
+  ProposerSlashingErrorCode,
+  SyncCommitteeErrorCode,
+  VoluntaryExitErrorCode,
+} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {INetworkCore} from "../core/index.js";
 import {
   BatchGossipHandlerFn,
   GossipHandlerFn,
   GossipHandlers,
   GossipMessageInfo,
+  GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
+import {PeerAction} from "../peers/index.js";
 import {prettyPrintPeerIdStr} from "../util.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
+  core: INetworkCore;
 };
+
+type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAction>};
+
+/**
+ * PeerAction mapping based on the topic and specific codes.
+ * Invalid signatures are Fatal on every topic.
+ */
+const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
+  [GossipType.beacon_block]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[BlockErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.blob_sidecar]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.data_column_sidecar]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
+  },
+  [GossipType.execution_payload]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.beacon_aggregate_and_proof]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.beacon_attestation]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.sync_committee_contribution_and_proof]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[SyncCommitteeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.sync_committee]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[SyncCommitteeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.payload_attestation_message]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[PayloadAttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.execution_payload_bid]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ExecutionPayloadBidErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.proposer_preferences]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ProposerPreferencesErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.voluntary_exit]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[VoluntaryExitErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.bls_to_execution_change]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[BlsToExecutionChangeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.proposer_slashing]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[ProposerSlashingErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.attester_slashing]: {
+    default: PeerAction.HighToleranceError,
+    byCode: {[AttesterSlashingErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  // light client validators only throw IGNORE
+  [GossipType.light_client_finality_update]: {default: PeerAction.HighToleranceError},
+  [GossipType.light_client_optimistic_update]: {default: PeerAction.HighToleranceError},
+};
+
+function rejectPeerAction(type: GossipType, code: string): PeerAction {
+  const rule = gossipRejectPeerAction[type];
+  return rule.byCode?.[code] ?? rule.default;
+}
 
 /**
  * Similar to getGossipValidatorFn but return a function to accept a batch of beacon_attestation messages
@@ -27,7 +125,7 @@ export function getGossipValidatorBatchFn(
   gossipHandlers: GossipHandlers,
   modules: ValidatorFnModules
 ): GossipValidatorBatchFn {
-  const {logger, metrics} = modules;
+  const {logger, metrics, core} = modules;
 
   return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
     // all messageInfos have same topic type
@@ -69,16 +167,19 @@ export function getGossipValidatorBatchFn(
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
             return TopicValidatorResult.Ignore;
-          case GossipAction.REJECT:
+          case GossipAction.REJECT: {
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
+            const peerAction = rejectPeerAction(type, e.type.code);
+            core.reportPeer(propagationSource, peerAction, e.type.code);
             logger.debug(
               `Gossip validation ${type} rejected`,
-              {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
+              {peer: propagationSource, clientAgent, clientVersion, peerAction},
               e
             );
             return TopicValidatorResult.Reject;
+          }
         }
       });
     } catch (e) {
@@ -108,7 +209,7 @@ export function getGossipValidatorBatchFn(
  * @see getGossipHandlers for reasoning on why GossipHandlerFn are used for gossip validation.
  */
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
-  const {logger, metrics} = modules;
+  const {logger, metrics, core} = modules;
 
   return async function gossipValidatorFn({
     topic,
@@ -155,14 +256,17 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
           metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
           return TopicValidatorResult.Ignore;
 
-        case GossipAction.REJECT:
+        case GossipAction.REJECT: {
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+          const peerAction = rejectPeerAction(type, e.type.code);
+          core.reportPeer(propagationSource, peerAction, e.type.code);
           logger.debug(
             `Gossip validation ${type} rejected`,
-            {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
+            {peer: propagationSource, clientAgent, clientVersion, peerAction},
             e
           );
           return TopicValidatorResult.Reject;
+        }
       }
     }
   };

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -12,13 +13,17 @@ import {
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {
+  createSpecTestMetrics,
+  expectInvalidStateTransitionWithNoProgressiveBalancesMismatches,
+  expectNoProgressiveBalancesMismatches,
+} from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
-const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
+const sanity: TestRunnerFn<any, BeaconStateAllForks | undefined> = (fork, testName, testSuite) => {
   switch (testName) {
     case "slots":
       return sanitySlots(fork, testName, testSuite);
@@ -29,14 +34,24 @@ const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuit
   }
 };
 
-const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (fork) => {
+const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks | undefined> = (fork) => {
   return {
-    testFunction: (testcase) => {
+    testFunction: async (testcase, _directoryName, testCaseName) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
+      const {metrics, register} = createSpecTestMetrics();
+      const runProcessSlots = (): BeaconStateAllForks =>
+        processSlots(state, state.slot + bnToNum(testcase.slots), undefined, {metrics});
+
+      if (testcase.post === undefined) {
+        await expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(runProcessSlots, register, testCaseName);
+        return undefined;
+      }
+
+      const postState = runProcessSlots();
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
+      await expectNoProgressiveBalancesMismatches(register, testCaseName);
       return postState;
     },
     options: {
@@ -45,10 +60,13 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
       },
-      shouldError: (testCase) => !testCase.post,
       timeout: 30000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
+        if (expected === undefined) {
+          expect(actual).toBeUndefined();
+          return;
+        }
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -56,25 +74,44 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
   };
 };
 
-const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (fork) => {
+const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks | undefined> = (fork) => {
   return {
-    testFunction: (testcase) => {
+    testFunction: async (testcase, _directoryName, testCaseName) => {
       const stateTB = testcase.pre;
       let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
+      const {metrics, register} = createSpecTestMetrics();
       const verify = shouldVerify(testcase);
-      for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
-        wrappedState = stateTransition(wrappedState, signedBlock, {
-          // Assume valid and available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          // Always verify the state root, it is not gated by bls_setting
-          verifyStateRoot: true,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        });
+      const runStateTransition = (): void => {
+        for (let i = 0; i < testcase.meta.blocks_count; i++) {
+          const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
+          wrappedState = stateTransition(
+            wrappedState,
+            signedBlock,
+            {
+              // Assume valid and available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              // Always verify the state root, it is not gated by bls_setting
+              verifyStateRoot: true,
+              verifyProposer: verify,
+              verifySignatures: verify,
+            },
+            {metrics}
+          );
+        }
+      };
+
+      if (testcase.post === undefined) {
+        await expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(
+          runStateTransition,
+          register,
+          testCaseName
+        );
+        return undefined;
       }
+
+      runStateTransition();
+      await expectNoProgressiveBalancesMismatches(register, testCaseName);
       return wrappedState;
     },
     options: {
@@ -84,13 +121,16 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         post: ssz[fork].BeaconState,
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
-      shouldError: (testCase) => testCase.post === undefined,
       // Only an ssz list limit violation is an expected input error, anything else is a decode bug
       shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
         !inputNames.has("post") && /over limit/.test(error.message),
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
+        if (expected === undefined) {
+          expect(actual).toBeUndefined();
+          return;
+        }
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -115,7 +155,7 @@ type SanityBlocksTestCase = {
     bls_setting: bigint;
   };
   pre: BeaconStateAllForks;
-  post: BeaconStateAllForks;
+  post?: BeaconStateAllForks;
 };
 
 type SanitySlotsTestCase = {

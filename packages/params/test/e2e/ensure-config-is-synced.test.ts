@@ -13,11 +13,7 @@ import {loadConfigYaml} from "../yaml.js";
  */
 const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
-const ignoredRemotePresetFields: string[] = [
-  // TODO GLOAS: The pinned v1.7.0-beta.0 still includes these; remove the exclusions once the pin includes consensus-specs#5613
-  "MAX_DATA_COLUMN_SIDECAR_SIZE",
-  "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
-];
+const ignoredRemotePresetFields: string[] = [];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

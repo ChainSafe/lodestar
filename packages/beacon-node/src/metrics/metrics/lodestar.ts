@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
+import {StateHashTreeRootSource} from "@lodestar/state-transition";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
@@ -25,8 +26,13 @@ import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
-import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {DownloadResult, DroppedItemReason, FetchResult, PendingBlockType} from "../../sync/types.js";
+import {
+  DeferredPayloadResult,
+  DownloadResult,
+  DroppedItemReason,
+  FetchResult,
+  PendingBlockType,
+} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
@@ -173,6 +179,30 @@ export function createLodestarMetrics(
       labelNames: ["eventName"],
       buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
     }),
+
+    reqRespByRange: {
+      requestedSlots: register.histogram<{method: string}>({
+        name: "lodestar_reqresp_by_range_requested_slots",
+        help: "Histogram of slot count requested per served by_range request",
+        labelNames: ["method"],
+        buckets: [1, 16, 32, 64, 128],
+      }),
+      // data_column_sidecars_by_range is the only by_range request carrying columns
+      requestedColumns: register.histogram({
+        name: "lodestar_reqresp_by_range_requested_columns",
+        help: "Histogram of column count requested per served data_column_sidecars_by_range request",
+        // 128 is NUMBER_OF_COLUMNS.
+        buckets: [1, 4, 8, 32, 128],
+      }),
+      servedBytes: register.histogram<{method: string}>({
+        name: "lodestar_reqresp_by_range_served_bytes",
+        help: "Histogram of total serialized bytes served per by_range request",
+        labelNames: ["method"],
+        // min bucket is roughly a typical mainnet block is 100MB,
+        // max bucket is roughly 100 * MAX_PAYLOAD_SIZE
+        buckets: [100e3, 1e6, 10e6, 100e6, 1000e6],
+      }),
+    },
 
     regenQueue: {
       length: register.gauge({
@@ -401,6 +431,15 @@ export function createLodestarMetrics(
       name: "lodestar_epoch_transition_by_caller_total",
       help: "Total count of epoch transition by caller",
       labelNames: ["caller"],
+    }),
+
+    // this metrics stay here instead of @lodestar/state-transition in order to prepare
+    // for the native zig state-transition in the future
+    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
+      name: "lodestar_stfn_hash_tree_root_seconds",
+      help: "Time to compute the hash tree root of a post state in seconds",
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.3, 0.5],
+      labelNames: ["source"],
     }),
 
     // BLS verifier thread pool and queue
@@ -654,6 +693,16 @@ export function createLodestarMetrics(
         name: "lodestar_payload_input_sync_source_total",
         help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
         labelNames: ["source"],
+      }),
+      deferredPayloadResult: register.counter<{result: DeferredPayloadResult}>({
+        name: "lodestar_sync_deferred_payload_result_total",
+        help: "Outcome of a slot's deferred optimistic payload searches, by result",
+        labelNames: ["result"],
+      }),
+      deferredPayloadPolls: register.histogram({
+        name: "lodestar_sync_deferred_payload_polls_count",
+        help: "Poll ticks after PAYLOAD_DUE until a searched payload was imported",
+        buckets: [0, 1, 2, 3, 6],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
@@ -986,6 +1035,13 @@ export function createLodestarMetrics(
         help: "Count of errors, by error type, while processing execution payload envelopes",
         labelNames: ["error"],
       }),
+      executionPayload: {
+        recvToValidation: register.histogram({
+          name: "lodestar_gossip_execution_payload_envelope_received_to_execution_payload_verification_seconds",
+          help: "Time elapsed between execution payload envelope received and execution payload verification",
+          buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 4, 6, 8],
+        }),
+      },
     },
     gossipExecutionPayloadBid: {
       elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
@@ -1120,30 +1176,6 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
-    backfillSync: {
-      backfilledTillSlot: register.gauge({
-        name: "lodestar_backfill_till_slot",
-        help: "Current lowest backfilled slot",
-      }),
-      prevFinOrWsSlot: register.gauge({
-        name: "lodestar_backfill_prev_fin_or_ws_slot",
-        help: "Slot of previous finalized or wsCheckpoint block to be validated",
-      }),
-      totalBlocks: register.gauge<{method: BackfillSyncMethod}>({
-        name: "lodestar_backfill_sync_blocks_total",
-        help: "Total amount of backfilled blocks",
-        labelNames: ["method"],
-      }),
-      errors: register.gauge({
-        name: "lodestar_backfill_sync_errors_total",
-        help: "Total number of errors while backfilling",
-      }),
-      status: register.gauge({
-        name: "lodestar_backfill_sync_status",
-        help: "Current backfill syncing status: [Aborted, Pending, Syncing, Completed]",
-      }),
-    },
-
     opPool: {
       aggregatedAttestationPool: {
         size: register.gauge({
