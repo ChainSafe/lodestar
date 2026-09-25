@@ -204,7 +204,7 @@ export class NativeNetworkCore implements INetworkCore {
       return {
         ...gossip,
         peers: drainLimits.peers,
-        servingStarts: drainLimits.servingStarts,
+        servingStarts: this.requests.allowance(drainLimits.servingStarts),
         capacity: {serving: this.requests.capacity(), ordinary},
       };
     },

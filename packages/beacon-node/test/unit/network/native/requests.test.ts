@@ -106,9 +106,12 @@ function claims(requests: NativeIncomingRequest[]): NativeClaim<NativeIncomingRe
   return requests.map((request) => new NativeClaim(request));
 }
 
-/** One turn's serving: native delivers up to the quota and the host's capacity from `queue`, and the host starts them. */
+/**
+ * One turn's serving: native delivers from `queue` up to the turn's allowance under the quota and the host's capacity,
+ * and the host starts them.
+ */
 function serveTurn(owner: NativeRequests, queue: NativeIncomingRequest[], quota = 8, deadline = Infinity): number {
-  const taken = queue.splice(0, Math.min(quota, owner.capacity()));
+  const taken = queue.splice(0, Math.min(owner.allowance(quota), owner.capacity()));
   owner.start(claims(taken), deadline);
   return taken.length;
 }
@@ -233,9 +236,10 @@ it("holds serving starts once the drain budget is spent and starts them first in
     expect(owner.start(held, 0)).toBe(true);
     expect(held.every(({adopted}) => adopted)).toBe(true);
     expect(started).toBe(0);
-    // Held starts count against the next turn's capacity and start before its new ones.
+    // Held starts count against the next turn's capacity and allowance, and start before its new ones.
     expect(owner.capacity()).toBe(5);
-    expect(serveTurn(owner, queue, 2)).toBe(2);
+    expect(owner.allowance(5)).toBe(2);
+    expect(serveTurn(owner, queue, 5)).toBe(2);
     expect(started).toBe(5);
     for (const input of inputs.slice(0, 5)) expect(input.request.fail).toHaveBeenCalledOnce();
     void inputs[5].permission.promise.catch(() => {});
@@ -246,6 +250,32 @@ it("holds serving starts once the drain budget is spent and starts them first in
   // A held start is still the host's: closing cancels it.
   expect(started).toBe(5);
   expect(inputs[5].request.cancel).toHaveBeenCalledOnce();
+});
+
+it("never starts more than one turn's allowance, however many turns the budget ended", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 32, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const queue = (await Promise.all(Array.from({length: 40}, () => incoming()))).map((input) => input.request);
+  let started = 0;
+  const factory: handlers.BoundedReqRespHandlers = () => () => {
+    started++;
+    throw Error("Started");
+  };
+  const owner = new NativeRequests(config, factory, 32, vi.fn());
+  try {
+    // Four turns the budget ended: the first holds eight starts, which leave the others no allowance.
+    for (let turn = 0; turn < 4; turn++) serveTurn(owner, queue, 8, 0);
+    expect(queue).toHaveLength(32);
+    expect(owner.capacity()).toBe(24);
+    expect(started).toBe(0);
+    expect(serveTurn(owner, queue)).toBe(0);
+    expect(started).toBe(8);
+    expect(serveTurn(owner, queue)).toBe(8);
+    expect(started).toBe(16);
+  } finally {
+    owner.close();
+  }
 });
 
 it("two peers waiting on eight response writes do not prevent a third peer from producing", async () => {

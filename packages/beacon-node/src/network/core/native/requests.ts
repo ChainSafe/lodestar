@@ -213,6 +213,10 @@ export class NativeRequests {
       1
     );
   }
+  /** Starts one turn may deliver: the per-turn quota less the held starts, which start first. */
+  allowance(quota: number): number {
+    return this.closed ? 0 : Math.max(0, quota - this.held.length);
+  }
   /**
    * Serving starts the host can take now: free routes and the host serving budget, which other adapters share, bound
    * them, less the starts already held.
