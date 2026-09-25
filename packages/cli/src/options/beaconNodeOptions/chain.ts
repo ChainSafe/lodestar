@@ -42,6 +42,7 @@ export type ChainArgs = {
 
   "chain.pruneHistory"?: boolean;
   "chain.blockTrace"?: boolean;
+  "chain.blockTraceAttestationTiming"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
@@ -89,6 +90,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
     blockTrace: args["chain.blockTrace"],
+    blockTraceAttestationTiming: args["chain.blockTraceAttestationTiming"],
   };
 }
 
@@ -368,6 +370,14 @@ Initial pruning may be slow on first startup with an existing large database.",
       "Trace each recent block's critical path per slot, exported as metrics and by `/eth/v1/lodestar/block_trace`",
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.blockTrace),
+    group: "chain",
+  },
+
+  "chain.blockTraceAttestationTiming": {
+    hidden: true,
+    description: "Time synchronous gossip attestation work in one slot in eight for the block trace",
+    type: "boolean",
+    defaultDescription: String(defaultOptions.chain.blockTraceAttestationTiming),
     group: "chain",
   },
 };

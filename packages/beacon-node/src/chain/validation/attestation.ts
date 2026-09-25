@@ -49,7 +49,6 @@ import {
   getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
-import {AttestationSegment} from "../blockTrace/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -125,7 +124,7 @@ export async function validateGossipAttestationsSameAttData(
     const step0 = wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
     if (segment >= 0) trace?.attestationSegmentEnd(segment);
     step0ResultOrErrors.push(await step0);
-    segment = trace?.sampling ? trace.attestationSegmentStart(AttestationSegment.microtask) : -1;
+    segment = trace?.sampling ? trace.attestationMicrotask() : -1;
   }
 
   // step1: verify signatures of all valid attestations
@@ -152,7 +151,7 @@ export async function validateGossipAttestationsSameAttData(
       Promise.all(signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true})));
   if (segment >= 0) trace?.attestationSegmentEnd(segment);
   const signatureValids = await verification;
-  const continuation = trace?.attestationSegmentStart(AttestationSegment.continuation) ?? -1;
+  const continuation = signatureSets.length > 0 ? (trace?.attestationContinuation(chain.bls.resultAt) ?? -1) : -1;
 
   // phase0 post validation
   for (const [i, sigValid] of signatureValids.entries()) {
@@ -291,8 +290,6 @@ async function validateAttestationNoSignatureCheck(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
   let committeeIndex: number | null;
-  // The segment this validation resumes in after awaiting the shuffling, timed in sampled slots
-  let resumed = -1;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation
@@ -404,203 +401,208 @@ async function validateAttestationNoSignatureCheck(
   let committeeValidatorIndices: Uint32Array;
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: SubnetID;
-  if (attestationOrCache.cache) {
-    committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
-    const signingRoot = attestationOrCache.cache.signingRoot;
-    getSigningRoot = () => signingRoot;
-    expectedSubnet = attestationOrCache.cache.subnet;
-  } else {
-    // Attestations must be for a known block. If the block is unknown, we simply drop the
-    // attestation and do not delay consideration for later.
-    //
-    // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
-
-    // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
-    // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-    const attHeadBlock = verifyHeadBlockAndTargetRoot(
-      chain,
-      attestationOrCache.attestation.data.beaconBlockRoot,
-      attestationOrCache.attestation.data.target.root,
-      attSlot,
-      attEpoch,
-      RegenCaller.validateGossipAttestation,
-      chain.opts.maxSkipSlots
-    );
-
-    // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
-    // > Altready check in `verifyHeadBlockAndTargetRoot()`
-
-    // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
-    // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-    // > Altready check in `verifyHeadBlockAndTargetRoot()`
-
-    // [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote
-    //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
-    // > Altready check in `verifyHeadBlockAndTargetRoot()`
-
-    const shuffling = await getShufflingForAttestationVerification(
-      chain,
-      attEpoch,
-      attHeadBlock,
-      RegenCaller.validateGossipAttestation
-    );
-    resumed = chain.blockTrace?.sampling ? chain.blockTrace.attestationSegmentStart(AttestationSegment.microtask) : -1;
-
-    // [REJECT] The committee index is within the expected range
-    // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
-    getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
-    expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
-  }
-
-  let validatorIndex: number;
-
-  if (!isForkPostElectra(fork)) {
-    // The validity of aggregation bits are already checked above
-    assert.notNull(aggregationBits);
-    assert.notNull(validatorCommitteeIndex);
-
-    validatorIndex = committeeValidatorIndices[validatorCommitteeIndex];
-    // [REJECT] The number of aggregation bits matches the committee size
-    // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
-    // > TODO: Is this necessary? Lighthouse does not do this check.
-    if (aggregationBits.bitLen !== committeeValidatorIndices.length) {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
-      });
-    }
-  } else {
-    if (attestationOrCache.attestation) {
-      validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+  // The segment this validation resumes in after awaiting the shuffling, timed in sampled slots
+  let resumed = -1;
+  try {
+    if (attestationOrCache.cache) {
+      committeeValidatorIndices = attestationOrCache.cache.committeeValidatorIndices;
+      const signingRoot = attestationOrCache.cache.signingRoot;
+      getSigningRoot = () => signingRoot;
+      expectedSubnet = attestationOrCache.cache.subnet;
     } else {
-      const attesterIndex = getAttesterIndexFromSingleAttestationSerialized(attestationOrCache.serializedData);
-      if (attesterIndex === null) {
+      // Attestations must be for a known block. If the block is unknown, we simply drop the
+      // attestation and do not delay consideration for later.
+      //
+      // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
+
+      // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
+      // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
+      const attHeadBlock = verifyHeadBlockAndTargetRoot(
+        chain,
+        attestationOrCache.attestation.data.beaconBlockRoot,
+        attestationOrCache.attestation.data.target.root,
+        attSlot,
+        attEpoch,
+        RegenCaller.validateGossipAttestation,
+        chain.opts.maxSkipSlots
+      );
+
+      // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
+      // > Altready check in `verifyHeadBlockAndTargetRoot()`
+
+      // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
+      // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+      // > Altready check in `verifyHeadBlockAndTargetRoot()`
+
+      // [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote
+      //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
+      // > Altready check in `verifyHeadBlockAndTargetRoot()`
+
+      const shuffling = await getShufflingForAttestationVerification(
+        chain,
+        attEpoch,
+        attHeadBlock,
+        RegenCaller.validateGossipAttestation
+      );
+      resumed = chain.blockTrace?.sampling ? chain.blockTrace.attestationMicrotask() : -1;
+
+      // [REJECT] The committee index is within the expected range
+      // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
+      committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
+      getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
+      expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
+    }
+
+    let validatorIndex: number;
+
+    if (!isForkPostElectra(fork)) {
+      // The validity of aggregation bits are already checked above
+      assert.notNull(aggregationBits);
+      assert.notNull(validatorCommitteeIndex);
+
+      validatorIndex = committeeValidatorIndices[validatorCommitteeIndex];
+      // [REJECT] The number of aggregation bits matches the committee size
+      // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
+      // > TODO: Is this necessary? Lighthouse does not do this check.
+      if (aggregationBits.bitLen !== committeeValidatorIndices.length) {
         throw new AttestationError(GossipAction.REJECT, {
-          code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+          code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
         });
       }
-      validatorIndex = attesterIndex;
-    }
-
-    // [REJECT] The attester is a member of the committee -- i.e.
-    // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
-    // Position of the validator in its committee
-    validatorCommitteeIndex = committeeValidatorIndices.indexOf(validatorIndex);
-    if (validatorCommitteeIndex === -1) {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
-      });
-    }
-  }
-
-  // LH > verify_middle_checks
-  // Run the checks that apply to the indexed attestation before the signature is checked.
-  //   Check correct subnet
-  //   The attestation is the first valid attestation received for the participating validator for the slot, attestation.data.slot.
-
-  // [REJECT] The attestation is for the correct subnet
-  // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
-  // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
-  // which may be pre-computed along with the committee information for the signature check.
-  if (subnet !== null && subnet !== expectedSubnet) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_SUBNET_ID,
-      received: subnet,
-      expected: expectedSubnet,
-    });
-  }
-
-  // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
-  // identical attestation.data.target.epoch and participating validator index.
-  if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
-      targetEpoch,
-      validatorIndex,
-    });
-  }
-
-  // [REJECT] The signature of attestation is valid.
-  const attestingIndices = [validatorIndex];
-  let signatureSet: IndexedSignatureSet;
-  let attDataRootHex: RootHex;
-  const signature = attestationOrCache.attestation
-    ? attestationOrCache.attestation.signature
-    : !isForkPostElectra(fork)
-      ? getSignatureFromAttestationSerialized(attestationOrCache.serializedData)
-      : getSignatureFromSingleAttestationSerialized(attestationOrCache.serializedData);
-  if (signature === null) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
-    });
-  }
-
-  if (attestationOrCache.cache) {
-    // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = createIndexedSignatureSetFromComponents(
-      validatorIndex,
-      attestationOrCache.cache.signingRoot,
-      signature
-    );
-    attDataRootHex = attestationOrCache.cache.attDataRootHex;
-  } else {
-    signatureSet = createIndexedSignatureSetFromComponents(validatorIndex, getSigningRoot(), signature);
-
-    // add cached attestation data before verifying signature
-    attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
-    if (attDataKey) {
-      // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
-      const committeeIndexKey = isForkPostElectra(fork)
-        ? committeeIndex
-        : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
-      chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
-        committeeValidatorIndices,
-        committeeIndex,
-        signingRoot: signatureSet.signingRoot,
-        subnet: expectedSubnet,
-        // precompute this to be used in forkchoice
-        // root of AttestationData was already cached during getIndexedAttestationSignatureSet
-        attDataRootHex,
-        attestationData: attData,
-      });
-    }
-  }
-
-  // no signature check, leave that for step1
-  const indexedAttestation: IndexedAttestation = {
-    attestingIndices,
-    data: attData,
-    signature,
-  };
-
-  const attestation: SingleAttestation = attestationOrCache.attestation
-    ? attestationOrCache.attestation
-    : !isForkPostElectra(fork)
-      ? {
-          // Aggregation bits are already asserted above to not be null
-          aggregationBits: aggregationBits as BitArray,
-          data: attData,
-          signature,
+    } else {
+      if (attestationOrCache.attestation) {
+        validatorIndex = (attestationOrCache.attestation as SingleAttestation<ForkPostElectra>).attesterIndex;
+      } else {
+        const attesterIndex = getAttesterIndexFromSingleAttestationSerialized(attestationOrCache.serializedData);
+        if (attesterIndex === null) {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+          });
         }
-      : {
-          committeeIndex,
-          attesterIndex: validatorIndex,
-          data: attData,
-          signature,
-        };
+        validatorIndex = attesterIndex;
+      }
 
-  if (resumed >= 0) chain.blockTrace?.attestationSegmentEnd(resumed);
-  return {
-    attestation,
-    indexedAttestation,
-    subnet: expectedSubnet,
-    attDataRootHex,
-    signatureSet,
-    validatorIndex,
-    committeeIndex,
-    validatorCommitteeIndex,
-    committeeSize: committeeValidatorIndices.length,
-  };
+      // [REJECT] The attester is a member of the committee -- i.e.
+      // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
+      // Position of the validator in its committee
+      validatorCommitteeIndex = committeeValidatorIndices.indexOf(validatorIndex);
+      if (validatorCommitteeIndex === -1) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
+        });
+      }
+    }
+
+    // LH > verify_middle_checks
+    // Run the checks that apply to the indexed attestation before the signature is checked.
+    //   Check correct subnet
+    //   The attestation is the first valid attestation received for the participating validator for the slot, attestation.data.slot.
+
+    // [REJECT] The attestation is for the correct subnet
+    // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
+    // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
+    // which may be pre-computed along with the committee information for the signature check.
+    if (subnet !== null && subnet !== expectedSubnet) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_SUBNET_ID,
+        received: subnet,
+        expected: expectedSubnet,
+      });
+    }
+
+    // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
+    // identical attestation.data.target.epoch and participating validator index.
+    if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
+        targetEpoch,
+        validatorIndex,
+      });
+    }
+
+    // [REJECT] The signature of attestation is valid.
+    const attestingIndices = [validatorIndex];
+    let signatureSet: IndexedSignatureSet;
+    let attDataRootHex: RootHex;
+    const signature = attestationOrCache.attestation
+      ? attestationOrCache.attestation.signature
+      : !isForkPostElectra(fork)
+        ? getSignatureFromAttestationSerialized(attestationOrCache.serializedData)
+        : getSignatureFromSingleAttestationSerialized(attestationOrCache.serializedData);
+    if (signature === null) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+      });
+    }
+
+    if (attestationOrCache.cache) {
+      // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
+      signatureSet = createIndexedSignatureSetFromComponents(
+        validatorIndex,
+        attestationOrCache.cache.signingRoot,
+        signature
+      );
+      attDataRootHex = attestationOrCache.cache.attDataRootHex;
+    } else {
+      signatureSet = createIndexedSignatureSetFromComponents(validatorIndex, getSigningRoot(), signature);
+
+      // add cached attestation data before verifying signature
+      attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
+      if (attDataKey) {
+        // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
+        const committeeIndexKey = isForkPostElectra(fork)
+          ? committeeIndex
+          : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
+        chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
+          committeeValidatorIndices,
+          committeeIndex,
+          signingRoot: signatureSet.signingRoot,
+          subnet: expectedSubnet,
+          // precompute this to be used in forkchoice
+          // root of AttestationData was already cached during getIndexedAttestationSignatureSet
+          attDataRootHex,
+          attestationData: attData,
+        });
+      }
+    }
+
+    // no signature check, leave that for step1
+    const indexedAttestation: IndexedAttestation = {
+      attestingIndices,
+      data: attData,
+      signature,
+    };
+
+    const attestation: SingleAttestation = attestationOrCache.attestation
+      ? attestationOrCache.attestation
+      : !isForkPostElectra(fork)
+        ? {
+            // Aggregation bits are already asserted above to not be null
+            aggregationBits: aggregationBits as BitArray,
+            data: attData,
+            signature,
+          }
+        : {
+            committeeIndex,
+            attesterIndex: validatorIndex,
+            data: attData,
+            signature,
+          };
+
+    return {
+      attestation,
+      indexedAttestation,
+      subnet: expectedSubnet,
+      attDataRootHex,
+      signatureSet,
+      validatorIndex,
+      committeeIndex,
+      validatorCommitteeIndex,
+      committeeSize: committeeValidatorIndices.length,
+    };
+  } finally {
+    if (resumed >= 0) chain.blockTrace?.attestationSegmentEnd(resumed);
+  }
 }
 
 /**

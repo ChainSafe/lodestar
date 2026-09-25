@@ -103,8 +103,8 @@ export type BlockTraceWait = {
   attestationStarts: number;
   attestationContinuations: number;
   /**
-   * Synchronous time of the segments timed in sampled time. It excludes promise resolution between segments, so it
-   * undercounts attestation JS time: by about 2 to 16% in a local harness.
+   * Synchronous time of the segments timed in sampled time, which exists only with attestation timing on. It excludes
+   * promise resolution between segments, so it undercounts attestation JS time: by about 2 to 16% in a local harness.
    */
   attestationJsMs: number;
   /** Fraction of the wait inside sampled time; `attestationJsMs` is complete only at 1 */

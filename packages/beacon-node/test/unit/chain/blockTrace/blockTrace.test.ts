@@ -5,7 +5,6 @@ import {SignatureSetType} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
-  AttestationSegment,
   BlockMilestone,
   BlockTrace,
   ConsumerTarget,
@@ -57,11 +56,11 @@ function mockMetrics() {
 }
 
 /** A trace whose clock is at the start of `slot`; `at(ms)` moves time to `ms` after the clock slot's start */
-function setup(slot: Slot) {
+function setup(slot: Slot, attestationTiming = false) {
   vi.useFakeTimers({toFake: ["Date", "performance"], now: slot * slotMs});
   const clock = new ClockStopped(slot);
   const metrics = mockMetrics();
-  const trace = new BlockTrace(config, clock, metrics as unknown as Metrics);
+  const trace = new BlockTrace(config, clock, metrics as unknown as Metrics, attestationTiming);
   return {
     trace,
     metrics: metrics.blockTrace,
@@ -86,8 +85,17 @@ function setup(slot: Slot) {
   };
 }
 
-function block(slot: Slot, blockRootHex: string, dataAvailableAt: number | null = null): IBlockInput {
-  return {slot, blockRootHex, dataAvailableAt} as IBlockInput;
+/** A block input whose data becomes available when `available` is called */
+function block(slot: Slot, blockRootHex: string) {
+  let observer: ((at: number) => void) | null = null;
+  const input = {
+    slot,
+    blockRootHex,
+    observeDataAvailable: (fn: (at: number) => void) => {
+      observer = fn;
+    },
+  } as unknown as IBlockInput;
+  return Object.assign(input, {available: () => observer?.(performance.now())});
 }
 
 /** The first slot at or after `from` whose attestation segments are timed, or not */
@@ -167,7 +175,7 @@ describe("BlockTrace", () => {
 
     // A duplicate job after import neither restarts the attempt nor extends its wait
     t.at(1500);
-    t.trace.attestationSegmentStart(AttestationSegment.start);
+    t.trace.attestationBatchStart(null);
     expect(t.trace.startAttempt([block(slot, root)], performance.now() - 100)).toBeNull();
 
     expect(t.slot(slot).roots[0].attempts).toBe(2);
@@ -180,12 +188,13 @@ describe("BlockTrace", () => {
     const t = setup(slot);
     t.at(1300);
     const enqueuedAt = performance.now();
+    t.trace.enqueued([block(slot, "0xaa")], enqueuedAt);
     t.at(1400);
     t.trace.processorLaneFree();
-    t.trace.attestationSegmentStart(AttestationSegment.start);
+    t.trace.attestationBatchStart(null);
     t.at(1420);
-    t.trace.attestationSegmentStart(AttestationSegment.continuation);
-    t.trace.attestationSegmentStart(AttestationSegment.start);
+    t.trace.attestationContinuation(undefined);
+    t.trace.attestationBatchStart(null);
     t.at(1450);
     t.trace.startAttempt([block(slot, "0xaa")], enqueuedAt);
 
@@ -201,10 +210,10 @@ describe("BlockTrace", () => {
 
   it("marks attestation time complete only for waits wholly in sampled slots", () => {
     const sampled = findSlot(101, true);
-    const t = setup(sampled - 1);
+    const t = setup(sampled - 1, true);
     t.toSlot(sampled);
     t.at(1000);
-    const segment = t.trace.attestationSegmentStart(AttestationSegment.start);
+    const segment = t.trace.attestationBatchStart(null);
     t.at(1005);
     t.trace.attestationSegmentEnd(segment);
     t.at(1100);
@@ -213,7 +222,7 @@ describe("BlockTrace", () => {
 
     // A wait that runs into the next, unsampled slot has partial coverage
     t.at(slotMs - 100);
-    const late = t.trace.attestationSegmentStart(AttestationSegment.start);
+    const late = t.trace.attestationBatchStart(null);
     t.at(slotMs - 90);
     t.trace.attestationSegmentEnd(late);
     t.toSlot(sampled + 1);
@@ -233,7 +242,7 @@ describe("BlockTrace", () => {
   });
 
   it("times each resume of batch validation up to its next await", async () => {
-    const t = setup(findSlot(100, true));
+    const t = setup(findSlot(100, true), true);
     const signingRoot = Buffer.alloc(32, 1);
     const chain = {
       blockTrace: t.trace,
@@ -265,6 +274,84 @@ describe("BlockTrace", () => {
 
     // The first step0 runs in the caller's segment; the other two and the signature submission are timed
     expect(t.slot(findSlot(100, true)).attestationWork).toEqual({starts: 0, continuations: 1, jsMs: 7});
+  });
+
+  it("records data availability when the block input's data arrives, whatever verification does", () => {
+    const slot = 100;
+    const t = setup(slot);
+    const input = block(slot, "0xaa");
+    t.at(900);
+    t.trace.enqueued([input], performance.now());
+    t.at(1200);
+    input.available();
+    expect(t.milestones(slot)).toMatchObject({processor_enqueue: 900, data_available: 1200, processor_start: null});
+  });
+
+  it("keeps a job still queued when its slot closes, and rejects an attempt's marks after the close", () => {
+    const slot = 100;
+    const t = setup(slot);
+    t.at(1000);
+    t.trace.enqueued([block(slot, "0xaa")], performance.now());
+    const attempt = t.trace.startAttempt([block(slot, "0xbb")], performance.now());
+
+    t.toSlot(slot + 2);
+    attempt?.mark(BlockMilestone.prestateRequest);
+    expect(t.slot(slot).roots.map((r) => r.outcome)).toEqual(["not_imported", "not_imported"]);
+    expect(t.milestones(slot, 0)).toMatchObject({processor_enqueue: 1000, processor_start: null});
+    expect(t.milestones(slot, 1)).toMatchObject({processor_start: 1000, prestate_request: null});
+    expect(t.metrics.milestoneMissing.inc).toHaveBeenCalledWith({
+      milestone: "processor_start",
+      outcome: "not_imported",
+    });
+  });
+
+  it("counts attestation segments without timing them when timing is off", () => {
+    const sampled = findSlot(100, true);
+    const t = setup(sampled);
+    t.at(1000);
+    expect(t.trace.attestationBatchStart(null)).toBe(-1);
+    expect(t.trace.attestationMicrotask()).toBe(-1);
+    t.trace.attestationContinuation(undefined);
+    t.at(1100);
+    t.trace.gossipValidationStart(sampled, "0xaa", (sampled * slotMs + 900) / 1000, performance.now());
+    expect(t.slot(sampled).sampled).toBe(false);
+    expect(t.slot(sampled).attestationWork).toEqual({starts: 1, continuations: 1, jsMs: null});
+    expect(t.slot(sampled).roots[0].waits.dispatch).toMatchObject({attestationStarts: 1, attestationContinuations: 1});
+
+    t.toSlot(sampled + 2);
+    expect(t.metrics.waitSampling.inc).not.toHaveBeenCalled();
+    expect(t.metrics.waitAttestationJs.observe).not.toHaveBeenCalled();
+  });
+
+  it("stamps untimed segments with the processor start and worker result times, not the clock", () => {
+    const slot = 100;
+    const t = setup(slot);
+    t.at(1000);
+    t.trace.attestationBatchStart((slot * slotMs + 850) / 1000);
+    t.trace.attestationBatchStart((slot * slotMs + 950) / 1000);
+    t.trace.attestationContinuation(performance.now() - 120);
+    t.trace.attestationContinuation(performance.now() + 50);
+    t.at(1100);
+    t.trace.gossipValidationStart(slot, "0xaa", (slot * slotMs + 900) / 1000, performance.now());
+    expect(t.slot(slot).roots[0].waits.dispatch).toMatchObject({attestationStarts: 1, attestationContinuations: 1});
+  });
+
+  it("leaves a wait whose log wrapped out of complete attestation time", () => {
+    const sampled = findSlot(101, true);
+    const t = setup(sampled - 1, true);
+    t.toSlot(sampled);
+    t.at(1000);
+    for (let i = 0; i < 16384 + 1; i++) {
+      t.trace.attestationSegmentEnd(t.trace.attestationBatchStart(null));
+    }
+    t.at(1100);
+    t.trace.gossipValidationStart(sampled, "0xaa", (sampled * slotMs + 900) / 1000, performance.now());
+    expect(t.slot(sampled).roots[0].waits.dispatch).toMatchObject({attestationLogTruncated: true, sampledCoverage: 1});
+
+    t.toSlot(sampled + 2);
+    expect(t.metrics.waitSampling.inc).toHaveBeenCalledWith({wait: "dispatch", coverage: "truncated"});
+    expect(t.metrics.waitAttestationJs.observe).not.toHaveBeenCalled();
+    expect(t.metrics.attestationLogTruncated.inc).toHaveBeenCalledTimes(1);
   });
 
   it("bounds competing roots per slot and counts changes of overflowing root", () => {

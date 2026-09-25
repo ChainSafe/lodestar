@@ -14,6 +14,7 @@ export enum BlockMilestone {
   gossipValidationStart,
   /** Validation ended, whatever its result */
   gossipValidationEnd,
+  /** A root's first block processor enqueue */
   processorEnqueue,
   processorStart,
   prestateRequest,
@@ -51,7 +52,7 @@ export enum BlockWait {
 }
 
 /** A synchronous segment of gossip attestation batch work */
-export enum AttestationSegment {
+enum AttestationSegment {
   /** A batch's first segment */
   start,
   /** A batch resuming after its signatures were verified */
@@ -99,7 +100,6 @@ const OBSERVED_READINESS = [
 ];
 /** Milestones of a processing attempt, cleared when a later attempt starts; the others keep their first value */
 const ATTEMPT_MILESTONES = [
-  BlockMilestone.processorEnqueue,
   BlockMilestone.processorStart,
   BlockMilestone.prestateRequest,
   BlockMilestone.prestateReady,
@@ -112,6 +112,7 @@ const ATTEMPT_MILESTONES = [
 ];
 /** Milestones an imported block records; the gossip ones only when it arrived by gossip */
 const EXPECTED_MILESTONES = [
+  BlockMilestone.processorEnqueue,
   ...ATTEMPT_MILESTONES,
   BlockMilestone.dataAvailable,
   BlockMilestone.forkChoice,
@@ -135,14 +136,14 @@ const ENTRIES = RING_SLOTS * ROOTS_PER_SLOT;
 const SEGMENT_LOG_SIZE = 16384;
 const SEGMENT_LOG_MASK = SEGMENT_LOG_SIZE - 1;
 /** Fields of a logged segment, adjacent in memory: start time, kind, duration */
-const SEGMENT_FIELDS = 4;
+const SEGMENT_FIELDS = 3;
 const SAMPLE_EVERY_SLOTS = 8;
 /** Slots before the clock slot that still take events; older slots are closed */
 const OPEN_PAST_SLOTS = 1;
 
 /**
- * Whether attestation segments are timed in `slot`: one slot in SAMPLE_EVERY_SLOTS, at a position in the epoch that
- * moves by one each epoch so every position is sampled.
+ * Whether attestation segments are timed in `slot` when timing is on: one slot in SAMPLE_EVERY_SLOTS, at a position in
+ * the epoch that moves by one each epoch so every position is sampled.
  */
 export function isSampledSlot(slot: Slot): boolean {
   return (slot - Math.floor(slot / SLOTS_PER_EPOCH)) % SAMPLE_EVERY_SLOTS === 0;
@@ -163,6 +164,8 @@ export function isSampledSlot(slot: Slot): boolean {
 export class BlockTrace {
   /** Whether attestation segments are timed in the current slot, so callers can skip untimed segments */
   sampling = false;
+  /** The global looked up once, as the attestation segment hooks run per batch */
+  private readonly perf = performance;
   private readonly genesisMs: number;
   private readonly targets = new Map<ForkName, ConsumerTargetsMs>();
   private currentSlot: Slot;
@@ -212,7 +215,9 @@ export class BlockTrace {
   constructor(
     private readonly config: ChainForkConfig,
     clock: IClock,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    /** Whether to time synchronous attestation segments in sampled slots; segment counts are always kept */
+    private readonly attestationTiming = false
   ) {
     this.genesisMs = clock.genesisTime * 1000;
     this.currentSlot = clock.currentSlot;
@@ -226,11 +231,17 @@ export class BlockTrace {
     if (e >= 0) this.setMilestone(e, milestone, at - this.slotStart[slotIndexOf(e)]);
   }
 
-  markDataAvailable(blocks: readonly IBlockInput[]): void {
+  /** Records the block input's data availability when it happens, or now if it has */
+  observeDataAvailable(block: IBlockInput): void {
+    const {slot, blockRootHex} = block;
+    block.observeDataAvailable((at) => this.mark(slot, blockRootHex, BlockMilestone.dataAvailable, at));
+  }
+
+  /** Records a block processor job's enqueue at `at`, a `performance.now()` time */
+  enqueued(blocks: readonly IBlockInput[], at: number): void {
     for (const block of blocks) {
-      if (block.dataAvailableAt !== null) {
-        this.mark(block.slot, block.blockRootHex, BlockMilestone.dataAvailable, block.dataAvailableAt);
-      }
+      this.mark(block.slot, block.blockRootHex, BlockMilestone.processorEnqueue, at);
+      this.observeDataAvailable(block);
     }
   }
 
@@ -273,20 +284,17 @@ export class BlockTrace {
       this.generation[e] = generation;
       this.attempts[e]++;
       for (const m of ATTEMPT_MILESTONES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
-      const start = this.slotStart[slotIndexOf(e)];
-      this.setMilestone(e, BlockMilestone.processorEnqueue, enqueuedAt - start);
-      this.setMilestone(e, BlockMilestone.processorStart, now - start);
+      this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
       this.setWait(e, BlockWait.processor, waitFrom, now);
       entries.push(e);
       generations.push(generation);
     }
-    this.markDataAvailable(blocks);
     if (entries.length === 0) return null;
 
     const markEntry = (i: number, milestone: BlockMilestone, at: number, unix: boolean): void => {
       const e = entries[i];
-      if (this.generation[e] !== generations[i]) return;
       const s = slotIndexOf(e);
+      if (this.generation[e] !== generations[i] || this.closed[s] === 1) return;
       this.setMilestone(e, milestone, unix ? at - this.slotStartMs(this.slotOf[s]) : at - this.slotStart[s]);
     };
     return {
@@ -322,14 +330,37 @@ export class BlockTrace {
   }
 
   /**
-   * Logs the start of a synchronous attestation segment. Returns the handle `attestationSegmentEnd` takes when the
-   * segment is timed, else -1.
+   * Logs a gossip attestation batch's start. Unless segments are timed, the processor's job start stamp stands in for
+   * a clock read. Returns the handle `attestationSegmentEnd` takes when the segment is timed, else -1.
    */
-  attestationSegmentStart(kind: AttestationSegment): number {
-    if (kind === AttestationSegment.microtask && !this.sampling) return -1;
+  attestationBatchStart(startUnixSec: number | null | undefined): number {
+    const at =
+      this.sampling || startUnixSec == null || this.currentIndex < 0
+        ? this.perf.now()
+        : startUnixSec * 1000 - this.slotStartMs(this.currentSlot) + this.slotStart[this.currentIndex];
+    return this.logSegment(AttestationSegment.start, at);
+  }
+
+  /**
+   * Logs a batch resuming after its signatures were verified. Unless segments are timed, `resultAt`, the time the
+   * worker result reached JS, stands in for a clock read.
+   */
+  attestationContinuation(resultAt: number | undefined): number {
+    return this.logSegment(
+      AttestationSegment.continuation,
+      this.sampling || resultAt === undefined || Number.isNaN(resultAt) ? this.perf.now() : resultAt
+    );
+  }
+
+  /** Logs a batch resuming in a microtask of its previous segment, only when segments are timed */
+  attestationMicrotask(): number {
+    return this.sampling ? this.logSegment(AttestationSegment.microtask, this.perf.now()) : -1;
+  }
+
+  private logSegment(kind: AttestationSegment, at: number): number {
     const i = this.segmentHead;
     const field = i * SEGMENT_FIELDS;
-    this.segments[field] = performance.now();
+    this.segments[field] = at;
     this.segments[field + 1] = kind;
     this.segments[field + 2] = NaN;
     this.segmentHead = (i + 1) & SEGMENT_LOG_MASK;
@@ -342,7 +373,7 @@ export class BlockTrace {
   attestationSegmentEnd(segment: number): void {
     if (segment < 0) return;
     const field = segment * SEGMENT_FIELDS;
-    const duration = performance.now() - this.segments[field];
+    const duration = this.perf.now() - this.segments[field];
     this.segments[field + 2] = duration;
     this.currentJsMs += duration;
   }
@@ -368,7 +399,7 @@ export class BlockTrace {
       if (this.slotOf[s] >= 0 && this.closed[s] === 0 && this.slotOf[s] < slot - OPEN_PAST_SLOTS) this.closeSlot(s);
     }
     this.currentIndex = this.slotIndex(slot);
-    const sampling = isSampledSlot(slot);
+    const sampling = this.attestationTiming && isSampledSlot(slot);
     if (sampling && !this.sampling) {
       this.sampledFrom = performance.now();
       this.sampledUntil = Number.POSITIVE_INFINITY;
@@ -483,26 +514,26 @@ export class BlockTrace {
     this.waitCoverage[w] =
       Math.max(0, Math.min(end, this.sampledUntil) - Math.max(begin, this.sampledFrom)) / (end - begin);
 
+    // Stamps from the processor and BLS results precede their logging, so the log is scanned whole, not in time order
     const logged = Math.min(this.segmentsWritten, SEGMENT_LOG_SIZE);
-    let i = this.segmentHead;
-    let scanned = 0;
-    for (; scanned < logged; scanned++) {
-      i = (i - 1) & SEGMENT_LOG_MASK;
+    let oldest = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < logged; i++) {
       const field = i * SEGMENT_FIELDS;
       const t = this.segments[field];
       const duration = this.segments[field + 2];
+      if (t < oldest) oldest = t;
+      if (t > end) continue;
       if (t < begin) {
         // A timed segment that straddles `begin` contributes its part inside
-        if (!Number.isNaN(duration) && t + duration > begin) this.waitJsMs[w] += Math.min(t + duration, end) - begin;
-        break;
+        if (t + duration > begin) this.waitJsMs[w] += Math.min(t + duration, end) - begin;
+        continue;
       }
-      if (t > end) continue;
       const kind = this.segments[field + 1];
       if (kind === AttestationSegment.start) this.waitStarts[w]++;
       else if (kind === AttestationSegment.continuation) this.waitContinuations[w]++;
       if (!Number.isNaN(duration)) this.waitJsMs[w] += Math.min(duration, end - t);
     }
-    if (scanned === logged && this.segmentsWritten > SEGMENT_LOG_SIZE) this.waitTruncated[w] = 1;
+    if (this.segmentsWritten > SEGMENT_LOG_SIZE && oldest > begin) this.waitTruncated[w] = 1;
   }
 
   private outcome(e: number): "head" | "imported" | "not_imported" {
@@ -561,10 +592,12 @@ export class BlockTrace {
         metrics.wait.observe({wait: name}, (this.waitEnd[w] - this.waitBegin[w]) / 1000);
         metrics.waitAttestationSegments.observe({wait: name, kind: "start"}, this.waitStarts[w]);
         metrics.waitAttestationSegments.observe({wait: name, kind: "continuation"}, this.waitContinuations[w]);
-        const coverage = this.waitCoverage[w];
-        metrics.waitSampling.inc({wait: name, coverage: samplingCoverage(coverage)});
-        if (coverage >= 1) metrics.waitAttestationJs.observe({wait: name}, this.waitJsMs[w] / 1000);
-        if (this.waitTruncated[w]) metrics.attestationLogTruncated.inc();
+        const truncated = this.waitTruncated[w] === 1;
+        if (truncated) metrics.attestationLogTruncated.inc();
+        if (!this.attestationTiming) continue;
+        const coverage = truncated ? "truncated" : samplingCoverage(this.waitCoverage[w]);
+        metrics.waitSampling.inc({wait: name, coverage});
+        if (coverage === "full") metrics.waitAttestationJs.observe({wait: name}, this.waitJsMs[w] / 1000);
       }
     }
   }
@@ -586,7 +619,7 @@ export class BlockTrace {
   private slotSnapshot(s: number): routes.lodestar.BlockTraceSlot {
     const slot = this.slotOf[s];
     const start = this.slotStart[s];
-    const sampled = isSampledSlot(slot);
+    const sampled = this.attestationTiming && isSampledSlot(slot);
     const current = s === this.currentIndex && slot === this.currentSlot;
     const roots: routes.lodestar.BlockTraceRoot[] = [];
     const first = s * ROOTS_PER_SLOT;

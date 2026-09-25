@@ -102,6 +102,12 @@ type WorkerDescriptor = {
 };
 
 type BufferFlushReason = "size" | "timeout";
+
+/** `process.hrtime()` in ms minus `performance.now()`, to express worker result times on the `performance.now()` scale */
+const HRTIME_OFFSET_MS = (() => {
+  const [sec, ns] = process.hrtime();
+  return sec * 1000 + ns / 1e6 - performance.now();
+})();
 type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 
 /**
@@ -113,6 +119,7 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
+  resultAt = NaN;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
@@ -439,6 +446,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
+      this.resultAt = jobEndSec * 1000 + jobEndNs / 1e6 - HRTIME_OFFSET_MS;
       const {workerId, batchRetries, batchSigsSuccess, verificationCalls, workerStartTime, workerEndTime, results} =
         workResult;
 

@@ -30,7 +30,12 @@ export class BlockProcessor {
     void
   >;
 
-  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+  constructor(
+    private readonly chain: BeaconChain,
+    metrics: Metrics | null,
+    opts: BlockProcessOpts,
+    signal: AbortSignal
+  ) {
     this.jobQueue = new JobItemQueue<
       [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts, number],
       void
@@ -54,7 +59,9 @@ export class BlockProcessor {
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<void> {
-    await this.jobQueue.push(job, payloadEnvelopes, opts, performance.now());
+    const enqueuedAt = performance.now();
+    this.chain.blockTrace?.enqueued(job, enqueuedAt);
+    await this.jobQueue.push(job, payloadEnvelopes, opts, enqueuedAt);
   }
 }
 

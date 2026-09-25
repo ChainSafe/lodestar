@@ -38,7 +38,7 @@ import {
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
-import {AttestationSegment, BlockMilestone} from "../../chain/blockTrace/index.js";
+import {BlockMilestone} from "../../chain/blockTrace/index.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -188,6 +188,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
       peerIdStr,
     });
+    chain.blockTrace?.observeDataAvailable(blockInput);
 
     // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
     // This ensures we have PayloadEnvelopeInput, even through "PARENT_BLOCK_UNKNOWN" error
@@ -1361,7 +1362,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         return results;
       }
       const trace = chain.blockTrace;
-      const start = trace?.attestationSegmentStart(AttestationSegment.start) ?? -1;
+      const start = trace?.attestationBatchStart(gossipHandlerParams[0].startProcessUnixSec) ?? -1;
       // all attestations should have same attestation data as filtered by network processor
       const {fork} = gossipHandlerParams[0].topic.boundary;
       const validationParams = gossipHandlerParams.map((param) => ({
@@ -1374,7 +1375,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       const validation = validateGossipAttestationsSameAttData(fork, chain, validationParams);
       if (start >= 0) trace?.attestationSegmentEnd(start);
       const {results: validationResults, batchableBls} = await validation;
-      const segment = trace?.sampling ? trace.attestationSegmentStart(AttestationSegment.microtask) : -1;
+      const segment = trace?.attestationMicrotask() ?? -1;
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
           results.push(validationResult.err as AttestationError);

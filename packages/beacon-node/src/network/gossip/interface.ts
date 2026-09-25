@@ -178,6 +178,8 @@ export type GossipMessageInfo = {
   seenTimestampSec: number;
   msgSlot: Slot | null;
   indexed?: string;
+  /** Unix time in seconds the processor started the message's job */
+  startProcessUnixSec?: number | null;
 };
 
 export type GossipValidatorFn = (messageInfo: GossipMessageInfo) => Promise<TopicValidatorResult>;
@@ -212,6 +214,8 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
   topic: GossipTopicMap[T];
   peerIdStr: string;
   seenTimestampSec: number;
+  /** Unix time in seconds the processor started the message's job */
+  startProcessUnixSec?: number | null;
 };
 
 export type GossipHandlers = {

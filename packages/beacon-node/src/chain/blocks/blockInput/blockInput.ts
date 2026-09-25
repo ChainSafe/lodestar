@@ -91,7 +91,9 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   parentRootHex: string;
 
   abstract state: BlockInputState<F>;
+  /** `performance.now()` when `hasAllData` first became true, null before */
   dataAvailableAt: number | null = null;
+  private dataAvailableObserver: ((at: number) => void) | null = null;
 
   protected blockPromise = createPromise<SignedBeaconBlock<F>>();
   protected dataPromise = createPromise<TData>();
@@ -177,8 +179,17 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
 
+  observeDataAvailable(observer: (at: number) => void): void {
+    if (this.dataAvailableAt !== null) observer(this.dataAvailableAt);
+    else this.dataAvailableObserver = observer;
+  }
+
   protected resolveData(data: TData): void {
-    this.dataAvailableAt ??= performance.now();
+    if (this.dataAvailableAt === null) {
+      this.dataAvailableAt = performance.now();
+      this.dataAvailableObserver?.(this.dataAvailableAt);
+      this.dataAvailableObserver = null;
+    }
     this.dataPromise.resolve(data);
   }
 

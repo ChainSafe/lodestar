@@ -62,6 +62,9 @@ export interface IBlsVerifier {
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
+  /** `performance.now()` time the latest verification result from a worker reached JS, when there is one */
+  readonly resultAt?: number;
+
   /** For multithread pool awaits terminating all workers */
   close(): Promise<void>;
 

@@ -322,7 +322,10 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
-    this.blockTrace = opts.blockTrace === false ? null : new BlockTrace(config, clock, metrics);
+    this.blockTrace =
+      opts.blockTrace === false
+        ? null
+        : new BlockTrace(config, clock, metrics, opts.blockTraceAttestationTiming === true);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);

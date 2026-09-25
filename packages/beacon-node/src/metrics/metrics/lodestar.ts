@@ -1103,13 +1103,13 @@ export function createLodestarMetrics(
       }),
       waitAttestationJs: register.histogram<{wait: string}>({
         name: "lodestar_block_trace_wait_attestation_js_seconds",
-        help: "Timed synchronous gossip attestation batch time during a traced block's wait, only for waits wholly in sampled slots; excludes promise resolution between segments",
+        help: "Timed synchronous gossip attestation batch time during a traced block's wait, with attestation timing on and only for waits wholly in sampled slots with a complete log; excludes promise resolution between segments",
         labelNames: ["wait"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
       }),
       waitSampling: register.counter<{wait: string; coverage: string}>({
         name: "lodestar_block_trace_wait_sampling_total",
-        help: "Traced block waits by how much of each lay in sampled slots: full, partial or none",
+        help: "Traced block waits, with attestation timing on, by how much of each lay in sampled slots: full, partial or none, or truncated when the attestation log no longer covered it",
         labelNames: ["wait", "coverage"],
       }),
       attestationLogTruncated: register.counter({

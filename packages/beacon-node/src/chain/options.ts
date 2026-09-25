@@ -57,6 +57,8 @@ export type IChainOptions = BlockProcessOpts &
     allowedFaults?: number;
     /** Trace each recent block's critical path per slot */
     blockTrace?: boolean;
+    /** Time synchronous gossip attestation segments in the block trace's sampled slots */
+    blockTraceAttestationTiming?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -140,4 +142,5 @@ export const defaultChainOptions: IChainOptions = {
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
   blockTrace: true,
+  blockTraceAttestationTiming: false,
 };

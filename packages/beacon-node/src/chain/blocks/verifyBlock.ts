@@ -215,7 +215,6 @@ export async function verifyBlocksInEpoch(
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);
         }
       }, ignore);
-      daAvailabilityPromise.then(() => this.blockTrace?.markDataAvailable(blockInputs), ignore);
     }
 
     // batch all I/O operations to reduce overhead

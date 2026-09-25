@@ -28,7 +28,6 @@ export class MockBlockInput implements IBlockInput {
   slot: number;
   blockRootHex: string;
   parentRootHex: string;
-  dataAvailableAt: number | null = null;
 
   _block?: SignedBeaconBlock;
   _blockSource?: BlockInputSource;
@@ -58,6 +57,7 @@ export class MockBlockInput implements IBlockInput {
     this._blockSource = source;
     this._blockPeerIdStr = peerIdStr;
   }
+  observeDataAvailable(): void {}
   hasBlock(): boolean {
     return !this._block;
   }
