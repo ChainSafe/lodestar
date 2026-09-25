@@ -38,13 +38,13 @@ export class BlsJobTimes {
   selected = NaN;
   /** The dispatch's work requests were prepared, before posting them to the worker */
   prepared = NaN;
-  /** The worker started the dispatch, as the worker stamped it */
+  /** The worker started the dispatch, other jobs included, as the worker stamped it */
   workerStart = NaN;
   /** The worker finished the dispatch, as the worker stamped it; the dispatch's results return together */
   workerEnd = NaN;
   /** The dispatch's result reached JS */
   received = NaN;
-  /** Signature sets in the dispatch, the job's own included; 0 before */
+  /** Signature sets in the dispatch, the job's own included; the largest dispatch's when split, 0 before */
   dispatchSets = 0;
 }
 

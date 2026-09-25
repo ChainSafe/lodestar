@@ -24,32 +24,39 @@ export enum BlockMilestone {
   prestateReady,
   stateTransitionStart,
   stateTransitionEnd,
-  /** The block's signature sets were built, just before submission to the BLS verifier */
+  /**
+   * The block's signature sets were built, just before submission to the BLS verifier. When the pool splits them into
+   * several jobs, each later stage is the latest job's.
+   */
   signatureSetsBuilt,
   /** The BLS pool picked the block's job for a worker dispatch */
   signatureJobSelected,
   /** The dispatch's work requests were prepared, before posting them to the worker */
   signatureJobPrepared,
-  /** The worker started the dispatch carrying the job, as the worker stamped it */
+  /** The worker started the dispatch carrying the job, as the worker stamped it; the dispatch includes other jobs */
   signatureWorkerStart,
-  /** The worker finished that dispatch, as the worker stamped it; the dispatch's results return together */
+  /** The worker finished that whole dispatch, as the worker stamped it; the dispatch's results return together */
   signatureWorkerEnd,
   /** Observed readiness: when the dispatch's result reached JS */
   signatureReceipt,
   /** Observed readiness: when the JS continuation ran, after an unknown worker callback delay */
   signaturesDone,
-  /** The newPayload request, body included, was written to the execution client connection */
+  /**
+   * The newPayload request's body was handed to the execution client connection, not confirmed delivered. With retries
+   * it is the latest attempt's, so the time before it can include earlier failures and backoff; unset when a redirect was
+   * followed.
+   */
   executionDispatch,
-  /** Observed readiness: when the newPayload response headers reached JS */
+  /** Observed readiness: when the latest attempt's newPayload response headers reached JS */
   executionReceipt,
   /** Observed readiness: when the JS continuation ran, after an unknown execution client callback delay */
   executionDone,
   /** When all sampled columns, or enough to reconstruct, first became available */
   dataAvailable,
   getBlobsRequest,
-  /** The first getBlobs call's engine request, body included, was written to the execution client connection */
+  /** The first getBlobs call's engine request body was handed to the connection, with retries as for newPayload */
   getBlobsDispatch,
-  /** Observed readiness: when the first getBlobs call's response headers reached JS */
+  /** Observed readiness: when the first getBlobs call's latest response headers reached JS */
   getBlobsReceipt,
   /** Observed readiness: the first getBlobs call's end, after an unknown execution client callback delay */
   getBlobsResponse,

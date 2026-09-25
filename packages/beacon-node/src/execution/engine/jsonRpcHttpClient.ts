@@ -60,16 +60,18 @@ export type ReqOpts = {
 
 /**
  * `performance.now()` times of a traced request's latest attempt, NaN until reached. They come from the HTTP client's
- * diagnostics channels, joined to the request `fetch` creates synchronously; without that join they stay NaN.
+ * diagnostics channels, joined to the request `fetch` creates synchronously; without that join they stay NaN. A followed
+ * redirect resets both, as `fetch` sends the redirected request untraced.
  */
 export class HttpRequestTimes {
-  /** The request, body included, was written to the connection */
+  /** The request's body was handed to the connection, which does not confirm it was delivered */
   sent = NaN;
   /** The response headers reached JS */
   received = NaN;
 }
 
 type UndiciRequestMessage = {request: object};
+type UndiciHeadersMessage = UndiciRequestMessage & {response: {statusCode: number}};
 
 /** Traced requests by the HTTP client's request object */
 const tracedRequests = new WeakMap<object, HttpRequestTimes>();
@@ -89,8 +91,15 @@ function subscribeRequestTimes(): void {
     if (times !== undefined) times.sent = performance.now();
   });
   subscribe("undici:request:headers", (message) => {
-    const times = tracedRequests.get((message as UndiciRequestMessage).request);
-    if (times !== undefined) times.received = performance.now();
+    const {request, response} = message as UndiciHeadersMessage;
+    const times = tracedRequests.get(request);
+    if (times === undefined) return;
+    if (response.statusCode >= 300 && response.statusCode < 400) {
+      times.sent = NaN;
+      times.received = NaN;
+    } else {
+      times.received = performance.now();
+    }
   });
 }
 

@@ -8,8 +8,13 @@ describe("execution / engine / jsonRpcHttpClient / request times", () => {
   let url: string;
 
   beforeAll(async () => {
-    // Answers after the request's `delay` param in ms
+    // Answers after the request's `delay` param in ms, and redirects `/redirect` to `/`
     server = http.createServer((req, res) => {
+      if (req.url === "/redirect") {
+        req.resume();
+        res.writeHead(307, {location: "/"}).end();
+        return;
+      }
       let body = "";
       req.on("data", (chunk) => {
         body += chunk;
@@ -41,6 +46,14 @@ describe("execution / engine / jsonRpcHttpClient / request times", () => {
     expect(times.sent).toBeGreaterThanOrEqual(blockEnd);
     expect(times.received - times.sent).toBeGreaterThanOrEqual(45);
     expect(times.received).toBeLessThanOrEqual(performance.now());
+  });
+
+  it("leaves the times unrecorded when the answered request is a followed redirect's", async () => {
+    const client = new JsonRpcHttpClient([`${url}/redirect`]);
+    const times = new HttpRequestTimes();
+    expect(await client.fetch({method: "delay", params: [5]}, {times})).toBe(5);
+    expect(times.sent).toBeNaN();
+    expect(times.received).toBeNaN();
   });
 
   it("leaves the times unrecorded when the request fails before it is written", async () => {

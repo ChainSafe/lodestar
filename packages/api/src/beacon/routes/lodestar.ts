@@ -125,7 +125,10 @@ export type BlockTraceRoot = {
   attempts: number;
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];
-  /** Signature sets in the BLS worker dispatch that carried the latest attempt's signature job, own sets included */
+  /**
+   * Signature sets in the BLS worker dispatch that carried the latest attempt's signature job, own sets included; the
+   * largest dispatch's when the job was split
+   */
   signatureDispatchSets: number | null;
   /** What the first getBlobs call returned: every blob, null for a missing one, or an error */
   getBlobsResult: "full" | "null" | "error" | null;
