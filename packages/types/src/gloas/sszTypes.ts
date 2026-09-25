@@ -513,8 +513,9 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
  * Lodestar-internal ExecutionPayload header: transactions, withdrawals and blockAccessList replaced
  * by their hash_tree_root at the same field positions, so it hashes to the same root as the full
  * payload (the pre-gloas ExecutionPayloadHeader pattern). Used to archive finalized envelopes without
- * the bodies the EL already stores. Not a spec container, never on the wire. Not exported: fork-generic
- * lookups of `ExecutionPayloadHeader` must keep resolving to the light client header for gloas and later.
+ * the bodies the EL already stores. Not a spec container, never on the wire. Not exported: gloas has no
+ * ExecutionPayloadHeader of its own and `sszTypesFor(fork)` resolves the name to the pre-gloas header for
+ * gloas and later, which an export here would shadow.
  */
 const ExecutionPayloadHeader = new ProgressiveContainerType(
   {
