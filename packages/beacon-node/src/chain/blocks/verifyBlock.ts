@@ -239,10 +239,10 @@ export async function verifyBlocksInEpoch(
         ({verifyStateTime}) => attempt.markUnixMs(BlockMilestone.stateTransitionEnd, verifyStateTime),
         ignore
       );
-      signaturesPromise.then(
-        ({verifySignaturesTime}) => attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime),
-        ignore
-      );
+      signaturesPromise.then(({verifySignaturesTime}) => {
+        attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime);
+        attempt.recordSignatureReturn();
+      }, ignore);
       verifyExecutionPayloadsPromise.then((status) => {
         if (status.execAborted === null && status.executionTime !== undefined) {
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);

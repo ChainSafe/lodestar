@@ -87,6 +87,11 @@ export enum BlockWait {
   processor,
   /** The treatment's wait before the state transition for its engine request writes */
   dispatchGate,
+  /**
+   * From the worker's end of the dispatch carrying the attempt's signature job to its result reaching JS, which includes
+   * message transport and the main thread's other work
+   */
+  signatureReturn,
 }
 
 /** A synchronous segment of gossip attestation batch work */
@@ -117,6 +122,8 @@ export type BlockAttempt = {
   recordArm(arm: DispatchArm | null): void;
   /** Records the treatment's wait before the state transition for every block, with the attestation work during it */
   recordGate(result: DispatchGateResult): void;
+  /** Records each block's signature return wait once its verification resolved, from its signature job's stages */
+  recordSignatureReturn(): void;
 };
 
 /** What a root's first getBlobs call returned: every blob, null for a missing one, or an error */
@@ -228,11 +235,12 @@ const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
   ["state_transition_start_to_getblobs_dispatch", BlockMilestone.stateTransitionStart, BlockMilestone.getBlobsDispatch],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
-const WAIT_COUNT = BlockWait.dispatchGate + 1;
-const WAIT_NAMES: Record<BlockWait, "dispatch" | "processor" | "dispatch_gate"> = {
+const WAIT_COUNT = BlockWait.signatureReturn + 1;
+const WAIT_NAMES: Record<BlockWait, "dispatch" | "processor" | "dispatch_gate" | "signature_return"> = {
   [BlockWait.dispatch]: "dispatch",
   [BlockWait.processor]: "processor",
   [BlockWait.dispatchGate]: "dispatch_gate",
+  [BlockWait.signatureReturn]: "signature_return",
 };
 const ATTESTATION_DATA = "attestation_data";
 /** Dispatch experiment arm labels, by 1 + the arm's index in ARMS, 0 for none */
@@ -267,9 +275,10 @@ export function isSampledSlot(slot: Slot): boolean {
  *
  * Milestones are ms from the slot start: new ones are `performance.now()` stamps anchored to the slot start when the
  * slot's record is created, existing ones are Unix ms. A root keeps its first arrival milestones and its latest
- * processing attempt; an imported root takes no further attempts. Each root records its dispatch, processor and
- * dispatch gate waits and the gossip attestation segments that ran during them, counted from a log of segment starts.
- * Attestation work during a wait co-occurred with it, which does not establish that it delayed the block.
+ * processing attempt; an imported root takes no further attempts. Each root records its dispatch, processor, dispatch
+ * gate and signature return waits and the gossip attestation segments that ran during them, counted from a log of
+ * segment starts. Attestation work during a wait co-occurred with it, which does not establish that it delayed the
+ * block.
  *
  * Storage is preallocated; recording a milestone allocates nothing. A slot closes at the start of slot + 2, when its
  * metrics are observed: "not imported" and "never head" mean by then.
@@ -453,6 +462,7 @@ export class BlockTrace {
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
       this.setWait(e, BlockWait.processor, waitFrom, now);
       this.waitBegin[e * WAIT_COUNT + BlockWait.dispatchGate] = NaN;
+      this.waitBegin[e * WAIT_COUNT + BlockWait.signatureReturn] = NaN;
       entries.push(e);
       generations.push(generation);
     }
@@ -511,6 +521,15 @@ export class BlockTrace {
           if (e < 0) continue;
           this.gates[e] = result;
           this.setWait(e, BlockWait.dispatchGate, result.start, result.start + result.ms);
+        }
+      },
+      recordSignatureReturn: () => {
+        for (const block of blocks) {
+          const e = currentEntry(block.blockRootHex);
+          const job = e >= 0 ? this.signatureJobs[e] : null;
+          if (job !== null && !Number.isNaN(job.workerEnd) && !Number.isNaN(job.received)) {
+            this.setWait(e, BlockWait.signatureReturn, job.workerEnd, job.received);
+          }
         }
       },
     };
@@ -905,6 +924,7 @@ export class BlockTrace {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),
           processor: this.waitSnapshot(e, BlockWait.processor, start),
           dispatchGate: this.waitSnapshot(e, BlockWait.dispatchGate, start),
+          signatureReturn: this.waitSnapshot(e, BlockWait.signatureReturn, start),
         },
       });
     }

@@ -1096,7 +1096,7 @@ export function createLodestarMetrics(
       }),
       wait: register.histogram<{wait: string; arm: string}>({
         name: "lodestar_block_trace_wait_seconds",
-        help: "Traced block waits by dispatch experiment arm: dispatch and processor proxy runnable import work without establishing eligibility; dispatch_gate is the treatment's wait before the state transition; persistence waits for write capacity",
+        help: "Traced block waits by dispatch experiment arm: dispatch and processor proxy runnable import work without establishing eligibility; dispatch_gate is the treatment's wait before the state transition; signature_return runs from the block's BLS worker end to its result reaching JS; persistence waits for write capacity",
         labelNames: ["wait", "arm"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
@@ -1111,7 +1111,7 @@ export function createLodestarMetrics(
       }),
       waitAttestationSegments: register.histogram<{wait: string; kind: string}>({
         name: "lodestar_block_trace_wait_attestation_segments",
-        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor or dispatch gate wait",
+        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor, dispatch gate or signature return wait",
         labelNames: ["wait", "kind"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
       }),

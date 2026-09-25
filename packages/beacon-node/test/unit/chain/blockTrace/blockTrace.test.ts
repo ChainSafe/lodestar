@@ -399,6 +399,43 @@ describe("BlockTrace", () => {
     expect(t.slot(slot).roots[0].waits.processor).toMatchObject({beginMs: 1200, endMs: 1200, attestationStarts: 0});
   });
 
+  it("records the attestation work between a signature job's worker end and its result reaching JS", () => {
+    const sampled = findSlot(101, true);
+    const t = setup(sampled - 1, true);
+    t.toSlot(sampled);
+    t.at(1000);
+    const attempt = t.trace.startAttempt([block(sampled, "0xaa")], performance.now());
+    const job = attempt?.signatureJob("0xaa");
+    if (!job) throw Error("Untraced signature job");
+    t.trace.attestationBatchStart(null);
+    t.at(1010);
+    job.workerEnd = performance.now();
+    t.at(1020);
+    const segment = t.trace.attestationBatchStart(null);
+    t.at(1025);
+    t.trace.attestationSegmentEnd(segment);
+    t.trace.attestationContinuation(undefined);
+    t.at(1040);
+    job.received = performance.now();
+    t.at(1045);
+    t.trace.attestationBatchStart(null);
+    attempt?.recordSignatureReturn();
+
+    expect(t.slot(sampled).roots[0].waits.signatureReturn).toMatchObject({
+      beginMs: 1010,
+      endMs: 1040,
+      attestationStarts: 1,
+      attestationContinuations: 1,
+      attestationJsMs: 5,
+      sampledCoverage: 1,
+    });
+    // A later attempt starts without one
+    t.trace.startAttempt([block(sampled, "0xaa")], performance.now());
+    expect(t.slot(sampled).roots[0].waits.signatureReturn).toBeNull();
+    attempt?.recordSignatureReturn();
+    expect(t.slot(sampled).roots[0].waits.signatureReturn).toBeNull();
+  });
+
   it("counts attestation segments during the processor wait from the lane freeing", () => {
     const slot = 100;
     const t = setup(slot);

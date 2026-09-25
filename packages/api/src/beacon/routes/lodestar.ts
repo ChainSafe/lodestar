@@ -152,7 +152,12 @@ export type BlockTraceRoot = {
    * it completed as enough columns to reconstruct before all sampled columns arrived
    */
   dataAvailableVia: {source: string; reconstructable: boolean} | null;
-  waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null; dispatchGate: BlockTraceWait | null};
+  waits: {
+    dispatch: BlockTraceWait | null;
+    processor: BlockTraceWait | null;
+    dispatchGate: BlockTraceWait | null;
+    signatureReturn: BlockTraceWait | null;
+  };
 };
 
 /** A slot of the block trace; times are ms from the slot start */
