@@ -1399,9 +1399,7 @@
     </spec>
 
 - name: CustodyColumnBits#gloas
-  sources:
-    - file: packages/beacon-node/src/util/dataColumns.ts
-      search: "private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {"
+  sources: []
   spec: |
     <spec container="CustodyColumnBits" fork="gloas" hash="b35abdb2">
     class CustodyColumnBits(BitVector):
@@ -2477,7 +2475,9 @@
     </spec>
 
 - name: LightClientHeader#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const LightClientHeader =
   spec: |
     <spec container="LightClientHeader" fork="gloas" hash="b0387ab2">
     class LightClientHeader(Container):
@@ -2596,6 +2596,65 @@
         kzg_proof: KZGProof
         column_index: ColumnIndex
         row_index: RowIndex
+    </spec>
+
+- name: NewPayloadRequest#bellatrix
+  sources:
+    - file: packages/types/src/bellatrix/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="bellatrix" hash="dce5dbc8">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+    </spec>
+
+- name: NewPayloadRequest#deneb
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="deneb" hash="8ecf6448">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+        # [New in Deneb:EIP4844]
+        versioned_hashes: VersionedHashes
+        # [New in Deneb:EIP4788]
+        parent_beacon_block_root: Root
+    </spec>
+
+- name: NewPayloadRequest#electra
+  sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: "export const NewPayloadRequest"
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "notifyNewPayload("
+  spec: |
+    <spec container="NewPayloadRequest" fork="electra" hash="3f66e4a3">
+    class NewPayloadRequest(Container):
+        execution_payload: ExecutionPayload
+        versioned_hashes: VersionedHashes
+        parent_beacon_block_root: Root
+        # [New in Electra]
+        execution_requests: ExecutionRequests
+    </spec>
+
+- name: NewPayloadRequest#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: "export const NewPayloadRequest"
+  spec: |
+    <spec container="NewPayloadRequest" fork="gloas" hash="153a25cf">
+    class NewPayloadRequest(ProgressiveContainer):
+        ACTIVE_FIELDS = active_fields(width=4)
+
+        execution_payload: ExecutionPayload
+        versioned_hashes: VersionedHashes
+        parent_beacon_block_root: Root
+        execution_requests: ExecutionRequests
     </spec>
 
 - name: NextSyncCommitteeBranch#altair
@@ -3125,6 +3184,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/beaconBlocksByRange.ts
+      search: export function validateBeaconBlocksByRangeRequest(
   spec: |
     <spec container="SignedBeaconBlocks" fork="phase0" hash="55c94960">
     class SignedBeaconBlocks(List[SignedBeaconBlock]):
@@ -3140,6 +3201,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendBeaconBlocksByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/beaconBlocksByRange.ts
+      search: export function validateBeaconBlocksByRangeRequest(
   spec: |
     <spec container="SignedBeaconBlocks" fork="deneb" hash="363a3db0">
     class SignedBeaconBlocks(List[SignedBeaconBlock]):
@@ -3200,6 +3263,8 @@
   sources:
     - file: packages/beacon-node/src/network/network.ts
       search: "async sendExecutionPayloadEnvelopesByRange("
+    - file: packages/beacon-node/src/network/reqresp/handlers/executionPayloadEnvelopesByRange.ts
+      search: export function validateExecutionPayloadEnvelopesByRangeRequest(
   spec: |
     <spec container="SignedExecutionPayloadEnvelopes" fork="gloas" hash="826dc65b">
     class SignedExecutionPayloadEnvelopes(List[SignedExecutionPayloadEnvelope]):
@@ -3525,6 +3590,20 @@
         """
         The validator registry.
         """
+    </spec>
+
+- name: VersionedHashes#deneb
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: "export const VersionedHashes"
+  spec: |
+    <spec container="VersionedHashes" fork="deneb" hash="05d6c47e">
+    class VersionedHashes(List[VersionedHash]):
+        """
+        The versioned hashes for blobs associated with an execution payload.
+        """
+
+        LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
     </spec>
 
 - name: VoluntaryExit#phase0

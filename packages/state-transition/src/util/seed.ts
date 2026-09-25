@@ -1,9 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
-import {computePtcIndicesForEpoch} from "@chainsafe/lodestar-z/shuffle";
 import {
+  computePtcIndicesForEpoch,
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
-} from "@chainsafe/swap-or-not-shuffle";
+} from "@chainsafe/lodestar-z/shuffle";
 import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_PTC_ATTESTER,
@@ -118,7 +118,7 @@ export function computeProposerIndex(
   }
 
   let maxEffectiveBalance: number;
-  let randByteCount: number;
+  let randByteCount: 1 | 2;
   if (fork >= ForkSeq.electra) {
     maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;
     randByteCount = 2;
@@ -245,7 +245,7 @@ export function getNextSyncCommitteeIndices(
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array {
   let maxEffectiveBalance: number;
-  let randByteCount: number;
+  let randByteCount: 1 | 2;
 
   if (fork >= ForkSeq.electra) {
     maxEffectiveBalance = MAX_EFFECTIVE_BALANCE_ELECTRA;

@@ -104,7 +104,7 @@ export async function processBlocks(
         payloadEnvelopesToImport.delete(orphaned.slot);
         // never validated, drop it from the shared cache so it is not served to peers, by-root sync reloads the
         // entry from db if the payload is ever needed
-        this.seenPayloadEnvelopeInputCache.prune(orphaned.payloadEnvelopeInput.blockRootHex);
+        this.seenPayloadEnvelopeInputCache.remove(orphaned.payloadEnvelopeInput.blockRootHex);
       }
     }
 
@@ -278,7 +278,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
       this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
-      this.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+      this.seenPayloadEnvelopeInputCache.remove(blockRootHex);
       orphaned.push({slot, payloadEnvelopeInput: payloadInput});
       continue;
     }

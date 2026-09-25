@@ -21,7 +21,7 @@ export type BuilderModules = {
   proposerPreferencesTracker: ProposerPreferencesTracker;
   clock: IClock;
   index: BuilderIndex;
-  store: PayloadStore;
+  payloadStore: PayloadStore;
 };
 
 export type BuilderOptions = {
@@ -48,7 +48,7 @@ export class Builder {
   private readonly index: BuilderIndex;
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
-  private readonly store: PayloadStore;
+  private readonly payloadStore: PayloadStore;
 
   constructor({
     opts,
@@ -58,7 +58,7 @@ export class Builder {
     proposerPreferencesTracker,
     clock,
     index,
-    store,
+    payloadStore,
   }: BuilderModules) {
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
@@ -68,7 +68,7 @@ export class Builder {
     this.controller = opts.abortController;
     this.logger = opts.logger;
     this.index = index;
-    this.store = store;
+    this.payloadStore = payloadStore;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
@@ -116,7 +116,7 @@ export class Builder {
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
 
-    const store = new PayloadStore();
+    const payloadStore = new PayloadStore();
 
     return new Builder({
       opts,
@@ -126,12 +126,12 @@ export class Builder {
       proposerPreferencesTracker,
       clock,
       index,
-      store,
+      payloadStore,
     });
   }
 
   private async onSlot(slot: number): Promise<void> {
-    this.store.prune(slot);
+    this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
   }
 

@@ -51,7 +51,7 @@ import {
 } from "@lodestar/types";
 import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ISlashingProtection} from "../slashingProtection/index.js";
+import {ISlashingProtection, InvalidBlockError, InvalidBlockErrorCode} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
@@ -475,7 +475,7 @@ export class ValidatorStore {
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
    * builders. A value omitted on an entry takes this key's default, then the validator
-   * client's configuration, while omitted auth data is derived from the entry url instead.
+   * client's configuration, while omitted auth data is derived from the entry url hostname instead.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -493,7 +493,8 @@ export class ValidatorStore {
     const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
     return builders.map((entry) => ({
       url: entry.url,
-      authData: entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(entry.url),
+      authData:
+        entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(new URL(entry.url).hostname),
       builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
       maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
       minBid: entry.minBid ?? keyMinBid,
@@ -544,7 +545,9 @@ export class ValidatorStore {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
       const authData =
-        entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(new TextEncoder().encode(entry.url));
+        entry.authData !== undefined
+          ? toHex(fromHex(entry.authData))
+          : toHex(new TextEncoder().encode(new URL(entry.url).hostname));
       const entryKey = `${entry.url}|${authData}`;
       if (seenEntries.has(entryKey)) {
         throw Error(`Duplicate builder entry url=${entry.url} authData=${authData}`);
@@ -663,12 +666,11 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: BeaconBlock | BlindedBeaconBlock,
-    currentSlot: Slot,
+    dutySlot: Slot,
     logger?: LoggerVc
   ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    if (blindedOrFull.slot !== dutySlot) {
+      throw new InvalidBlockError({code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blindedOrFull.slot, dutySlot});
     }
 
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
@@ -909,7 +911,7 @@ export class ValidatorStore {
     });
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE,
       data,
     };
 
@@ -1184,6 +1186,11 @@ export class ValidatorStore {
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
+    }
+    if (data.target.epoch !== computeEpochAtSlot(data.slot)) {
+      throw Error(
+        `Inconsistent attestation data during signing: att.target.epoch ${data.target.epoch} != epoch of att.slot ${data.slot}`
+      );
     }
 
     const forkSeq = this.config.getForkSeq(data.slot);

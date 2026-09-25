@@ -1,5 +1,4 @@
 export {AttesterSlashingRepository} from "./attesterSlashing.js";
-export {BackfilledRanges} from "./backfilledRanges.js";
 export {BlobSidecarsRepository} from "./blobSidecars.js";
 export {BlobSidecarsArchiveRepository} from "./blobSidecarsArchive.js";
 export {BlockRepository} from "./block.js";
@@ -9,7 +8,12 @@ export {BLSToExecutionChangeRepository} from "./blsToExecutionChange.js";
 export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";
-export {ExecutionPayloadEnvelopeArchiveRepository} from "./executionPayloadEnvelopeArchive.js";
+export {
+  type ArchivedEnvelope,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  decodeArchivedEnvelope,
+  encodeArchivedHeaderEnvelope,
+} from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";

@@ -16,6 +16,12 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
 jobs:
   docker:
     name: Build Docker (${{ matrix.arch }})
@@ -33,7 +39,7 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -41,7 +47,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push lodestar
         run: >
-          docker buildx build . --push
+          docker buildx build . --push --provenance=false --sbom=false
           --tag chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }}
           --platform linux/${{ matrix.arch }}
           --build-arg COMMIT=$(git rev-parse HEAD)
@@ -55,7 +61,7 @@ jobs:
 
       - name: Build and push custom Grafana
         run: >
-          docker buildx build ./docker/grafana/ --push
+          docker buildx build ./docker/grafana/ --push --provenance=false --sbom=false
           --file ./docker/grafana/Dockerfile
           --build-context dashboards=./dashboards
           --tag chainsafe/lodestar-grafana:${{ inputs.tag }}-${{ matrix.arch }}
@@ -63,10 +69,92 @@ jobs:
 
       - name: Build and push custom Prometheus
         run: >
-          docker buildx build ./docker/prometheus/ --push
+          docker buildx build ./docker/prometheus/ --push --provenance=false --sbom=false
           --file ./docker/prometheus/Dockerfile
           --tag chainsafe/lodestar-prometheus:${{ inputs.tag }}-${{ matrix.arch }}
           --platform linux/${{ matrix.arch }}
+
+      - name: Resolve image digests
+        id: image_digests
+        run: |
+          echo "lodestar=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+          echo "grafana=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar-grafana:${{ inputs.tag }}-${{ matrix.arch }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+          echo "prometheus=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar-prometheus:${{ inputs.tag }}-${{ matrix.arch }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+
+      - name: Attest lodestar image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar
+          subject-digest: ${{ steps.image_digests.outputs.lodestar }}
+          push-to-registry: true
+
+      - name: Attest Grafana image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-grafana
+          subject-digest: ${{ steps.image_digests.outputs.grafana }}
+          push-to-registry: true
+
+      - name: Attest Prometheus image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-prometheus
+          subject-digest: ${{ steps.image_digests.outputs.prometheus }}
+          push-to-registry: true
+
+      - name: Generate lodestar image SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: docker.io/chainsafe/lodestar@${{ steps.image_digests.outputs.lodestar }}
+          registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          output-file: lodestar-${{ matrix.arch }}.sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest lodestar image SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar
+          subject-digest: ${{ steps.image_digests.outputs.lodestar }}
+          sbom-path: lodestar-${{ matrix.arch }}.sbom.spdx.json
+          push-to-registry: true
+
+      - name: Generate Grafana image SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: docker.io/chainsafe/lodestar-grafana@${{ steps.image_digests.outputs.grafana }}
+          registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          output-file: lodestar-grafana-${{ matrix.arch }}.sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest Grafana image SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-grafana
+          subject-digest: ${{ steps.image_digests.outputs.grafana }}
+          sbom-path: lodestar-grafana-${{ matrix.arch }}.sbom.spdx.json
+          push-to-registry: true
+
+      - name: Generate Prometheus image SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: docker.io/chainsafe/lodestar-prometheus@${{ steps.image_digests.outputs.prometheus }}
+          registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          output-file: lodestar-prometheus-${{ matrix.arch }}.sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest Prometheus image SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-prometheus
+          subject-digest: ${{ steps.image_digests.outputs.prometheus }}
+          sbom-path: lodestar-prometheus-${{ matrix.arch }}.sbom.spdx.json
+          push-to-registry: true
 
   docker-manifest:
     name: Create Docker manifest
@@ -74,7 +162,7 @@ jobs:
     needs: docker
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -109,3 +197,31 @@ jobs:
         run: |
           docker pull chainsafe/lodestar:${{ inputs.tag }}
           docker image history chainsafe/lodestar:${{ inputs.tag }}
+
+      - name: Resolve manifest digests
+        id: manifest_digests
+        run: |
+          echo "lodestar=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar:${{ inputs.tag }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+          echo "grafana=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar-grafana:${{ inputs.tag }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+          echo "prometheus=$(docker buildx imagetools inspect docker.io/chainsafe/lodestar-prometheus:${{ inputs.tag }} --format '{{.Manifest.Digest}}')" >> "$GITHUB_OUTPUT"
+
+      - name: Attest lodestar manifest provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar
+          subject-digest: ${{ steps.manifest_digests.outputs.lodestar }}
+          push-to-registry: true
+
+      - name: Attest Grafana manifest provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-grafana
+          subject-digest: ${{ steps.manifest_digests.outputs.grafana }}
+          push-to-registry: true
+
+      - name: Attest Prometheus manifest provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: docker.io/chainsafe/lodestar-prometheus
+          subject-digest: ${{ steps.manifest_digests.outputs.prometheus }}
+          push-to-registry: true
