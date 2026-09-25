@@ -3,6 +3,7 @@ import {ContainerType, Type} from "@chainsafe/ssz";
 import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
+import {decodeArchivedEnvelope, encodeArchivedBlindedEnvelope} from "../../../src/db/repositories/index.js";
 import type {ExecutionPayloadBodies} from "../../../src/util/blindedEnvelope.js";
 import {signedBlindedEnvelopeToFull, toSignedBlindedEnvelope} from "../../../src/util/blindedEnvelope.js";
 import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
@@ -68,6 +69,23 @@ describe("blindedEnvelope", () => {
 
     expect(blinded).toBeLessThan(1500);
     expect(full - blinded).toBeGreaterThan(260_000);
+  });
+
+  it("full and blinded envelopes both start with 0x64, so the 0x00 archive prefix is unambiguous", () => {
+    const full = generateSignedExecutionPayloadEnvelope(8);
+    expect(ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full)[0]).toBe(0x64);
+    expect(ssz.gloas.SignedBlindedExecutionPayloadEnvelope.serialize(toSignedBlindedEnvelope(full))[0]).toBe(0x64);
+  });
+
+  it("archive framing round-trips: raw full bytes stay full, prefixed blinded decodes to the blinded envelope", () => {
+    const full = generateSignedExecutionPayloadEnvelope(8);
+    const fullBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
+    expect(decodeArchivedEnvelope(fullBytes).envelopeBytes).toBe(fullBytes);
+
+    const blinded = toSignedBlindedEnvelope(full);
+    const decoded = decodeArchivedEnvelope(encodeArchivedBlindedEnvelope(blinded)).blinded;
+    if (decoded === undefined) throw Error("expected a blinded entry");
+    expect(ssz.gloas.SignedBlindedExecutionPayloadEnvelope.equals(decoded, blinded)).toBe(true);
   });
 
   it("blinded type round-trips through bytes", () => {

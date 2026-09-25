@@ -11,12 +11,9 @@ export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js"
 export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";
 export {
   type ArchivedEnvelope,
-  type ArchivedEnvelopeEntry,
-  ArchivedEnvelopeKind,
   ExecutionPayloadEnvelopeArchiveRepository,
-  archivedSignedExecutionPayloadEnvelopeSsz,
   decodeArchivedEnvelope,
-  encodeArchivedFullEnvelope,
+  encodeArchivedBlindedEnvelope,
 } from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";

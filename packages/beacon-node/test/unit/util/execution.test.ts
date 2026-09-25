@@ -5,7 +5,7 @@ import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
-import {ArchivedEnvelopeKind} from "../../../src/db/repositories/index.js";
+import {encodeArchivedBlindedEnvelope} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
 import {toSignedBlindedEnvelope} from "../../../src/util/blindedEnvelope.js";
@@ -38,10 +38,10 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   // Seed the archive with the blinded form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.put(slot, {
-      selector: ArchivedEnvelopeKind.Blinded,
-      value: toSignedBlindedEnvelope(full),
-    });
+    await db.executionPayloadEnvelopeArchive.putBinary(
+      slot,
+      encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(full))
+    );
     return full;
   }
 
@@ -128,7 +128,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   // Seed a full entry (--chain.dedupePayloads=false) in the same archive.
   async function seedFull(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.put(slot, {selector: ArchivedEnvelopeKind.Full, value: full});
+    await db.executionPayloadEnvelopeArchive.putBinary(slot, ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full));
     return full;
   }
 

@@ -7,12 +7,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {
-  ArchivedEnvelopeKind,
-  BlockArchiveBatchPutBinaryItem,
-  archivedSignedExecutionPayloadEnvelopeSsz,
-  encodeArchivedFullEnvelope,
-} from "../../../db/repositories/index.js";
+import {BlockArchiveBatchPutBinaryItem, encodeArchivedBlindedEnvelope} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {toSignedBlindedEnvelope} from "../../../util/blindedEnvelope.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -512,15 +507,9 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
         const root = fromHex(block.blockRoot);
         if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
           const envelope = await db.executionPayloadEnvelope.get(root);
-          return envelope === null
-            ? null
-            : archivedSignedExecutionPayloadEnvelopeSsz.serialize({
-                selector: ArchivedEnvelopeKind.Blinded,
-                value: toSignedBlindedEnvelope(envelope),
-              });
+          return envelope === null ? null : encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(envelope));
         }
-        const envelopeBytes = await db.executionPayloadEnvelope.getBinary(root);
-        return envelopeBytes === null ? null : encodeArchivedFullEnvelope(envelopeBytes);
+        return db.executionPayloadEnvelope.getBinary(root);
       })
     );
 

@@ -1,82 +1,52 @@
-import {Type, UnionType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUCKET_LENGTH, Db, DbBatch, Repository, encodeKey as encodeDbKey} from "@lodestar/db";
+import {BUCKET_LENGTH, BinaryRepository, Db, DbBatch, encodeKey as encodeDbKey} from "@lodestar/db";
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
-// Lodestar-internal storage type, not a spec container
-
 /**
- * Archive value: blinded (selector 0, default) or full (selector 1, `--chain.dedupePayloads=false`).
- * One selector byte then the value, so full entries are servable as `bytes.subarray(1)`.
+ * Prefix of a blinded entry. A full `SignedExecutionPayloadEnvelope` starts with the offset of its
+ * variable-size `message` field (4 + 96 = 0x64), so a leading 0x00 byte is unambiguous and full
+ * entries can be stored as the hot db bytes, untouched.
  */
-export const archivedSignedExecutionPayloadEnvelopeSsz = new UnionType(
-  [ssz.gloas.SignedBlindedExecutionPayloadEnvelope, ssz.gloas.SignedExecutionPayloadEnvelope],
-  {typeName: "ArchivedSignedExecutionPayloadEnvelope"}
-);
+const BLINDED_ENVELOPE_PREFIX = 0x00;
 
-/** Union selector of `archivedSignedExecutionPayloadEnvelopeSsz` */
-export enum ArchivedEnvelopeKind {
-  /** `SignedBlindedExecutionPayloadEnvelope`, bodies reconstructed from the EL on read (default) */
-  Blinded = 0,
-  /** `SignedExecutionPayloadEnvelope` stored as-is (`--chain.dedupePayloads=false`) */
-  Full = 1,
-}
-
-/** Discriminated form of the ssz union value, so `selector` narrows `value` */
+/** An archive entry as the serving paths need it: full stays bytes, blinded is deserialized for reconstruction */
 export type ArchivedEnvelope =
-  | {selector: ArchivedEnvelopeKind.Blinded; value: gloas.SignedBlindedExecutionPayloadEnvelope}
-  | {selector: ArchivedEnvelopeKind.Full; value: gloas.SignedExecutionPayloadEnvelope};
+  | {blinded: gloas.SignedBlindedExecutionPayloadEnvelope; envelopeBytes?: undefined}
+  | {blinded?: undefined; envelopeBytes: Uint8Array};
 
-const ARCHIVED_ENVELOPE_SELECTOR_LENGTH = 1;
-
-/**
- * An archive entry as the serving paths need it: full ones stay bytes (served as-is),
- * blinded ones are deserialized for reconstruction
- */
-export type ArchivedEnvelopeEntry =
-  | {selector: ArchivedEnvelopeKind.Full; envelopeBytes: Uint8Array}
-  | {selector: ArchivedEnvelopeKind.Blinded; value: gloas.SignedBlindedExecutionPayloadEnvelope};
-
-export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelopeEntry {
-  const value = bytes.subarray(ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
-  return bytes[0] === ArchivedEnvelopeKind.Full
-    ? {selector: ArchivedEnvelopeKind.Full, envelopeBytes: value}
-    : {
-        selector: ArchivedEnvelopeKind.Blinded,
-        value: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(value),
-      };
+export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelope {
+  return bytes[0] === BLINDED_ENVELOPE_PREFIX
+    ? {blinded: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(bytes.subarray(1))}
+    : {envelopeBytes: bytes};
 }
 
-/** Full envelope bytes as they already are in the hot db, prefixed with the selector byte */
-export function encodeArchivedFullEnvelope(envelopeBytes: Uint8Array): Uint8Array {
-  const out = new Uint8Array(ARCHIVED_ENVELOPE_SELECTOR_LENGTH + envelopeBytes.length);
-  out[0] = ArchivedEnvelopeKind.Full;
-  out.set(envelopeBytes, ARCHIVED_ENVELOPE_SELECTOR_LENGTH);
+export function encodeArchivedBlindedEnvelope(blinded: gloas.SignedBlindedExecutionPayloadEnvelope): Uint8Array {
+  const value = ssz.gloas.SignedBlindedExecutionPayloadEnvelope.serialize(blinded);
+  const out = new Uint8Array(1 + value.length);
+  out[0] = BLINDED_ENVELOPE_PREFIX;
+  out.set(value, 1);
   return out;
 }
 
 /**
- * Finalized envelopes, blinded or full ({@link ArchivedEnvelopeKind}), indexed by slot
+ * Finalized envelopes indexed by slot: `SignedExecutionPayloadEnvelope` bytes as-is
+ * (`--chain.dedupePayloads=false`, or the block was still optimistic when archived), or a
+ * `SignedBlindedExecutionPayloadEnvelope` behind a 0x00 prefix. See {@link decodeArchivedEnvelope}.
  */
-export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, ArchivedEnvelope> {
+export class ExecutionPayloadEnvelopeArchiveRepository extends BinaryRepository<Slot> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.gloas_executionPayloadEnvelopeArchive;
-    // ssz types a union value as {selector: number; value: A | B}; narrow it to the discriminated form
-    const type = archivedSignedExecutionPayloadEnvelopeSsz as Type<ArchivedEnvelope>;
-    super(config, db, bucket, type, getBucketNameByValue(bucket));
-  }
-
-  /**
-   * Id is the slot from the envelope
-   */
-  getId(value: ArchivedEnvelope): Slot {
-    return value.value.message.payload.slotNumber;
+    super(config, db, bucket, getBucketNameByValue(bucket));
   }
 
   encodeKey(id: Slot): Uint8Array {
     return encodeDbKey(this.bucket, id);
+  }
+
+  decodeKey(data: Uint8Array): number {
+    return bytesToInt(data.subarray(BUCKET_LENGTH), "be");
   }
 
   /** Archive entries and delete their hot counterparts (`hotKey` pre-encoded) in one atomic batch */
@@ -88,9 +58,5 @@ export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, 
       operations.push({type: "put", key: this.encodeKey(slot), value: archivedBytes}, {type: "del", key: hotKey});
     }
     await this.db.batch(operations, this.dbReqOpts);
-  }
-
-  decodeKey(data: Uint8Array): number {
-    return bytesToInt(data.subarray(BUCKET_LENGTH), "be");
   }
 }

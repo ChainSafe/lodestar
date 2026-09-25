@@ -13,7 +13,7 @@ import {
   EnvelopeReconstructionErrorCode,
 } from "../chain/errors/envelopeReconstructionError.js";
 import {IBeaconDb} from "../db/index.js";
-import {ArchivedEnvelopeEntry, ArchivedEnvelopeKind, decodeArchivedEnvelope} from "../db/repositories/index.js";
+import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {signedBlindedEnvelopeToFull} from "./blindedEnvelope.js";
@@ -266,7 +266,7 @@ const MAX_BODIES_REQUEST = 32;
 
 type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
-type RangeEntry = ArchivedEnvelopeEntry & {slot: Slot};
+type RangeEntry = ArchivedEnvelope & {slot: Slot};
 
 /** What a body root mismatch means on a given serving path */
 export type ReconstructMismatchPolicy = "throw" | "omit";
@@ -323,13 +323,13 @@ async function* reconstructBatch(
 ): AsyncIterable<SlotEnvelopeBytes> {
   const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
   for (const entry of batch) {
-    if (entry.selector === ArchivedEnvelopeKind.Blinded) blindedEnvelopes.push(entry.value);
+    if (entry.blinded !== undefined) blindedEnvelopes.push(entry.blinded);
   }
   const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes);
 
   let blindedIdx = 0;
   for (const entry of batch) {
-    if (entry.selector === ArchivedEnvelopeKind.Full) {
+    if (entry.envelopeBytes !== undefined) {
       yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
       continue;
     }

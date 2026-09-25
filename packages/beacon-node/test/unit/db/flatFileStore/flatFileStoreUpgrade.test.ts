@@ -13,7 +13,7 @@ import {fromAsync, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
-import {ArchivedEnvelopeKind} from "../../../../src/db/repositories/index.js";
+import {encodeArchivedBlindedEnvelope} from "../../../../src/db/repositories/index.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
 import {toSignedBlindedEnvelope} from "../../../../src/util/blindedEnvelope.js";
 
@@ -73,10 +73,10 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = root;
       envelope.message.payload.slotNumber = slot;
-      await db.executionPayloadEnvelopeArchive.put(slot, {
-        selector: ArchivedEnvelopeKind.Blinded,
-        value: toSignedBlindedEnvelope(envelope),
-      });
+      await db.executionPayloadEnvelopeArchive.putBinary(
+        slot,
+        encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(envelope))
+      );
     }
     return {block, columns: columns.map(({data}) => data)};
   }

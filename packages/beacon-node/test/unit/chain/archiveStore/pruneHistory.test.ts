@@ -5,7 +5,6 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {pruneHistory} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {BeaconDb} from "../../../../src/db/index.js";
-import {ArchivedEnvelopeKind} from "../../../../src/db/repositories/index.js";
 import {startTmpBeaconDb} from "../../../utils/db.js";
 
 describe("chain / archiveStore / pruneHistory", () => {
@@ -32,11 +31,11 @@ describe("chain / archiveStore / pruneHistory", () => {
         return {key: slot, value: block};
       })
     );
-    await db.executionPayloadEnvelopeArchive.batchPut(
+    await db.executionPayloadEnvelopeArchive.batchPutBinary(
       slots.map((slot) => {
         const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
         envelope.message.payload.slotNumber = slot;
-        return {key: slot, value: {selector: ArchivedEnvelopeKind.Full, value: envelope}};
+        return {key: slot, value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)};
       })
     );
 

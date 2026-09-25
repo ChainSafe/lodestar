@@ -61,7 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
-import {ArchivedEnvelopeKind, decodeArchivedEnvelope} from "../db/repositories/index.js";
+import {decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -965,11 +965,11 @@ export class BeaconChain implements IBeaconChain {
       if (archivedBytes === null) continue;
 
       const archived = decodeArchivedEnvelope(archivedBytes);
-      if (archived.selector === ArchivedEnvelopeKind.Full) {
+      if (archived.envelopeBytes !== undefined) {
         out[i] = archived.envelopeBytes;
         continue;
       }
-      blindedEnvelopes.push(archived.value);
+      blindedEnvelopes.push(archived.blinded);
       blindedEnvelopeIdxs.push(i);
     }
 
@@ -1007,10 +1007,13 @@ export class BeaconChain implements IBeaconChain {
     const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
     if (hot !== null) return hot;
 
-    const archived = await this.db.executionPayloadEnvelopeArchive.get(blockSlot);
-    if (archived === null) return null;
-    if (archived.selector === ArchivedEnvelopeKind.Full) return archived.value;
-    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [archived.value]);
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+    if (archivedBytes === null) return null;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    if (archived.envelopeBytes !== undefined) {
+      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+    }
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [archived.blinded]);
     if (isRebuildMiss(result)) {
       if (result.reason === "mismatch") throw result.error;
       return null;
@@ -1035,11 +1038,14 @@ export class BeaconChain implements IBeaconChain {
     const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
     if (hot !== null) return hot.message.executionRequests;
 
-    const archived = await this.db.executionPayloadEnvelopeArchive.get(parentBlockSlot);
-    if (archived === null) {
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
+    if (archivedBytes === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return archived.value.message.executionRequests;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    return archived.envelopeBytes !== undefined
+      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
+      : archived.blinded.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {

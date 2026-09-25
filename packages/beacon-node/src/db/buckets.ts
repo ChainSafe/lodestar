@@ -71,7 +71,7 @@ export enum Bucket {
   allForks_dataColumnSidecarsArchive = 58, // BeaconBlockSlot -> DataColumnSidecars
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
-  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> archivedSignedExecutionPayloadEnvelopeSsz (blinded | full)
+  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope, or 0x00 + SignedBlindedExecutionPayloadEnvelope
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
