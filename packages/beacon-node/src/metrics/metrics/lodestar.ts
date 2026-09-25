@@ -1136,6 +1136,12 @@ export function createLodestarMetrics(
         labelNames: ["selected"],
       }),
     },
+    eventLoopDelayByPhase: register.histogram<{phase_bps: string}>({
+      name: "lodestar_event_loop_delay_by_slot_phase_seconds",
+      help: "How late a timer probe due every 10 ms ran, by the slot phase bucket of the time it was due, labeled by the bucket's first basis point of the slot",
+      labelNames: ["phase_bps"],
+      buckets: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+    }),
     dispatchGate: {
       arm: register.gauge({
         name: "lodestar_dispatch_gate_arm",

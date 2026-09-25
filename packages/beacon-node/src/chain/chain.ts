@@ -64,6 +64,7 @@ import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {EventLoopDelayByPhase} from "../metrics/eventLoopDelayByPhase.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
@@ -242,6 +243,7 @@ export class BeaconChain implements IBeaconChain {
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
   readonly blockTrace: BlockTrace | null;
   readonly dispatchGate: DispatchGateSwitch;
+  private readonly eventLoopDelayByPhase: EventLoopDelayByPhase | null;
 
   readonly opts: IChainOptions;
 
@@ -329,6 +331,9 @@ export class BeaconChain implements IBeaconChain {
         ? null
         : new BlockTrace(config, clock, metrics, opts.blockTraceAttestationTiming === true);
     this.dispatchGate = new DispatchGateSwitch(parseDispatchSchedule(opts), clock, logger, metrics);
+    this.eventLoopDelayByPhase = metrics
+      ? new EventLoopDelayByPhase(this.genesisTime * 1000, config.SLOT_DURATION_MS, metrics.eventLoopDelayByPhase)
+      : null;
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
@@ -562,6 +567,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async close(): Promise<void> {
+    this.eventLoopDelayByPhase?.stop();
     await this.archiveStore.close();
     await this.bls.close();
 
