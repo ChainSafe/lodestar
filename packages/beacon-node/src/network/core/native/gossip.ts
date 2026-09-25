@@ -95,8 +95,8 @@ export class NativeGossip {
   }
   /**
    * Answers dependency checks and starts the claimed jobs. Urgent jobs (blocks, blob sidecars, data columns) all start
-   * now whatever the budget; ordinary jobs start until `deadline`, at least one per drain. Returns whether claimed
-   * jobs wait for a later drain.
+   * now whatever the budget; ordinary jobs start until `deadline`, at least one per drain unless the budget was spent
+   * before this delivery and no job was held. Returns whether claimed jobs wait for a later drain.
    */
   deliver(
     checks: NativeGossipDependencyCheck[],
@@ -115,17 +115,19 @@ export class NativeGossip {
     }
     // A claim, or ordinary work behind a closed gate, waits on the executor; its retry drains again.
     if (!demand.ready && (batch !== null || !this.ordinary)) processor.canExecute();
+    // Ordinary work claimed at the drain's start is new work, which a spent budget defers like the claim it replaced.
+    const progress = this.queued.length > 0 || performance.now() < deadline;
     if (batch) {
       this.ordinary = demand.ordinary;
       if (batch.messages.length > 0) this.dispatch(batch, processor);
     }
-    return this.start(processor, deadline);
+    return this.start(processor, deadline, progress);
   }
-  /** Starts queued ordinary jobs, at least one, until `deadline`. Returns whether any remain. */
-  private start(processor: GossipExecutor, deadline: number): boolean {
+  /** Starts queued ordinary jobs until `deadline`, the first whatever the time when `progress`. Returns whether any remain. */
+  private start(processor: GossipExecutor, deadline: number, progress: boolean): boolean {
     let started = 0;
     for (const {jobs, grouped} of this.queued) {
-      if (started > 0 && performance.now() >= deadline) break;
+      if ((started > 0 || !progress) && performance.now() >= deadline) break;
       started++;
       void this.execute(jobs, grouped, processor, []).catch(this.onError);
     }

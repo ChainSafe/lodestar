@@ -1,3 +1,4 @@
+import {Histogram} from "prom-client";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {NativeExchange, NativeExchangeDemand} from "@chainsafe/lodestar-z/network";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
@@ -13,7 +14,18 @@ const idle: NativeExchange = {
   checks: [],
   gossip: null,
   more: false,
+  failure: null,
 };
+
+/** Holds every setImmediate callback for the test to run, so a throwing drain does not escape the test. */
+function immediates(): (() => void)[] {
+  const queued: (() => void)[] = [];
+  const hold = (callback: (...args: unknown[]) => void, ...args: unknown[]) => {
+    queued.push(() => callback(...args));
+  };
+  vi.spyOn(globalThis, "setImmediate").mockImplementation(hold as unknown as typeof setImmediate);
+  return queued;
+}
 
 function macrotask(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
@@ -155,6 +167,28 @@ describe("native drain", () => {
     expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
     await macrotask();
     expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+  });
+
+  it("schedules the next drain while native holds more whatever error reporting or instrumentation throws", async () => {
+    const node = fixture();
+    const queued = immediates();
+    const failure = new Error("reporting failed");
+    node.runtime.exchange.mockReturnValue({...idle, more: true, failure: new Error("facade construction failed")});
+    node.onError.mockImplementationOnce(() => {
+      throw failure;
+    });
+    node.drain.request();
+    expect(() => queued.shift()?.()).toThrow(failure);
+    // The burst end, then the next drain.
+    expect(queued).toHaveLength(2);
+    queued.shift()?.();
+    const duration = node.register.getSingleMetric("lodestar_native_drain_seconds") as Histogram;
+    vi.spyOn(duration, "observe").mockImplementation(() => {
+      throw failure;
+    });
+    expect(() => queued.shift()?.()).toThrow(failure);
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+    expect(queued).toHaveLength(2);
   });
 
   it("retries a failure its handler recovers, and a failed delivery while native holds more", async () => {

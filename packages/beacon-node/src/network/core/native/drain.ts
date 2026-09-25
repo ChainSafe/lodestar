@@ -88,30 +88,34 @@ export class NativeDrain {
   private readonly run = (): void => {
     this.scheduled = false;
     const started = performance.now();
-    if (this.notifiedAt !== undefined) this.metrics?.notifyToDrain.observe((started - this.notifiedAt) / 1000);
+    const notifiedAt = this.notifiedAt;
     this.notifiedAt = undefined;
     const {budgetMs, settle, peers, servingStarts, gossipItems, gossipBytes} = this.limits;
     const deadline = started + budgetMs;
     let more = false;
     try {
-      const stages = this.stages();
-      const gossip = stages?.gossip({items: gossipItems, bytes: gossipBytes, deadline}) ?? null;
-      const serving = stages?.serving(servingStarts) ?? 0;
-      const result = this.runtime.exchange({settle, peers: stages ? peers : 0, serving, gossip});
-      more = result.more;
-      if (stages) more = stages.deliver(result, gossip, deadline) || more;
-      // A serving start the binding could not hand over was cancelled; everything else was delivered.
-      if (result.failure !== undefined) throw result.failure;
-    } catch (error) {
-      // Native keeps its latch while it reported more, so a failed delivery drains again.
-      more = this.onError(error) || more;
+      try {
+        const stages = this.stages();
+        const gossip = stages?.gossip({items: gossipItems, bytes: gossipBytes, deadline}) ?? null;
+        const serving = stages?.serving(servingStarts) ?? 0;
+        const result = this.runtime.exchange({settle, peers: stages ? peers : 0, serving, gossip});
+        more = result.more;
+        if (stages) more = stages.deliver(result, gossip, deadline) || more;
+        // A serving start the binding could not hand over was cancelled; everything else was delivered.
+        if (result.failure !== null) throw result.failure;
+      } catch (error) {
+        if (this.onError(error)) more = true;
+      }
+    } finally {
+      // Native keeps its latch while it reported more, so the next drain is scheduled whatever reporting throws.
+      // The burst end is queued first, so it covers only this drain.
+      if (this.metrics) setImmediate(this.burstEnd, started);
+      if (more) this.schedule();
     }
     const reason = !more ? "idle" : performance.now() >= deadline ? "budget" : "caps";
+    if (notifiedAt !== undefined) this.metrics?.notifyToDrain.observe((started - notifiedAt) / 1000);
     this.metrics?.duration.observe((performance.now() - started) / 1000);
     this.metrics?.yields.inc({reason});
-    // Queued ahead of the next drain, so the burst covers only this one.
-    if (this.metrics) setImmediate(this.burstEnd, started);
-    if (more) this.schedule();
   };
 
   private readonly burstEnd = (started: number): void => {

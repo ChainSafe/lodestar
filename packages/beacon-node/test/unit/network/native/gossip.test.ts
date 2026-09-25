@@ -247,6 +247,28 @@ describe("native gossip host ownership", () => {
     }
   });
 
+  it("defers newly claimed ordinary jobs when earlier work in the drain spent its budget", async () => {
+    const node = await fixture();
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    try {
+      node.admit(node.message(), node.message(2, blockTopic));
+      const demand = node.gossip.demand({items: 64, bytes: 8 * 1024 * 1024, deadline: 8});
+      expect(demand).toMatchObject({ordinary: true});
+      const batch = demand ? node.claim(demand) : null;
+      // Settlement, peers and serving ran past the 8 ms deadline before gossip delivery at 9 ms.
+      now = 9;
+      expect(node.gossip.deliver([], batch, demand, 8)).toBe(true);
+      expect(node.pending.map(({topic}) => topic.type)).toEqual([GossipType.beacon_block]);
+      // The next drain starts the held job whatever its budget, so held work progresses.
+      expect(node.turn({items: 64, bytes: 8 * 1024 * 1024, deadline: now})).toBe(false);
+      expect(node.pending.map(({topic}) => topic.type)).toEqual([GossipType.beacon_block, GossipType.voluntary_exit]);
+    } finally {
+      vi.restoreAllMocks();
+      await node.close();
+    }
+  });
+
   it("dispatches a claimed message larger than the drain byte cap", async () => {
     const node = await fixture();
     try {
