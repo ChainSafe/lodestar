@@ -290,7 +290,9 @@ export function createNativeConfig(
   slot: number,
   status: Status,
   custodyGroupCount: number,
-  activeValidatorCount: number
+  activeValidatorCount: number,
+  /** Chain genesis time in Unix seconds; gives native its slot phases. */
+  genesisTime?: number
 ): {
   application: NativeApplicationConfig;
   network: NetworkConfig;
@@ -372,6 +374,7 @@ export function createNativeConfig(
     bind: listeners,
     discovery: discovery(opts, key),
     initialSlot: BigInt(Math.max(0, slot)),
+    ...(genesisTime !== undefined ? {genesisTime: BigInt(genesisTime)} : {}),
     local,
     serveLightClients: !(opts.disableLightClientServer ?? false),
     identify: {agentVersion: opts.private ? "" : `Lodestar/${opts.version ?? "dev"}`, protocolVersion: "eth2/1.0.0"},
