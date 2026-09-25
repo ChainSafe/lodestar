@@ -6,6 +6,7 @@ import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
@@ -211,5 +212,84 @@ describe("block archive repository", () => {
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
     expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+  });
+
+  it("should delete index entries of a pruned range", async () => {
+    const blocks = Array.from({length: 5}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < blocks.length; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(blocks.map((block) => ({key: block.message.slot, value: block})));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange([0, 1, 2]);
+
+    for (const slot of [0, 1, 2]) {
+      expect(await blockArchive.get(slot)).toBeNull();
+      expect(await blockArchive.getRootBySlot(slot)).toBeNull();
+      expect(await blockArchive.getSlotByRoot(roots[slot])).toBeNull();
+    }
+    expect(await blockArchive.getSlotByParentRoot(blocks[0].message.parentRoot)).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[0])).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[1])).toBeNull();
+
+    // the entry pointing at the first kept block must survive
+    expect(await blockArchive.getSlotByParentRoot(roots[2])).toBe(3);
+    expect(await blockArchive.getSlotByRoot(roots[3])).toBe(3);
+    expect(toRootHex((await blockArchive.getRootBySlot(4)) ?? new Uint8Array())).toBe(toRootHex(roots[4]));
+  });
+
+  it("should delete parent index entries following an unindexed block", async () => {
+    const blocks = Array.from({length: 5}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < blocks.length; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(
+      blocks.filter((block) => block.message.slot !== 2).map((block) => ({key: block.message.slot, value: block}))
+    );
+    // block 2 is stored without any index entries
+    await db.put(blockArchive.encodeKey(2), ssz.phase0.SignedBeaconBlock.serialize(blocks[2]));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange([0, 1, 2, 3]);
+
+    for (const slot of [0, 1, 2, 3]) {
+      expect(await blockArchive.get(slot)).toBeNull();
+    }
+    // the entry pointing at block 3 is keyed by the unindexed block's root and read from block 3 itself
+    expect(await blockArchive.getSlotByParentRoot(roots[2])).toBeNull();
+    expect(await blockArchive.getSlotByRoot(roots[3])).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(roots[3])).toBe(4);
+  });
+
+  it("should carry the parent root across delete chunks", async () => {
+    const count = 2500;
+    const blocks = Array.from({length: count}, (_, slot) => {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    });
+    for (let i = 1; i < count; i++) {
+      blocks[i].message.parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(blocks[i - 1].message);
+    }
+    await blockArchive.batchPut(blocks.map((block) => ({key: block.message.slot, value: block})));
+    const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+
+    await blockArchive.batchDeleteRange(blocks.slice(0, count - 1).map((block) => block.message.slot));
+
+    // the entry pointing at the first block of a chunk is keyed by the last root of the previous chunk
+    for (const slot of [1000, 2000]) {
+      expect(await blockArchive.getSlotByParentRoot(roots[slot - 1])).toBeNull();
+    }
+    expect(await blockArchive.getSlotByParentRoot(roots[count - 2])).toBe(count - 1);
+    expect(await blockArchive.get(count - 1)).not.toBeNull();
   });
 });

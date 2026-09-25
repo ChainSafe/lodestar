@@ -70,7 +70,11 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
+import {
+  createSpecTestBeaconMetrics,
+  expectNoProgressiveBalancesMismatches,
+  expectValidProgressiveBalances,
+} from "./progressiveBalances.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -98,6 +102,7 @@ export const forkChoiceTestRunner =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
+        const metrics = createSpecTestBeaconMetrics(anchorState.genesisTime);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isGloasStateType(anchorState)
@@ -140,7 +145,6 @@ export const forkChoiceTestRunner =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
           },
@@ -154,7 +158,7 @@ export const forkChoiceTestRunner =
             logger,
             processShutdownCallback: () => {},
             clock,
-            metrics: null,
+            metrics,
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
@@ -512,6 +516,12 @@ export const forkChoiceTestRunner =
                   ignoreIfKnown: isValid,
                   ignoreIfFinalized: isValid,
                 });
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+                if (protoBlock === null) {
+                  throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
+                }
+                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
+                expectValidProgressiveBalances(postState, metrics);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") {
@@ -753,6 +763,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
+          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
         } finally {
           await chain.close();
         }

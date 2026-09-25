@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
 
@@ -52,12 +52,15 @@ export async function pruneHistory(
     blocksToPrune: blocks.length,
     envelopesToPrune: envelopes.length,
     statesToPrune: states.length,
+    blockSlots: prettyPrintIndices(blocks),
+    envelopeSlots: prettyPrintIndices(envelopes),
+    stateSlots: prettyPrintIndices(states),
   });
 
   const step1 = metrics?.pruneHistory.pruneKeys.startTimer();
   await Promise.all([
     // ->
-    db.blockArchive.batchDelete(blocks),
+    db.blockArchive.batchDeleteRange(blocks),
     db.executionPayloadEnvelopeArchive.batchDelete(envelopes),
     db.stateArchive.batchDelete(states),
   ]);

@@ -12,7 +12,7 @@ import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const pubkey = Buffer.alloc(96, 1);
+  const pubkey = Buffer.alloc(48, 1);
   let db: LevelDbController;
 
   beforeAll(async () => {

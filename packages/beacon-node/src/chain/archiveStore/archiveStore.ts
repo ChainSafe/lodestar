@@ -16,7 +16,6 @@ import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.j
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN, pruneHistory} from "./utils/pruneHistory.js";
-import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -37,7 +36,6 @@ export enum ArchiveStoreTask {
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
   ForkchoicePrune = "forkchoice_prune",
-  UpdateBackfillRange = "update_backfill_range",
 }
 
 /**
@@ -261,10 +259,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
-      timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
