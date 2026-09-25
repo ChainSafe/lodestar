@@ -6,7 +6,7 @@ import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
-import {DispatchArm} from "../blocks/dispatchGate.js";
+import {DispatchArm, DispatchGateResult} from "../blocks/dispatchGate.js";
 import {BlsJobTimes} from "../bls/interface.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
@@ -76,14 +76,17 @@ export enum BlockMilestone {
 }
 
 /**
- * Waits that proxy runnable import work. Neither establishes that the block was eligible to run: native execution
- * capacity can hold a block while JS is free, and the processor wait includes the queue's deliberate yield.
+ * Waits of a block's import work. The dispatch and processor waits proxy runnable work without establishing that the
+ * block was eligible to run: native execution capacity can hold a block while JS is free, and the processor wait
+ * includes the queue's deliberate yield.
  */
 export enum BlockWait {
   /** From gossip admission to the gossip handler */
   dispatch,
   /** From a processor job's enqueue, or the lane freeing if later, to its start */
   processor,
+  /** The treatment's wait before the state transition for its engine request writes */
+  dispatchGate,
 }
 
 /** A synchronous segment of gossip attestation batch work */
@@ -112,6 +115,8 @@ export type BlockAttempt = {
   executionRequest(root: RootHex): HttpRequestTimes | undefined;
   /** Records every block's dispatch experiment arm, null when the attempt takes none */
   recordArm(arm: DispatchArm | null): void;
+  /** Records the treatment's wait before the state transition for every block, with the attestation work during it */
+  recordGate(result: DispatchGateResult): void;
 };
 
 /** What a root's first getBlobs call returned: every blob, null for a missing one, or an error */
@@ -223,10 +228,11 @@ const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
   ["state_transition_start_to_getblobs_dispatch", BlockMilestone.stateTransitionStart, BlockMilestone.getBlobsDispatch],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
-const WAIT_COUNT = BlockWait.processor + 1;
-const WAIT_NAMES: Record<BlockWait, "dispatch" | "processor"> = {
+const WAIT_COUNT = BlockWait.dispatchGate + 1;
+const WAIT_NAMES: Record<BlockWait, "dispatch" | "processor" | "dispatch_gate"> = {
   [BlockWait.dispatch]: "dispatch",
   [BlockWait.processor]: "processor",
+  [BlockWait.dispatchGate]: "dispatch_gate",
 };
 const ATTESTATION_DATA = "attestation_data";
 /** Dispatch experiment arm labels, by 1 + the arm's index in ARMS, 0 for none */
@@ -261,9 +267,9 @@ export function isSampledSlot(slot: Slot): boolean {
  *
  * Milestones are ms from the slot start: new ones are `performance.now()` stamps anchored to the slot start when the
  * slot's record is created, existing ones are Unix ms. A root keeps its first arrival milestones and its latest
- * processing attempt; an imported root takes no further attempts. Each root records its dispatch and processor waits
- * and the gossip attestation segments that ran during them, counted from a log of segment starts. Waits are proxies:
- * attestation work during a wait co-occurred with it, which does not establish that it delayed the block.
+ * processing attempt; an imported root takes no further attempts. Each root records its dispatch, processor and
+ * dispatch gate waits and the gossip attestation segments that ran during them, counted from a log of segment starts.
+ * Attestation work during a wait co-occurred with it, which does not establish that it delayed the block.
  *
  * Storage is preallocated; recording a milestone allocates nothing. A slot closes at the start of slot + 2, when its
  * metrics are observed: "not imported" and "never head" mean by then.
@@ -311,6 +317,8 @@ export class BlockTrace {
   private readonly getBlobsResult = new Uint8Array(ENTRIES);
   /** The latest attempt's dispatch experiment arm, 1 + its index in ARMS, 0 when it took none */
   private readonly arms = new Uint8Array(ENTRIES);
+  /** The latest attempt's treatment wait before the state transition */
+  private readonly gates: (DispatchGateResult | null)[] = new Array<DispatchGateResult | null>(ENTRIES).fill(null);
   /**
    * Stage records of each root's operations in flight: the latest attempt's signature job and newPayload request, and
    * the first getBlobs call. Snapshots read them, and the slot's close reads them a last time and drops them.
@@ -394,20 +402,19 @@ export class BlockTrace {
   }
 
   /**
-   * Records the root's first getBlobs call now, returning the record of its engine request's transport times, read like
-   * a signature job's; undefined for a later call or an untraced root
+   * Records the root's first getBlobs call now, and `times`, its engine request's transport times, read like a signature
+   * job's; returns false for a later call or an untraced root
    */
-  getBlobsRequest(slot: Slot, root: RootHex): HttpRequestTimes | undefined {
+  getBlobsRequest(slot: Slot, root: RootHex, times: HttpRequestTimes): boolean {
     const e = this.entry(slot, root);
     if (
       e < 0 ||
       !this.setMilestone(e, BlockMilestone.getBlobsRequest, performance.now() - this.slotStart[slotIndexOf(e)])
     ) {
-      return undefined;
+      return false;
     }
-    const times = new HttpRequestTimes();
     this.getBlobsRequests[e] = times;
-    return times;
+    return true;
   }
 
   /** Records the root's first getBlobs response now and what it returned */
@@ -440,10 +447,12 @@ export class BlockTrace {
       for (const m of ATTEMPT_STAGES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       this.signatureDispatchSets[e] = 0;
       this.arms[e] = 0;
+      this.gates[e] = null;
       this.signatureJobs[e] = null;
       this.executionRequests[e] = null;
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
       this.setWait(e, BlockWait.processor, waitFrom, now);
+      this.waitBegin[e * WAIT_COUNT + BlockWait.dispatchGate] = NaN;
       entries.push(e);
       generations.push(generation);
     }
@@ -494,6 +503,14 @@ export class BlockTrace {
         for (const block of blocks) {
           const e = currentEntry(block.blockRootHex);
           if (e >= 0) this.arms[e] = arm === null ? 0 : ARMS.indexOf(arm) + 1;
+        }
+      },
+      recordGate: (result) => {
+        for (const block of blocks) {
+          const e = currentEntry(block.blockRootHex);
+          if (e < 0) continue;
+          this.gates[e] = result;
+          this.setWait(e, BlockWait.dispatchGate, result.start, result.start + result.ms);
         }
       },
     };
@@ -671,6 +688,7 @@ export class BlockTrace {
     this.signatureDispatchSets[e] = 0;
     this.getBlobsResult[e] = 0;
     this.arms[e] = 0;
+    this.gates[e] = null;
     this.signatureJobs[e] = null;
     this.executionRequests[e] = null;
     this.getBlobsRequests[e] = null;
@@ -878,6 +896,7 @@ export class BlockTrace {
         outcome: outcome === "not_imported" && this.closed[s] === 0 ? "pending" : outcome,
         attempts: this.attempts[e],
         arm: this.arms[e] === 0 ? null : ARMS[this.arms[e] - 1],
+        dispatchGate: gateSnapshot(this.gates[e]),
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,
@@ -885,6 +904,7 @@ export class BlockTrace {
         waits: {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),
           processor: this.waitSnapshot(e, BlockWait.processor, start),
+          dispatchGate: this.waitSnapshot(e, BlockWait.dispatchGate, start),
         },
       });
     }
@@ -913,6 +933,12 @@ export class BlockTrace {
       roots,
     };
   }
+}
+
+function gateSnapshot(gate: DispatchGateResult | null): routes.lodestar.BlockTraceRoot["dispatchGate"] {
+  if (gate === null) return null;
+  const {outcome, getBlobs, ms, overshootMs} = gate;
+  return {outcome, getBlobs, ms: round(ms), overshootMs: Number.isNaN(overshootMs) ? null : round(overshootMs)};
 }
 
 function samplingCoverage(coverage: number): "full" | "partial" | "none" {

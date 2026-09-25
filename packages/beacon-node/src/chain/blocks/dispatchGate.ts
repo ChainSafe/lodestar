@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {BlockProcessOpts} from "../options.js";
@@ -17,6 +18,81 @@ export enum DispatchArm {
 
 /** Epochs in each arm of a crossover pair */
 export const EPOCHS_PER_ARM = 4;
+/** Requested bound of the treatment's wait before the state transition; the event loop can run its timeout late */
+export const DISPATCH_GATE_DEADLINE_MS = 10;
+
+/**
+ * - both_sent: newPayload's and the getBlobs call's first attempts each handed their body to the connection
+ * - new_payload_only: newPayload's did, and no getBlobs call was in progress or its first attempt sent nothing
+ * - fell_back: the deadline passed first
+ * - skipped: newPayload's first attempt ended without sending its body
+ */
+export type DispatchGateOutcome = "both_sent" | "new_payload_only" | "fell_back" | "skipped";
+/** The root's getBlobs call when the gate started: none in progress or it sent nothing, not yet sent, or sent */
+export type GetBlobsAtGate = "none" | "pending" | "dispatched";
+export type DispatchGateResult = {
+  outcome: DispatchGateOutcome;
+  getBlobs: GetBlobsAtGate;
+  /** The `performance.now()` time the gate started */
+  start: number;
+  /** From the gate's start to its end */
+  ms: number;
+  /** How late the deadline's timeout ran, NaN unless the gate fell back */
+  overshootMs: number;
+};
+
+/**
+ * Waits until newPayload's first attempt, and the root's getBlobs call's when it has not sent yet, has handed its body to
+ * the connection or ended, for at most `deadlineMs`. It waits for no response and starts no request.
+ */
+export function awaitEngineDispatch(
+  newPayload: HttpRequestTimes,
+  getBlobs: HttpRequestTimes | null,
+  deadlineMs: number
+): Promise<DispatchGateResult> {
+  const start = performance.now();
+  const getBlobsAtGate: GetBlobsAtGate =
+    getBlobs === null || (getBlobs.firstAttemptEnded && Number.isNaN(getBlobs.firstSent))
+      ? "none"
+      : getBlobs.firstAttemptEnded
+        ? "dispatched"
+        : "pending";
+  const waited = getBlobsAtGate === "pending" ? getBlobs : null;
+
+  return new Promise((resolve) => {
+    let timeout: NodeJS.Timeout | undefined;
+    const finish = (timedOutAt: number): void => {
+      clearTimeout(timeout);
+      newPayload.onFirstAttemptEnd = null;
+      if (waited) waited.onFirstAttemptEnd = null;
+      const fellBack = !Number.isNaN(timedOutAt);
+      const newPayloadSent = !Number.isNaN(newPayload.firstSent);
+      const getBlobsSent = getBlobs !== null && !Number.isNaN(getBlobs.firstSent);
+      resolve({
+        outcome: fellBack ? "fell_back" : !newPayloadSent ? "skipped" : getBlobsSent ? "both_sent" : "new_payload_only",
+        getBlobs: getBlobsAtGate,
+        start,
+        ms: performance.now() - start,
+        overshootMs: fellBack ? timedOutAt - start - deadlineMs : NaN,
+      });
+    };
+    const onEnd = (): void => {
+      if (newPayload.firstAttemptEnded && (waited === null || waited.firstAttemptEnded)) finish(NaN);
+    };
+    newPayload.onFirstAttemptEnd = onEnd;
+    if (waited) waited.onFirstAttemptEnd = onEnd;
+    timeout = setTimeout(() => finish(performance.now()), deadlineMs);
+    onEnd();
+  });
+}
+
+export function observeDispatchGate(metrics: Metrics | null, result: DispatchGateResult): void {
+  if (!metrics) return;
+  const {outcome, getBlobs, ms, overshootMs} = result;
+  metrics.dispatchGate.gates.inc({outcome, getblobs: getBlobs});
+  metrics.dispatchGate.duration.observe({outcome}, ms / 1000);
+  if (!Number.isNaN(overshootMs)) metrics.dispatchGate.overshoot.observe(overshootMs / 1000);
+}
 
 /** From `startEpoch`, `pairs` pairs of arms, each pair's order drawn from `seed` */
 export type DispatchSchedule = {seed: number; startEpoch: Epoch; pairs: number};

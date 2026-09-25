@@ -94,8 +94,8 @@ export type BlockProcessorQueueItem = {
 };
 
 /**
- * A wait that proxies runnable import work, in ms from its slot's start, and the gossip attestation segments that
- * started during it. Attestation work during a wait co-occurred with it; that does not establish it delayed the block.
+ * A wait of a block's import work, in ms from its slot's start, and the gossip attestation segments that started during
+ * it. Attestation work during a wait co-occurred with it; that does not establish it delayed the block.
  */
 export type BlockTraceWait = {
   beginMs: number;
@@ -128,6 +128,16 @@ export type BlockTraceRoot = {
    * null when the attempt was not a single live Fulu gossip block or did not reach verification
    */
   arm: DispatchArm | null;
+  /**
+   * The treatment's wait before the latest attempt's state transition for the first engine request writes: its outcome,
+   * the getBlobs call's state when it started, its duration, and how late its deadline's timeout ran when it fell back
+   */
+  dispatchGate: {
+    outcome: "both_sent" | "new_payload_only" | "fell_back" | "skipped";
+    getBlobs: "none" | "pending" | "dispatched";
+    ms: number;
+    overshootMs: number | null;
+  } | null;
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];
   /**
@@ -142,7 +152,7 @@ export type BlockTraceRoot = {
    * it completed as enough columns to reconstruct before all sampled columns arrived
    */
   dataAvailableVia: {source: string; reconstructable: boolean} | null;
-  waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
+  waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null; dispatchGate: BlockTraceWait | null};
 };
 
 /** A slot of the block trace; times are ms from the slot start */

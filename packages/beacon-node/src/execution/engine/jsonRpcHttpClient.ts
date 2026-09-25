@@ -68,6 +68,20 @@ export class HttpRequestTimes {
   sent = NaN;
   /** The response headers reached JS */
   received = NaN;
+  /** The first attempt's `sent`, which a retry or a followed redirect never resets; NaN when it sent nothing */
+  firstSent = NaN;
+  /** Whether the first attempt sent its body or ended without; a caller that skips the request ends it too */
+  firstAttemptEnded = false;
+  /** Called once when the first attempt ends; one waiter at a time */
+  onFirstAttemptEnd: (() => void) | null = null;
+
+  endFirstAttempt(): void {
+    if (this.firstAttemptEnded) return;
+    this.firstAttemptEnded = true;
+    const onEnd = this.onFirstAttemptEnd;
+    this.onFirstAttemptEnd = null;
+    onEnd?.();
+  }
 }
 
 type UndiciRequestMessage = {request: object};
@@ -88,7 +102,12 @@ function subscribeRequestTimes(): void {
   });
   subscribe("undici:request:bodySent", (message) => {
     const times = tracedRequests.get((message as UndiciRequestMessage).request);
-    if (times !== undefined) times.sent = performance.now();
+    if (times === undefined) return;
+    times.sent = performance.now();
+    if (!times.firstAttemptEnded) {
+      times.firstSent = times.sent;
+      times.endFirstAttempt();
+    }
   });
   subscribe("undici:request:headers", (message) => {
     const {request, response} = message as UndiciHeadersMessage;
@@ -357,6 +376,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       }
       throw e;
     } finally {
+      opts?.times?.endFirstAttempt();
       timer?.();
       this.metrics?.activeRequests.dec({routeId}, 1);
 

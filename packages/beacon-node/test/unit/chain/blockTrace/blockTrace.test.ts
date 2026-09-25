@@ -19,6 +19,7 @@ import {
   Step0Result,
   validateGossipAttestationsSameAttData,
 } from "../../../../src/chain/validation/index.js";
+import {HttpRequestTimes} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -226,9 +227,10 @@ describe("BlockTrace", () => {
     const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
     const execution = attempt?.executionRequest("0xaa");
     t.at(1000);
-    const getBlobs = t.trace.getBlobsRequest(slot, "0xaa");
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeUndefined();
-    if (!execution || !getBlobs) throw Error("Untraced request");
+    const getBlobs = new HttpRequestTimes();
+    expect(t.trace.getBlobsRequest(slot, "0xaa", getBlobs)).toBe(true);
+    expect(t.trace.getBlobsRequest(slot, "0xaa", new HttpRequestTimes())).toBe(false);
+    if (!execution) throw Error("Untraced request");
     t.at(1200);
     Object.assign(execution, {sent: performance.now() - 150, received: performance.now() - 20});
     attempt?.markUnixMs(BlockMilestone.executionDone, Date.now());
@@ -306,6 +308,28 @@ describe("BlockTrace", () => {
     );
   });
 
+  it("records the treatment's wait before the state transition and the attestation work during it", () => {
+    const slot = 100;
+    const t = setup(slot);
+    t.at(1000);
+    const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    const start = performance.now();
+    t.at(1002);
+    t.trace.attestationBatchStart(null);
+    t.at(1008);
+    attempt?.recordGate({outcome: "both_sent", getBlobs: "pending", start, ms: 8, overshootMs: NaN});
+    expect(t.slot(slot).roots[0].dispatchGate).toEqual({
+      outcome: "both_sent",
+      getBlobs: "pending",
+      ms: 8,
+      overshootMs: null,
+    });
+    expect(t.slot(slot).roots[0].waits.dispatchGate).toMatchObject({beginMs: 1000, endMs: 1008, attestationStarts: 1});
+
+    t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    expect(t.slot(slot).roots[0]).toMatchObject({dispatchGate: null, waits: {dispatchGate: null}});
+  });
+
   it("keeps the stages an operation reached before its slot closed, and none after", () => {
     const slot = 100;
     const t = setup(slot);
@@ -313,8 +337,9 @@ describe("BlockTrace", () => {
     const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
     const job = attempt?.signatureJob("0xaa");
     const execution = attempt?.executionRequest("0xaa");
-    const getBlobs = t.trace.getBlobsRequest(slot, "0xaa");
-    if (!job || !execution || !getBlobs) throw Error("Untraced operation");
+    const getBlobs = new HttpRequestTimes();
+    t.trace.getBlobsRequest(slot, "0xaa", getBlobs);
+    if (!job || !execution) throw Error("Untraced operation");
     t.at(1050);
     Object.assign(job, {built: performance.now(), selected: performance.now()});
     execution.sent = performance.now();
@@ -572,9 +597,9 @@ describe("BlockTrace", () => {
     const slot = 100;
     const t = setup(slot);
     t.at(1000);
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeDefined();
+    expect(t.trace.getBlobsRequest(slot, "0xaa", new HttpRequestTimes())).toBe(true);
     t.at(1100);
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeUndefined();
+    expect(t.trace.getBlobsRequest(slot, "0xaa", new HttpRequestTimes())).toBe(false);
     t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsResponse);
     t.at(1200);
     t.trace.mark(slot, "0xaa", BlockMilestone.head);

@@ -8,9 +8,11 @@ import {
   DispatchGateSwitch,
   DispatchSchedule,
   EPOCHS_PER_ARM,
+  awaitEngineDispatch,
   firstArmOfPair,
   parseDispatchSchedule,
 } from "../../../../src/chain/blocks/dispatchGate.js";
+import {HttpRequestTimes} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
@@ -142,5 +144,75 @@ describe("chain / blocks / dispatchGate / switch", () => {
     expect(() =>
       parseDispatchSchedule({dispatchGateSeed: 1.5, dispatchGateStartEpoch: 2, dispatchGatePairs: 1})
     ).toThrow();
+  });
+});
+
+describe("chain / blocks / dispatchGate / awaitEngineDispatch", () => {
+  /** Ends `times`' first attempt after `ms`, having sent its body unless `sent` is false */
+  function endAfter(times: HttpRequestTimes, ms: number, sent = true): void {
+    setTimeout(() => {
+      if (sent) times.firstSent = times.sent = performance.now();
+      times.endFirstAttempt();
+    }, ms);
+  }
+
+  it("ends once newPayload and a pending getBlobs call have sent their bodies", async () => {
+    const [newPayload, getBlobs] = [new HttpRequestTimes(), new HttpRequestTimes()];
+    endAfter(newPayload, 1);
+    endAfter(getBlobs, 3);
+    const result = await awaitEngineDispatch(newPayload, getBlobs, 1000);
+    expect(result).toMatchObject({outcome: "both_sent", getBlobs: "pending", overshootMs: NaN});
+    expect(result.start).toBeLessThanOrEqual(newPayload.firstSent);
+    expect(result.ms).toBeGreaterThanOrEqual(getBlobs.firstSent - newPayload.firstSent);
+    expect(result.ms).toBeLessThan(500);
+    expect(newPayload.onFirstAttemptEnd).toBeNull();
+    expect(getBlobs.onFirstAttemptEnd).toBeNull();
+  });
+
+  it("does not wait for a getBlobs call that already sent, or for none", async () => {
+    const dispatched = new HttpRequestTimes();
+    dispatched.firstSent = performance.now();
+    dispatched.endFirstAttempt();
+    let newPayload = new HttpRequestTimes();
+    endAfter(newPayload, 1);
+    expect(await awaitEngineDispatch(newPayload, dispatched, 1000)).toMatchObject({
+      outcome: "both_sent",
+      getBlobs: "dispatched",
+    });
+
+    newPayload = new HttpRequestTimes();
+    endAfter(newPayload, 1);
+    expect(await awaitEngineDispatch(newPayload, null, 1000)).toMatchObject({
+      outcome: "new_payload_only",
+      getBlobs: "none",
+    });
+  });
+
+  it("counts a getBlobs call that sent nothing, and a newPayload that sent nothing, as ended", async () => {
+    let newPayload = new HttpRequestTimes();
+    const skipped = new HttpRequestTimes();
+    endAfter(newPayload, 1);
+    endAfter(skipped, 2, false);
+    expect(await awaitEngineDispatch(newPayload, skipped, 1000)).toMatchObject({
+      outcome: "new_payload_only",
+      getBlobs: "pending",
+    });
+
+    newPayload = new HttpRequestTimes();
+    endAfter(newPayload, 1, false);
+    expect(await awaitEngineDispatch(newPayload, null, 1000)).toMatchObject({outcome: "skipped", getBlobs: "none"});
+  });
+
+  it("falls back at the deadline and records how late its timeout ran", async () => {
+    const [newPayload, getBlobs] = [new HttpRequestTimes(), new HttpRequestTimes()];
+    endAfter(getBlobs, 1);
+    const result = await awaitEngineDispatch(newPayload, getBlobs, 10);
+    expect(result.outcome).toBe("fell_back");
+    // Timers run on the event loop's millisecond clock, so the timeout can run up to 1 ms early by this clock
+    expect(result.ms).toBeGreaterThanOrEqual(9);
+    expect(result.ms).toBeLessThan(200);
+    expect(result.overshootMs).toBeGreaterThanOrEqual(-1);
+    expect(result.overshootMs).toBeLessThanOrEqual(result.ms - 9);
+    expect(newPayload.onFirstAttemptEnd).toBeNull();
   });
 });

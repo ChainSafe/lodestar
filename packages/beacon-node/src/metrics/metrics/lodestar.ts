@@ -1096,7 +1096,7 @@ export function createLodestarMetrics(
       }),
       wait: register.histogram<{wait: string; arm: string}>({
         name: "lodestar_block_trace_wait_seconds",
-        help: "Traced block waits by dispatch experiment arm: dispatch and processor proxy runnable import work without establishing eligibility; persistence waits for write capacity",
+        help: "Traced block waits by dispatch experiment arm: dispatch and processor proxy runnable import work without establishing eligibility; dispatch_gate is the treatment's wait before the state transition; persistence waits for write capacity",
         labelNames: ["wait", "arm"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
@@ -1111,7 +1111,7 @@ export function createLodestarMetrics(
       }),
       waitAttestationSegments: register.histogram<{wait: string; kind: string}>({
         name: "lodestar_block_trace_wait_attestation_segments",
-        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch or processor wait",
+        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor or dispatch gate wait",
         labelNames: ["wait", "kind"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
       }),
@@ -1144,6 +1144,22 @@ export function createLodestarMetrics(
       forcedControl: register.gauge({
         name: "lodestar_dispatch_gate_forced_control",
         help: "Whether the API forces blocks to the dispatch experiment's control arm",
+      }),
+      gates: register.counter<{outcome: string; getblobs: string}>({
+        name: "lodestar_dispatch_gate_total",
+        help: "Treatment waits before the state transition for the first engine request writes, by outcome and by the getBlobs call's state when the wait started",
+        labelNames: ["outcome", "getblobs"],
+      }),
+      duration: register.histogram<{outcome: string}>({
+        name: "lodestar_dispatch_gate_seconds",
+        help: "Duration of each treatment wait before the state transition, by outcome",
+        labelNames: ["outcome"],
+        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1],
+      }),
+      overshoot: register.histogram({
+        name: "lodestar_dispatch_gate_overshoot_seconds",
+        help: "How late the deadline's timeout ran for treatment waits that fell back",
+        buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25],
       }),
     },
     importPayload: {
