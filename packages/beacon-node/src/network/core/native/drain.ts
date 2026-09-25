@@ -38,7 +38,11 @@ export class NativeClaim<T> {
   }
 }
 
-export type NativeJob = Omit<NativeGossipJob, "start" | "length"> & {messages: NativeGossipMessage[]};
+/** A claimed job, with when the exchange that claimed it started, on the performance clock. */
+export type NativeJob = Omit<NativeGossipJob, "start" | "length"> & {
+  messages: NativeGossipMessage[];
+  exchangedAt: number;
+};
 
 /** One exchange's payload, with jobs and serving starts to adopt. */
 export type NativeDelivery = {
@@ -116,6 +120,8 @@ export class NativeDrain {
   /** Consecutive turns whose demand threw or whose exchange could not run. */
   private failures = 0;
   private readonly obligations: NativeAction[] = [];
+  /** Queued verdicts' callbacks for the start of the exchange that applies them. */
+  private readonly sent = new Map<NativeAction, (at: number) => void>();
   /** One entry per imported root, per penalized peer and action, and for a recheck or a drop, in arrival order. */
   private readonly coalesced = new Map<string, Coalesced>();
   private blocks = 0;
@@ -147,9 +153,11 @@ export class NativeDrain {
     this.schedule();
   };
 
-  /** One per delivered message. */
-  verdict(handle: NativeGossipHandle, verdict: NativeGossipVerdict): void {
-    this.obligations.push({handle, type: "verdict", verdict});
+  /** One per delivered message. `sent` hears when the exchange that applies it starts. */
+  verdict(handle: NativeGossipHandle, verdict: NativeGossipVerdict, sent?: (at: number) => void): void {
+    const action: NativeAction = {handle, type: "verdict", verdict};
+    this.obligations.push(action);
+    if (sent) this.sent.set(action, sent);
     this.schedule();
   }
   /** One per delivered dependency check. */
@@ -292,6 +300,7 @@ export class NativeDrain {
       }
     }
     const batch = this.take();
+    const exchangedAt = performance.now();
     let result: NativeExchange;
     try {
       result = this.runtime.exchange(batch, demand);
@@ -311,7 +320,7 @@ export class NativeDrain {
     let held = false;
     let failure: unknown = result.failure;
     try {
-      if (stages && !failed) held = this.deliver(stages, result, deadline);
+      if (stages && !failed) held = this.deliver(stages, result, deadline, exchangedAt);
     } catch (error) {
       failure ??= error;
     }
@@ -321,6 +330,14 @@ export class NativeDrain {
     if (result.more || held || (budgetEnded && result.disabledWaiting)) next = "now";
     else if (failed || result.parked.serving || result.parked.ordinary || result.disabledWaiting) next = "later";
     if (failure !== null) this.onFailure(failure);
+    // Last, so a throwing observer cannot cost a delivery its adoption or ignore verdicts.
+    if (this.sent.size > 0)
+      for (const action of batch) {
+        const sent = this.sent.get(action);
+        if (!sent) continue;
+        this.sent.delete(action);
+        sent(exchangedAt);
+      }
     return next;
   }
 
@@ -328,11 +345,12 @@ export class NativeDrain {
    * Hands the delivery to the host. Whatever the host throws, the pump keeps what it never adopted: a job gets an
    * ignore verdict, and a serving start is cancelled, which releases it.
    */
-  private deliver(stages: NativeDrainStages, result: NativeExchange, deadline: number): boolean {
+  private deliver(stages: NativeDrainStages, result: NativeExchange, deadline: number, exchangedAt: number): boolean {
     const gossip = result.gossip;
     const jobs = (gossip?.jobs ?? []).map(
       ({kind, grouped, urgent, start, length}) =>
         new NativeClaim<NativeJob>({
+          exchangedAt,
           grouped,
           kind,
           messages: gossip?.messages.slice(start, start + length) ?? [],

@@ -440,6 +440,36 @@ describe("native pump", () => {
     ]);
   });
 
+  it("hands delivered jobs and a verdict's sender the start of its exchange, and never an exchange that threw", async () => {
+    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+    const node = fixture();
+    const sent = vi.fn<(at: number) => void>();
+    node.runtime.exchange.mockImplementationOnce(() => {
+      throw new Error("exchange failed");
+    });
+    node.runtime.exchange.mockReturnValueOnce({
+      ...idle,
+      gossip: {
+        messages: [{handle: handle(3)} as NativeGossipMessage],
+        jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}],
+      },
+    });
+    node.advance(5);
+    node.drain.verdict(handle(1), "accept", sent);
+    node.drain.verdict(handle(2), "ignore");
+    await macrotask();
+    expect(sent).not.toHaveBeenCalled();
+    node.advance(20);
+    vi.advanceTimersByTime(25);
+    await macrotask();
+    expect(node.calls()[1][0]).toEqual([
+      {handle: handle(1), type: "verdict", verdict: "accept"},
+      {handle: handle(2), type: "verdict", verdict: "ignore"},
+    ]);
+    expect(sent).toHaveBeenCalledExactlyOnceWith(25);
+    expect(node.stages.deliver.mock.calls[0][0].jobs[0].item.exchangedAt).toBe(25);
+  });
+
   it("measures each turn's burst through its continuations up to the next macrotask checkpoint", async () => {
     const node = fixture();
     node.stages.deliver.mockImplementation(() => {

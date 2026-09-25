@@ -74,12 +74,13 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
       demand.claimOrdinary && demand.ordinary ? queued.filter((message) => message.topic !== blockTopic) : [];
     const messages = [...urgent, ...ordinary].slice(0, demand.messages);
     queued = queued.filter((message) => !messages.includes(message));
+    const exchangedAt = performance.now();
     const jobs: NativeJob[] = grouped
-      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages}]
+      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages, exchangedAt}]
       : messages.map((message) =>
           message.topic === blockTopic
-            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message]}
-            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message]}
+            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message], exchangedAt}
+            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message], exchangedAt}
         );
     const result = messages.length > 0 ? jobs.map((job) => new NativeClaim(job)) : [];
     claims.push(result);
@@ -384,6 +385,35 @@ describe("native gossip host ownership", () => {
       expect(await register.getSingleMetricAsString("lodestar_native_gossip_check_to_dispatch_seconds")).toContain(
         'lodestar_native_gossip_check_to_dispatch_seconds_count{kind="voluntary_exit"} 1'
       );
+    } finally {
+      await node.close();
+    }
+  });
+
+  it("times an urgent job's stages from its exchange to the exchange that applies its verdict", async () => {
+    const register = new RegistryMetricCreator();
+    const node = await fixture(undefined, true, register);
+    try {
+      const block = node.message(2, blockTopic);
+      node.admit(block, node.message());
+      node.turn();
+      await node.retire(node.pending[0]);
+      const [handle, verdict, sent] = node.ledger.verdict.mock.calls[0];
+      expect([handle, verdict]).toEqual([block.handle, "accept"]);
+      sent?.(performance.now());
+      const metric = await register.getSingleMetricAsString("lodestar_native_gossip_host_stage_seconds");
+      for (const interval of [
+        "exchange_to_dispatch",
+        "dispatch_to_start",
+        "start_to_complete",
+        "complete_to_queued",
+        "queued_to_sent",
+      ])
+        expect(metric).toContain(
+          `lodestar_native_gossip_host_stage_seconds_count{kind="beacon_block",interval="${interval}"} 1`
+        );
+      // Ordinary jobs are not timed.
+      expect(metric).not.toContain('kind="voluntary_exit"');
     } finally {
       await node.close();
     }
