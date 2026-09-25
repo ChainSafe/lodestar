@@ -5,7 +5,7 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
-import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../chain/errors/index.js";
+import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {reconstructExecutionPayloadEnvelopesByRange} from "../../../util/execution.js";
@@ -42,9 +42,9 @@ export async function* onExecutionPayloadEnvelopesByRange(
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  if (startSlot <= archiveMaxSlot) {
-    let yielded = 0;
-    try {
+  let yielded = 0;
+  try {
+    if (startSlot <= archiveMaxSlot) {
       for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
         db,
         chain.executionEngine,
@@ -59,51 +59,52 @@ export async function* onExecutionPayloadEnvelopesByRange(
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
         };
       }
-    } catch (e) {
-      if (e instanceof EnvelopeReconstructionError) {
-        if (e.type.code === EnvelopeReconstructionErrorCode.RANGE_UNSERVABLE && yielded > 0) {
-          // A short response is spec-legal; continuing into the hot range would leave a hole
-          return;
-        }
-        // RESOURCE_UNAVAILABLE rather than SERVER_ERROR so peers don't downscore us for our own EL
-        throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Failed to serve archived envelopes: ${e.message}`);
-      }
-      throw e;
     }
-  }
 
-  // Non-finalized range of envelopes
-  if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // Non-finalized range of envelopes. The finalized block's own envelope may be archived by a
+    // migration that ran since archiveMaxSlot was computed, so this read can reconstruct too.
+    if (endSlot > archiveMaxSlot) {
+      const headBlock = chain.forkChoice.getHead();
+      const headRoot = headBlock.blockRoot;
+      const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
+      // Iterate head chain with ascending block numbers
+      for (let i = headChain.length - 1; i >= 0; i--) {
+        const block = headChain[i];
 
-      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
-        // Skip EMPTY blocks
-        if (block.payloadStatus !== PayloadStatus.FULL) {
-          continue;
+        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
+          // Skip EMPTY blocks
+          if (block.payloadStatus !== PayloadStatus.FULL) {
+            continue;
+          }
+
+          const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, block.blockRoot);
+          if (!envelopeBytes) {
+            throw new ResponseError(
+              RespStatus.SERVER_ERROR,
+              `No envelope for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+            );
+          }
+
+          yielded++;
+          yield {
+            data: envelopeBytes,
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+          };
+        } else if (block.slot >= endSlot) {
+          break;
         }
-
-        const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, block.blockRoot);
-        if (!envelopeBytes) {
-          throw new ResponseError(
-            RespStatus.SERVER_ERROR,
-            `No envelope for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
-          );
-        }
-
-        yield {
-          data: envelopeBytes,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-        };
-      } else if (block.slot >= endSlot) {
-        break;
       }
     }
+  } catch (e) {
+    if (e instanceof EnvelopeReconstructionError) {
+      // An unservable entry or our own EL failing: after some envelopes, end short (spec-legal, the
+      // peer fetches the rest elsewhere); with nothing served, RESOURCE_UNAVAILABLE rather than
+      // SERVER_ERROR so peers don't downscore us for it
+      if (yielded > 0) return;
+      throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Failed to serve envelopes: ${e.message}`);
+    }
+    throw e;
   }
 }
 

@@ -259,8 +259,6 @@ export async function getDataColumnSidecarsFromExecution(
   return DataColumnEngineResult.SuccessResolved;
 }
 
-// Execution payload envelopes: rebuild blinded archive entries from EL bodies
-
 /** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
 const MAX_BODIES_REQUEST = 32;
 
@@ -390,6 +388,7 @@ async function reconstructEnvelopesBatch(
   try {
     bodies = await executionEngine.getPayloadBodiesByHashV2(hashes);
   } catch (e) {
+    metrics?.payloadEnvelopeReconstruction.engineErrors.inc();
     throw new EnvelopeReconstructionError(
       {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE},
       `engine_getPayloadBodiesByHashV2 failed: ${(e as Error).message}`

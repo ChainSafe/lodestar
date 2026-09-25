@@ -226,6 +226,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Body root mismatches, by which body differed from the stored root",
         labelNames: ["field"],
       }),
+      engineErrors: register.counter({
+        name: "beacon_payload_envelope_reconstruction_engine_errors_total",
+        help: "engine_getPayloadBodiesByHashV2 round-trips that failed while rebuilding envelopes",
+      }),
     },
 
     blockInputFetchStats: {
