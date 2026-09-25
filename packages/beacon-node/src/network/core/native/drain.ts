@@ -23,7 +23,7 @@ const BLOCK_MAX = 256;
 const REPORT_ENTRY_MAX = 512;
 const REPORT_COUNT_MAX = 100;
 const RETRY_MS = 25;
-/** Consecutive turns whose demand or exchange failed before escalating. */
+/** Consecutive failed turns, each counted once for a failed demand or exchange, before escalating. */
 const FAILURES_MAX = 3;
 
 /** Per-turn bounds of the pump: its time budget and the completions settled per native table. */
@@ -301,11 +301,13 @@ export class NativeDrain {
       const code = (error as {code?: unknown} | null)?.code;
       if (typeof code === "string") this.escalate(1, code);
       this.requeue(batch);
-      if (++this.failures >= FAILURES_MAX) this.escalate(3, error);
+      // A turn whose demand failed has counted already.
+      if (!failed && ++this.failures >= FAILURES_MAX) this.escalate(3, error);
       this.onError(error);
       return "retry";
     }
-    if (stages && !failed) this.failures = 0;
+    // Any exchange that ran without a failed demand ends the run, a settling one after close included.
+    if (!failed) this.failures = 0;
     let held = false;
     let failure: unknown = result.failure;
     try {

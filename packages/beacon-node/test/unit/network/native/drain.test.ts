@@ -335,6 +335,41 @@ describe("native pump", () => {
     expect(node.onError).toHaveBeenCalledTimes(4);
   });
 
+  it("counts a turn whose demand and exchange both failed once", () => {
+    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+    const node = fixture();
+    const queued = immediates();
+    node.stages.demand.mockImplementation(() => {
+      throw new Error("demand failed");
+    });
+    node.runtime.exchange.mockImplementation(() => {
+      throw new Error("exchange failed");
+    });
+    node.drain.request();
+    expect(runUntilEscalated(queued, 20)).toBe(true);
+    expect(node.stages.demand).toHaveBeenCalledTimes(3);
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+    expect(node.runtime.fail).toHaveBeenCalledExactlyOnceWith(3, "demand failed");
+  });
+
+  it("after the host closes, an exchange that settles ends a run of failed ones", () => {
+    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+    const node = fixture();
+    const queued = immediates();
+    node.close();
+    const failure = new Error("exchange failed");
+    const results = [failure, {...idle, more: true}, failure, {...idle, more: true}, failure, idle];
+    node.runtime.exchange.mockImplementation(() => {
+      const result = results.shift() ?? idle;
+      if (result instanceof Error) throw result;
+      return result;
+    });
+    node.drain.request();
+    expect(runUntilEscalated(queued, 40)).toBe(false);
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(6);
+    expect(node.onError).toHaveBeenCalledTimes(3);
+  });
+
   it("a throw before phase B leaves the batch queued and retries on the timer", async () => {
     vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
     const node = fixture();
