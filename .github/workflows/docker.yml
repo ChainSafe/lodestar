@@ -28,6 +28,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
+      # Each arch job emits multiple GitHub/Sigstore attestations. Serializing
+      # avoids transient OIDC token exhaustion across parallel matrix jobs.
+      max-parallel: 1
       matrix:
         include:
           - arch: amd64
