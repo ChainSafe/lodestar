@@ -12,6 +12,7 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import type {HttpRequestTimes} from "./jsonRpcHttpClient.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 import {DATA} from "./utils.js";
@@ -123,13 +124,16 @@ export interface IExecutionEngine {
    * https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-chain.md#on_payload
    *
    * Should be called in advance before, after or in parallel to block processing
+   *
+   * `times`, when given, receives the engine request's transport times.
    */
   notifyNewPayload(
     fork: ForkName,
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    times?: HttpRequestTimes
   ): Promise<ExecutePayloadResponse>;
 
   /**
@@ -174,14 +178,17 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
+  /** `times`, when given, receives the engine request's transport times */
   getBlobs(
     fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
+    buffers?: Uint8Array[],
+    times?: HttpRequestTimes
   ): Promise<BlobAndProofV2[] | null>;
   getBlobs(
     fork: ForkPreFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
+    buffers?: Uint8Array[],
+    times?: HttpRequestTimes
   ): Promise<(BlobAndProof | null)[]>;
 }

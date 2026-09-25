@@ -127,6 +127,8 @@ export type BlockTraceRoot = {
   milestones: (number | null)[];
   /** Signature sets in the BLS worker dispatch that carried the latest attempt's signature job, own sets included */
   signatureDispatchSets: number | null;
+  /** What the first getBlobs call returned: every blob, null for a missing one, or an error */
+  getBlobsResult: "full" | "null" | "error" | null;
   waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
 };
 

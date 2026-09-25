@@ -7,6 +7,7 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
@@ -109,9 +110,18 @@ export async function verifyBlocksInEpoch(
 
   try {
     // Start execution payload verification first (async request to execution client)
+    const executionRequests = attempt ? blockInputs.map(() => new HttpRequestTimes()) : undefined;
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
+        ? verifyBlocksExecutionPayload(
+            this,
+            parentBlock,
+            blockInputs,
+            preState0,
+            abortController.signal,
+            opts,
+            executionRequests
+          )
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
@@ -217,11 +227,15 @@ export async function verifyBlocksInEpoch(
         recordSignatureJobs();
         attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime);
       }, recordSignatureJobs);
+      const recordExecutionRequests = (): void => {
+        executionRequests?.forEach((times, i) => attempt.executionRequest(blockInputs[i].blockRootHex, times));
+      };
       verifyExecutionPayloadsPromise.then((status) => {
+        recordExecutionRequests();
         if (status.execAborted === null && status.executionTime !== undefined) {
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);
         }
-      }, ignore);
+      }, recordExecutionRequests);
     }
 
     // batch all I/O operations to reduce overhead

@@ -1,3 +1,4 @@
+import {subscribe} from "node:diagnostics_channel";
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
@@ -53,7 +54,45 @@ export type ReqOpts = {
   retries?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
+  /** Receives the request's transport times */
+  times?: HttpRequestTimes;
 };
+
+/**
+ * `performance.now()` times of a traced request's latest attempt, NaN until reached. They come from the HTTP client's
+ * diagnostics channels, joined to the request `fetch` creates synchronously; without that join they stay NaN.
+ */
+export class HttpRequestTimes {
+  /** The request, body included, was written to the connection */
+  sent = NaN;
+  /** The response headers reached JS */
+  received = NaN;
+}
+
+type UndiciRequestMessage = {request: object};
+
+/** Traced requests by the HTTP client's request object */
+const tracedRequests = new WeakMap<object, HttpRequestTimes>();
+/** The times of the request `fetch` is creating, set only during the synchronous `fetch` call */
+let creatingTimes: HttpRequestTimes | null = null;
+let subscribed = false;
+
+/** Subscribes to the HTTP client's request events on the first traced request, so untraced processes publish none */
+function subscribeRequestTimes(): void {
+  if (subscribed) return;
+  subscribed = true;
+  subscribe("undici:request:create", (message) => {
+    if (creatingTimes !== null) tracedRequests.set((message as UndiciRequestMessage).request, creatingTimes);
+  });
+  subscribe("undici:request:bodySent", (message) => {
+    const times = tracedRequests.get((message as UndiciRequestMessage).request);
+    if (times !== undefined) times.sent = performance.now();
+  });
+  subscribe("undici:request:headers", (message) => {
+    const times = tracedRequests.get((message as UndiciRequestMessage).request);
+    if (times !== undefined) times.received = performance.now();
+  });
+}
 
 export type JsonRpcHttpClientMetrics = {
   requestTime: Histogram<{routeId: string}>;
@@ -270,12 +309,21 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const res = await fetch(url, {
-        method: "post",
-        body: JSON.stringify(json),
-        headers,
-        signal: controller.signal,
-      });
+      const body = JSON.stringify(json);
+      const times = opts?.times;
+      if (times !== undefined) {
+        subscribeRequestTimes();
+        times.sent = NaN;
+        times.received = NaN;
+        creatingTimes = times;
+      }
+      let response: Promise<Response>;
+      try {
+        response = fetch(url, {method: "post", body, headers, signal: controller.signal});
+      } finally {
+        creatingTimes = null;
+      }
+      const res = await response;
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
       const bodyText = await res.text();

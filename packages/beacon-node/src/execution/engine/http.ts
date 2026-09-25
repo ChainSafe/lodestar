@@ -21,6 +21,7 @@ import {
 } from "./interface.js";
 import {
   ErrorJsonRpcResponse,
+  HttpRequestTimes,
   HttpRpcError,
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
@@ -213,7 +214,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    times?: HttpRequestTimes
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.gloas
@@ -227,6 +229,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
               : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
+    const methodOpts = times === undefined ? notifyNewPayloadOpts : {...notifyNewPayloadOpts, times};
 
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
@@ -253,13 +256,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             parentBeaconBlockRoot,
             serializedExecutionRequests,
           ],
-          methodOpts: notifyNewPayloadOpts,
+          methodOpts,
         };
       } else {
         engineRequest = {
           method: "engine_newPayloadV3",
           params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
-          methodOpts: notifyNewPayloadOpts,
+          methodOpts,
         };
       }
     } else {
@@ -267,7 +270,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       engineRequest = {
         method,
         params: [serializedExecutionPayload],
-        methodOpts: notifyNewPayloadOpts,
+        methodOpts,
       };
     }
 
@@ -495,26 +498,30 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getBlobs(
     fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
+    buffers?: Uint8Array[],
+    times?: HttpRequestTimes
   ): Promise<BlobAndProofV2[] | null>;
   async getBlobs(
     fork: ForkPreFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
+    buffers?: Uint8Array[],
+    times?: HttpRequestTimes
   ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
-    versionedHashes: VersionedHashes
+    versionedHashes: VersionedHashes,
+    _buffers?: Uint8Array[],
+    times?: HttpRequestTimes
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex);
+      return await this.getBlobsV2(versionedHashesHex, undefined, times);
     }
-    return await this.getBlobsV1(versionedHashesHex);
+    return await this.getBlobsV1(versionedHashesHex, times);
   }
 
-  private async getBlobsV1(versionedHashesHex: string[]) {
+  private async getBlobsV1(versionedHashesHex: string[], times?: HttpRequestTimes) {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV1"],
       EngineApiRpcParamTypes["engine_getBlobsV1"]
@@ -523,7 +530,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method: "engine_getBlobsV1",
         params: [versionedHashesHex],
       },
-      getBlobsV1Opts
+      times === undefined ? getBlobsV1Opts : {...getBlobsV1Opts, times}
     );
 
     const invalidLength = response.length !== versionedHashesHex.length;
@@ -537,7 +544,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeBlobAndProofs);
   }
 
-  private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
+  private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[], times?: HttpRequestTimes) {
     if (buffers) {
       if (buffers.length !== versionedHashesHex.length) {
         throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
@@ -558,7 +565,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method: "engine_getBlobsV2",
         params: [versionedHashesHex],
       },
-      getBlobsV2Opts
+      times === undefined ? getBlobsV2Opts : {...getBlobsV2Opts, times}
     );
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found

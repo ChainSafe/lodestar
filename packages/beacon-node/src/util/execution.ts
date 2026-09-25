@@ -7,8 +7,9 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockMilestone, BlockTrace} from "../chain/blockTrace/index.js";
+import {BlockMilestone, BlockTrace, GetBlobsResult} from "../chain/blockTrace/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {HttpRequestTimes} from "../execution/engine/jsonRpcHttpClient.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
@@ -164,11 +165,17 @@ export async function getDataColumnSidecarsFromExecution(
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
   const traced = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex) === true;
+  const times = traced ? new HttpRequestTimes() : undefined;
+  const traceResponse = (result: GetBlobsResult): void => {
+    if (times !== undefined) blockTrace?.getBlobsResponse(input.slot, input.blockRootHex, times, result);
+  };
   const blobs = await executionEngine
-    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers)
-    .finally(() => {
-      if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsResponse);
+    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers, times)
+    .catch((e) => {
+      traceResponse("error");
+      throw e;
     });
+  traceResponse(blobs === null ? "null" : "full");
   timer?.();
 
   // Execution engine was unable to find one or more blobs
@@ -201,6 +208,7 @@ export async function getDataColumnSidecarsFromExecution(
   } finally {
     compTimer?.();
   }
+  if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsUsable);
 
   // Publish columns if and only if subscribed to them
   const previouslyMissingColumns = input.getMissingSampledColumnMeta().missing;

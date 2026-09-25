@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
+import type {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {IBlockInput} from "../blocks/blockInput/types.js";
@@ -37,13 +38,26 @@ export enum BlockMilestone {
   signatureReceipt,
   /** Observed readiness: when the JS continuation ran, after an unknown worker callback delay */
   signaturesDone,
+  /** The newPayload request, body included, was written to the execution client connection */
+  executionDispatch,
+  /** Observed readiness: when the newPayload response headers reached JS */
+  executionReceipt,
   /** Observed readiness: when the JS continuation ran, after an unknown execution client callback delay */
   executionDone,
   /** When all sampled columns, or enough to reconstruct, first became available */
   dataAvailable,
   getBlobsRequest,
+  /** The first getBlobs call's engine request, body included, was written to the execution client connection */
+  getBlobsDispatch,
+  /** Observed readiness: when the first getBlobs call's response headers reached JS */
+  getBlobsReceipt,
   /** Observed readiness: the first getBlobs call's end, after an unknown execution client callback delay */
   getBlobsResponse,
+  /**
+   * Observed readiness: the first getBlobs call's cells were computed and sidecars assembled, when it could satisfy
+   * availability
+   */
+  getBlobsUsable,
   /** Import reached the persistence queue */
   persistenceRequest,
   /** Observed readiness: when the JS continuation ran after the persistence queue had space */
@@ -83,7 +97,13 @@ export type BlockAttempt = {
   markBlock(root: RootHex, milestone: BlockMilestone): void;
   /** Records the stages of `root`'s signature job */
   signatureJob(root: RootHex, times: BlsJobTimes): void;
+  /** Records the transport times of `root`'s newPayload request */
+  executionRequest(root: RootHex, times: HttpRequestTimes): void;
 };
+
+/** What a root's first getBlobs call returned: every blob, null for a missing one, or an error */
+export type GetBlobsResult = "full" | "null" | "error";
+const GETBLOBS_RESULTS: GetBlobsResult[] = ["full", "null", "error"];
 
 const MILESTONE_COUNT = BlockMilestone.head + 1;
 const MILESTONE_NAMES: Record<BlockMilestone, string> = {
@@ -103,10 +123,15 @@ const MILESTONE_NAMES: Record<BlockMilestone, string> = {
   [BlockMilestone.signatureWorkerEnd]: "signature_worker_end",
   [BlockMilestone.signatureReceipt]: "signature_receipt",
   [BlockMilestone.signaturesDone]: "signatures_done",
+  [BlockMilestone.executionDispatch]: "execution_dispatch",
+  [BlockMilestone.executionReceipt]: "execution_receipt",
   [BlockMilestone.executionDone]: "execution_done",
   [BlockMilestone.dataAvailable]: "data_available",
   [BlockMilestone.getBlobsRequest]: "getblobs_request",
+  [BlockMilestone.getBlobsDispatch]: "getblobs_dispatch",
+  [BlockMilestone.getBlobsReceipt]: "getblobs_receipt",
   [BlockMilestone.getBlobsResponse]: "getblobs_response",
+  [BlockMilestone.getBlobsUsable]: "getblobs_usable",
   [BlockMilestone.persistenceRequest]: "persistence_request",
   [BlockMilestone.persistenceUnblock]: "persistence_unblock",
   [BlockMilestone.forkChoice]: "fork_choice",
@@ -116,8 +141,11 @@ const OBSERVED_READINESS = [
   BlockMilestone.prestateReady,
   BlockMilestone.signatureReceipt,
   BlockMilestone.signaturesDone,
+  BlockMilestone.executionReceipt,
   BlockMilestone.executionDone,
+  BlockMilestone.getBlobsReceipt,
   BlockMilestone.getBlobsResponse,
+  BlockMilestone.getBlobsUsable,
   BlockMilestone.persistenceUnblock,
 ];
 /** Milestones of a processing attempt, cleared when a later attempt starts; the others keep their first value */
@@ -134,7 +162,8 @@ const ATTEMPT_MILESTONES = [
 ];
 /**
  * Stages inside an attempt's verification branches, also cleared when a later attempt starts. An imported block may
- * lack them: trusted signatures skip the BLS job, and main-thread verification has no pool stages.
+ * lack them: trusted signatures skip the BLS job, main-thread verification has no pool stages, and request times
+ * need the HTTP client's diagnostics channels.
  */
 const ATTEMPT_STAGES = [
   BlockMilestone.signatureSetsBuilt,
@@ -143,6 +172,8 @@ const ATTEMPT_STAGES = [
   BlockMilestone.signatureWorkerStart,
   BlockMilestone.signatureWorkerEnd,
   BlockMilestone.signatureReceipt,
+  BlockMilestone.executionDispatch,
+  BlockMilestone.executionReceipt,
 ];
 /** Milestones an imported block records; the gossip ones only when it arrived by gossip */
 const EXPECTED_MILESTONES = [
@@ -155,6 +186,9 @@ const EXPECTED_MILESTONES = [
 /** Intervals observed when a slot closes, from the first milestone to the second */
 const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
   ["signature_sets_built_to_worker_end", BlockMilestone.signatureSetsBuilt, BlockMilestone.signatureWorkerEnd],
+  ["execution_dispatch_to_receipt", BlockMilestone.executionDispatch, BlockMilestone.executionReceipt],
+  ["validation_end_to_getblobs_dispatch", BlockMilestone.gossipValidationEnd, BlockMilestone.getBlobsDispatch],
+  ["getblobs_dispatch_to_usable", BlockMilestone.getBlobsDispatch, BlockMilestone.getBlobsUsable],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
 const WAIT_COUNT = BlockWait.processor + 1;
@@ -238,6 +272,8 @@ export class BlockTrace {
   private readonly attempts = new Uint16Array(ENTRIES);
   /** Signature sets in the worker dispatch that carried the latest attempt's signature job, 0 when not recorded */
   private readonly signatureDispatchSets = new Uint16Array(ENTRIES);
+  /** The first getBlobs call's result, 1 + its index in GETBLOBS_RESULTS, 0 when not recorded */
+  private readonly getBlobsResult = new Uint8Array(ENTRIES);
   /** Per root and wait: `performance.now()` begin and end, NaN when not recorded */
   private readonly waitBegin = new Float64Array(ENTRIES * WAIT_COUNT);
   private readonly waitEnd = new Float64Array(ENTRIES * WAIT_COUNT);
@@ -308,6 +344,18 @@ export class BlockTrace {
     );
   }
 
+  /** Records the root's first getBlobs response now, with its request's transport times and what it returned */
+  getBlobsResponse(slot: Slot, root: RootHex, times: HttpRequestTimes, result: GetBlobsResult): void {
+    const e = this.entry(slot, root);
+    if (e < 0) return;
+    const start = this.slotStart[slotIndexOf(e)];
+    this.setMilestone(e, BlockMilestone.getBlobsDispatch, times.sent - start);
+    this.setMilestone(e, BlockMilestone.getBlobsReceipt, times.received - start);
+    if (this.setMilestone(e, BlockMilestone.getBlobsResponse, performance.now() - start)) {
+      this.getBlobsResult[e] = GETBLOBS_RESULTS.indexOf(result) + 1;
+    }
+  }
+
   /**
    * Starts a block processor job's attempt at its blocks now, clearing each block's previous attempt. A block already
    * imported takes no attempt. Returns null when no block is traced.
@@ -363,6 +411,13 @@ export class BlockTrace {
           if (this.generation[entries[i]] === generations[i] && this.closed[slotIndexOf(entries[i])] === 0) {
             this.signatureDispatchSets[entries[i]] = times.dispatchSets;
           }
+        }
+      },
+      executionRequest: (root, times) => {
+        for (let i = 0; i < entries.length; i++) {
+          if (this.roots[entries[i]] !== root) continue;
+          markEntry(i, BlockMilestone.executionDispatch, times.sent, false);
+          markEntry(i, BlockMilestone.executionReceipt, times.received, false);
         }
       },
     };
@@ -538,6 +593,7 @@ export class BlockTrace {
     this.generation[e] = ++this.generations;
     this.attempts[e] = 0;
     this.signatureDispatchSets[e] = 0;
+    this.getBlobsResult[e] = 0;
     this.waitBegin.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     this.waitEnd.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     return e;
@@ -697,6 +753,7 @@ export class BlockTrace {
         attempts: this.attempts[e],
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
+        getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,
         waits: {
           dispatch: this.waitSnapshot(e, BlockWait.dispatch, start),
           processor: this.waitSnapshot(e, BlockWait.processor, start),

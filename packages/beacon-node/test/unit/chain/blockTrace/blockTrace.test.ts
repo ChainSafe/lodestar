@@ -19,6 +19,7 @@ import {
   Step0Result,
   validateGossipAttestationsSameAttData,
 } from "../../../../src/chain/validation/index.js";
+import {HttpRequestTimes} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -202,6 +203,45 @@ describe("BlockTrace", () => {
       milestone: "signature_job_selected",
       outcome: "not_imported",
     });
+  });
+
+  it("records engine request transport times apart from their continuations", () => {
+    const slot = 100;
+    const t = setup(slot);
+    const requestTimes = (sent: number, received: number): HttpRequestTimes =>
+      Object.assign(new HttpRequestTimes(), {sent: performance.now() + sent, received: performance.now() + received});
+    t.at(900);
+    t.trace.gossipValidationStart(slot, "0xaa", (slot * slotMs + 850) / 1000, performance.now());
+    t.at(950);
+    t.trace.mark(slot, "0xaa", BlockMilestone.gossipValidationEnd);
+    const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    t.at(1000);
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(true);
+    t.at(1200);
+    attempt?.executionRequest("0xaa", requestTimes(-150, -20));
+    attempt?.markUnixMs(BlockMilestone.executionDone, Date.now());
+    t.trace.getBlobsResponse(slot, "0xaa", requestTimes(-110, -60), "full");
+    t.at(1300);
+    t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsUsable);
+    // A later call's response is not the first call's
+    t.trace.getBlobsResponse(slot, "0xaa", requestTimes(0, 10), "null");
+
+    expect(t.milestones(slot)).toMatchObject({
+      execution_dispatch: 1050,
+      execution_receipt: 1180,
+      execution_done: 1200,
+      getblobs_request: 1000,
+      getblobs_dispatch: 1090,
+      getblobs_receipt: 1140,
+      getblobs_response: 1200,
+      getblobs_usable: 1300,
+    });
+    expect(t.slot(slot).roots[0].getBlobsResult).toBe("full");
+
+    t.toSlot(slot + 2);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "execution_dispatch_to_receipt"}, 0.13);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "validation_end_to_getblobs_dispatch"}, 0.14);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "getblobs_dispatch_to_usable"}, 0.21);
   });
 
   it("clears a failed attempt, drops its late marks, and takes no attempt after import", () => {

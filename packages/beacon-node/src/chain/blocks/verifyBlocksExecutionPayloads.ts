@@ -12,6 +12,7 @@ import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
+import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -52,6 +53,8 @@ type VerifyBlockExecutionResponse =
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
  *
  * Since the EL client must be aware of each parent, all payloads must be submitted in sequence.
+ *
+ * `requestTimes`, when given, has an entry per block that receives its newPayload request's transport times.
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
@@ -59,7 +62,8 @@ export async function verifyBlocksExecutionPayload(
   blockInputs: IBlockInput[],
   preState0: IBeaconStateView,
   signal: AbortSignal,
-  opts: BlockProcessOpts & ImportBlockOpts
+  opts: BlockProcessOpts & ImportBlockOpts,
+  requestTimes?: HttpRequestTimes[]
 ): Promise<SegmentExecStatus> {
   const executionStatuses: BlockExecutionStatus[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -95,7 +99,7 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
+    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0, requestTimes?.[blockIndex]);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
@@ -140,7 +144,8 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
-  preState0: IBeaconStateView
+  preState0: IBeaconStateView,
+  requestTimes?: HttpRequestTimes
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
@@ -179,7 +184,8 @@ export async function verifyBlockExecutionPayload(
     executionPayloadEnabled,
     versionedHashes,
     parentBlockRoot,
-    executionRequests
+    executionRequests,
+    requestTimes
   );
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
