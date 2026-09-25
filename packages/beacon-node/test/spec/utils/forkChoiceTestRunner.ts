@@ -845,8 +845,6 @@ export const forkChoiceTestRunner =
         timeout: 60000,
         expectFunc: () => {},
         // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
-        // Skip this test because we don't have minimal kzg lib integrated
-        //
         // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
         shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
