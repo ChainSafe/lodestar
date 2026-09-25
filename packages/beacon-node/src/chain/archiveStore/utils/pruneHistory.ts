@@ -1,6 +1,6 @@
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {Logger, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
@@ -12,7 +12,7 @@ export async function pruneHistory(
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch
-): Promise<void> {
+): Promise<Slot> {
   const blockCutoffEpoch = Math.min(
     // set by config, with underflow protection
     Math.max(currentEpoch - config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, 0),
@@ -63,4 +63,6 @@ export async function pruneHistory(
   });
 
   metrics?.pruneHistory.pruneCount.inc();
+
+  return blockCutoffSlot;
 }

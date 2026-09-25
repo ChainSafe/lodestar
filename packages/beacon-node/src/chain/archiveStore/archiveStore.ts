@@ -103,7 +103,7 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      await callFnWhenAwait(
+      const blockCutoffSlot = await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
@@ -116,6 +116,7 @@ export class ArchiveStore {
         30_000,
         this.signal
       );
+      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
     }
 
     if (this.opts.serveHistoricalState) {
@@ -234,7 +235,7 @@ export class ArchiveStore {
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        await pruneHistory(
+        const blockCutoffSlot = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
@@ -242,6 +243,7 @@ export class ArchiveStore {
           finalizedEpoch,
           this.chain.clock.currentEpoch
         );
+        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 

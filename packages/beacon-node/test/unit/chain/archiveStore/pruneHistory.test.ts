@@ -39,8 +39,9 @@ describe("chain / archiveStore / pruneHistory", () => {
       })
     );
 
-    await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+    const blockCutoffSlot = await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
 
+    expect(blockCutoffSlot).toBe(cutoffSlot);
     expect(await db.blockArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
     expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
   });
