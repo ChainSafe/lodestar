@@ -528,7 +528,7 @@ const ExecutionPayloadHeader = new ProgressiveContainerType(
 
 const {payload: _payload, ...envelopeFieldsWithoutPayload} = ExecutionPayloadEnvelope.fields;
 
-/** Same root as ExecutionPayloadEnvelope, so a builder signature verifies against the header form */
+/** Same field positions as ExecutionPayloadEnvelope, so it hashes to the same root */
 export const ExecutionPayloadHeaderEnvelope = new ProgressiveContainerType(
   {
     payloadHeader: ExecutionPayloadHeader,
