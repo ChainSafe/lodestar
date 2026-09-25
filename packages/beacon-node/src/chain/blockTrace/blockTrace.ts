@@ -2,11 +2,11 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
-import type {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
+import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
-import type {BlsJobTimes} from "../bls/index.js";
+import {BlsJobTimes} from "../bls/interface.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
 /** Block critical-path milestones in pipeline order */
@@ -95,10 +95,13 @@ export type BlockAttempt = {
   /** Records `milestone` for every block from an existing Unix timestamp in ms */
   markUnixMs(milestone: BlockMilestone, unixMs: number): void;
   markBlock(root: RootHex, milestone: BlockMilestone): void;
-  /** Records the stages of `root`'s signature job */
-  signatureJob(root: RootHex, times: BlsJobTimes): void;
-  /** Records the transport times of `root`'s newPayload request */
-  executionRequest(root: RootHex, times: HttpRequestTimes): void;
+  /**
+   * Starts `root`'s signature job, returning the record its stages are stamped on, which the trace reads until the
+   * attempt is replaced or the slot closes; undefined when the root is untraced
+   */
+  signatureJob(root: RootHex): BlsJobTimes | undefined;
+  /** Starts `root`'s newPayload request, returning the record of its transport times, read like a signature job's */
+  executionRequest(root: RootHex): HttpRequestTimes | undefined;
 };
 
 /** What a root's first getBlobs call returned: every blob, null for a missing one, or an error */
@@ -182,6 +185,15 @@ const EXPECTED_MILESTONES = [
   BlockMilestone.dataAvailable,
   BlockMilestone.forkChoice,
   BlockMilestone.head,
+];
+/** Milestones read from a signature job's stage record */
+const SIGNATURE_JOB_STAGES: [BlockMilestone, Exclude<keyof BlsJobTimes, "dispatchSets">][] = [
+  [BlockMilestone.signatureSetsBuilt, "built"],
+  [BlockMilestone.signatureJobSelected, "selected"],
+  [BlockMilestone.signatureJobPrepared, "prepared"],
+  [BlockMilestone.signatureWorkerStart, "workerStart"],
+  [BlockMilestone.signatureWorkerEnd, "workerEnd"],
+  [BlockMilestone.signatureReceipt, "received"],
 ];
 /** Intervals observed when a slot closes, from the first milestone to the second */
 const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
@@ -274,6 +286,17 @@ export class BlockTrace {
   private readonly signatureDispatchSets = new Uint16Array(ENTRIES);
   /** The first getBlobs call's result, 1 + its index in GETBLOBS_RESULTS, 0 when not recorded */
   private readonly getBlobsResult = new Uint8Array(ENTRIES);
+  /**
+   * Stage records of each root's operations in flight: the latest attempt's signature job and newPayload request, and
+   * the first getBlobs call. Snapshots read them, and the slot's close reads them a last time and drops them.
+   */
+  private readonly signatureJobs: (BlsJobTimes | null)[] = new Array<BlsJobTimes | null>(ENTRIES).fill(null);
+  private readonly executionRequests: (HttpRequestTimes | null)[] = new Array<HttpRequestTimes | null>(ENTRIES).fill(
+    null
+  );
+  private readonly getBlobsRequests: (HttpRequestTimes | null)[] = new Array<HttpRequestTimes | null>(ENTRIES).fill(
+    null
+  );
   /** What first completed each root's data, null when not recorded */
   private readonly dataAvailableVia: (DataAvailableVia | null)[] = new Array<DataAvailableVia | null>(ENTRIES).fill(
     null
@@ -345,22 +368,30 @@ export class BlockTrace {
     }
   }
 
-  /** Records whether this is the root's first getBlobs call, whose response is recorded */
-  getBlobsRequest(slot: Slot, root: RootHex): boolean {
+  /**
+   * Records the root's first getBlobs call now, returning the record of its engine request's transport times, read like
+   * a signature job's; undefined for a later call or an untraced root
+   */
+  getBlobsRequest(slot: Slot, root: RootHex): HttpRequestTimes | undefined {
     const e = this.entry(slot, root);
-    return (
-      e >= 0 && this.setMilestone(e, BlockMilestone.getBlobsRequest, performance.now() - this.slotStart[slotIndexOf(e)])
-    );
+    if (
+      e < 0 ||
+      !this.setMilestone(e, BlockMilestone.getBlobsRequest, performance.now() - this.slotStart[slotIndexOf(e)])
+    ) {
+      return undefined;
+    }
+    const times = new HttpRequestTimes();
+    this.getBlobsRequests[e] = times;
+    return times;
   }
 
-  /** Records the root's first getBlobs response now, with its request's transport times and what it returned */
-  getBlobsResponse(slot: Slot, root: RootHex, times: HttpRequestTimes, result: GetBlobsResult): void {
+  /** Records the root's first getBlobs response now and what it returned */
+  getBlobsResponse(slot: Slot, root: RootHex, result: GetBlobsResult): void {
     const e = this.entry(slot, root);
-    if (e < 0) return;
-    const start = this.slotStart[slotIndexOf(e)];
-    this.setMilestone(e, BlockMilestone.getBlobsDispatch, times.sent - start);
-    this.setMilestone(e, BlockMilestone.getBlobsReceipt, times.received - start);
-    if (this.setMilestone(e, BlockMilestone.getBlobsResponse, performance.now() - start)) {
+    if (
+      e >= 0 &&
+      this.setMilestone(e, BlockMilestone.getBlobsResponse, performance.now() - this.slotStart[slotIndexOf(e)])
+    ) {
       this.getBlobsResult[e] = GETBLOBS_RESULTS.indexOf(result) + 1;
     }
   }
@@ -383,6 +414,8 @@ export class BlockTrace {
       for (const m of ATTEMPT_MILESTONES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       for (const m of ATTEMPT_STAGES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       this.signatureDispatchSets[e] = 0;
+      this.signatureJobs[e] = null;
+      this.executionRequests[e] = null;
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
       this.setWait(e, BlockWait.processor, waitFrom, now);
       entries.push(e);
@@ -396,6 +429,15 @@ export class BlockTrace {
       if (this.generation[e] !== generations[i] || this.closed[s] === 1) return;
       this.setMilestone(e, milestone, unix ? at - this.slotStartMs(this.slotOf[s]) : at - this.slotStart[s]);
     };
+    /** The entry of `root` while this attempt is its latest and its slot is open, else -1 */
+    const currentEntry = (root: RootHex): number => {
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        if (this.roots[e] !== root) continue;
+        return this.generation[e] === generations[i] && this.closed[slotIndexOf(e)] === 0 ? e : -1;
+      }
+      return -1;
+    };
     return {
       mark: (milestone, at = performance.now()) => {
         for (let i = 0; i < entries.length; i++) markEntry(i, milestone, at, false);
@@ -408,26 +450,19 @@ export class BlockTrace {
         for (let i = 0; i < entries.length; i++)
           if (this.roots[entries[i]] === root) markEntry(i, milestone, at, false);
       },
-      signatureJob: (root, times) => {
-        for (let i = 0; i < entries.length; i++) {
-          if (this.roots[entries[i]] !== root) continue;
-          markEntry(i, BlockMilestone.signatureSetsBuilt, times.built, false);
-          markEntry(i, BlockMilestone.signatureJobSelected, times.selected, false);
-          markEntry(i, BlockMilestone.signatureJobPrepared, times.prepared, false);
-          markEntry(i, BlockMilestone.signatureWorkerStart, times.workerStart, false);
-          markEntry(i, BlockMilestone.signatureWorkerEnd, times.workerEnd, false);
-          markEntry(i, BlockMilestone.signatureReceipt, times.received, false);
-          if (this.generation[entries[i]] === generations[i] && this.closed[slotIndexOf(entries[i])] === 0) {
-            this.signatureDispatchSets[entries[i]] = times.dispatchSets;
-          }
-        }
+      signatureJob: (root) => {
+        const e = currentEntry(root);
+        if (e < 0) return undefined;
+        const times = new BlsJobTimes();
+        this.signatureJobs[e] = times;
+        return times;
       },
-      executionRequest: (root, times) => {
-        for (let i = 0; i < entries.length; i++) {
-          if (this.roots[entries[i]] !== root) continue;
-          markEntry(i, BlockMilestone.executionDispatch, times.sent, false);
-          markEntry(i, BlockMilestone.executionReceipt, times.received, false);
-        }
+      executionRequest: (root) => {
+        const e = currentEntry(root);
+        if (e < 0) return undefined;
+        const times = new HttpRequestTimes();
+        this.executionRequests[e] = times;
+        return times;
       },
     };
   }
@@ -603,6 +638,9 @@ export class BlockTrace {
     this.attempts[e] = 0;
     this.signatureDispatchSets[e] = 0;
     this.getBlobsResult[e] = 0;
+    this.signatureJobs[e] = null;
+    this.executionRequests[e] = null;
+    this.getBlobsRequests[e] = null;
     this.dataAvailableVia[e] = null;
     this.waitBegin.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
     this.waitEnd.fill(NaN, e * WAIT_COUNT, (e + 1) * WAIT_COUNT);
@@ -659,19 +697,47 @@ export class BlockTrace {
     if (this.segmentsWritten > SEGMENT_LOG_SIZE && oldest > begin) this.waitTruncated[w] = 1;
   }
 
+  /** Copies the stages a root's records have reached into its milestones; a record keeps each stage's latest value */
+  private readStages(e: number): void {
+    const start = this.slotStart[slotIndexOf(e)];
+    const offset = e * MILESTONE_COUNT;
+    const job = this.signatureJobs[e];
+    if (job !== null) {
+      for (const [m, stage] of SIGNATURE_JOB_STAGES) this.milestones[offset + m] = job[stage] - start;
+      this.signatureDispatchSets[e] = job.dispatchSets;
+    }
+    const execution = this.executionRequests[e];
+    if (execution !== null) {
+      this.milestones[offset + BlockMilestone.executionDispatch] = execution.sent - start;
+      this.milestones[offset + BlockMilestone.executionReceipt] = execution.received - start;
+    }
+    const getBlobs = this.getBlobsRequests[e];
+    if (getBlobs !== null) {
+      this.milestones[offset + BlockMilestone.getBlobsDispatch] = getBlobs.sent - start;
+      this.milestones[offset + BlockMilestone.getBlobsReceipt] = getBlobs.received - start;
+    }
+  }
+
   private outcome(e: number): "head" | "imported" | "not_imported" {
     if (this.has(e, BlockMilestone.head)) return "head";
     return this.has(e, BlockMilestone.forkChoice) ? "imported" : "not_imported";
   }
 
   private closeSlot(s: number): void {
+    const first = s * ROOTS_PER_SLOT;
+    const last = first + this.rootCount[s];
+    // Keep the stages operations still in flight have reached, and none after
+    for (let e = first; e < last; e++) {
+      this.readStages(e);
+      this.signatureJobs[e] = null;
+      this.executionRequests[e] = null;
+      this.getBlobsRequests[e] = null;
+    }
     this.closed[s] = 1;
     const metrics = this.metrics?.blockTrace;
     if (!metrics) return;
     const slot = this.slotOf[s];
     const due = this.getTargets(slot)[BLOCK_TARGET] ?? 0;
-    const first = s * ROOTS_PER_SLOT;
-    const last = first + this.rootCount[s];
 
     if (this.attDataCount[s] > 0) {
       const ms = this.attDataMs[s];
@@ -758,6 +824,7 @@ export class BlockTrace {
     const roots: routes.lodestar.BlockTraceRoot[] = [];
     const first = s * ROOTS_PER_SLOT;
     for (let e = first; e < first + this.rootCount[s]; e++) {
+      this.readStages(e);
       const milestones: (number | null)[] = [];
       for (let m = 0; m < MILESTONE_COUNT; m++) {
         const ms = this.milestones[e * MILESTONE_COUNT + m];

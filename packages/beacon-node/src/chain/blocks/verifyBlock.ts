@@ -7,11 +7,9 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
-import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
-import {BlsJobTimes} from "../bls/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -110,7 +108,7 @@ export async function verifyBlocksInEpoch(
 
   try {
     // Start execution payload verification first (async request to execution client)
-    const executionRequests = attempt ? blockInputs.map(() => new HttpRequestTimes()) : undefined;
+    const executionRequests = attempt ? blockInputs.map((b) => attempt.executionRequest(b.blockRootHex)) : undefined;
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
         ? verifyBlocksExecutionPayload(
@@ -199,7 +197,7 @@ export async function verifyBlocksInEpoch(
     // All signatures at once
     // TODO GLOAS: can verify payload signatures in batch too
     // maybe chain with the above verifyBlocksSignatures()
-    const signatureJobs = attempt ? blocks.map(() => new BlsJobTimes()) : undefined;
+    const signatureJobs = attempt ? blockInputs.map((b) => attempt.signatureJob(b.blockRootHex)) : undefined;
     const signaturesPromise = verifyBlocksSignatures(
       this.config,
       this.bls,
@@ -219,23 +217,15 @@ export async function verifyBlocksInEpoch(
         ({verifyStateTime}) => attempt.markUnixMs(BlockMilestone.stateTransitionEnd, verifyStateTime),
         ignore
       );
-      // A branch's stages are recorded however it ends
-      const recordSignatureJobs = (): void => {
-        signatureJobs?.forEach((times, i) => attempt.signatureJob(blockInputs[i].blockRootHex, times));
-      };
-      signaturesPromise.then(({verifySignaturesTime}) => {
-        recordSignatureJobs();
-        attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime);
-      }, recordSignatureJobs);
-      const recordExecutionRequests = (): void => {
-        executionRequests?.forEach((times, i) => attempt.executionRequest(blockInputs[i].blockRootHex, times));
-      };
+      signaturesPromise.then(
+        ({verifySignaturesTime}) => attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime),
+        ignore
+      );
       verifyExecutionPayloadsPromise.then((status) => {
-        recordExecutionRequests();
         if (status.execAborted === null && status.executionTime !== undefined) {
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);
         }
-      }, recordExecutionRequests);
+      }, ignore);
     }
 
     // batch all I/O operations to reduce overhead

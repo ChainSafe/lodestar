@@ -20,7 +20,7 @@ import {ImportBlockOpts} from "./types.js";
  *
  * Since all data is known in advance all signatures are verified at once in parallel.
  *
- * `jobTimes`, when given, has an entry per block that receives its verification's stage times.
+ * `jobTimes`, when given, has an entry per block that, when defined, receives its verification's stage times.
  */
 export async function verifyBlocksSignatures(
   config: BeaconConfig,
@@ -31,7 +31,7 @@ export async function verifyBlocksSignatures(
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts,
-  jobTimes?: BlsJobTimes[]
+  jobTimes?: (BlsJobTimes | undefined)[]
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);

@@ -11,7 +11,6 @@ import {
   getConsumerTargetsMs,
   isSampledSlot,
 } from "../../../../src/chain/blockTrace/index.js";
-import {BlsJobTimes} from "../../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenAttesters} from "../../../../src/chain/seenCache/seenAttesters.js";
 import {
@@ -19,7 +18,6 @@ import {
   Step0Result,
   validateGossipAttestationsSameAttData,
 } from "../../../../src/chain/validation/index.js";
-import {HttpRequestTimes} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -162,28 +160,33 @@ describe("BlockTrace", () => {
     expect(t.metrics.wait.observe).toHaveBeenCalledWith({wait: "processor"}, 0);
   });
 
-  it("records a block's signature job stages per root, and drops a replaced attempt's", () => {
+  it("reads a block's signature job stages per root, and drops a replaced attempt's", () => {
     const slot = 100;
     const t = setup(slot);
     const [a, b] = [block(slot, "0xaa"), block(slot, "0xbb")];
     t.at(1000);
     const first = t.trace.startAttempt([a], performance.now());
+    const replaced = first?.signatureJob("0xaa");
     t.at(1100);
     const second = t.trace.startAttempt([a, b], performance.now());
-    const times = (at: number): BlsJobTimes =>
-      Object.assign(new BlsJobTimes(), {
-        built: performance.now() + at,
-        selected: performance.now() + at + 5,
-        prepared: performance.now() + at + 6,
-        workerStart: performance.now() + at + 8,
-        workerEnd: performance.now() + at + 40,
-        received: performance.now() + at + 45,
-        dispatchSets: 12,
-      });
-    first?.signatureJob("0xaa", times(-50));
-    second?.signatureJob("0xbb", times(100));
-    // A verification the pool never dispatched leaves its later stages unrecorded
-    second?.signatureJob("0xaa", Object.assign(new BlsJobTimes(), {built: performance.now() + 100}));
+    const jobA = second?.signatureJob("0xaa");
+    const jobB = second?.signatureJob("0xbb");
+    expect(first?.signatureJob("0xaa")).toBeUndefined();
+    expect(second?.signatureJob("0xcc")).toBeUndefined();
+    if (!replaced || !jobA || !jobB) throw Error("Untraced signature job");
+    const at = performance.now() + 100;
+    replaced.built = at - 150;
+    // A verification the pool has not dispatched has no later stages yet
+    jobA.built = at;
+    Object.assign(jobB, {
+      built: at,
+      selected: at + 5,
+      prepared: at + 6,
+      workerStart: at + 8,
+      workerEnd: at + 40,
+      received: at + 45,
+      dispatchSets: 12,
+    });
 
     expect(t.milestones(slot, 0)).toMatchObject({
       signature_sets_built: 1200,
@@ -212,23 +215,25 @@ describe("BlockTrace", () => {
   it("records engine request transport times apart from their continuations", () => {
     const slot = 100;
     const t = setup(slot);
-    const requestTimes = (sent: number, received: number): HttpRequestTimes =>
-      Object.assign(new HttpRequestTimes(), {sent: performance.now() + sent, received: performance.now() + received});
     t.at(900);
     t.trace.gossipValidationStart(slot, "0xaa", (slot * slotMs + 850) / 1000, performance.now());
     t.at(950);
     t.trace.mark(slot, "0xaa", BlockMilestone.gossipValidationEnd);
     const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    const execution = attempt?.executionRequest("0xaa");
     t.at(1000);
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(true);
+    const getBlobs = t.trace.getBlobsRequest(slot, "0xaa");
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeUndefined();
+    if (!execution || !getBlobs) throw Error("Untraced request");
     t.at(1200);
-    attempt?.executionRequest("0xaa", requestTimes(-150, -20));
+    Object.assign(execution, {sent: performance.now() - 150, received: performance.now() - 20});
     attempt?.markUnixMs(BlockMilestone.executionDone, Date.now());
-    t.trace.getBlobsResponse(slot, "0xaa", requestTimes(-110, -60), "full");
+    Object.assign(getBlobs, {sent: performance.now() - 110, received: performance.now() - 60});
+    t.trace.getBlobsResponse(slot, "0xaa", "full");
     t.at(1300);
     t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsUsable);
     // A later call's response is not the first call's
-    t.trace.getBlobsResponse(slot, "0xaa", requestTimes(0, 10), "null");
+    t.trace.getBlobsResponse(slot, "0xaa", "null");
 
     expect(t.milestones(slot)).toMatchObject({
       execution_dispatch: 1050,
@@ -246,6 +251,43 @@ describe("BlockTrace", () => {
     expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "execution_dispatch_to_receipt"}, 0.13);
     expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "validation_end_to_getblobs_dispatch"}, 0.14);
     expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "getblobs_dispatch_to_usable"}, 0.21);
+  });
+
+  it("keeps the stages an operation reached before its slot closed, and none after", () => {
+    const slot = 100;
+    const t = setup(slot);
+    t.at(1000);
+    const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    const job = attempt?.signatureJob("0xaa");
+    const execution = attempt?.executionRequest("0xaa");
+    const getBlobs = t.trace.getBlobsRequest(slot, "0xaa");
+    if (!job || !execution || !getBlobs) throw Error("Untraced operation");
+    t.at(1050);
+    Object.assign(job, {built: performance.now(), selected: performance.now()});
+    execution.sent = performance.now();
+    getBlobs.sent = performance.now();
+
+    // Dispatched and still waiting when the slot closes
+    t.toSlot(slot + 2);
+    job.received = performance.now();
+    execution.received = performance.now();
+    getBlobs.received = performance.now();
+    t.trace.getBlobsResponse(slot, "0xaa", "full");
+
+    expect(t.milestones(slot)).toMatchObject({
+      signature_sets_built: 1050,
+      signature_job_selected: 1050,
+      signature_receipt: null,
+      execution_dispatch: 1050,
+      execution_receipt: null,
+      getblobs_request: 1000,
+      getblobs_dispatch: 1050,
+      getblobs_receipt: null,
+      getblobs_response: null,
+    });
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "execution_dispatch"}, 1.05);
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "getblobs_dispatch"}, 1.05);
+    expect(t.metrics.milestone.observe).not.toHaveBeenCalledWith({milestone: "getblobs_receipt"}, expect.anything());
   });
 
   it("clears a failed attempt, drops its late marks, and takes no attempt after import", () => {
@@ -474,9 +516,9 @@ describe("BlockTrace", () => {
     const slot = 100;
     const t = setup(slot);
     t.at(1000);
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(true);
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeDefined();
     t.at(1100);
-    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBe(false);
+    expect(t.trace.getBlobsRequest(slot, "0xaa")).toBeUndefined();
     t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsResponse);
     t.at(1200);
     t.trace.mark(slot, "0xaa", BlockMilestone.head);

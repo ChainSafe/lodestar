@@ -54,7 +54,8 @@ type VerifyBlockExecutionResponse =
  *
  * Since the EL client must be aware of each parent, all payloads must be submitted in sequence.
  *
- * `requestTimes`, when given, has an entry per block that receives its newPayload request's transport times.
+ * `requestTimes`, when given, has an entry per block that, when defined, receives its newPayload request's transport
+ * times.
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
@@ -63,7 +64,7 @@ export async function verifyBlocksExecutionPayload(
   preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts,
-  requestTimes?: HttpRequestTimes[]
+  requestTimes?: (HttpRequestTimes | undefined)[]
 ): Promise<SegmentExecStatus> {
   const executionStatuses: BlockExecutionStatus[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
