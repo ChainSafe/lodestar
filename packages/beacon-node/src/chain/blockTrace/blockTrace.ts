@@ -6,6 +6,7 @@ import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
+import {DispatchArm} from "../blocks/dispatchGate.js";
 import {BlsJobTimes} from "../bls/interface.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
@@ -109,6 +110,8 @@ export type BlockAttempt = {
   signatureJob(root: RootHex): BlsJobTimes | undefined;
   /** Starts `root`'s newPayload request, returning the record of its transport times, read like a signature job's */
   executionRequest(root: RootHex): HttpRequestTimes | undefined;
+  /** Records every block's dispatch experiment arm, null when the attempt takes none */
+  recordArm(arm: DispatchArm | null): void;
 };
 
 /** What a root's first getBlobs call returned: every blob, null for a missing one, or an error */
@@ -208,6 +211,16 @@ const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
   ["execution_dispatch_to_receipt", BlockMilestone.executionDispatch, BlockMilestone.executionReceipt],
   ["validation_end_to_getblobs_dispatch", BlockMilestone.gossipValidationEnd, BlockMilestone.getBlobsDispatch],
   ["getblobs_dispatch_to_usable", BlockMilestone.getBlobsDispatch, BlockMilestone.getBlobsUsable],
+  ["gossip_admission_to_fork_choice", BlockMilestone.gossipAdmission, BlockMilestone.forkChoice],
+  ["gossip_admission_to_data_available", BlockMilestone.gossipAdmission, BlockMilestone.dataAvailable],
+  ["prestate_ready_to_state_transition_start", BlockMilestone.prestateReady, BlockMilestone.stateTransitionStart],
+  ["state_transition_start_to_end", BlockMilestone.stateTransitionStart, BlockMilestone.stateTransitionEnd],
+  [
+    "state_transition_start_to_execution_dispatch",
+    BlockMilestone.stateTransitionStart,
+    BlockMilestone.executionDispatch,
+  ],
+  ["state_transition_start_to_getblobs_dispatch", BlockMilestone.stateTransitionStart, BlockMilestone.getBlobsDispatch],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
 const WAIT_COUNT = BlockWait.processor + 1;
@@ -216,6 +229,9 @@ const WAIT_NAMES: Record<BlockWait, "dispatch" | "processor"> = {
   [BlockWait.processor]: "processor",
 };
 const ATTESTATION_DATA = "attestation_data";
+/** Dispatch experiment arm labels, by 1 + the arm's index in ARMS, 0 for none */
+const ARMS = [DispatchArm.control, DispatchArm.treatment];
+const ARM_LABELS = ["none", ...ARMS];
 /** Every fork's head vote consumes the block, so each block milestone is measured against the attestation target */
 const BLOCK_TARGET = ConsumerTarget.attestationDue;
 
@@ -293,6 +309,8 @@ export class BlockTrace {
   private readonly signatureDispatchSets = new Uint16Array(ENTRIES);
   /** The first getBlobs call's result, 1 + its index in GETBLOBS_RESULTS, 0 when not recorded */
   private readonly getBlobsResult = new Uint8Array(ENTRIES);
+  /** The latest attempt's dispatch experiment arm, 1 + its index in ARMS, 0 when it took none */
+  private readonly arms = new Uint8Array(ENTRIES);
   /**
    * Stage records of each root's operations in flight: the latest attempt's signature job and newPayload request, and
    * the first getBlobs call. Snapshots read them, and the slot's close reads them a last time and drops them.
@@ -421,6 +439,7 @@ export class BlockTrace {
       for (const m of ATTEMPT_MILESTONES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       for (const m of ATTEMPT_STAGES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       this.signatureDispatchSets[e] = 0;
+      this.arms[e] = 0;
       this.signatureJobs[e] = null;
       this.executionRequests[e] = null;
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
@@ -470,6 +489,12 @@ export class BlockTrace {
         const times = new HttpRequestTimes();
         this.executionRequests[e] = times;
         return times;
+      },
+      recordArm: (arm) => {
+        for (const block of blocks) {
+          const e = currentEntry(block.blockRootHex);
+          if (e >= 0) this.arms[e] = arm === null ? 0 : ARMS.indexOf(arm) + 1;
+        }
       },
     };
   }
@@ -645,6 +670,7 @@ export class BlockTrace {
     this.attempts[e] = 0;
     this.signatureDispatchSets[e] = 0;
     this.getBlobsResult[e] = 0;
+    this.arms[e] = 0;
     this.signatureJobs[e] = null;
     this.executionRequests[e] = null;
     this.getBlobsRequests[e] = null;
@@ -748,24 +774,31 @@ export class BlockTrace {
 
     if (this.attDataCount[s] > 0) {
       const ms = this.attDataMs[s];
-      metrics.milestone.observe({milestone: ATTESTATION_DATA}, ms / 1000);
-      metrics.milestoneToTarget.observe({milestone: ATTESTATION_DATA, target: BLOCK_TARGET}, (ms - due) / 1000);
-      if (ms > due) metrics.milestoneLate.inc({milestone: ATTESTATION_DATA});
+      // The arm of the slot's block the data selected
+      let arm = ARM_LABELS[0];
       let selected = last > first ? "other_root" : "no_block";
-      for (let e = first; e < last; e++) if (this.roots[e] === this.attDataRoot[s]) selected = "slot_block";
+      for (let e = first; e < last; e++) {
+        if (this.roots[e] !== this.attDataRoot[s]) continue;
+        selected = "slot_block";
+        arm = ARM_LABELS[this.arms[e]];
+      }
+      metrics.milestone.observe({milestone: ATTESTATION_DATA, arm}, ms / 1000);
+      metrics.milestoneToTarget.observe({milestone: ATTESTATION_DATA, target: BLOCK_TARGET, arm}, (ms - due) / 1000);
+      if (ms > due) metrics.milestoneLate.inc({milestone: ATTESTATION_DATA});
       metrics.attestationData.inc({selected});
     }
 
     for (let e = first; e < last; e++) {
       const outcome = this.outcome(e);
-      metrics.blocks.inc({outcome});
+      const arm = ARM_LABELS[this.arms[e]];
+      metrics.blocks.inc({outcome, arm});
       const offset = e * MILESTONE_COUNT;
       for (let m = 0; m < MILESTONE_COUNT; m++) {
         const ms = this.milestones[offset + m];
         if (Number.isNaN(ms)) continue;
         const milestone = MILESTONE_NAMES[m as BlockMilestone];
-        metrics.milestone.observe({milestone}, ms / 1000);
-        metrics.milestoneToTarget.observe({milestone, target: BLOCK_TARGET}, (ms - due) / 1000);
+        metrics.milestone.observe({milestone, arm}, ms / 1000);
+        metrics.milestoneToTarget.observe({milestone, target: BLOCK_TARGET, arm}, (ms - due) / 1000);
         if (ms > due) metrics.milestoneLate.inc({milestone});
       }
       for (const m of EXPECTED_MILESTONES) {
@@ -779,10 +812,12 @@ export class BlockTrace {
       const persistence =
         this.milestones[offset + BlockMilestone.persistenceUnblock] -
         this.milestones[offset + BlockMilestone.persistenceRequest];
-      if (!Number.isNaN(persistence)) metrics.wait.observe({wait: "persistence"}, Math.max(0, persistence) / 1000);
+      if (!Number.isNaN(persistence)) {
+        metrics.wait.observe({wait: "persistence", arm}, Math.max(0, persistence) / 1000);
+      }
       for (const [interval, from, to] of INTERVALS) {
         const ms = this.milestones[offset + to] - this.milestones[offset + from];
-        if (!Number.isNaN(ms)) metrics.interval.observe({interval}, ms / 1000);
+        if (!Number.isNaN(ms)) metrics.interval.observe({interval, arm}, ms / 1000);
       }
       const via = this.dataAvailableVia[e];
       if (via !== null) {
@@ -796,7 +831,7 @@ export class BlockTrace {
         const w = e * WAIT_COUNT + wait;
         if (Number.isNaN(this.waitBegin[w])) continue;
         const name = WAIT_NAMES[wait as BlockWait];
-        metrics.wait.observe({wait: name}, (this.waitEnd[w] - this.waitBegin[w]) / 1000);
+        metrics.wait.observe({wait: name, arm}, (this.waitEnd[w] - this.waitBegin[w]) / 1000);
         metrics.waitAttestationSegments.observe({wait: name, kind: "start"}, this.waitStarts[w]);
         metrics.waitAttestationSegments.observe({wait: name, kind: "continuation"}, this.waitContinuations[w]);
         const truncated = this.waitTruncated[w] === 1;
@@ -842,6 +877,7 @@ export class BlockTrace {
         root: this.roots[e] as RootHex,
         outcome: outcome === "not_imported" && this.closed[s] === 0 ? "pending" : outcome,
         attempts: this.attempts[e],
+        arm: this.arms[e] === 0 ? null : ARMS[this.arms[e] - 1],
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,

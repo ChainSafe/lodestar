@@ -59,6 +59,12 @@ export type IChainOptions = BlockProcessOpts &
     blockTrace?: boolean;
     /** Time synchronous gossip attestation segments in the block trace's sampled slots */
     blockTraceAttestationTiming?: boolean;
+    /** Seed of the dispatch experiment's crossover schedule, set with its start epoch and pairs */
+    dispatchGateSeed?: number;
+    /** First epoch of the dispatch experiment's crossover schedule */
+    dispatchGateStartEpoch?: number;
+    /** Pairs of arms in the dispatch experiment's crossover schedule, after which blocks are control */
+    dispatchGatePairs?: number;
   };
 
 export type BlockProcessOpts = {

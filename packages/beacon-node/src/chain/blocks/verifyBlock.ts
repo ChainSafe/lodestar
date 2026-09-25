@@ -73,6 +73,7 @@ export async function verifyBlocksInEpoch(
 
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
+  attempt?.recordArm(this.dispatchGate.armOf(blockInputs, opts));
 
   attempt?.mark(BlockMilestone.prestateRequest);
   // TODO: Skip in process chain segment

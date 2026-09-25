@@ -4,6 +4,7 @@ import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {BlockInputSource, DataAvailableVia, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
+import {DispatchArm} from "../../../../src/chain/blocks/dispatchGate.js";
 import {
   BlockMilestone,
   BlockTrace,
@@ -150,14 +151,14 @@ describe("BlockTrace", () => {
     expect(t.slot(slot).closed).toBe(true);
     expect(t.slot(slot).roots[0].outcome).toBe("not_imported");
     expect(t.milestones(slot)).toMatchObject({state_transition_end: 1300, signatures_done: 1400, data_available: null});
-    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "not_imported"});
-    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "signatures_done"}, 1.4);
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "not_imported", arm: "none"});
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "signatures_done", arm: "none"}, 1.4);
     expect(t.metrics.milestoneMissing.inc).toHaveBeenCalledWith({milestone: "data_available", outcome: "not_imported"});
     expect(t.metrics.milestoneMissing.inc).not.toHaveBeenCalledWith({
       milestone: "signatures_done",
       outcome: "not_imported",
     });
-    expect(t.metrics.wait.observe).toHaveBeenCalledWith({wait: "processor"}, 0);
+    expect(t.metrics.wait.observe).toHaveBeenCalledWith({wait: "processor", arm: "none"}, 0);
   });
 
   it("reads a block's signature job stages per root, and drops a replaced attempt's", () => {
@@ -205,7 +206,10 @@ describe("BlockTrace", () => {
     expect(t.slot(slot).roots[1].signatureDispatchSets).toBe(12);
 
     t.toSlot(slot + 2);
-    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "signature_sets_built_to_worker_end"}, 0.04);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "signature_sets_built_to_worker_end", arm: "none"},
+      0.04
+    );
     expect(t.metrics.milestoneMissing.inc).not.toHaveBeenCalledWith({
       milestone: "signature_job_selected",
       outcome: "not_imported",
@@ -248,9 +252,58 @@ describe("BlockTrace", () => {
     expect(t.slot(slot).roots[0].getBlobsResult).toBe("full");
 
     t.toSlot(slot + 2);
-    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "execution_dispatch_to_receipt"}, 0.13);
-    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "validation_end_to_getblobs_dispatch"}, 0.14);
-    expect(t.metrics.interval.observe).toHaveBeenCalledWith({interval: "getblobs_dispatch_to_usable"}, 0.21);
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "execution_dispatch_to_receipt", arm: "none"},
+      0.13
+    );
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "validation_end_to_getblobs_dispatch", arm: "none"},
+      0.14
+    );
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "getblobs_dispatch_to_usable", arm: "none"},
+      0.21
+    );
+  });
+
+  it("labels a root's observations with its latest attempt's dispatch arm", () => {
+    const slot = 100;
+    const t = setup(slot);
+    const [a, b] = [block(slot, "0xaa"), block(slot, "0xbb")];
+    t.at(900);
+    t.trace.gossipValidationStart(slot, "0xaa", (slot * slotMs + 850) / 1000, performance.now());
+    t.trace.startAttempt([a], performance.now())?.recordArm(DispatchArm.control);
+    t.at(1000);
+    const attempt = t.trace.startAttempt([a], performance.now());
+    expect(t.slot(slot).roots[0].arm).toBeNull();
+    attempt?.recordArm(DispatchArm.treatment);
+    const execution = attempt?.executionRequest("0xaa");
+    if (!execution) throw Error("Untraced request");
+    execution.sent = performance.now() + 10;
+    t.at(1020);
+    attempt?.mark(BlockMilestone.stateTransitionStart);
+    t.at(1100);
+    t.trace.mark(slot, "0xaa", BlockMilestone.forkChoice);
+    t.trace.startAttempt([b], performance.now())?.recordArm(null);
+    t.at(attestationDueMs);
+    t.trace.attestationData(slot, "0xaa", performance.now());
+    expect(t.slot(slot).roots.map((r) => r.arm)).toEqual([DispatchArm.treatment, null]);
+
+    t.toSlot(slot + 2);
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "imported", arm: "treatment"});
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "not_imported", arm: "none"});
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "state_transition_start_to_execution_dispatch", arm: "treatment"},
+      -0.01
+    );
+    expect(t.metrics.interval.observe).toHaveBeenCalledWith(
+      {interval: "gossip_admission_to_fork_choice", arm: "treatment"},
+      0.25
+    );
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith(
+      {milestone: "attestation_data", arm: "treatment"},
+      attestationDueMs / 1000
+    );
   });
 
   it("keeps the stages an operation reached before its slot closed, and none after", () => {
@@ -285,9 +338,12 @@ describe("BlockTrace", () => {
       getblobs_receipt: null,
       getblobs_response: null,
     });
-    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "execution_dispatch"}, 1.05);
-    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "getblobs_dispatch"}, 1.05);
-    expect(t.metrics.milestone.observe).not.toHaveBeenCalledWith({milestone: "getblobs_receipt"}, expect.anything());
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "execution_dispatch", arm: "none"}, 1.05);
+    expect(t.metrics.milestone.observe).toHaveBeenCalledWith({milestone: "getblobs_dispatch", arm: "none"}, 1.05);
+    expect(t.metrics.milestone.observe).not.toHaveBeenCalledWith(
+      {milestone: "getblobs_receipt", arm: "none"},
+      expect.anything()
+    );
   });
 
   it("clears a failed attempt, drops its late marks, and takes no attempt after import", () => {
@@ -537,10 +593,10 @@ describe("BlockTrace", () => {
     expect(t.metrics.attestationData.inc).toHaveBeenCalledWith({selected: "slot_block"});
     expect(t.metrics.milestoneLate.inc).toHaveBeenCalledWith({milestone: "attestation_data"});
     expect(t.metrics.milestoneToTarget.observe).toHaveBeenCalledWith(
-      {milestone: "head", target: ConsumerTarget.attestationDue},
+      {milestone: "head", target: ConsumerTarget.attestationDue, arm: "none"},
       (1200 - attestationDueMs) / 1000
     );
-    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "head"});
+    expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "head", arm: "none"});
   });
 });
 

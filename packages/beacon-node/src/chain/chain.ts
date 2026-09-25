@@ -79,6 +79,7 @@ import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
+import {DispatchGateSwitch, parseDispatchSchedule} from "./blocks/dispatchGate.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -240,6 +241,7 @@ export class BeaconChain implements IBeaconChain {
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
   readonly blockTrace: BlockTrace | null;
+  readonly dispatchGate: DispatchGateSwitch;
 
   readonly opts: IChainOptions;
 
@@ -326,6 +328,7 @@ export class BeaconChain implements IBeaconChain {
       opts.blockTrace === false
         ? null
         : new BlockTrace(config, clock, metrics, opts.blockTraceAttestationTiming === true);
+    this.dispatchGate = new DispatchGateSwitch(parseDispatchSchedule(opts), clock, logger, metrics);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);

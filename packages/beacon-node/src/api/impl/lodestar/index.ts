@@ -132,6 +132,15 @@ export function getLodestarApi({
       return {data: chain.blockTrace.getSnapshot()};
     },
 
+    async getDispatchGate() {
+      return {data: chain.dispatchGate.getState()};
+    },
+
+    async setDispatchGateControl({forceControl}) {
+      chain.dispatchGate.setForceControl(forceControl);
+      return {data: chain.dispatchGate.getState()};
+    },
+
     async getStateCacheItems() {
       return {data: chain.regen.dumpCacheSummary()};
     },

@@ -123,6 +123,11 @@ export type BlockTraceRoot = {
    * verification milestones are shared by its blocks
    */
   attempts: number;
+  /**
+   * The latest attempt's arm in the pre-state-transition dispatch experiment, decided when its verification started;
+   * null when the attempt was not a single live Fulu gossip block or did not reach verification
+   */
+  arm: DispatchArm | null;
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];
   /**
@@ -166,6 +171,28 @@ export type BlockTrace = {
   /** Milestones stamped when the JS continuation ran after an external result, whose callback delay is unknown */
   observedReadiness: string[];
   slots: BlockTraceSlot[];
+};
+
+export type DispatchArm = "control" | "treatment";
+
+/** The pre-state-transition dispatch experiment's crossover schedule and control override */
+export type DispatchGateState = {
+  /**
+   * From `startEpoch`, `pairs` pairs of arms of `epochsPerArm` epochs each; `firstArms` has each pair's first arm, drawn
+   * from `seed`. Null when no schedule is configured, so every block is control.
+   */
+  schedule: {
+    seed: number;
+    startEpoch: Epoch;
+    pairs: number;
+    epochsPerArm: number;
+    firstArms: DispatchArm[];
+  } | null;
+  /** Whether blocks starting processing now take the control arm whatever the schedule */
+  forceControl: boolean;
+  currentEpoch: Epoch;
+  /** The arm a live block of the current epoch starting processing now takes */
+  currentArm: DispatchArm;
 };
 
 export type StateCacheItem = {
@@ -305,6 +332,23 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     BlockTrace,
+    EmptyMeta
+  >;
+  /** Get the pre-state-transition dispatch experiment's schedule and control override */
+  getDispatchGate: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    DispatchGateState,
+    EmptyMeta
+  >;
+  /** Force blocks that start processing from now to the control arm, or return them to the schedule */
+  setDispatchGateControl: Endpoint<
+    "POST",
+    {forceControl: boolean},
+    {query: {force_control: boolean}},
+    DispatchGateState,
     EmptyMeta
   >;
   /** Dump a summary of the states in the block state cache and checkpoint state cache */
@@ -583,6 +627,22 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/lodestar/block_trace",
       method: "GET",
       req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getDispatchGate: {
+      url: "/eth/v1/lodestar/dispatch_gate",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    setDispatchGateControl: {
+      url: "/eth/v1/lodestar/dispatch_gate",
+      method: "POST",
+      req: {
+        writeReq: ({forceControl}) => ({query: {force_control: forceControl}}),
+        parseReq: ({query}) => ({forceControl: query.force_control}),
+        schema: {query: {force_control: Schema.BooleanRequired}},
+      },
       resp: JsonOnlyResponseCodec,
     },
     getStateCacheItems: {
