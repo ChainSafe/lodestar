@@ -2,7 +2,7 @@ import {spawnSync} from "node:child_process";
 import {describe, expect, it} from "vitest";
 
 describe("native pump escalation", () => {
-  it.each([1, 3, 4])(
+  it.each([1, 3])(
     "trigger %i terminates the process through native fatalError",
     (trigger) => {
       const result = spawnSync(

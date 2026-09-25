@@ -39,15 +39,9 @@ const actions: Record<PeerAction, NativePeerAction> = {
 };
 
 /** Bounds of one native turn; the rest yields to the next one. */
-const drainLimits: NativeDrainLimits = {
-  budgetMs: 8,
-  settle: 32,
-  peers: 32,
-  checks: 64,
-  servingStarts: 8,
-  gossipItems: 64,
-  gossipBytes: 8 * 1024 * 1024,
-};
+const drainLimits: NativeDrainLimits = {budgetMs: 8, settle: 32};
+/** Per-turn quotas of each payload source. */
+const quotas = {peers: 32, checks: 64, servingStarts: 8, messages: 64, bytes: 8 * 1024 * 1024};
 
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
@@ -94,6 +88,7 @@ export class NativeNetworkCore implements INetworkCore {
         core.runtime,
         drainLimits,
         core.drainStages,
+        core.onOperationError,
         core.onFailure,
         modules.metricsRegistry
       );
@@ -199,12 +194,12 @@ export class NativeNetworkCore implements INetworkCore {
   };
   private readonly stages: NativeDrainStages = {
     demand: (deadline) => {
-      const {checks, gossipItems: messages, gossipBytes: bytes} = drainLimits;
+      const {checks, messages, bytes} = quotas;
       const {ordinary, ...gossip} = this.gossip.demand({checks, messages, bytes}, deadline);
       return {
         ...gossip,
-        peers: drainLimits.peers,
-        servingStarts: this.requests.allowance(drainLimits.servingStarts),
+        peers: quotas.peers,
+        servingStarts: this.requests.allowance(quotas.servingStarts),
         capacity: {serving: this.requests.capacity(), ordinary},
       };
     },

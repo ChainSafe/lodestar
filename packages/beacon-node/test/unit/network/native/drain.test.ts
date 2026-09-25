@@ -2,7 +2,6 @@ import {Histogram} from "prom-client";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {
   NativeExchange,
-  NativeExchangeDelivery,
   NativeExchangeDemand,
   NativeGossipMessage,
   NativeIncomingRequest,
@@ -11,15 +10,7 @@ import {defer} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
 import {ACTION_MAX, NativeDrain, NativeDrainStages} from "../../../../src/network/core/native/drain.js";
 
-const limits = {
-  budgetMs: 8,
-  settle: 32,
-  peers: 32,
-  checks: 64,
-  servingStarts: 8,
-  gossipItems: 64,
-  gossipBytes: 8 * 1024 * 1024,
-};
+const limits = {budgetMs: 8, settle: 32};
 const host = {
   bytes: 8 * 1024 * 1024,
   capacity: {serving: 32, ordinary: true},
@@ -39,38 +30,25 @@ const control: NativeExchangeDemand = {
   servingStarts: 0,
   settleCells: 32,
 };
-const idle: NativeExchangeDelivery = {
-  rolledBack: false,
-  settled: 0,
+const idle: NativeExchange = {
   peers: [],
   serving: [],
   checks: [],
   gossip: null,
-  retired: false,
   more: false,
   parked: {serving: false, ordinary: false},
   disabledWaiting: false,
   failure: null,
 };
-/** A rolled-back result whose payload fields throw, as nothing may read them. */
-function rolledBack(retired = false): NativeExchange {
-  const trap = Object.fromEntries(
-    ["peers", "serving", "checks", "gossip", "failure", "parked", "disabledWaiting"].map((field) => [
-      field,
-      {
-        get() {
-          throw Error(`read ${field} of a rollback`);
-        },
-      },
-    ])
-  );
-  return Object.freeze(Object.defineProperties({more: true, retired, rolledBack: true}, trap)) as NativeExchange;
-}
 const handle = (index: number) => ({index, generation: 1n});
 
-/** Runs held callbacks until the pump escalates or `max` ran. Returns whether it escalated. */
+/**
+ * Runs held callbacks, firing the fake timers whenever none is held, until the pump escalates or `max` ran. Returns
+ * whether it escalated.
+ */
 function runUntilEscalated(queued: (() => void)[], max: number): boolean {
-  for (let i = 0; i < max && queued.length > 0; i++) {
+  for (let i = 0; i < max; i++) {
+    if (queued.length === 0) vi.advanceTimersByTime(25);
     try {
       queued.shift()?.();
     } catch (error) {
@@ -125,12 +103,14 @@ function fixture() {
   };
   let open = true;
   const onError = vi.fn((_error: unknown) => {});
+  const onFailure = vi.fn((_error: unknown) => {});
   const register = new RegistryMetricCreator();
-  const drain = new NativeDrain(runtime, limits, () => (open ? stages : null), onError, register);
+  const drain = new NativeDrain(runtime, limits, () => (open ? stages : null), onError, onFailure, register);
   return {
     runtime,
     stages,
     onError,
+    onFailure,
     register,
     drain,
     closed,
@@ -268,9 +248,9 @@ describe("native pump", () => {
     ).toBe(true);
     expect(captured[3].slice(1000 - 768)).toEqual([
       {root: new Uint8Array(32).fill(1), type: "block"},
-      {type: "dropQueued"},
       {action: "high_tolerance", count: 100, peerId: "peer", type: "reportPeer"},
       {action: "fatal", count: 1, peerId: "peer", type: "reportPeer"},
+      {type: "dropQueued"},
     ]);
     // Roots past the coalescing bound become one recheck of every waiting message.
     for (let i = 0; i < 257; i++) node.drain.block(Uint8Array.of(i >> 8, i & 255));
@@ -289,42 +269,18 @@ describe("native pump", () => {
     expect(node.calls()[1][0]).toHaveLength(512 - ACTION_MAX);
   });
 
-  it("a rollback runs a control-only recovery turn, then a normal one whatever it reports", async () => {
+  it("keeps a penalty reported while its batch is in flight for the next exchange", async () => {
     const node = fixture();
-    node.runtime.exchange.mockReturnValueOnce(rolledBack());
-    node.drain.verdict(handle(1), "ignore");
-    for (let i = 0; i < 4; i++) await macrotask();
-    expect(node.calls()).toEqual([
-      [[{handle: handle(1), type: "verdict", verdict: "ignore"}], {...host, settleCells: 32}],
-      [[], control],
-      [[], {...host, settleCells: 32}],
-    ]);
-    expect(node.stages.deliver).toHaveBeenCalledOnce();
-    expect(node.runtime.fail).not.toHaveBeenCalled();
-  });
-
-  it("escalates three rolled-back deliveries that retired nothing, even with control completing in between", async () => {
-    const node = fixture();
-    const queued = immediates();
-    node.runtime.exchange.mockImplementation((_actions, demand) =>
-      demand.messages > 0 ? rolledBack() : {...idle, settled: 2, more: true}
-    );
-    node.drain.request();
-    expect(runUntilEscalated(queued, 100)).toBe(true);
-    expect(node.runtime.fail).toHaveBeenCalledExactlyOnceWith(4, "delivery rolled back");
-    // Three normal attempts rolled back around two recovery turns that settled control.
-    expect(node.calls().map(([, demand]) => demand.messages > 0)).toEqual([true, false, true, false, true]);
-  });
-
-  it("a rollback that retired an item resets the escalation count", async () => {
-    const node = fixture();
-    const queued = immediates();
-    const results = [rolledBack(), idle, rolledBack(), idle, rolledBack(true), idle, rolledBack(), idle, rolledBack()];
-    node.runtime.exchange.mockImplementation(() => results.shift() ?? idle);
-    node.drain.request();
-    expect(runUntilEscalated(queued, 100)).toBe(false);
-    // Five normal attempts, each followed by a recovery turn, then an idle normal one.
-    expect(node.runtime.exchange).toHaveBeenCalledTimes(11);
+    // Legacy settlement can run a promise's `then` getter inside the exchange, which may report the same peer.
+    node.runtime.exchange.mockImplementationOnce(() => {
+      node.drain.reportPeer("peer", "fatal");
+      return idle;
+    });
+    node.drain.reportPeer("peer", "fatal");
+    await macrotask();
+    await macrotask();
+    const report = {action: "fatal", count: 1, peerId: "peer", type: "reportPeer"};
+    expect(node.calls().map(([actions]) => actions)).toEqual([[report], [report]]);
   });
 
   it("escalates a batch native refuses", async () => {
@@ -339,23 +295,44 @@ describe("native pump", () => {
     expect(node.runtime.fail).toHaveBeenCalledExactlyOnceWith(1, "InvalidNetworkActions");
   });
 
-  it("escalates three consecutive turns whose demand throws, settling control in each", async () => {
-    const other = fixture();
+  it("retries a failed demand on the timer, settling control each turn, and escalates the third", () => {
+    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+    const node = fixture();
+    const queued = immediates();
     const failure = new Error("demand failed");
-    other.stages.demand.mockImplementation(() => {
+    node.stages.demand.mockImplementation(() => {
       throw failure;
     });
-    for (let i = 0; i < 2; i++) {
-      other.drain.request();
-      await macrotask();
-      // The turn settles control without the failed demand.
-      expect(other.runtime.exchange).toHaveBeenLastCalledWith([], control);
-    }
-    expect(other.onError).toHaveBeenCalledTimes(2);
-    const next = immediates();
-    other.drain.request();
-    expect(() => next.shift()?.()).toThrow(Escalated);
-    expect(other.runtime.fail).toHaveBeenCalledExactlyOnceWith(3, "demand failed");
+    node.drain.request();
+    expect(runUntilEscalated(queued, 20)).toBe(true);
+    expect(node.calls()).toEqual([
+      [[], control],
+      [[], control],
+    ]);
+    expect(node.onError).toHaveBeenCalledTimes(2);
+    expect(node.onFailure).not.toHaveBeenCalled();
+    expect(node.stages.deliver).not.toHaveBeenCalled();
+    expect(node.runtime.fail).toHaveBeenCalledExactlyOnceWith(3, "demand failed");
+  });
+
+  it("a demand that succeeds resets the failure count", () => {
+    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+    const node = fixture();
+    const queued = immediates();
+    const failure = new Error("demand failed");
+    const fails = [true, true, false, true, true];
+    node.stages.demand.mockImplementation(() => {
+      if (fails.shift()) throw failure;
+      return host;
+    });
+    // The delivering turn reports more, so the failing demands after it follow at once, then on the timer.
+    node.runtime.exchange.mockImplementation((_actions, demand) =>
+      demand.messages > 0 && fails.length > 0 ? {...idle, more: true} : idle
+    );
+    node.drain.request();
+    expect(runUntilEscalated(queued, 20)).toBe(false);
+    expect(node.stages.demand).toHaveBeenCalledTimes(6);
+    expect(node.onError).toHaveBeenCalledTimes(4);
   });
 
   it("a throw before phase B leaves the batch queued and retries on the timer", async () => {
@@ -365,13 +342,17 @@ describe("native pump", () => {
     node.runtime.exchange.mockImplementationOnce(() => {
       throw failure;
     });
+    node.drain.reportPeer("peer", "fatal");
     node.drain.classify(handle(3), false);
     await macrotask();
     expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
     expect(vi.getTimerCount()).toBe(1);
     vi.advanceTimersByTime(25);
     await macrotask();
-    expect(node.calls()[1][0]).toEqual([{available: false, handle: handle(3), type: "classify"}]);
+    expect(node.calls()[1][0]).toEqual([
+      {available: false, handle: handle(3), type: "classify"},
+      {action: "fatal", count: 1, peerId: "peer", type: "reportPeer"},
+    ]);
     expect(node.runtime.fail).not.toHaveBeenCalled();
   });
 
@@ -414,7 +395,7 @@ describe("native pump", () => {
     });
     node.drain.request();
     await macrotask();
-    expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(node.onFailure).toHaveBeenCalledExactlyOnceWith(failure);
     expect(starts[0].cancel).not.toHaveBeenCalled();
     expect(starts[1].cancel).toHaveBeenCalledOnce();
     await macrotask();
@@ -456,7 +437,7 @@ describe("native pump", () => {
     node.drain.request();
     await macrotask();
     expect(node.stages.deliver).toHaveBeenCalledOnce();
-    expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(node.onFailure).toHaveBeenCalledExactlyOnceWith(failure);
     await macrotask();
     expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
   });
@@ -466,7 +447,7 @@ describe("native pump", () => {
     const queued = immediates();
     const failure = new Error("reporting failed");
     node.runtime.exchange.mockReturnValue({...idle, more: true, failure: new Error("facade construction failed")});
-    node.onError.mockImplementationOnce(() => {
+    node.onFailure.mockImplementationOnce(() => {
       throw failure;
     });
     node.drain.request();

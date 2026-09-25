@@ -5,7 +5,6 @@ import {describe, expect, it, vi} from "vitest";
 import {
   NativeAction,
   NativeExchange,
-  NativeExchangeDelivery,
   NativeGossipDependencyCheck,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
@@ -34,14 +33,11 @@ const blockTopic = stringifyGossipTopic(config, {
   boundary: {fork: ForkName.phase0, epoch: 0},
 });
 const unbounded = {checks: 64, messages: 64, bytes: 16 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
-const idle: NativeExchangeDelivery = {
-  rolledBack: false,
-  settled: 0,
+const idle: NativeExchange = {
   peers: [],
   serving: [],
   checks: [],
   gossip: null,
-  retired: false,
   more: false,
   parked: {serving: false, ordinary: false},
   disabledWaiting: false,
@@ -534,7 +530,7 @@ describe("native gossip host ownership", () => {
     });
     const pump = new NativeDrain(
       {exchange, fail: vi.fn<NativeNetworkApplicationRuntime["fail"]>(), closed: new Promise(() => {})},
-      {budgetMs: 8, settle: 32, peers: 32, checks: 64, servingStarts: 8, gossipItems: 64, gossipBytes: 1 << 20},
+      {budgetMs: 8, settle: 32},
       () => ({
         demand: () => ({
           bytes: 1 << 20,
@@ -550,6 +546,7 @@ describe("native gossip host ownership", () => {
           throw failure;
         },
       }),
+      node.onError,
       node.onFailure,
       null
     );

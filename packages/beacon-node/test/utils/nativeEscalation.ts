@@ -2,11 +2,7 @@
 // process through fatalError, so reaching the end is a failure.
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import bindings from "@chainsafe/lodestar-z";
-import {
-  NativeExchange,
-  NativeNetworkApplicationRuntime,
-  initializeNativeNetworkRuntime,
-} from "@chainsafe/lodestar-z/network";
+import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {createNativeConfig} from "../../src/network/core/native/config.js";
@@ -56,20 +52,16 @@ const stages: NativeDrainStages = {
   },
   deliver: () => false,
 };
-// Trigger 4 needs rollbacks, which a real bridge only produces on allocation failure, so the exchange reports them.
-const rolledBack: NativeExchange = {more: true, retired: false, rolledBack: true};
-const runtime: Pick<NativeNetworkApplicationRuntime, "exchange" | "fail" | "closed"> =
-  trigger === 4 ? {exchange: () => rolledBack, fail: native.fail.bind(native), closed: native.closed} : native;
 drain = new NativeDrain(
-  runtime,
-  {budgetMs: 8, settle: 32, peers: 32, checks: 64, servingStarts: 8, gossipItems: 64, gossipBytes: 1 << 20},
+  native,
+  {budgetMs: 8, settle: 32},
   () => stages,
+  () => {},
   () => {},
   null
 );
-for (let turn = 0; turn < 8; turn++) {
-  drain.request();
-  await new Promise((resolve) => setTimeout(resolve, 50));
-}
+// One request: a refused batch escalates at once, and a failing demand retries on the pump's timer until the third.
+drain.request();
+await new Promise((resolve) => setTimeout(resolve, 2000));
 console.log("survived");
 await native.close();

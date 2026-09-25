@@ -2,7 +2,6 @@ import {
   NativeAction,
   NativeEscalation,
   NativeExchange,
-  NativeExchangeDelivery,
   NativeExchangeDemand,
   NativeGossipDependencyCheck,
   NativeGossipHandle,
@@ -24,20 +23,11 @@ const BLOCK_MAX = 256;
 const REPORT_ENTRY_MAX = 512;
 const REPORT_COUNT_MAX = 100;
 const RETRY_MS = 25;
-/** Consecutive failures that escalate a broken bridge contract. */
+/** Consecutive turns whose demand or exchange failed before escalating. */
 const FAILURES_MAX = 3;
 
-/** Per-turn bounds of the pump. */
-export type NativeDrainLimits = {
-  budgetMs: number;
-  /** Completions settled per native table. */
-  settle: number;
-  peers: number;
-  checks: number;
-  servingStarts: number;
-  gossipItems: number;
-  gossipBytes: number;
-};
+/** Per-turn bounds of the pump: its time budget and the completions settled per native table. */
+export type NativeDrainLimits = {budgetMs: number; settle: number};
 
 /** A delivered job or serving start the pump owns until the host adopts it, by starting or holding its work. */
 export class NativeClaim<T> {
@@ -65,6 +55,8 @@ export type NativeDrainStages = {
   /** Hands a delivery to its consumers. Returns whether JS-held ordinary jobs remain. */
   deliver(delivery: NativeDelivery, deadline: number): boolean;
 };
+
+type Coalesced = Exclude<NativeAction, {type: "verdict" | "classify"}>;
 
 type NativeDrainMetrics = ReturnType<typeof createNativeDrainMetrics>;
 
@@ -112,25 +104,22 @@ const CONTROL = {
  * Runs native exchanges in bounded macrotasks, each with queued obligations first, then coalesced requests, and hands
  * the delivery to the host. It runs again at once while native reports more, actions or JS-held jobs remain, or the
  * time budget left ordinary work, and after the one retry timer while work waits for external capacity or a disabled
- * service. After the host closes, turns only settle, until closed. A rollback runs a control-only recovery turn, then
- * a normal one. A broken bridge contract escalates through native `fail`, which terminates the process.
+ * service, or after a failed demand. After the host closes, turns only settle, until closed. A broken bridge contract
+ * escalates through native `fail`, which terminates the process.
  */
 export class NativeDrain {
   private scheduled = false;
   private running = false;
   private stopped = false;
   private retry: NodeJS.Timeout | undefined;
-  private recovering = false;
   private notifiedAt: number | undefined;
   /** Consecutive turns whose demand threw or whose exchange could not run. */
-  private turnFailures = 0;
-  /** Consecutive rolled-back deliveries that retired nothing. */
-  private failedDeliveries = 0;
+  private failures = 0;
   private readonly obligations: NativeAction[] = [];
-  private readonly blocks = new Map<string, Uint8Array>();
-  private recheck = false;
-  private dropping = false;
-  private readonly reports = new Map<string, {peerId: string; action: NativePeerAction; count: number}>();
+  /** One entry per imported root, per penalized peer and action, and for a recheck or a drop, in arrival order. */
+  private readonly coalesced = new Map<string, Coalesced>();
+  private blocks = 0;
+  private reports = 0;
   /** Peer penalties dropped because the coalescing table was full. */
   reportsDropped = 0;
   private readonly metrics: NativeDrainMetrics | null;
@@ -139,7 +128,10 @@ export class NativeDrain {
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "exchange" | "fail" | "closed">,
     private readonly limits: NativeDrainLimits,
     private readonly stages: () => NativeDrainStages | null,
+    /** A failure the pump recovers from: a demand that threw or an exchange that did not run. */
     private readonly onError: (error: unknown) => void,
+    /** A host handler or facade failure after a delivery. */
+    private readonly onFailure: (error: unknown) => void,
     register: RegistryMetricCreator | null
   ) {
     this.metrics = register ? createNativeDrainMetrics(register) : null;
@@ -166,63 +158,70 @@ export class NativeDrain {
     this.schedule();
   }
   block(root: Uint8Array): void {
-    if (this.recheck) return;
-    const key = Buffer.from(root).toString("hex");
-    if (!this.blocks.has(key) && this.blocks.size >= BLOCK_MAX) {
-      this.blocks.clear();
-      this.recheck = true;
-    } else this.blocks.set(key, root);
-    this.schedule();
+    this.coalesce({root, type: "block"});
   }
   dropQueued(): void {
-    this.dropping = true;
-    this.schedule();
+    this.coalesce({type: "dropQueued"});
   }
   reportPeer(peerId: string, action: NativePeerAction): void {
-    const key = `${action}:${peerId}`;
-    const report = this.reports.get(key);
-    if (report) report.count = Math.min(REPORT_COUNT_MAX, report.count + 1);
-    else if (this.reports.size >= REPORT_ENTRY_MAX) this.reportsDropped++;
-    else this.reports.set(key, {action, count: 1, peerId});
+    this.coalesce({action, count: 1, peerId, type: "reportPeer"});
+  }
+
+  private coalesce(action: Coalesced): void {
+    this.add(action);
     this.schedule();
+  }
+
+  /** Queues a coalesced request, merging a penalty into its entry, within the ledger's bounds. */
+  private add(action: Coalesced): void {
+    const key = keyOf(action);
+    const queued = this.coalesced.get(key);
+    if (queued) {
+      if (queued.type === "reportPeer" && action.type === "reportPeer")
+        queued.count = Math.min(REPORT_COUNT_MAX, queued.count + action.count);
+      return;
+    }
+    if (action.type === "block") {
+      if (this.coalesced.has("recheck")) return;
+      if (this.blocks === BLOCK_MAX) {
+        for (const [queuedKey, {type}] of this.coalesced) if (type === "block") this.coalesced.delete(queuedKey);
+        this.blocks = 0;
+        this.coalesced.set("recheck", {type: "recheck"});
+        return;
+      }
+      this.blocks++;
+    } else if (action.type === "reportPeer") {
+      if (this.reports === REPORT_ENTRY_MAX) {
+        this.reportsDropped++;
+        return;
+      }
+      this.reports++;
+    }
+    // A penalty is copied, so an entry in flight never changes.
+    this.coalesced.set(key, action.type === "reportPeer" ? {...action} : action);
+  }
+
+  /** Moves up to `ACTION_MAX` queued actions into one batch; what arrives meanwhile queues for the next one. */
+  private take(): NativeAction[] {
+    const batch = this.obligations.splice(0, ACTION_MAX);
+    for (const [key, action] of this.coalesced) {
+      if (batch.length === ACTION_MAX) break;
+      this.coalesced.delete(key);
+      if (action.type === "block") this.blocks--;
+      else if (action.type === "reportPeer") this.reports--;
+      batch.push(action);
+    }
+    return batch;
+  }
+
+  /** Returns a batch native never applied to the ledger. */
+  private requeue(batch: NativeAction[]): void {
+    this.obligations.unshift(...batch.filter(({type}) => type === "verdict" || type === "classify"));
+    for (const action of batch) if (action.type !== "verdict" && action.type !== "classify") this.add(action);
   }
 
   private pending(): boolean {
-    return (
-      this.obligations.length > 0 || this.blocks.size > 0 || this.recheck || this.dropping || this.reports.size > 0
-    );
-  }
-
-  /** Up to `ACTION_MAX` queued actions; `commit` removes them once native applied them. */
-  private batch(): {actions: NativeAction[]; commit(): void} {
-    const actions = this.obligations.slice(0, ACTION_MAX);
-    const obligations = actions.length;
-    const blocks: string[] = [];
-    const reports: string[] = [];
-    for (const [key, root] of this.blocks) {
-      if (actions.length === ACTION_MAX) break;
-      actions.push({root, type: "block"});
-      blocks.push(key);
-    }
-    const recheck = this.recheck && actions.length < ACTION_MAX;
-    if (recheck) actions.push({type: "recheck"});
-    const dropping = this.dropping && actions.length < ACTION_MAX;
-    if (dropping) actions.push({type: "dropQueued"});
-    for (const [key, {peerId, action, count}] of this.reports) {
-      if (actions.length === ACTION_MAX) break;
-      actions.push({action, count, peerId, type: "reportPeer"});
-      reports.push(key);
-    }
-    return {
-      actions,
-      commit: () => {
-        this.obligations.splice(0, obligations);
-        for (const key of blocks) this.blocks.delete(key);
-        if (recheck) this.recheck = false;
-        if (dropping) this.dropping = false;
-        for (const key of reports) this.reports.delete(key);
-      },
-    };
+    return this.obligations.length > 0 || this.coalesced.size > 0;
   }
 
   private schedule(): void {
@@ -279,57 +278,47 @@ export class NativeDrain {
   };
 
   private turn(deadline: number): Next {
-    const stages = this.recovering ? null : this.stages();
-    const recovery = this.recovering;
-    this.recovering = false;
+    const stages = this.stages();
     let demand: NativeExchangeDemand = {...CONTROL, settleCells: this.limits.settle};
-    let normal = false;
+    let failed = false;
     if (stages) {
       try {
         demand = {...stages.demand(deadline), settleCells: this.limits.settle};
-        normal = true;
       } catch (error) {
-        if (++this.turnFailures >= FAILURES_MAX) this.escalate(3, error);
+        // The turn still settles control; the demand retries on the timer.
+        if (++this.failures >= FAILURES_MAX) this.escalate(3, error);
+        failed = true;
         this.onError(error);
       }
     }
-    const {actions, commit} = this.batch();
+    const batch = this.take();
     let result: NativeExchange;
     try {
-      result = this.runtime.exchange(actions, demand);
+      result = this.runtime.exchange(batch, demand);
     } catch (error) {
       // Native refuses only an invalid batch or a nested exchange, so a refusal of this generated batch is a
-      // broken contract. Anything else leaves native state untouched and retries.
+      // broken contract. Anything else left native untouched: the batch requeues and the turn retries.
       const code = (error as {code?: unknown} | null)?.code;
       if (typeof code === "string") this.escalate(1, code);
-      if (++this.turnFailures >= FAILURES_MAX) this.escalate(3, error);
+      this.requeue(batch);
+      if (++this.failures >= FAILURES_MAX) this.escalate(3, error);
       this.onError(error);
       return "retry";
     }
-    commit();
-    if (normal) this.turnFailures = 0;
-    if (result.rolledBack) {
-      if (result.retired) this.failedDeliveries = 0;
-      else if (++this.failedDeliveries >= FAILURES_MAX) this.escalate(4, "delivery rolled back");
-      // Control completions get a turn that does not depend on building payload.
-      this.recovering = true;
-      return "now";
-    }
-    if (result.retired || delivers(result)) this.failedDeliveries = 0;
+    if (stages && !failed) this.failures = 0;
     let held = false;
     let failure: unknown = result.failure;
     try {
-      if (stages && normal) held = this.deliver(stages, result, deadline);
+      if (stages && !failed) held = this.deliver(stages, result, deadline);
     } catch (error) {
       failure ??= error;
     }
-    // A recovery turn is followed by a normal one whatever it reports. Ordinary work the time budget left unclaimed
-    // waits for the next turn, as held jobs do.
-    const budgetEnded = normal && demand.messages > 0 && !demand.claimOrdinary;
+    // Ordinary work the time budget left unclaimed waits for the next turn, as held jobs do.
+    const budgetEnded = stages !== null && !failed && demand.messages > 0 && !demand.claimOrdinary;
     let next: Next = "idle";
-    if (recovery || result.more || held || (budgetEnded && result.disabledWaiting)) next = "now";
-    else if (result.parked.serving || result.parked.ordinary || result.disabledWaiting) next = "later";
-    if (failure !== null) this.onError(failure);
+    if (result.more || held || (budgetEnded && result.disabledWaiting)) next = "now";
+    else if (failed || result.parked.serving || result.parked.ordinary || result.disabledWaiting) next = "later";
+    if (failure !== null) this.onFailure(failure);
     return next;
   }
 
@@ -337,7 +326,7 @@ export class NativeDrain {
    * Hands the delivery to the host. Whatever the host throws, the pump keeps what it never adopted: a job gets an
    * ignore verdict, and a serving start is cancelled, which releases it.
    */
-  private deliver(stages: NativeDrainStages, result: NativeExchangeDelivery, deadline: number): boolean {
+  private deliver(stages: NativeDrainStages, result: NativeExchange, deadline: number): boolean {
     const gossip = result.gossip;
     const jobs = (gossip?.jobs ?? []).map(
       ({kind, grouped, urgent, start, length}) =>
@@ -363,11 +352,13 @@ export class NativeDrain {
   };
 }
 
-function delivers(result: NativeExchangeDelivery): boolean {
-  return (
-    result.peers.length > 0 ||
-    result.serving.length > 0 ||
-    result.checks.length > 0 ||
-    (result.gossip?.messages.length ?? 0) > 0
-  );
+function keyOf(action: Coalesced): string {
+  switch (action.type) {
+    case "block":
+      return `block:${Buffer.from(action.root).toString("hex")}`;
+    case "reportPeer":
+      return `report:${action.action}:${action.peerId}`;
+    default:
+      return action.type;
+  }
 }
