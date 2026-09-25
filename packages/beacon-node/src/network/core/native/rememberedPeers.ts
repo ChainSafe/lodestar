@@ -13,6 +13,8 @@ const FILE_NAME = "native-remembered-peers.json";
 const VERSION = 1;
 const MAX_FILE_BYTES = 128 * 1024;
 const MAX_PEERS = 256;
+/** Native's bound on a peer id's text; decoding longer base58 text costs quadratic time. */
+const MAX_PEER_ID_LENGTH = 55;
 const EXPIRY_S = 24 * 60 * 60;
 const WRITE_INTERVAL_MS = 5 * 60 * 1000;
 const FINAL_WRITE_TIMEOUT_MS = 2000;
@@ -39,8 +41,10 @@ export function readRememberedPeers(
 }
 
 function readBounded(file: string): string {
-  const fd = fs.openSync(file, "r");
+  // Opening a FIFO without a writer would block; a non-blocking open lets fstat reject it.
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
   try {
+    if (!fs.fstatSync(fd).isFile()) throw Error("Not a regular file");
     const buffer = Buffer.alloc(MAX_FILE_BYTES + 1);
     const length = fs.readSync(fd, buffer, 0, buffer.length, 0);
     if (length > MAX_FILE_BYTES) throw Error(`File exceeds ${MAX_FILE_BYTES} bytes`);
@@ -73,6 +77,7 @@ function parsePeer(entry: unknown): NativeRememberedPeer {
   const {family, address, port} = entry.endpoint;
   if (
     typeof peerId !== "string" ||
+    peerId.length > MAX_PEER_ID_LENGTH ||
     (family !== 4 && family !== 6) ||
     typeof address !== "string" ||
     !(family === 4 ? /^0x[0-9a-f]{8}$/ : /^0x[0-9a-f]{32}$/).test(address) ||
@@ -102,7 +107,10 @@ function isInteger(value: unknown, min: number, max: number): value is number {
  */
 export class RememberedPeersWriter {
   private readonly file: string;
+  private readonly temporary: string;
   private readonly timer: NodeJS.Timeout;
+  /** Aborted when close ends: a write still running then requests no snapshot and renames nothing. */
+  private readonly stopped = new AbortController();
   private writing: Promise<void> | null = null;
 
   constructor(
@@ -111,13 +119,17 @@ export class RememberedPeersWriter {
     private readonly logger: Logger
   ) {
     this.file = path.join(dir, FILE_NAME);
+    this.temporary = `${this.file}.${process.pid}.tmp`;
     this.timer = setInterval(() => {
       if (!this.writing) void this.write();
     }, WRITE_INTERVAL_MS);
     this.timer.unref();
   }
 
-  /** Stops the timer and writes the final snapshot within 2 s; call it before the runtime closes and refuses one. */
+  /**
+   * Stops the timer and writes the final snapshot within 2 s, abandoning a write still running then. Call it before
+   * the runtime closes and refuses a snapshot.
+   */
   async close(): Promise<void> {
     clearInterval(this.timer);
     try {
@@ -127,14 +139,17 @@ export class RememberedPeersWriter {
       }, FINAL_WRITE_TIMEOUT_MS);
     } catch (error) {
       this.logger.warn("Native remembered peers not written at close", {file: this.file}, error as Error);
+    } finally {
+      this.stopped.abort();
     }
   }
 
   private write(): Promise<void> {
     this.writing = this.persist()
-      .catch((error: unknown) =>
-        this.logger.warn("Native remembered peers write failed", {file: this.file}, error as Error)
-      )
+      .catch((error: unknown) => {
+        if (!this.stopped.signal.aborted)
+          this.logger.warn("Native remembered peers write failed", {file: this.file}, error as Error);
+      })
       .finally(() => {
         this.writing = null;
       });
@@ -142,6 +157,7 @@ export class RememberedPeersWriter {
   }
 
   private async persist(): Promise<void> {
+    this.stopped.signal.throwIfAborted();
     const {genesisValidatorsRoot, peers} = await this.runtime.getRememberedPeers();
     const json = JSON.stringify({
       version: VERSION,
@@ -152,13 +168,13 @@ export class RememberedPeersWriter {
         qualifiedAtUnixS,
       })),
     });
-    const temporary = `${this.file}.tmp`;
     await fs.promises.mkdir(this.dir, {recursive: true});
     try {
-      await fs.promises.writeFile(temporary, json);
-      await fs.promises.rename(temporary, this.file);
+      await fs.promises.writeFile(this.temporary, json);
+      this.stopped.signal.throwIfAborted();
+      await fs.promises.rename(this.temporary, this.file);
     } catch (error) {
-      await fs.promises.rm(temporary, {force: true}).catch(() => {});
+      await fs.promises.rm(this.temporary, {force: true}).catch(() => {});
       throw error;
     }
   }

@@ -1,9 +1,10 @@
+import {execFileSync} from "node:child_process";
 import fs from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {NativeRememberedPeer, NativeRememberedPeersSnapshot} from "@chainsafe/lodestar-z/network";
 import {TimeoutError, defer, toHex} from "@lodestar/utils";
 import {RememberedPeersWriter, readRememberedPeers} from "../../../../src/network/core/native/rememberedPeers.js";
@@ -107,6 +108,20 @@ describe("native remembered peers file", () => {
     expect(logger.info).toHaveBeenCalledWith("Ignoring native remembered peers", {file}, expect.any(Error));
   });
 
+  it("rejects an overlong peer id without decoding it", () => {
+    write(valid([{...entry, peerId: `16Uiu2HAm${"a".repeat(120_000)}`}]));
+    const started = performance.now();
+    expect(readRememberedPeers(dir, root, logger)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it.skipIf(process.platform === "win32")("starts cold without blocking on a FIFO in place of the file", () => {
+    fs.mkdirSync(dir, {recursive: true});
+    execFileSync("mkfifo", [file]);
+    expect(readRememberedPeers(dir, root, logger)).toBeNull();
+    expect(logger.info).toHaveBeenCalledWith("Ignoring native remembered peers", {file}, expect.any(Error));
+  });
+
   it("accepts a file of exactly 128 KiB", () => {
     write(JSON.stringify(valid()).padEnd(128 * 1024));
     expect(readRememberedPeers(dir, root, logger)?.peers).toEqual([peer(a)]);
@@ -137,6 +152,7 @@ describe("native remembered peers file", () => {
     if (step === "rename") vi.spyOn(fs.promises, "rename").mockRejectedValueOnce(failure);
     else
       vi.spyOn(fs.promises, "writeFile").mockImplementationOnce(async (temporary) => {
+        expect(temporary).toBe(`${file}.${process.pid}.tmp`);
         await fs.promises.appendFile(temporary as string, '{"version":');
         throw failure;
       });
@@ -203,8 +219,17 @@ describe("native remembered peers file", () => {
       expect(runtime.getRememberedPeers).toHaveBeenCalledTimes(2);
     });
 
-    it("bounds the final snapshot and write to 2 seconds", async () => {
-      const runtime = {getRememberedPeers: vi.fn(() => new Promise<NativeRememberedPeersSnapshot>(() => {}))};
+    /** Waits for an abandoned write to remove its temporary file, then for the writer to settle. */
+    async function abandoned(rm: MockInstance<typeof fs.promises.rm>): Promise<void> {
+      await until(() => rm.mock.results.length > 0);
+      await rm.mock.results[0]?.value;
+      await until(() => false, 50);
+    }
+
+    it("bounds the final snapshot and write to 2 seconds and abandons them after", async () => {
+      const rm = vi.spyOn(fs.promises, "rm");
+      const pending = defer<NativeRememberedPeersSnapshot>();
+      const runtime = {getRememberedPeers: vi.fn(() => pending.promise)};
       let closed = false;
       const closing = new RememberedPeersWriter(dir, runtime, logger).close().then(() => {
         closed = true;
@@ -214,12 +239,37 @@ describe("native remembered peers file", () => {
       expect(closed).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
       await closing;
-      expect(logger.warn).toHaveBeenCalledWith(
+      pending.resolve(snapshot([peer(a)]));
+      await abandoned(rm);
+      expect(fs.readdirSync(dir)).toEqual([]);
+      expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
         "Native remembered peers not written at close",
         {file},
         expect.any(TimeoutError)
       );
-      expect(fs.existsSync(file)).toBe(false);
+    });
+
+    it("abandons a periodic write still running when close's bound ends", async () => {
+      write(valid());
+      const previous = fs.readFileSync(file, "utf8");
+      const rm = vi.spyOn(fs.promises, "rm");
+      const pending = defer<NativeRememberedPeersSnapshot>();
+      const runtime = {getRememberedPeers: vi.fn(() => pending.promise)};
+      const writer = new RememberedPeersWriter(dir, runtime, logger);
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+      const closing = writer.close();
+      await vi.advanceTimersByTimeAsync(2000);
+      await closing;
+      pending.resolve(snapshot([peer(b)]));
+      await abandoned(rm);
+      expect(runtime.getRememberedPeers).toHaveBeenCalledOnce();
+      expect(fs.readFileSync(file, "utf8")).toBe(previous);
+      expect(fs.readdirSync(dir)).toEqual(["native-remembered-peers.json"]);
+      expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
+        "Native remembered peers not written at close",
+        {file},
+        expect.any(TimeoutError)
+      );
     });
   });
 });
