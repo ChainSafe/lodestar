@@ -22,6 +22,7 @@ type BeaconExtraArgs = {
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
+  pubkeysFile?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
   validatorMonitorLogs?: boolean;
@@ -145,6 +146,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
+    type: "string",
+  },
+
+  pubkeysFile: {
+    hidden: true,
+    description: "Pubkey cache file, loaded on startup and saved on graceful shutdown",
+    defaultDescription: defaultBeaconPaths.pubkeysFile,
     type: "string",
   },
 
