@@ -100,6 +100,8 @@ export class NativeDrain {
       const result = this.runtime.exchange({settle, peers: stages ? peers : 0, serving, gossip});
       more = result.more;
       if (stages) more = stages.deliver(result, gossip, deadline) || more;
+      // A serving start the binding could not hand over was cancelled; everything else was delivered.
+      if (result.failure !== undefined) throw result.failure;
     } catch (error) {
       // Native keeps its latch while it reported more, so a failed delivery drains again.
       more = this.onError(error) || more;

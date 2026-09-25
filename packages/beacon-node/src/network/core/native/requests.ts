@@ -185,6 +185,8 @@ export class NativeRequests {
   private readonly capacity: number;
   private readonly budget;
   private retry: NodeJS.Timeout | undefined;
+  /** Delivered starts a spent drain budget holds for the next drain, at most one drain's quantum. */
+  private held: NativeIncomingRequest[] = [];
   constructor(
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
@@ -210,27 +212,40 @@ export class NativeRequests {
       1
     );
   }
-  /** Serving starts to take now: the drain's quantum, free routes and the host serving budget bound them. */
+  /**
+   * Serving starts to take now: the drain's quantum, free routes and the host serving budget bound them, less the
+   * starts already held.
+   */
   demand(max: number): number {
     nativeInteger(max, "incoming drain", 32, 1);
     if (this.closed) return 0;
-    return Math.max(0, Math.min(max, this.capacity - this.routes.size, this.budget.remaining()));
+    const free = Math.min(max, this.capacity - this.routes.size, this.budget.remaining());
+    return Math.max(0, free - this.held.length);
   }
   /**
-   * Starts delivered requests. While queued requests wait on the serving budget, which other adapters share, drains
-   * again after 25 ms.
+   * Starts held and then delivered requests, unless the drain's budget is spent: they then wait for the next drain.
+   * While queued requests wait on the serving budget, which other adapters share, drains again after 25 ms. Returns
+   * whether starts wait for the next drain.
    */
-  start(requests: NativeIncomingRequest[], queued: boolean): void {
-    for (const request of requests) {
-      if (this.closed) void request.cancel().catch(() => {});
-      else this.serve(request);
+  start(requests: NativeIncomingRequest[], queued: boolean, deadline: number): boolean {
+    if (this.closed) {
+      for (const request of requests) void request.cancel().catch(() => {});
+      return false;
     }
-    if (this.closed || !queued || this.routes.size >= this.capacity || this.budget.canAcquire() || this.retry) return;
+    const starts = this.held.concat(requests);
+    this.held = [];
+    if (starts.length > 0 && performance.now() >= deadline) {
+      this.held = starts;
+      return true;
+    }
+    for (const request of starts) this.serve(request);
+    if (!queued || this.routes.size >= this.capacity || this.budget.canAcquire() || this.retry) return false;
     this.retry = setTimeout(() => {
       this.retry = undefined;
       this.wake();
     }, 25);
     this.retry.unref();
+    return false;
   }
   private serve(request: NativeIncomingRequest): void {
     const protocol = this.protocols.get(request.protocol);
@@ -279,5 +294,7 @@ export class NativeRequests {
       void request?.cancel().catch(() => {});
     }
     this.routes.clear();
+    for (const request of this.held) void request.cancel().catch(() => {});
+    this.held = [];
   }
 }

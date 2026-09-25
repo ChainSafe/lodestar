@@ -198,8 +198,8 @@ export class NativeNetworkCore implements INetworkCore {
     gossip: (limits) => this.gossip.demand(limits),
     deliver: (result, gossip, deadline) => {
       this.peers.deliver(result.peers);
-      this.requests.start(result.serving, result.servingQueued);
-      return this.gossip.deliver(result.checks, result.gossip, gossip, deadline);
+      const held = this.requests.start(result.serving, result.servingQueued, deadline);
+      return this.gossip.deliver(result.checks, result.gossip, gossip, deadline) || held;
     },
   };
   private readonly drainStages = (): NativeDrainStages | null => (this.closed ? null : this.stages);

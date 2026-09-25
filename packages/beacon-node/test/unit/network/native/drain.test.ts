@@ -144,6 +144,19 @@ describe("native drain", () => {
     expect(burst.sum).toBeCloseTo(0.006, 9);
   });
 
+  it("reports a serving start the binding could not hand over after delivering the rest, and drains again", async () => {
+    const node = fixture();
+    const failure = new Error("facade construction failed");
+    const result = {...idle, more: true, failure};
+    node.runtime.exchange.mockReturnValueOnce(result);
+    node.drain.request();
+    await macrotask();
+    expect(node.stages.deliver).toHaveBeenCalledExactlyOnceWith(result, gossip, limits.budgetMs);
+    expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
+    await macrotask();
+    expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
+  });
+
   it("retries a failure its handler recovers, and a failed delivery while native holds more", async () => {
     const node = fixture();
     const failure = new Error("drain failed");
