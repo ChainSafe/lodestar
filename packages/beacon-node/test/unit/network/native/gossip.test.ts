@@ -234,6 +234,25 @@ describe("native gossip host ownership", () => {
     }
   });
 
+  it("dispatches a claimed message larger than the drain byte cap", async () => {
+    const node = await fixture();
+    try {
+      const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
+      const block = {...node.message(1, blockTopic), data: new Uint8Array(9 * 1024 * 1024)};
+      expect(node.drain([block], false, limits)).toBe(false);
+      expect(node.runtime.drainGossip).toHaveBeenCalledExactlyOnceWith({
+        items: 64,
+        bytes: limits.bytes,
+        ordinary: true,
+      });
+      expect(node.pending.map(({msg}) => msg.data.length)).toEqual([9 * 1024 * 1024]);
+      await node.retire(node.pending[0]);
+      expect(node.runtime.reportGossip).toHaveBeenCalledExactlyOnceWith(block.handle, "accept");
+    } finally {
+      await node.close();
+    }
+  });
+
   it("calls no native lane without work and closes the ordinary gate once while the executor is busy", async () => {
     const node = await fixture();
     try {
