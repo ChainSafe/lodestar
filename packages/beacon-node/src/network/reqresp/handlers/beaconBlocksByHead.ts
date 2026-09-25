@@ -23,7 +23,7 @@ export async function* onBeaconBlocksByHead(
   let blockRootHex = requestedRootHex;
   const minimumRequestEpoch = Math.max(
     GENESIS_EPOCH,
-    chain.clock.currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS
+    chain.clock.currentEpoch - chain.config.getMinEpochsForBlockRequests(chain.clock.currentEpoch)
   );
   const minimumRequestSlot = computeStartSlotAtEpoch(minimumRequestEpoch);
 
