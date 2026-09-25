@@ -91,6 +91,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   parentRootHex: string;
 
   abstract state: BlockInputState<F>;
+  dataAvailableAt: number | null = null;
 
   protected blockPromise = createPromise<SignedBeaconBlock<F>>();
   protected dataPromise = createPromise<TData>();
@@ -176,6 +177,11 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
 
+  protected resolveData(data: TData): void {
+    this.dataAvailableAt ??= performance.now();
+    this.dataPromise.resolve(data);
+  }
+
   async waitForBlockAndAllData(timeout: number, signal?: AbortSignal): Promise<this> {
     if (!this.state.hasBlock || !this.state.hasAllData) {
       await withTimeout(() => Promise.all([this.blockPromise.promise, this.dataPromise.promise]), timeout, signal);
@@ -206,7 +212,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
   private constructor(init: BlockInputInit, state: BlockInputPreDataState) {
     super(init);
     this.state = state;
-    this.dataPromise.resolve(null);
+    this.resolveData(null);
     this.blockPromise.resolve(state.block);
   }
 
@@ -318,7 +324,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     const blockInput = new BlockInputBlobs(init, state);
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
-      blockInput.dataPromise.resolve([]);
+      blockInput.resolveData([]);
     }
     return blockInput;
   }
@@ -413,7 +419,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
-      this.dataPromise.resolve(this.getBlobs());
+      this.resolveData(this.getBlobs());
     }
   }
 
@@ -470,7 +476,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         hasAllData: true,
         timeCompleteSec: seenTimestampSec,
       };
-      this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
+      this.resolveData([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
     }
   }
 
@@ -682,7 +688,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
-      blockInput.dataPromise.resolve([]);
+      blockInput.resolveData([]);
       blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
@@ -709,7 +715,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
-      blockInput.dataPromise.resolve([]);
+      blockInput.resolveData([]);
       blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
@@ -837,7 +843,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     } as BlockInputColumnsState;
 
     if (hasAllData && sampledColumns !== null) {
-      this.dataPromise.resolve(sampledColumns);
+      this.resolveData(sampledColumns);
     }
 
     if (hasComputedAllData && sampledColumns !== null) {
@@ -961,7 +967,7 @@ export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
   private constructor(init: BlockInputInit, state: BlockInputNoDataState) {
     super(init);
     this.state = state;
-    this.dataPromise.resolve(null);
+    this.resolveData(null);
     this.blockPromise.resolve(state.block);
   }
 

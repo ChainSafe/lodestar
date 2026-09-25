@@ -1317,6 +1317,7 @@ export function getValidatorApi(
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
             headState.getBlockRootAtSlot(slot);
+      chain.blockTrace?.attestationData(slot, slot >= headSlot ? headBlockRootHex : toRootHex(beaconBlockRoot));
 
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {

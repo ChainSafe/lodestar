@@ -93,6 +93,55 @@ export type BlockProcessorQueueItem = {
   addedTimeMs: number;
 };
 
+/** A traced block root; times are ms from the start of its slot */
+export type BlockTraceRoot = {
+  root: RootHex;
+  outcome: "pending" | "head" | "imported" | "not_imported";
+  /** Recorded milestones by name */
+  milestones: Record<string, number>;
+  /** Union of the intervals in which import work was runnable and waiting for the JS thread */
+  runnableImport: {
+    ms: number;
+    intervals: [number, number][];
+    intervalsDropped: boolean;
+    /** Attestation batch starts and continuations that ran inside the union */
+    attestationStarts: number;
+    attestationContinuations: number;
+    /** Attestation segments inside the union timed in a sampled slot, and their synchronous time */
+    attestationTimedSegments: number;
+    attestationJsMs: number;
+    /** Whether the attestation log no longer covered the start of an interval */
+    attestationLogTruncated: boolean;
+  };
+};
+
+/** A slot of the block trace; times are ms from the slot start */
+export type BlockTraceSlot = {
+  slot: Slot;
+  fork: ForkName;
+  finalized: boolean;
+  /** Whether attestation segments were timed in this slot */
+  sampled: boolean;
+  targetsMs: Record<string, number | null>;
+  /** The first head root the attestation data API selected for this slot, before its state regen */
+  attestationData: {ms: number; root: RootHex; count: number; rootChanged: boolean} | null;
+  /** Attestation batch work that ran during this clock slot */
+  attestationWork: {starts: number; continuations: number; jsMs: number | null};
+  rootsOverflow: number;
+  roots: BlockTraceRoot[];
+};
+
+export type BlockTrace = {
+  currentSlot: Slot;
+  slotDurationMs: number;
+  sampleEverySlots: number;
+  /** Milestone names in critical-path order */
+  milestones: string[];
+  /** Milestones stamped when the JS continuation ran after an external result, whose callback delay is unknown */
+  observedReadiness: string[];
+  slots: BlockTraceSlot[];
+};
+
 export type StateCacheItem = {
   slot: Slot;
   root: RootHex;
@@ -221,6 +270,15 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     BlockProcessorQueueItem[],
+    EmptyMeta
+  >;
+  /** Dump the per-slot block critical-path trace */
+  getBlockTrace: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    BlockTrace,
     EmptyMeta
   >;
   /** Dump a summary of the states in the block state cache and checkpoint state cache */
@@ -491,6 +549,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     },
     getBlockProcessorQueueItems: {
       url: "/eth/v1/lodestar/block_processor_queue_items",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getBlockTrace: {
+      url: "/eth/v1/lodestar/block_trace",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,

@@ -178,6 +178,7 @@ function buildIncompleteGloasBlockInput({
     slot,
     blockRootHex,
     parentRootHex,
+    dataAvailableAt: null,
     addBlock(props): void {
       currentBlock = props.block;
       timeCompleteSec = props.seenTimestampSec;

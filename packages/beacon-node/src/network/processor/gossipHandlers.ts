@@ -38,6 +38,7 @@ import {
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {AttestationSegment, BlockMilestone} from "../../chain/blockTrace/index.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -151,12 +152,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     signedBlock: SignedBeaconBlock,
     fork: ForkName,
     peerIdStr: string,
-    seenTimestampSec: number
+    seenTimestampSec: number,
+    validationStart: number
   ): Promise<IBlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const blockShortHex = prettyBytes(blockRootHex);
+    chain.blockTrace?.gossipValidationStart(slot, blockRootHex, seenTimestampSec, validationStart);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -259,6 +262,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       throw e;
     } finally {
+      chain.blockTrace?.mark(slot, blockRootHex, BlockMilestone.gossipValidationEnd);
       // The block received from the network may have established an equivocation, either by conflicting
       // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
       const proposerIndex = signedBlock.message.proposerIndex;
@@ -712,11 +716,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
+      const validationStart = performance.now();
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
       try {
-        const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
+        const blockInput = await validateBeaconBlock(
+          signedBlock,
+          topic.boundary.fork,
+          peerIdStr,
+          seenTimestampSec,
+          validationStart
+        );
         chain.serializedCache.set(signedBlock, serializedData);
         handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
       } catch (e) {
@@ -1349,6 +1360,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       if (attestationCount === 0) {
         return results;
       }
+      const trace = chain.blockTrace;
+      const start = trace?.attestationSegmentStart(AttestationSegment.start) ?? -1;
       // all attestations should have same attestation data as filtered by network processor
       const {fork} = gossipHandlerParams[0].topic.boundary;
       const validationParams = gossipHandlerParams.map((param) => ({
@@ -1358,11 +1371,10 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         attDataBase64: param.gossipData.indexed,
         subnet: param.topic.subnet,
       })) as GossipAttestation[];
-      const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
-        fork,
-        chain,
-        validationParams
-      );
+      const validation = validateGossipAttestationsSameAttData(fork, chain, validationParams);
+      if (start >= 0) trace?.attestationSegmentEnd(start);
+      const {results: validationResults, batchableBls} = await validation;
+      const segment = trace?.sampling ? trace.attestationSegmentStart(AttestationSegment.microtask) : -1;
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
           results.push(validationResult.err as AttestationError);
@@ -1434,6 +1446,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }
 
+      if (segment >= 0) trace?.attestationSegmentEnd(segment);
       return results;
     },
   };

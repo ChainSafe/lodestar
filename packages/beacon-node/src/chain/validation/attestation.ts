@@ -49,6 +49,7 @@ import {
   getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
+import {AttestationSegment} from "../blockTrace/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -115,11 +116,17 @@ export async function validateGossipAttestationsSameAttData(
   // this for await pattern below seems to be bad but it's not
   // for seen AttestationData, it's the same to await Promise.all() pattern
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
+  const trace = chain.blockTrace;
+  const timed = trace?.sampling === true;
   const step0ResultOrErrors: Result<Step0Result>[] = [];
-  for (const attestationOrBytes of attestationOrBytesArr) {
+  for (let i = 0; i < attestationOrBytesArr.length; i++) {
+    const attestationOrBytes = attestationOrBytesArr[i];
     const {subnet} = attestationOrBytes;
-    const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
-    step0ResultOrErrors.push(resultOrError);
+    // The first step0 runs in the caller's segment, each later one in a microtask after the previous
+    const segment = timed && i > 0 ? (trace?.attestationSegmentStart(AttestationSegment.microtask) ?? -1) : -1;
+    const step0 = wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
+    if (segment >= 0) trace?.attestationSegmentEnd(segment);
+    step0ResultOrErrors.push(await step0);
   }
 
   // step1: verify signatures of all valid attestations
@@ -149,6 +156,7 @@ export async function validateGossipAttestationsSameAttData(
       signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true}))
     );
   }
+  const continuation = trace?.attestationSegmentStart(AttestationSegment.continuation) ?? -1;
 
   // phase0 post validation
   for (const [i, sigValid] of signatureValids.entries()) {
@@ -186,6 +194,7 @@ export async function validateGossipAttestationsSameAttData(
       };
     }
   }
+  if (continuation >= 0) trace?.attestationSegmentEnd(continuation);
 
   return {
     results: step0ResultOrErrors,

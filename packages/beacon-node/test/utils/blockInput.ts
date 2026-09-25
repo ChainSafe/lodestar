@@ -28,6 +28,7 @@ export class MockBlockInput implements IBlockInput {
   slot: number;
   blockRootHex: string;
   parentRootHex: string;
+  dataAvailableAt: number | null = null;
 
   _block?: SignedBeaconBlock;
   _blockSource?: BlockInputSource;

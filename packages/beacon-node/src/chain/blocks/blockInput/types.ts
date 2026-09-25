@@ -140,6 +140,8 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
 
   /** Whether all expected DA data has been seen and validated. */
   hasAllData(): boolean;
+  /** `performance.now()` when `hasAllData` first became true, null before */
+  dataAvailableAt: number | null;
 
   /**
    * Whether the block and all DA data retrieved.

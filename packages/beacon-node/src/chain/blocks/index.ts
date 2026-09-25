@@ -3,6 +3,7 @@ import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {BlockMilestone} from "../blockTrace/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -23,12 +24,30 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>;
+  /** The last argument is the `performance.now()` time the job was enqueued */
+  readonly jobQueue: JobItemQueue<
+    [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts, number],
+    void
+  >;
 
-  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>(
-      (job, payloadEnvelopes, importOpts) => {
-        return processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts});
+  constructor(
+    private readonly chain: BeaconChain,
+    metrics: Metrics | null,
+    opts: BlockProcessOpts,
+    signal: AbortSignal
+  ) {
+    this.jobQueue = new JobItemQueue<
+      [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts, number],
+      void
+    >(
+      async (job, payloadEnvelopes, importOpts, enqueuedAt) => {
+        const trace = chain.blockTrace;
+        trace?.processorStart(job, enqueuedAt);
+        try {
+          await processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts});
+        } finally {
+          trace?.processorIdle();
+        }
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
@@ -40,7 +59,9 @@ export class BlockProcessor {
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<void> {
-    await this.jobQueue.push(job, payloadEnvelopes, opts);
+    const enqueuedAt = performance.now();
+    this.chain.blockTrace?.markAll(job, BlockMilestone.processorEnqueue, enqueuedAt);
+    await this.jobQueue.push(job, payloadEnvelopes, opts, enqueuedAt);
   }
 }
 

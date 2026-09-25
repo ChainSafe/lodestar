@@ -55,6 +55,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
     allowedFaults?: number;
+    /** Trace each recent block's critical path per slot */
+    blockTrace?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -137,4 +139,5 @@ export const defaultChainOptions: IChainOptions = {
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
+  blockTrace: true,
 };

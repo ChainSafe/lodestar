@@ -85,6 +85,7 @@ import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
+import {BlockMilestone, BlockTrace} from "./blockTrace/index.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
@@ -238,6 +239,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
+  readonly blockTrace: BlockTrace | null;
 
   readonly opts: IChainOptions;
 
@@ -320,6 +322,7 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
+    this.blockTrace = opts.blockTrace === false ? null : new BlockTrace(config, clock, metrics);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
@@ -497,6 +500,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       metrics,
       config,
+      blockTrace: this.blockTrace,
     });
     this.columnReconstructionTracker = new ColumnReconstructionTracker({
       logger,
@@ -1341,6 +1345,7 @@ export class BeaconChain implements IBeaconChain {
       const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
 
       const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+      if (headRootChanged) this.blockTrace?.mark(head.slot, head.blockRoot, BlockMilestone.head);
 
       if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
         return head;

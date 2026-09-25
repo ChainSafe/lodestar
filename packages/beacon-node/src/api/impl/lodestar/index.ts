@@ -127,6 +127,11 @@ export function getLodestarApi({
       };
     },
 
+    async getBlockTrace() {
+      if (chain.blockTrace === null) throw new ApiError(404, "Block trace is disabled");
+      return {data: chain.blockTrace.getSnapshot()};
+    },
+
     async getStateCacheItems() {
       return {data: chain.regen.dumpCacheSummary()};
     },

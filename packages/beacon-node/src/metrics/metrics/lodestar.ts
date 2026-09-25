@@ -1057,6 +1057,75 @@ export function createLodestarMetrics(
         labelNames: ["reason"],
       }),
     },
+    blockTrace: {
+      milestone: register.histogram<{milestone: string}>({
+        name: "lodestar_block_trace_milestone_seconds",
+        help: "Imported block critical-path milestone, or the attestation data snapshot, relative to its slot start",
+        labelNames: ["milestone"],
+        buckets: [-1, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 8, 12],
+      }),
+      milestoneToTarget: register.histogram<{milestone: string; target: string}>({
+        name: "lodestar_block_trace_milestone_to_target_seconds",
+        help: "Imported block critical-path milestone relative to its consumer target, negative before the target",
+        labelNames: ["milestone", "target"],
+        buckets: [-4, -3, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4, 8],
+      }),
+      milestoneLate: register.counter<{milestone: string}>({
+        name: "lodestar_block_trace_milestone_late_total",
+        help: "Imported block milestones recorded after their consumer target",
+        labelNames: ["milestone"],
+      }),
+      milestoneMissing: register.counter<{milestone: string}>({
+        name: "lodestar_block_trace_milestone_missing_total",
+        help: "Imported blocks without an expected milestone; head means the block never became head",
+        labelNames: ["milestone"],
+      }),
+      blocks: register.counter<{outcome: string}>({
+        name: "lodestar_block_trace_blocks_total",
+        help: "Traced block roots by outcome when their slot is finalized in the trace",
+        labelNames: ["outcome"],
+      }),
+      rootsOverflow: register.counter({
+        name: "lodestar_block_trace_roots_overflow_total",
+        help: "Block roots not traced because their slot already traced its maximum competing roots",
+      }),
+      stage: register.histogram<{stage: string}>({
+        name: "lodestar_block_trace_stage_seconds",
+        help: "Imported block time between two critical-path milestones",
+        labelNames: ["stage"],
+        buckets: [0, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 4],
+      }),
+      verifyLast: register.counter<{branch: string}>({
+        name: "lodestar_block_trace_verify_last_total",
+        help: "Imported blocks by the parallel verification branch that finished last",
+        labelNames: ["branch"],
+      }),
+      runnableImport: register.histogram({
+        name: "lodestar_block_trace_runnable_import_seconds",
+        help: "Imported block time runnable import work waited for the JS thread, as the union across stages",
+        buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+      }),
+      runnableImportAttestationSegments: register.histogram<{kind: string}>({
+        name: "lodestar_block_trace_runnable_import_attestation_segments",
+        help: "Attestation batch starts and continuations that ran while an imported block's import work was runnable",
+        labelNames: ["kind"],
+        buckets: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
+      }),
+      runnableImportAttestationJs: register.histogram({
+        name: "lodestar_block_trace_runnable_import_attestation_js_seconds",
+        help: "Synchronous attestation time while an imported block's import work was runnable, in sampled slots",
+        buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+      }),
+      attestationLogTruncated: register.counter({
+        name: "lodestar_block_trace_attestation_log_truncated_total",
+        help: "Imported blocks whose runnable import began before the oldest logged attestation segment",
+      }),
+      attestationData: register.counter<{selected: string}>({
+        name: "lodestar_block_trace_attestation_data_total",
+        help: "Slots by the first head root the attestation data API selected: the slot's block, another root, or no traced block",
+        labelNames: ["selected"],
+      }),
+    },
     importPayload: {
       elapsedTimeTillImported: register.histogram<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_elapsed_time_till_imported_seconds",
