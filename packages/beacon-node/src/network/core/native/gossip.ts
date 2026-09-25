@@ -12,6 +12,7 @@ import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
+import {NativeGossipDrainLimits, nativeLanes} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
 
@@ -40,8 +41,10 @@ type GossipExecution = {jobs: GossipJob[]; grouped: boolean};
 export class NativeGossip {
   private closed = false;
   private processor: GossipExecutor | undefined;
-  /** Claimed jobs a spent drain budget left for the next drain, at most one batch. */
+  /** Claimed ordinary jobs a spent drain budget left for the next drain, at most one batch. */
   private queued: GossipExecution[] = [];
+  /** Whether native claims ordinary work, as the last drainGossip asked. */
+  private ordinary = true;
   constructor(
     private readonly runtime: GossipRuntime,
     private readonly config: BeaconConfig,
@@ -70,19 +73,45 @@ export class NativeGossip {
       this.runtime.trackGossipSearch(Buffer.from(root.slice(2), "hex"), peer === undefined ? null : peer)
     );
   }
-  /** Starts claimed jobs until `deadline`, then claims at most `items`/`bytes` more. Returns whether work remains. */
-  drain({items, bytes, deadline}: {items: number; bytes: number; deadline: number}): boolean {
+  /**
+   * Answers dependency checks, claims at most `items`/`bytes` and starts the claimed jobs. Urgent jobs (blocks, blob
+   * sidecars, data columns) all start in this drain whatever the budget. Ordinary jobs start until `deadline`, at
+   * least one per drain, and native claims ordinary work only while none is queued, the budget lasts and the executor
+   * can take it. Native lanes without work are not called. Returns whether work remains.
+   */
+  drain({items, bytes, deadline, lanes}: NativeGossipDrainLimits): boolean {
     const processor = this.processor;
     if (this.closed || !processor) return false;
-    if (this.start(processor, deadline)) return true;
-    const checks = this.runtime.drainGossipChecks();
-    if (checks.length > 0) this.runtime.classifyGossip(processor.check(checks));
-    if (performance.now() >= deadline) return true;
-    const batch = this.runtime.drainGossip({items, bytes, ordinary: processor.canExecute()});
-    if (batch.messages.length > 0) this.dispatch(batch, processor);
-    return this.start(processor, deadline) || batch.more;
+    let urgentWork = (lanes & nativeLanes.gossipUrgent) !== 0;
+    let ordinaryWork = (lanes & nativeLanes.gossipOrdinary) !== 0;
+    if (lanes & nativeLanes.gossipChecks) {
+      const checks = this.runtime.drainGossipChecks();
+      if (checks.length > 0) {
+        this.runtime.classifyGossip(processor.check(checks));
+        // Available dependencies can make work of any kind claimable.
+        urgentWork = true;
+        ordinaryWork = true;
+      }
+    }
+    let more = false;
+    if (urgentWork || ordinaryWork || !this.ordinary) {
+      const ready = processor.canExecute();
+      const ordinary = ready && this.queued.length === 0 && performance.now() < deadline;
+      // A claim also sets native's ordinary gate. It stays closed only while the executor cannot take ordinary work,
+      // whose retry drains again; a gate closed for queued jobs or the budget reopens in a later drain.
+      if (urgentWork || (ordinary && (ordinaryWork || !this.ordinary)) || (!ready && this.ordinary && ordinaryWork)) {
+        // Native sets the gate before copying, so a failed copy leaves it as asked.
+        this.ordinary = ordinary;
+        const batch = this.runtime.drainGossip({items, bytes, ordinary});
+        if (batch.messages.length > 0) this.dispatch(batch, processor);
+        more = batch.more;
+      }
+      // Ordinary work held back for queued jobs or the budget, or a gate left closed, needs a later drain.
+      more ||= ready && !ordinary && (ordinaryWork || !this.ordinary);
+    }
+    return this.start(processor, deadline) || more;
   }
-  /** Starts queued jobs, at least one, until `deadline`. Returns whether any remain. */
+  /** Starts queued ordinary jobs, at least one, until `deadline`. Returns whether any remain. */
   private start(processor: GossipExecutor, deadline: number): boolean {
     let started = 0;
     for (const {jobs, grouped} of this.queued) {
@@ -140,8 +169,12 @@ export class NativeGossip {
       void this.execute(messages, false, processor, errors).catch(this.onError);
       return;
     }
-    for (const job of batch.jobs)
-      this.queued.push({jobs: messages.slice(job.start, job.start + job.length), grouped: job.grouped});
+    for (const job of batch.jobs) {
+      const jobs = messages.slice(job.start, job.start + job.length);
+      // Claims come in priority order, so urgent jobs start first and none waits for the budget.
+      if (job.urgent) void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
+      else this.queued.push({jobs, grouped: job.grouped});
+    }
   }
   private async execute(
     jobs: GossipJob[],

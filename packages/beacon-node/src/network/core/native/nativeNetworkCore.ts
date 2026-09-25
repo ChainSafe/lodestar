@@ -43,8 +43,8 @@ const drainLimits: NativeDrainLimits = {
   peers: 32,
   settle: 32,
   servingStarts: 8,
-  gossipItems: 16,
-  gossipBytes: 2 * 1024 * 1024,
+  gossipItems: 64,
+  gossipBytes: 8 * 1024 * 1024,
 };
 
 export class NativeNetworkCore implements INetworkCore {

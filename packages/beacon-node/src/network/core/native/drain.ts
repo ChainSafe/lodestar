@@ -1,5 +1,15 @@
-import {NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import {NativeLanes, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
+
+/** The bits of `pendingLanes`: the native drain calls that have work. */
+export const nativeLanes: NativeLanes = {
+  settle: 1,
+  peers: 2,
+  incoming: 4,
+  gossipChecks: 8,
+  gossipUrgent: 16,
+  gossipOrdinary: 32,
+};
 
 /** Per-macrotask bounds of the native drain. */
 export type NativeDrainLimits = {
@@ -12,11 +22,15 @@ export type NativeDrainLimits = {
   gossipBytes: number;
 };
 
+/** Gossip bounds of one drain, with the `pendingLanes` bits read at its start. */
+export type NativeGossipDrainLimits = {items: number; bytes: number; deadline: number; lanes: number};
+
 /** Host consumers of the native lanes. Each returns whether it left work. */
 export type NativeDrainStages = {
   peers(limit: number): boolean;
   requests(limit: number): boolean;
-  gossip(limits: {items: number; bytes: number; deadline: number}): boolean;
+  /** Called on every drain: it may hold claimed jobs whatever the native lanes report. */
+  gossip(limits: NativeGossipDrainLimits): boolean;
 };
 
 type NativeDrainMetrics = ReturnType<typeof createNativeDrainMetrics>;
@@ -44,9 +58,10 @@ function createNativeDrainMetrics(register: RegistryMetricCreator) {
 
 /**
  * Delivers native results and lane work to the host in bounded macrotasks. `request` only schedules; each drain
- * settles results, then consumes peers, serving starts and gossip until a cap or the time budget, and yields the
- * rest to another macrotask. Only a drain that leaves nothing calls `endDrain`, which releases native's
- * notification latch. After the host closes, drains only settle, until native reports nothing left.
+ * reads which native lanes have work, settles results, then consumes peers, serving starts and gossip until a cap or
+ * the time budget, and yields the rest to another macrotask. Native calls for lanes without work are skipped. Only a
+ * drain that leaves nothing calls `endDrain`, which releases native's notification latch. After the host closes,
+ * drains only settle, until native reports nothing left.
  */
 export class NativeDrain {
   private scheduled = false;
@@ -54,7 +69,7 @@ export class NativeDrain {
   private readonly metrics: NativeDrainMetrics | null;
 
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "settle" | "endDrain">,
+    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "pendingLanes" | "settle" | "endDrain">,
     private readonly limits: NativeDrainLimits,
     private readonly stages: () => NativeDrainStages | null,
     /** Returns whether to drain again after a failure. */
@@ -84,13 +99,15 @@ export class NativeDrain {
     const deadline = started + budgetMs;
     let more = false;
     try {
-      more = this.runtime.settle(settle);
+      const lanes = this.runtime.pendingLanes();
+      if (lanes & nativeLanes.settle) more = this.runtime.settle(settle);
       const stages = this.stages();
       if (stages) {
-        more = stages.peers(peers) || more;
-        more = performance.now() >= deadline || stages.requests(servingStarts) || more;
-        more =
-          performance.now() >= deadline || stages.gossip({items: gossipItems, bytes: gossipBytes, deadline}) || more;
+        if (lanes & nativeLanes.peers) more = stages.peers(peers) || more;
+        if (lanes & nativeLanes.incoming)
+          more = performance.now() >= deadline || stages.requests(servingStarts) || more;
+        // Gossip applies the budget to ordinary work only.
+        more = stages.gossip({items: gossipItems, bytes: gossipBytes, deadline, lanes}) || more;
       }
     } catch (error) {
       more = this.onError(error);

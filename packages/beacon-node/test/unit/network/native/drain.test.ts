@@ -1,8 +1,9 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
-import {NativeDrain, NativeDrainStages} from "../../../../src/network/core/native/drain.js";
+import {NativeDrain, NativeDrainStages, nativeLanes} from "../../../../src/network/core/native/drain.js";
 
-const limits = {budgetMs: 8, peers: 32, settle: 32, servingStarts: 8, gossipItems: 16, gossipBytes: 2 * 1024 * 1024};
+const limits = {budgetMs: 8, peers: 32, settle: 32, servingStarts: 8, gossipItems: 64, gossipBytes: 8 * 1024 * 1024};
+const allLanes = Object.values(nativeLanes).reduce((lanes, lane) => lanes | lane, 0);
 
 function macrotask(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
@@ -16,7 +17,7 @@ async function yields(register: RegistryMetricCreator): Promise<Record<string, n
 function fixture() {
   let now = 0;
   vi.spyOn(performance, "now").mockImplementation(() => now);
-  const runtime = {settle: vi.fn(() => false), endDrain: vi.fn(() => false)};
+  const runtime = {pendingLanes: vi.fn(() => allLanes), settle: vi.fn(() => false), endDrain: vi.fn(() => false)};
   const stages = {
     peers: vi.fn<NativeDrainStages["peers"]>(() => false),
     requests: vi.fn<NativeDrainStages["requests"]>(() => false),
@@ -59,6 +60,7 @@ describe("native drain", () => {
       items: limits.gossipItems,
       bytes: limits.gossipBytes,
       deadline: limits.budgetMs,
+      lanes: allLanes,
     });
     expect(node.runtime.endDrain).toHaveBeenCalledOnce();
     await macrotask();
@@ -66,21 +68,65 @@ describe("native drain", () => {
     expect(await yields(node.register)).toEqual({idle: 1});
   });
 
-  it("stops starting stages once the budget is spent and resumes in the next macrotask", async () => {
+  it("stops starting serving once the budget is spent and resumes in the next macrotask", async () => {
     const node = fixture();
-    node.stages.requests.mockImplementationOnce(() => {
+    node.stages.peers.mockImplementationOnce(() => {
       node.advance(limits.budgetMs);
       return false;
     });
     node.drain.request();
     await macrotask();
-    expect(node.stages.requests).toHaveBeenCalledOnce();
-    expect(node.stages.gossip).not.toHaveBeenCalled();
+    expect(node.stages.requests).not.toHaveBeenCalled();
+    // Gossip applies the spent budget to its ordinary work itself.
+    expect(node.stages.gossip).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({deadline: limits.budgetMs}));
     expect(node.runtime.endDrain).not.toHaveBeenCalled();
     await macrotask();
-    expect(node.stages.gossip).toHaveBeenCalledOnce();
+    expect(node.stages.requests).toHaveBeenCalledOnce();
     expect(node.runtime.endDrain).toHaveBeenCalledOnce();
     expect(await yields(node.register)).toEqual({budget: 1, idle: 1});
+  });
+
+  it("does not call native lanes without work", async () => {
+    const node = fixture();
+    node.runtime.pendingLanes.mockReturnValue(0);
+    node.drain.request();
+    await macrotask();
+    expect(node.runtime.pendingLanes).toHaveBeenCalledOnce();
+    expect(node.runtime.settle).not.toHaveBeenCalled();
+    expect(node.stages.peers).not.toHaveBeenCalled();
+    expect(node.stages.requests).not.toHaveBeenCalled();
+    // Gossip may hold claimed jobs, so it always runs and skips its own empty lanes.
+    expect(node.stages.gossip).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({lanes: 0}));
+    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
+    node.runtime.pendingLanes.mockReturnValue(nativeLanes.settle | nativeLanes.incoming);
+    node.drain.request();
+    await macrotask();
+    expect(node.runtime.settle).toHaveBeenCalledOnce();
+    expect(node.stages.peers).not.toHaveBeenCalled();
+    expect(node.stages.requests).toHaveBeenCalledOnce();
+    expect(node.stages.gossip).toHaveBeenLastCalledWith(
+      expect.objectContaining({lanes: nativeLanes.settle | nativeLanes.incoming})
+    );
+    expect(await yields(node.register)).toEqual({idle: 2});
+  });
+
+  it("releases the latch only through an idle endDrain", async () => {
+    const node = fixture();
+    node.runtime.pendingLanes.mockReturnValue(0);
+    node.stages.gossip.mockReturnValueOnce(true);
+    node.drain.request();
+    await macrotask();
+    // Queued gossip leaves work, so the latch stays held without an endDrain.
+    expect(node.runtime.endDrain).not.toHaveBeenCalled();
+    node.runtime.endDrain.mockReturnValueOnce(true);
+    await macrotask();
+    // An idle drain ends, and native keeps the latch for work that arrived meanwhile.
+    expect(node.runtime.endDrain).toHaveBeenCalledOnce();
+    await macrotask();
+    expect(node.runtime.endDrain).toHaveBeenCalledTimes(2);
+    await macrotask();
+    expect(node.runtime.pendingLanes).toHaveBeenCalledTimes(3);
+    expect(node.runtime.endDrain).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the latch while a cap leaves work and drains again until native reports none", async () => {
