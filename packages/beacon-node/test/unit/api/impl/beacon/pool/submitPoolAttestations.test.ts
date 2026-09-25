@@ -107,14 +107,8 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
       )
       .mockResolvedValue({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
     const gossip = new NativeGossip(
-      {
-        publishGossip,
-        reportGossip: () => true,
-        classifyGossip: () => 0,
-        notifyGossipBlock: () => {},
-        dropQueuedGossip: () => {},
-        trackGossipSearch: () => false,
-      },
+      {publishGossip},
+      {verdict: () => {}, classify: () => {}, block: () => {}, dropQueued: () => {}},
       createBeaconConfig(config, new Uint8Array(32)),
       new NetworkEventBus(),
       defaultNetworkOptions,

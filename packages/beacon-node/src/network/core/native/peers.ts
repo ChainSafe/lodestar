@@ -96,7 +96,7 @@ export class NativePeers {
   ) {
     nativeInteger(capacity, "peer projection capacity", 4096, 1);
   }
-  deliver(events: NativePeerObservation[]): void {
+  deliver(events: readonly NativePeerObservation[]): void {
     if (this.closed) return;
     for (const event of events) this.observe(event);
   }

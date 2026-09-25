@@ -21,7 +21,7 @@ import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEnd
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeDrain, NativeDrainLimits, NativeDrainStages} from "./drain.js";
-import {NativeNetworkError, NativeNetworkErrorCode, isNativeResultAllocationError, nativeInteger} from "./errors.js";
+import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeGossipExecutor} from "./executor.js";
 import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
@@ -38,11 +38,12 @@ const actions: Record<PeerAction, NativePeerAction> = {
   [PeerAction.HighToleranceError]: "high_tolerance",
 };
 
-/** Bounds of one native drain macrotask; the rest yields to the next one. */
+/** Bounds of one native turn; the rest yields to the next one. */
 const drainLimits: NativeDrainLimits = {
   budgetMs: 8,
-  peers: 32,
   settle: 32,
+  peers: 32,
+  checks: 64,
   servingStarts: 8,
   gossipItems: 64,
   gossipBytes: 8 * 1024 * 1024,
@@ -93,7 +94,7 @@ export class NativeNetworkCore implements INetworkCore {
         core.runtime,
         drainLimits,
         core.drainStages,
-        core.onDrainError,
+        core.onFailure,
         modules.metricsRegistry
       );
       core.intent = new NativeIntent(
@@ -109,6 +110,7 @@ export class NativeNetworkCore implements INetworkCore {
       const diagnostics = core.runtime.diagnostics();
       core.gossip = new NativeGossip(
         core.runtime,
+        core.drain,
         config,
         modules.events,
         core.modules.opts,
@@ -196,23 +198,23 @@ export class NativeNetworkCore implements INetworkCore {
     this.drain.request();
   };
   private readonly stages: NativeDrainStages = {
-    serving: (max) => this.requests.demand(max),
-    gossip: (limits) => this.gossip.demand(limits),
-    deliver: (result, gossip, deadline) => {
-      this.peers.deliver(result.peers);
-      const held = this.requests.start(result.serving, result.servingQueued, deadline);
-      return this.gossip.deliver(result.checks, result.gossip, gossip, deadline) || held;
+    demand: (deadline) => {
+      const {checks, gossipItems: messages, gossipBytes: bytes} = drainLimits;
+      const {ordinary, ...gossip} = this.gossip.demand({checks, messages, bytes}, deadline);
+      return {
+        ...gossip,
+        peers: drainLimits.peers,
+        servingStarts: drainLimits.servingStarts,
+        capacity: {serving: this.requests.capacity(), ordinary},
+      };
+    },
+    deliver: ({peers, starts, checks, jobs}, deadline) => {
+      this.peers.deliver(peers);
+      const held = this.requests.start(starts, deadline);
+      return this.gossip.deliver(checks, jobs, deadline) || held;
     },
   };
   private readonly drainStages = (): NativeDrainStages | null => (this.closed ? null : this.stages);
-  private readonly onDrainError = (error: unknown): boolean => {
-    if (!isNativeResultAllocationError(error)) {
-      this.onFailure(error);
-      return false;
-    }
-    this.onOperationError(error);
-    return true;
-  };
   private readonly onFailure = (error: unknown): void => {
     if (this.closed) return;
     this.failure =
@@ -266,7 +268,7 @@ export class NativeNetworkCore implements INetworkCore {
     return this.intent.custody(count);
   }
   reportPeer(peer: string, action: PeerAction, _actionName: string): void {
-    this.runtime.reportPeer(peer, actions[action]);
+    this.drain.reportPeer(peer, actions[action]);
   }
   reStatusPeers(peers: string[]): Promise<void> {
     nativeInteger(peers.length, "re-status peers", this.modules.opts.maxPeers);

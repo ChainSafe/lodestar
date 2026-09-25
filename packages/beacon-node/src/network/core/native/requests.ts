@@ -20,6 +20,7 @@ import {
 } from "@lodestar/reqresp";
 import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
+import type {NativeClaim} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
@@ -182,21 +183,21 @@ export class NativeRequests {
   private readonly protocols: ReadonlyMap<string, NativeProtocol>;
   private readonly maxChunks: number;
   private closed = false;
-  private readonly capacity: number;
+  /** Routes served at once. */
+  private readonly limit: number;
   private readonly budget;
-  private retry: NodeJS.Timeout | undefined;
-  /** Delivered starts a spent drain budget holds for the next drain, at most one drain's quantum. */
+  /** Delivered starts a spent turn budget holds for the next turn, at most one turn's quantum. */
   private held: NativeIncomingRequest[] = [];
   constructor(
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
     capacity: number,
-    /** Schedules the core drain, which takes the next requests within its per-macrotask cap. */
+    /** Schedules a native turn once a route retires, since serving capacity returned. */
     private readonly wake: () => void
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
     this.budget = servingBudget(getHandler);
-    this.capacity = Math.min(capacity, this.budget.snapshot().limits.capacity);
+    this.limit = Math.min(capacity, this.budget.snapshot().limits.capacity);
     this.protocols = nativeProtocols(config, config.getForkName(0));
     this.maxChunks = nativeInteger(
       Math.max(
@@ -213,38 +214,31 @@ export class NativeRequests {
     );
   }
   /**
-   * Serving starts to take now: the drain's quantum, free routes and the host serving budget bound them, less the
-   * starts already held.
+   * Serving starts the host can take now: free routes and the host serving budget, which other adapters share, bound
+   * them, less the starts already held.
    */
-  demand(max: number): number {
-    nativeInteger(max, "incoming drain", 32, 1);
+  capacity(): number {
     if (this.closed) return 0;
-    const free = Math.min(max, this.capacity - this.routes.size, this.budget.remaining());
-    return Math.max(0, free - this.held.length);
+    return Math.max(0, Math.min(this.limit - this.routes.size, this.budget.remaining()) - this.held.length);
   }
   /**
-   * Starts held and then delivered requests, unless the drain's budget is spent: they then wait for the next drain.
-   * While queued requests wait on the serving budget, which other adapters share, drains again after 25 ms. Returns
-   * whether starts wait for the next drain.
+   * Adopts delivered starts and starts them after the held ones, unless the turn's budget is spent: they then wait
+   * for the next turn. Returns whether starts wait for the next turn.
    */
-  start(requests: NativeIncomingRequest[], queued: boolean, deadline: number): boolean {
-    if (this.closed) {
-      for (const request of requests) void request.cancel().catch(() => {});
-      return false;
-    }
-    const starts = this.held.concat(requests);
+  start(claims: NativeClaim<NativeIncomingRequest>[], deadline: number): boolean {
+    if (this.closed) return false;
+    const starts = this.held.concat(
+      claims.map((claim) => {
+        claim.adopt();
+        return claim.item;
+      })
+    );
     this.held = [];
     if (starts.length > 0 && performance.now() >= deadline) {
       this.held = starts;
       return true;
     }
     for (const request of starts) this.serve(request);
-    if (!queued || this.routes.size >= this.capacity || this.budget.canAcquire() || this.retry) return false;
-    this.retry = setTimeout(() => {
-      this.retry = undefined;
-      this.wake();
-    }, 25);
-    this.retry.unref();
     return false;
   }
   private serve(request: NativeIncomingRequest): void {
@@ -287,7 +281,6 @@ export class NativeRequests {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    if (this.retry) clearTimeout(this.retry);
     for (const route of this.routes) {
       const request = route.request;
       route.clear();

@@ -3,8 +3,9 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {
-  NativeExchangeDemand,
-  NativeGossipBatch,
+  NativeAction,
+  NativeExchange,
+  NativeExchangeDelivery,
   NativeGossipDependencyCheck,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
@@ -13,6 +14,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {defer} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
+import {NativeClaim, NativeDrain, NativeJob} from "../../../../src/network/core/native/drain.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
@@ -31,15 +33,34 @@ const blockTopic = stringifyGossipTopic(config, {
   type: GossipType.beacon_block,
   boundary: {fork: ForkName.phase0, epoch: 0},
 });
-const unbounded = {items: 64, bytes: 16 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
+const unbounded = {checks: 64, messages: 64, bytes: 16 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
+const idle: NativeExchangeDelivery = {
+  rolledBack: false,
+  settled: 0,
+  peers: [],
+  serving: [],
+  checks: [],
+  gossip: null,
+  retired: false,
+  more: false,
+  parked: {serving: false, ordinary: false},
+  disabledWaiting: false,
+  failure: null,
+};
+
+type Demand = ReturnType<NativeGossip["demand"]>;
 
 async function fixture(events = new NetworkEventBus(), attach = true, register: RegistryMetricCreator | null = null) {
   const peer = await generateKeyPair("secp256k1");
   let queued: NativeGossipMessage[] = [];
   let checks: NativeGossipDependencyCheck[] = [];
   let grouped = false;
-  let gate = true;
-  const reportGossip = vi.fn<NativeNetworkApplicationRuntime["reportGossip"]>(() => true);
+  const ledger = {
+    verdict: vi.fn<NativeDrain["verdict"]>(),
+    classify: vi.fn<NativeDrain["classify"]>(),
+    block: vi.fn<NativeDrain["block"]>(),
+    dropQueued: vi.fn<NativeDrain["dropQueued"]>(),
+  };
   const publishGossip = vi.fn<NativeNetworkApplicationRuntime["publishGossip"]>(async () => ({
     queued: 1,
     selected: 1,
@@ -47,41 +68,35 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
     pressured: 0,
     duplicate: false,
   }));
-  const runtime = {
-    reportGossip,
-    publishGossip,
-    classifyGossip: vi.fn<NativeNetworkApplicationRuntime["classifyGossip"]>((answers) => answers.length),
-    notifyGossipBlock: () => {},
-    dropQueuedGossip: () => {},
-    trackGossipSearch: () => true,
-  };
-  // Like native, claims urgent blocks whenever queued and ordinary work only while the ordinary gate is open.
-  const claim = vi.fn((demand: NonNullable<NativeExchangeDemand["gossip"]>): NativeGossipBatch | null => {
+  const runtime = {publishGossip};
+  // Like native, claims urgent blocks whenever queued, and ordinary work only while the host claims it and can
+  // execute it.
+  const claims: NativeClaim<NativeJob>[][] = [];
+  const claim = vi.fn((demand: Demand): NativeClaim<NativeJob>[] => {
     const urgent = queued.filter((message) => message.topic === blockTopic);
-    const ordinary = queued.filter((message) => message.topic !== blockTopic);
-    const reopen = demand.ordinary && (ordinary.length > 0 || !gate);
-    if (urgent.length === 0 && !reopen && (demand.ready || !gate || ordinary.length === 0)) return null;
-    gate = demand.ordinary;
-    const messages = [...urgent, ...(gate ? ordinary : [])].slice(0, demand.items);
+    const ordinary =
+      demand.claimOrdinary && demand.ordinary ? queued.filter((message) => message.topic !== blockTopic) : [];
+    const messages = [...urgent, ...ordinary].slice(0, demand.messages);
     queued = queued.filter((message) => !messages.includes(message));
-    const jobs = grouped
-      ? [{kind: "beacon_attestation" as const, start: 0, length: messages.length, grouped: true, urgent: false}]
-      : messages.map((message, start) =>
+    const jobs: NativeJob[] = grouped
+      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages}]
+      : messages.map((message) =>
           message.topic === blockTopic
-            ? {kind: "beacon_block" as const, start, length: 1, grouped: false, urgent: true}
-            : {kind: "voluntary_exit" as const, start, length: 1, grouped: false, urgent: false}
+            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message]}
+            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message]}
         );
-    return {messages, jobs: messages.length > 0 ? jobs : []};
+    const result = messages.length > 0 ? jobs.map((job) => new NativeClaim(job)) : [];
+    claims.push(result);
+    return result;
   });
   const onError = vi.fn();
   const onFailure = vi.fn();
-  const gossip = new NativeGossip(runtime, config, events, defaultNetworkOptions, onError, onFailure, register);
+  const gossip = new NativeGossip(runtime, ledger, config, events, defaultNetworkOptions, onError, onFailure, register);
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
-    check: vi.fn<NativeGossipExecutor["check"]>((checks) => checks.map(({handle}) => ({handle, available: true}))),
+    check: vi.fn<NativeGossipExecutor["check"]>((checks) => checks.map(() => true)),
     ready: vi.fn<NativeGossipExecutor["ready"]>(() => true),
-    canExecute: vi.fn<NativeGossipExecutor["canExecute"]>(() => true),
     execute: vi.fn<NativeGossipExecutor["execute"]>((messages) => {
       pending.push(...messages);
       return Promise.all(
@@ -95,21 +110,20 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
     observe: vi.fn<NativeGossipExecutor["observe"]>(),
   };
   if (attach) gossip.attach(processor);
-  /** One drain's gossip: the host's demand, native's checks and claim, and the delivery. */
+  /** One turn's gossip: the host's demand, native's checks and claim, and the delivery. */
   const turn = (limits = unbounded): boolean => {
-    const demand = gossip.demand(limits);
-    const batch = demand ? claim(demand) : null;
-    return gossip.deliver(demand ? checks.splice(0) : [], batch, demand, limits.deadline);
+    const demand = gossip.demand(limits, limits.deadline);
+    const jobs = demand.messages > 0 ? claim(demand) : [];
+    return gossip.deliver(demand.checks > 0 ? checks.splice(0) : [], jobs, limits.deadline);
   };
   return {
     gossip,
     events,
     runtime,
+    ledger,
     claim,
+    claims,
     turn,
-    get gate() {
-      return gate;
-    },
     pending,
     processor,
     onError,
@@ -162,9 +176,9 @@ describe("native gossip host ownership", () => {
       expect(node.processor.execute.mock.calls.map(([messages]) => messages.length)).toEqual([1, 1]);
       expect(node.pending[0].seenTimestampSec).toBe(12.345);
       await node.retire(node.pending[1], TopicValidatorResult.Reject);
-      expect(node.runtime.reportGossip.mock.calls).toEqual([[node.message(2).handle, "reject"]]);
+      expect(node.ledger.verdict.mock.calls).toEqual([[node.message(2).handle, "reject"]]);
       await node.retire(node.pending[0]);
-      expect(node.runtime.reportGossip).toHaveBeenLastCalledWith(node.message().handle, "accept");
+      expect(node.ledger.verdict).toHaveBeenLastCalledWith(node.message().handle, "accept");
     } finally {
       await node.close();
     }
@@ -180,26 +194,29 @@ describe("native gossip host ownership", () => {
       return execute ? execute(messages, grouped) : Promise.resolve([]);
     });
     try {
-      const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: 8};
+      const limits = {checks: 64, messages: 64, bytes: 8 * 1024 * 1024, deadline: 8};
       expect(node.drain([node.message(), node.message(2), node.message(3)], false, limits)).toBe(true);
       expect(node.processor.execute).toHaveBeenCalledTimes(2);
       expect(node.claim).toHaveBeenCalledExactlyOnceWith({
-        items: 64,
+        checks: 64,
+        messages: 64,
         bytes: 8 * 1024 * 1024,
+        claimOrdinary: true,
         ordinary: true,
-        ready: true,
       });
+      // Every delivered job was adopted: started or held.
+      expect(node.claims.flat().every(({adopted}) => adopted)).toBe(true);
       node.admit(node.message(4));
       // One queued job starts even past the budget; native ordinary work waits for the queue to empty.
       expect(node.turn({...limits, deadline: now})).toBe(false);
       expect(node.processor.execute).toHaveBeenCalledTimes(3);
-      expect(node.claim).toHaveBeenLastCalledWith(expect.objectContaining({ordinary: false}));
-      expect(node.claim).toHaveLastReturnedWith(null);
+      expect(node.claim).toHaveBeenLastCalledWith(expect.objectContaining({claimOrdinary: false}));
+      expect(node.claim).toHaveLastReturnedWith([]);
       expect(node.turn({...limits, deadline: now + 8})).toBe(false);
       expect(node.processor.execute).toHaveBeenCalledTimes(4);
-      expect(node.claim).toHaveLastReturnedWith(expect.objectContaining({jobs: [expect.anything()]}));
+      expect(node.claim).toHaveLastReturnedWith([expect.anything()]);
       for (const message of node.pending.slice()) await node.retire(message);
-      expect(node.runtime.reportGossip).toHaveBeenCalledTimes(4);
+      expect(node.ledger.verdict).toHaveBeenCalledTimes(4);
     } finally {
       vi.restoreAllMocks();
       await node.close();
@@ -216,7 +233,7 @@ describe("native gossip host ownership", () => {
       return execute ? execute(messages, grouped) : Promise.resolve([]);
     });
     try {
-      const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: 8};
+      const limits = {checks: 64, messages: 64, bytes: 8 * 1024 * 1024, deadline: 8};
       const ordinary = [node.message(), node.message(2), node.message(3)];
       const urgent = [4, 5, 6].map((id) => node.message(id, blockTopic));
       expect(node.drain([...ordinary, ...urgent], false, limits)).toBe(true);
@@ -225,22 +242,30 @@ describe("native gossip host ownership", () => {
       expect(node.pending.map(({msgId}) => msgId)).toEqual(
         [...urgent, ordinary[0]].map(({id}) => Buffer.from(id).toString("hex"))
       );
-      // Urgent work is claimed while ordinary jobs wait, with native's ordinary gate closed for the queue.
+      // Urgent work is claimed while ordinary jobs wait, and ordinary work is not claimed for the queue.
       node.admit(node.message(7, blockTopic), node.message(8));
       expect(node.turn({...limits, deadline: now})).toBe(true);
-      expect(node.claim).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: false, ready: true});
-      expect(node.gate).toBe(false);
+      expect(node.claim).toHaveBeenLastCalledWith({
+        ...limits,
+        deadline: undefined,
+        claimOrdinary: false,
+        ordinary: true,
+      });
       expect(node.processor.execute).toHaveBeenCalledTimes(6);
       expect(node.pending.at(-2)?.topic.type).toBe(GossipType.beacon_block);
-      // The next drain starts the last queued job; the one after reopens the gate and claims the ordinary work.
+      // The next turn starts the last queued job; the one after claims the ordinary work.
       expect(node.turn({...limits, deadline: now + 8})).toBe(false);
-      expect(node.claim).toHaveLastReturnedWith(null);
+      expect(node.claim).toHaveLastReturnedWith([]);
       expect(node.turn({...limits, deadline: now + 8})).toBe(false);
-      expect(node.claim).toHaveBeenLastCalledWith({items: 64, bytes: 8 * 1024 * 1024, ordinary: true, ready: true});
-      expect(node.gate).toBe(true);
+      expect(node.claim).toHaveBeenLastCalledWith({
+        ...limits,
+        deadline: undefined,
+        claimOrdinary: true,
+        ordinary: true,
+      });
       expect(node.processor.execute).toHaveBeenCalledTimes(8);
       for (const message of node.pending.slice()) await node.retire(message);
-      expect(node.runtime.reportGossip).toHaveBeenCalledTimes(8);
+      expect(node.ledger.verdict).toHaveBeenCalledTimes(8);
     } finally {
       vi.restoreAllMocks();
       await node.close();
@@ -253,15 +278,16 @@ describe("native gossip host ownership", () => {
     vi.spyOn(performance, "now").mockImplementation(() => now);
     try {
       node.admit(node.message(), node.message(2, blockTopic));
-      const demand = node.gossip.demand({items: 64, bytes: 8 * 1024 * 1024, deadline: 8});
-      expect(demand).toMatchObject({ordinary: true});
-      const batch = demand ? node.claim(demand) : null;
+      const limits = {checks: 64, messages: 64, bytes: 8 * 1024 * 1024};
+      const demand = node.gossip.demand(limits, 8);
+      expect(demand).toMatchObject({claimOrdinary: true, ordinary: true});
+      const jobs = node.claim(demand);
       // Settlement, peers and serving ran past the 8 ms deadline before gossip delivery at 9 ms.
       now = 9;
-      expect(node.gossip.deliver([], batch, demand, 8)).toBe(true);
+      expect(node.gossip.deliver([], jobs, 8)).toBe(true);
       expect(node.pending.map(({topic}) => topic.type)).toEqual([GossipType.beacon_block]);
-      // The next drain starts the held job whatever its budget, so held work progresses.
-      expect(node.turn({items: 64, bytes: 8 * 1024 * 1024, deadline: now})).toBe(false);
+      // The next turn starts the held job whatever its budget, so held work progresses.
+      expect(node.turn({...limits, deadline: now})).toBe(false);
       expect(node.pending.map(({topic}) => topic.type)).toEqual([GossipType.beacon_block, GossipType.voluntary_exit]);
     } finally {
       vi.restoreAllMocks();
@@ -272,39 +298,58 @@ describe("native gossip host ownership", () => {
   it("dispatches a claimed message larger than the drain byte cap", async () => {
     const node = await fixture();
     try {
-      const limits = {items: 64, bytes: 8 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
+      const limits = {checks: 64, messages: 64, bytes: 8 * 1024 * 1024, deadline: Number.POSITIVE_INFINITY};
       const block = {...node.message(1, blockTopic), data: new Uint8Array(9 * 1024 * 1024)};
       expect(node.drain([block], false, limits)).toBe(false);
-      expect(node.claim).toHaveBeenCalledExactlyOnceWith({items: 64, bytes: limits.bytes, ordinary: true, ready: true});
+      expect(node.claim).toHaveBeenCalledExactlyOnceWith({
+        checks: 64,
+        messages: 64,
+        bytes: limits.bytes,
+        claimOrdinary: true,
+        ordinary: true,
+      });
       expect(node.pending.map(({msg}) => msg.data.length)).toEqual([9 * 1024 * 1024]);
       await node.retire(node.pending[0]);
-      expect(node.runtime.reportGossip).toHaveBeenCalledExactlyOnceWith(block.handle, "accept");
+      expect(node.ledger.verdict).toHaveBeenCalledExactlyOnceWith(block.handle, "accept");
     } finally {
       await node.close();
     }
   });
 
-  it("retries a busy executor only for gossip work and mirrors the ordinary gate a claim sets", async () => {
+  it("reports the executor's readiness as ordinary capacity and claims ordinary work only with it", async () => {
     const node = await fixture();
-    const all = {items: 64, bytes: 16 * 1024 * 1024};
     try {
       node.processor.ready.mockReturnValue(false);
-      expect(node.turn()).toBe(false);
-      expect(node.claim).toHaveLastReturnedWith(null);
-      expect(node.processor.canExecute).not.toHaveBeenCalled();
       node.admit(node.message());
       expect(node.turn()).toBe(false);
-      expect(node.claim).toHaveBeenLastCalledWith({...all, ordinary: false, ready: false});
-      expect(node.gate).toBe(false);
-      expect(node.processor.canExecute).toHaveBeenCalledOnce();
-      expect(node.turn()).toBe(false);
-      expect(node.claim).toHaveLastReturnedWith(null);
-      expect(node.processor.canExecute).toHaveBeenCalledTimes(2);
+      expect(node.claim).toHaveBeenLastCalledWith(expect.objectContaining({claimOrdinary: true, ordinary: false}));
+      expect(node.pending).toHaveLength(0);
       node.processor.ready.mockReturnValue(true);
       expect(node.turn()).toBe(false);
-      expect(node.claim).toHaveBeenLastCalledWith({...all, ordinary: true, ready: true});
+      expect(node.claim).toHaveBeenLastCalledWith(expect.objectContaining({claimOrdinary: true, ordinary: true}));
       expect(node.pending).toHaveLength(1);
-      expect(node.processor.canExecute).toHaveBeenCalledTimes(2);
+    } finally {
+      await node.close();
+    }
+  });
+
+  it("classifies every check unavailable when the executor cannot answer them", async () => {
+    const node = await fixture();
+    const failure = new Error("check failed");
+    node.processor.check.mockImplementationOnce(() => {
+      throw failure;
+    });
+    const checks = [1, 2].map((id) => ({
+      handle: node.message(id).handle,
+      root: new Uint8Array(32),
+      slot: 1n,
+      peerId: node.message(id).peerId,
+      topic,
+    }));
+    try {
+      node.dependencyChecks(checks);
+      expect(node.ledger.classify.mock.calls).toEqual(checks.map(({handle}) => [handle, false]));
+      expect(node.onError).toHaveBeenCalledExactlyOnceWith(failure);
     } finally {
       await node.close();
     }
@@ -322,9 +367,7 @@ describe("native gossip host ownership", () => {
     try {
       expect(node.dependencyChecks(checks)).toBe(false);
       expect(node.processor.check).toHaveBeenCalledWith(checks);
-      expect(node.runtime.classifyGossip).toHaveBeenCalledExactlyOnceWith(
-        checks.map(({handle}) => ({handle, available: true}))
-      );
+      expect(node.ledger.classify.mock.calls).toEqual(checks.map(({handle}) => [handle, true]));
       expect(node.processor.execute).not.toHaveBeenCalled();
     } finally {
       await node.close();
@@ -335,7 +378,7 @@ describe("native gossip host ownership", () => {
     const register = new RegistryMetricCreator();
     const node = await fixture(undefined, true, register);
     try {
-      // Native claims a classified message in the exchange after the one that delivered its check.
+      // Native claims a classified message in the exchange that carries its classification.
       const message = node.message();
       node.dependencyChecks([
         {handle: message.handle, root: new Uint8Array(32), slot: 1n, peerId: message.peerId, topic},
@@ -372,7 +415,7 @@ describe("native gossip host ownership", () => {
       await flush();
       expect(node.processor.execute).not.toHaveBeenCalled();
       expect(node.onError).toHaveBeenCalledOnce();
-      expect(node.runtime.reportGossip.mock.calls).toEqual(messages.map(({handle}) => [handle, "ignore"]));
+      expect(node.ledger.verdict.mock.calls).toEqual(messages.map(({handle}) => [handle, "ignore"]));
       node.drain([node.message(4)]);
       expect(node.pending).toHaveLength(1);
     } finally {
@@ -392,7 +435,7 @@ describe("native gossip host ownership", () => {
       try {
         node.drain([node.message(), node.message(2)], true);
         await flush();
-        expect(node.runtime.reportGossip.mock.calls).toEqual([
+        expect(node.ledger.verdict.mock.calls).toEqual([
           [node.message().handle, "ignore"],
           [node.message(2).handle, "ignore"],
         ]);
@@ -414,11 +457,10 @@ describe("native gossip host ownership", () => {
         propagationSource: message.propagationSource,
         acceptance: TopicValidatorResult.Accept,
       });
-      expect(node.runtime.reportGossip).not.toHaveBeenCalled();
-      node.runtime.reportGossip.mockReturnValue(false);
+      expect(node.ledger.verdict).not.toHaveBeenCalled();
       await node.retire(message);
       await node.retire(message);
-      expect(node.runtime.reportGossip).toHaveBeenCalledExactlyOnceWith(node.message().handle, "accept");
+      expect(node.ledger.verdict).toHaveBeenCalledExactlyOnceWith(node.message().handle, "accept");
     } finally {
       await node.close();
     }
@@ -427,7 +469,7 @@ describe("native gossip host ownership", () => {
   it("retires every group handle before invoking throwing observers", async () => {
     const node = await fixture();
     const observer = vi.fn(() => {
-      expect(node.runtime.reportGossip).toHaveBeenCalledTimes(2);
+      expect(node.ledger.verdict).toHaveBeenCalledTimes(2);
       throw new Error("observer failed");
     });
     node.processor.observe.mockImplementation(observer);
@@ -435,9 +477,9 @@ describe("native gossip host ownership", () => {
     try {
       node.drain([node.message(), node.message(2)], true);
       await node.retire(node.pending[0]);
-      expect(node.runtime.reportGossip).not.toHaveBeenCalled();
+      expect(node.ledger.verdict).not.toHaveBeenCalled();
       await node.retire(node.pending[1], TopicValidatorResult.Reject);
-      expect(node.runtime.reportGossip.mock.calls).toEqual([
+      expect(node.ledger.verdict.mock.calls).toEqual([
         [node.message().handle, "accept"],
         [node.message(2).handle, "reject"],
       ]);
@@ -452,14 +494,14 @@ describe("native gossip host ownership", () => {
   it("attempts every completion when a native report throws", async () => {
     const node = await fixture();
     const error = new Error("native report failed");
-    node.runtime.reportGossip.mockImplementationOnce(() => {
+    node.ledger.verdict.mockImplementationOnce(() => {
       throw error;
     });
     try {
       node.drain([node.message(), node.message(2)], true);
       await node.retire(node.pending[0]);
       await node.retire(node.pending[1]);
-      expect(node.runtime.reportGossip).toHaveBeenCalledTimes(2);
+      expect(node.ledger.verdict).toHaveBeenCalledTimes(2);
       expect(node.onFailure).toHaveBeenCalledWith(error);
       expect(node.onError).not.toHaveBeenCalled();
     } finally {
@@ -474,8 +516,57 @@ describe("native gossip host ownership", () => {
       node.drain([input]);
       structuredClone(input.data.buffer, {transfer: [input.data.buffer]});
       await node.retire(node.pending[0]);
-      expect(node.runtime.reportGossip).toHaveBeenCalledWith(input.handle, "accept");
+      expect(node.ledger.verdict).toHaveBeenCalledWith(input.handle, "accept");
       expect(node.onError).not.toHaveBeenCalled();
+    } finally {
+      await node.close();
+    }
+  });
+
+  it("keeps a job the host adopted and started when its handler throws, and reports it once", async () => {
+    const node = await fixture();
+    const message = node.message(9, blockTopic);
+    const failure = new Error("handler failed after adoption");
+    const exchange = vi.fn((_actions: readonly NativeAction[], _demand: unknown): NativeExchange => idle);
+    exchange.mockReturnValueOnce({
+      ...idle,
+      gossip: {messages: [message], jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}]},
+    });
+    const pump = new NativeDrain(
+      {exchange, fail: vi.fn<NativeNetworkApplicationRuntime["fail"]>(), closed: new Promise(() => {})},
+      {budgetMs: 8, settle: 32, peers: 32, checks: 64, servingStarts: 8, gossipItems: 64, gossipBytes: 1 << 20},
+      () => ({
+        demand: () => ({
+          bytes: 1 << 20,
+          capacity: null,
+          checks: 64,
+          claimOrdinary: true,
+          messages: 64,
+          peers: 32,
+          servingStarts: 8,
+        }),
+        deliver: ({checks, jobs}, deadline) => {
+          node.gossip.deliver(checks, jobs, deadline);
+          throw failure;
+        },
+      }),
+      node.onFailure,
+      null
+    );
+    node.ledger.verdict.mockImplementation((handle, verdict) => pump.verdict(handle, verdict));
+    try {
+      pump.request();
+      await flush();
+      expect(node.onFailure).toHaveBeenCalledExactlyOnceWith(failure);
+      expect(node.pending).toHaveLength(1);
+      await flush();
+      // No early ignore: the adopted task still owns the message.
+      expect(exchange.mock.calls.flatMap(([actions]) => actions)).toEqual([]);
+      await node.retire(node.pending[0]);
+      await flush();
+      expect(exchange.mock.calls.flatMap(([actions]) => actions)).toEqual([
+        {handle: message.handle, type: "verdict", verdict: "accept"},
+      ]);
     } finally {
       await node.close();
     }
@@ -487,7 +578,7 @@ describe("native gossip host ownership", () => {
       node.drain([node.message()]);
       node.gossip.close();
       await node.retire(node.pending[0]);
-      expect(node.runtime.reportGossip).not.toHaveBeenCalled();
+      expect(node.ledger.verdict).not.toHaveBeenCalled();
     } finally {
       await node.close();
     }

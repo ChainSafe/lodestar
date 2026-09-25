@@ -8,10 +8,6 @@ export enum NativeNetworkErrorCode {
   UNAVAILABLE = "NATIVE_NETWORK_UNAVAILABLE",
 }
 
-export function isNativeResultAllocationError(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "NetworkResultAllocationFailed";
-}
-
 export class NativeNetworkError extends LodestarError<{code: NativeNetworkErrorCode; resource: string}> {
   constructor(type: {code: NativeNetworkErrorCode; resource: string}) {
     super(type, `${type.code}: ${type.resource}`);
