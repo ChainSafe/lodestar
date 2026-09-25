@@ -29,7 +29,7 @@ export type IChainOptions = BlockProcessOpts &
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
-    /** Archive finalized Gloas payload envelopes blinded (bodies reconstructed from the EL on read) */
+    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
     dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;

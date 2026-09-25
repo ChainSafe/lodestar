@@ -5,27 +5,27 @@ import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
- * Prefix of a blinded entry. A full `SignedExecutionPayloadEnvelope` starts with the offset of its
+ * Prefix of a header entry. A full `SignedExecutionPayloadEnvelope` starts with the offset of its
  * variable-size `message` field (4 + 96 = 0x64), so a leading 0x00 byte is unambiguous and full
  * entries can be stored as the hot db bytes, untouched.
  */
-const BLINDED_ENVELOPE_PREFIX = 0x00;
+const HEADER_ENVELOPE_PREFIX = 0x00;
 
-/** An archive entry as the serving paths need it: full stays bytes, blinded is deserialized for reconstruction */
+/** An archive entry as the serving paths need it: full stays bytes, header is deserialized for reconstruction */
 export type ArchivedEnvelope =
-  | {blinded: gloas.SignedBlindedExecutionPayloadEnvelope; envelopeBytes?: undefined}
-  | {blinded?: undefined; envelopeBytes: Uint8Array};
+  | {headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope; envelopeBytes?: undefined}
+  | {headerEnvelope?: undefined; envelopeBytes: Uint8Array};
 
 export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelope {
-  return bytes[0] === BLINDED_ENVELOPE_PREFIX
-    ? {blinded: ssz.gloas.SignedBlindedExecutionPayloadEnvelope.deserialize(bytes.subarray(1))}
+  return bytes[0] === HEADER_ENVELOPE_PREFIX
+    ? {headerEnvelope: ssz.gloas.SignedExecutionPayloadHeaderEnvelope.deserialize(bytes.subarray(1))}
     : {envelopeBytes: bytes};
 }
 
-export function encodeArchivedBlindedEnvelope(blinded: gloas.SignedBlindedExecutionPayloadEnvelope): Uint8Array {
-  const value = ssz.gloas.SignedBlindedExecutionPayloadEnvelope.serialize(blinded);
+export function encodeArchivedHeaderEnvelope(headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope): Uint8Array {
+  const value = ssz.gloas.SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope);
   const out = new Uint8Array(1 + value.length);
-  out[0] = BLINDED_ENVELOPE_PREFIX;
+  out[0] = HEADER_ENVELOPE_PREFIX;
   out.set(value, 1);
   return out;
 }
@@ -33,7 +33,7 @@ export function encodeArchivedBlindedEnvelope(blinded: gloas.SignedBlindedExecut
 /**
  * Finalized envelopes indexed by slot: `SignedExecutionPayloadEnvelope` bytes as-is
  * (`--chain.dedupePayloads=false`, or the block was still optimistic when archived), or a
- * `SignedBlindedExecutionPayloadEnvelope` behind a 0x00 prefix. See {@link decodeArchivedEnvelope}.
+ * `SignedExecutionPayloadHeaderEnvelope` behind a 0x00 prefix. See {@link decodeArchivedEnvelope}.
  */
 export class ExecutionPayloadEnvelopeArchiveRepository extends BinaryRepository<Slot> {
   constructor(config: ChainForkConfig, db: Db) {

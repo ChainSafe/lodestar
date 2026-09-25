@@ -189,7 +189,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.dedupePayloads": {
     type: "boolean",
     description:
-      "Archive finalized Gloas execution payload envelopes in blinded form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list, whose retention is implementation-dependent. Set to false to keep full envelopes on disk.",
+      "Archive finalized Gloas execution payload envelopes in header form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list, whose retention is implementation-dependent. Set to false to keep full envelopes on disk.",
     defaultDescription: String(defaultOptions.chain.dedupePayloads),
     group: "chain",
   },

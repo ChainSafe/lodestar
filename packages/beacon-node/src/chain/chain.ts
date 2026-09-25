@@ -933,7 +933,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Batch variant: archived blinded envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
+   * Batch variant: archived header envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
    * A body root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
    * returns null for that entry, for peer-facing paths where the spec allows omission.
    */
@@ -942,8 +942,8 @@ export class BeaconChain implements IBeaconChain {
     onMismatch: ReconstructMismatchPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
-    const blindedEnvelopeIdxs: number[] = [];
+    const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+    const headerEnvelopeIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
       const {blockSlot, blockRootHex} = requests[i];
@@ -969,12 +969,12 @@ export class BeaconChain implements IBeaconChain {
         out[i] = archived.envelopeBytes;
         continue;
       }
-      blindedEnvelopes.push(archived.blinded);
-      blindedEnvelopeIdxs.push(i);
+      headerEnvelopes.push(archived.headerEnvelope);
+      headerEnvelopeIdxs.push(i);
     }
 
-    if (blindedEnvelopes.length > 0) {
-      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, blindedEnvelopes);
+    if (headerEnvelopes.length > 0) {
+      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, headerEnvelopes);
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
@@ -988,7 +988,7 @@ export class BeaconChain implements IBeaconChain {
           }
           continue;
         }
-        out[blindedEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -1013,7 +1013,9 @@ export class BeaconChain implements IBeaconChain {
     if (archived.envelopeBytes !== undefined) {
       return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
     }
-    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [archived.blinded]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
+      archived.headerEnvelope,
+    ]);
     if (isRebuildMiss(result)) {
       if (result.reason === "mismatch") throw result.error;
       return null;
@@ -1029,7 +1031,7 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    // executionRequests survives blinding, so read it without reconstructing
+    // executionRequests is kept in the header envelope, so read it without reconstructing
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope().message.executionRequests;
@@ -1045,7 +1047,7 @@ export class BeaconChain implements IBeaconChain {
     const archived = decodeArchivedEnvelope(archivedBytes);
     return archived.envelopeBytes !== undefined
       ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
-      : archived.blinded.message.executionRequests;
+      : archived.headerEnvelope.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {

@@ -7,10 +7,10 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem, encodeArchivedBlindedEnvelope} from "../../../db/repositories/index.js";
+import {BlockArchiveBatchPutBinaryItem, encodeArchivedHeaderEnvelope} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
-import {toSignedBlindedEnvelope} from "../../../util/blindedEnvelope.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
+import {toSignedHeaderEnvelope} from "../../../util/headerEnvelope.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
@@ -479,9 +479,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
  *
- * With `dedupePayloads` (default), execution-valid envelopes are archived blinded. Envelopes of
+ * With `dedupePayloads` (default), execution-valid envelopes are archived as header envelopes. Envelopes of
  * still-optimistic blocks are archived in full, since the EL may not serve their bodies, and are not
- * blinded later. Archive put + hot delete are one atomic db batch.
+ * converted later. Archive put + hot delete are one atomic db batch.
  */
 export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
@@ -501,13 +501,13 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
   for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
     const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
-    // Only blinded envelopes need deserializing; full ones are copied as bytes
+    // Only header envelopes need deserializing; full ones are copied as bytes
     const archivedBytesArray = await Promise.all(
       batch.map(async (block) => {
         const root = fromHex(block.blockRoot);
         if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
           const envelope = await db.executionPayloadEnvelope.get(root);
-          return envelope === null ? null : encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(envelope));
+          return envelope === null ? null : encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope));
         }
         return db.executionPayloadEnvelope.getBinary(root);
       })

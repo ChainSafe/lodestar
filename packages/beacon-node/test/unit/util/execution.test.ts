@@ -5,15 +5,15 @@ import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
-import {encodeArchivedBlindedEnvelope} from "../../../src/db/repositories/index.js";
+import {encodeArchivedHeaderEnvelope} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
-import {toSignedBlindedEnvelope} from "../../../src/util/blindedEnvelope.js";
 import {
   isRebuildMiss,
   reconstructExecutionPayloadEnvelopes,
   reconstructExecutionPayloadEnvelopesByRange,
 } from "../../../src/util/execution.js";
+import {toSignedHeaderEnvelope} from "../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../utils/db.js";
 import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
 
@@ -35,12 +35,12 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
 
   const bodyOf = payloadBodiesOf;
 
-  // Seed the archive with the blinded form (the write seam does this at hot→cold migration).
+  // Seed the archive with the header form (the write seam does this at hot→cold migration).
   async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
     const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.putBinary(
       slot,
-      encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(full))
+      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
     );
     return full;
   }
@@ -141,7 +141,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
-    // only the two blinded entries go to the EL
+    // only the two header entries go to the EL
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(2);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).not.toContain(toRootHex(archivedFull.message.payload.blockHash));
@@ -250,7 +250,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("reports a mismatch as a miss carrying BODY_ROOT_MISMATCH on the batch getter path", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
-    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedBlindedEnvelope(full)]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
@@ -259,7 +259,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedBlindedEnvelope(full)])).toEqual([
+    expect(await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)])).toEqual([
       {slot: 10, reason: "unavailable"},
     ]);
   });

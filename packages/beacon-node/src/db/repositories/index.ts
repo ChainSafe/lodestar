@@ -13,7 +13,7 @@ export {
   type ArchivedEnvelope,
   ExecutionPayloadEnvelopeArchiveRepository,
   decodeArchivedEnvelope,
-  encodeArchivedBlindedEnvelope,
+  encodeArchivedHeaderEnvelope,
 } from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";

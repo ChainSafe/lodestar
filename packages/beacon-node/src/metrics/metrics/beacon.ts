@@ -218,7 +218,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     payloadEnvelopeReconstruction: {
       envelopes: register.counter<{result: "ok" | "unavailable" | "mismatch"}>({
         name: "beacon_payload_envelope_reconstruction_envelopes_total",
-        help: "Archived blinded envelopes rebuilt from EL bodies, by outcome",
+        help: "Archived header envelopes rebuilt from EL bodies, by outcome",
         labelNames: ["result"],
       }),
       mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({

@@ -1,10 +1,10 @@
 import {ssz} from "@lodestar/types";
 import {
-  BlindedExecutionPayloadEnvelope,
   BlockAccessList,
   ExecutionPayloadEnvelope,
-  SignedBlindedExecutionPayloadEnvelope,
+  ExecutionPayloadHeaderEnvelope,
   SignedExecutionPayloadEnvelope,
+  SignedExecutionPayloadHeaderEnvelope,
   Transactions,
   Withdrawals,
 } from "@lodestar/types/gloas";
@@ -26,11 +26,12 @@ export type ExecutionPayloadBodyField = keyof ExecutionPayloadBodies;
 const {transactions, withdrawals, blockAccessList} = ssz.gloas.ExecutionPayload.fields;
 
 /** Replace the three body lists by their roots; hashes to the same root as the full envelope */
-export function toBlindedEnvelope(envelope: ExecutionPayloadEnvelope): BlindedExecutionPayloadEnvelope {
-  const {transactions: txs, withdrawals: wds, blockAccessList: bal, ...scalars} = envelope.payload;
+export function toHeaderEnvelope(envelope: ExecutionPayloadEnvelope): ExecutionPayloadHeaderEnvelope {
+  const {payload, ...envelopeFields} = envelope;
+  const {transactions: txs, withdrawals: wds, blockAccessList: bal, ...scalars} = payload;
   return {
-    ...envelope,
-    payload: {
+    ...envelopeFields,
+    payloadHeader: {
       ...scalars,
       transactionsRoot: transactions.hashTreeRoot(txs),
       withdrawalsRoot: withdrawals.hashTreeRoot(wds),
@@ -39,21 +40,20 @@ export function toBlindedEnvelope(envelope: ExecutionPayloadEnvelope): BlindedEx
   };
 }
 
-export function toSignedBlindedEnvelope(
-  envelope: SignedExecutionPayloadEnvelope
-): SignedBlindedExecutionPayloadEnvelope {
-  return {message: toBlindedEnvelope(envelope.message), signature: envelope.signature};
+export function toSignedHeaderEnvelope(envelope: SignedExecutionPayloadEnvelope): SignedExecutionPayloadHeaderEnvelope {
+  return {message: toHeaderEnvelope(envelope.message), signature: envelope.signature};
 }
 
 /**
- * Rebuild the full signed envelope from blinded + EL bodies, each body verified against its stored
+ * Rebuild the full signed envelope from header envelope + EL bodies, each body verified against its stored
  * root. Throws {@link EnvelopeReconstructionError} BODY_ROOT_MISMATCH naming the first body that differs.
  */
-export function signedBlindedEnvelopeToFull(
-  blindedEnvelope: SignedBlindedExecutionPayloadEnvelope,
+export function signedHeaderEnvelopeToFull(
+  headerEnvelope: SignedExecutionPayloadHeaderEnvelope,
   bodies: ExecutionPayloadBodies
 ): SignedExecutionPayloadEnvelope {
-  const {transactionsRoot, withdrawalsRoot, blockAccessListRoot, ...scalars} = blindedEnvelope.message.payload;
+  const {payloadHeader, ...envelopeFields} = headerEnvelope.message;
+  const {transactionsRoot, withdrawalsRoot, blockAccessListRoot, ...scalars} = payloadHeader;
   const slot = scalars.slotNumber;
 
   assertBodyRoot("transactions", slot, transactionsRoot, transactions.hashTreeRoot(bodies.transactions));
@@ -61,8 +61,8 @@ export function signedBlindedEnvelopeToFull(
   assertBodyRoot("blockAccessList", slot, blockAccessListRoot, blockAccessList.hashTreeRoot(bodies.blockAccessList));
 
   return {
-    message: {...blindedEnvelope.message, payload: {...scalars, ...bodies}},
-    signature: blindedEnvelope.signature,
+    message: {...envelopeFields, payload: {...scalars, ...bodies}},
+    signature: headerEnvelope.signature,
   };
 }
 

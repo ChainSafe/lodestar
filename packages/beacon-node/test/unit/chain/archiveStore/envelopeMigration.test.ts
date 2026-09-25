@@ -7,7 +7,7 @@ import {toRootHex} from "@lodestar/utils";
 import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
-import {toSignedBlindedEnvelope} from "../../../../src/util/blindedEnvelope.js";
+import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {generateProtoBlock, generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
 
@@ -45,7 +45,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     });
   }
 
-  it("archives blinded envelopes by default (dedupePayloads=true) and removes them from hot", async () => {
+  it("archives header envelopes by default (dedupePayloads=true) and removes them from hot", async () => {
     const blocks = [await seedHot(10), await seedHot(11)];
 
     const migrated = await migrateExecutionPayloadEnvelopesFromHotToColdDb(config, db, logger, blocks, true);
@@ -53,11 +53,11 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     expect(migrated).toEqual([10, 11]);
     for (const slot of [10, 11]) {
       const archived = await readArchived(slot);
-      if (archived.blinded === undefined) throw Error("expected a blinded entry");
+      if (archived.headerEnvelope === undefined) throw Error("expected a header entry");
       expect(
-        ssz.gloas.SignedBlindedExecutionPayloadEnvelope.equals(
-          archived.blinded,
-          toSignedBlindedEnvelope(generateSignedExecutionPayloadEnvelope(slot))
+        ssz.gloas.SignedExecutionPayloadHeaderEnvelope.equals(
+          archived.headerEnvelope,
+          toSignedHeaderEnvelope(generateSignedExecutionPayloadEnvelope(slot))
         )
       ).toBe(true);
       expect(
@@ -85,7 +85,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     await migrateExecutionPayloadEnvelopesFromHotToColdDb(config, db, logger, [await seedHot(10)], true);
     await migrateExecutionPayloadEnvelopesFromHotToColdDb(config, db, logger, [await seedHot(11)], false);
 
-    expect((await readArchived(10)).blinded).toBeDefined();
+    expect((await readArchived(10)).headerEnvelope).toBeDefined();
     expect((await readArchived(11)).envelopeBytes).toBeDefined();
   });
 
@@ -97,7 +97,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
 
     expect(migrated).toEqual([10, 11]);
     expect((await readArchived(10)).envelopeBytes).toBeDefined();
-    expect((await readArchived(11)).blinded).toBeDefined();
+    expect((await readArchived(11)).headerEnvelope).toBeDefined();
   });
 
   it("migrates more blocks than one batch, in one atomic write per batch", async () => {
@@ -107,8 +107,8 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     const migrated = await migrateExecutionPayloadEnvelopesFromHotToColdDb(config, db, logger, blocks, true);
 
     expect(migrated).toHaveLength(300);
-    expect((await readArchived(0)).blinded).toBeDefined();
-    expect((await readArchived(299)).blinded).toBeDefined();
+    expect((await readArchived(0)).headerEnvelope).toBeDefined();
+    expect((await readArchived(299)).headerEnvelope).toBeDefined();
     expect(
       await db.executionPayloadEnvelope.get(generateSignedExecutionPayloadEnvelope(299).message.beaconBlockRoot)
     ).toBeNull();

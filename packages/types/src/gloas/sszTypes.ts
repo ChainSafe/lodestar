@@ -510,37 +510,40 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
 );
 
 /**
- * Lodestar-internal blinding of ExecutionPayload: transactions, withdrawals and blockAccessList
- * replaced by their hash_tree_root at the same field positions, so it hashes to the same root as the
- * full payload (same pattern as ExecutionPayloadHeader). Used to archive finalized envelopes without
- * the bodies the EL already stores. Not a spec container, never on the wire.
+ * Lodestar-internal ExecutionPayload header: transactions, withdrawals and blockAccessList replaced
+ * by their hash_tree_root at the same field positions, so it hashes to the same root as the full
+ * payload (the pre-gloas ExecutionPayloadHeader pattern). Used to archive finalized envelopes without
+ * the bodies the EL already stores. Not a spec container, never on the wire. Not exported: fork-generic
+ * lookups of `ExecutionPayloadHeader` must keep resolving to the light client header for gloas and later.
  */
-export const BlindedExecutionPayload = new ProgressiveContainerType(
+const ExecutionPayloadHeader = new ProgressiveContainerType(
   {
     ...electraSsz.ExecutionPayloadHeader.fields,
     blockAccessListRoot: Root, // New in GLOAS:EIP-7928
     slotNumber: Slot, // New in GLOAS:EIP-7843
   },
   activeFields(19),
-  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-/** Same root as ExecutionPayloadEnvelope, so a builder signature verifies against the blinded form */
-export const BlindedExecutionPayloadEnvelope = new ProgressiveContainerType(
+const {payload: _payload, ...envelopeFieldsWithoutPayload} = ExecutionPayloadEnvelope.fields;
+
+/** Same root as ExecutionPayloadEnvelope, so a builder signature verifies against the header form */
+export const ExecutionPayloadHeaderEnvelope = new ProgressiveContainerType(
   {
-    ...ExecutionPayloadEnvelope.fields,
-    payload: BlindedExecutionPayload,
+    payloadHeader: ExecutionPayloadHeader,
+    ...envelopeFieldsWithoutPayload,
   },
   activeFields(5),
-  {typeName: "BlindedExecutionPayloadEnvelope", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
 );
 
-export const SignedBlindedExecutionPayloadEnvelope = new ContainerType(
+export const SignedExecutionPayloadHeaderEnvelope = new ContainerType(
   {
-    message: BlindedExecutionPayloadEnvelope,
+    message: ExecutionPayloadHeaderEnvelope,
     signature: BLSSignature,
   },
-  {typeName: "SignedBlindedExecutionPayloadEnvelope", jsonCase: "eth2"}
+  {typeName: "SignedExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
 );
 
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(

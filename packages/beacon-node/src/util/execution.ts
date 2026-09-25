@@ -16,7 +16,6 @@ import {IBeaconDb} from "../db/index.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {signedBlindedEnvelopeToFull} from "./blindedEnvelope.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
 import {
   getCellsAndProofs,
@@ -24,6 +23,7 @@ import {
   getDataColumnSidecarsFromColumnSidecar,
   getGloasDataColumnSidecars,
 } from "./dataColumns.js";
+import {signedHeaderEnvelopeToFull} from "./headerEnvelope.js";
 
 export enum DataColumnEngineResult {
   PreFulu = "pre_fulu",
@@ -276,7 +276,7 @@ export type RebuildMiss =
   | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
 
 /**
- * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes, rebuilding blinded
+ * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes, rebuilding header
  * entries from EL bodies 32 per round-trip.
  *
  * Ends at the first entry that cannot be served by throwing RANGE_UNSERVABLE with that slot: the
@@ -319,19 +319,19 @@ async function* reconstructBatch(
   metrics: Metrics | null,
   batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
-  const blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[] = [];
+  const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
   for (const entry of batch) {
-    if (entry.blinded !== undefined) blindedEnvelopes.push(entry.blinded);
+    if (entry.headerEnvelope !== undefined) headerEnvelopes.push(entry.headerEnvelope);
   }
-  const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes);
+  const rebuilt = await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes);
 
-  let blindedIdx = 0;
+  let rebuiltIdx = 0;
   for (const entry of batch) {
     if (entry.envelopeBytes !== undefined) {
       yield {slot: entry.slot, envelopeBytes: entry.envelopeBytes};
       continue;
     }
-    const result = rebuilt[blindedIdx++];
+    const result = rebuilt[rebuiltIdx++];
     if (isRebuildMiss(result)) {
       // Peer-triggered, so debug: a persistent local mismatch would otherwise log on every request
       if (result.reason === "mismatch") {
@@ -349,19 +349,19 @@ async function* reconstructBatch(
 }
 
 /**
- * Rebuild blinded envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
+ * Rebuild header envelopes from EL bodies, 32 per round-trip. Aligned with the input, with a
  * {@link RebuildMiss} where the envelope could not be rebuilt; the caller decides what a miss means
  * on its path. Throws ENGINE_UNAVAILABLE only.
  */
 export async function reconstructExecutionPayloadEnvelopes(
   executionEngine: IExecutionEngine,
   metrics: Metrics | null,
-  blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
+  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
-  for (let i = 0; i < blindedEnvelopes.length; i += MAX_BODIES_REQUEST) {
+  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_REQUEST) {
     out.push(
-      ...(await reconstructEnvelopesBatch(executionEngine, metrics, blindedEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
+      ...(await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
     );
   }
   return out;
@@ -379,10 +379,10 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
 async function reconstructEnvelopesBatch(
   executionEngine: IExecutionEngine,
   metrics: Metrics | null,
-  blindedEnvelopes: gloas.SignedBlindedExecutionPayloadEnvelope[]
+  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
-  if (blindedEnvelopes.length === 0) return [];
-  const hashes = blindedEnvelopes.map((blindedEnvelope) => toRootHex(blindedEnvelope.message.payload.blockHash));
+  if (headerEnvelopes.length === 0) return [];
+  const hashes = headerEnvelopes.map((headerEnvelope) => toRootHex(headerEnvelope.message.payloadHeader.blockHash));
 
   let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
   try {
@@ -395,8 +395,8 @@ async function reconstructEnvelopesBatch(
     );
   }
 
-  return blindedEnvelopes.map((blindedEnvelope, i) => {
-    const slot = blindedEnvelope.message.payload.slotNumber;
+  return headerEnvelopes.map((headerEnvelope, i) => {
+    const slot = headerEnvelope.message.payloadHeader.slotNumber;
     const body = bodies[i];
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
@@ -404,7 +404,7 @@ async function reconstructEnvelopesBatch(
       return {slot, reason: "unavailable"};
     }
     try {
-      const envelope = signedBlindedEnvelopeToFull(blindedEnvelope, {
+      const envelope = signedHeaderEnvelopeToFull(headerEnvelope, {
         transactions: body.transactions,
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,

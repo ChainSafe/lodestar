@@ -9,11 +9,11 @@ import {toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
-import {encodeArchivedBlindedEnvelope} from "../../../../../src/db/repositories/index.js";
+import {encodeArchivedHeaderEnvelope} from "../../../../../src/db/repositories/index.js";
 import {IExecutionEngine} from "../../../../../src/execution/index.js";
 import {onExecutionPayloadEnvelopesByRange} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.js";
-import {toSignedBlindedEnvelope} from "../../../../../src/util/blindedEnvelope.js";
+import {toSignedHeaderEnvelope} from "../../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../../utils/db.js";
 import {
   generateProtoBlock,
@@ -66,7 +66,7 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
     const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.putBinary(
       slot,
-      encodeArchivedBlindedEnvelope(toSignedBlindedEnvelope(full))
+      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
     );
     await db.blockArchive.putBinary(
       slot,

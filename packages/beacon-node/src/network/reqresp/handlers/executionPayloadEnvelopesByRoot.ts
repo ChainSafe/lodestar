@@ -19,7 +19,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
-  // Resolve slots first so archived blinded envelopes are rebuilt in one EL batch, not one call per root
+  // Resolve slots first so archived header envelopes are rebuilt in one EL batch, not one call per root
   const requests: {blockSlot: Slot; blockRootHex: RootHex}[] = [];
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
