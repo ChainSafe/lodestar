@@ -23,9 +23,7 @@ describe("beacon / debug", () => {
 
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
-  // Get state by SSZ
-
-  describe("get state in SSZ format", () => {
+  describe("response encoding", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
     let server: FastifyInstance;
@@ -41,6 +39,36 @@ describe("beacon / debug", () => {
 
     afterAll(async () => {
       if (server !== undefined) await server.close();
+    });
+
+    it("wraps fork choice v2 in data and preserves free-form extra data", async () => {
+      mockApi.getDebugForkChoiceV2.mockResolvedValue(testData.getDebugForkChoiceV2.res);
+      const response = await server.inject({method: "GET", url: "/eth/v2/debug/fork_choice"});
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        data: {
+          fork_choice_nodes: [
+            {weight: "18446744073709551615", parent_payload_status: null},
+            {
+              parent_payload_status: "full",
+              payload_attester_count: "3",
+              extra_data: {client_field: {nested_value: "42"}},
+            },
+          ],
+        },
+      });
+      expect(response.json()).not.toHaveProperty("fork_choice_nodes");
+    });
+
+    it("accepts fork choice v2 responses without extra data", async () => {
+      const data = structuredClone(testData.getDebugForkChoiceV2.res.data);
+      if (data instanceof Uint8Array) throw Error("Expected JSON fixture");
+      delete data.extraData;
+      for (const node of data.forkChoiceNodes) delete node.extraData;
+      mockApi.getDebugForkChoiceV2.mockResolvedValue({data});
+      const client = getClient(config, new HttpClient({baseUrl}));
+      const response = await client.getDebugForkChoiceV2();
+      expect(response.value()).toEqual(data);
     });
 
     it("getStateV2", async () => {
