@@ -24,6 +24,10 @@ export const DB_READ_LIMITS_V1 = Object.freeze({
 
 export interface FilterOptions<K> {
   readLimits?: DbReadLimits;
+  /** Forwarded to classic-level; false keeps the blocks this read loads out of the LevelDB block cache */
+  fillCache?: boolean;
+  /** Read one row per native call, so a stream holds at most one row natively and one in JS */
+  rowAtATime?: boolean;
   gt?: K;
   gte?: K;
   lt?: K;
@@ -36,6 +40,8 @@ export interface FilterOptions<K> {
 
 export type DbReqOpts = {
   readLimits?: DbReadLimits;
+  /** Forwarded to classic-level; false keeps the blocks this read loads out of the LevelDB block cache */
+  fillCache?: boolean;
   /** For metrics */
   bucketId?: string;
 };

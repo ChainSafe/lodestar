@@ -66,11 +66,16 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   }
 
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    const readLimits = opts?.readLimits;
+    const {readLimits, fillCache} = opts ?? {};
     if (readLimits !== undefined && this.db.boundedReadVersion !== 1) {
       throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
     }
-    return readLimits === undefined ? this.dbReqOpts : {bucketId: this.bucketId, readLimits};
+    if (readLimits === undefined && fillCache === undefined) return this.dbReqOpts;
+    return {
+      bucketId: this.bucketId,
+      ...(readLimits === undefined ? {} : {readLimits}),
+      ...(fillCache === undefined ? {} : {fillCache}),
+    };
   }
 
   async get(prefix: P, id: I, opts?: DbReqOpts): Promise<T | null> {
@@ -275,7 +280,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   }
 
   async keys(opts?: FilterOptions<{prefix: P; id: I}>): Promise<{prefix: P; id: I}[]> {
-    const {readLimits, gt, gte, lt, lte, reverse, limit} = opts ?? {};
+    const {readLimits, fillCache, rowAtATime, gt, gte, lt, lte, reverse, limit} = opts ?? {};
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
@@ -297,6 +302,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
 
     if (readLimits !== undefined) optsBuff.readLimits = this.readOptions({readLimits}).readLimits;
+    if (fillCache !== undefined) optsBuff.fillCache = fillCache;
+    if (rowAtATime !== undefined) optsBuff.rowAtATime = rowAtATime;
     if (reverse !== undefined) optsBuff.reverse = reverse;
     if (limit !== undefined) optsBuff.limit = limit;
 
