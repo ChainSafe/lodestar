@@ -3,7 +3,9 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
+  ForkSeq,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   MAX_EFFECTIVE_BALANCE,
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   PARTICIPATION_FLAG_WEIGHTS,
@@ -156,7 +158,11 @@ function computeTotalAttestationsRewardsAltair(
     .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
-  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+  const inactivityPenaltyQuotient =
+    config.getForkSeq(state.slot) === ForkSeq.altair
+      ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR
+      : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
+  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
 
   for (let i = 0; i < flags.length; i++) {
     if (validatorIndices.length && !validatorIndices.includes(i)) {
