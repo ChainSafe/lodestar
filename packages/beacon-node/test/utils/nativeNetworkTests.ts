@@ -508,6 +508,11 @@ describe("native Lodestar integration", () => {
             // The binding renders the family once
             expect(metrics.match(/^# TYPE lodestar_native_log_delivery_errors_total counter$/gm)).toHaveLength(1);
             expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
+            // The adapter renders its serving gauges once, and the served request returned its charges
+            expect(metrics.match(/^# TYPE lodestar_native_host_serving_reserved_bytes gauge$/gm)).toHaveLength(1);
+            expect(metrics.match(/^# TYPE lodestar_native_host_serving_source_pending_bytes gauge$/gm)).toHaveLength(1);
+            expect(metrics).toContain('lodestar_native_host_serving_reserved_bytes{scope="total"} 0\n');
+            expect(metrics).toContain("lodestar_native_host_serving_source_pending_bytes 0\n");
           },
           {timeout: 5000}
         );

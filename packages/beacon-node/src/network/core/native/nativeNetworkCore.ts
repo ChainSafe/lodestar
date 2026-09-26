@@ -295,7 +295,7 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return this.network.metrics();
+    return this.network.metrics() + this.requests.metrics();
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

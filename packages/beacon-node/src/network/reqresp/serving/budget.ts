@@ -198,6 +198,8 @@ export class HostServingBudget {
   snapshot() {
     const decoded = this.leases.size * this.policy.decodedBytes;
     const state = this.leases.size * this.policy.stateBytes;
+    let pendingSourceLimitBytes = 0;
+    for (const lease of this.leases) pendingSourceLimitBytes += lease.context.snapshot().pendingSourceLimitBytes;
     return {
       limits: this.policy,
       occupancy: this.leases.size,
@@ -205,6 +207,8 @@ export class HostServingBudget {
       waiting: this.waiting.length,
       reservedBytes: state + this.retainedBytes + this.workingBytes,
       reservedSourceBytes: this.retainedBytes + this.workingBytes,
+      /** Source-read reservations of the leases' outstanding reads, at most one source limit per lease */
+      pendingSourceLimitBytes,
       retainedBytes: this.retainedBytes,
       workingBytes: this.workingBytes,
       reservedDecodedBytes: decoded,

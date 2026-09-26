@@ -160,6 +160,68 @@ it("produces after native credit and keeps capacity charged past stream close un
   expect(budget.snapshot().occupancy).toBe(0);
 });
 
+/** The serving gauges' samples, after checking their families and types. */
+function servingGauges(text: string): {total: number; source: number; pending: number} {
+  expect(text.match(/^# TYPE .*$/gm)).toEqual([
+    "# TYPE lodestar_native_host_serving_reserved_bytes gauge",
+    "# TYPE lodestar_native_host_serving_source_pending_bytes gauge",
+  ]);
+  const samples = new Map(
+    text
+      .split("\n")
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .map((line) => {
+        const [name, value] = line.split(" ");
+        return [name, Number(value)];
+      })
+  );
+  expect([...samples.keys()]).toEqual([
+    'lodestar_native_host_serving_reserved_bytes{scope="total"}',
+    'lodestar_native_host_serving_reserved_bytes{scope="source"}',
+    "lodestar_native_host_serving_source_pending_bytes",
+  ]);
+  return {
+    total: samples.get('lodestar_native_host_serving_reserved_bytes{scope="total"}') ?? NaN,
+    source: samples.get('lodestar_native_host_serving_reserved_bytes{scope="source"}') ?? NaN,
+    pending: samples.get("lodestar_native_host_serving_source_pending_bytes") ?? NaN,
+  };
+}
+
+it("reports a cancelled request's serving charges, to a later adapter too, until its held source read retires", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const held = defer<Uint8Array>();
+  const factory: handlers.BoundedReqRespHandlers = () => () =>
+    handlers.startServingHandler(budget, (context) =>
+      (async function* () {
+        const data = await context.read(() => held.promise, 1024);
+        yield {data, boundary: {fork: config.getForkName(0), epoch: 0}};
+      })()
+    );
+  const owner = new NativeRequests(config, factory, 32);
+  expect(servingGauges(owner.metrics())).toEqual({total: 0, source: 0, pending: 0});
+  const {request, permission} = await incoming();
+  const served = owner.serve(request);
+  permission.resolve();
+  await vi.waitFor(() => expect(budget.snapshot().working).toBe(1));
+  const {reservedBytes, reservedSourceBytes} = budget.snapshot();
+  const charged = {total: reservedBytes, source: reservedSourceBytes, pending: 1024};
+  expect(charged.source).toBeGreaterThan(0);
+  expect(charged.total).toBeGreaterThan(charged.source);
+  expect(servingGauges(owner.metrics())).toEqual(charged);
+  // The adapter closes, cancelling the request while its source read is held; a successor reports the same charges.
+  owner.close();
+  expect(request.cancel).toHaveBeenCalledOnce();
+  const successor = new NativeRequests(config, factory, 32);
+  await vi.waitFor(() => expect(budget.snapshot().outstandingRetirements).toBe(1));
+  expect(servingGauges(successor.metrics())).toEqual(charged);
+  held.resolve(new Uint8Array(1));
+  await served;
+  expect(servingGauges(successor.metrics())).toEqual({total: 0, source: 0, pending: 0});
+  expect(request.respond).not.toHaveBeenCalled();
+});
+
 it("answers an uncertified stored block with RESOURCE_UNAVAILABLE before reading it", async () => {
   const config = servingConfig();
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));

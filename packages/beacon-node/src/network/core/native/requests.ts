@@ -158,6 +158,9 @@ async function respond(
   }
 }
 
+const RESERVED_NAME = "lodestar_native_host_serving_reserved_bytes";
+const PENDING_NAME = "lodestar_native_host_serving_source_pending_bytes";
+
 export class NativeRequests {
   /** Each request's handler until it retires, with the stream it answers. */
   private readonly serving = new Map<ServingHandler, IncomingRequest>();
@@ -226,6 +229,20 @@ export class NativeRequests {
       await handler.retired;
       this.serving.delete(handler);
     }
+  }
+  /** The environment's serving reservations, retiring leases of earlier adapters included, in exposition format. */
+  metrics(): string {
+    const {reservedBytes, reservedSourceBytes, pendingSourceLimitBytes} = this.budget.snapshot();
+    return [
+      `# HELP ${RESERVED_NAME} Host serving allowance still charged, retiring leases included: every reservation (total) or the retained-response and production part (source). Reservations, not allocated memory; source is part of total, so do not sum the scopes`,
+      `# TYPE ${RESERVED_NAME} gauge`,
+      `${RESERVED_NAME}{scope="total"} ${reservedBytes}`,
+      `${RESERVED_NAME}{scope="source"} ${reservedSourceBytes}`,
+      `# HELP ${PENDING_NAME} Source-read reservations of bounded serving reads still outstanding, retiring leases included. Reservations, not allocated memory`,
+      `# TYPE ${PENDING_NAME} gauge`,
+      `${PENDING_NAME} ${pendingSourceLimitBytes}`,
+      "",
+    ].join("\n");
   }
   close(): void {
     if (this.closed) return;
