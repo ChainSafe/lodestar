@@ -152,14 +152,17 @@ function computeTotalAttestationsRewardsAltair(
   const rewards = [];
   const {flags} = transitionCache;
   const {epochCtx} = state;
-  const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
-    .filter((index) => index !== undefined); // Validator indices to include in the result
+  const hasFilter = validatorIds.length > 0;
+  const validatorIndices = new Set(
+    validatorIds
+      .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
+      .filter((index): index is number => index !== null)
+  );
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
 
   for (let i = 0; i < flags.length; i++) {
-    if (validatorIndices.length && !validatorIndices.includes(i)) {
+    if (hasFilter && !validatorIndices.has(i)) {
       continue;
     }
 
