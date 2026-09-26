@@ -323,7 +323,11 @@ it("requests waiting for retained memory leave native credit available to existi
   const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0);
   const budget = HostServingBudget.forEnvironment(
     resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0, {
-      totalBytes: 3 * basic.stateBytes + 5 * basic.sourceBytes,
+      // Room for two by-root responses under the largest retained charge, a block range's
+      totalBytes:
+        3 * basic.stateBytes +
+        basic.workingBytes +
+        (basic.methods[ReqRespMethod.BeaconBlocksByRange]?.retainedBytes ?? 0),
     })
   );
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);

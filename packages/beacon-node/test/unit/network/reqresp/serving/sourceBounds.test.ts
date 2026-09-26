@@ -13,7 +13,6 @@ import {
 } from "@lodestar/params";
 import {LightClientHeader, LightClientUpdate, fulu, ssz, sszTypesFor} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {beaconRestApiServerOpts} from "../../../../../src/api/rest/index.js";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../../../src/db/repositories/blobSidecars.js";
 import {getRootIndex} from "../../../../../src/db/repositories/blockArchiveIndex.js";
@@ -29,9 +28,9 @@ import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
  * checks it against the lease charges under the stock classic-level 1.4.1 read model. A pull holds the working charge
  * and the time between pulls only the retained charge. In a pull, a `get` holds the native value and its JS copy at
  * once, and a `getMany` holds every native value plus the JS copy in conversion; after the pull only the JS copies
- * remain. An iterator batch stops after the row that passes the 16 KiB high-water mark, and stock keeps its native
- * copy until the next pull, so between pulls it holds the batch natively and in JS. Every read here omits read
- * limits, so it takes the stock path. LevelDB's own block buffers and block cache are outside the lease in both the
+ * remain. A serving range stream reads one row per native read, and stock keeps that row's native copy until the next
+ * read, so between pulls it holds the row natively and in JS. Every read here omits read limits, so it takes the stock
+ * path. LevelDB's own block buffers and block cache are outside the lease in both the
  * stock and the patched binary.
  */
 
@@ -40,7 +39,6 @@ const config = servingConfig(MAX_BLOBS);
 const policy = resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 0);
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 const root = new Uint8Array(32).fill(7);
-const STOCK_ITERATOR_HIGH_WATER_MARK = 16 * 1024;
 /** Column bytes per blob: its cell, commitment and proof */
 const COLUMN_BLOB_BYTES = ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize;
 
@@ -59,9 +57,9 @@ function stockGetPull(bytes: number): number {
   return 2 * bytes;
 }
 
-/** Stock iterator batch, in a pull and between pulls: small rows up to the mark plus the crossing row, native and JS */
-function stockIteratorBatch(bytes: number): number {
-  return 2 * (STOCK_ITERATOR_HIGH_WATER_MARK + bytes);
+/** Stock row-at-a-time stream, in a pull and between pulls: the row natively and in JS */
+function stockRangeRow(bytes: number): number {
+  return 2 * bytes;
 }
 
 async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Promise<void>): Promise<void> {
@@ -126,11 +124,11 @@ describe("serving source bounds with stock reads", () => {
     // One blob more than the largest pre-Fulu limit would pass the charge the policy derives
     expect(BLOB_SIDECARS_IN_WRAPPER_INDEX + 10 * BLOB_SIDECAR_FIXED_SIZE).toBeGreaterThan(policy.wrapperBytes);
     // By root reads the wrapper with a get and holds its JS copy across the sidecar writes; by range holds the
-    // archive iterator's batch
+    // archive stream's row
     expect(stockGetPull(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
     expect(policy.wrapperBytes).toBeLessThanOrEqual(blobs.retainedBytes);
-    expect(stockIteratorBatch(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
-    expect(stockIteratorBatch(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.retainedBytes);
+    expect(stockRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
+    expect(stockRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.retainedBytes);
   });
 
   it("stores the largest column batch of the blob schedule within the column charges", async () => {
@@ -231,10 +229,12 @@ describe("serving source bounds with stock reads", () => {
     });
   });
 
-  it("bounds network-delivered blocks at the block charges but not every local block writer", async () => {
+  it("bounds network-delivered and locally published blocks at the block charges, but not rows stored before", async () => {
     const blocks = work(ReqRespMethod.BeaconBlocksByRoot);
-    expect(work(ReqRespMethod.BeaconBlocksByRange)).toEqual(blocks);
+    const ranges = work(ReqRespMethod.BeaconBlocksByRange);
     expect(work(ReqRespMethod.BeaconBlocksByHead)).toEqual(blocks);
+    expect(ranges.limits).toEqual(blocks.limits);
+    expect(ranges.workingBytes).toBe(blocks.workingBytes);
     expect(policy.blockBytes).toBe(config.MAX_PAYLOAD_SIZE);
     expect(blocks.limits.sourceBytes).toBe(config.MAX_PAYLOAD_SIZE);
     for (const fork of [
@@ -262,13 +262,14 @@ describe("serving source bounds with stock reads", () => {
     // A block at the network cap fits a stock get: both copies in the pull, the JS copy between pulls
     expect(stockGetPull(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
     expect(config.MAX_PAYLOAD_SIZE).toBeLessThanOrEqual(blocks.retainedBytes);
-    // A stock archive iterator fits the pull but holds its native batch beside the JS copy between pulls, which the
-    // retained charge does not cover
-    expect(stockIteratorBatch(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
-    expect(stockIteratorBatch(config.MAX_PAYLOAD_SIZE)).toBeGreaterThan(blocks.retainedBytes);
-    // The local publication API admits a request body above the block charge, and the repository keeps whatever a
-    // writer puts: a stock read returns every stored byte before any serving check can run
-    expect(beaconRestApiServerOpts.bodyLimit).toBeGreaterThan(blocks.limits.sourceBytes);
+    // A block range's row stream holds the row natively and in JS between pulls, with its 9-byte key twice and its
+    // JS row objects in the remaining allowance
+    expect(stockRangeRow(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
+    const rowMetadata = ranges.retainedBytes - stockRangeRow(config.MAX_PAYLOAD_SIZE);
+    expect(rowMetadata).toBeGreaterThanOrEqual(2 * 9 + 1024);
+    expect(rowMetadata).toBeLessThan(64 * 1024);
+    // Local publication now refuses blocks above the cap, but the repository keeps whatever a writer put before: a
+    // stock read would return every stored byte before any serving check can run
     await withDb(async (db) => {
       await db.block.putBinary(root, new Uint8Array(blocks.limits.sourceBytes + 1));
       expect((await db.block.getBinary(root))?.byteLength).toBe(blocks.limits.sourceBytes + 1);

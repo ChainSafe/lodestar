@@ -4,6 +4,7 @@ import {defer} from "@lodestar/utils";
 import {HostServingBudget} from "../../../../../src/network/reqresp/serving/budget.js";
 import {startServingHandler} from "../../../../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../../../../src/network/reqresp/serving/policy.js";
+import {ReqRespMethod} from "../../../../../src/network/reqresp/types.js";
 import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 
 const policy = resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 1, 0);
@@ -194,8 +195,10 @@ it("paused responses retain sources without occupying production permits", async
 it("a full retained allowance leaves work capacity for an existing response to retire", async () => {
   const config = servingConfig();
   const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0);
+  // Room for the states, one maximum production step and the largest retained charge, a block range's
+  const rangeRetained = basic.methods[ReqRespMethod.BeaconBlocksByRange]?.retainedBytes ?? 0;
   const limits = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0, {
-    totalBytes: 3 * basic.stateBytes + 5 * basic.sourceBytes,
+    totalBytes: 3 * basic.stateBytes + basic.workingBytes + rangeRetained,
     maxTasks: 2,
   });
   const budget = HostServingBudget.forEnvironment(limits);
@@ -281,13 +284,15 @@ it("bounded production gives waiting peers a turn and cancellation removes queue
 it("cancels retained-memory admission without starting a source operation", async () => {
   const config = servingConfig();
   const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 2, 0);
+  const rangeRetained = basic.methods[ReqRespMethod.BeaconBlocksByRange]?.retainedBytes ?? 0;
   const limits = resolveServingPolicy(config, {boundedReadVersion: 1}, 2, 0, {
-    totalBytes: 2 * basic.stateBytes + 4 * basic.sourceBytes,
+    totalBytes: 2 * basic.stateBytes + basic.workingBytes + rangeRetained,
   });
   const budget = HostServingBudget.forEnvironment(limits);
   const factory = vi.fn(async function* () {});
-  const first = startServingHandler(budget, factory);
-  const second = startServingHandler(budget, factory);
+  // Block ranges retain the largest charge, so a second one waits for the first
+  const first = startServingHandler(budget, factory, undefined, "", ReqRespMethod.BeaconBlocksByRange);
+  const second = startServingHandler(budget, factory, undefined, "", ReqRespMethod.BeaconBlocksByRange);
   try {
     await first.prepare();
     const pending = second.prepare();

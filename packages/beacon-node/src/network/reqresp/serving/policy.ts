@@ -18,6 +18,8 @@ import * as protocols from "../protocols.js";
 import {ReqRespMethod} from "../types.js";
 
 const MiB = 1024 * 1024;
+/** A range row's key natively and in JS (slot keys are 9 bytes) and its JS row objects */
+const RANGE_ROW_METADATA_BYTES = 4096;
 export type ServingOptions = {
   totalBytes?: number;
   /** Maximum simultaneous source operations, excluding quota and response-write waits. */
@@ -214,13 +216,15 @@ export function resolveServingPolicy(
     };
   };
   const blocks = work(blockBytes);
+  // A stock range stream holds its row natively until the next native read and in JS until written
+  const blockRanges: ServingWork = {...blocks, retainedBytes: 2 * blocks.limits.sourceBytes + RANGE_ROW_METADATA_BYTES};
   const columns = work(Math.max(blockBytes, columnBatchBytes));
   // The range generator retains the wrapper, copied sidecar list and yielded sidecar across a write.
   const blobs = work(wrapperBytes, 3);
   const light = work(Math.max(witness + 2 * committee + header, update));
   const methods = {
     [ReqRespMethod.BeaconBlocksByRoot]: blocks,
-    [ReqRespMethod.BeaconBlocksByRange]: blocks,
+    [ReqRespMethod.BeaconBlocksByRange]: blockRanges,
     [ReqRespMethod.BeaconBlocksByHead]: blocks,
     [ReqRespMethod.BlobSidecarsByRoot]: blobs,
     [ReqRespMethod.BlobSidecarsByRange]: blobs,
