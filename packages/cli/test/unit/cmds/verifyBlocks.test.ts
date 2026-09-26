@@ -26,7 +26,7 @@ function block(slot: number, oversized = false) {
 }
 
 describe("cmds / beacon / verify-blocks", () => {
-  it("stops at an oversized archived block with its slot and root, then resumes and verifies", async () => {
+  it("stops at an oversized archived or hot block with its slot and root, and succeeds once both fit", async () => {
     const dataDir = await mkdtemp(join(tmpdir(), "lodestar-verify-blocks-"));
     const args = {
       dataDir,
@@ -60,6 +60,22 @@ describe("cmds / beacon / verify-blocks", () => {
         expect(await db.blockCertification.load()).toEqual({from: 2, to: 3});
         // The operator replaces the oversized block
         await db.blockArchive.putBinary(2, block(2).bytes);
+      });
+      await verifyBlocks.handler?.(args);
+      await withDb(async (db) => {
+        expect(await db.blockCertification.load()).toBeNull();
+      });
+
+      // An oversized hot block fails the command even though the archive is verified
+      const hot = block(4, true);
+      await withDb((db) => db.block.putBinary(Buffer.from(hot.root.slice(2), "hex"), hot.bytes));
+      await expect(verifyBlocks.handler?.(args)).rejects.toThrow(
+        `Hot block at slot 4 root ${hot.root} has ${hot.bytes.byteLength} bytes, above MAX_PAYLOAD_SIZE ${MAX_PAYLOAD_SIZE}`
+      );
+      // A clean hot scan with the verified archive succeeds
+      await withDb(async (db) => {
+        await db.block.delete(Buffer.from(hot.root.slice(2), "hex"));
+        await db.block.putBinary(Buffer.from(block(4).root.slice(2), "hex"), block(4).bytes);
       });
       await verifyBlocks.handler?.(args);
       await withDb(async (db) => {
