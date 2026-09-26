@@ -112,6 +112,15 @@ export function getBeaconBlockApi({
     const signedBlock = signedBlockContents.signedBlock;
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
+    // A block above the p2p payload limit cannot propagate, and no stored block may exceed it. Every local publish
+    // path, full, engine-reconstructed or builder-unblinded, reaches this check before caching or importing.
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.value_serializedSize(signedBlock);
+    if (blockBytes > config.MAX_PAYLOAD_SIZE) {
+      throw new ApiError(
+        400,
+        `Signed block size ${blockBytes} exceeds MAX_PAYLOAD_SIZE ${config.MAX_PAYLOAD_SIZE}, slot=${slot}`
+      );
+    }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
     const blockForImport = chain.seenBlockInputCache.getByBlock({
