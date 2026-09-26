@@ -1,9 +1,4 @@
-import {
-  NativeNetworkApplicationRuntime,
-  NativePeerObservation,
-  NativePeerState,
-  NetworkStatus,
-} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork, NativePeerObservation, NativePeerState, NetworkStatus} from "@chainsafe/lodestar-z/network";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -88,7 +83,7 @@ export class NativePeers {
   private readonly peers = new Map<string, {state: NativePeerState; sequence: bigint; rejected?: true}>();
   private closed = false;
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "disconnect">,
+    private readonly network: Pick<NativeNetwork, "disconnect">,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly capacity: number
@@ -129,7 +124,7 @@ export class NativePeers {
         this.peers.set(peer, {state: {...state, relevant: false}, sequence: event.ownerSequence, rejected: true});
         if (previous?.state.relevant) this.events.emit(NetworkEvent.peerDisconnected, {peer});
         try {
-          void this.runtime.disconnect(state.identity).catch(() => {});
+          void this.network.disconnect(state.identity).catch(() => {});
         } catch {}
         return;
       }

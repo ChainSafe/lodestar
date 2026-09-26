@@ -1,48 +1,32 @@
 import {setTimeout as delay, setImmediate as yieldToIO} from "node:timers/promises";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
-import {
-  NativeExchangeDemand,
-  NativeGossipDependencyCheck,
-  NativeGossipHandle,
-  NativeGossipMessage,
-  NativeNetworkApplicationRuntime,
-} from "@chainsafe/lodestar-z/network";
+import {DependencyCheck, GossipJob, GossipMessage, NativeNetwork, Verdict} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
-import type {NativeClaim, NativeDrain, NativeJob} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
 
-type GossipLedger = Pick<NativeDrain, "verdict" | "classify" | "block" | "dropQueued">;
 type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe">;
-/** Gossip bounds of one exchange. */
-export type NativeGossipLimits = {checks: number; messages: number; bytes: number};
-type GossipJob = {
-  handle: NativeGossipHandle;
-  message?: PendingGossipsubMessage;
-  result: TopicValidatorResult;
-  completed: boolean;
+
+const verdicts: Record<TopicValidatorResult, Verdict> = {
+  [TopicValidatorResult.Accept]: "accept",
+  [TopicValidatorResult.Reject]: "reject",
+  [TopicValidatorResult.Ignore]: "ignore",
 };
-/** One validator job: a single message, or an attestation group validated together. */
-type GossipExecution = {jobs: GossipJob[]; grouped: boolean};
 
 export class NativeGossip {
   private closed = false;
   private processor: GossipExecutor | undefined;
-  /** Claimed ordinary jobs a spent drain budget left for the next drain, at most one batch. */
-  private queued: GossipExecution[] = [];
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "publishGossip">,
-    private readonly ledger: GossipLedger,
+    private readonly network: Pick<NativeNetwork, "publish" | "blockImported" | "dropQueuedGossip">,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
-    private readonly onError: (error: unknown) => void,
-    private readonly onFailure: (error: unknown) => void
+    private readonly onError: (error: unknown) => void
   ) {}
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
@@ -53,72 +37,55 @@ export class NativeGossip {
     this.processor = processor;
   }
   notifyBlock(root: Uint8Array): void {
-    if (!this.closed) this.ledger.block(root);
+    if (!this.closed) this.network.blockImported(root);
   }
   dropQueued(): void {
-    if (!this.closed) this.ledger.dropQueued();
+    if (!this.closed) this.network.dropQueuedGossip();
   }
-  /**
-   * The next exchange's gossip quotas and ordinary capacity. Ordinary work is claimed only while no claimed job
-   * waits, the budget lasts and the executor can take it; urgent work whenever the executor is attached.
-   */
-  demand(
-    {checks, messages, bytes}: NativeGossipLimits,
-    deadline: number
-  ): Pick<NativeExchangeDemand, "checks" | "messages" | "bytes" | "claimOrdinary"> & {ordinary: boolean} {
-    const processor = this.processor;
-    if (this.closed || !processor) return {bytes: 0, checks: 0, claimOrdinary: false, messages: 0, ordinary: false};
-    return {
-      bytes,
-      checks,
-      claimOrdinary: this.queued.length === 0 && performance.now() < deadline,
-      messages,
-      ordinary: processor.ready(),
-    };
+  /** Whether ordinary gossip can execute now; urgent gossip always can. */
+  ready(): boolean {
+    return this.processor?.ready() ?? false;
   }
-  /**
-   * Answers dependency checks and starts the claimed jobs, adopting each as it starts or holds it. Urgent jobs
-   * (blocks, blob sidecars, data columns) all start now whatever the budget; ordinary jobs start until `deadline`, at
-   * least one per turn unless the budget was spent before this delivery and no job was held. Checks the executor
-   * cannot answer are classified unavailable. Returns whether claimed jobs wait for a later turn.
-   */
-  deliver(checks: readonly NativeGossipDependencyCheck[], jobs: NativeClaim<NativeJob>[], deadline: number): boolean {
-    const processor = this.processor;
-    if (this.closed || !processor) return false;
-    if (checks.length > 0) {
-      let available: boolean[] = [];
+  checkDependencies(checks: readonly DependencyCheck[]): boolean[] {
+    return this.attached().check(checks);
+  }
+  /** One verdict per message, in order. Observer and result event failures are reported, never retired as verdicts. */
+  async validate(job: GossipJob): Promise<Verdict[]> {
+    const processor = this.attached();
+    const messages = job.messages.map((message) => this.prepare(message));
+    const results = await processor.execute(messages, job.grouped);
+    const errors: unknown[] = [];
+    try {
+      processor.observe(messages, results);
+    } catch (error) {
+      errors.push(error);
+    }
+    for (const [i, message] of messages.entries()) {
       try {
-        available = processor.check(checks);
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource: message.propagationSource,
+          acceptance: results[i] ?? TopicValidatorResult.Ignore,
+        });
       } catch (error) {
-        this.onError(error);
+        errors.push(error);
       }
-      for (const [i, {handle}] of checks.entries()) this.ledger.classify(handle, available[i] ?? false);
     }
-    // Ordinary work claimed at the turn's start is new work, which a spent budget defers like the claim it replaced.
-    const progress = this.queued.length > 0 || performance.now() < deadline;
-    if (jobs.length > 0) this.dispatch(jobs, processor);
-    return this.start(processor, deadline, progress);
+    if (errors.length > 0)
+      this.onError(errors.length === 1 ? errors[0] : new AggregateError(errors, "Native gossip observers failed"));
+    return messages.map((_, i) => verdicts[results[i] ?? TopicValidatorResult.Ignore]);
   }
-  /** Starts queued ordinary jobs until `deadline`, the first whatever the time when `progress`. Returns whether any remain. */
-  private start(processor: GossipExecutor, deadline: number, progress: boolean): boolean {
-    let started = 0;
-    for (const {jobs, grouped} of this.queued) {
-      if ((started > 0 || !progress) && performance.now() >= deadline) break;
-      started++;
-      void this.execute(jobs, grouped, processor, []).catch(this.onError);
-    }
-    this.queued = this.queued.slice(started);
-    return this.queued.length > 0;
+  private attached(): GossipExecutor {
+    if (!this.processor)
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "gossip executor"});
+    return this.processor;
   }
-  private prepare(job: GossipJob, message: NativeGossipMessage): void {
-    const topic = parseGossipTopic(this.config, message.topic);
-    const source = message.peerId;
-    const id = Buffer.from(message.id).toString("hex");
-    const pending: PendingGossipsubMessage = {
-      topic,
+  private prepare(message: GossipMessage): PendingGossipsubMessage {
+    return {
+      topic: parseGossipTopic(this.config, message.topic),
       msg: {type: "unsigned", topic: message.topic, data: message.data},
-      msgId: id,
-      propagationSource: source,
+      msgId: Buffer.from(message.id).toString("hex"),
+      propagationSource: message.peerId,
       clientAgent: "unknown",
       clientVersion: "unknown",
       indexed: message.attestationData ?? undefined,
@@ -126,101 +93,6 @@ export class NativeGossip {
       seenTimestampSec: message.receivedAtUnixMs / 1000,
       startProcessUnixSec: null,
     };
-    job.message = pending;
-  }
-  private complete(job: GossipJob): void {
-    if (job.completed) return;
-    job.completed = true;
-    if (!this.closed)
-      this.ledger.verdict(
-        job.handle,
-        job.result === TopicValidatorResult.Accept
-          ? "accept"
-          : job.result === TopicValidatorResult.Reject
-            ? "reject"
-            : "ignore"
-      );
-  }
-  private dispatch(claims: NativeClaim<NativeJob>[], processor: GossipExecutor): void {
-    const prepared = claims.map(({item}) =>
-      item.messages.map(({handle}) => ({handle, result: TopicValidatorResult.Ignore, completed: false}) as GossipJob)
-    );
-    const errors: unknown[] = [];
-    try {
-      for (const [i, jobs] of prepared.entries())
-        for (const [j, job] of jobs.entries()) this.prepare(job, claims[i].item.messages[j]);
-    } catch (error) {
-      errors.push(error);
-    }
-    if (errors.length > 0) {
-      for (const claim of claims) claim.adopt();
-      void this.execute(prepared.flat(), false, processor, errors).catch(this.onError);
-      return;
-    }
-    for (const [i, {item: job}] of claims.entries()) {
-      const jobs = prepared[i];
-      // Claims come in priority order, so urgent jobs start first and none waits for the budget.
-      claims[i].adopt();
-      if (job.urgent) void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
-      else this.queued.push({jobs, grouped: job.grouped});
-    }
-  }
-  private async execute(
-    jobs: GossipJob[],
-    grouped: boolean,
-    processor: GossipExecutor,
-    errors: unknown[]
-  ): Promise<void> {
-    const pending: PendingGossipsubMessage[] = [];
-    const executing: GossipJob[] = [];
-    let results: TopicValidatorResult[] = [];
-    const completionErrors: unknown[] = [];
-    try {
-      for (const job of jobs)
-        if (job.message) {
-          pending.push(job.message);
-          executing.push(job);
-        }
-      if (pending.length > 0 && errors.length === 0) {
-        results = await processor.execute(pending, grouped);
-        for (const [i, job] of executing.entries()) job.result = results[i] ?? TopicValidatorResult.Ignore;
-      }
-    } catch (error) {
-      errors.push(error);
-    } finally {
-      for (const job of jobs) {
-        try {
-          this.complete(job);
-        } catch (error) {
-          completionErrors.push(error);
-        }
-      }
-    }
-    if (completionErrors.length > 0)
-      this.onFailure(
-        completionErrors.length === 1
-          ? completionErrors[0]
-          : new AggregateError(completionErrors, "Native gossip retirement failed")
-      );
-    // Observers may throw or dispatch more work. Every handle and credit must be retired first.
-    try {
-      processor.observe(pending, results);
-    } catch (error) {
-      errors.push(error);
-    }
-    for (const [i, message] of pending.entries()) {
-      try {
-        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: message.msgId,
-          propagationSource: message.propagationSource,
-          acceptance: executing[i].result,
-        });
-      } catch (error) {
-        errors.push(error);
-      }
-    }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) throw new AggregateError(errors, "Native gossip job failed");
   }
   async publish(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     if (this.closed)
@@ -240,7 +112,7 @@ export class NativeGossip {
       if (this.closed)
         throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "gossip publication"});
       try {
-        return (await this.runtime.publishGossip(topic, data, options)).queued;
+        return (await this.network.publish(topic, data, options)).queued;
       } catch (error) {
         if (
           error instanceof Error &&
@@ -267,8 +139,6 @@ export class NativeGossip {
   }
 
   close(): void {
-    if (this.closed) return;
     this.closed = true;
-    this.queued = [];
   }
 }

@@ -1,11 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {peerIdFromPublicKey, peerIdFromString} from "@libp2p/peer-id";
-import {
-  NativeNetworkApplicationRuntime,
-  NativeRememberedPeer,
-  NativeRememberedPeers,
-} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork, NativeRememberedPeer, NativeRememberedPeers} from "@chainsafe/lodestar-z/network";
 import {Logger, fromHex, toHex, withTimeout} from "@lodestar/utils";
 
 /** `{version, genesisValidatorsRoot, peers}` in the shape of `NativeRememberedPeers`, bytes as 0x-prefixed hex. */
@@ -115,7 +111,7 @@ export class RememberedPeersWriter {
 
   constructor(
     private readonly dir: string,
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "getRememberedPeers">,
+    private readonly network: Pick<NativeNetwork, "getRememberedPeers">,
     private readonly logger: Logger
   ) {
     this.file = path.join(dir, FILE_NAME);
@@ -128,7 +124,7 @@ export class RememberedPeersWriter {
 
   /**
    * Stops the timer and writes the final snapshot within 2 s, abandoning a write still running then. Call it before
-   * the runtime closes and refuses a snapshot.
+   * the network closes and refuses a snapshot.
    */
   async close(): Promise<void> {
     clearInterval(this.timer);
@@ -158,7 +154,7 @@ export class RememberedPeersWriter {
 
   private async persist(): Promise<void> {
     this.stopped.signal.throwIfAborted();
-    const {genesisValidatorsRoot, peers} = await this.runtime.getRememberedPeers();
+    const {genesisValidatorsRoot, peers} = await this.network.getRememberedPeers();
     const json = JSON.stringify({
       version: VERSION,
       genesisValidatorsRoot: toHex(genesisValidatorsRoot),

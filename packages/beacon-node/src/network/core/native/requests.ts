@@ -1,7 +1,7 @@
 import {peerIdFromString} from "@libp2p/peer-id";
 import {
-  NativeIncomingRequest,
-  NativeNetworkApplicationRuntime,
+  IncomingRequest,
+  NativeNetwork,
   NativeRequestError,
   NativeRequestOptions,
   NativeResponseChunk,
@@ -18,9 +18,13 @@ import {
   RpcResponseStatusError,
   responseStatusErrorToRequestError,
 } from "@lodestar/reqresp";
-import {ServingHandler, getBoundedReqRespHandlers, servingBudget} from "../../reqresp/serving/handler.js";
+import {
+  LocalServingResponseError,
+  ServingHandler,
+  getBoundedReqRespHandlers,
+  servingBudget,
+} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
-import type {NativeClaim} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
@@ -64,7 +68,7 @@ function requestError(error: unknown): unknown {
 }
 
 export function outgoingNativeRequest(
-  runtime: Pick<NativeNetworkApplicationRuntime, "request">,
+  network: Pick<NativeNetwork, "request">,
   protocols: ReadonlyMap<string, NativeProtocol>,
   data: OutgoingRequestArgs,
   options: NativeRequestOptions
@@ -81,7 +85,7 @@ export function outgoingNativeRequest(
   const protocol = selected;
   let iterator: AsyncIterableIterator<NativeResponseChunk>;
   try {
-    iterator = runtime.request(data.peerId, protocol.id, data.requestData, options);
+    iterator = network.request(data.peerId, protocol.id, data.requestData, options);
   } catch (error) {
     throw requestError(error);
   }
@@ -118,82 +122,55 @@ export function outgoingNativeRequest(
   };
 }
 
-class IncomingRoute {
-  handler: ServingHandler | undefined;
-  request: NativeIncomingRequest | undefined;
-  constructor(request: NativeIncomingRequest) {
-    this.request = request;
-  }
-  clear(): void {
-    this.request = undefined;
-    const handler = this.handler;
-    this.handler = undefined;
-    handler?.cancel();
-  }
+function fail(request: IncomingRequest, error: unknown): Promise<void> {
+  const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
+  const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
+  return request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
 }
 
-async function serve(
-  route: IncomingRoute,
+async function respond(
+  request: IncomingRequest,
   handler: ServingHandler,
   protocol: NativeProtocol,
   config: BeaconConfig,
   maxChunks: number
 ): Promise<void> {
-  try {
-    // Reserve retained data before native credit so new requests cannot block existing responses from finishing.
-    await handler.prepare();
-    for (let chunks = 0; chunks <= maxChunks; chunks++) {
-      if (!route.request) return;
-      await route.request.ready();
-      if (!route.request) return;
-      let result: IteratorResult<ResponseOutgoing> | undefined = await handler.next();
-      if (!route.request) return;
-      if (result.done) {
-        await route.request.finish();
-        return;
-      }
-      if (chunks === maxChunks)
-        throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "response chunks"});
-      const {boundary} = result.value;
-      const submission = route.request.respond(
-        result.value.data,
-        protocol.context
-          ? {
-              fork: nativeFork(boundary.fork),
-              digest: config.forkBoundary2ForkDigest(boundary),
-            }
-          : null
-      );
-      result = undefined;
-      await submission;
-    }
-  } catch (error) {
-    if (route.request) {
-      const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
-      const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
-      await route.request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256));
-    }
-  } finally {
-    route.clear();
+  // Reserve retained data before native credit so new requests cannot block existing responses from finishing.
+  await handler.prepare();
+  for (let chunks = 0; chunks <= maxChunks; chunks++) {
+    await request.ready();
+    let result: IteratorResult<ResponseOutgoing> | undefined = await handler.next();
+    if (result.done) return request.finish();
+    if (chunks === maxChunks)
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "response chunks"});
+    const {boundary} = result.value;
+    const submission = request.respond(
+      result.value.data,
+      protocol.context
+        ? {
+            fork: nativeFork(boundary.fork),
+            digest: config.forkBoundary2ForkDigest(boundary),
+          }
+        : null
+    );
+    result = undefined;
+    await submission;
   }
 }
 
 export class NativeRequests {
-  private readonly routes = new Set<IncomingRoute>();
+  /** Each request's handler until it retires, with the stream it answers. */
+  private readonly serving = new Map<ServingHandler, IncomingRequest>();
   private readonly protocols: ReadonlyMap<string, NativeProtocol>;
   private readonly maxChunks: number;
   private closed = false;
-  /** Routes served at once. */
+  /** Requests served at once. */
   private readonly limit: number;
   private readonly budget;
-  /** Delivered starts a spent turn budget holds for the next turn, at most one turn's quantum. */
-  private held: NativeIncomingRequest[] = [];
   constructor(
     private readonly config: BeaconConfig,
     private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
-    capacity: number,
-    /** Schedules a native turn once a route retires, since serving capacity returned. */
-    private readonly wake: () => void
+    capacity: number
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
     this.budget = servingBudget(getHandler);
@@ -213,85 +190,49 @@ export class NativeRequests {
       1
     );
   }
-  /** Starts one turn may deliver: the per-turn quota less the held starts, which start first. */
-  allowance(quota: number): number {
-    return this.closed ? 0 : Math.max(0, quota - this.held.length);
-  }
   /**
    * Serving starts the host can take now: free routes and the host serving budget, which other adapters share, bound
-   * them, less the starts already held.
+   * them. A request charges a route until its handler retires.
    */
   capacity(): number {
-    if (this.closed) return 0;
-    return Math.max(0, Math.min(this.limit - this.routes.size, this.budget.remaining()) - this.held.length);
+    return Math.max(0, Math.min(this.limit - this.serving.size, this.budget.remaining()));
   }
   /**
-   * Adopts delivered starts and starts them after the held ones, unless the turn's budget is spent: they then wait
-   * for the next turn. Returns whether starts wait for the next turn.
+   * Serves one request, cancelling its handler when the stream closes. Settles once the handler retired, including
+   * work that outlived the stream.
    */
-  start(claims: NativeClaim<NativeIncomingRequest>[], deadline: number): boolean {
-    if (this.closed) return false;
-    const starts = this.held.concat(
-      claims.map((claim) => {
-        claim.adopt();
-        return claim.item;
-      })
-    );
-    this.held = [];
-    if (starts.length > 0 && performance.now() >= deadline) {
-      this.held = starts;
-      return true;
-    }
-    for (const request of starts) this.serve(request);
-    return false;
-  }
-  private serve(request: NativeIncomingRequest): void {
+  async serve(request: IncomingRequest): Promise<void> {
+    if (this.closed) return request.cancel();
     const protocol = this.protocols.get(request.protocol);
-    if (!protocol) {
-      void request
-        .fail(RespStatus.SERVER_ERROR, new TextEncoder().encode("Local serving capacity exhausted"))
-        .catch(() => {});
-      return;
-    }
-    const route = new IncomingRoute(request);
-    this.routes.add(route);
-    void request.closed.then(() => {
-      route.clear();
-    });
+    if (!protocol) return fail(request, new LocalServingResponseError());
+    let handler: ServingHandler;
     try {
-      const handler = this.getHandler(protocol.method)(
+      handler = this.getHandler(protocol.method)(
         {data: request.data, version: protocol.version},
         peerIdFromString(request.peerId),
         "unknown"
       );
-      route.handler = handler;
-      request.retainUntil(handler.retired);
-      void handler.retired.then(() => {
-        this.routes.delete(route);
-        this.wake();
-      });
-      void serve(route, handler, protocol, this.config, this.maxChunks).catch(() => {});
     } catch (error) {
-      const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
-      const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
-      void request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
-      route.clear();
-      void request.closed.then(() => {
-        this.routes.delete(route);
-        this.wake();
-      });
+      return fail(request, error);
+    }
+    this.serving.set(handler, request);
+    void request.closed.then(() => handler.cancel());
+    try {
+      await respond(request, handler, protocol, this.config, this.maxChunks);
+    } catch (error) {
+      await fail(request, error);
+    } finally {
+      handler.cancel();
+      await handler.retired;
+      this.serving.delete(handler);
     }
   }
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    for (const route of this.routes) {
-      const request = route.request;
-      route.clear();
-      void request?.cancel().catch(() => {});
+    for (const [handler, request] of this.serving) {
+      handler.cancel();
+      void request.cancel().catch(() => {});
     }
-    this.routes.clear();
-    for (const request of this.held) void request.cancel().catch(() => {});
-    this.held = [];
   }
 }

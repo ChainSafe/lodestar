@@ -1,7 +1,7 @@
 import {
   NativeApplicationConfig,
   NativeLocalIntent,
-  NativeNetworkApplicationRuntime,
+  NativeNetwork,
   NativeSubscriptionSet,
 } from "@chainsafe/lodestar-z/network";
 import {
@@ -72,7 +72,7 @@ export class NativeIntent {
   private closed = false;
   private appliedSlot: number;
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "applyIntent" | "updateStatus">,
+    private readonly runtime: Pick<NativeNetwork, "applyIntent" | "updateStatus">,
     application: NativeApplicationConfig,
     private readonly network: NetworkConfig,
     private readonly clock: IClock,

@@ -1,14 +1,14 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
-import type {NativeGossipDiagnosticsPage, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@chainsafe/lodestar-z/network";
 import type {PeerScoreStats} from "../../peers/score/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-type Runtime = Pick<NativeNetworkApplicationRuntime, "getPeers" | "getGossipDiagnostics">;
+type Network = Pick<NativeNetwork, "getPeers" | "getGossipDiagnostics">;
 
-async function visitPages(runtime: Runtime, visit: (page: NativeGossipDiagnosticsPage) => void): Promise<void> {
+async function visitPages(network: Network, visit: (page: NativeGossipDiagnosticsPage) => void): Promise<void> {
   let cursor = 0;
   for (let pageIndex = 0; pageIndex < 64; pageIndex++) {
-    const page = await runtime.getGossipDiagnostics(cursor);
+    const page = await network.getGossipDiagnostics(cursor);
     visit(page);
     if (page.nextCursor === null) return;
     cursor = nativeInteger(page.nextCursor, "gossip diagnostics cursor", 512, cursor + 1);
@@ -33,9 +33,9 @@ function ipString(ip: Uint8Array): string | null {
   return groups.join(":");
 }
 
-export async function dumpNativeGossipScores(runtime: Runtime): Promise<PeerScoreStatsDump> {
+export async function dumpNativeGossipScores(network: Network): Promise<PeerScoreStatsDump> {
   const dump: PeerScoreStatsDump = {};
-  await visitPages(runtime, (page) => {
+  await visitPages(network, (page) => {
     const names = new Map(page.topics.map((topic) => [topic.index, topic]));
     for (const peer of page.peers) {
       const topics: PeerScoreStatsDump[string]["topics"] = {};
@@ -75,9 +75,9 @@ export async function dumpNativeGossipScores(runtime: Runtime): Promise<PeerScor
   return dump;
 }
 
-export async function dumpNativeMeshPeers(runtime: Runtime): Promise<Record<string, string[]>> {
+export async function dumpNativeMeshPeers(network: Network): Promise<Record<string, string[]>> {
   const meshes = new Map<string, Set<string>>();
-  await visitPages(runtime, (page) => {
+  await visitPages(network, (page) => {
     const names = new Map(page.topics.map((topic) => [topic.index, topic]));
     for (const topic of page.topics) {
       if (topic.subscribed && !meshes.has(topic.topic)) meshes.set(topic.topic, new Set());
@@ -93,11 +93,11 @@ export async function dumpNativeMeshPeers(runtime: Runtime): Promise<Record<stri
   return Object.fromEntries(Array.from(meshes, ([topic, peers]) => [topic, Array.from(peers)]));
 }
 
-export async function dumpNativePeerScores(runtime: Runtime): Promise<PeerScoreStats> {
-  const snapshot = await runtime.getPeers();
+export async function dumpNativePeerScores(network: Network): Promise<PeerScoreStats> {
+  const snapshot = await network.getPeers();
   const gossip = new Map<string, number>();
   let observed: NativeGossipDiagnosticsPage | undefined;
-  await visitPages(runtime, (page) => {
+  await visitPages(network, (page) => {
     observed ??= page;
     for (const peer of page.peers) gossip.set(peer.identity, peer.score);
   });

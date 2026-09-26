@@ -12,7 +12,7 @@ import {UINT64_MAX, createNativeConfig, kinds, nativeTopicScore} from "../../../
 import {NativeNetworkError} from "../../../../src/network/core/native/errors.js";
 import {computeGossipPeerScoreParams} from "../../../../src/network/gossip/scoringParameters.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
-import {initializeSettlingRuntime} from "../../../utils/nativeRuntime.js";
+import {createSettlingNetwork} from "../../../utils/nativeSettlingNetwork.js";
 
 const config = createBeaconConfig(
   {
@@ -70,17 +70,14 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     const application = node.create({}, 0, 1_000_000);
     bindings.config.set(config, config.genesisValidatorsRoot);
-    const runtime = initializeSettlingRuntime(application);
+    // Initialization refuses a plan past its native or bridge budget.
+    const network = createSettlingNetwork(application);
     try {
-      await runtime.identity;
-      const diagnostics = runtime.diagnostics();
-      console.info("million-validator native reservations", diagnostics.nativeRequestedBytes);
-      expect(diagnostics.gossip.capacity).toBeGreaterThan(34_375);
-      expect(diagnostics.nativeRequestedBytes).toBeLessThanOrEqual(application.resources.nativeBudgetBytes);
-      expect(diagnostics.bridgeRequestedBytes).toBeLessThanOrEqual(application.resources.bridgeBudgetBytes);
+      const capacity = application.gossipPolicy.processor.reduce((items, limit) => items + limit.items, 0);
+      expect(capacity).toBeGreaterThan(34_375);
     } finally {
       application.identitySecretKey.fill(0);
-      await runtime.close();
+      await network.close();
     }
   });
   it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {

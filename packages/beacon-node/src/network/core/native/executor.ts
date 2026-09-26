@@ -1,5 +1,5 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
-import {NativeGossipDependencyCheck} from "@chainsafe/lodestar-z/network";
+import {DependencyCheck} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
 import {SlotRootHex} from "@lodestar/types";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
@@ -43,7 +43,7 @@ export class NativeGossipExecutor {
   }
 
   /** Whether each check's block is known; an unknown one starts a search. */
-  check(checks: readonly NativeGossipDependencyCheck[]): boolean[] {
+  check(checks: readonly DependencyCheck[]): boolean[] {
     const roots = new Map<string, boolean>();
     return checks.map((check) => {
       const root = `0x${Buffer.from(check.root).toString("hex")}`;

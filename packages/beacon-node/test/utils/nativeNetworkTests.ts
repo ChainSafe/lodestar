@@ -9,11 +9,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {
-  NativeApplicationConfig,
-  NativeLocalIntent,
-  initializeNativeNetworkRuntime,
-} from "@chainsafe/lodestar-z/network";
+import {NativeApplicationConfig, NativeLocalIntent} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -34,7 +30,7 @@ import {ClockStopped} from "../mocks/clock.js";
 import {nativeBindingProcess} from "./nativeBindingProcess.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import {nativeNetworkProcess} from "./nativeNetworkProcess.js";
-import {initializeSettlingRuntime} from "./nativeRuntime.js";
+import {createSettlingNetwork} from "./nativeSettlingNetwork.js";
 
 /** Clears retained mock calls and collects the previous test's runtime before the next one initializes. */
 async function nativeRuntimeReleased(): Promise<void> {
@@ -43,7 +39,7 @@ async function nativeRuntimeReleased(): Promise<void> {
     global.gc?.();
     await sleep(5);
     try {
-      initializeNativeNetworkRuntime({} as NativeApplicationConfig, () => {});
+      createSettlingNetwork({} as NativeApplicationConfig);
     } catch (error) {
       if (!(error instanceof Error) || !error.message.includes("NetworkAlreadyInitialized")) return;
     }
@@ -505,16 +501,14 @@ describe("native Lodestar integration", () => {
         16384
       );
       bindings.config.set(config, config.genesisValidatorsRoot);
-      const runtime = initializeSettlingRuntime(application);
+      const network = createSettlingNetwork(application);
       try {
-        const identity = await runtime.identity;
-        expect(runtime.state).toBe("running");
-        expect(identity.localEndpoint.port).toBeGreaterThan(0);
-        await runtime.applyIntent(emptyIntent(application), 0n);
-        expect(runtime.state).toBe("running");
+        expect((await network.getIdentity()).localEndpoint.port).toBeGreaterThan(0);
+        await network.applyIntent(emptyIntent(application), 0n);
       } finally {
-        await runtime.close();
+        await network.close();
       }
+      expect(await network.closed).toEqual({reason: "requested"});
     },
     15000
   );

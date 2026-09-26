@@ -1,10 +1,6 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
-import {
-  NativeNetworkApplicationRuntime,
-  NativePeerAction,
-  initializeNativeNetworkRuntime,
-} from "@chainsafe/lodestar-z/network";
+import {NativeHost, NativeNetwork, NativePeerAction, createNativeNetwork} from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
@@ -20,7 +16,6 @@ import {INetworkCore} from "../types.js";
 import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
-import {NativeDrain, NativeDrainLimits, NativeDrainStages} from "./drain.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeGossipExecutor} from "./executor.js";
 import {NativeGossip} from "./gossip.js";
@@ -38,30 +33,31 @@ const actions: Record<PeerAction, NativePeerAction> = {
   [PeerAction.HighToleranceError]: "high_tolerance",
 };
 
-/** Bounds of one native turn; the rest yields to the next one. */
-const drainLimits: NativeDrainLimits = {budgetMs: 8, settle: 32};
-/** Per-turn quotas of each payload source. */
-const quotas = {peers: 32, checks: 64, servingStarts: 8, messages: 64, bytes: 8 * 1024 * 1024};
+/** The binding renders every native metric family. */
+type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry">;
 
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
   private gossip!: NativeGossip;
   private peers!: NativePeers;
   private requests!: NativeRequests;
-  private runtime!: NativeNetworkApplicationRuntime;
+  private network!: NativeNetwork;
   private logs: NativeLogs | undefined;
   private remembered: RememberedPeersWriter | undefined;
-  private drain!: NativeDrain;
   private closed = false;
   private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
-  private constructor(private readonly modules: BaseNetworkInit) {}
+  private constructor(private readonly modules: NativeNetworkInit) {}
 
-  static init(modules: BaseNetworkInit): NativeNetworkCore {
+  static init(modules: NativeNetworkInit): NativeNetworkCore {
     assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
     const {peerStoreDir, logger} = modules;
-    const {application, network, directPeers} = createNativeConfig(
+    const {
+      application,
+      network: networkConfig,
+      directPeers,
+    } = createNativeConfig(
       opts,
       config,
       privateKey,
@@ -83,46 +79,25 @@ export class NativeNetworkCore implements INetworkCore {
       const rememberedPeers = peerStoreDir
         ? readRememberedPeers(peerStoreDir, config.genesisValidatorsRoot, logger)
         : null;
-      core.runtime = initializeNativeNetworkRuntime({...application, rememberedPeers}, core.onWorkAvailable);
-      core.drain = new NativeDrain(
-        core.runtime,
-        drainLimits,
-        core.drainStages,
-        core.onOperationError,
-        core.onFailure,
-        modules.metricsRegistry
-      );
+      // The factory calls the host only from later macrotasks, so every consumer below attaches first.
+      core.network = createNativeNetwork({...application, rememberedPeers}, core.host);
       core.intent = new NativeIntent(
-        core.runtime,
+        core.network,
         application,
-        network,
+        networkConfig,
         clock,
         core.modules.opts,
         initialStatus,
         core.onFailure
       );
-      core.logs = new NativeLogs(core.runtime, modules.logger.child({module: "native"}));
-      const diagnostics = core.runtime.diagnostics();
-      core.gossip = new NativeGossip(
-        core.runtime,
-        core.drain,
-        config,
-        modules.events,
-        core.modules.opts,
-        core.onOperationError,
-        core.onFailure
-      );
-      core.peers = new NativePeers(core.runtime, config, modules.events, diagnostics.resolvedCapacities.peerCapacity);
-      core.requests = new NativeRequests(
-        config,
-        modules.getReqRespHandler,
-        diagnostics.incoming.capacity,
-        core.onWorkAvailable
-      );
-      void core.runtime.closed
+      core.logs = new NativeLogs(core.network, modules.logger.child({module: "native"}));
+      core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
+      core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
+      core.requests = new NativeRequests(config, modules.getReqRespHandler, core.network.limits.incomingCapacity);
+      void core.network.closed
         .then((result) => {
-          if (result.reason === "failed")
-            modules.logger.error("Native network owner failed", {code: core.runtime.diagnostics().terminalErrorCode});
+          if (result.reason === "failed" && !core.failure)
+            modules.logger.error("Native network failed", {}, result.error);
           return core.close();
         })
         .catch((error: unknown) => modules.logger.error("Native network terminal cleanup failed", {}, error as Error));
@@ -131,7 +106,7 @@ export class NativeNetworkCore implements INetworkCore {
       queueMicrotask(() => {
         if (!core.closed) void core.connectConfiguredPeers(directPeers).catch(core.onFailure);
       });
-      if (peerStoreDir) core.remembered = new RememberedPeersWriter(peerStoreDir, core.runtime, logger);
+      if (peerStoreDir) core.remembered = new RememberedPeersWriter(peerStoreDir, core.network, logger);
       return core;
     } catch (error) {
       void core
@@ -144,14 +119,14 @@ export class NativeNetworkCore implements INetworkCore {
   }
 
   createGossipExecutor(modules: NetworkProcessorModules, opts: NetworkProcessorOpts): NativeGossipExecutor {
-    return new NativeGossipExecutor(modules, opts, this.gossip, this.onWorkAvailable);
+    return new NativeGossipExecutor(modules, opts, this.gossip, () => this.network.notifyCapacity());
   }
 
   private async connectConfiguredPeers(directPeers: NativeDirectPeer[]): Promise<void> {
     const {opts} = this.modules;
     for (const peer of directPeers) {
       if (this.closed) return;
-      await this.runtime.addDirectPeer(peer.identity, peer.addresses);
+      await this.network.setDirectPeer(peer.identity, peer.addresses);
     }
     await this.connectBootnodes(opts.bootMultiaddrs ?? []);
   }
@@ -168,16 +143,9 @@ export class NativeNetworkCore implements INetworkCore {
     }
   }
 
+  /** The failure that ended the network, the host's first, or null after a requested close. */
   get terminated(): Promise<Error | null> {
-    return this.runtime.closed.then((result) => {
-      if (this.failure) return this.failure;
-      if (result.reason !== "failed") return null;
-      let resource = "native owner";
-      try {
-        resource = this.runtime.diagnostics().terminalErrorCode ?? resource;
-      } catch {}
-      return new NativeNetworkError({code: NativeNetworkErrorCode.FAILED, resource});
-    });
+    return this.network.closed.then((result) => this.failure ?? (result.reason === "failed" ? result.error : null));
   }
 
   private readonly onSlot = (): void => {
@@ -187,28 +155,16 @@ export class NativeNetworkCore implements INetworkCore {
       this.onFailure(error);
     }
   };
-  /** Only schedules; native results settle in the drain, which also runs after close until native has none left. */
-  private readonly onWorkAvailable = (): void => {
-    this.drain.request();
+  /** Delivered work goes to the adapter's consumers; once it closes, the binding only settles. */
+  private readonly host: NativeHost = {
+    capacity: () => (this.closed ? null : {ordinary: this.gossip.ready(), serving: this.requests.capacity()}),
+    validate: (job) => this.gossip.validate(job),
+    checkDependencies: (checks) => this.gossip.checkDependencies(checks),
+    serve: (request) => this.requests.serve(request),
+    peers: (events) => this.peers.deliver(events),
+    failed: (error) => this.onFailure(error),
+    error: (error) => this.onOperationError(error),
   };
-  private readonly stages: NativeDrainStages = {
-    demand: (deadline) => {
-      const {checks, messages, bytes} = quotas;
-      const {ordinary, ...gossip} = this.gossip.demand({checks, messages, bytes}, deadline);
-      return {
-        ...gossip,
-        peers: quotas.peers,
-        servingStarts: this.requests.allowance(quotas.servingStarts),
-        capacity: {serving: this.requests.capacity(), ordinary},
-      };
-    },
-    deliver: ({peers, starts, checks, jobs}, deadline) => {
-      this.peers.deliver(peers);
-      const held = this.requests.start(starts, deadline);
-      return this.gossip.deliver(checks, jobs, deadline) || held;
-    },
-  };
-  private readonly drainStages = (): NativeDrainStages | null => (this.closed ? null : this.stages);
   private readonly onFailure = (error: unknown): void => {
     if (this.closed) return;
     this.failure =
@@ -236,9 +192,10 @@ export class NativeNetworkCore implements INetworkCore {
     this.requests?.close();
     this.peers?.close();
     this.intent?.close();
-    // The runtime refuses the final remembered peers snapshot once it closes.
+    this.network?.notifyCapacity();
+    // The network refuses the final remembered peers snapshot once it closes.
     void (this.remembered?.close() ?? Promise.resolve())
-      .then(() => this.runtime?.close())
+      .then(() => this.network?.close())
       .finally(() => this.logs?.close())
       .then(() => completion.resolve(), completion.reject);
     return this.closePromise;
@@ -262,45 +219,45 @@ export class NativeNetworkCore implements INetworkCore {
     return this.intent.custody(count);
   }
   reportPeer(peer: string, action: PeerAction, _actionName: string): void {
-    this.drain.reportPeer(peer, actions[action]);
+    this.network.reportPeer(peer, actions[action]);
   }
   reStatusPeers(peers: string[]): Promise<void> {
     nativeInteger(peers.length, "re-status peers", this.modules.opts.maxPeers);
-    return this.runtime.reStatusPeers(peers);
+    return this.network.reStatus(peers);
   }
   async getConnectedPeers(): Promise<string[]> {
-    return (await this.runtime.getPeers()).peers
+    return (await this.network.getPeers()).peers
       .filter((peer) => peer.connection !== null)
       .map((peer) => peer.identity);
   }
   async getConnectedPeerCount(): Promise<number> {
-    return (await this.runtime.getPeers()).counts.connected;
+    return (await this.network.getPeers()).counts.connected;
   }
   connectToPeer(peer: string, addresses: string[]): Promise<void> {
     nativeInteger(addresses.length, "dial addresses", 2, 1);
-    return this.runtime.connect(
+    return this.network.connect(
       peer,
       addresses.map((address) => parseNativeEndpoint(address, true, peer)),
       BigInt(this.modules.opts.dialTimeoutMs ?? 10000)
     );
   }
   disconnectPeer(peer: string): Promise<void> {
-    return this.runtime.disconnect(peer);
+    return this.network.disconnect(peer);
   }
   async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
     const direct = parseNativeDirectPeer(peer);
-    await this.runtime.addDirectPeer(direct.identity, direct.addresses);
+    await this.network.setDirectPeer(direct.identity, direct.addresses);
     return direct.id;
   }
   removeDirectPeer(peer: string): Promise<boolean> {
-    return this.runtime.removeDirectPeer(peer);
+    return this.network.setDirectPeer(peer, null);
   }
   async getDirectPeers(): Promise<string[]> {
-    return (await this.runtime.getDirectPeers()).identities;
+    return (await this.network.getDirectPeers()).identities;
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
     const {opts, config, clock} = this.modules;
-    return outgoingNativeRequest(this.runtime, nativeProtocols(config, config.getForkName(clock.currentSlot)), data, {
+    return outgoingNativeRequest(this.network, nativeProtocols(config, config.getForkName(clock.currentSlot)), data, {
       negotiationTimeoutMs: opts.dialTimeoutMs,
       requestTimeoutMs: opts.requestTimeoutMs,
       responseTimeoutMs: opts.respTimeoutMs,
@@ -310,7 +267,7 @@ export class NativeNetworkCore implements INetworkCore {
     return this.gossip.publish(topic, data, opts);
   }
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
-    const identity = await this.runtime.getIdentity();
+    const identity = await this.network.getIdentity();
     const peerId = identity.peerId;
     const enr = identity.localEnr ? ENR.decode(identity.localEnr) : undefined;
     const metadata = identity.metadata;
@@ -339,35 +296,34 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async scrapeMetrics(): Promise<string> {
     return [
-      this.runtime.getMetrics(),
+      this.network.metrics(),
       "# TYPE lodestar_native_log_delivery_errors_total counter\n",
       `lodestar_native_log_delivery_errors_total ${this.logs?.deliveryErrors ?? 0}\n`,
-      (await this.modules.metricsRegistry?.metrics()) ?? "",
     ].join("");
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));
   }
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    const snapshot = await this.runtime.getPeers();
+    const snapshot = await this.network.getPeers();
     return snapshot.peers.filter((peer) => peer.connection !== null).map(formatNativePeer);
   }
   async dumpPeer(peerId: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
-    const snapshot = await this.runtime.getPeers();
+    const snapshot = await this.network.getPeers();
     const peer = snapshot.peers.find((peer) => peer.connection !== null && peer.identity === peerId);
     return peer ? formatNativePeer(peer) : undefined;
   }
   dumpPeerScoreStats(): ReturnType<typeof dumpNativePeerScores> {
-    return dumpNativePeerScores(this.runtime);
+    return dumpNativePeerScores(this.network);
   }
   dumpGossipPeerScoreStats(): ReturnType<typeof dumpNativeGossipScores> {
-    return dumpNativeGossipScores(this.runtime);
+    return dumpNativeGossipScores(this.network);
   }
   dumpDiscv5KadValues(): Promise<never> {
     return this.unavailable("discovery routing-table snapshot");
   }
   dumpMeshPeers(): ReturnType<typeof dumpNativeMeshPeers> {
-    return dumpNativeMeshPeers(this.runtime);
+    return dumpNativeMeshPeers(this.network);
   }
   writeNetworkThreadProfile(_durationMs: number, _dirpath: string): Promise<never> {
     return this.unavailable("native thread CPU profile");

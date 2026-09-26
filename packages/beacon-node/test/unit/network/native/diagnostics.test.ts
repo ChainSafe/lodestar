@@ -1,11 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {expect, it, vi} from "vitest";
-import type {
-  NativeGossipDiagnosticsPage,
-  NativeNetworkApplicationRuntime,
-  NativePeerState,
-} from "@chainsafe/lodestar-z/network";
+import type {NativeGossipDiagnosticsPage, NativeNetwork, NativePeerState} from "@chainsafe/lodestar-z/network";
 import {
   dumpNativeGossipScores,
   dumpNativeMeshPeers,
@@ -84,7 +80,7 @@ async function fixture() {
       counts: {connected: 1, relevant: 1, outboundRelevant: 0},
       ownerSequence: 1n,
     })),
-  } satisfies Pick<NativeNetworkApplicationRuntime, "getPeers" | "getGossipDiagnostics">;
+  } satisfies Pick<NativeNetwork, "getPeers" | "getGossipDiagnostics">;
   return {page, peer, runtime, peerId: peerIdFromPublicKey(key.publicKey).toString()};
 }
 

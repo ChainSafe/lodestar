@@ -100,19 +100,17 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
   });
 
   it("retries native admission without validating or inserting the attestation again", async () => {
-    const publishGossip = vi
+    const publish = vi
       .fn()
       .mockRejectedValueOnce(
         Object.assign(new Error("full"), {code: "NetworkGossipPublishFailed", reason: "admission_full"})
       )
       .mockResolvedValue({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
     const gossip = new NativeGossip(
-      {publishGossip},
-      {verdict: () => {}, classify: () => {}, block: () => {}, dropQueued: () => {}},
+      {publish, blockImported: () => {}, dropQueuedGossip: () => {}},
       createBeaconConfig(config, new Uint8Array(32)),
       new NetworkEventBus(),
       defaultNetworkOptions,
-      vi.fn(),
       vi.fn()
     );
     const data = ssz.electra.SingleAttestation.serialize(ssz.electra.SingleAttestation.defaultValue());
@@ -121,8 +119,8 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
       await api.submitPoolAttestationsV2({signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]});
       expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledOnce();
       expect(attestationPool.add).toHaveBeenCalledOnce();
-      expect(publishGossip).toHaveBeenCalledTimes(2);
-      expect(publishGossip.mock.calls[0][1]).toBe(publishGossip.mock.calls[1][1]);
+      expect(publish).toHaveBeenCalledTimes(2);
+      expect(publish.mock.calls[0][1]).toBe(publish.mock.calls[1][1]);
     } finally {
       gossip.close();
     }

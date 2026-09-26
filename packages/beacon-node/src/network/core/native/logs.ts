@@ -1,4 +1,4 @@
-import {NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork} from "@chainsafe/lodestar-z/network";
 import {Logger} from "@lodestar/utils";
 
 export class NativeLogs {
@@ -10,10 +10,10 @@ export class NativeLogs {
   private lastWarning = 0;
 
   constructor(
-    private readonly runtime: Pick<NativeNetworkApplicationRuntime, "drainLogs" | "setLogLevel">,
+    private readonly network: Pick<NativeNetwork, "drainLogs" | "setLogLevel">,
     private readonly logger: Logger
   ) {
-    runtime.setLogLevel("debug");
+    network.setLogLevel("debug");
     this.timer = setInterval(() => this.drain(1), 250);
     this.timer.unref();
   }
@@ -26,7 +26,7 @@ export class NativeLogs {
   private drain(batches: number): void {
     try {
       for (let i = 0; i < batches; i++) {
-        const batch = this.runtime.drainLogs(32);
+        const batch = this.network.drainLogs(32);
         for (const record of batch.records) {
           try {
             this.logger[record.level](record.message, {

@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it, vi} from "vitest";
-import {NativeLocalIntent, NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
+import {NativeLocalIntent, NativeNetwork} from "@chainsafe/lodestar-z/network";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -50,12 +50,12 @@ async function fixture(
     16
   );
   application.identitySecretKey.fill(0);
-  const applyIntent = vi.fn<NativeNetworkApplicationRuntime["applyIntent"]>(async (_intent, slot) => ({
+  const applyIntent = vi.fn<NativeNetwork["applyIntent"]>(async (_intent, slot) => ({
     slot,
     ownerSequence: 1n,
     changed: true,
   }));
-  const updateStatus = vi.fn<NativeNetworkApplicationRuntime["updateStatus"]>(async () => undefined);
+  const updateStatus = vi.fn<NativeNetwork["updateStatus"]>(async () => undefined);
   const failed = vi.fn();
   const intent = new NativeIntent({applyIntent, updateStatus}, application, network, clock, opts, status, failed);
   if (refreshInitialState) {
@@ -81,7 +81,7 @@ async function fixture(
 describe("native local intent transactions", () => {
   it("coalesces pending committee batches", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     try {
       node.applyIntent.mockImplementationOnce(() => held.promise);
       const started = node.applyIntent.mock.calls.length;
@@ -109,7 +109,7 @@ describe("native local intent transactions", () => {
 
   it("preserves ordering around coalesced batches and rolls back a refused batch", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     try {
       node.applyIntent.mockImplementationOnce(() => held.promise).mockRejectedValueOnce(new Error("batch refused"));
       const active = node.intent.coreTopics(true);
@@ -135,7 +135,7 @@ describe("native local intent transactions", () => {
 
   it("rejects coalesced work at close", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     node.applyIntent.mockImplementationOnce(() => held.promise);
     const duty = {slot: 1, subnet: 1, validatorIndex: 0, isAggregator: true};
     const active = node.intent.committee([duty], false);
@@ -150,7 +150,7 @@ describe("native local intent transactions", () => {
 
   it("rejects a malformed batch atomically without contaminating pending demand", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     try {
       node.applyIntent.mockImplementationOnce(() => held.promise);
       const active = node.intent.coreTopics(true);
@@ -174,7 +174,7 @@ describe("native local intent transactions", () => {
 
   it("does not revive expired queued duties", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     try {
       node.applyIntent.mockImplementationOnce(() => held.promise);
       const active = node.intent.coreTopics(true);
@@ -296,7 +296,7 @@ describe("native local intent transactions", () => {
 
   it("publishes each requested state only after its own native completion and rolls back failures", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     try {
       node.applyIntent.mockImplementationOnce(() => held.promise);
       const started = node.applyIntent.mock.calls.length;
@@ -513,7 +513,7 @@ describe("native local intent transactions", () => {
 
   it("bounds commands and rejects queued work during close without waiting for native completion", async () => {
     const node = await fixture();
-    const held = defer<Awaited<ReturnType<NativeNetworkApplicationRuntime["applyIntent"]>>>();
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     node.applyIntent.mockImplementationOnce(() => held.promise);
     const waiting = Array.from({length: 17}, () => node.intent.coreTopics(true).catch((error: unknown) => error));
     await expect(node.intent.coreTopics(true)).rejects.toThrow("local intent commands");

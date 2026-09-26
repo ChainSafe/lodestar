@@ -1,12 +1,11 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
-import {NativeIncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {IncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {RequestErrorCode, RespStatus} from "@lodestar/reqresp";
 import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
-import {NativeClaim} from "../../../../src/network/core/native/drain.js";
 import {nativeProtocols} from "../../../../src/network/core/native/protocols.js";
 import {NativeRequests, outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
 import {onBeaconBlocksByRoot} from "../../../../src/network/reqresp/handlers/beaconBlocksByRoot.js";
@@ -79,13 +78,12 @@ async function incoming() {
   const closed = defer<void>();
   const permission = defer<void>();
   const written = defer<void>();
-  const request: NativeIncomingRequest = {
+  const request: IncomingRequest = {
     peerId: peerIdFromPublicKey(key.publicKey).toString(),
     connection: {index: 0, generation: 1},
     protocol: "/eth2/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy",
     data: new Uint8Array(32),
     closed: closed.promise,
-    retainUntil: vi.fn(),
     ready: vi.fn(() => permission.promise),
     respond: vi.fn(() => written.promise),
     finish: vi.fn(() => {
@@ -105,72 +103,57 @@ async function incoming() {
   return {request, closed, permission, written};
 }
 
-function claims(requests: NativeIncomingRequest[]): NativeClaim<NativeIncomingRequest>[] {
-  return requests.map((request) => new NativeClaim(request));
+/** Whether `promise` settled by the next macrotask. */
+async function settled(promise: Promise<unknown>): Promise<boolean> {
+  let done = false;
+  void promise.finally(() => {
+    done = true;
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  return done;
 }
 
-/**
- * One turn's serving: native delivers from `queue` up to the turn's allowance under the quota and the host's capacity,
- * and the host starts them.
- */
-function serveTurn(owner: NativeRequests, queue: NativeIncomingRequest[], quota = 8, deadline = Infinity): number {
-  const taken = queue.splice(0, Math.min(owner.allowance(quota), owner.capacity()));
-  owner.start(claims(taken), deadline);
-  return taken.length;
-}
-
-it("waits for quota before producing data and for host retirement before taking another request", async () => {
+it("produces after native credit and keeps capacity charged past stream close until child work retires", async () => {
   const config = servingConfig();
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
-  const ancillary = defer<void>();
-  const first = await incoming();
-  const second = await incoming();
-  const queue = [first.request, second.request];
-  let taken = 0;
+  const child = defer<void>();
   let produced = 0;
   const active: handlers.ServingHandler[] = [];
   const factory: handlers.BoundedReqRespHandlers = () => () => {
     const handler = handlers.startServingHandler(budget, (context) =>
       (async function* () {
         produced++;
-        void context.read(() => ancillary.promise).catch(() => {});
+        void context.read(() => child.promise).catch(() => {});
         yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
       })()
     );
     active.push(handler);
     return handler;
   };
-  // Retirement schedules the core drain instead of taking the next request inline.
-  const takenAtWake: number[] = [];
-  const wake = vi.fn(() => {
-    takenAtWake.push(taken);
-    setImmediate(() => {
-      taken += serveTurn(owner, queue);
-    });
-  });
-  const owner = new NativeRequests(config, factory, 32, wake);
+  const owner = new NativeRequests(config, factory, 32);
+  const {request, closed, permission, written} = await incoming();
   try {
-    taken += serveTurn(owner, queue);
-    expect(taken).toBe(1);
-    expect(first.request.retainUntil).toHaveBeenCalledWith(active[0].retired);
+    const served = owner.serve(request);
+    expect(owner.capacity()).toBe(0);
     expect(produced).toBe(0);
-    first.permission.resolve();
-    await vi.waitFor(() => expect(first.request.respond).toHaveBeenCalledOnce());
+    permission.resolve();
+    await vi.waitFor(() => expect(request.respond).toHaveBeenCalledOnce());
     expect(produced).toBe(1);
-    first.closed.resolve();
+    // The stream closes while the response write and a child read of its handler are unresolved.
+    closed.resolve();
     await vi.waitFor(() => expect(budget.snapshot().outstandingRetirements).toBe(1));
-    taken += serveTurn(owner, queue);
-    expect(taken).toBe(1);
-    ancillary.resolve();
-    first.written.resolve();
-    await vi.waitFor(() => expect(second.request.ready).toHaveBeenCalledOnce());
-    expect(takenAtWake).toEqual([1]);
-    expect(taken).toBe(2);
-    expect(first.request.fail).not.toHaveBeenCalled();
+    expect(await settled(served)).toBe(false);
+    expect(owner.capacity()).toBe(0);
+    written.resolve();
+    expect(await settled(served)).toBe(false);
+    child.resolve();
+    await served;
+    expect(owner.capacity()).toBe(1);
+    expect(request.fail).not.toHaveBeenCalled();
   } finally {
-    ancillary.resolve();
-    first.written.resolve();
+    child.resolve();
+    written.resolve();
     owner.close();
     await Promise.all(active.map((handler) => handler.retired));
   }
@@ -196,21 +179,16 @@ it("answers an uncertified stored block with RESOURCE_UNAVAILABLE before reading
       onBeaconBlocksByRoot([root], chain as unknown as IBeaconChain, context)
     );
   const {request, permission} = await incoming();
-  const owner = new NativeRequests(config, factory, 32, vi.fn());
-  try {
-    expect(serveTurn(owner, [request])).toBe(1);
-    permission.resolve();
-    await vi.waitFor(() => expect(request.fail).toHaveBeenCalledOnce());
-    expect(request.fail).toHaveBeenCalledWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
-    expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe(
-      "Local serving unavailable: uncertified_block"
-    );
-    expect(getBinary).not.toHaveBeenCalled();
-    expect(request.respond).not.toHaveBeenCalled();
-  } finally {
-    owner.close();
-  }
-  await vi.waitFor(() => expect(budget.snapshot().occupancy).toBe(0));
+  const owner = new NativeRequests(config, factory, 32);
+  permission.resolve();
+  await owner.serve(request);
+  expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
+  expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe(
+    "Local serving unavailable: uncertified_block"
+  );
+  expect(getBinary).not.toHaveBeenCalled();
+  expect(request.respond).not.toHaveBeenCalled();
+  expect(budget.snapshot().occupancy).toBe(0);
 });
 
 it("reports no serving capacity while an earlier adapter holds the shared budget, without a timer of its own", async () => {
@@ -218,103 +196,53 @@ it("reports no serving capacity while an earlier adapter holds the shared budget
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const previous = budget.acquire();
-  const factory: handlers.BoundedReqRespHandlers = () => () => {
-    throw Error("No request available");
-  };
   vi.useFakeTimers();
-  const owner = new NativeRequests(config, factory, 32, vi.fn());
-  try {
-    expect(owner.capacity()).toBe(0);
-    owner.start([], Infinity);
-    expect(vi.getTimerCount()).toBe(0);
-    previous.finish();
-    expect(owner.capacity()).toBe(1);
-    owner.close();
-    expect(owner.capacity()).toBe(0);
-  } finally {
-    previous.finish();
-    owner.close();
-  }
-});
-
-it("leaves starts it never adopted, once closed, for the pump to cancel", async () => {
-  const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
-  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const owner = new NativeRequests(
     config,
     () => () => {
       throw Error("No request available");
     },
-    32,
-    vi.fn()
+    32
   );
+  try {
+    expect(owner.capacity()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+    previous.finish();
+    expect(owner.capacity()).toBe(1);
+  } finally {
+    previous.finish();
+    owner.close();
+  }
+});
+
+it("cancels a handler when its stream closes, and every served request at close", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 2, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const active: handlers.ServingHandler[] = [];
+  const factory: handlers.BoundedReqRespHandlers = () => () => {
+    const handler = handlers.startServingHandler(budget, async function* () {
+      yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
+    });
+    active.push(handler);
+    return handler;
+  };
+  const owner = new NativeRequests(config, factory, 32);
+  const [first, second] = await Promise.all([incoming(), incoming()]);
+  const served = [owner.serve(first.request), owner.serve(second.request)];
+  expect(owner.capacity()).toBe(0);
+  // The first stream closes before native credit arrives: its handler retires without producing.
+  first.closed.resolve();
+  first.permission.reject(Error("closed"));
+  await served[0];
+  expect(first.request.respond).not.toHaveBeenCalled();
+  expect(owner.capacity()).toBe(1);
   owner.close();
-  const delivered = claims([(await incoming()).request]);
-  expect(owner.start(delivered, Infinity)).toBe(false);
-  expect(delivered[0].adopted).toBe(false);
-  expect(delivered[0].item.cancel).not.toHaveBeenCalled();
-});
-
-it("holds serving starts once the drain budget is spent and starts them first in the next drain", async () => {
-  const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 8, 0));
-  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
-  const inputs = await Promise.all(Array.from({length: 6}, () => incoming()));
-  const queue = inputs.map((input) => input.request);
-  let started = 0;
-  const factory: handlers.BoundedReqRespHandlers = () => () => {
-    started++;
-    throw Error("Started");
-  };
-  const owner = new NativeRequests(config, factory, 32, vi.fn());
-  try {
-    // Settlement and peers spent the budget: the host adopts the delivered starts and holds them for the next turn,
-    // which follows at once.
-    const held = claims(queue.splice(0, 3));
-    expect(owner.start(held, 0)).toBe(true);
-    expect(held.every(({adopted}) => adopted)).toBe(true);
-    expect(started).toBe(0);
-    // Held starts count against the next turn's capacity and allowance, and start before its new ones.
-    expect(owner.capacity()).toBe(5);
-    expect(owner.allowance(5)).toBe(2);
-    expect(serveTurn(owner, queue, 5)).toBe(2);
-    expect(started).toBe(5);
-    for (const input of inputs.slice(0, 5)) expect(input.request.fail).toHaveBeenCalledOnce();
-    void inputs[5].permission.promise.catch(() => {});
-    expect(owner.start(claims(queue.splice(0, 1)), 0)).toBe(true);
-  } finally {
-    owner.close();
-  }
-  // A held start is still the host's: closing cancels it.
-  expect(started).toBe(5);
-  expect(inputs[5].request.cancel).toHaveBeenCalledOnce();
-});
-
-it("never starts more than one turn's allowance, however many turns the budget ended", async () => {
-  const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 32, 0));
-  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
-  const queue = (await Promise.all(Array.from({length: 40}, () => incoming()))).map((input) => input.request);
-  let started = 0;
-  const factory: handlers.BoundedReqRespHandlers = () => () => {
-    started++;
-    throw Error("Started");
-  };
-  const owner = new NativeRequests(config, factory, 32, vi.fn());
-  try {
-    // Four turns the budget ended: the first holds eight starts, which leave the others no allowance.
-    for (let turn = 0; turn < 4; turn++) serveTurn(owner, queue, 8, 0);
-    expect(queue).toHaveLength(32);
-    expect(owner.capacity()).toBe(24);
-    expect(started).toBe(0);
-    expect(serveTurn(owner, queue)).toBe(0);
-    expect(started).toBe(8);
-    expect(serveTurn(owner, queue)).toBe(8);
-    expect(started).toBe(16);
-  } finally {
-    owner.close();
-  }
+  expect(second.request.cancel).toHaveBeenCalledOnce();
+  await served[1];
+  expect(second.request.respond).not.toHaveBeenCalled();
+  expect(budget.snapshot().occupancy).toBe(0);
+  await Promise.all(active.map((handler) => handler.retired));
 });
 
 it("two peers waiting on eight response writes do not prevent a third peer from producing", async () => {
@@ -323,7 +251,6 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const inputs = await Promise.all(Array.from({length: 9}, () => incoming()));
   for (let i = 1; i < 8; i++) inputs[i].request = {...inputs[i].request, peerId: inputs[i < 4 ? 0 : 4].request.peerId};
-  const queue = inputs.map((input) => input.request);
   const active: handlers.ServingHandler[] = [];
   const factory: handlers.BoundedReqRespHandlers = (method) => (_request, peer) => {
     const handler = handlers.startServingHandler(
@@ -338,9 +265,9 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, factory, 32, vi.fn());
+  const owner = new NativeRequests(config, factory, 32);
   try {
-    serveTurn(owner, queue, 32);
+    for (const input of inputs) void owner.serve(input.request);
     expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
     for (const input of inputs.slice(0, 8)) input.permission.resolve();
     await vi.waitFor(() => {
@@ -371,7 +298,6 @@ it("requests waiting for retained memory leave native credit available to existi
   );
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const inputs = await Promise.all(Array.from({length: 3}, () => incoming()));
-  const queue = inputs.map((input) => input.request);
   const active: handlers.ServingHandler[] = [];
   const factory: handlers.BoundedReqRespHandlers = (method) => (_request, peer) => {
     const handler = handlers.startServingHandler(
@@ -386,9 +312,9 @@ it("requests waiting for retained memory leave native credit available to existi
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, factory, 3, vi.fn());
+  const owner = new NativeRequests(config, factory, 3);
   try {
-    serveTurn(owner, queue, 3);
+    for (const input of inputs) void owner.serve(input.request);
     inputs[0].permission.resolve();
     inputs[1].permission.resolve();
     await vi.waitFor(() => {
