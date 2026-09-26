@@ -42,9 +42,7 @@ function createState(fork: ForkName.altair | ForkName.bellatrix): CachedBeaconSt
     pubkeys.map((_, i) => (i % 2 === 0 ? TIMELY_ALL_FLAGS : 0))
   );
   state.currentEpochParticipation = BeaconState.fields.currentEpochParticipation.toViewDU(pubkeys.map(() => 0));
-  state.inactivityScores = BeaconState.fields.inactivityScores.toViewDU(
-    pubkeys.map((_, i) => i * inactivityScoreStep)
-  );
+  state.inactivityScores = BeaconState.fields.inactivityScores.toViewDU(pubkeys.map((_, i) => i * inactivityScoreStep));
 
   const config = createBeaconConfig(
     createChainForkConfig({
