@@ -278,6 +278,53 @@ describe("gossip block validation", () => {
     );
   });
 
+  describe("authentication before the parent lookup", () => {
+    it("rejects an unknown parent block with an invalid proposer signature before looking up the parent", async () => {
+      verifySignature.mockResolvedValue(false);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, job, ForkName.phase0),
+        BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+      );
+      expect(verifySignature).toHaveBeenCalledOnce();
+      expect(chain.seenBlockProposers.isKnown(clockSlot, proposerIndex)).toBe(false);
+      expect(regen.getState).not.toHaveBeenCalled();
+      expect(regen.getPreState).not.toHaveBeenCalled();
+    });
+
+    it("rejects an unknown parent block from a proposer index outside the registry without verifying", async () => {
+      (chain as unknown as {pubkeyCache: {size: number}}).pubkeyCache = {size: proposerIndex};
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, job, ForkName.phase0),
+        BlockErrorCode.UNKNOWN_PROPOSER
+      );
+      expect(verifySignature).not.toHaveBeenCalled();
+    });
+
+    it("retains a signed unknown parent block as the proposer's proposal and drops a second one for the slot", async () => {
+      const blockRoot = toRootHex(
+        ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockToSignedHeader(config, job).message)
+      );
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, job, ForkName.phase0),
+        BlockErrorCode.PARENT_BLOCK_UNKNOWN
+      );
+      expect(chain.seenBlockProposers.isKnown(clockSlot, proposerIndex)).toBe(true);
+      expect(chain.seenBlockProposers.hasBlockRoot(clockSlot, proposerIndex, blockRoot)).toBe(true);
+
+      // A second unknown parent block from the same proposer is an equivocation, not another retained block
+      const sibling: SignedBeaconBlock = {signature, message: {...block, stateRoot: Buffer.alloc(32, 1)}};
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, sibling, ForkName.phase0),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
+      expect(verifySignature).toHaveBeenCalledTimes(2);
+      expect(chain.seenBlockProposers.isEquivocating(clockSlot, proposerIndex)).toBe(true);
+    });
+  });
+
   it("NOT_LATER_THAN_PARENT", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
