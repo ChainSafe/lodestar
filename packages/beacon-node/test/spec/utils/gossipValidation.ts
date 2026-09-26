@@ -387,6 +387,7 @@ export async function runGossipValidationTest(
       validatorMonitor: null,
       anchorState: anchorStateView,
       isAnchorStateFinalized: true,
+      isCheckpointState: false,
       executionEngine,
       executionBuilder: undefined,
     }

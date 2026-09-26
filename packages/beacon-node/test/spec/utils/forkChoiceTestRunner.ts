@@ -162,6 +162,7 @@ export const forkChoiceTestRunner =
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
+            isCheckpointState: false,
             executionEngine,
             executionBuilder: undefined,
           }

@@ -79,6 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       anchorState,
       stateBytes: anchorStateBytes,
       isFinalized,
+      isCheckpointState,
     } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     // Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH per epoch),
@@ -105,6 +106,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState: anchorStateView,
       isAnchorStateFinalized: isFinalized,
+      isCheckpointState,
     });
 
     // dev debug option to have access to the BN instance
