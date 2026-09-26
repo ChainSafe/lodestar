@@ -113,10 +113,10 @@ const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
 type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
-type ForkChoiceNodeV2 = ValueOf<typeof ForkChoiceNodeV2Type> & {extraData?: Record<string, unknown>};
+type ForkChoiceNodeV2 = ValueOf<typeof ForkChoiceNodeV2Type> & {extraData: Record<string, unknown>};
 type ForkChoiceResponseV2 = Omit<ValueOf<typeof ForkChoiceResponseV2Type>, "forkChoiceNodes"> & {
   forkChoiceNodes: ForkChoiceNodeV2[];
-  extraData?: Record<string, unknown>;
+  extraData: Record<string, unknown>;
 };
 
 export type Endpoints = {
@@ -240,25 +240,30 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           toJson: (data) => {
             const json = ForkChoiceResponseV2Type.toJson(data) as {
               fork_choice_nodes: Record<string, unknown>[];
-              extra_data?: Record<string, unknown>;
             };
-            if (data.extraData !== undefined) json.extra_data = data.extraData;
-            for (const [i, node] of data.forkChoiceNodes.entries()) {
-              if (node.extraData !== undefined) json.fork_choice_nodes[i].extra_data = node.extraData;
-            }
-            return json;
+            return {
+              ...json,
+              fork_choice_nodes: json.fork_choice_nodes.map((node, i) => ({
+                ...node,
+                extra_data: data.forkChoiceNodes[i].extraData,
+              })),
+              extra_data: data.extraData,
+            };
           },
           fromJson: (json) => {
-            const data: ForkChoiceResponseV2 = ForkChoiceResponseV2Type.fromJson(json);
+            const data = ForkChoiceResponseV2Type.fromJson(json);
             const {fork_choice_nodes, extra_data} = json as {
-              fork_choice_nodes: {extra_data?: Record<string, unknown>}[];
-              extra_data?: Record<string, unknown>;
+              fork_choice_nodes: {extra_data: unknown}[];
+              extra_data: unknown;
             };
-            if (extra_data !== undefined) data.extraData = extra_data;
-            for (const [i, node] of fork_choice_nodes.entries()) {
-              if (node.extra_data !== undefined) data.forkChoiceNodes[i].extraData = node.extra_data;
-            }
-            return data;
+            return {
+              ...data,
+              forkChoiceNodes: data.forkChoiceNodes.map((node, i) => ({
+                ...node,
+                extraData: parseExtraData(fork_choice_nodes[i].extra_data),
+              })),
+              extraData: parseExtraData(extra_data),
+            };
           },
         },
         meta: EmptyMetaCodec,
@@ -309,4 +314,11 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
     },
   };
+}
+
+function parseExtraData(json: unknown): Record<string, unknown> {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    throw Error("extra_data must be an object");
+  }
+  return json as Record<string, unknown>;
 }

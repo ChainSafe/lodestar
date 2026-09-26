@@ -60,6 +60,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
             payloadAttesterCount: 0,
             payloadAvailabilityYesCount: 0,
             payloadDataAvailabilityYesCount: 0,
+            extraData: {},
           },
           {
             slot: 2,

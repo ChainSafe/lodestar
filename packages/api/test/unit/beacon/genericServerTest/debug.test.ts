@@ -48,7 +48,7 @@ describe("beacon / debug", () => {
       expect(response.json()).toMatchObject({
         data: {
           fork_choice_nodes: [
-            {weight: "18446744073709551615", parent_payload_status: null},
+            {weight: "18446744073709551615", parent_payload_status: null, extra_data: {}},
             {
               parent_payload_status: "full",
               payload_attester_count: "3",
@@ -60,15 +60,28 @@ describe("beacon / debug", () => {
       expect(response.json()).not.toHaveProperty("fork_choice_nodes");
     });
 
-    it("accepts fork choice v2 responses without extra data", async () => {
+    it("accepts fork choice v2 responses with empty extra data", async () => {
       const data = structuredClone(testData.getDebugForkChoiceV2.res.data);
       if (data instanceof Uint8Array) throw Error("Expected JSON fixture");
-      delete data.extraData;
-      for (const node of data.forkChoiceNodes) delete node.extraData;
+      data.extraData = {};
+      for (const node of data.forkChoiceNodes) node.extraData = {};
       mockApi.getDebugForkChoiceV2.mockResolvedValue({data});
       const client = getClient(config, new HttpClient({baseUrl}));
       const response = await client.getDebugForkChoiceV2();
       expect(response.value()).toEqual(data);
+    });
+
+    it.each(["response", "node"])("rejects fork choice v2 with missing %s extra data", (location) => {
+      const codec = getDefinitions(config).getDebugForkChoiceV2.resp.data;
+      const data = testData.getDebugForkChoiceV2.res.data;
+      if (data instanceof Uint8Array) throw Error("Expected JSON fixture");
+      const json = codec.toJson(data, undefined) as {
+        extra_data?: unknown;
+        fork_choice_nodes: {extra_data?: unknown}[];
+      };
+      if (location === "response") delete json.extra_data;
+      else delete json.fork_choice_nodes[0].extra_data;
+      expect(() => codec.fromJson(json, undefined)).toThrow("extra_data must be an object");
     });
 
     it("getStateV2", async () => {
