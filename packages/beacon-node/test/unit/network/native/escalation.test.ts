@@ -19,4 +19,15 @@ describe("native pump escalation", () => {
     },
     90_000
   );
+
+  it("a close whose exchanges keep failing settles or escalates with no other handle alive", () => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", "test/utils/nativeEscalation.ts", "close"], {
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+    const closed = result.status === 0 && result.stdout.includes("closed");
+    const escalated =
+      result.signal === "SIGABRT" && result.stderr.includes("native network bridge escalation trigger 3");
+    expect(closed || escalated, JSON.stringify(result)).toBe(true);
+  }, 90_000);
 });

@@ -241,13 +241,14 @@ export class NativeDrain {
     setImmediate(this.run);
   }
 
-  private retryLater(): void {
-    if (this.retry || this.stopped) return;
-    this.retry = setTimeout(() => {
+  private retryLater(failed: boolean): void {
+    if (this.stopped) return;
+    this.retry ??= setTimeout(() => {
       this.retry = undefined;
       this.schedule();
-    }, RETRY_MS);
-    this.retry.unref();
+    }, RETRY_MS).unref();
+    // A failed exchange retries until it settles or escalates, also when nothing else keeps the process alive.
+    if (failed) this.retry.ref();
   }
 
   private stop(): void {
@@ -280,7 +281,7 @@ export class NativeDrain {
       if (this.metrics) setImmediate(this.burstEnd, started);
       // Actions queued while the turn ran need one too, unless its exchange failed.
       if (next === "now" || (next !== "retry" && this.pending())) this.schedule();
-      else if (next !== "idle") this.retryLater();
+      else if (next !== "idle") this.retryLater(next === "retry");
     }
     const budget = performance.now() >= started + this.limits.budgetMs;
     if (notifiedAt !== undefined) this.metrics?.notifyToDrain.observe((started - notifiedAt) / 1000);

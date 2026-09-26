@@ -1,5 +1,6 @@
 // Runs the pump against a real native runtime until it escalates the trigger in argv; native `fail` terminates the
-// process through fatalError, so reaching the end is a failure.
+// process through fatalError, so reaching the end is a failure. With "close", every exchange after the host closes
+// fails and nothing else keeps the process alive: it must settle the close or escalate.
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import bindings from "@chainsafe/lodestar-z";
 import {initializeNativeNetworkRuntime} from "@chainsafe/lodestar-z/network";
@@ -9,7 +10,7 @@ import {createNativeConfig} from "../../src/network/core/native/config.js";
 import {NativeDrain, NativeDrainStages} from "../../src/network/core/native/drain.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
 
-const trigger = Number(process.argv[2]);
+const mode = process.argv[2];
 const config = createBeaconConfig(
   {
     ALTAIR_FORK_EPOCH: 0,
@@ -46,22 +47,40 @@ const demand = {
 };
 const stages: NativeDrainStages = {
   demand: () => {
-    if (trigger === 3) throw Error("demand failed");
+    if (mode === "3") throw Error("demand failed");
     // Trigger 1: native refuses a quota past its bound.
-    return trigger === 1 ? {...demand, messages: 65} : demand;
+    return mode === "1" ? {...demand, messages: 65} : demand;
   },
   deliver: () => false,
 };
+let closing = false;
+const runtime: Pick<typeof native, "exchange" | "fail" | "closed"> = {
+  closed: native.closed,
+  exchange: (actions, exchangeDemand) => {
+    // Without a string code, the pump retries rather than escalating at once.
+    if (closing) throw Error("exchange failed");
+    return native.exchange(actions, exchangeDemand);
+  },
+  fail: (trigger, reason) => native.fail(trigger, reason),
+};
 drain = new NativeDrain(
-  native,
+  runtime,
   {budgetMs: 8, settle: 32},
-  () => stages,
+  () => (closing ? null : stages),
   () => {},
   () => {},
   null
 );
-// One request: a refused batch escalates at once, and a failing demand retries on the pump's timer until the third.
-drain.request();
-await new Promise((resolve) => setTimeout(resolve, 2000));
-console.log("survived");
-await native.close();
+if (mode === "close") {
+  // A command settles through the pump before the host closes.
+  await native.getIdentity();
+  closing = true;
+  await native.close();
+  console.log("closed");
+} else {
+  // One request: a refused batch escalates at once, and a failing demand retries on the pump's timer until the third.
+  drain.request();
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  console.log("survived");
+  await native.close();
+}
