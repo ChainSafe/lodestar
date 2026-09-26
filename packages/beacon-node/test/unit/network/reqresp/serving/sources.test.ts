@@ -38,19 +38,22 @@ import {measureOwners, servingConfig} from "../../../../utils/network/reqresp/se
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
 const config = servingConfig();
-const policy = resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 0);
+const policy = resolveServingPolicy(config, 6, 0);
 const root = new Uint8Array(32).fill(1);
 const rootHex = toRootHex(root);
 const slot = 6 * SLOTS_PER_EPOCH;
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 const peer = {toString: () => "peer"} as PeerId;
 
+/** A new database whose blocks serving may read: certified from its start, with a passed hot scan */
 async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Promise<void>): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-serving-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
-    expect(controller.boundedReadVersion).toBe(1);
-    await run(new BeaconDb(config, controller), controller);
+    const db = new BeaconDb(config, controller);
+    expect(await db.blockCertification.load()).toBeNull();
+    expect(await db.blockCertification.scanHot()).toBeNull();
+    await run(db, controller);
   } finally {
     await controller.close();
     await rm(path, {recursive: true, force: true});
@@ -101,14 +104,12 @@ function columns(
 }
 
 describe("actual serving sources", () => {
-  it("checks actual facade capability at factory initialization", async () =>
-    withDb(async (db, controller) => {
-      expect(db.boundedReadVersion).toBe(controller.boundedReadVersion);
-      expect(resolveServingPolicy(config, db, 6, 0).sourceBytes).toBe(policy.sourceBytes);
+  it("checks the serving fork at factory initialization", async () =>
+    withDb(async (db) => {
       const chain = makeChain(db);
       const future = createBeaconConfig({...config, GLOAS_FORK_EPOCH: 7}, new Uint8Array(32));
       const futureChain = {...chain, config: future, clock: {...chain.clock, currentSlot: chain.clock.currentSlot}};
-      const futurePolicy = resolveServingPolicy(future, db, 6, futureChain.clock.currentSlot);
+      const futurePolicy = resolveServingPolicy(future, 6, futureChain.clock.currentSlot);
       const budget = HostServingBudget.forEnvironment(futurePolicy);
       futureChain.clock.currentSlot = -1;
       expect(getBoundedReqRespHandlers({chain: futureChain, db}, budget)).toBeTypeOf("function");
@@ -123,11 +124,6 @@ describe("actual serving sources", () => {
         );
         expect(budget.snapshot().occupancy).toBe(0);
       }
-      const unsupported = new BeaconDb(config, {boundedReadVersion: undefined} as unknown as LevelDbController);
-      expect(() => resolveServingPolicy(config, unsupported, 6, 0)).toThrow("capability");
-      expect(() =>
-        getBoundedReqRespHandlers({chain, db: unsupported}, HostServingBudget.forEnvironment(policy))
-      ).toThrow("capability");
     }));
 
   it("counts real ProtoArray ancestors, including newer skipped nodes and pruning", async () =>
@@ -480,7 +476,7 @@ describe("actual serving sources", () => {
       }
     }));
 
-  it("bounds hot blocks and root-index/archive sources through the sole factory", async () =>
+  it("serves a certified hot block and refuses an unverified archived block through the sole factory", async () =>
     withDb(async (db, controller) => {
       const chain = makeChain(db);
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
@@ -495,13 +491,15 @@ describe("actual serving sources", () => {
       expect(await Array.fromAsync(bounded)).toEqual(expected);
       await bounded.retired;
       await db.block.delete(root);
-      // An archived block above the source cap, in a slot not yet verified, keeps the bounded read
+      // Finalization copies an oversized block into the archive and leaves its slot unverified
+      await db.blockCertification.unverifyOversized([{slot, bytes: policy.sourceBytes + 1}]);
       await controller.put(getRootIndexKey(root), intToBytes(slot, 8, "be"));
       await db.blockArchive.putBinary(slot, new Uint8Array(policy.sourceBytes + 1));
-      expect(db.blockCertification.isArchiveSlotVerified(slot)).toBe(false);
+      const getBinary = vi.spyOn(db.blockArchive, "getBinary");
       const bad = handler(request, peer, "test");
       await expect(bad.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY", status: RespStatus.SERVER_ERROR});
       await bad.retired;
+      expect(getBinary).not.toHaveBeenCalled();
       expect(budget.snapshot().occupancy).toBe(0);
     }));
 

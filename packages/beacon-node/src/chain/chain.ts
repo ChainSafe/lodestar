@@ -130,7 +130,7 @@ import {
   ServingCapacityError,
   ServingConfigurationError,
   ServingContext,
-  servingBoundedRead,
+  assertServableBlock,
   servingRead,
 } from "./serving/context.js";
 import {preflightServingBlock, preflightServingColumn, serializeServingValue} from "./serving/serialization.js";
@@ -882,8 +882,8 @@ export class BeaconChain implements IBeaconChain {
           };
         }
       }
-      const hotRead = this.db.blockCertification.hotVerified ? servingRead : servingBoundedRead;
-      const data = await hotRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
+      assertServableBlock(context, this.db.blockCertification.hotVerified);
+      const data = await servingRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
       if (data) context?.checkResponse(data, context.limits.blockBytes);
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
@@ -903,11 +903,11 @@ export class BeaconChain implements IBeaconChain {
       const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
       return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
     }
-    // The eight-byte root index row, then the block, which keeps the bounded read until its slot is verified
+    // The eight-byte root index row, then the block if its slot is certified
     const slot = await servingRead(context, (opts) => this.db.blockArchive.getSlotByRoot(fromHex(root), opts), 8);
     if (slot === null) return null;
-    const archiveRead = this.db.blockCertification.isArchiveSlotVerified(slot) ? servingRead : servingBoundedRead;
-    const data = await archiveRead(context, (opts) => this.db.blockArchive.getBinary(slot, opts));
+    assertServableBlock(context, this.db.blockCertification.isArchiveSlotVerified(slot));
+    const data = await servingRead(context, (opts) => this.db.blockArchive.getBinary(slot, opts));
     if (data === null) return null;
     return {
       block: context.checkResponse(data, context.limits.blockBytes),

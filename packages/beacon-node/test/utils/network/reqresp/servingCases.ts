@@ -56,7 +56,7 @@ export function registerServingSchemaCases(): void {
       ForkName.fulu,
     ] as const) {
       it(`bounds concrete decoded ${fork} inputs and exact serialization`, () => {
-        const policy = resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 6, 0);
+        const policy = resolveServingPolicy(servingConfig(), 6, 0);
         const types = sszTypesFor(fork);
         const committeeBytes = ssz.altair.SyncCommittee.serialize(ssz.altair.SyncCommittee.defaultValue());
         const current = ssz.altair.SyncCommittee.deserialize(committeeBytes);

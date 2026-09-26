@@ -28,7 +28,6 @@ import {
  * but instead expose relevant beacon chain objects
  */
 export interface IBeaconDb {
-  readonly boundedReadVersion?: 1;
   /** Which stored blocks serving may read with stock reads */
   readonly blockCertification: ServingBlockCertification;
   // unfinalized blocks

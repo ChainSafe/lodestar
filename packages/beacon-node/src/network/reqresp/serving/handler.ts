@@ -142,8 +142,6 @@ export function getBoundedReqRespHandlers(
   modules: {chain: IBeaconChain; db: IBeaconDb},
   budget: HostServingBudget
 ): BoundedReqRespHandlers {
-  if (modules.db.boundedReadVersion !== 1)
-    throw new ServingConfigurationError("Actual bounded DB capability v1 required");
   assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
   const factory: BoundedReqRespHandlers =
     (method) =>

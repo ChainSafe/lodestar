@@ -118,7 +118,7 @@ function serveTurn(owner: NativeRequests, queue: NativeIncomingRequest[], quota 
 
 it("waits for quota before producing data and for host retirement before taking another request", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const ancillary = defer<void>();
   const first = await incoming();
@@ -176,7 +176,7 @@ it("waits for quota before producing data and for host retirement before taking 
 
 it("reports no serving capacity while an earlier adapter holds the shared budget, without a timer of its own", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const previous = budget.acquire();
   const factory: handlers.BoundedReqRespHandlers = () => () => {
@@ -200,7 +200,7 @@ it("reports no serving capacity while an earlier adapter holds the shared budget
 
 it("leaves starts it never adopted, once closed, for the pump to cancel", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 1, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const owner = new NativeRequests(
     config,
@@ -219,7 +219,7 @@ it("leaves starts it never adopted, once closed, for the pump to cancel", async 
 
 it("holds serving starts once the drain budget is spent and starts them first in the next drain", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 8, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 8, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const inputs = await Promise.all(Array.from({length: 6}, () => incoming()));
   const queue = inputs.map((input) => input.request);
@@ -254,7 +254,7 @@ it("holds serving starts once the drain budget is spent and starts them first in
 
 it("never starts more than one turn's allowance, however many turns the budget ended", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 32, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 32, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const queue = (await Promise.all(Array.from({length: 40}, () => incoming()))).map((input) => input.request);
   let started = 0;
@@ -280,7 +280,7 @@ it("never starts more than one turn's allowance, however many turns the budget e
 
 it("two peers waiting on eight response writes do not prevent a third peer from producing", async () => {
   const config = servingConfig();
-  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, {boundedReadVersion: 1}, 32, 0));
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 32, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const inputs = await Promise.all(Array.from({length: 9}, () => incoming()));
   for (let i = 1; i < 8; i++) inputs[i].request = {...inputs[i].request, peerId: inputs[i < 4 ? 0 : 4].request.peerId};
@@ -320,9 +320,9 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
 
 it("requests waiting for retained memory leave native credit available to existing responses", async () => {
   const config = servingConfig();
-  const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0);
+  const basic = resolveServingPolicy(config, 3, 0);
   const budget = HostServingBudget.forEnvironment(
-    resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0, {
+    resolveServingPolicy(config, 3, 0, {
       // Room for two by-root responses under the largest retained charge, a block range's
       totalBytes:
         3 * basic.stateBytes +

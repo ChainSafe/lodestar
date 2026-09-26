@@ -1,5 +1,4 @@
 import {BeaconConfig} from "@lodestar/config";
-import {DB_READ_LIMITS_V1, Db} from "@lodestar/db";
 import {
   ForkName,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
@@ -53,17 +52,14 @@ export function assertSupportedServingSlot(config: BeaconConfig, currentSlot: nu
 
 export function resolveServingPolicy(
   config: BeaconConfig,
-  db: Pick<Db, "boundedReadVersion">,
   nativeIncomingCapacity: number,
   currentSlot: number,
   options: ServingOptions = {}
 ): ServingPolicy {
-  if (db.boundedReadVersion !== 1) throw new ServingConfigurationError("Actual bounded DB capability v1 required");
   integer(nativeIncomingCapacity, "native incoming capacity");
   assertSupportedServingSlot(config, currentSlot);
   const forks = config.forksAscendingEpochOrder;
-  if (forks.length > Object.keys(ForkName).length || config.BLOB_SCHEDULE.length > DB_READ_LIMITS_V1.maxIteratorRows)
-    throw new ServingConfigurationError("Schedule cardinality");
+  if (forks.length > Object.keys(ForkName).length) throw new ServingConfigurationError("Schedule cardinality");
   let previousEpoch = 0;
   for (const fork of forks) {
     if (fork.epoch !== Infinity) integer(fork.epoch * SLOTS_PER_EPOCH, "fork slot", true);
@@ -177,13 +173,6 @@ export function resolveServingPolicy(
     "source cap"
   );
   const maxRange = integer(Math.max(config.MAX_REQUEST_BLOCKS, config.MAX_REQUEST_BLOCKS_DENEB), "block range");
-  if (
-    sourceBytes > DB_READ_LIMITS_V1.maxValueBytes ||
-    sourceBytes > DB_READ_LIMITS_V1.maxTotalBytes ||
-    NUMBER_OF_COLUMNS > DB_READ_LIMITS_V1.maxEntries ||
-    maxRange > DB_READ_LIMITS_V1.maxIteratorRows
-  )
-    throw new ServingConfigurationError("Serving policy exceeds native DB v1 limits");
   const totalBytes = integer(options.totalBytes ?? 256 * MiB, "total bytes");
   const maxTasks = integer(options.maxTasks ?? 6, "tasks");
   const transactionVisits = integer(

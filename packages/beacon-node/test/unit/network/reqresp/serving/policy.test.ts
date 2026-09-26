@@ -14,7 +14,7 @@ registerServingSchemaCases();
 describe("serving policy", () => {
   it("preserves canonical request maxima with scalar cardinality separate from bytes", () => {
     const config = servingConfig();
-    const policy = resolveServingPolicy(config, {boundedReadVersion: 1}, 16, 0);
+    const policy = resolveServingPolicy(config, 16, 0);
     const columnsType = DataColumnSidecarsByRootRequestType(config);
     const identifiers = Array.from({length: config.MAX_REQUEST_BLOCKS_DENEB}, () => ({
       blockRoot: new Uint8Array(32),
@@ -45,7 +45,7 @@ describe("serving policy", () => {
     [128, 34],
   ]) {
     it(`separates B${blobs} C${cap} request capacity from production work`, () => {
-      const policy = resolveServingPolicy(servingConfig(blobs), {boundedReadVersion: 1}, 16, 0);
+      const policy = resolveServingPolicy(servingConfig(blobs), 16, 0);
       expect(policy.sourceBytes).toBe(cap * MiB);
       expect(policy.capacity).toBe(16);
       expect(policy.maxTasks).toBe(6);
@@ -55,8 +55,8 @@ describe("serving policy", () => {
     });
   }
   it("fails if a legal maximum task cannot fit, and accepts explicit H", () => {
-    expect(() => resolveServingPolicy(servingConfig(256), {boundedReadVersion: 1}, 16, 0)).toThrow("No maximum");
-    const policy = resolveServingPolicy(servingConfig(256), {boundedReadVersion: 1}, 16, 0, {
+    expect(() => resolveServingPolicy(servingConfig(256), 16, 0)).toThrow("No maximum");
+    const policy = resolveServingPolicy(servingConfig(256), 16, 0, {
       totalBytes: 512 * MiB,
       maxTasks: 2,
       ancestrySteps: 20000,
@@ -68,34 +68,26 @@ describe("serving policy", () => {
     expect(policy.ancestrySteps).toBe(20000);
     expect(policy.transactionVisits).toBe(17);
   });
-  it("advanced H does not override native storage caps", () => {
-    expect(() =>
-      resolveServingPolicy(servingConfig(1024), {boundedReadVersion: 1}, 16, 0, {totalBytes: 4096 * MiB})
-    ).toThrow("native DB v1");
-  });
-  it("requires actual capability and nonzero admission", () => {
-    expect(() => resolveServingPolicy(servingConfig(), {}, 16, 0)).toThrow("capability");
-    expect(() => resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 0, 0)).toThrow("incoming");
-    expect(() => resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 1, 0, {maxTasks: 0})).toThrow("tasks");
+  it("requires nonzero admission", () => {
+    expect(() => resolveServingPolicy(servingConfig(), 0, 0)).toThrow("incoming");
+    expect(() => resolveServingPolicy(servingConfig(), 1, 0, {maxTasks: 0})).toThrow("tasks");
   });
   it("accepts future Gloas and rejects at and after activation", () => {
     const config = createBeaconConfig(
       {...servingConfig(), GLOAS_FORK_EPOCH: 6, HEZE_FORK_EPOCH: 7},
       new Uint8Array(32)
     );
-    expect(resolveServingPolicy(config, {boundedReadVersion: 1}, 6, -1).sourceBytes).toBe(10 * MiB);
-    expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, NaN)).toThrow("current serving slot");
-    expect(resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 6 * SLOTS_PER_EPOCH - 1).sourceBytes).toBe(
-      10 * MiB
-    );
+    expect(resolveServingPolicy(config, 6, -1).sourceBytes).toBe(10 * MiB);
+    expect(() => resolveServingPolicy(config, 6, NaN)).toThrow("current serving slot");
+    expect(resolveServingPolicy(config, 6, 6 * SLOTS_PER_EPOCH - 1).sourceBytes).toBe(10 * MiB);
     for (const slot of [6 * SLOTS_PER_EPOCH, 7 * SLOTS_PER_EPOCH, 8 * SLOTS_PER_EPOCH])
-      expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, slot)).toThrow("Unsupported serving fork");
+      expect(() => resolveServingPolicy(config, 6, slot)).toThrow("Unsupported serving fork");
   });
   for (const value of [NaN, Infinity, -1, 0.5]) {
     it(`rejects invalid schedule epoch ${value}`, () => {
       const config = servingConfig();
       config.BLOB_SCHEDULE[0].EPOCH = value;
-      expect(() => resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 0)).toThrow();
+      expect(() => resolveServingPolicy(config, 6, 0)).toThrow();
     });
   }
 });

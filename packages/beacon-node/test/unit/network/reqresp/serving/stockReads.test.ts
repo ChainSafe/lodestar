@@ -30,7 +30,7 @@ import {SerializedCache} from "../../../../../src/util/serializedCache.js";
 import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 
 const config = servingConfig();
-const policy = resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 0);
+const policy = resolveServingPolicy(config, 6, 0);
 const root = new Uint8Array(32).fill(1);
 const rootHex = toRootHex(root);
 const slot = 6 * SLOTS_PER_EPOCH;
@@ -41,17 +41,15 @@ const peer = {toString: () => "peer"} as PeerId;
 type Read = {
   call: "get" | "getMany" | "iterator" | "nextv" | "next";
   fillCache?: boolean;
-  bounded?: boolean;
   size?: number;
 };
-type LevelOptions = {fillCache?: boolean; readLimits?: unknown};
+type LevelOptions = {fillCache?: boolean};
 type LevelIterator = {
   nextv(size: number, ...rest: unknown[]): Promise<unknown>;
   next(...rest: unknown[]): Promise<unknown>;
 };
 /** The classic-level instance behind the controller, as far as these tests touch it */
 type Level = {
-  boundedReadVersion?: number;
   get(key: Uint8Array, opts?: LevelOptions): Promise<unknown>;
   getMany(keys: Uint8Array[], opts?: LevelOptions): Promise<unknown>;
   iterator(opts?: LevelOptions): LevelIterator;
@@ -59,10 +57,10 @@ type Level = {
   getProperty(name: string): string;
 };
 
-/** A real LevelDB whose classic-level reads are recorded; `stock` hides the patched read capability */
+/** A real LevelDB whose classic-level reads are recorded */
 async function withDb(
   run: (db: BeaconDb, reads: Read[], level: Level) => Promise<void>,
-  {stock = false, delay}: {stock?: boolean; delay?: Promise<void>} = {}
+  {delay}: {delay?: Promise<void>} = {}
 ): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-stock-reads-"));
   const controller = await LevelDbController.create({name: path}, {logger});
@@ -75,17 +73,17 @@ async function withDb(
   const getMany = level.getMany.bind(level);
   const iterator = level.iterator.bind(level);
   level.get = async (key, opts) => {
-    reads.push({call: "get", fillCache: opts?.fillCache, bounded: opts?.readLimits !== undefined});
+    reads.push({call: "get", fillCache: opts?.fillCache});
     await wait();
     return get(key, opts);
   };
   level.getMany = async (keys, opts) => {
-    reads.push({call: "getMany", fillCache: opts?.fillCache, bounded: opts?.readLimits !== undefined});
+    reads.push({call: "getMany", fillCache: opts?.fillCache});
     await wait();
     return getMany(keys, opts);
   };
   level.iterator = (opts) => {
-    reads.push({call: "iterator", fillCache: opts?.fillCache, bounded: opts?.readLimits !== undefined});
+    reads.push({call: "iterator", fillCache: opts?.fillCache});
     const it = iterator(opts);
     const nextv = it.nextv.bind(it);
     const next = it.next.bind(it);
@@ -100,7 +98,6 @@ async function withDb(
     };
     return it;
   };
-  if (stock) Object.defineProperty(level, "boundedReadVersion", {value: 0});
   try {
     await run(new BeaconDb(config, controller), reads, level);
   } finally {
@@ -225,7 +222,7 @@ function sources(
 }
 
 describe("stock serving reads", () => {
-  it("keep every serving read out of the block cache and bound only uncertified block values", async () =>
+  it("keep every serving read out of the block cache and refuse uncertified blocks before reading them", async () =>
     withDb(async (db, reads) => {
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
       // The root index row of the unknown by-root column request
@@ -236,95 +233,64 @@ describe("stock serving reads", () => {
         const expected = await Array.fromAsync(source());
         expect(expected.length, name).toBeGreaterThan(0);
         reads.length = 0;
-        expect(await Array.fromAsync(source(new ServingContext(policy))), name).toEqual(expected);
+        const served = Array.fromAsync(source(new ServingContext(policy)));
+        if (name === "blocksByRoot" || name === "blocksByRange") {
+          // No stored block is certified before the certification loads and this run's hot scan passes
+          await expect(served, name).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+          expect(reads, name).toEqual([]);
+          continue;
+        }
+        expect(await served, name).toEqual(expected);
         const opened = reads.filter((read) => read.call !== "nextv" && read.call !== "next");
         expect(opened.length, name).toBeGreaterThan(0);
-        // Block values keep the patched read limits until existing rows are verified; every other read is stock
-        const bounded = name === "blocksByRoot" || name === "blocksByRange";
-        expect(opened, name).toEqual(opened.map(({call}) => ({call, fillCache: false, bounded})));
+        expect(opened, name).toEqual(opened.map(({call}) => ({call, fillCache: false})));
       }
     }));
 
-  it("serve every bounded repository from a stock DB and refuse uncertified block values", async () =>
-    withDb(
-      async (db) => {
-        expect(db.boundedReadVersion).toBeUndefined();
-        const chain = {...makeChain(db), lightClientServer: await seed(db)};
-        await db.blockArchive.batchPutBinary([
-          {key: slot, value: new Uint8Array(8), slot, blockRoot: new Uint8Array(32).fill(9), parentRoot: root},
-        ]);
-        for (const [name, source] of Object.entries(sources(chain, db))) {
-          const served = Array.fromAsync(source(new ServingContext(policy)));
-          if (name === "blocksByRoot" || name === "blocksByRange") {
-            // Refused before any block value is read
-            await expect(served, name).rejects.toMatchObject({code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
-          } else {
-            await expect(served, name).resolves.toEqual(await Array.fromAsync(source()));
-          }
-        }
-      },
-      {stock: true}
-    ));
+  it("read certified blocks outside the block cache and refuse blocks in unverified archive slots before reading them", async () =>
+    withDb(async (db, reads) => {
+      // A database certified from its start: every block below was written by a capped writer
+      expect(await db.blockCertification.load()).toBeNull();
+      const chain = {...makeChain(db), lightClientServer: await seed(db)};
+      const archivedRoot = new Uint8Array(32).fill(5);
+      await db.blockArchive.batchPutBinary([
+        {
+          key: 1,
+          value: (await db.blockArchive.getBinary(1)) as Uint8Array,
+          slot: 1,
+          blockRoot: archivedRoot,
+          parentRoot: root,
+        },
+      ]);
+      expect(await db.blockCertification.scanHot()).toBeNull();
+      const {blocksByRoot, blocksByRange} = sources(chain, db);
+      const archivedByRoot = (context?: ServingContext) => onBeaconBlocksByRoot([archivedRoot], chain, context);
+      for (const source of [blocksByRoot, blocksByRange, archivedByRoot]) {
+        const expected = await Array.fromAsync(source());
+        reads.length = 0;
+        expect(await Array.fromAsync(source(new ServingContext(policy)))).toEqual(expected);
+        const opened = reads.filter((read) => read.call !== "nextv" && read.call !== "next");
+        expect(opened.length).toBeGreaterThan(0);
+        expect(opened).toEqual(opened.map(({call}) => ({call, fillCache: false})));
+      }
 
-  it("read certified blocks with stock reads and keep blocks in unverified archive slots bounded", async () =>
-    withDb(
-      async (db, reads) => {
-        // A database certified from its start: every block below was written by a capped writer
-        expect(await db.blockCertification.load()).toBeNull();
-        const chain = {...makeChain(db), lightClientServer: await seed(db)};
-        const archivedRoot = new Uint8Array(32).fill(5);
-        await db.blockArchive.batchPutBinary([
-          {
-            key: 1,
-            value: (await db.blockArchive.getBinary(1)) as Uint8Array,
-            slot: 1,
-            blockRoot: archivedRoot,
-            parentRoot: root,
-          },
-        ]);
-        expect(await db.blockCertification.scanHot()).toBeNull();
-        const {blocksByRoot, blocksByRange} = sources(chain, db);
-        const archivedByRoot = (context?: ServingContext) => onBeaconBlocksByRoot([archivedRoot], chain, context);
-        const served = async (source: (context?: ServingContext) => AsyncIterable<ResponseOutgoing>) => {
-          reads.length = 0;
-          const items = await Array.fromAsync(source(new ServingContext(policy)));
-          expect(items.length).toBeGreaterThan(0);
-          return reads.filter((read) => read.call !== "nextv" && read.call !== "next");
-        };
-        for (const source of [blocksByRoot, blocksByRange, archivedByRoot]) {
-          const opened = await served(source);
-          expect(opened).toEqual(opened.map(({call}) => ({call, fillCache: false, bounded: false})));
-        }
+      // Finalization copied an oversized block into slot 1, so serving refuses it and any range holding it
+      await db.blockCertification.unverifyOversized([{slot: 1, bytes: config.MAX_PAYLOAD_SIZE + 1}]);
+      reads.length = 0;
+      await expect(Array.fromAsync(blocksByRange(new ServingContext(policy)))).rejects.toMatchObject({
+        code: "HOST_SERVING_CAPACITY",
+      });
+      expect(reads).toEqual([]);
+      // Only the root index row is read before the block behind it is refused
+      await expect(Array.fromAsync(archivedByRoot(new ServingContext(policy)))).rejects.toMatchObject({
+        code: "HOST_SERVING_CAPACITY",
+      });
+      expect(reads).toEqual([{call: "get", fillCache: false}]);
+    }));
 
-        // Finalization copied an oversized block into slot 1, so block reads there keep the bounded path
-        await db.blockCertification.unverifyOversized([{slot: 1, bytes: config.MAX_PAYLOAD_SIZE + 1}]);
-        expect((await served(blocksByRange)).map(({bounded}) => bounded)).toEqual([true]);
-        // The root index row stays a stock read; the block behind it is bounded
-        expect((await served(archivedByRoot)).map(({bounded}) => bounded)).toEqual([false, true]);
-      },
-      {stock: false}
-    ));
-
-  it("serve certified blocks from a stock DB", async () =>
-    withDb(
-      async (db) => {
-        expect(await db.blockCertification.load()).toBeNull();
-        const chain = {...makeChain(db), lightClientServer: await seed(db)};
-        expect(await db.blockCertification.scanHot()).toBeNull();
-        const {blocksByRoot, blocksByRange} = sources(chain, db);
-        for (const source of [blocksByRoot, blocksByRange]) {
-          await expect(Array.fromAsync(source(new ServingContext(policy)))).resolves.toEqual(
-            await Array.fromAsync(source())
-          );
-        }
-      },
-      {stock: true}
-    ));
-
-  it("keep a missing-column block read bounded when finalization copies an oversized hot block before it runs", async () => {
-    const gate = defer<void>();
-    const held = defer<void>();
-    await withDb(async (db, reads, level) => {
+  it("refuse a missing-column block read while this run's hot scan has not passed", async () =>
+    withDb(async (db, reads) => {
+      // The archive is certified, but an oversized hot block may be copied into it by finalization at any time
       expect(await db.blockCertification.load()).toBeNull();
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
@@ -332,14 +298,8 @@ describe("stock serving reads", () => {
       const bytes = ssz.fulu.SignedBeaconBlock.serialize(block);
       await db.block.putBinary(root, bytes);
       expect(await db.blockCertification.scanHot()).toMatchObject({slot, bytes: bytes.byteLength});
+      await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
 
-      // Hold the block read that the missing column triggers until finalization has run
-      const get = level.get.bind(level);
-      level.get = async (key, opts) => {
-        held.resolve();
-        await gate.promise;
-        return get(key, opts);
-      };
       reads.length = 0;
       const served = Array.fromAsync(
         onDataColumnSidecarsByRange(
@@ -351,15 +311,10 @@ describe("stock serving reads", () => {
           new ServingContext(policy)
         )
       );
-      await held.promise;
-      // Finalization marks the oversized hot block unverified, then copies it into the slot the read selected
-      await db.blockCertification.unverifyOversized([{slot, bytes: bytes.byteLength}]);
-      await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
-      gate.resolve();
-      await Promise.allSettled([served]);
-      expect(reads.filter((read) => read.call === "get")).toEqual([{call: "get", fillCache: false, bounded: true}]);
-    });
-  });
+      await expect(served).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+      // The column lookup ran; the block read behind the missing column never did
+      expect(reads).toEqual([{call: "getMany", fillCache: false}]);
+    }));
 
   it("read a stock range one row per native read and keep its snapshot under writes", async () =>
     withDb(async (db, reads) => {
@@ -381,9 +336,7 @@ describe("stock serving reads", () => {
       } finally {
         await iterator.return?.();
       }
-      expect(reads.filter((read) => read.call === "iterator")).toEqual([
-        {call: "iterator", fillCache: false, bounded: false},
-      ]);
+      expect(reads.filter((read) => read.call === "iterator")).toEqual([{call: "iterator", fillCache: false}]);
       // Each native read returns one row; default batching never runs
       const pulls = reads.filter((read) => read.call === "nextv" || read.call === "next");
       expect(pulls.every((read) => read.call === "nextv" && read.size === 1)).toBe(true);

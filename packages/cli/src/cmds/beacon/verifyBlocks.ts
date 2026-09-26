@@ -10,7 +10,7 @@ import {getBeaconPaths} from "./paths.js";
 export const verifyBlocks: CliCommand<BeaconArgs, GlobalArgs> = {
   command: "verify-blocks",
   describe:
-    "Verify that archived blocks stored before the block size cap fit MAX_PAYLOAD_SIZE, so bounded serving can read them with stock reads. Run with the beacon node stopped; an interrupted run resumes.",
+    "Verify that archived blocks stored before the block size cap fit MAX_PAYLOAD_SIZE, so native serving can read them. Run with the beacon node stopped; an interrupted run resumes.",
   examples: [
     {
       command: "beacon verify-blocks --network hoodi",
@@ -34,7 +34,7 @@ export const verifyBlocks: CliCommand<BeaconArgs, GlobalArgs> = {
       });
       if (oversized !== null) {
         throw Error(
-          `Archived block at slot ${oversized.slot} root ${oversized.root} has ${oversized.bytes} bytes, above MAX_PAYLOAD_SIZE ${config.MAX_PAYLOAD_SIZE}; it and later archived blocks stay on bounded serving reads`
+          `Archived block at slot ${oversized.slot} root ${oversized.root} has ${oversized.bytes} bytes, above MAX_PAYLOAD_SIZE ${config.MAX_PAYLOAD_SIZE}; serving refuses it and later archived blocks`
         );
       }
       logger.info("Archived blocks verified");

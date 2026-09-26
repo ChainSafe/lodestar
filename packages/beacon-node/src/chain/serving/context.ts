@@ -1,4 +1,4 @@
-import {DB_READ_LIMITS_V1, DbReadLimits, DbReqOpts, FilterOptions} from "@lodestar/db";
+import {DbReqOpts, FilterOptions} from "@lodestar/db";
 
 export class ServingCapacityError extends Error {
   readonly code = "HOST_SERVING_CAPACITY";
@@ -12,12 +12,7 @@ export class ServingConfigurationError extends Error {
 }
 
 export function isServingCapacityError(error: unknown): boolean {
-  return (
-    error instanceof ServingCapacityError ||
-    (error instanceof Error &&
-      "code" in error &&
-      (error.code === "LEVEL_READ_LIMIT" || error.code === "LEVEL_ALLOCATION_FAILED"))
-  );
+  return error instanceof ServingCapacityError;
 }
 
 export type ServingLimits = Readonly<{
@@ -44,8 +39,7 @@ export type ServingLimits = Readonly<{
 
 /**
  * Retained sources survive yields; temporary source work stays charged until all reads settle. Every serving read
- * keeps the blocks it loads out of the LevelDB block cache. Stock reads rely on the stored value bounds of their
- * repositories; bounded reads use the patched DB's read limits.
+ * keeps the blocks it loads out of the LevelDB block cache and relies on the stored value bound of its repository.
  */
 export class ServingContext {
   private operations = 0;
@@ -82,10 +76,6 @@ export class ServingContext {
     this.assertActive();
     return {fillCache: false, rowAtATime: true};
   }
-  /** Options of a bounded range stream */
-  boundedStreamOptions(): DbReqOpts {
-    return this.boundedReadOptions();
-  }
   private checkSourcePhase(maxValueBytes: number, maxEntries: number): void {
     this.assertActive();
     if (
@@ -99,17 +89,7 @@ export class ServingContext {
       throw new ServingCapacityError("source phase");
     }
   }
-  private boundedReadOptions(maxValueBytes = this.limits.sourceBytes, maxEntries = 1): DbReqOpts {
-    this.checkSourcePhase(maxValueBytes, maxEntries);
-    const readLimits: DbReadLimits = {
-      maxKeyBytes: DB_READ_LIMITS_V1.maxKeyBytes,
-      maxValueBytes,
-      maxTotalBytes: this.limits.sourceBytes,
-      maxEntries,
-    };
-    return {fillCache: false, readLimits};
-  }
-  /** A stock read of a repository whose stored values are bounded; `maxValueBytes` and `maxEntries` size its charge */
+  /** A read of a repository whose stored values are bounded; `maxValueBytes` and `maxEntries` size its charge */
   async read<T>(
     operation: (opts: DbReqOpts) => Promise<T>,
     maxValueBytes = this.limits.sourceBytes,
@@ -117,14 +97,6 @@ export class ServingContext {
   ): Promise<T> {
     this.checkSourcePhase(maxValueBytes, maxEntries);
     return this.track(operation, {fillCache: false}, maxValueBytes, maxEntries);
-  }
-  /** A read limited by the patched DB, for repositories without a stored value bound */
-  async boundedRead<T>(
-    operation: (opts: DbReqOpts) => Promise<T>,
-    maxValueBytes = this.limits.sourceBytes,
-    maxEntries = 1
-  ): Promise<T> {
-    return this.track(operation, this.boundedReadOptions(maxValueBytes, maxEntries), maxValueBytes, maxEntries);
   }
   private async track<T>(
     operation: (opts: DbReqOpts) => Promise<T>,
@@ -141,9 +113,6 @@ export class ServingContext {
     this.peakPendingSourceLimitBytes = Math.max(this.peakPendingSourceLimitBytes, this.pendingSourceLimitBytes);
     try {
       return await operation(opts);
-    } catch (error) {
-      if (isServingCapacityError(error)) throw new ServingCapacityError("database read");
-      throw error;
     } finally {
       this.operations--;
       this.pendingSourceLimitBytes -= reservation;
@@ -175,7 +144,7 @@ export class ServingContext {
   }
 }
 
-/** A stock serving read of a bounded repository, or the plain read outside serving */
+/** A serving read of a bounded repository, or the plain read outside serving */
 export function servingRead<T>(
   context: ServingContext | undefined,
   operation: (opts?: DbReqOpts) => Promise<T>,
@@ -185,12 +154,10 @@ export function servingRead<T>(
   return context ? context.read(operation, maxValueBytes, maxEntries) : operation();
 }
 
-/** A serving read limited by the patched DB, for block values, or the plain read outside serving */
-export function servingBoundedRead<T>(
-  context: ServingContext | undefined,
-  operation: (opts?: DbReqOpts) => Promise<T>,
-  maxValueBytes?: number,
-  maxEntries?: number
-): Promise<T> {
-  return context ? context.boundedRead(operation, maxValueBytes, maxEntries) : operation();
+/**
+ * Refuses serving a stored block that is not certified to fit MAX_PAYLOAD_SIZE, before any read of it; the peer sees a
+ * resource-unavailable response. Reads outside serving are not refused.
+ */
+export function assertServableBlock(context: ServingContext | undefined, certified: boolean): void {
+  if (context && !certified) throw new ServingCapacityError("uncertified block");
 }

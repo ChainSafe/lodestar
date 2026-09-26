@@ -90,7 +90,10 @@ export async function nativeNetworkFixture(
         executionEngine: new ExecutionEngineDisabled(),
       }
     );
-    const budget = HostServingBudget.forEnvironment(resolveServingPolicy(beaconConfig, db, 6, clock.currentSlot));
+    // As at native node startup; both backends serve through the bounded handlers here
+    await db.blockCertification.load();
+    await db.blockCertification.scanHot();
+    const budget = HostServingBudget.forEnvironment(resolveServingPolicy(beaconConfig, 6, clock.currentSlot));
     network = await Network.init({
       processShutdownCallback,
       opts: {

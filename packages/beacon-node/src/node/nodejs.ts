@@ -207,7 +207,7 @@ export class BeaconNode {
     const unverified = await db.blockCertification.load();
     if (boundedServing && unverified !== null) {
       logger.info(
-        "Archived blocks await size verification, run `lodestar beacon verify-blocks` with the node stopped",
+        "Serving refuses archived blocks awaiting size verification, run `lodestar beacon verify-blocks` with the node stopped",
         {fromSlot: unverified.from, toSlot: unverified.to}
       );
     }
@@ -287,10 +287,10 @@ export class BeaconNode {
     await chain.init();
 
     if (boundedServing) {
-      // Serving reads hot blocks with stock reads only when none exceeds MAX_PAYLOAD_SIZE
+      // Serving reads stored blocks only after this scan finds none above MAX_PAYLOAD_SIZE
       const oversized = await db.blockCertification.scanHot();
       if (oversized) {
-        logger.warn("Hot block above MAX_PAYLOAD_SIZE, hot blocks stay on bounded serving reads", {...oversized});
+        logger.warn("Hot block above MAX_PAYLOAD_SIZE, serving refuses stored blocks until restart", {...oversized});
       }
     }
 
@@ -310,12 +310,7 @@ export class BeaconNode {
         ? getBoundedReqRespHandlers(
             {db, chain},
             HostServingBudget.forEnvironment(
-              resolveServingPolicy(
-                config,
-                db,
-                opts.network.native?.profile === "small" ? 6 : 32,
-                chain.clock.currentSlot
-              )
+              resolveServingPolicy(config, opts.network.native?.profile === "small" ? 6 : 32, chain.clock.currentSlot)
             )
           )
         : getReqRespHandlers({db, chain}),

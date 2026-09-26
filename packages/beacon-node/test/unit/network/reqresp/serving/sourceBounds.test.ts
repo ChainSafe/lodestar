@@ -29,14 +29,13 @@ import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
  * and the time between pulls only the retained charge. In a pull, a `get` holds the native value and its JS copy at
  * once, and a `getMany` holds every native value plus the JS copy in conversion; after the pull only the JS copies
  * remain. A serving range stream reads one row per native read, and stock keeps that row's native copy until the next
- * read, so between pulls it holds the row natively and in JS. Every read here omits read limits, so it takes the stock
- * path. LevelDB's own block buffers and block cache are outside the lease in both the
- * stock and the patched binary.
+ * read, so between pulls it holds the row natively and in JS. LevelDB's own block buffers and block cache are outside
+ * the lease.
  */
 
 const MAX_BLOBS = 21;
 const config = servingConfig(MAX_BLOBS);
-const policy = resolveServingPolicy(config, {boundedReadVersion: 1}, 6, 0);
+const policy = resolveServingPolicy(config, 6, 0);
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 const root = new Uint8Array(32).fill(7);
 /** Column bytes per blob: its cell, commitment and proof */

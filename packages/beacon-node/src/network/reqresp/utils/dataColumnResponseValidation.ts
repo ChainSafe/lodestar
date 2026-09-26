@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {ServingContext, servingBoundedRead, servingRead} from "../../../chain/serving/context.js";
+import {ServingContext, assertServableBlock, servingRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -48,9 +48,11 @@ export async function handleColumnSidecarUnavailability({
     if (!envelopeBytes) return;
   }
 
-  // Blocks keep the bounded read until verified
-  const verified = blockRoot ? db.blockCertification.hotVerified : db.blockCertification.isArchiveSlotVerified(slot);
-  const blockBytes = await (verified ? servingRead : servingBoundedRead)(context, (opts) =>
+  assertServableBlock(
+    context,
+    blockRoot ? db.blockCertification.hotVerified : db.blockCertification.isArchiveSlotVerified(slot)
+  );
+  const blockBytes = await servingRead(context, (opts) =>
     blockRoot ? db.block.getBinary(blockRoot, opts) : db.blockArchive.getBinary(slot, opts)
   );
   if (blockBytes) context?.checkBacking(blockBytes);

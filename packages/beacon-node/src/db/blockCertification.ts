@@ -31,13 +31,13 @@ const NONE: Interval = {from: 1, to: 0};
 export type OversizedBlock = {slot: Slot | null; root: RootHex | null; bytes: number};
 
 /**
- * Which stored blocks serving may read with stock reads: blocks within MAX_PAYLOAD_SIZE by their writers or by
- * verification. Every current block writer is capped: gossip and req/resp decoding, local publication, genesis, and
+ * Which stored blocks serving may read; it refuses the others before reading them. Certified blocks fit
+ * MAX_PAYLOAD_SIZE by their writers or by verification. Every current block writer is capped: gossip and req/resp decoding, local publication, genesis, and
  * finalization, which copies hot rows and marks any oversized one unverified. Rows written before this certification,
  * by a build without it, or under another MAX_PAYLOAD_SIZE are unverified until `verifyArchive` reads them.
  *
  * No archive block is certified until this run's `scanHot` succeeds: finalization could otherwise copy an oversized hot
- * block into a slot that a pending stock read already selected as verified.
+ * block into a slot that a pending read already selected as verified.
  */
 export class ServingBlockCertification {
   /** Whether every hot block fitted MAX_PAYLOAD_SIZE when this process scanned them; later hot writes are capped */

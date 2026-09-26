@@ -7,7 +7,7 @@ import {resolveServingPolicy} from "../../../../../src/network/reqresp/serving/p
 import {ReqRespMethod} from "../../../../../src/network/reqresp/types.js";
 import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 
-const policy = resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 1, 0);
+const policy = resolveServingPolicy(servingConfig(), 1, 0);
 function occupancy(budget: HostServingBudget, count: number, retiring: number): void {
   expect(budget.snapshot()).toMatchObject({
     occupancy: count,
@@ -162,7 +162,7 @@ describe("environment serving retirement", () => {
 });
 
 it("paused responses retain sources without occupying production permits", async () => {
-  const limits = resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 32, 0, {maxTasks: 2});
+  const limits = resolveServingPolicy(servingConfig(), 32, 0, {maxTasks: 2});
   const budget = HostServingBudget.forEnvironment(limits);
   const response: ResponseOutgoing = {
     data: new Uint8Array([1]),
@@ -194,10 +194,10 @@ it("paused responses retain sources without occupying production permits", async
 
 it("a full retained allowance leaves work capacity for an existing response to retire", async () => {
   const config = servingConfig();
-  const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0);
+  const basic = resolveServingPolicy(config, 3, 0);
   // Room for the states, one maximum production step and the largest retained charge, a block range's
   const rangeRetained = basic.methods[ReqRespMethod.BeaconBlocksByRange]?.retainedBytes ?? 0;
-  const limits = resolveServingPolicy(config, {boundedReadVersion: 1}, 3, 0, {
+  const limits = resolveServingPolicy(config, 3, 0, {
     totalBytes: 3 * basic.stateBytes + basic.workingBytes + rangeRetained,
     maxTasks: 2,
   });
@@ -227,7 +227,7 @@ it("a full retained allowance leaves work capacity for an existing response to r
 });
 
 it("bounded production gives waiting peers a turn and cancellation removes queued work", async () => {
-  const limits = resolveServingPolicy(servingConfig(), {boundedReadVersion: 1}, 6, 0, {maxTasks: 2});
+  const limits = resolveServingPolicy(servingConfig(), 6, 0, {maxTasks: 2});
   const budget = HostServingBudget.forEnvironment(limits);
   const holds = [defer<void>(), defer<void>()];
   const started = [defer<void>(), defer<void>()];
@@ -283,9 +283,9 @@ it("bounded production gives waiting peers a turn and cancellation removes queue
 
 it("cancels retained-memory admission without starting a source operation", async () => {
   const config = servingConfig();
-  const basic = resolveServingPolicy(config, {boundedReadVersion: 1}, 2, 0);
+  const basic = resolveServingPolicy(config, 2, 0);
   const rangeRetained = basic.methods[ReqRespMethod.BeaconBlocksByRange]?.retainedBytes ?? 0;
-  const limits = resolveServingPolicy(config, {boundedReadVersion: 1}, 2, 0, {
+  const limits = resolveServingPolicy(config, 2, 0, {
     totalBytes: 2 * basic.stateBytes + basic.workingBytes + rangeRetained,
   });
   const budget = HostServingBudget.forEnvironment(limits);
