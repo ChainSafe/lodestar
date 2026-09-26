@@ -43,6 +43,7 @@ export const e2eMainnetProject = defineProject({
       LODESTAR_PRESET: "mainnet",
     },
     pool: "forks",
+    execArgv: ["--expose-gc"],
     maxWorkers: 1,
     isolate: true,
     sequence: {
