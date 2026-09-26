@@ -202,6 +202,16 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
+    const boundedServing = opts.network.backend === "native" || opts.network.native?.serving;
+    // Before anything prunes or writes: a missing writer canary means a build without the certification ran
+    const unverified = await db.blockCertification.load();
+    if (boundedServing && unverified !== null) {
+      logger.info(
+        "Archived blocks await size verification, run `lodestar beacon verify-blocks` with the node stopped",
+        {fromSlot: unverified.from, toSlot: unverified.to}
+      );
+    }
+
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
@@ -276,6 +286,14 @@ export class BeaconNode {
     // Load persisted data from disk to in-memory caches
     await chain.init();
 
+    if (boundedServing) {
+      // Serving reads hot blocks with stock reads only when none exceeds MAX_PAYLOAD_SIZE
+      const oversized = await db.blockCertification.scanHot();
+      if (oversized) {
+        logger.warn("Hot block above MAX_PAYLOAD_SIZE, hot blocks stay on bounded serving reads", {...oversized});
+      }
+    }
+
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
     const network = await Network.init({
@@ -288,21 +306,20 @@ export class BeaconNode {
       db,
       privateKey,
       peerStoreDir,
-      getReqRespHandler:
-        opts.network.backend === "native" || opts.network.native?.serving
-          ? getBoundedReqRespHandlers(
-              {db, chain},
-              HostServingBudget.forEnvironment(
-                resolveServingPolicy(
-                  config,
-                  db,
-                  opts.network.native?.profile === "small" ? 6 : 32,
-                  chain.clock.currentSlot,
-                  opts.network.native?.serving
-                )
+      getReqRespHandler: boundedServing
+        ? getBoundedReqRespHandlers(
+            {db, chain},
+            HostServingBudget.forEnvironment(
+              resolveServingPolicy(
+                config,
+                db,
+                opts.network.native?.profile === "small" ? 6 : 32,
+                chain.clock.currentSlot,
+                opts.network.native?.serving
               )
             )
-          : getReqRespHandlers({db, chain}),
+          )
+        : getReqRespHandlers({db, chain}),
     });
 
     const sync = new BeaconSync(opts.sync, {

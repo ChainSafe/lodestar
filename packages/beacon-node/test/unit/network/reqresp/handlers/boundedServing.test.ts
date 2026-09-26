@@ -40,6 +40,7 @@ describe("bounded serving actual behavior", () => {
       forkChoice: {getFinalizedCheckpointSlot: () => 1},
     } as unknown as IBeaconChain;
     const archive = {
+      blockCertification: {isArchiveRangeVerified: () => false},
       blockArchive: {
         decodeKey: () => 0,
         binaryEntriesStream: () => ({

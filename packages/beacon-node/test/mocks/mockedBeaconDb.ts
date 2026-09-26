@@ -54,6 +54,13 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
+
+      blockCertification: {
+        hotVerified: false,
+        isArchiveSlotVerified: vi.fn().mockReturnValue(false),
+        isArchiveRangeVerified: vi.fn().mockReturnValue(false),
+        unverifyOversized: vi.fn().mockResolvedValue(undefined),
+      },
     };
   });
 

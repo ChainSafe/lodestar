@@ -1,4 +1,5 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import type {ServingBlockCertification} from "./blockCertification.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
@@ -28,6 +29,8 @@ import {
  */
 export interface IBeaconDb {
   readonly boundedReadVersion?: 1;
+  /** Which stored blocks serving may read with stock reads */
+  readonly blockCertification: ServingBlockCertification;
   // unfinalized blocks
   block: BlockRepository;
   // finalized blocks

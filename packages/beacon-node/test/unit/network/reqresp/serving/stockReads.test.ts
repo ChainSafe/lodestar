@@ -225,7 +225,7 @@ function sources(
 }
 
 describe("stock serving reads", () => {
-  it("keep every serving read out of the block cache and bound only block values by the patched DB", async () =>
+  it("keep every serving read out of the block cache and bound only uncertified block values", async () =>
     withDb(async (db, reads) => {
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
       // The root index row of the unknown by-root column request
@@ -245,7 +245,7 @@ describe("stock serving reads", () => {
       }
     }));
 
-  it("serve every bounded repository from a stock DB and keep block values on the patched DB", async () =>
+  it("serve every bounded repository from a stock DB and refuse uncertified block values", async () =>
     withDb(
       async (db) => {
         expect(db.boundedReadVersion).toBeUndefined();
@@ -261,6 +261,61 @@ describe("stock serving reads", () => {
           } else {
             await expect(served, name).resolves.toEqual(await Array.fromAsync(source()));
           }
+        }
+      },
+      {stock: true}
+    ));
+
+  it("read certified blocks with stock reads and keep blocks in unverified archive slots bounded", async () =>
+    withDb(
+      async (db, reads) => {
+        // A database certified from its start: every block below was written by a capped writer
+        expect(await db.blockCertification.load()).toBeNull();
+        const chain = {...makeChain(db), lightClientServer: await seed(db)};
+        const archivedRoot = new Uint8Array(32).fill(5);
+        await db.blockArchive.batchPutBinary([
+          {
+            key: 1,
+            value: (await db.blockArchive.getBinary(1)) as Uint8Array,
+            slot: 1,
+            blockRoot: archivedRoot,
+            parentRoot: root,
+          },
+        ]);
+        expect(await db.blockCertification.scanHot()).toBeNull();
+        const {blocksByRoot, blocksByRange} = sources(chain, db);
+        const archivedByRoot = (context?: ServingContext) => onBeaconBlocksByRoot([archivedRoot], chain, context);
+        const served = async (source: (context?: ServingContext) => AsyncIterable<ResponseOutgoing>) => {
+          reads.length = 0;
+          const items = await Array.fromAsync(source(new ServingContext(policy)));
+          expect(items.length).toBeGreaterThan(0);
+          return reads.filter((read) => read.call !== "nextv" && read.call !== "next");
+        };
+        for (const source of [blocksByRoot, blocksByRange, archivedByRoot]) {
+          const opened = await served(source);
+          expect(opened).toEqual(opened.map(({call}) => ({call, fillCache: false, bounded: false})));
+        }
+
+        // Finalization copied an oversized block into slot 1, so block reads there keep the bounded path
+        await db.blockCertification.unverifyOversized([{slot: 1, bytes: config.MAX_PAYLOAD_SIZE + 1}]);
+        expect((await served(blocksByRange)).map(({bounded}) => bounded)).toEqual([true]);
+        // The root index row stays a stock read; the block behind it is bounded
+        expect((await served(archivedByRoot)).map(({bounded}) => bounded)).toEqual([false, true]);
+      },
+      {stock: false}
+    ));
+
+  it("serve certified blocks from a stock DB", async () =>
+    withDb(
+      async (db) => {
+        expect(await db.blockCertification.load()).toBeNull();
+        const chain = {...makeChain(db), lightClientServer: await seed(db)};
+        expect(await db.blockCertification.scanHot()).toBeNull();
+        const {blocksByRoot, blocksByRange} = sources(chain, db);
+        for (const source of [blocksByRoot, blocksByRange]) {
+          await expect(Array.fromAsync(source(new ServingContext(policy)))).resolves.toEqual(
+            await Array.fromAsync(source())
+          );
         }
       },
       {stock: true}

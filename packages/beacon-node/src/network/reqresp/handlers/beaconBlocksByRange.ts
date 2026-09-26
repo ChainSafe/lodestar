@@ -50,11 +50,13 @@ export async function* onBeaconBlocksByRange(
 
   // Finalized range of blocks
   if (startSlot <= archiveMaxSlot) {
-    // Chain of blobs won't change
+    const archiveEndSlot = Math.min(endSlot, archiveMaxSlot + 1);
+    // Chain of blobs won't change. Blocks keep the bounded stream until their slots are verified.
+    const verified = db.blockCertification.isArchiveRangeVerified(startSlot, archiveEndSlot - 1);
     for await (const {key, value} of finalized.binaryEntriesStream({
-      ...(context ? {...context.boundedStreamOptions(), limit: count} : {}),
+      ...(context ? {...(verified ? context.streamOptions() : context.boundedStreamOptions()), limit: count} : {}),
       gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
+      lt: archiveEndSlot,
     })) {
       context?.checkResponse(value, context.limits.blockBytes);
       yield {

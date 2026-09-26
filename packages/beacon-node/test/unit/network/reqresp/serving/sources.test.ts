@@ -9,7 +9,7 @@ import {PayloadStatus, ProtoArray} from "@lodestar/fork-choice";
 import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RespStatus, ResponseOutgoing} from "@lodestar/reqresp";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {Logger, byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, defer, intToBytes, toRootHex} from "@lodestar/utils";
 import {BlockInputColumns, BlockInputPreData} from "../../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types.js";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
@@ -495,7 +495,10 @@ describe("actual serving sources", () => {
       expect(await Array.fromAsync(bounded)).toEqual(expected);
       await bounded.retired;
       await db.block.delete(root);
-      await controller.put(getRootIndexKey(root), new Uint8Array(policy.sourceBytes + 1));
+      // An archived block above the source cap, in a slot not yet verified, keeps the bounded read
+      await controller.put(getRootIndexKey(root), intToBytes(slot, 8, "be"));
+      await db.blockArchive.putBinary(slot, new Uint8Array(policy.sourceBytes + 1));
+      expect(db.blockCertification.isArchiveSlotVerified(slot)).toBe(false);
       const bad = handler(request, peer, "test");
       await expect(bad.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY", status: RespStatus.SERVER_ERROR});
       await bad.retired;

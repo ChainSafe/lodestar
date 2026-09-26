@@ -882,7 +882,8 @@ export class BeaconChain implements IBeaconChain {
           };
         }
       }
-      const data = await servingBoundedRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
+      const hotRead = this.db.blockCertification.hotVerified ? servingRead : servingBoundedRead;
+      const data = await hotRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
       if (data) context?.checkResponse(data, context.limits.blockBytes);
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
@@ -898,11 +899,22 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await servingBoundedRead(context, (opts) =>
-      this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), opts)
-    );
-    if (data?.value) context?.checkResponse(data.value, context.limits.blockBytes);
-    return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
+    if (!context) {
+      const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
+      return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
+    }
+    // The eight-byte root index row, then the block, which keeps the bounded read until its slot is verified
+    const slot = await servingRead(context, (opts) => this.db.blockArchive.getSlotByRoot(fromHex(root), opts), 8);
+    if (slot === null) return null;
+    const archiveRead = this.db.blockCertification.isArchiveSlotVerified(slot) ? servingRead : servingBoundedRead;
+    const data = await archiveRead(context, (opts) => this.db.blockArchive.getBinary(slot, opts));
+    if (data === null) return null;
+    return {
+      block: context.checkResponse(data, context.limits.blockBytes),
+      executionOptimistic: false,
+      finalized: true,
+      slot,
+    };
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {

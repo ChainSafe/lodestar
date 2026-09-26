@@ -72,6 +72,8 @@ export enum Bucket {
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
   gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope
+
+  index_servingBlockCertification = 61, // "unverified" -> archive slots whose blocks may exceed MAX_PAYLOAD_SIZE
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

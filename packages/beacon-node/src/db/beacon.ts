@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {ServingBlockCertification, WRITER_CANARY_ID} from "./blockCertification.js";
 import {Bucket} from "./buckets.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
@@ -61,6 +62,8 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
+  blockCertification: ServingBlockCertification;
+
   constructor(
     config: ChainForkConfig,
     protected readonly db: Db
@@ -91,6 +94,8 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
     this.backfilledRanges = new BackfilledRanges(config, db);
+
+    this.blockCertification = new ServingBlockCertification(config, db, this.block, this.blockArchive);
   }
 
   close(): Promise<void> {
@@ -102,8 +107,9 @@ export class BeaconDb implements IBeaconDb {
   }
 
   async pruneHotDb(): Promise<void> {
-    // Prune all hot blobs
-    await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    // Prune all hot blobs, keeping the block certification's writer canary
+    const keys = await this.blobSidecars.keys();
+    await this.blobSidecars.batchDelete(keys.filter((key) => !Buffer.from(key).equals(WRITER_CANARY_ID)));
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());
