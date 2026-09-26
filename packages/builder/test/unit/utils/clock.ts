@@ -20,6 +20,7 @@ export class ClockMock implements IClock {
   msToSlot = (slot: number): number => (slot - this.currentSlot) * this.secondsPerSlot * 1000;
   msFromSlot = (): number => 0;
   secFromSlot = (): number => 0;
+  getSlotDurationMs = (_slot: number): number => 12000;
   getCurrentSlot = (): number => this.currentSlot;
   getCurrentEpoch = (): number => this.currentEpoch;
 

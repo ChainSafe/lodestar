@@ -16,6 +16,9 @@ import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
 
+/** Half slot in basis points (5000 BPS = 50% of slot) */
+const HALF_SLOT_BPS = 5000;
+
 export enum SubnetSource {
   committee = "committee",
   longLived = "long_lived",
@@ -163,9 +166,13 @@ export class AttnetsService implements IAttnetsService {
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      setTimeout(() => {
-        this.onHalfSlot(clockSlot);
-      }, this.config.SLOT_DURATION_MS * 0.5);
+      const fork = this.config.getForkName(clockSlot);
+      setTimeout(
+        () => {
+          this.onHalfSlot(clockSlot);
+        },
+        this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS)
+      );
 
       for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {

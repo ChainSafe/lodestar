@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 import {computeEpochAtSlot} from "./epoch.js";
-import {computeTimeAtSlot, getCurrentSlot} from "./slot.js";
+import {computeTimeAtSlot, getCurrentSlot, getSlotDurationMs} from "./slot.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -13,6 +13,7 @@ export type ClockOptions = {
 
 export interface IClock {
   readonly genesisTime: number;
+  /** @deprecated Use getSlotDurationMs(slot) instead */
   readonly secondsPerSlot: number;
 
   readonly currentEpoch: number;
@@ -25,6 +26,8 @@ export interface IClock {
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
+  /** Slot duration in ms for a given slot */
+  getSlotDurationMs(slot: Slot): number;
 }
 
 export enum TimeItem {
@@ -95,6 +98,11 @@ export class Clock implements IClock {
     return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
   }
 
+  /** Slot duration in ms for a given slot */
+  getSlotDurationMs(slot: Slot): number {
+    return getSlotDurationMs(this.config, slot);
+  }
+
   /**
    * If a task happens to take more than one slot to run, we might skip a slot. This is unfortunate,
    * however the alternative is to *always* process every slot, which has the chance of creating a
@@ -145,20 +153,18 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
-    const msFromGenesis = Date.now() - this.genesisTime * 1000;
+    const currentSlot = getCurrentSlot(this.config, this.genesisTime);
 
     if (timeItem === TimeItem.Slot) {
-      if (msFromGenesis >= 0) {
-        return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
-      }
-      return Math.abs(msFromGenesis) % milliSecondsPerSlot;
+      const nextSlotTimeSec = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime);
+      return Math.max(0, nextSlotTimeSec * 1000 - Date.now());
     }
-    const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
-    if (msFromGenesis >= 0) {
-      return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
-    }
-    return Math.abs(msFromGenesis) % milliSecondsPerEpoch;
+
+    // For epoch: find the next epoch boundary slot
+    const currentEpoch = computeEpochAtSlot(currentSlot);
+    const nextEpochSlot = (currentEpoch + 1) * SLOTS_PER_EPOCH;
+    const nextEpochTimeSec = computeTimeAtSlot(this.config, nextEpochSlot, this.genesisTime);
+    return Math.max(0, nextEpochTimeSec * 1000 - Date.now());
   }
 }
 
@@ -166,9 +172,15 @@ export class Clock implements IClock {
  * Same to the spec but we use Math.round instead of Math.floor.
  */
 export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
-  const diffInSeconds = Date.now() / 1000 - genesisTime;
-  const slotsSinceGenesis = Math.round((diffInSeconds * 1000) / config.SLOT_DURATION_MS);
-  return GENESIS_SLOT + slotsSinceGenesis;
+  // Get floor slot first, then check if we're closer to the next slot
+  const floorSlot = getCurrentSlot(config, genesisTime);
+  const slotStartSec = computeTimeAtSlot(config, floorSlot, genesisTime);
+  const slotDurationMs = getSlotDurationMs(config, floorSlot);
+  const slotDurationSec = slotDurationMs / 1000;
+  const elapsed = Date.now() / 1000 - slotStartSec;
+
+  // If more than half the slot has passed, round up
+  return elapsed >= slotDurationSec / 2 ? floorSlot + 1 : floorSlot;
 }
 
 // function useEventStream() {

@@ -3,6 +3,11 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
+/** Slot duration in ms for a given slot */
+export function getSlotDurationMs(config: ChainConfig, _slot: Slot): number {
+  return config.SLOT_DURATION_MS;
+}
+
 export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
   return Math.floor(diffInSeconds / (config.SLOT_DURATION_MS / 1000));
