@@ -1,17 +1,12 @@
-export type GossipQueueOpts<T> = LinearGossipQueueOpts<T> | IndexedGossipQueueMinSizeOpts<T>;
+export type GossipQueueOpts<T> = LinearGossipQueueOpts | IndexedGossipQueueMinSizeOpts<T>;
 
-export type GossipQueueDropOpts<T> = {
-  /** Trusted synchronous observer that must not throw. */
-  onDrop?: (item: T) => void;
-};
-
-export type LinearGossipQueueOpts<T = unknown> = GossipQueueDropOpts<T> & {
+export type LinearGossipQueueOpts = {
   type: QueueType;
   maxLength: number;
   dropOpts: DropOpts;
 };
 
-export type IndexedGossipQueueOpts<T> = GossipQueueDropOpts<T> & {
+export type IndexedGossipQueueOpts<T> = {
   maxLength: number;
   indexFn: (item: T) => string | null;
 };

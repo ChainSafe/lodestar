@@ -30,7 +30,7 @@ async function fixture(close: () => Promise<void>) {
   const core = {close, publishGossip} as unknown as INetworkCore;
   const networkProcessor = new NetworkProcessor(
     {chain, db: getMockedBeaconDb(), config, logger, metrics: null, events, core, aggregatorTracker},
-    {completeGossipWork: true}
+    {}
   );
   const network = new Network({
     opts: defaultNetworkOptions,

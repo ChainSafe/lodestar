@@ -55,22 +55,9 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
   }
 
   clear(): void {
-    if (this.opts.onDrop) {
-      for (const [key, {listItems}] of this.indexedItems) {
-        this.indexedItems.delete(key);
-        const length = listItems.length;
-        for (let i = 0; i < length; i++) {
-          const item = listItems.shift();
-          this._length--;
-          if (item !== null) this.opts.onDrop(item);
-        }
-      }
-    }
     this.indexedItems = new Map();
     this._length = 0;
     this.minChunkSizeKeys = new OrderedSet();
-    this.nextWaitTimeMs = null;
-    this.lastWaitTimeCheckedMs = 0;
   }
 
   /**
@@ -92,8 +79,9 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
   add(item: T): number {
     const key = this.opts.indexFn(item);
     if (key == null) {
-      this.opts.onDrop?.(item);
-      return 1;
+      // this comes from getAttDataBase64FromAttestationSerialized() return type
+      // should not happen
+      return 0;
     }
     const now = Date.now();
     // here we mutate item, which is used for gossip validation later
@@ -133,7 +121,6 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
         // it's faster to search for deleted item from the head in this case
         this.minChunkSizeKeys.delete(firstKey, true);
       }
-      this.opts.onDrop?.(deletedItem);
       return 1;
     }
     return 0;
