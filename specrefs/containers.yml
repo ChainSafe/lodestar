@@ -1170,7 +1170,7 @@
 - name: BuilderPendingPayments#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
-      search: "builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH),"
+      search: export const BuilderPendingPayments =
   spec: |
     <spec container="BuilderPendingPayments" fork="gloas" hash="862b4264">
     class BuilderPendingPayments(Vector[BuilderPendingPayment]):
