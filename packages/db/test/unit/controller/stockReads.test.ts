@@ -8,7 +8,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController, PrefixedRepository, Repository} from "../../../src/index.js";
 
-type Options = {fillCache?: boolean; readLimits?: unknown; limit?: number};
+type Options = {fillCache?: boolean; limit?: number};
 type Call = {call: string; fillCache?: boolean; size?: number};
 
 const type = new ContainerType({value: new UintNumberType(8)});

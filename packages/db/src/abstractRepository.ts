@@ -68,17 +68,9 @@ export abstract class BinaryRepository<I extends Id> {
     return key.slice(BUCKET_LENGTH) as I;
   }
 
+  /** The repository's read options, with `fillCache` when a read sets it */
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    const {readLimits, fillCache} = opts ?? {};
-    if (readLimits !== undefined && this.db.boundedReadVersion !== 1) {
-      throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
-    }
-    if (readLimits === undefined && fillCache === undefined) return this.dbReqOpts;
-    return {
-      bucketId: this.bucketId,
-      ...(readLimits === undefined ? {} : {readLimits}),
-      ...(fillCache === undefined ? {} : {fillCache}),
-    };
+    return opts?.fillCache === undefined ? this.dbReqOpts : {...this.dbReqOpts, fillCache: opts.fillCache};
   }
 
   async getBinary(id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
@@ -155,34 +147,32 @@ export abstract class BinaryRepository<I extends Id> {
    * Transforms opts from I to Uint8Array
    */
   protected dbFilterOptions(opts?: FilterOptions<I>): FilterOptions<Uint8Array> {
-    const {readLimits, fillCache, rowAtATime, gt, gte, lt, lte, reverse, limit} = opts ?? {};
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 
     // Set at least one min key
-    if (lt !== undefined) {
-      optsBuff.lt = this.encodeKey(lt);
-    } else if (lte !== undefined) {
-      optsBuff.lte = this.encodeKey(lte);
+    if (opts?.lt !== undefined) {
+      optsBuff.lt = this.encodeKey(opts.lt);
+    } else if (opts?.lte !== undefined) {
+      optsBuff.lte = this.encodeKey(opts.lte);
     } else {
       optsBuff.lt = this.maxKey;
     }
 
     // Set at least one max key
-    if (gt !== undefined) {
-      optsBuff.gt = this.encodeKey(gt);
-    } else if (gte !== undefined) {
-      optsBuff.gte = this.encodeKey(gte);
+    if (opts?.gt !== undefined) {
+      optsBuff.gt = this.encodeKey(opts.gt);
+    } else if (opts?.gte !== undefined) {
+      optsBuff.gte = this.encodeKey(opts.gte);
     } else {
       optsBuff.gte = this.minKey;
     }
 
-    if (readLimits !== undefined) optsBuff.readLimits = this.readOptions({readLimits}).readLimits;
-    if (fillCache !== undefined) optsBuff.fillCache = fillCache;
-    if (rowAtATime !== undefined) optsBuff.rowAtATime = rowAtATime;
-    if (reverse !== undefined) optsBuff.reverse = reverse;
-    if (limit !== undefined) optsBuff.limit = limit;
+    if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
+    if (opts?.rowAtATime !== undefined) optsBuff.rowAtATime = opts.rowAtATime;
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
     return optsBuff;
   }

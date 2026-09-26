@@ -65,17 +65,9 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return this.type.hashTreeRoot(value) as I;
   }
 
+  /** The repository's read options, with `fillCache` when a read sets it */
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    const {readLimits, fillCache} = opts ?? {};
-    if (readLimits !== undefined && this.db.boundedReadVersion !== 1) {
-      throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
-    }
-    if (readLimits === undefined && fillCache === undefined) return this.dbReqOpts;
-    return {
-      bucketId: this.bucketId,
-      ...(readLimits === undefined ? {} : {readLimits}),
-      ...(fillCache === undefined ? {} : {fillCache}),
-    };
+    return opts?.fillCache === undefined ? this.dbReqOpts : {...this.dbReqOpts, fillCache: opts.fillCache};
   }
 
   async get(prefix: P, id: I, opts?: DbReqOpts): Promise<T | null> {
@@ -280,32 +272,30 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   }
 
   async keys(opts?: FilterOptions<{prefix: P; id: I}>): Promise<{prefix: P; id: I}[]> {
-    const {readLimits, fillCache, rowAtATime, gt, gte, lt, lte, reverse, limit} = opts ?? {};
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 
-    if (gte !== undefined) {
-      optsBuff.gte = this.wrapKey(this.encodeKeyRaw(gte.prefix, gte.id));
-    } else if (gt !== undefined) {
-      optsBuff.gt = this.wrapKey(this.encodeKeyRaw(gt.prefix, gt.id));
+    if (opts?.gte !== undefined) {
+      optsBuff.gte = this.wrapKey(this.encodeKeyRaw(opts.gte.prefix, opts.gte.id));
+    } else if (opts?.gt !== undefined) {
+      optsBuff.gt = this.wrapKey(this.encodeKeyRaw(opts.gt.prefix, opts.gt.id));
     } else {
       optsBuff.gte = this.minKey;
     }
 
-    if (lte !== undefined) {
-      optsBuff.lte = this.wrapKey(this.encodeKeyRaw(lte.prefix, lte.id));
-    } else if (lt !== undefined) {
-      optsBuff.lt = this.wrapKey(this.encodeKeyRaw(lt.prefix, lt.id));
+    if (opts?.lte !== undefined) {
+      optsBuff.lte = this.wrapKey(this.encodeKeyRaw(opts.lte.prefix, opts.lte.id));
+    } else if (opts?.lt !== undefined) {
+      optsBuff.lt = this.wrapKey(this.encodeKeyRaw(opts.lt.prefix, opts.lt.id));
     } else {
       optsBuff.lt = this.maxKey;
     }
 
-    if (readLimits !== undefined) optsBuff.readLimits = this.readOptions({readLimits}).readLimits;
-    if (fillCache !== undefined) optsBuff.fillCache = fillCache;
-    if (rowAtATime !== undefined) optsBuff.rowAtATime = rowAtATime;
-    if (reverse !== undefined) optsBuff.reverse = reverse;
-    if (limit !== undefined) optsBuff.limit = limit;
+    if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
+    if (opts?.rowAtATime !== undefined) optsBuff.rowAtATime = opts.rowAtATime;
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
     const data = await this.db.keys(optsBuff);
     return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));

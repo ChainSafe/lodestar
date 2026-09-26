@@ -42,45 +42,6 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     }
   }
 
-  get boundedReadVersion(): 1 | undefined {
-    return this.db.boundedReadVersion === 1 ? 1 : undefined;
-  }
-
-  private captureReadOptions(opts?: DbReqOpts): DbReqOpts {
-    const {readLimits, fillCache, bucketId} = opts ?? {};
-    return {
-      bucketId,
-      ...(readLimits === undefined ? {} : {readLimits}),
-      ...(fillCache === undefined ? {} : {fillCache}),
-    };
-  }
-
-  /** The options classic-level reads for a get or getMany */
-  private levelReadOptions(opts: DbReqOpts): {readLimits?: DbReqOpts["readLimits"]; fillCache?: boolean} {
-    const {readLimits, fillCache} = opts;
-    return {...(readLimits === undefined ? {} : {readLimits}), ...(fillCache === undefined ? {} : {fillCache})};
-  }
-
-  private captureFilterOptions(opts: FilterOptions<Uint8Array>): FilterOptions<Uint8Array> {
-    const {readLimits, fillCache, rowAtATime, bucketId, gt, gte, lt, lte, reverse, limit} = opts;
-    return {
-      ...this.captureReadOptions({readLimits, fillCache, bucketId}),
-      ...(rowAtATime === undefined ? {} : {rowAtATime}),
-      ...(gt === undefined ? {} : {gt}),
-      ...(gte === undefined ? {} : {gte}),
-      ...(lt === undefined ? {} : {lt}),
-      ...(lte === undefined ? {} : {lte}),
-      ...(reverse === undefined ? {} : {reverse}),
-      ...(limit === undefined ? {} : {limit}),
-    };
-  }
-
-  private checkReadLimits(opts?: DbReqOpts): void {
-    if (opts?.readLimits !== undefined && this.boundedReadVersion !== 1) {
-      throw Object.assign(new Error("Bounded reads are unsupported"), {code: "LEVEL_BOUNDED_READ_UNSUPPORTED"});
-    }
-  }
-
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
     const db =
       opts.db ||
@@ -130,12 +91,10 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async get(key: Uint8Array, opts?: DbReqOpts): Promise<Uint8Array | null> {
-    opts = this.captureReadOptions(opts);
-    this.checkReadLimits(opts);
     try {
       this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
       this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
-      return (await this.db.get(key, this.levelReadOptions(opts))) as Uint8Array | null;
+      return (await this.db.get(key, levelReadOptions(opts))) as Uint8Array | null;
     } catch (e) {
       if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
         return null;
@@ -151,11 +110,9 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
    * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
    */
   async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
-    opts = this.captureReadOptions(opts);
-    this.checkReadLimits(opts);
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-    return await this.db.getMany(keys, this.levelReadOptions(opts));
+    return await this.db.getMany(keys, levelReadOptions(opts));
   }
 
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
@@ -194,38 +151,26 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
-    opts = this.captureFilterOptions(opts);
-    this.checkReadLimits(opts);
     return this.readIterator(this.db.keys(opts), opts, (key) => key);
   }
 
   valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
-    opts = this.captureFilterOptions(opts);
-    this.checkReadLimits(opts);
     return this.readIterator(this.db.values(opts), opts, (value) => value);
   }
 
   entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
-    opts = this.captureFilterOptions(opts);
-    this.checkReadLimits(opts);
     return this.readIterator(this.db.iterator(opts), opts, (entry) => ({key: entry[0], value: entry[1]}));
   }
 
   keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    opts = this.captureFilterOptions(opts);
-    if (opts.readLimits !== undefined) return Array.fromAsync(this.keysStream(opts));
     return this.metricsAll(this.db.keys(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    opts = this.captureFilterOptions(opts);
-    if (opts.readLimits !== undefined) return Array.fromAsync(this.valuesStream(opts));
     return this.metricsAll(this.db.values(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
-    opts = this.captureFilterOptions(opts);
-    if (opts.readLimits !== undefined) return Array.fromAsync(this.entriesStream(opts));
     const entries = await this.metricsAll(this.db.iterator(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
     return entries.map((entry) => ({key: entry[0], value: entry[1]}));
   }
@@ -251,22 +196,15 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     getValue: (item: T) => K
   ): AsyncIterable<K> {
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
-    if (opts.readLimits === undefined && opts.rowAtATime !== true)
-      return this.metricsIterator(iterator, getValue, bucket);
+    if (opts.rowAtATime !== true) return this.metricsIterator(iterator, getValue, bucket);
     let closing: Promise<void> | undefined;
     const close = (): Promise<void> => {
       closing ??= iterator.close();
       return closing;
     };
-    // A bounded iterator reads only the rows its limit allows. A stock stream follows classic-level, where a limit
-    // that is not a non-negative integer, -1 included, means no limit.
+    // As in classic-level, a limit that is not a non-negative integer, -1 included, means no limit
     const {limit} = opts;
-    const rowLimit =
-      opts.readLimits !== undefined
-        ? (limit ?? 0)
-        : limit !== undefined && Number.isInteger(limit) && limit >= 0
-          ? limit
-          : Infinity;
+    const rowLimit = limit !== undefined && Number.isInteger(limit) && limit >= 0 ? limit : Infinity;
     const rows = this.rowAtATimeIterator(iterator, rowLimit, close);
     const measured = this.metricsIterator(rows, getValue, bucket)[Symbol.asyncIterator]();
     // The snapshot already exists even if neither generator has started.
@@ -367,3 +305,8 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
 /** From https://www.npmjs.com/package/level */
 type LevelDbError = {code: "LEVEL_NOT_FOUND"; cause?: {code: "LEVEL_LOCKED"}};
+
+/** The options classic-level takes for a get or getMany: `fillCache` when the read sets it */
+function levelReadOptions(opts?: DbReqOpts): {fillCache?: boolean} {
+  return opts?.fillCache === undefined ? {} : {fillCache: opts.fillCache};
+}
