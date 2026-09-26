@@ -30,7 +30,7 @@ describe("getDebugForkChoiceV2", () => {
     modules.forkChoice.getHeadRoot.mockReturnValue(ZERO_HASH_HEX);
   });
 
-  it("reports graph parents, execution heads and PTC counts across payload variants", async () => {
+  it("returns parent roots and statuses, execution hashes and PTC counts", async () => {
     const block = generateProtoBlock({
       slot: 1,
       blockRoot: root(2),

@@ -134,7 +134,6 @@ export type Endpoints = {
 
   /**
    * Retrieves all current fork choice context
-   * @deprecated Use getDebugForkChoiceV2
    */
   getDebugForkChoice: Endpoint<
     // ⏎
