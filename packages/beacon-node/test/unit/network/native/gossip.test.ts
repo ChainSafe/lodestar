@@ -41,6 +41,7 @@ const idle: NativeExchange = {
   parked: {serving: false, ordinary: false},
   disabledWaiting: false,
   failure: null,
+  acknowledged: [],
 };
 
 type Demand = ReturnType<NativeGossip["demand"]>;

@@ -38,6 +38,7 @@ const idle: NativeExchange = {
   parked: {serving: false, ordinary: false},
   disabledWaiting: false,
   failure: null,
+  acknowledged: [],
 };
 const handle = (index: number) => ({index, generation: 1n});
 
