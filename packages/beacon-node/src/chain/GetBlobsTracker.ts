@@ -12,7 +12,6 @@ import {
 } from "../util/execution.js";
 import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
-import {BlockTrace} from "./blockTrace/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 export type GetBlobsTrackerInit = {
@@ -21,7 +20,6 @@ export type GetBlobsTrackerInit = {
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
-  blockTrace: BlockTrace | null;
 };
 
 /**
@@ -33,7 +31,6 @@ export class GetBlobsTracker {
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
-  blockTrace: BlockTrace | null;
   activeReconstructions = new Set<string>();
   // Preallocate buffers for getBlobsV2 RPC calls
   // See https://github.com/ChainSafe/lodestar/pull/8282 for context
@@ -45,7 +42,6 @@ export class GetBlobsTracker {
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
-    this.blockTrace = init.blockTrace;
   }
 
   triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
@@ -100,8 +96,7 @@ export class GetBlobsTracker {
         this.emitter,
         input,
         this.metrics,
-        this.blobsAndProofsBuffers[freeIndex].buffers,
-        this.blockTrace
+        this.blobsAndProofsBuffers[freeIndex].buffers
       )
         .then((result) => {
           this.logger.debug("getBlobsV2 result for block", {...logCtx, result});

@@ -3,7 +3,6 @@ import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
-import {BlockAttempt} from "../blockTrace/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -24,30 +23,12 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  /** The last argument is the `performance.now()` time the job was enqueued */
-  readonly jobQueue: JobItemQueue<
-    [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts, number],
-    void
-  >;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>;
 
-  constructor(
-    private readonly chain: BeaconChain,
-    metrics: Metrics | null,
-    opts: BlockProcessOpts,
-    signal: AbortSignal
-  ) {
-    this.jobQueue = new JobItemQueue<
-      [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts, number],
-      void
-    >(
-      async (job, payloadEnvelopes, importOpts, enqueuedAt) => {
-        const trace = chain.blockTrace;
-        const attempt = trace?.startAttempt(job, enqueuedAt) ?? null;
-        try {
-          await processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts}, attempt);
-        } finally {
-          trace?.processorLaneFree();
-        }
+  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+    this.jobQueue = new JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>(
+      (job, payloadEnvelopes, importOpts) => {
+        return processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
@@ -59,9 +40,7 @@ export class BlockProcessor {
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<void> {
-    const enqueuedAt = performance.now();
-    this.chain.blockTrace?.enqueued(job, enqueuedAt);
-    await this.jobQueue.push(job, payloadEnvelopes, opts, enqueuedAt);
+    await this.jobQueue.push(job, payloadEnvelopes, opts);
   }
 }
 
@@ -79,8 +58,7 @@ export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
-  opts: BlockProcessOpts & ImportBlockOpts,
-  attempt: BlockAttempt | null = null
+  opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
@@ -119,7 +97,7 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts, attempt);
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -162,7 +140,7 @@ export async function processBlocks(
       const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
       if (fullyVerifiedBlock !== undefined) {
         // TODO: Consider batching importBlock too if it takes significant time
-        await importBlock.call(this, fullyVerifiedBlock, opts, attempt);
+        await importBlock.call(this, fullyVerifiedBlock, opts);
       }
 
       const payloadInput = payloadEnvelopes?.get(slot);

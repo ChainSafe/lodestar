@@ -31,7 +31,6 @@ import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -73,8 +72,7 @@ const EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS = 64;
 export async function importBlock(
   this: BeaconChain,
   fullyVerifiedBlock: FullyVerifiedBlock,
-  opts: ImportBlockOpts,
-  attempt: BlockAttempt | null = null
+  opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
   let {executionStatus} = fullyVerifiedBlock;
@@ -101,9 +99,7 @@ export async function importBlock(
   // Wait for space in the write queue to apply backpressure during sync.
   // Without this, a supernode syncing from behind can accumulate many blocks worth of column
   // data in memory (up to 128 columns per block) causing OOM before persistence catches up.
-  attempt?.markBlock(blockInput.blockRootHex, BlockMilestone.persistenceRequest);
   await this.unfinalizedBlockWrites.waitForSpace();
-  attempt?.markBlock(blockInput.blockRootHex, BlockMilestone.persistenceUnblock);
   this.unfinalizedBlockWrites.push(blockInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
@@ -134,7 +130,6 @@ export async function importBlock(
     executionStatus,
     dataAvailabilityStatus
   );
-  this.blockTrace?.mark(blockInput.slot, blockInput.blockRootHex, BlockMilestone.forkChoice);
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block

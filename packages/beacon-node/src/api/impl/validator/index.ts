@@ -1317,7 +1317,6 @@ export function getValidatorApi(
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
             headState.getBlockRootAtSlot(slot);
-      const selectedAt = performance.now();
 
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {
@@ -1362,11 +1361,6 @@ export function getValidatorApi(
       // TODO confirm if the below is correct assertion
       // notOnOutOfRangeData(attEpochState.currentJustifiedCheckpoint.root);
 
-      chain.blockTrace?.attestationData(
-        slot,
-        slot >= headSlot ? headBlockRootHex : toRootHex(beaconBlockRoot),
-        selectedAt
-      );
       return {
         data: {
           slot,

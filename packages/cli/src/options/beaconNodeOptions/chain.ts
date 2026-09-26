@@ -41,7 +41,6 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
-  "chain.blockTrace"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
@@ -88,7 +87,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
-    blockTrace: args["chain.blockTrace"],
   };
 }
 
@@ -359,15 +357,6 @@ This is useful to minimize disk usage when the node does not need to serve histo
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
-    group: "chain",
-  },
-
-  "chain.blockTrace": {
-    hidden: true,
-    description:
-      "Trace each recent block's critical path per slot, exported as metrics and by `/eth/v1/lodestar/block_trace`",
-    type: "boolean",
-    defaultDescription: String(defaultOptions.chain.blockTrace),
     group: "chain",
   },
 };

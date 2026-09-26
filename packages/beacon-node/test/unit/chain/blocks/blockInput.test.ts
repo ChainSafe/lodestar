@@ -1,6 +1,6 @@
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {BeaconBlockBody, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -8,7 +8,6 @@ import {
   AddBlob,
   AddBlock,
   BlockInputBlobs,
-  BlockInputColumns,
   BlockInputSource,
   CreateBlockInputMeta,
   ForkBlobsDA,
@@ -188,48 +187,5 @@ describe("BlockInput", () => {
         expect(blockInput.hasAllData()).toBeTruthy();
       });
     }
-  });
-
-  describe("Data availability time", () => {
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it("stamps the first time enough columns to reconstruct are available, and what completed them", () => {
-      vi.useFakeTimers({toFake: ["performance"]});
-      const {block, rootHex} = buildBlockTestSet(ForkName.fulu);
-      (block.message.body as BeaconBlockBody<ForkName.fulu>).blobKzgCommitments = [
-        ssz.fulu.KZGCommitment.defaultValue(),
-      ];
-      const sampledColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i);
-      const blockInput = BlockInputColumns.createFromBlock({
-        block: block as SignedBeaconBlock<ForkName.fulu>,
-        blockRootHex: rootHex,
-        daOutOfRange: false,
-        forkName: ForkName.fulu,
-        source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
-        sampledColumns,
-        custodyColumns: sampledColumns,
-      });
-      const addColumn = (index: number, source = BlockInputSource.gossip): void => {
-        const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
-        columnSidecar.index = index;
-        blockInput.addColumn({blockRootHex: rootHex, columnSidecar, source, seenTimestampSec: Date.now() / 1000});
-      };
-
-      for (let i = 0; i < NUMBER_OF_COLUMNS / 2 - 1; i++) addColumn(i);
-      expect(blockInput.dataAvailableAt).toBeNull();
-      vi.advanceTimersByTime(10);
-      const availableAt = performance.now();
-      addColumn(NUMBER_OF_COLUMNS / 2 - 1, BlockInputSource.engine);
-      vi.advanceTimersByTime(10);
-      addColumn(NUMBER_OF_COLUMNS / 2);
-      expect(blockInput.hasAllData()).toBe(true);
-      expect(blockInput.dataAvailableAt).toBe(availableAt);
-      const observer = vi.fn();
-      blockInput.observeDataAvailable(observer);
-      expect(observer).toHaveBeenCalledWith(availableAt, {source: BlockInputSource.engine, reconstructable: true});
-    });
   });
 });

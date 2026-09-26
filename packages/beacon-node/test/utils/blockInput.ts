@@ -57,7 +57,6 @@ export class MockBlockInput implements IBlockInput {
     this._blockSource = source;
     this._blockPeerIdStr = peerIdStr;
   }
-  observeDataAvailable(): void {}
   hasBlock(): boolean {
     return !this._block;
   }

@@ -7,7 +7,6 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockMilestone, BlockTrace} from "../chain/blockTrace/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -138,8 +137,7 @@ export async function getDataColumnSidecarsFromExecution(
   emitter: ChainEventEmitter,
   input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
-  blobAndProofBuffers?: Uint8Array[],
-  blockTrace?: BlockTrace | null
+  blobAndProofBuffers?: Uint8Array[]
 ): Promise<DataColumnEngineResult> {
   const isPayloadInput = input instanceof PayloadEnvelopeInput;
 
@@ -163,12 +161,7 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const traced = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex) === true;
-  const blobs = await executionEngine
-    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers)
-    .finally(() => {
-      if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsResponse);
-    });
+  const blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
   timer?.();
 
   // Execution engine was unable to find one or more blobs

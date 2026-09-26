@@ -25,14 +25,6 @@ export enum BlockInputSource {
   recovery = "recovery",
 }
 
-/** What first completed a block input's data */
-export type DataAvailableVia = {
-  /** The source of the item that completed it, `none` when the block needed no data */
-  source: BlockInputSource | "none";
-  /** Whether it completed as enough columns to reconstruct, before all sampled columns arrived */
-  reconstructable: boolean;
-};
-
 export type PromiseParts<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -148,11 +140,6 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
 
   /** Whether all expected DA data has been seen and validated. */
   hasAllData(): boolean;
-  /**
-   * Calls `observer` with the `performance.now()` time `hasAllData` first became true and what completed it, now if it
-   * already has
-   */
-  observeDataAvailable(observer: (at: number, via: DataAvailableVia) => void): void;
 
   /**
    * Whether the block and all DA data retrieved.

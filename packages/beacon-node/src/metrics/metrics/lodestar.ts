@@ -1057,55 +1057,6 @@ export function createLodestarMetrics(
         labelNames: ["reason"],
       }),
     },
-    blockTrace: {
-      milestone: register.histogram<{milestone: string}>({
-        name: "lodestar_block_trace_milestone_seconds",
-        help: "Traced block critical-path milestone, or the attestation data snapshot, relative to its slot start",
-        labelNames: ["milestone"],
-        buckets: [-1, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 8, 12],
-      }),
-      milestoneToTarget: register.histogram<{milestone: string; target: string}>({
-        name: "lodestar_block_trace_milestone_to_target_seconds",
-        help: "Traced block critical-path milestone relative to its consumer target, negative before the target",
-        labelNames: ["milestone", "target"],
-        buckets: [-4, -3, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4, 8],
-      }),
-      milestoneLate: register.counter<{milestone: string}>({
-        name: "lodestar_block_trace_milestone_late_total",
-        help: "Traced block milestones recorded after their consumer target",
-        labelNames: ["milestone"],
-      }),
-      milestoneMissing: register.counter<{milestone: string; outcome: string}>({
-        name: "lodestar_block_trace_milestone_missing_total",
-        help: "Expected milestones a traced block had not recorded when its slot closed at slot + 2, by outcome; for not imported blocks, the pending work",
-        labelNames: ["milestone", "outcome"],
-      }),
-      blocks: register.counter<{outcome: string}>({
-        name: "lodestar_block_trace_blocks_total",
-        help: "Traced block roots by outcome when their slot closed at slot + 2",
-        labelNames: ["outcome"],
-      }),
-      dataAvailable: register.counter<{source: string; completion: string}>({
-        name: "lodestar_block_trace_data_available_total",
-        help: "Traced block roots whose data became available, when their slot closed, by the source of the item that completed it and whether it completed as enough columns to reconstruct",
-        labelNames: ["source", "completion"],
-      }),
-      rootsOverflow: register.counter({
-        name: "lodestar_block_trace_roots_overflow_total",
-        help: "Changes of untraced overflowing root in a slot that already traced its maximum roots, not distinct roots",
-      }),
-      wait: register.histogram<{wait: string}>({
-        name: "lodestar_block_trace_wait_seconds",
-        help: "Traced block waits: dispatch and processor proxy runnable import work without establishing eligibility; persistence waits for write capacity",
-        labelNames: ["wait"],
-        buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
-      }),
-      attestationData: register.counter<{selected: string}>({
-        name: "lodestar_block_trace_attestation_data_total",
-        help: "Slots by the first head root the attestation data API returned: the slot's block, another root, or no traced block",
-        labelNames: ["selected"],
-      }),
-    },
     eventLoopDelayByPhase: register.histogram<{phase_bps: string}>({
       name: "lodestar_event_loop_delay_by_slot_phase_seconds",
       help: "How late a timer probe due every 10 ms ran, by the slot phase bucket of the time it was due, labeled by the bucket's first basis point of the slot",

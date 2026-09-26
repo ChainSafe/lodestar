@@ -38,7 +38,6 @@ import {
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
-import {BlockMilestone} from "../../chain/blockTrace/index.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -152,14 +151,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     signedBlock: SignedBeaconBlock,
     fork: ForkName,
     peerIdStr: string,
-    seenTimestampSec: number,
-    validationStart: number
+    seenTimestampSec: number
   ): Promise<IBlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const blockShortHex = prettyBytes(blockRootHex);
-    chain.blockTrace?.gossipValidationStart(slot, blockRootHex, seenTimestampSec, validationStart);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -188,7 +185,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
       peerIdStr,
     });
-    chain.blockTrace?.observeDataAvailable(blockInput);
 
     // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
     // This ensures we have PayloadEnvelopeInput, even through "PARENT_BLOCK_UNKNOWN" error
@@ -263,7 +259,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       throw e;
     } finally {
-      chain.blockTrace?.mark(slot, blockRootHex, BlockMilestone.gossipValidationEnd);
       // The block received from the network may have established an equivocation, either by conflicting
       // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
       const proposerIndex = signedBlock.message.proposerIndex;
@@ -717,18 +712,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
-      const validationStart = performance.now();
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
       try {
-        const blockInput = await validateBeaconBlock(
-          signedBlock,
-          topic.boundary.fork,
-          peerIdStr,
-          seenTimestampSec,
-          validationStart
-        );
+        const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
         chain.serializedCache.set(signedBlock, serializedData);
         handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
       } catch (e) {

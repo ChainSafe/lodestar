@@ -15,7 +15,6 @@ import {
   CreateBlockInputMeta,
   DAData,
   DAType,
-  DataAvailableVia,
   IBlockInput,
   LogMetaBasic,
   LogMetaBlobs,
@@ -26,9 +25,6 @@ import {
 } from "./types.js";
 
 export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputNoData;
-
-/** Data complete without any item: no blobs or sampled columns, or out of the availability window */
-const NO_DATA_NEEDED: DataAvailableVia = {source: "none", reconstructable: false};
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -95,10 +91,6 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   parentRootHex: string;
 
   abstract state: BlockInputState<F>;
-  /** `performance.now()` when `hasAllData` first became true, null before */
-  dataAvailableAt: number | null = null;
-  private dataAvailableVia: DataAvailableVia = NO_DATA_NEEDED;
-  private dataAvailableObserver: ((at: number, via: DataAvailableVia) => void) | null = null;
 
   protected blockPromise = createPromise<SignedBeaconBlock<F>>();
   protected dataPromise = createPromise<TData>();
@@ -184,21 +176,6 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
 
-  observeDataAvailable(observer: (at: number, via: DataAvailableVia) => void): void {
-    if (this.dataAvailableAt !== null) observer(this.dataAvailableAt, this.dataAvailableVia);
-    else this.dataAvailableObserver = observer;
-  }
-
-  protected resolveData(data: TData, via: DataAvailableVia = NO_DATA_NEEDED): void {
-    if (this.dataAvailableAt === null) {
-      this.dataAvailableAt = performance.now();
-      this.dataAvailableVia = via;
-      this.dataAvailableObserver?.(this.dataAvailableAt, via);
-      this.dataAvailableObserver = null;
-    }
-    this.dataPromise.resolve(data);
-  }
-
   async waitForBlockAndAllData(timeout: number, signal?: AbortSignal): Promise<this> {
     if (!this.state.hasBlock || !this.state.hasAllData) {
       await withTimeout(() => Promise.all([this.blockPromise.promise, this.dataPromise.promise]), timeout, signal);
@@ -229,7 +206,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
   private constructor(init: BlockInputInit, state: BlockInputPreDataState) {
     super(init);
     this.state = state;
-    this.resolveData(null);
+    this.dataPromise.resolve(null);
     this.blockPromise.resolve(state.block);
   }
 
@@ -341,7 +318,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     const blockInput = new BlockInputBlobs(init, state);
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
-      blockInput.resolveData([]);
+      blockInput.dataPromise.resolve([]);
     }
     return blockInput;
   }
@@ -436,7 +413,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
-      this.resolveData(this.getBlobs(), {source, reconstructable: false});
+      this.dataPromise.resolve(this.getBlobs());
     }
   }
 
@@ -493,10 +470,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         hasAllData: true,
         timeCompleteSec: seenTimestampSec,
       };
-      this.resolveData(
-        [...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar),
-        {source, reconstructable: false}
-      );
+      this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
     }
   }
 
@@ -708,7 +682,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
-      blockInput.resolveData([]);
+      blockInput.dataPromise.resolve([]);
       blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
@@ -735,7 +709,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
-      blockInput.resolveData([]);
+      blockInput.dataPromise.resolve([]);
       blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
@@ -863,7 +837,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     } as BlockInputColumnsState;
 
     if (hasAllData && sampledColumns !== null) {
-      this.resolveData(sampledColumns, {source, reconstructable: !hasComputedAllData});
+      this.dataPromise.resolve(sampledColumns);
     }
 
     if (hasComputedAllData && sampledColumns !== null) {
@@ -987,7 +961,7 @@ export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
   private constructor(init: BlockInputInit, state: BlockInputNoDataState) {
     super(init);
     this.state = state;
-    this.resolveData(null);
+    this.dataPromise.resolve(null);
     this.blockPromise.resolve(state.block);
   }
 
