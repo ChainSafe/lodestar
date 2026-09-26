@@ -104,6 +104,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private cachedBuilderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private cachedBuilderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -412,6 +414,30 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       ).payloadExpectedWithdrawals.toValue();
     }
     return this._payloadExpectedWithdrawals;
+  }
+
+  get builderPendingPayments(): gloas.BuilderPendingPayments {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder payments are not supported before Gloas");
+    }
+
+    if (this.cachedBuilderPendingPayments === null) {
+      this.cachedBuilderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+    }
+    return this.cachedBuilderPendingPayments;
+  }
+
+  get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder withdrawals are not supported before Gloas");
+    }
+
+    if (this.cachedBuilderPendingWithdrawals === null) {
+      this.cachedBuilderPendingWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).builderPendingWithdrawals.toValue();
+    }
+    return this.cachedBuilderPendingWithdrawals;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {

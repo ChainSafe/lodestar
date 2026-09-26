@@ -15,6 +15,9 @@ const balance = 32e9;
 const reward = 32e9;
 const pubkeyHex = toHex(Buffer.alloc(48, 1));
 const versionedHash = ssz.deneb.VersionedHash.defaultValue();
+const builderPendingWithdrawal = {feeRecipient: new Uint8Array(20).fill(1), amount: balance, builderIndex: 32};
+const builderPendingPayments = ssz.gloas.BuilderPendingPayments.defaultValue();
+builderPendingPayments[0] = {weight: balance, withdrawal: builderPendingWithdrawal, proposerIndex: 1};
 
 const blockHeaderResponse: BlockHeaderResponse = {
   root,
@@ -267,6 +270,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: ssz.fulu.ProposerLookahead.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: builderPendingPayments,
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [builderPendingWithdrawal],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
 
