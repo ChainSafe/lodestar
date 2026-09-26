@@ -68,8 +68,7 @@ export class NativeNetworkCore implements INetworkCore {
       clock.currentSlot,
       initialStatus,
       initialCustodyGroupCount,
-      activeValidatorCount,
-      clock.genesisTime
+      activeValidatorCount
     );
     const core = new NativeNetworkCore({
       ...modules,
