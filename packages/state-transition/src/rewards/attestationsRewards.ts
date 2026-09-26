@@ -122,9 +122,8 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
     ) {
       const baseReward = effectiveBalanceByIncrement * baseRewardPerIncrement;
       const rewardNumerator = baseReward * weight * unslashedStakeByIncrement;
-      // Both idealReward and penalty are rounded to nearest integer. Loss of precision is minimal as unit is gwei
-      const idealReward = Math.round(rewardNumerator / activeBalanceByIncrement / WEIGHT_DENOMINATOR);
-      const penalty = Math.round((baseReward * weight) / WEIGHT_DENOMINATOR); // Positive number indicates penalty
+      const idealReward = Math.floor(rewardNumerator / (activeBalanceByIncrement * WEIGHT_DENOMINATOR));
+      const penalty = Math.floor((baseReward * weight) / WEIGHT_DENOMINATOR); // Positive number indicates penalty
 
       const idealAttestationsReward = idealRewards[effectiveBalanceByIncrement];
       idealAttestationsReward[flagName] = isInInactivityLeak(state) ? 0 : idealReward; // No attestations rewards during inactivity leak
