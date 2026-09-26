@@ -1,5 +1,3 @@
-import {ServingOptions} from "../../reqresp/serving/policy.js";
-
 export type NativeBackendOptions = {
   profile?: "small" | "beaconNode";
   nativeBudgetBytes?: number;
@@ -7,7 +5,6 @@ export type NativeBackendOptions = {
   receiveBudgetBytes?: number;
   hostGossipItems?: number;
   hostGossipBytes?: number;
-  serving?: ServingOptions;
   discovery?: {
     /** Persisted address hints, captured before CLI defaults and locality cleanup. */
     initialEnr?: string;

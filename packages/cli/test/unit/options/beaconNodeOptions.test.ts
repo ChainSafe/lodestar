@@ -227,10 +227,6 @@ describe("options / beaconNodeOptions", () => {
 describe("options / network / tcp and quic flags", () => {
   it("keeps stock default and selects native explicitly", () => {
     expect(parseNetworkArgs({}).backend).toBe("libp2p");
-    expect(parseNetworkArgs({"network.boundedServing": true})).toMatchObject({
-      backend: "libp2p",
-      native: {serving: {}},
-    });
     expect(parseNetworkArgs({"network.backend": "native", tcp: false, listenAddress: "127.0.0.1"})).toMatchObject({
       backend: "native",
       localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1"],

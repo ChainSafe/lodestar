@@ -11,7 +11,6 @@ export const defaultQuicPort = 9001;
 
 export type NetworkArgs = {
   "network.backend"?: "libp2p" | "native";
-  "network.boundedServing"?: boolean;
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -186,7 +185,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
     backend: args["network.backend"] ?? defaultOptions.network.backend,
-    ...(args["network.boundedServing"] ? {native: {serving: {}}} : {}),
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -213,13 +211,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
-  "network.boundedServing": {
-    type: "boolean",
-    hidden: true,
-    group: "network",
-    description:
-      "Enable bounded request serving on libp2p for matched native-backend runs. Native always uses bounded serving.",
-  },
   "network.backend": {
     type: "string",
     choices: ["libp2p", "native"],

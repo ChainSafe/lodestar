@@ -202,7 +202,7 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
-    const boundedServing = opts.network.backend === "native" || opts.network.native?.serving;
+    const boundedServing = opts.network.backend === "native";
     // Before anything prunes or writes: a missing writer canary means a build without the certification ran
     const unverified = await db.blockCertification.load();
     if (boundedServing && unverified !== null) {
@@ -314,8 +314,7 @@ export class BeaconNode {
                 config,
                 db,
                 opts.network.native?.profile === "small" ? 6 : 32,
-                chain.clock.currentSlot,
-                opts.network.native?.serving
+                chain.clock.currentSlot
               )
             )
           )
