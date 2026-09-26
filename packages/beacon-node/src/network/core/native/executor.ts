@@ -64,7 +64,12 @@ export class NativeGossipExecutor {
     return chain.blsThreadPoolCanAcceptWork() && chain.regenCanAcceptWork();
   }
 
-  async execute(messages: PendingGossipsubMessage[], grouped: boolean): Promise<TopicValidatorResult[]> {
+  /** Validates one job. Its handlers' deferred work waits for `reported`: the owner's disposition of the verdicts. */
+  async execute(
+    messages: PendingGossipsubMessage[],
+    grouped: boolean,
+    reported: Promise<void>
+  ): Promise<TopicValidatorResult[]> {
     if (this.stopped || messages.length === 0) return messages.map(() => TopicValidatorResult.Ignore);
     const start = Date.now() / 1000;
     const infos: GossipMessageInfo[] = messages.map((message) => {
@@ -82,8 +87,8 @@ export class NativeGossipExecutor {
         resource: "native gossip validator job",
       });
     return infos[0].topic.type === GossipType.beacon_attestation
-      ? this.validateBatch(infos)
-      : [await this.validate(infos[0])];
+      ? this.validateBatch(infos, reported)
+      : [await this.validate(infos[0], reported)];
   }
 
   observe(messages: PendingGossipsubMessage[], results: TopicValidatorResult[]): void {

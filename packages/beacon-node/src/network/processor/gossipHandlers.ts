@@ -87,6 +87,7 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -121,6 +122,16 @@ export type ValidatorFnsModules = {
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
+
+/**
+ * Runs a handler's work in the next event loop after the network has processed the validation result, so an accepted
+ * message is forwarded first: at once where the result was reported synchronously, else once `reported` resolves.
+ * Work whose network closed first never runs.
+ */
+function callAfterValidation(reported: Promise<void> | undefined, callback: () => void): void {
+  if (reported === undefined) callInNextEventLoop(callback);
+  else reported.then(() => callInNextEventLoop(callback)).catch(() => {});
+}
 
 /**
  * Gossip handlers perform validation + handling in a single function.
@@ -706,19 +717,28 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   return {
-    [GossipType.beacon_block]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
+    [GossipType.beacon_block]: async (
+      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.beacon_block>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
       try {
         const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
-        chain.serializedCache.set(signedBlock, serializedData);
-        handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        // Handler - deferred to next event loop so the validation result propagates first
+        callAfterValidation(reported, () => {
+          try {
+            chain.serializedCache.set(signedBlock, serializedData);
+            handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+          } catch (e) {
+            logger.debug(
+              "Error handling gossip block",
+              {slot: signedBlock.message.slot, root: blockInput.blockRootHex},
+              e as Error
+            );
+          }
+        });
       } catch (e) {
         // Spec: IGNORE the block, ie not to re-publish to peers
         // but we should still import an equivocating (REPEAT_PROPOSAL) block into fork choice because we don't
@@ -732,6 +752,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // blockInput was optimistically seeded in validateBeaconBlock and retained on IGNORE
           const blockInput = chain.seenBlockInputCache.get(e.type.root);
           if (blockInput) {
+            // We're returning IGNORE (thrown below), so this block is not forwarded to peers. Unlike the
+            // happy path there is no rush to forward, so we don't need to wrap in callAfterValidation.
             chain.serializedCache.set(signedBlock, serializedData);
             // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
             // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
@@ -743,12 +765,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
     },
 
-    [GossipType.blob_sidecar]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
+    [GossipType.blob_sidecar]: async (
+      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.blob_sidecar>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const blobSidecar = sszDeserialize(topic, serializedData);
       const blobSlot = blobSidecar.signedBlockHeader.message.slot;
@@ -758,37 +778,46 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
-      chain.serializedCache.set(blobSidecar, serializedData);
-      if (!blockInput.hasBlockAndAllData()) {
-        const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-        chain.logger.debug("Received gossip blob, waiting for full data availability", {
-          msToWait: cutoffTimeMs,
-          blobIndex: index,
-          ...blockInput.getLogMeta(),
-        });
-        blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
-          chain.logger.debug(
-            "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
-            {
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.serializedCache.set(blobSidecar, serializedData);
+          if (!blockInput.hasBlockAndAllData()) {
+            const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+            chain.logger.debug("Received gossip blob, waiting for full data availability", {
+              msToWait: cutoffTimeMs,
               blobIndex: index,
               ...blockInput.getLogMeta(),
-            }
+            });
+            blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
+              chain.logger.debug(
+                "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
+                {
+                  blobIndex: index,
+                  ...blockInput.getLogMeta(),
+                }
+              );
+              chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+                blockInput,
+                peer: peerIdStr,
+                source: BlockInputSource.gossip,
+              });
+            });
+          }
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip blob",
+            {slot: blobSlot, root: blockInput.blockRootHex, index},
+            e as Error
           );
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
-            blockInput,
-            peer: peerIdStr,
-            source: BlockInputSource.gossip,
-          });
-        });
-      }
+        }
+      });
     },
 
-    [GossipType.data_column_sidecar]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
+    [GossipType.data_column_sidecar]: async (
+      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.data_column_sidecar>,
+      reported?: Promise<void>
+    ) => {
       const {fork} = topic.boundary;
       const {serializedData} = gossipData;
       const dataColumnSidecar = sszDeserialize(topic, serializedData);
@@ -813,58 +842,69 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           peerIdStr,
           seenTimestampSec
         );
-        chain.serializedCache.set(dataColumnSidecar, serializedData);
+        // Handler - deferred to next event loop so the validation result propagates first
+        callAfterValidation(reported, () => {
+          try {
+            chain.serializedCache.set(dataColumnSidecar, serializedData);
 
-        const payloadInputMeta = payloadInput.getLogMeta();
-        const {receivedColumns} = payloadInputMeta;
-        // it's not helpful to track every single column received
-        // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
-        switch (receivedColumns) {
-          case 1:
-          case config.SAMPLES_PER_SLOT:
-          case 2 * config.SAMPLES_PER_SLOT:
-          case NUMBER_OF_COLUMNS / 4:
-          case NUMBER_OF_COLUMNS / 2:
-          case NUMBER_OF_COLUMNS:
-            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
-            break;
-        }
+            const payloadInputMeta = payloadInput.getLogMeta();
+            const {receivedColumns} = payloadInputMeta;
+            // it's not helpful to track every single column received
+            // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+            switch (receivedColumns) {
+              case 1:
+              case config.SAMPLES_PER_SLOT:
+              case 2 * config.SAMPLES_PER_SLOT:
+              case NUMBER_OF_COLUMNS / 4:
+              case NUMBER_OF_COLUMNS / 2:
+              case NUMBER_OF_COLUMNS:
+                metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+                break;
+            }
 
-        if (!payloadInput.hasComputedAllData()) {
-          // if we've received at least half of the columns, trigger reconstruction of the rest
-          if (receivedColumns >= NUMBER_OF_COLUMNS / 2) {
-            chain.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
-          }
+            if (!payloadInput.hasComputedAllData()) {
+              // if we've received at least half of the columns, trigger reconstruction of the rest
+              if (receivedColumns >= NUMBER_OF_COLUMNS / 2) {
+                chain.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
+              }
 
-          chain.logger.debug("Received gossip data column, payload envelope input not yet complete", {
-            dataColumnIndex: index,
-            ...payloadInputMeta,
-          });
-        }
-
-        // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
-        // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
-        // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
-
-        if (!payloadInput.isComplete()) {
-          const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-          // do not await here to not delay gossip validation
-          payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
-            chain.logger.debug(
-              "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
-              {
+              chain.logger.debug("Received gossip data column, payload envelope input not yet complete", {
                 dataColumnIndex: index,
                 ...payloadInputMeta,
-              }
+              });
+            }
+
+            // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
+            // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+            // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
+
+            if (!payloadInput.isComplete()) {
+              const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+              // do not await here to not delay gossip validation
+              payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
+                chain.logger.debug(
+                  "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
+                  {
+                    dataColumnIndex: index,
+                    ...payloadInputMeta,
+                  }
+                );
+                // TODO GLOAS: UnknownBlockSync to handle this event
+                chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+                  payloadInput,
+                  peer: peerIdStr,
+                  source: BlockInputSource.gossip,
+                });
+              });
+            }
+          } catch (e) {
+            logger.debug(
+              "Error handling gossip data column",
+              {slot: dataColumnSlot, root: payloadInput.blockRootHex, index},
+              e as Error
             );
-            // TODO GLOAS: UnknownBlockSync to handle this event
-            chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
-              payloadInput,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          });
-        }
+          }
+        });
       } else {
         if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
           throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
@@ -887,62 +927,72 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           peerIdStr,
           seenTimestampSec
         );
-        chain.serializedCache.set(dataColumnSidecar, serializedData);
-        const blockInputMeta = blockInput.getLogMeta();
-        const {receivedColumns} = blockInputMeta;
-        // it's not helpful to track every single column received
-        // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
-        switch (receivedColumns) {
-          case 1:
-          case config.SAMPLES_PER_SLOT:
-          case 2 * config.SAMPLES_PER_SLOT:
-          case NUMBER_OF_COLUMNS / 4:
-          case NUMBER_OF_COLUMNS / 2:
-          case NUMBER_OF_COLUMNS:
-            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
-            break;
-        }
+        // Handler - deferred to next event loop so the validation result propagates first
+        callAfterValidation(reported, () => {
+          try {
+            chain.serializedCache.set(dataColumnSidecar, serializedData);
+            const blockInputMeta = blockInput.getLogMeta();
+            const {receivedColumns} = blockInputMeta;
+            // it's not helpful to track every single column received
+            // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+            switch (receivedColumns) {
+              case 1:
+              case config.SAMPLES_PER_SLOT:
+              case 2 * config.SAMPLES_PER_SLOT:
+              case NUMBER_OF_COLUMNS / 4:
+              case NUMBER_OF_COLUMNS / 2:
+              case NUMBER_OF_COLUMNS:
+                metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+                break;
+            }
 
-        if (!blockInput.hasComputedAllData()) {
-          // immediately attempt fetch of data columns from execution engine
-          chain.getBlobsTracker.triggerGetBlobs(blockInput);
-          // if we've received at least half of the columns, trigger reconstruction of the rest
-          if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-            chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
-          }
-        }
+            if (!blockInput.hasComputedAllData()) {
+              // immediately attempt fetch of data columns from execution engine
+              chain.getBlobsTracker.triggerGetBlobs(blockInput);
+              // if we've received at least half of the columns, trigger reconstruction of the rest
+              if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+                chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+              }
+            }
 
-        if (!blockInput.hasBlockAndAllData()) {
-          const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-          chain.logger.debug("Received gossip data column, waiting for full data availability", {
-            msToWait: cutoffTimeMs,
-            dataColumnIndex: index,
-            ...blockInputMeta,
-          });
-          // do not await here to not delay gossip validation
-          blockInput.waitForBlockAndAllData(cutoffTimeMs).catch((_e) => {
-            chain.logger.debug(
-              "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
-              {
+            if (!blockInput.hasBlockAndAllData()) {
+              const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+              chain.logger.debug("Received gossip data column, waiting for full data availability", {
+                msToWait: cutoffTimeMs,
                 dataColumnIndex: index,
                 ...blockInputMeta,
-              }
+              });
+              // do not await here to not delay gossip validation
+              blockInput.waitForBlockAndAllData(cutoffTimeMs).catch((_e) => {
+                chain.logger.debug(
+                  "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
+                  {
+                    dataColumnIndex: index,
+                    ...blockInputMeta,
+                  }
+                );
+                chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+                  blockInput,
+                  peer: peerIdStr,
+                  source: BlockInputSource.gossip,
+                });
+              });
+            }
+          } catch (e) {
+            logger.debug(
+              "Error handling gossip data column",
+              {slot: dataColumnSlot, root: blockInput.blockRootHex, index},
+              e as Error
             );
-            chain.emitter.emit(ChainEvent.incompleteBlockInput, {
-              blockInput,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          });
-        }
+          }
+        });
       }
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async ({
-      gossipData,
-      topic,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>) => {
+    [GossipType.beacon_aggregate_and_proof]: async (
+      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
@@ -961,98 +1011,121 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      // Handler
+      // Handler - deferred to next event loop so the validation result propagates first
       const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = validationResult;
-      chain.validatorMonitor?.registerGossipAggregatedAttestation(
-        seenTimestampSec,
-        signedAggregateAndProof,
-        indexedAttestation
-      );
-      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
-
-      const insertOutcome = chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        attDataRootHex,
-        indexedAttestation.attestingIndices.length,
-        committeeValidatorIndices
-      );
-      metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
+      callAfterValidation(reported, () => {
         try {
-          chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+          chain.validatorMonitor?.registerGossipAggregatedAttestation(
+            seenTimestampSec,
+            signedAggregateAndProof,
+            indexedAttestation
+          );
+          const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
+
+          const insertOutcome = chain.aggregatedAttestationPool.add(
+            aggregatedAttestation,
+            attDataRootHex,
+            indexedAttestation.attestingIndices.length,
+            committeeValidatorIndices
+          );
+          metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+
+          if (!options.dontSendGossipAttestationsToForkchoice) {
+            chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+          }
+
+          chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
         } catch (e) {
           logger.debug(
-            "Error adding gossip aggregated attestation to forkchoice",
-            {slot: aggregatedAttestation.data.slot},
+            "Error handling gossip aggregate and proof",
+            {
+              slot: signedAggregateAndProof.message.aggregate.data.slot,
+              root: toRootHex(signedAggregateAndProof.message.aggregate.data.beaconBlockRoot),
+            },
             e as Error
           );
         }
-      }
-
-      chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
+      });
     },
 
-    [GossipType.attester_slashing]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
+    [GossipType.attester_slashing]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.attester_slashing>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
-      // Handler
-
-      try {
-        chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
-        chain.forkChoice.onAttesterSlashing(attesterSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
-
-      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+          chain.forkChoice.onAttesterSlashing(attesterSlashing);
+          chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip attester slashing",
+            {slot: attesterSlashing.attestation1.data.slot},
+            e as Error
+          );
+        }
+      });
     },
 
-    [GossipType.proposer_slashing]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
+    [GossipType.proposer_slashing]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.proposer_slashing>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
-      // Handler
-
-      try {
-        chain.opPool.insertProposerSlashing(proposerSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
-
-      chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.opPool.insertProposerSlashing(proposerSlashing);
+          chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip proposer slashing",
+            {
+              slot: proposerSlashing.signedHeader1.message.slot,
+              proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex,
+            },
+            e as Error
+          );
+        }
+      });
     },
 
-    [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+    [GossipType.voluntary_exit]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const voluntaryExit = sszDeserialize(topic, serializedData);
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
-      // Handler
-
-      try {
-        chain.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
-
-      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.opPool.insertVoluntaryExit(voluntaryExit);
+          chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip voluntary exit",
+            {epoch: voluntaryExit.message.epoch, validatorIndex: voluntaryExit.message.validatorIndex},
+            e as Error
+          );
+        }
+      });
     },
 
-    [GossipType.sync_committee_contribution_and_proof]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>) => {
+    [GossipType.sync_committee_contribution_and_proof]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const contributionAndProof = sszDeserialize(topic, serializedData);
       const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
@@ -1065,25 +1138,36 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       });
 
-      // Handler
-      chain.validatorMonitor?.registerGossipSyncContributionAndProof(
-        contributionAndProof.message,
-        syncCommitteeParticipantIndices
-      );
-      try {
-        const insertOutcome = chain.syncContributionAndProofPool.add(
-          contributionAndProof.message,
-          syncCommitteeParticipantIndices.length
-        );
-        metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
-      }
-
-      chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.validatorMonitor?.registerGossipSyncContributionAndProof(
+            contributionAndProof.message,
+            syncCommitteeParticipantIndices
+          );
+          const insertOutcome = chain.syncContributionAndProofPool.add(
+            contributionAndProof.message,
+            syncCommitteeParticipantIndices.length
+          );
+          metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
+          chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip contribution and proof",
+            {
+              slot: contributionAndProof.message.contribution.slot,
+              subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
+            },
+            e as Error
+          );
+        }
+      });
     },
 
-    [GossipType.sync_committee]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>) => {
+    [GossipType.sync_committee]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const syncCommittee = sszDeserialize(topic, serializedData);
       const {subnet} = topic;
@@ -1097,15 +1181,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      // Handler — add for ALL positions this validator holds in the subcommittee
-      try {
-        for (const indexInSubcommittee of indicesInSubcommittee) {
-          const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-          metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+      // Handler - deferred to next event loop so the validation result propagates first
+      // add for ALL positions this validator holds in the subcommittee
+      callAfterValidation(reported, () => {
+        try {
+          for (const indexInSubcommittee of indicesInSubcommittee) {
+            const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+            metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+          }
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip sync committee",
+            {slot: syncCommittee.slot, subnet, validatorIndex: syncCommittee.validatorIndex},
+            e as Error
+          );
         }
-      } catch (e) {
-        logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
+      });
     },
 
     [GossipType.light_client_finality_update]: async ({
@@ -1127,29 +1218,32 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
+    [GossipType.bls_to_execution_change]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
 
-      // Handler
-      try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
-
-      chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+          chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip bls to execution change",
+            {validatorIndex: blsToExecutionChange.message.validatorIndex},
+            e as Error
+          );
+        }
+      });
     },
-    [GossipType.execution_payload]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
+    [GossipType.execution_payload]: async (
+      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.execution_payload>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
@@ -1203,133 +1297,178 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
-      chain.serializedCache.set(signedEnvelope, serializedData);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.serializedCache.set(signedEnvelope, serializedData);
 
-      payloadInput.addPayloadEnvelope({
-        envelope: signedEnvelope,
-        source: PayloadEnvelopeInputSource.gossip,
-        seenTimestampSec,
-        peerIdStr,
-      });
+          payloadInput.addPayloadEnvelope({
+            envelope: signedEnvelope,
+            source: PayloadEnvelopeInputSource.gossip,
+            seenTimestampSec,
+            peerIdStr,
+          });
 
-      chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
-        slot,
-        builderIndex: envelope.builderIndex,
-        blockHash: toRootHex(envelope.payload.blockHash),
-        blockRoot: blockRootHex,
-      });
+          chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
+            slot,
+            builderIndex: envelope.builderIndex,
+            blockHash: toRootHex(envelope.payload.blockHash),
+            blockRoot: blockRootHex,
+          });
 
-      chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-        // Adjust verbosity based on error type
-        let logLevel: LogLevel;
+          chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+            // Adjust verbosity based on error type
+            let logLevel: LogLevel;
 
-        if (e instanceof PayloadError) {
-          switch (e.type.code) {
-            // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
-            // already verified the block is in fork choice
-            case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
-            case PayloadErrorCode.MISS_BLOCK_STATE:
-            case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
-              // Errors might indicate an issue with our node or the connected EL client
+            if (e instanceof PayloadError) {
+              switch (e.type.code) {
+                // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
+                // already verified the block is in fork choice
+                case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
+                case PayloadErrorCode.MISS_BLOCK_STATE:
+                case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
+                  // Errors might indicate an issue with our node or the connected EL client
+                  logLevel = LogLevel.error;
+                  break;
+                // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+                case PayloadErrorCode.INVALID_SIGNATURE:
+                case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+                case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+                  core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  // Misbehaving peer, but could highlight an issue in another client
+                  logLevel = LogLevel.warn;
+                  break;
+              }
+            } else {
+              // Any unexpected error
               logLevel = LogLevel.error;
-              break;
-            // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
-            case PayloadErrorCode.INVALID_SIGNATURE:
-            case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
-            case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
-              // Misbehaving peer, but could highlight an issue in another client
-              logLevel = LogLevel.warn;
-              break;
-          }
-        } else {
-          // Any unexpected error
-          logLevel = LogLevel.error;
+            }
+            metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
+              error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
+            });
+            chain.logger[logLevel](
+              "Error processing execution payload from gossip",
+              {slot, root: blockRootHex, peer: peerIdStr},
+              e as Error
+            );
+          });
+        } catch (e) {
+          logger.debug("Error handling gossip execution payload", {slot, root: blockRootHex}, e as Error);
         }
-        metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
-          error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
-        });
-        chain.logger[logLevel](
-          "Error processing execution payload from gossip",
-          {slot, peer: peerIdStr, root: blockRootHex},
-          e as Error
-        );
       });
     },
-    [GossipType.payload_attestation_message]: async ({
-      gossipData,
-      topic,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
+    [GossipType.payload_attestation_message]: async (
+      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.payload_attestation_message>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
       const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
 
-      const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
-      metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
+          metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
-      try {
-        const insertOutcome = chain.payloadAttestationPool.add(
-          payloadAttestationMessage,
-          validationResult.attDataRootHex,
-          validationResult.validatorCommitteeIndices
-        );
-        metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to payloadAttestation pool", {}, e as Error);
-      }
-      chain.forkChoice.notifyPtcMessages(
-        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-        payloadAttestationMessage.data.slot,
-        validationResult.validatorCommitteeIndices,
-        payloadAttestationMessage.data.payloadPresent,
-        payloadAttestationMessage.data.blobDataAvailable
-      );
+          try {
+            const insertOutcome = chain.payloadAttestationPool.add(
+              payloadAttestationMessage,
+              validationResult.attDataRootHex,
+              validationResult.validatorCommitteeIndices
+            );
+            metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+          } catch (e) {
+            logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+          }
+          chain.forkChoice.notifyPtcMessages(
+            toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+            payloadAttestationMessage.data.slot,
+            validationResult.validatorCommitteeIndices,
+            payloadAttestationMessage.data.payloadPresent,
+            payloadAttestationMessage.data.blobDataAvailable
+          );
 
-      chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
-        version: config.getForkName(payloadAttestationMessage.data.slot),
-        data: payloadAttestationMessage,
+          chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+            version: config.getForkName(payloadAttestationMessage.data.slot),
+            data: payloadAttestationMessage,
+          });
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip payload attestation message",
+            {
+              slot: payloadAttestationMessage.data.slot,
+              root: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+            },
+            e as Error
+          );
+        }
       });
     },
-    [GossipType.execution_payload_bid]: async ({
-      gossipData,
-      topic,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
+    [GossipType.execution_payload_bid]: async (
+      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.execution_payload_bid>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
-      // this could be negative, because it's most likely the bid of next slot comes at this clock slot
-      const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
-      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.gossip}, elapsedSec);
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          // this could be negative, because it's most likely the bid of next slot comes at this clock slot
+          const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
+          metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.gossip}, elapsedSec);
 
-      // Handle valid payload bid by storing in a bid pool
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid, Math.floor(elapsedSec * 1000));
-        metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
+          // Handle valid payload bid by storing in a bid pool
+          const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid, Math.floor(elapsedSec * 1000));
+          metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
 
-      chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
+          chain.validatorMonitor?.registerExecutionPayloadBid(
+            OpSource.gossip,
+            proposerIndex,
+            executionPayloadBid.message
+          );
 
-      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
-        version: config.getForkName(executionPayloadBid.message.slot),
-        data: executionPayloadBid,
+          chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+            version: config.getForkName(executionPayloadBid.message.slot),
+            data: executionPayloadBid,
+          });
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip execution payload bid",
+            {
+              slot: executionPayloadBid.message.slot,
+              root: toRootHex(executionPayloadBid.message.parentBlockRoot),
+              proposerIndex,
+            },
+            e as Error
+          );
+        }
       });
     },
-    [GossipType.proposer_preferences]: async ({
-      gossipData,
-      topic,
-    }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
+    [GossipType.proposer_preferences]: async (
+      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.proposer_preferences>,
+      reported?: Promise<void>
+    ) => {
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
 
-      chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-        version: config.getForkName(signedProposerPreferences.message.proposalSlot),
-        data: signedProposerPreferences,
+      // Handler - deferred to next event loop so the validation result propagates first
+      callAfterValidation(reported, () => {
+        try {
+          chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+            version: config.getForkName(signedProposerPreferences.message.proposalSlot),
+            data: signedProposerPreferences,
+          });
+        } catch (e) {
+          logger.debug(
+            "Error handling gossip proposer preferences",
+            {proposalSlot: signedProposerPreferences.message.proposalSlot},
+            e as Error
+          );
+        }
       });
     },
   };
@@ -1342,7 +1481,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
   const {chain, metrics, logger, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (
-      gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
+      gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[],
+      reported?: Promise<void>
     ): Promise<(null | AttestationError)[]> => {
       const results: (null | AttestationError)[] = [];
       const attestationCount = gossipHandlerParams.length;
@@ -1363,69 +1503,9 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         chain,
         validationParams
       );
-      for (const [i, validationResult] of validationResults.entries()) {
-        if (validationResult.err) {
-          results.push(validationResult.err as AttestationError);
-          continue;
-        }
-        // null means no error
-        results.push(null);
-
-        // Handler
-        const {
-          indexedAttestation,
-          attDataRootHex,
-          attestation,
-          committeeIndex,
-          validatorCommitteeIndex,
-          committeeSize,
-        } = validationResult.result;
-        chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
-          gossipHandlerParams[i].seenTimestampSec,
-          indexedAttestation
-        );
-
-        const {subnet} = validationResult.result;
-        try {
-          // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-          // but don't add to attestation pool, to save CPU and RAM
-          if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-            const insertOutcome = chain.attestationPool.add(
-              committeeIndex,
-              attestation,
-              attDataRootHex,
-              validatorCommitteeIndex,
-              committeeSize
-            );
-            metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
-          }
-        } catch (e) {
-          logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-        }
-
-        if (!options.dontSendGossipAttestationsToForkchoice) {
-          try {
-            chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
-          } catch (e) {
-            logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
-          }
-        }
-
-        if (isForkPostElectra(fork)) {
-          chain.emitter.emit(
-            routes.events.EventType.singleAttestation,
-            attestation as SingleAttestation<ForkPostElectra>
-          );
-        } else {
-          chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
-          chain.emitter.emit(
-            routes.events.EventType.singleAttestation,
-            toElectraSingleAttestation(
-              attestation as SingleAttestation<ForkPreElectra>,
-              indexedAttestation.attestingIndices[0]
-            )
-          );
-        }
+      // verdicts computed synchronously and returned immediately
+      for (const validationResult of validationResults) {
+        results.push(validationResult.err ? (validationResult.err as AttestationError) : null);
       }
 
       if (batchableBls) {
@@ -1433,6 +1513,72 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       } else {
         metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }
+
+      // Handler - deferred to next event loop so the validation result propagates first.
+      callAfterValidation(reported, () => {
+        for (const [i, validationResult] of validationResults.entries()) {
+          if (validationResult.err) continue;
+          const {
+            indexedAttestation,
+            attDataRootHex,
+            attestation,
+            committeeIndex,
+            validatorCommitteeIndex,
+            committeeSize,
+            subnet,
+          } = validationResult.result;
+          try {
+            chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
+              gossipHandlerParams[i].seenTimestampSec,
+              indexedAttestation
+            );
+
+            try {
+              // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+              // but don't add to attestation pool, to save CPU and RAM
+              if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
+                const insertOutcome = chain.attestationPool.add(
+                  committeeIndex,
+                  attestation,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
+              }
+            } catch (e) {
+              logger.debug("Error adding gossip unaggregated attestation to pool", {subnet}, e as Error);
+            }
+
+            // Separate boundary: a pool insertion error above must not skip the fork-choice vote
+            if (!options.dontSendGossipAttestationsToForkchoice) {
+              try {
+                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+              } catch (e) {
+                logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+              }
+            }
+
+            if (isForkPostElectra(fork)) {
+              chain.emitter.emit(
+                routes.events.EventType.singleAttestation,
+                attestation as SingleAttestation<ForkPostElectra>
+              );
+            } else {
+              chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+              chain.emitter.emit(
+                routes.events.EventType.singleAttestation,
+                toElectraSingleAttestation(
+                  attestation as SingleAttestation<ForkPreElectra>,
+                  indexedAttestation.attestingIndices[0]
+                )
+              );
+            }
+          } catch (e) {
+            logger.debug("Error handling gossip attestation", {slot: indexedAttestation.data.slot, subnet}, e as Error);
+          }
+        }
+      });
 
       return results;
     },

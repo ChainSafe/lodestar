@@ -85,6 +85,9 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
   return {executor, chain, gossip, result, wake, single, batch};
 }
 
+/** The owner's disposition of a job's verdicts, which these tests never withhold. */
+const reported = Promise.resolve();
+
 function message(id: string, attestation = false): PendingGossipsubMessage {
   const boundary = {fork: ForkName.electra, epoch: 0};
   return {
@@ -107,7 +110,7 @@ describe("native gossip host execution", () => {
     const held = defer<void>();
     f.single.mockImplementation(() => held.promise);
     try {
-      const execution = f.executor.execute([message("held")], false);
+      const execution = f.executor.execute([message("held")], false, reported);
       const settled = vi.fn();
       void execution.then(settled);
       expect(f.single).toHaveBeenCalledOnce();
@@ -121,7 +124,9 @@ describe("native gossip host execution", () => {
       await expect(execution).resolves.toEqual([TopicValidatorResult.Accept]);
       expect(f.result).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledOnce();
-      await expect(f.executor.execute([message("stopped")], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      await expect(f.executor.execute([message("stopped")], false, reported)).resolves.toEqual([
+        TopicValidatorResult.Ignore,
+      ]);
       expect(f.single).toHaveBeenCalledOnce();
     } finally {
       held.resolve();
@@ -136,11 +141,11 @@ describe("native gossip host execution", () => {
         null,
         new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE}),
       ]);
-      expect(await f.executor.execute([message("accept", true), message("reject", true)], true)).toEqual([
+      expect(await f.executor.execute([message("accept", true), message("reject", true)], true, reported)).toEqual([
         TopicValidatorResult.Accept,
         TopicValidatorResult.Reject,
       ]);
-      await expect(f.executor.execute([message("unindexed", true)], false)).resolves.toEqual([
+      await expect(f.executor.execute([message("unindexed", true)], false, reported)).resolves.toEqual([
         TopicValidatorResult.Accept,
       ]);
       expect(f.batch).toHaveBeenCalledTimes(2);
@@ -161,7 +166,7 @@ describe("native gossip host execution", () => {
     f.single.mockImplementation(() => held.promise);
     try {
       const messages = [message("held")];
-      const execution = f.executor.execute(messages, false);
+      const execution = f.executor.execute(messages, false, reported);
       expect(submitted).toHaveBeenCalledWith(1);
       expect(observed).not.toHaveBeenCalled();
       held.resolve();
@@ -267,7 +272,7 @@ describe("native gossip host execution", () => {
     f.chain.emitter.on(ChainEvent.blockUnknownParent, recovery);
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
     try {
-      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Ignore]);
       expect(recovery).toHaveBeenCalledOnce();
       expect(recovery).toHaveBeenCalledWith(expect.objectContaining({blockInput, peer: "peer"}));
       expect(search).not.toHaveBeenCalled();
@@ -275,7 +280,7 @@ describe("native gossip host execution", () => {
       f.chain.forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
         root === blockInput.parentRootHex ? ({slot: 2} as ProtoBlock) : null
       );
-      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Reject]);
+      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Reject]);
       expect(recovery).toHaveBeenCalledOnce();
     } finally {
       f.executor.stop();
@@ -285,7 +290,7 @@ describe("native gossip host execution", () => {
   it("rejects a non-attestation job containing more than one message", async () => {
     const f = fixture();
     try {
-      await expect(f.executor.execute([message("first"), message("second")], false)).rejects.toThrow(
+      await expect(f.executor.execute([message("first"), message("second")], false, reported)).rejects.toThrow(
         "native gossip validator job"
       );
       expect(f.single).not.toHaveBeenCalled();

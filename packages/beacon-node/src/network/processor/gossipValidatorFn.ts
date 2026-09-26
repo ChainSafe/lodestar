@@ -29,7 +29,7 @@ export function getGossipValidatorBatchFn(
 ): GossipValidatorBatchFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
+  return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[], reported?: Promise<void>) {
     // all messageInfos have same topic type
     const type = messageInfos[0].topic.type;
     try {
@@ -43,7 +43,8 @@ export function getGossipValidatorBatchFn(
           topic: messageInfo.topic,
           peerIdStr: messageInfo.propagationSource,
           seenTimestampSec: messageInfo.seenTimestampSec,
-        }))
+        })),
+        reported
       );
 
       return results.map((e, i) => {
@@ -110,24 +111,22 @@ export function getGossipValidatorBatchFn(
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn({
-    topic,
-    msg,
-    propagationSource,
-    clientAgent,
-    clientVersion,
-    seenTimestampSec,
-    msgSlot,
-  }) {
+  return async function gossipValidatorFn(
+    {topic, msg, propagationSource, clientAgent, clientVersion, seenTimestampSec, msgSlot},
+    reported
+  ) {
     const type = topic.type;
 
     try {
-      await (gossipHandlers[type] as GossipHandlerFn)({
-        gossipData: {serializedData: msg.data, msgSlot},
-        topic,
-        peerIdStr: propagationSource,
-        seenTimestampSec,
-      });
+      await (gossipHandlers[type] as GossipHandlerFn)(
+        {
+          gossipData: {serializedData: msg.data, msgSlot},
+          topic,
+          peerIdStr: propagationSource,
+          seenTimestampSec,
+        },
+        reported
+      );
 
       metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
 

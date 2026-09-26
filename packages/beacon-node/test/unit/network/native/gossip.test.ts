@@ -89,8 +89,9 @@ describe("native gossip host", () => {
     const node = await fixture();
     const results = vi.fn();
     node.events.on(NetworkEvent.gossipMessageValidationResult, results);
-    const validated = node.gossip.validate(job([node.message(1), node.message(2), node.message(3)], true));
-    expect(node.processor.execute).toHaveBeenCalledExactlyOnceWith(node.pending, true);
+    const validating = job([node.message(1), node.message(2), node.message(3)], true);
+    const validated = node.gossip.validate(validating);
+    expect(node.processor.execute).toHaveBeenCalledExactlyOnceWith(node.pending, true, validating.reported);
     expect(node.pending[0]).toMatchObject({
       msgId: Buffer.from(node.message(1).id).toString("hex"),
       msgSlot: 7,
