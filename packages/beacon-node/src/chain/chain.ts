@@ -278,6 +278,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
+      isCheckpointState,
       executionEngine,
       executionBuilder,
       builderApiClientOpts,
@@ -297,6 +298,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor: ValidatorMonitor | null;
       anchorState: IBeaconStateView;
       isAnchorStateFinalized: boolean;
+      isCheckpointState: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
       builderApiClientOpts?: BuilderApiClientOpts;
@@ -514,6 +516,7 @@ export class BeaconChain implements IBeaconChain {
         dbName,
         dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
         anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint},
+        isCheckpointState,
       },
       signal
     );

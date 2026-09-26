@@ -157,6 +157,7 @@ const fastConfirmationTest =
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
+            isCheckpointState: false,
             executionEngine,
             executionBuilder: undefined,
           }

@@ -28,6 +28,7 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   dbName: string;
   dataColumnDir: string;
   anchorState: {finalizedCheckpoint: Checkpoint};
+  isCheckpointState: boolean;
 };
 
 export enum ArchiveStoreTask {
@@ -118,24 +119,27 @@ export class ArchiveStore {
       );
     }
 
-    // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
-    // above), rather than the anchor state slot set in the constructor. On an in-place restart the DB
-    // still holds finalized history below the anchor; leaving the value at the anchor makes the node
-    // reject by_range requests (beacon_blocks, execution_payload_envelopes and data_column_sidecars
-    // all gate on this slot) for data it still retains. An empty archive (e.g. a fresh checkpoint
-    // sync with nothing below the anchor) leaves the constructor's anchor slot in place.
-    const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
-    if (earliestArchivedBlockSlot != null) {
-      const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
-      this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
-      this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
-        oldEarliestAvailableSlot,
-        newEarliestAvailableSlot: earliestArchivedBlockSlot,
-      });
-    } else {
-      this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
+    // blockArchive.firstKey() is only a valid earliestAvailableSlot floor when the archive is
+    // contiguous up to the anchor. A checkpoint sync this startup can leave an unservable gap below
+    // the anchor (no backfill yet, #7997), so only lower to the retained floor when we did not.
+    if (this.opts.isCheckpointState) {
+      this.logger.verbose("Checkpoint-synced anchor, keeping earliestAvailableSlot at the anchor slot", {
         earliestAvailableSlot: this.chain.earliestAvailableSlot,
       });
+    } else {
+      const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
+      if (earliestArchivedBlockSlot != null) {
+        const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
+        this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
+        this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
+          oldEarliestAvailableSlot,
+          newEarliestAvailableSlot: earliestArchivedBlockSlot,
+        });
+      } else {
+        this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
+          earliestAvailableSlot: this.chain.earliestAvailableSlot,
+        });
+      }
     }
 
     if (this.opts.serveHistoricalState) {

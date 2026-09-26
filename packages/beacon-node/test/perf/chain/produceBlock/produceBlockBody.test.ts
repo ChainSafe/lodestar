@@ -69,6 +69,7 @@ describe("produceBlockBody", () => {
         validatorMonitor: null,
         anchorState: new BeaconStateView(state),
         isAnchorStateFinalized: true,
+        isCheckpointState: false,
         executionEngine,
       }
     );
