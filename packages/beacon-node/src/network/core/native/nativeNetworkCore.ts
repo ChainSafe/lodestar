@@ -33,7 +33,7 @@ const actions: Record<PeerAction, NativePeerAction> = {
   [PeerAction.HighToleranceError]: "high_tolerance",
 };
 
-/** The binding renders every native metric family. */
+/** The binding renders its metric families, and the adapter adds its serving reservation gauges. */
 type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry">;
 
 export class NativeNetworkCore implements INetworkCore {
