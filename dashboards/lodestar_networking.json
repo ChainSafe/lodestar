@@ -832,7 +832,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": true
@@ -1544,7 +1544,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -1745,7 +1745,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -1858,7 +1858,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -2107,17 +2107,6 @@
           "interval": "",
           "legendFormat": "upstream heartbeat average",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_native_peer_selection_seconds_sum[$rate_interval]) / rate(lodestar_native_peer_selection_seconds_count[$rate_interval])",
-          "interval": "",
-          "legendFormat": "native uncached selection average",
-          "refId": "B"
         }
       ],
       "title": "Peer manager work duration",
@@ -3933,7 +3922,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": true
@@ -5078,7 +5067,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": true
@@ -7535,28 +7524,6 @@
           "legendFormat": "upstream syncnets avg",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_native_peers_per_active_subnet_sum{type=\"attnets\"} / lodestar_native_peers_per_active_subnet_count{type=\"attnets\"}",
-          "legendFormat": "native attnets current average",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_native_peers_per_active_subnet_sum{type=\"syncnets\"} / lodestar_native_peers_per_active_subnet_count{type=\"syncnets\"}",
-          "legendFormat": "native syncnets current average",
-          "range": true,
-          "refId": "D"
         }
       ],
       "title": "Peers per active subnet",
@@ -7824,28 +7791,6 @@
       },
       "pluginVersion": "8.4.2",
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_native_peer_dials_requested",
-          "interval": "",
-          "legendFormat": "dials permitted",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_native_peer_disconnects_requested",
-          "interval": "",
-          "legendFormat": "disconnect {{reason}}",
-          "refId": "B"
-        },
         {
           "datasource": {
             "type": "prometheus",

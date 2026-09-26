@@ -4897,7 +4897,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -5846,7 +5846,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -6419,7 +6419,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1e-9
         },
         "legend": {
           "show": false
@@ -7806,17 +7806,6 @@
           "interval": "",
           "legendFormat": "upstream skips",
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_native_gossipsub_heartbeats_skipped_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "native ticks with unfinished cycle",
-          "refId": "C"
         }
       ],
       "title": "Gossipsub heartbeat runs / skips per second",
@@ -9444,111 +9433,6 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 364
-      },
-      "id": 511,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_native_gossip_maintenance_slice_seconds_sum[$rate_interval]) / rate(lodestar_native_gossip_maintenance_slice_seconds_count[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{phase}} average",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "histogram_quantile(0.99, sum by (le, phase) (rate(lodestar_native_gossip_maintenance_slice_seconds_bucket[$rate_interval])))",
-          "interval": "",
-          "legendFormat": "{{phase}} p99",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(lodestar_native_gossip_heartbeat_lateness_seconds_bucket[$rate_interval])))",
-          "interval": "",
-          "legendFormat": "heartbeat lateness p99",
-          "refId": "C"
-        }
-      ],
-      "title": "Native gossip maintenance slices and scheduling delay",
-      "type": "timeseries",
-      "description": "Continuous setup/topic slice elapsed time includes OS preemption, but excludes gaps between slices. Lateness measures the delay from a scheduled heartbeat deadline."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
         "y": 372
       },
       "id": 512,
@@ -9575,105 +9459,11 @@
           "interval": "",
           "legendFormat": "{{instance}} export age",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "time() - (lodestar_native_gossip_maintenance_completed_timestamp_seconds > 0)",
-          "interval": "",
-          "legendFormat": "{{instance}} last completed cycle age",
-          "refId": "B"
         }
       ],
-      "title": "Native gossip maintenance and export freshness",
+      "title": "Native metrics export freshness",
       "type": "timeseries",
       "description": "Ages use Prometheus time, so they continue growing if the network owner stalls. Completion age is absent until the first completed cycle; inspect the active-cycle panel during startup."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 380
-      },
-      "id": 513,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_native_gossip_maintenance_active",
-          "interval": "",
-          "legendFormat": "{{instance}} active",
-          "refId": "A"
-        }
-      ],
-      "title": "Native gossip maintenance active",
-      "type": "timeseries",
-      "description": "One means an unfinished maintenance cycle at the last export. Read together with export freshness."
     }
   ],
   "refresh": "10s",

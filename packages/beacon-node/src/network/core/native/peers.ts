@@ -85,7 +85,6 @@ function sameConnection(
 }
 
 export class NativePeers {
-  statusRefusals = 0n;
   private readonly peers = new Map<string, {state: NativePeerState; sequence: bigint; rejected?: true}>();
   private closed = false;
   constructor(
@@ -127,7 +126,6 @@ export class NativePeers {
         status = hostStatus(state.status);
       } catch (error) {
         if (!(error instanceof NativeNetworkError)) throw error;
-        if (this.statusRefusals < 0xffff_ffff_ffff_ffffn) this.statusRefusals++;
         this.peers.set(peer, {state: {...state, relevant: false}, sequence: event.ownerSequence, rejected: true});
         if (previous?.state.relevant) this.events.emit(NetworkEvent.peerDisconnected, {peer});
         try {

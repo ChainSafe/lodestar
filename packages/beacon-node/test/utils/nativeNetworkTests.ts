@@ -15,6 +15,7 @@ import {
   initializeNativeNetworkRuntime,
 } from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
@@ -251,7 +252,8 @@ describe("native Lodestar integration", () => {
       await node.network.connectToPeer(peerId, [`${nativeMultiaddr(peer.localEndpoint)}/p2p/${peerId}`]);
       await vi.waitFor(
         async () =>
-          expect(await node.network.scrapeMetrics()).toContain("lodestar_native_peer_status_range_refusals_total 1\n"),
+          // The host refused the Status and closed the peer
+          expect(await node.network.scrapeMetrics()).toContain('lodestar_native_peer_closes_total{reason="host"} 1\n'),
         {timeout: 5000}
       );
       await vi.waitFor(async () => expect((await remote.getPeers()).counts.connected).toBe(0), {timeout: 5000});
@@ -330,6 +332,8 @@ describe("native Lodestar integration", () => {
     "serves blocks and gossip with an IPv$family $backend peer from a dual-stack runtime",
     async ({backend, family}) => {
       const worker = vi.spyOn(WorkerNetworkCore, "init");
+      // Native log records reach Lodestar's logger with their native context
+      const debugLogs = vi.spyOn(Object.getPrototypeOf(testLogger()), "debug");
       const config = createBeaconConfig(
         {
           ALTAIR_FORK_EPOCH: 0,
@@ -440,15 +444,18 @@ describe("native Lodestar integration", () => {
               'beacon_reqresp_incoming_request_handler_time_seconds_count{method="beacon_blocks_by_root"} 1\n'
             );
             expect(metrics).toContain('gossipsub_rejected_messages_total{topic="proposer_slashing"} 1\n');
-            expect(metrics).toContain("lodestar_native_gossip_scored_peers 1\n");
+            // Gossipsub tracks the remote peer, whose score the dumps above read, on the topic it scored
+            expect(metrics).toMatch(
+              /gossipsub_topic_peer_count\{topicStr="\/eth2\/[0-9a-f]{8}\/proposer_slashing\/ssz_snappy"\} 1\n/
+            );
             expect(metrics).toMatch(/lodestar_native_quic_udp_sent_bytes_total [1-9]\d*\n/);
             expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
             expect(metrics).toContain("libp2p_peers 1\n");
-            expect(metrics).toMatch(
-              /lodestar_native_logs_emitted_total\{scope="network_reqresp",level="debug"\} [1-9]\d*\n/
-            );
-            expect(metrics).toContain("# TYPE lodestar_native_log_delivery_errors_total counter\n");
-            expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
+            expect(
+              debugLogs.mock.calls.some(
+                ([, context]) => (context as Record<string, unknown> | undefined)?.nativeScope === "network_reqresp"
+              )
+            ).toBe(true);
           },
           {timeout: 5000}
         );
@@ -456,6 +463,7 @@ describe("native Lodestar integration", () => {
       } finally {
         const results = await Promise.allSettled([left.close(), right?.close()]);
         worker.mockRestore();
+        debugLogs.mockRestore();
         expect(results.filter((result) => result.status === "rejected")).toEqual([]);
       }
     },

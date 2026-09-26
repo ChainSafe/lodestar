@@ -567,17 +567,6 @@
           "interval": "",
           "legendFormat": "upstream discovery",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum(lodestar_native_peer_dial_time_seconds_count{status=\"error\"}) / sum(lodestar_native_peer_dial_time_seconds_count)",
-          "interval": "",
-          "legendFormat": "native all origins",
-          "refId": "B"
         }
       ],
       "title": "Completed dial error fraction (cumulative)",
@@ -1195,17 +1184,6 @@
           "interval": "",
           "legendFormat": "upstream discovery {{status}}",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_native_peer_dial_time_seconds_sum[$rate_interval]) / rate(lodestar_native_peer_dial_time_seconds_count[$rate_interval])",
-          "interval": "",
-          "legendFormat": "native all origins {{status}}",
-          "refId": "B"
         }
       ],
       "title": "dial time seconds",
