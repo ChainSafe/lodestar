@@ -1,6 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   computeEpochAtSlot,
@@ -370,6 +375,28 @@ export function getBeaconStateApi({
           validators: validatorIndices,
           validatorAggregates,
         },
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getStatePtc({stateId, slot}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas state fork=${state.forkName}`);
+      }
+
+      const usedSlot = slot ?? state.slot;
+      const epoch = computeEpochAtSlot(usedSlot);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        throw new ApiError(400, "Cannot retrieve PTC for pre-gloas slot");
+      }
+      if (epoch < stateEpoch - 1 || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+        throw new ApiError(400, "Slot is outside the PTC window of the state");
+      }
+
+      return {
+        data: {slot: usedSlot, validators: Array.from(state.getPayloadTimelinessCommittee(usedSlot))},
         meta: {executionOptimistic, finalized},
       };
     },
