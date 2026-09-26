@@ -242,12 +242,14 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     const {root, milestones, error} = await verify(DispatchArm.treatment, {getBlobs: true});
     expect(error).toBeNull();
     expect(root.arm).toBe(DispatchArm.treatment);
-    expect(root.dispatchGate).toMatchObject({outcome: "both_sent", getBlobs: "pending"});
-    const {execution_dispatch, getblobs_dispatch, state_transition_start} = milestones;
-    expect(execution_dispatch).not.toBeNull();
-    expect(getblobs_dispatch).not.toBeNull();
-    expect(execution_dispatch).toBeLessThan(state_transition_start as number);
-    expect(getblobs_dispatch).toBeLessThan(state_transition_start as number);
+    expect(root.dispatchGate).toMatchObject({outcome: "both_sent", getBlobs: "pending", getBlobsTraced: true});
+    const {execution_first_sent, getblobs_first_sent, state_transition_start} = milestones;
+    expect(execution_first_sent).not.toBeNull();
+    expect(getblobs_first_sent).not.toBeNull();
+    expect(execution_first_sent).toBeLessThan(state_transition_start as number);
+    expect(getblobs_first_sent).toBeLessThan(state_transition_start as number);
+    expect(root.dispatchGate?.getBlobsFirstSentMs).toBe(getblobs_first_sent);
+    expect(milestones.execution_dispatch).toBe(execution_first_sent);
     expect(root.waits.dispatchGate?.endMs).toBeLessThanOrEqual(state_transition_start as number);
     expect(Number.isNaN(stfStart)).toBe(false);
   });
@@ -331,6 +333,6 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     expect(gate.ms).toBeGreaterThanOrEqual(gate.settledMs);
     expect(gate.ms).toBeLessThan(forkchoiceDelayMs / 2);
     // The state transition started without waiting for the queued request, which kept its order behind forkchoiceUpdated
-    expect(milestones.execution_dispatch).toBeGreaterThan((milestones.state_transition_start as number) + STF_MS);
+    expect(milestones.execution_first_sent).toBeGreaterThan((milestones.state_transition_start as number) + STF_MS);
   });
 });

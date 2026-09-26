@@ -232,9 +232,12 @@ describe("BlockTrace", () => {
     expect(t.trace.getBlobsRequest(slot, "0xaa", new HttpRequestTimes())).toBe(false);
     if (!execution) throw Error("Untraced request");
     t.at(1200);
-    Object.assign(execution, {sent: performance.now() - 150, received: performance.now() - 20});
+    // newPayload's first attempt sent at 1030 and a retry at 1050
+    Object.assign(execution, {firstSent: performance.now() - 170, sent: performance.now() - 150});
+    Object.assign(execution, {received: performance.now() - 20});
     attempt?.markUnixMs(BlockMilestone.executionDone, Date.now());
-    Object.assign(getBlobs, {sent: performance.now() - 110, received: performance.now() - 60});
+    Object.assign(getBlobs, {firstSent: performance.now() - 110, sent: performance.now() - 110});
+    Object.assign(getBlobs, {received: performance.now() - 60});
     t.trace.getBlobsResponse(slot, "0xaa", "full");
     t.at(1300);
     t.trace.mark(slot, "0xaa", BlockMilestone.getBlobsUsable);
@@ -242,10 +245,12 @@ describe("BlockTrace", () => {
     t.trace.getBlobsResponse(slot, "0xaa", "null");
 
     expect(t.milestones(slot)).toMatchObject({
+      execution_first_sent: 1030,
       execution_dispatch: 1050,
       execution_receipt: 1180,
       execution_done: 1200,
       getblobs_request: 1000,
+      getblobs_first_sent: 1090,
       getblobs_dispatch: 1090,
       getblobs_receipt: 1140,
       getblobs_response: 1200,
@@ -281,7 +286,7 @@ describe("BlockTrace", () => {
     attempt?.recordArm(DispatchArm.treatment);
     const execution = attempt?.executionRequest("0xaa");
     if (!execution) throw Error("Untraced request");
-    execution.sent = performance.now() + 10;
+    execution.firstSent = execution.sent = performance.now() + 10;
     t.at(1020);
     attempt?.mark(BlockMilestone.stateTransitionStart);
     t.at(1100);
@@ -295,7 +300,7 @@ describe("BlockTrace", () => {
     expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "imported", arm: "treatment"});
     expect(t.metrics.blocks.inc).toHaveBeenCalledWith({outcome: "not_imported", arm: "none"});
     expect(t.metrics.interval.observe).toHaveBeenCalledWith(
-      {interval: "state_transition_start_to_execution_dispatch", arm: "treatment"},
+      {interval: "state_transition_start_to_execution_first_sent", arm: "treatment"},
       -0.01
     );
     expect(t.metrics.interval.observe).toHaveBeenCalledWith(
@@ -317,10 +322,12 @@ describe("BlockTrace", () => {
     t.at(1002);
     t.trace.attestationBatchStart(null);
     t.at(1008);
-    attempt?.recordGate({outcome: "both_sent", getBlobs: "pending", start, settledMs: 3, ms: 8});
+    attempt?.recordGate({outcome: "new_payload_only", getBlobs: "none", start, settledMs: 3, ms: 8}, null);
     expect(t.slot(slot).roots[0].dispatchGate).toEqual({
-      outcome: "both_sent",
-      getBlobs: "pending",
+      outcome: "new_payload_only",
+      getBlobs: "none",
+      getBlobsFirstSentMs: null,
+      getBlobsTraced: null,
       settledMs: 3,
       ms: 8,
       pastDeadlineMs: 0,
@@ -329,6 +336,41 @@ describe("BlockTrace", () => {
 
     t.trace.startAttempt([block(slot, "0xaa")], performance.now());
     expect(t.slot(slot).roots[0]).toMatchObject({dispatchGate: null, waits: {dispatchGate: null}});
+  });
+
+  it("identifies the getBlobs call a gate observed apart from the first call the getblobs milestones describe", () => {
+    const slot = 100;
+    const t = setup(slot);
+    // The first call sent at 900 and finished; a second call was in progress when the gate ran
+    const first = new HttpRequestTimes();
+    t.at(890);
+    t.trace.getBlobsRequest(slot, "0xaa", first);
+    first.firstSent = first.sent = performance.now() + 10;
+    t.at(1000);
+    const attempt = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    const later = new HttpRequestTimes();
+    const gate = {outcome: "fell_back", getBlobs: "pending", start: performance.now(), settledMs: 10, ms: 12} as const;
+    t.at(1012);
+    attempt?.recordGate(gate, later);
+    t.at(1040);
+    later.firstSent = performance.now();
+    expect(t.slot(slot).roots[0].dispatchGate).toMatchObject({
+      getBlobsFirstSentMs: 1040,
+      getBlobsTraced: false,
+      pastDeadlineMs: 2,
+    });
+    expect(t.milestones(slot)).toMatchObject({getblobs_first_sent: 900, state_transition_start: null});
+
+    // A gate that observed the first call
+    t.at(1100);
+    const retried = t.trace.startAttempt([block(slot, "0xaa")], performance.now());
+    retried?.recordGate({...gate, start: performance.now()}, first);
+    expect(t.slot(slot).roots[0].dispatchGate).toMatchObject({getBlobsFirstSentMs: 900, getBlobsTraced: true});
+
+    // What the observed call reached by the slot's close stays, and nothing after
+    t.toSlot(slot + 2);
+    first.firstSent = performance.now();
+    expect(t.slot(slot).roots[0].dispatchGate).toMatchObject({getBlobsFirstSentMs: 900, getBlobsTraced: true});
   });
 
   it("keeps the stages an operation reached before its slot closed, and none after", () => {

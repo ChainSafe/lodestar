@@ -44,6 +44,11 @@ export enum BlockMilestone {
   /** Observed readiness: when the JS continuation ran, after an unknown worker callback delay */
   signaturesDone,
   /**
+   * The newPayload request's first attempt handed its body to the execution client connection, not confirmed delivered;
+   * a retry or a followed redirect never moves it
+   */
+  executionFirstSent,
+  /**
    * The newPayload request's body was handed to the execution client connection, not confirmed delivered. With retries
    * it is the latest attempt's, so the time before it can include earlier failures and backoff; unset when a redirect was
    * followed.
@@ -56,6 +61,8 @@ export enum BlockMilestone {
   /** When all sampled columns, or enough to reconstruct, first became available */
   dataAvailable,
   getBlobsRequest,
+  /** The first getBlobs call's first attempt handed its engine request body to the connection, as for newPayload */
+  getBlobsFirstSent,
   /** The first getBlobs call's engine request body was handed to the connection, with retries as for newPayload */
   getBlobsDispatch,
   /** Observed readiness: when the first getBlobs call's latest response headers reached JS */
@@ -121,8 +128,11 @@ export type BlockAttempt = {
   executionRequest(root: RootHex): HttpRequestTimes | undefined;
   /** Records every block's dispatch experiment arm, null when the attempt takes none */
   recordArm(arm: DispatchArm | null): void;
-  /** Records the treatment's wait before the state transition for every block, with the attestation work during it */
-  recordGate(result: DispatchGateResult): void;
+  /**
+   * Records the treatment's wait before the state transition for every block, with the attestation work during it and
+   * the getBlobs call in progress it observed, read like a signature job's
+   */
+  recordGate(result: DispatchGateResult, getBlobs: HttpRequestTimes | null): void;
   /** Records each block's signature return wait once its verification resolved, from its signature job's stages */
   recordSignatureReturn(): void;
 };
@@ -149,11 +159,13 @@ const MILESTONE_NAMES: Record<BlockMilestone, string> = {
   [BlockMilestone.signatureWorkerEnd]: "signature_worker_end",
   [BlockMilestone.signatureReceipt]: "signature_receipt",
   [BlockMilestone.signaturesDone]: "signatures_done",
+  [BlockMilestone.executionFirstSent]: "execution_first_sent",
   [BlockMilestone.executionDispatch]: "execution_dispatch",
   [BlockMilestone.executionReceipt]: "execution_receipt",
   [BlockMilestone.executionDone]: "execution_done",
   [BlockMilestone.dataAvailable]: "data_available",
   [BlockMilestone.getBlobsRequest]: "getblobs_request",
+  [BlockMilestone.getBlobsFirstSent]: "getblobs_first_sent",
   [BlockMilestone.getBlobsDispatch]: "getblobs_dispatch",
   [BlockMilestone.getBlobsReceipt]: "getblobs_receipt",
   [BlockMilestone.getBlobsResponse]: "getblobs_response",
@@ -198,6 +210,7 @@ const ATTEMPT_STAGES = [
   BlockMilestone.signatureWorkerStart,
   BlockMilestone.signatureWorkerEnd,
   BlockMilestone.signatureReceipt,
+  BlockMilestone.executionFirstSent,
   BlockMilestone.executionDispatch,
   BlockMilestone.executionReceipt,
 ];
@@ -229,11 +242,15 @@ const INTERVALS: [name: string, from: BlockMilestone, to: BlockMilestone][] = [
   ["prestate_ready_to_state_transition_start", BlockMilestone.prestateReady, BlockMilestone.stateTransitionStart],
   ["state_transition_start_to_end", BlockMilestone.stateTransitionStart, BlockMilestone.stateTransitionEnd],
   [
-    "state_transition_start_to_execution_dispatch",
+    "state_transition_start_to_execution_first_sent",
     BlockMilestone.stateTransitionStart,
-    BlockMilestone.executionDispatch,
+    BlockMilestone.executionFirstSent,
   ],
-  ["state_transition_start_to_getblobs_dispatch", BlockMilestone.stateTransitionStart, BlockMilestone.getBlobsDispatch],
+  [
+    "state_transition_start_to_getblobs_first_sent",
+    BlockMilestone.stateTransitionStart,
+    BlockMilestone.getBlobsFirstSent,
+  ],
 ];
 const GOSSIP_MILESTONES = [BlockMilestone.gossipValidationStart, BlockMilestone.gossipValidationEnd];
 const WAIT_COUNT = BlockWait.signatureReturn + 1;
@@ -329,6 +346,14 @@ export class BlockTrace {
   private readonly arms = new Uint8Array(ENTRIES);
   /** The latest attempt's treatment wait before the state transition */
   private readonly gates: (DispatchGateResult | null)[] = new Array<DispatchGateResult | null>(ENTRIES).fill(null);
+  /**
+   * The getBlobs call in progress that the latest attempt's gate observed, read like the other operations: its first
+   * attempt's send in ms from the slot start, and whether it is the first call the getblobs milestones describe, 1 if it
+   * is, 2 if not, 0 when not read
+   */
+  private readonly gateGetBlobs: (HttpRequestTimes | null)[] = new Array<HttpRequestTimes | null>(ENTRIES).fill(null);
+  private readonly gateGetBlobsFirstSent = new Float64Array(ENTRIES);
+  private readonly gateGetBlobsTraced = new Uint8Array(ENTRIES);
   /** The first getBlobs call's cell computation times, and its sidecar assembly's duration in ms */
   private readonly getBlobsCells: (CellComputeTimes | null)[] = new Array<CellComputeTimes | null>(ENTRIES).fill(null);
   private readonly getBlobsAssemblyMs = new Float64Array(ENTRIES);
@@ -468,7 +493,7 @@ export class BlockTrace {
       for (const m of ATTEMPT_STAGES) this.milestones[e * MILESTONE_COUNT + m] = NaN;
       this.signatureDispatchSets[e] = 0;
       this.arms[e] = 0;
-      this.gates[e] = null;
+      this.clearGate(e);
       this.signatureJobs[e] = null;
       this.executionRequests[e] = null;
       this.setMilestone(e, BlockMilestone.processorStart, now - this.slotStart[slotIndexOf(e)]);
@@ -527,11 +552,12 @@ export class BlockTrace {
           if (e >= 0) this.arms[e] = arm === null ? 0 : ARMS.indexOf(arm) + 1;
         }
       },
-      recordGate: (result) => {
+      recordGate: (result, getBlobs) => {
         for (const block of blocks) {
           const e = currentEntry(block.blockRootHex);
           if (e < 0) continue;
           this.gates[e] = result;
+          this.gateGetBlobs[e] = getBlobs;
           this.setWait(e, BlockWait.dispatchGate, result.start, result.start + result.ms);
         }
       },
@@ -719,7 +745,7 @@ export class BlockTrace {
     this.signatureDispatchSets[e] = 0;
     this.getBlobsResult[e] = 0;
     this.arms[e] = 0;
-    this.gates[e] = null;
+    this.clearGate(e);
     this.getBlobsCells[e] = null;
     this.signatureJobs[e] = null;
     this.executionRequests[e] = null;
@@ -791,13 +817,20 @@ export class BlockTrace {
     }
     const execution = this.executionRequests[e];
     if (execution !== null) {
+      this.milestones[offset + BlockMilestone.executionFirstSent] = execution.firstSent - start;
       this.milestones[offset + BlockMilestone.executionDispatch] = execution.sent - start;
       this.milestones[offset + BlockMilestone.executionReceipt] = execution.received - start;
     }
     const getBlobs = this.getBlobsRequests[e];
     if (getBlobs !== null) {
+      this.milestones[offset + BlockMilestone.getBlobsFirstSent] = getBlobs.firstSent - start;
       this.milestones[offset + BlockMilestone.getBlobsDispatch] = getBlobs.sent - start;
       this.milestones[offset + BlockMilestone.getBlobsReceipt] = getBlobs.received - start;
+    }
+    const gateGetBlobs = this.gateGetBlobs[e];
+    if (gateGetBlobs !== null) {
+      this.gateGetBlobsFirstSent[e] = gateGetBlobs.firstSent - start;
+      this.gateGetBlobsTraced[e] = gateGetBlobs === getBlobs ? 1 : 2;
     }
   }
 
@@ -815,6 +848,7 @@ export class BlockTrace {
       this.signatureJobs[e] = null;
       this.executionRequests[e] = null;
       this.getBlobsRequests[e] = null;
+      this.gateGetBlobs[e] = null;
     }
     this.closed[s] = 1;
     const metrics = this.metrics?.blockTrace;
@@ -894,6 +928,30 @@ export class BlockTrace {
     }
   }
 
+  private clearGate(e: number): void {
+    this.gates[e] = null;
+    this.gateGetBlobs[e] = null;
+    this.gateGetBlobsFirstSent[e] = NaN;
+    this.gateGetBlobsTraced[e] = 0;
+  }
+
+  private gateSnapshot(e: number): routes.lodestar.BlockTraceRoot["dispatchGate"] {
+    const gate = this.gates[e];
+    if (gate === null) return null;
+    const {outcome, getBlobs, settledMs, ms} = gate;
+    const firstSent = this.gateGetBlobsFirstSent[e];
+    const traced = this.gateGetBlobsTraced[e];
+    return {
+      outcome,
+      getBlobs,
+      getBlobsFirstSentMs: Number.isNaN(firstSent) ? null : round(firstSent),
+      getBlobsTraced: traced === 0 ? null : traced === 1,
+      settledMs: round(settledMs),
+      ms: round(ms),
+      pastDeadlineMs: round(pastDeadlineMs(gate)),
+    };
+  }
+
   private cellsSnapshot(e: number, start: number): routes.lodestar.BlockTraceRoot["getBlobsCells"] {
     const cells = this.getBlobsCells[e];
     if (cells === null) return null;
@@ -938,7 +996,7 @@ export class BlockTrace {
         outcome: outcome === "not_imported" && this.closed[s] === 0 ? "pending" : outcome,
         attempts: this.attempts[e],
         arm: this.arms[e] === 0 ? null : ARMS[this.arms[e] - 1],
-        dispatchGate: gateSnapshot(this.gates[e]),
+        dispatchGate: this.gateSnapshot(e),
         milestones,
         signatureDispatchSets: this.signatureDispatchSets[e] > 0 ? this.signatureDispatchSets[e] : null,
         getBlobsResult: this.getBlobsResult[e] > 0 ? GETBLOBS_RESULTS[this.getBlobsResult[e] - 1] : null,
@@ -977,12 +1035,6 @@ export class BlockTrace {
       roots,
     };
   }
-}
-
-function gateSnapshot(gate: DispatchGateResult | null): routes.lodestar.BlockTraceRoot["dispatchGate"] {
-  if (gate === null) return null;
-  const {outcome, getBlobs, settledMs, ms} = gate;
-  return {outcome, getBlobs, settledMs: round(settledMs), ms: round(ms), pastDeadlineMs: round(pastDeadlineMs(gate))};
 }
 
 function samplingCoverage(coverage: number): "full" | "partial" | "none" {
