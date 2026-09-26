@@ -1,6 +1,6 @@
 import http from "node:http";
 import {AddressInfo} from "node:net";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {HttpRequestTimes, JsonRpcHttpClient} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 
 describe("execution / engine / jsonRpcHttpClient / request times", () => {
@@ -8,15 +8,11 @@ describe("execution / engine / jsonRpcHttpClient / request times", () => {
   let url: string;
 
   beforeAll(async () => {
-    // Answers after the request's `delay` param in ms, redirects `/redirect` to `/`, and fails `/error` once read
+    // Answers after the request's `delay` param in ms, and redirects `/redirect` to `/`
     server = http.createServer((req, res) => {
       if (req.url === "/redirect") {
         req.resume();
         res.writeHead(307, {location: "/"}).end();
-        return;
-      }
-      if (req.url === "/error") {
-        req.resume().on("end", () => res.writeHead(500).end());
         return;
       }
       let body = "";
@@ -63,29 +59,8 @@ describe("execution / engine / jsonRpcHttpClient / request times", () => {
   it("leaves the times unrecorded when the request fails before it is written", async () => {
     const client = new JsonRpcHttpClient(["http://127.0.0.1:1"]);
     const times = new HttpRequestTimes();
-    const onEnd = vi.fn();
-    times.onFirstAttemptEnd = onEnd;
     await expect(client.fetch({method: "delay", params: [0]}, {times})).rejects.toThrow();
     expect(times.sent).toBeNaN();
     expect(times.received).toBeNaN();
-    expect(times.firstSent).toBeNaN();
-    expect(times.firstAttemptEnded).toBe(true);
-    expect(onEnd).toHaveBeenCalledOnce();
-  });
-
-  it("ends the first attempt once when it hands its body to the connection, and keeps its send across retries", async () => {
-    const client = new JsonRpcHttpClient([`${url}/error`]);
-    const times = new HttpRequestTimes();
-    let sentAtEnd = NaN;
-    const onEnd = vi.fn(() => {
-      sentAtEnd = times.sent;
-    });
-    times.onFirstAttemptEnd = onEnd;
-    await expect(
-      client.fetchWithRetries({method: "delay", params: [0]}, {times, retries: 1, retryDelay: 0})
-    ).rejects.toThrow();
-    expect(onEnd).toHaveBeenCalledOnce();
-    expect(times.firstSent).toBe(sentAtEnd);
-    expect(times.sent).toBeGreaterThan(times.firstSent);
   });
 });

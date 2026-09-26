@@ -35,7 +35,6 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {DispatchGateSwitch} from "./blocks/dispatchGate.js";
 import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {BlockTrace} from "./blockTrace/index.js";
 import {IBlsVerifier} from "./bls/index.js";
@@ -165,7 +164,6 @@ export interface IBeaconChain {
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
   /** Null when the trace is disabled */
   readonly blockTrace: BlockTrace | null;
-  readonly dispatchGate: DispatchGateSwitch;
 
   readonly opts: IChainOptions;
 

@@ -80,7 +80,6 @@ import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
-import {DISPATCH_GATE_CONTROL_FILE, DispatchGateSwitch, parseDispatchSchedule} from "./blocks/dispatchGate.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -242,7 +241,6 @@ export class BeaconChain implements IBeaconChain {
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
   readonly blockTrace: BlockTrace | null;
-  readonly dispatchGate: DispatchGateSwitch;
   private readonly eventLoopDelayByPhase: EventLoopDelayByPhase | null;
 
   readonly opts: IChainOptions;
@@ -330,13 +328,6 @@ export class BeaconChain implements IBeaconChain {
       opts.blockTrace === false
         ? null
         : new BlockTrace(config, clock, metrics, opts.blockTraceAttestationTiming === true);
-    this.dispatchGate = new DispatchGateSwitch(
-      parseDispatchSchedule(opts),
-      clock,
-      logger,
-      metrics,
-      path.join(dataDir, DISPATCH_GATE_CONTROL_FILE)
-    );
     this.eventLoopDelayByPhase = metrics
       ? new EventLoopDelayByPhase(this.genesisTime * 1000, config.SLOT_DURATION_MS, metrics.eventLoopDelayByPhase)
       : null;

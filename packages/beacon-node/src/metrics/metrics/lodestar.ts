@@ -1058,16 +1058,16 @@ export function createLodestarMetrics(
       }),
     },
     blockTrace: {
-      milestone: register.histogram<{milestone: string; arm: string}>({
+      milestone: register.histogram<{milestone: string}>({
         name: "lodestar_block_trace_milestone_seconds",
-        help: "Traced block critical-path milestone, or the attestation data snapshot, relative to its slot start, by the root's dispatch experiment arm",
-        labelNames: ["milestone", "arm"],
+        help: "Traced block critical-path milestone, or the attestation data snapshot, relative to its slot start",
+        labelNames: ["milestone"],
         buckets: [-1, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 8, 12],
       }),
-      milestoneToTarget: register.histogram<{milestone: string; target: string; arm: string}>({
+      milestoneToTarget: register.histogram<{milestone: string; target: string}>({
         name: "lodestar_block_trace_milestone_to_target_seconds",
-        help: "Traced block critical-path milestone relative to its consumer target, negative before the target, by the root's dispatch experiment arm",
-        labelNames: ["milestone", "target", "arm"],
+        help: "Traced block critical-path milestone relative to its consumer target, negative before the target",
+        labelNames: ["milestone", "target"],
         buckets: [-4, -3, -2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 4, 8],
       }),
       milestoneLate: register.counter<{milestone: string}>({
@@ -1080,10 +1080,10 @@ export function createLodestarMetrics(
         help: "Expected milestones a traced block had not recorded when its slot closed at slot + 2, by outcome; for not imported blocks, the pending work",
         labelNames: ["milestone", "outcome"],
       }),
-      blocks: register.counter<{outcome: string; arm: string}>({
+      blocks: register.counter<{outcome: string}>({
         name: "lodestar_block_trace_blocks_total",
-        help: "Traced block roots by outcome when their slot closed at slot + 2, and by dispatch experiment arm",
-        labelNames: ["outcome", "arm"],
+        help: "Traced block roots by outcome when their slot closed at slot + 2",
+        labelNames: ["outcome"],
       }),
       dataAvailable: register.counter<{source: string; completion: string}>({
         name: "lodestar_block_trace_data_available_total",
@@ -1094,24 +1094,21 @@ export function createLodestarMetrics(
         name: "lodestar_block_trace_roots_overflow_total",
         help: "Changes of untraced overflowing root in a slot that already traced its maximum roots, not distinct roots",
       }),
-      wait: register.histogram<{wait: string; arm: string}>({
+      wait: register.histogram<{wait: string}>({
         name: "lodestar_block_trace_wait_seconds",
-        help: "Traced block waits by dispatch experiment arm: dispatch and processor proxy runnable import work without establishing eligibility; dispatch_gate is the treatment's wait before the state transition; signature_return runs from the block's BLS worker end to its result reaching JS; persistence waits for write capacity",
-        labelNames: ["wait", "arm"],
+        help: "Traced block waits: dispatch and processor proxy runnable import work without establishing eligibility; signature_return runs from the block's BLS worker end to its result reaching JS; persistence waits for write capacity",
+        labelNames: ["wait"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
-      interval: register.histogram<{interval: string; arm: string}>({
+      interval: register.histogram<{interval: string}>({
         name: "lodestar_block_trace_interval_seconds",
-        help: "Traced block intervals between two milestones of the same root, `<from>_to_<to>`, negative when the second came first, by the root's dispatch experiment arm",
-        labelNames: ["interval", "arm"],
-        buckets: [
-          -1, -0.25, -0.1, -0.025, -0.005, 0, 0.005, 0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1,
-          1.5, 2, 4,
-        ],
+        help: "Traced block intervals between two milestones of the same root, `<from>_to_<to>`, negative when the second came first",
+        labelNames: ["interval"],
+        buckets: [-1, -0.25, -0.1, -0.025, 0, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 4],
       }),
       waitAttestationSegments: register.histogram<{wait: string; kind: string}>({
         name: "lodestar_block_trace_wait_attestation_segments",
-        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor, dispatch gate or signature return wait",
+        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor or signature return wait",
         labelNames: ["wait", "kind"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
       }),
@@ -1154,39 +1151,6 @@ export function createLodestarMetrics(
       labelNames: ["phase_bps"],
       buckets: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
     }),
-    dispatchGate: {
-      arm: register.gauge({
-        name: "lodestar_dispatch_gate_arm",
-        help: "Dispatch experiment arm a live block of the current epoch takes: 1 treatment, 0 control",
-      }),
-      forcedControl: register.gauge({
-        name: "lodestar_dispatch_gate_forced_control",
-        help: "Whether the API forces blocks to the dispatch experiment's control arm",
-      }),
-      gates: register.counter<{outcome: string; getblobs: string}>({
-        name: "lodestar_dispatch_gate_total",
-        help: "Treatment waits before the state transition for the first engine request writes, by outcome and by the getBlobs call's state when the wait started",
-        labelNames: ["outcome", "getblobs"],
-      }),
-      duration: register.histogram<{outcome: string}>({
-        name: "lodestar_dispatch_gate_seconds",
-        help: "Whole delay of each treatment wait before the state transition, from its start to the verification resuming, by outcome",
-        labelNames: ["outcome"],
-        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1, 0.25, 0.5],
-      }),
-      settle: register.histogram<{outcome: string}>({
-        name: "lodestar_dispatch_gate_settle_seconds",
-        help: "From each treatment wait's start to the engine requests' first attempts ending or the deadline's timeout running, by outcome",
-        labelNames: ["outcome"],
-        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1, 0.25, 0.5],
-      }),
-      pastDeadline: register.histogram<{outcome: string}>({
-        name: "lodestar_dispatch_gate_past_deadline_seconds",
-        help: "How far each treatment wait's whole delay passed its 10 ms deadline, 0 within it, by outcome",
-        labelNames: ["outcome"],
-        buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
-      }),
-    },
     importPayload: {
       elapsedTimeTillImported: register.histogram<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_elapsed_time_till_imported_seconds",

@@ -43,9 +43,6 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
   "chain.blockTrace"?: boolean;
   "chain.blockTraceAttestationTiming"?: boolean;
-  "chain.dispatchGateSeed"?: number;
-  "chain.dispatchGateStartEpoch"?: number;
-  "chain.dispatchGatePairs"?: number;
 };
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
@@ -94,9 +91,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     pruneHistory: args["chain.pruneHistory"],
     blockTrace: args["chain.blockTrace"],
     blockTraceAttestationTiming: args["chain.blockTraceAttestationTiming"],
-    dispatchGateSeed: args["chain.dispatchGateSeed"],
-    dispatchGateStartEpoch: args["chain.dispatchGateStartEpoch"],
-    dispatchGatePairs: args["chain.dispatchGatePairs"],
   };
 }
 
@@ -384,28 +378,6 @@ Initial pruning may be slow on first startup with an existing large database.",
     description: "Time synchronous gossip attestation work in one slot in eight for the block trace",
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.blockTraceAttestationTiming),
-    group: "chain",
-  },
-
-  "chain.dispatchGateSeed": {
-    hidden: true,
-    description:
-      "Seed of the pre-state-transition engine dispatch experiment's crossover schedule, which alternates control and treatment arms of 4 epochs in pairs whose order the seed draws. Set with `chain.dispatchGateStartEpoch` and `chain.dispatchGatePairs`; without them every block is control",
-    type: "number",
-    group: "chain",
-  },
-
-  "chain.dispatchGateStartEpoch": {
-    hidden: true,
-    description: "First epoch of the dispatch experiment's crossover schedule",
-    type: "number",
-    group: "chain",
-  },
-
-  "chain.dispatchGatePairs": {
-    hidden: true,
-    description: "Pairs of arms in the dispatch experiment's crossover schedule, after which every block is control",
-    type: "number",
     group: "chain",
   },
 };

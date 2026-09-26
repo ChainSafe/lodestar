@@ -7,7 +7,6 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
-import {HttpRequestTimes} from "../../execution/engine/jsonRpcHttpClient.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockAttempt, BlockMilestone} from "../blockTrace/index.js";
@@ -16,7 +15,6 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
-import {DISPATCH_GATE_DEADLINE_MS, DispatchArm, awaitEngineDispatch, observeDispatchGate} from "./dispatchGate.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
@@ -75,8 +73,6 @@ export async function verifyBlocksInEpoch(
 
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
-  const arm = this.dispatchGate.armOf(blockInputs, opts);
-  attempt?.recordArm(arm);
 
   attempt?.mark(BlockMilestone.prestateRequest);
   // TODO: Skip in process chain segment
@@ -112,10 +108,7 @@ export async function verifyBlocksInEpoch(
 
   try {
     // Start execution payload verification first (async request to execution client)
-    const executionRequests = blockInputs.map((b) => attempt?.executionRequest(b.blockRootHex));
-    // The treatment waits on the single block's newPayload request, traced or not
-    const gatedRequest = arm === DispatchArm.treatment ? (executionRequests[0] ?? new HttpRequestTimes()) : null;
-    if (gatedRequest !== null) executionRequests[0] = gatedRequest;
+    const executionRequests = attempt ? blockInputs.map((b) => attempt.executionRequest(b.blockRootHex)) : undefined;
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
         ? verifyBlocksExecutionPayload(
@@ -185,20 +178,6 @@ export async function verifyBlocksInEpoch(
               availableTime,
             };
           })();
-
-    if (gatedRequest !== null) {
-      // Execution verification settling ends newPayload's first attempt if the request never reached the connection, as
-      // when the engine queue or serialization refused it. Both branches still reject into Promise.all below.
-      const endFirstAttempt = (): void => gatedRequest.endFirstAttempt();
-      verifyExecutionPayloadsPromise.then(endFirstAttempt, endFirstAttempt);
-      daAvailabilityPromise.catch(() => {});
-      // Hand newPayload, and a getBlobs call not yet sent, to the connection before the synchronous state transition
-      const getBlobs = this.getBlobsTracker.requestInProgress(blockInputs[0].blockRootHex);
-      const settlement = await awaitEngineDispatch(gatedRequest, getBlobs, DISPATCH_GATE_DEADLINE_MS);
-      const gate = {...settlement, ms: performance.now() - settlement.start};
-      observeDispatchGate(this.metrics, gate);
-      attempt?.recordGate(gate, getBlobs);
-    }
 
     attempt?.mark(BlockMilestone.stateTransitionStart);
     // Run state transition only

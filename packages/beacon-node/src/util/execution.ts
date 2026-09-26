@@ -9,7 +9,6 @@ import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlockMilestone, BlockTrace, GetBlobsResult} from "../chain/blockTrace/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
-import {HttpRequestTimes} from "../execution/engine/jsonRpcHttpClient.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
@@ -133,8 +132,6 @@ export async function getBlobSidecarsFromExecution(
  *
  * Post fulu, whenever we see either beacon_block or data_column_sidecar gossip message and data isn't complete.
  * Post gloas, immediately when beacon block is successfully imported and PayloadEnvelopeInput is created.
- *
- * `times` receives the engine request's transport times, when it makes one.
  */
 export async function getDataColumnSidecarsFromExecution(
   config: ChainForkConfig,
@@ -143,8 +140,7 @@ export async function getDataColumnSidecarsFromExecution(
   input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
   blobAndProofBuffers?: Uint8Array[],
-  blockTrace?: BlockTrace | null,
-  times = new HttpRequestTimes()
+  blockTrace?: BlockTrace | null
 ): Promise<DataColumnEngineResult> {
   const isPayloadInput = input instanceof PayloadEnvelopeInput;
 
@@ -168,9 +164,9 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const traced = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex, times) === true;
+  const times = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex);
   const traceResponse = (result: GetBlobsResult): void => {
-    if (traced) blockTrace?.getBlobsResponse(input.slot, input.blockRootHex, result);
+    if (times !== undefined) blockTrace?.getBlobsResponse(input.slot, input.blockRootHex, result);
   };
   const blobs = await executionEngine
     .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers, times)
@@ -219,7 +215,7 @@ export async function getDataColumnSidecarsFromExecution(
     metrics?.getBlobsComputation.blobCells.observe((cellTimes.resumed[i] - cellTimes.submitted[i]) / 1000);
   }
   metrics?.getBlobsComputation.sidecarAssembly.observe(assemblyMs / 1000);
-  if (traced) {
+  if (times !== undefined) {
     blockTrace?.getBlobsComputed(input.slot, input.blockRootHex, cellTimes, assemblyMs);
     blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsUsable);
   }
