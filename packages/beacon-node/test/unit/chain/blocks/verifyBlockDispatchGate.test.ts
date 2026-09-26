@@ -1,13 +1,18 @@
 import {subscribe, unsubscribe} from "node:diagnostics_channel";
 import http from "node:http";
 import {AddressInfo} from "node:net";
-import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {BlockInputColumns, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
-import {DispatchArm, DispatchGateSwitch, firstArmOfPair} from "../../../../src/chain/blocks/dispatchGate.js";
+import {
+  DISPATCH_GATE_DEADLINE_MS,
+  DispatchArm,
+  DispatchGateSwitch,
+  firstArmOfPair,
+} from "../../../../src/chain/blocks/dispatchGate.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksDataAvailability} from "../../../../src/chain/blocks/verifyBlocksDataAvailability.js";
 import {verifyBlocksSignatures} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
@@ -19,6 +24,7 @@ import {GetBlobsTracker} from "../../../../src/chain/GetBlobsTracker.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {ExecutionEngineHttp} from "../../../../src/execution/engine/http.js";
 import {HttpRequestTimes, JsonRpcHttpClient} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
+import {isQueueErrorAborted} from "../../../../src/util/queue/index.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -46,6 +52,7 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
   let url: string;
   let forkchoiceDelayMs = 0;
   let stfStart = NaN;
+  const aborts: AbortController[] = [];
 
   beforeAll(async () => {
     // A JSON-RPC engine answering newPayload VALID, getBlobs with null and forkchoiceUpdated after a delay
@@ -82,6 +89,10 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     await new Promise((resolve) => server.close(resolve));
   });
 
+  afterEach(() => {
+    for (const abort of aborts.splice(0)) abort.abort();
+  });
+
   beforeEach(() => {
     forkchoiceDelayMs = 0;
     stfStart = NaN;
@@ -97,14 +108,72 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     });
   });
 
-  /** Verifies a live Fulu gossip block in `arm`, with a blob unless `noBlobs`, returning its trace root */
+  /**
+   * Verifies a live Fulu gossip block with root `root` in `arm`, with a blob unless `noBlobs`, returning its trace root
+   * and the verification's error; `whilePrestate` runs during its prestate regeneration
+   */
   async function verify(
     arm: DispatchArm,
-    opts: {getBlobs: boolean; noBlobs?: boolean; beforeBlock?: (engine: ExecutionEngineHttp) => void}
+    opts: {
+      getBlobs: boolean;
+      noBlobs?: boolean;
+      root?: string;
+      proposerIndex?: number;
+      beforeBlock?: (engine: ExecutionEngineHttp) => void;
+      whilePrestate?: (dispatchGate: DispatchGateSwitch) => void;
+    },
+    shared = setupChain(arm)
   ) {
+    const {chain, blockTrace, getBlobsTracker, executionEngine, dispatchGate} = shared;
+    const root = opts.root ?? "0xaa";
+    const proposerIndex = opts.proposerIndex ?? 0;
+    const {whilePrestate} = opts;
+    shared.whilePrestate = whilePrestate ? () => whilePrestate(dispatchGate) : null;
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    block.message.proposerIndex = proposerIndex;
+    block.message.body.blobKzgCommitments = opts.noBlobs ? [] : [new Uint8Array(48)];
+    const blockInput = BlockInputColumns.createFromBlock({
+      forkName: ForkName.fulu,
+      block,
+      blockRootHex: root,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: Date.now() / 1000,
+      daOutOfRange: false,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+
+    opts.beforeBlock?.(executionEngine);
+    // As the gossip block handler does, getBlobs is triggered before the block is processed
+    if (opts.getBlobs) getBlobsTracker.triggerGetBlobs(blockInput);
+    const attempt = blockTrace.startAttempt([blockInput], performance.now());
+    const error = await verifyBlocksInEpoch
+      .call(
+        chain,
+        generateProtoBlock({slot: slot - 1}),
+        [blockInput],
+        null,
+        {seenTimestampSec: Date.now() / 1000},
+        attempt
+      )
+      .then(
+        () => null,
+        (e: unknown) => e
+      );
+    const {milestoneNames, slots} = blockTrace.getSnapshot();
+    const traced = slots[0].roots.find((r) => r.root === root);
+    if (traced === undefined) throw Error(`Untraced root ${root}`);
+    const milestones = Object.fromEntries(milestoneNames.map((name, i) => [name, traced.milestones[i]]));
+    return {root: traced, milestones, error, dispatchGate};
+  }
+
+  /** A chain whose treatment arm covers the block's epoch unless `arm` is control, with an HTTP engine on the server */
+  function setupChain(arm: DispatchArm) {
     const logger = getMockedLogger();
     const clock = new ClockStopped(slot);
     const abort = new AbortController();
+    aborts.push(abort);
     const executionEngine = new ExecutionEngineHttp(
       new JsonRpcHttpClient([url], {signal: abort.signal}),
       {signal: abort.signal, logger, metrics: null},
@@ -134,7 +203,17 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
       isExecutionEnabled: () => true,
       isStateValidatorsNodesPopulated: () => true,
     } as unknown as IBeaconStateView;
-    const chain = {
+    const shared = {
+      chain: undefined as unknown as BeaconChain,
+      blockTrace,
+      getBlobsTracker,
+      executionEngine,
+      dispatchGate,
+      abort,
+      /** Runs during the next prestate regeneration, which then yields to the event loop first */
+      whilePrestate: null as (() => void) | null,
+    };
+    shared.chain = {
       config,
       logger,
       metrics: null,
@@ -143,48 +222,25 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
       dispatchGate,
       getBlobsTracker,
       seenBlockProposers: new SeenBlockProposers(),
-      regen: {getPreState: async () => preState},
+      regen: {
+        getPreState: async () => {
+          const whilePrestate = shared.whilePrestate;
+          shared.whilePrestate = null;
+          if (whilePrestate !== null) {
+            await new Promise((resolve) => setTimeout(resolve, 1));
+            whilePrestate();
+          }
+          return preState;
+        },
+      },
       shufflingCache: {processState: () => {}},
     } as unknown as BeaconChain;
-
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    block.message.slot = slot;
-    block.message.body.blobKzgCommitments = opts.noBlobs ? [] : [new Uint8Array(48)];
-    const blockInput = BlockInputColumns.createFromBlock({
-      forkName: ForkName.fulu,
-      block,
-      blockRootHex: "0xaa",
-      source: BlockInputSource.gossip,
-      seenTimestampSec: Date.now() / 1000,
-      daOutOfRange: false,
-      sampledColumns: [0],
-      custodyColumns: [0],
-    });
-
-    try {
-      opts.beforeBlock?.(executionEngine);
-      // As the gossip block handler does, getBlobs is triggered before the block is processed
-      if (opts.getBlobs) getBlobsTracker.triggerGetBlobs(blockInput);
-      const attempt = blockTrace.startAttempt([blockInput], performance.now());
-      await verifyBlocksInEpoch.call(
-        chain,
-        generateProtoBlock({slot: slot - 1}),
-        [blockInput],
-        null,
-        {seenTimestampSec: Date.now() / 1000},
-        attempt
-      );
-      const {milestoneNames, slots} = blockTrace.getSnapshot();
-      const root = slots[0].roots[0];
-      const milestones = Object.fromEntries(milestoneNames.map((name, i) => [name, root.milestones[i]]));
-      return {root, milestones};
-    } finally {
-      abort.abort();
-    }
+    return shared;
   }
 
   it("hands newPayload and getBlobs to the connection before the state transition starts when the gate succeeds", async () => {
-    const {root, milestones} = await verify(DispatchArm.treatment, {getBlobs: true});
+    const {root, milestones, error} = await verify(DispatchArm.treatment, {getBlobs: true});
+    expect(error).toBeNull();
     expect(root.arm).toBe(DispatchArm.treatment);
     expect(root.dispatchGate).toMatchObject({outcome: "both_sent", getBlobs: "pending"});
     const {execution_dispatch, getblobs_dispatch, state_transition_start} = milestones;
@@ -201,6 +257,18 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     expect(root.dispatchGate).toMatchObject({outcome: "new_payload_only", getBlobs: "pending"});
     expect(milestones.getblobs_request).toBeNull();
     expect(milestones.execution_dispatch).toBeLessThan(milestones.state_transition_start as number);
+  });
+
+  it("ends the wait at once when newPayload fails before reaching HTTP, and still surfaces the failure", async () => {
+    const shared = setupChain(DispatchArm.treatment);
+    // The engine queue refuses newPayload before any request
+    shared.abort.abort();
+    const {root, milestones, error} = await verify(DispatchArm.treatment, {getBlobs: false}, shared);
+    expect(isQueueErrorAborted(error)).toBe(true);
+    expect(root.dispatchGate).toMatchObject({outcome: "skipped", getBlobs: "none"});
+    expect(root.dispatchGate?.settledMs).toBeLessThan(DISPATCH_GATE_DEADLINE_MS);
+    expect(milestones.execution_dispatch).toBeNull();
+    expect(milestones.state_transition_start).not.toBeNull();
   });
 
   it("sends newPayload only after the synchronous state transition in the control arm", async () => {

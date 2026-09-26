@@ -187,10 +187,11 @@ export async function verifyBlocksInEpoch(
           })();
 
     if (gatedRequest !== null) {
-      // The branches started so far reject into Promise.all below, after the wait
-      const ignore = (): void => {};
-      verifyExecutionPayloadsPromise.catch(ignore);
-      daAvailabilityPromise.catch(ignore);
+      // Execution verification settling ends newPayload's first attempt if the request never reached the connection, as
+      // when the engine queue or serialization refused it. Both branches still reject into Promise.all below.
+      const endFirstAttempt = (): void => gatedRequest.endFirstAttempt();
+      verifyExecutionPayloadsPromise.then(endFirstAttempt, endFirstAttempt);
+      daAvailabilityPromise.catch(() => {});
       // Hand newPayload, and a getBlobs call not yet sent, to the connection before the synchronous state transition
       const settlement = await awaitEngineDispatch(
         gatedRequest,
