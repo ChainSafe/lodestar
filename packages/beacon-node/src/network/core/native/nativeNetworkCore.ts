@@ -42,7 +42,7 @@ export class NativeNetworkCore implements INetworkCore {
   private peers!: NativePeers;
   private requests!: NativeRequests;
   private network!: NativeNetwork;
-  private logs: NativeLogs | undefined;
+  private logs!: NativeLogs;
   private remembered: RememberedPeersWriter | undefined;
   private closed = false;
   private failure: Error | undefined;
@@ -79,8 +79,9 @@ export class NativeNetworkCore implements INetworkCore {
       const rememberedPeers = peerStoreDir
         ? readRememberedPeers(peerStoreDir, config.genesisValidatorsRoot, logger)
         : null;
+      core.logs = new NativeLogs(modules.logger.child({module: "native"}));
       // The factory calls the host only from later macrotasks, so every consumer below attaches first.
-      core.network = createNativeNetwork({...application, rememberedPeers}, core.host);
+      core.network = createNativeNetwork({...application, rememberedPeers, logLevel: core.logs.level}, core.host);
       core.intent = new NativeIntent(
         core.network,
         application,
@@ -90,7 +91,6 @@ export class NativeNetworkCore implements INetworkCore {
         initialStatus,
         core.onFailure
       );
-      core.logs = new NativeLogs(core.network, modules.logger.child({module: "native"}));
       core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
       core.requests = new NativeRequests(config, modules.getReqRespHandler, core.network.limits.incomingCapacity);
@@ -163,6 +163,7 @@ export class NativeNetworkCore implements INetworkCore {
     serve: (request) => this.requests.serve(request),
     peers: (events) => this.peers.deliver(events),
     failed: (error) => this.onFailure(error),
+    logs: (records, lost) => this.logs.deliver(records, lost),
     error: (error) => this.onOperationError(error),
   };
   private readonly onFailure = (error: unknown): void => {
@@ -196,7 +197,6 @@ export class NativeNetworkCore implements INetworkCore {
     // The network refuses the final remembered peers snapshot once it closes.
     void (this.remembered?.close() ?? Promise.resolve())
       .then(() => this.network?.close())
-      .finally(() => this.logs?.close())
       .then(() => completion.resolve(), completion.reject);
     return this.closePromise;
   }
@@ -295,11 +295,7 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return [
-      this.network.metrics(),
-      "# TYPE lodestar_native_log_delivery_errors_total counter\n",
-      `lodestar_native_log_delivery_errors_total ${this.logs?.deliveryErrors ?? 0}\n`,
-    ].join("");
+    return this.network.metrics();
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

@@ -7,7 +7,7 @@ import type {
 } from "@chainsafe/lodestar-z/network";
 import type {BeaconConfig} from "@lodestar/config";
 
-export async function nativeBindingProcess(config: NativeApplicationConfig, chain: BeaconConfig) {
+export async function nativeBindingProcess(config: Omit<NativeApplicationConfig, "logLevel">, chain: BeaconConfig) {
   const child = fork(new URL("./nativeBindingPeer.mjs", import.meta.url), [], {
     serialization: "advanced",
     stdio: ["ignore", "ignore", "inherit", "ipc"],

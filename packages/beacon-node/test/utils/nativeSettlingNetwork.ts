@@ -10,8 +10,9 @@ const settlingHost: NativeHost = {
   failed: (error) => {
     throw error;
   },
+  logs: () => {},
 };
 
-export function createSettlingNetwork(application: NativeApplicationConfig): NativeNetwork {
-  return createNativeNetwork(application, settlingHost);
+export function createSettlingNetwork(application: Omit<NativeApplicationConfig, "logLevel">): NativeNetwork {
+  return createNativeNetwork({...application, logLevel: "off"}, settlingHost);
 }

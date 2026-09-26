@@ -73,7 +73,7 @@ export class NativeIntent {
   private appliedSlot: number;
   constructor(
     private readonly runtime: Pick<NativeNetwork, "applyIntent" | "updateStatus">,
-    application: NativeApplicationConfig,
+    application: Pick<NativeApplicationConfig, "initialSlot">,
     private readonly network: NetworkConfig,
     private readonly clock: IClock,
     private readonly opts: NetworkOptions,

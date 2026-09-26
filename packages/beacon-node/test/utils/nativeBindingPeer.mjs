@@ -13,6 +13,7 @@ const host = {
   failed: (error) => {
     throw error;
   },
+  logs: () => {},
 };
 process.on("message", async ({id, method, args}) => {
   if (++active > 16) process.exit(2);
@@ -21,7 +22,7 @@ process.on("message", async ({id, method, args}) => {
     switch (method) {
       case "initialize":
         bindings.config.set(args[1], args[2]);
-        network = createNativeNetwork(args[0], host);
+        network = createNativeNetwork({...args[0], logLevel: "off"}, host);
         value = await network.getIdentity();
         break;
       case "applyIntent":

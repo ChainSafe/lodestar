@@ -23,6 +23,7 @@ import {nativeMultiaddr} from "../../src/network/core/native/addresses.js";
 import {createNativeConfig} from "../../src/network/core/native/config.js";
 import {NativeIntent} from "../../src/network/core/native/intent.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
+import {NativePeers} from "../../src/network/core/native/peers.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
 import {ClockEvent} from "../../src/util/clock.js";
@@ -69,13 +70,65 @@ describe("native Lodestar integration", () => {
     }
   }, 15000);
 
-  it("ordinary network shutdown does not request process failure", async () => {
+  it("requests node shutdown once with a delivery failure the binding reported", async () => {
+    const config = fuluConfig();
+    const shutdown = vi.fn();
+    const node = await nativeNetworkFixture(config, "native", {}, undefined, shutdown);
+    const failure = new Error("test peer projection failed");
+    const deliver = vi.spyOn(NativePeers.prototype, "deliver").mockImplementation(() => {
+      throw failure;
+    });
+    const {application} = createNativeConfig(
+      {
+        ...defaultNetworkOptions,
+        tcp: false,
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
+        maxPeers: 12,
+        targetPeers: 8,
+      },
+      config,
+      await generateKeyPair("secp256k1"),
+      0,
+      ssz.fulu.Status.defaultValue(),
+      config.CUSTODY_REQUIREMENT,
+      16
+    );
+    const remote = await nativeBindingProcess(application, config);
+    application.identitySecretKey.fill(0);
+    try {
+      const peer = remote.identity;
+      await remote.applyIntent(emptyIntent(application), 0n);
+      // The connection's peer event reaches the throwing projection, and the binding fails the network
+      void node.network
+        .connectToPeer(peer.peerId, [`${nativeMultiaddr(peer.localEndpoint)}/p2p/${peer.peerId}`])
+        .catch(() => {});
+      await vi.waitFor(() => expect(shutdown).toHaveBeenCalledExactlyOnceWith(failure), {timeout: 5000});
+      await vi.waitFor(() => expect(node.network.closed).toBe(true));
+      await node.network.close();
+      expect(shutdown).toHaveBeenCalledOnce();
+    } finally {
+      deliver.mockRestore();
+      const results = await Promise.allSettled([remote.close(), node.close()]);
+      expect(results.filter((result) => result.status === "rejected")).toEqual([]);
+    }
+  }, 15000);
+
+  it("ordinary network shutdown delivers the native records of its close and does not request process failure", async () => {
     const shutdown = vi.fn();
     const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
+    const infoLogs = vi.spyOn(Object.getPrototypeOf(testLogger()), "info");
     try {
       await node.network.close();
+      expect(
+        infoLogs.mock.calls.some(
+          ([message, context]) =>
+            String(message).startsWith("owner_stopped reason=requested") &&
+            (context as Record<string, unknown> | undefined)?.nativeScope === "network_runtime"
+        )
+      ).toBe(true);
       expect(shutdown).not.toHaveBeenCalled();
     } finally {
+      infoLogs.mockRestore();
       await node.close();
     }
   }, 15000);
@@ -328,8 +381,8 @@ describe("native Lodestar integration", () => {
     "serves blocks and gossip with an IPv$family $backend peer from a dual-stack runtime",
     async ({backend, family}) => {
       const worker = vi.spyOn(WorkerNetworkCore, "init");
-      // Native log records reach Lodestar's logger with their native context
-      const debugLogs = vi.spyOn(Object.getPrototypeOf(testLogger()), "debug");
+      // Native log records at the logger's level reach it with their native context
+      const infoLogs = vi.spyOn(Object.getPrototypeOf(testLogger()), "info");
       const config = createBeaconConfig(
         {
           ALTAIR_FORK_EPOCH: 0,
@@ -448,11 +501,12 @@ describe("native Lodestar integration", () => {
             expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
             expect(metrics).toContain("libp2p_peers 1\n");
             expect(
-              debugLogs.mock.calls.some(
-                ([, context]) => (context as Record<string, unknown> | undefined)?.nativeScope === "network_reqresp"
+              infoLogs.mock.calls.some(
+                ([, context]) => (context as Record<string, unknown> | undefined)?.nativeScope === "network_runtime"
               )
             ).toBe(true);
-            expect(metrics).toContain("# TYPE lodestar_native_log_delivery_errors_total counter\n");
+            // The binding renders the family once
+            expect(metrics.match(/^# TYPE lodestar_native_log_delivery_errors_total counter$/gm)).toHaveLength(1);
             expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
           },
           {timeout: 5000}
@@ -461,7 +515,7 @@ describe("native Lodestar integration", () => {
       } finally {
         const results = await Promise.allSettled([left.close(), right?.close()]);
         worker.mockRestore();
-        debugLogs.mockRestore();
+        infoLogs.mockRestore();
         expect(results.filter((result) => result.status === "rejected")).toEqual([]);
       }
     },
@@ -514,7 +568,7 @@ describe("native Lodestar integration", () => {
   );
 });
 
-function emptyIntent(application: NativeApplicationConfig): NativeLocalIntent {
+function emptyIntent(application: Omit<NativeApplicationConfig, "logLevel">): NativeLocalIntent {
   return {
     update: {
       local: application.local,

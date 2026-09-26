@@ -316,7 +316,8 @@ export function createNativeConfig(
   custodyGroupCount: number,
   activeValidatorCount: number
 ): {
-  application: NativeApplicationConfig;
+  /** The network selects the log level from its logger at initialization. */
+  application: Omit<NativeApplicationConfig, "logLevel">;
   network: NetworkConfig;
   directPeers: NativeDirectPeer[];
 } {
@@ -382,7 +383,7 @@ export function createNativeConfig(
     items: Math.min(limit.items, processor[i].items),
     bytes: limit.bytes,
   }));
-  const application: NativeApplicationConfig = {
+  const application: Omit<NativeApplicationConfig, "logLevel"> = {
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
     discovery: discovery(opts, key),
