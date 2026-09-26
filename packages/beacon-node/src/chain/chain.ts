@@ -126,7 +126,13 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {ServingCapacityError, ServingConfigurationError, ServingContext, servingRead} from "./serving/context.js";
+import {
+  ServingCapacityError,
+  ServingConfigurationError,
+  ServingContext,
+  servingBoundedRead,
+  servingRead,
+} from "./serving/context.js";
 import {preflightServingBlock, preflightServingColumn, serializeServingValue} from "./serving/serialization.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
@@ -876,7 +882,7 @@ export class BeaconChain implements IBeaconChain {
           };
         }
       }
-      const data = await servingRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
+      const data = await servingBoundedRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
       if (data) context?.checkResponse(data, context.limits.blockBytes);
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
@@ -892,7 +898,9 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await servingRead(context, (opts) => this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), opts));
+    const data = await servingBoundedRead(context, (opts) =>
+      this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), opts)
+    );
     if (data?.value) context?.checkResponse(data.value, context.limits.blockBytes);
     return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
   }

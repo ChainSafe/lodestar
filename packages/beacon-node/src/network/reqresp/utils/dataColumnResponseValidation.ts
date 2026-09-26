@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {ServingContext, servingRead} from "../../../chain/serving/context.js";
+import {ServingContext, servingBoundedRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -48,7 +48,7 @@ export async function handleColumnSidecarUnavailability({
     if (!envelopeBytes) return;
   }
 
-  const blockBytes = await servingRead(context, (opts) =>
+  const blockBytes = await servingBoundedRead(context, (opts) =>
     blockRoot ? db.block.getBinary(blockRoot, opts) : db.blockArchive.getBinary(slot, opts)
   );
   if (blockBytes) context?.checkBacking(blockBytes);

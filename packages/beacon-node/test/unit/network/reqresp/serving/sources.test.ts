@@ -15,7 +15,7 @@ import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types
 import {BeaconChain} from "../../../../../src/chain/chain.js";
 import {IBeaconChain} from "../../../../../src/chain/interface.js";
 import {LightClientServer} from "../../../../../src/chain/lightClient/index.js";
-import {ServingContext} from "../../../../../src/chain/serving/context.js";
+import {ServingCapacityError, ServingContext} from "../../../../../src/chain/serving/context.js";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {getRootIndexKey} from "../../../../../src/db/repositories/blockArchiveIndex.js";
 import {
@@ -715,7 +715,8 @@ describe("actual serving sources", () => {
 
   it("preserves local capacity category through the light-client translation", async () =>
     withDb(async (db) => {
-      await db.syncCommitteeWitness.putBinary(root, new Uint8Array(policy.lightClient.witness + 1));
+      // A stock read reports a local capacity refusal as the database would
+      vi.spyOn(db.syncCommitteeWitness, "get").mockRejectedValue(new ServingCapacityError("database read"));
       const server = {db, getBootstrap: LightClientServer.prototype.getBootstrap} as unknown as LightClientServer;
       const chain = {...makeChain(db), lightClientServer: server};
       const budget = HostServingBudget.forEnvironment(policy);

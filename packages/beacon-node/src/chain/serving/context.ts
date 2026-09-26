@@ -1,4 +1,4 @@
-import {DB_READ_LIMITS_V1, DbReadLimits, DbReqOpts} from "@lodestar/db";
+import {DB_READ_LIMITS_V1, DbReadLimits, DbReqOpts, FilterOptions} from "@lodestar/db";
 
 export class ServingCapacityError extends Error {
   readonly code = "HOST_SERVING_CAPACITY";
@@ -42,7 +42,11 @@ export type ServingLimits = Readonly<{
   }>;
 }>;
 
-/** Retained sources survive yields; temporary source work stays charged until all reads settle. */
+/**
+ * Retained sources survive yields; temporary source work stays charged until all reads settle. Every serving read
+ * keeps the blocks it loads out of the LevelDB block cache. Stock reads rely on the stored value bounds of their
+ * repositories; bounded reads use the patched DB's read limits.
+ */
 export class ServingContext {
   private operations = 0;
   private pendingSourceLimitBytes = 0;
@@ -73,7 +77,16 @@ export class ServingContext {
   assertActive(): void {
     if (this.cancelled) throw Object.assign(new Error("Serving cancelled"), {code: "HOST_SERVING_CANCELLED"});
   }
-  readOptions(maxValueBytes = this.limits.sourceBytes, maxEntries = 1): DbReqOpts {
+  /** Options of a stock range stream: one row per native read */
+  streamOptions(): Pick<FilterOptions<never>, "fillCache" | "rowAtATime"> {
+    this.assertActive();
+    return {fillCache: false, rowAtATime: true};
+  }
+  /** Options of a bounded range stream */
+  boundedStreamOptions(): DbReqOpts {
+    return this.boundedReadOptions();
+  }
+  private checkSourcePhase(maxValueBytes: number, maxEntries: number): void {
     this.assertActive();
     if (
       !Number.isSafeInteger(maxValueBytes) ||
@@ -85,20 +98,40 @@ export class ServingContext {
     ) {
       throw new ServingCapacityError("source phase");
     }
+  }
+  private boundedReadOptions(maxValueBytes = this.limits.sourceBytes, maxEntries = 1): DbReqOpts {
+    this.checkSourcePhase(maxValueBytes, maxEntries);
     const readLimits: DbReadLimits = {
       maxKeyBytes: DB_READ_LIMITS_V1.maxKeyBytes,
       maxValueBytes,
       maxTotalBytes: this.limits.sourceBytes,
       maxEntries,
     };
-    return {readLimits};
+    return {fillCache: false, readLimits};
   }
+  /** A stock read of a repository whose stored values are bounded; `maxValueBytes` and `maxEntries` size its charge */
   async read<T>(
     operation: (opts: DbReqOpts) => Promise<T>,
     maxValueBytes = this.limits.sourceBytes,
     maxEntries = 1
   ): Promise<T> {
-    const opts = this.readOptions(maxValueBytes, maxEntries);
+    this.checkSourcePhase(maxValueBytes, maxEntries);
+    return this.track(operation, {fillCache: false}, maxValueBytes, maxEntries);
+  }
+  /** A read limited by the patched DB, for repositories without a stored value bound */
+  async boundedRead<T>(
+    operation: (opts: DbReqOpts) => Promise<T>,
+    maxValueBytes = this.limits.sourceBytes,
+    maxEntries = 1
+  ): Promise<T> {
+    return this.track(operation, this.boundedReadOptions(maxValueBytes, maxEntries), maxValueBytes, maxEntries);
+  }
+  private async track<T>(
+    operation: (opts: DbReqOpts) => Promise<T>,
+    opts: DbReqOpts,
+    maxValueBytes: number,
+    maxEntries: number
+  ): Promise<T> {
     const reservation = Math.min(this.limits.sourceBytes, maxValueBytes * maxEntries);
     if (this.operations >= 2 || this.pendingSourceLimitBytes + reservation > this.limits.sourceBytes) {
       throw new ServingCapacityError("concurrent source phase");
@@ -142,6 +175,7 @@ export class ServingContext {
   }
 }
 
+/** A stock serving read of a bounded repository, or the plain read outside serving */
 export function servingRead<T>(
   context: ServingContext | undefined,
   operation: (opts?: DbReqOpts) => Promise<T>,
@@ -149,4 +183,14 @@ export function servingRead<T>(
   maxEntries?: number
 ): Promise<T> {
   return context ? context.read(operation, maxValueBytes, maxEntries) : operation();
+}
+
+/** A serving read limited by the patched DB, for block values, or the plain read outside serving */
+export function servingBoundedRead<T>(
+  context: ServingContext | undefined,
+  operation: (opts?: DbReqOpts) => Promise<T>,
+  maxValueBytes?: number,
+  maxEntries?: number
+): Promise<T> {
+  return context ? context.boundedRead(operation, maxValueBytes, maxEntries) : operation();
 }

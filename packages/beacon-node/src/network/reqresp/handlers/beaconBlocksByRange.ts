@@ -52,7 +52,7 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({
-      ...(context ? {...context.readOptions(), limit: count} : {}),
+      ...(context ? {...context.boundedStreamOptions(), limit: count} : {}),
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {

@@ -32,7 +32,7 @@ export async function* onBlobSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-      ...(context ? {...context.readOptions(), limit: count} : {}),
+      ...(context ? {...context.streamOptions(), limit: count} : {}),
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
