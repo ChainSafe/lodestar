@@ -4,11 +4,16 @@ import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
+import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {Metrics} from "../../../../src/metrics/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
@@ -23,7 +28,8 @@ import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {createMetricsTest} from "../../metrics/utils.js";
 
-function fixture(metrics: Metrics | null = null) {
+/** An executor over a mocked chain; `stubbed` replaces the gossip handlers with stubs. */
+function fixture(metrics: Metrics | null = null, stubbed = true) {
   const single = vi.fn(async () => {});
   const batch = vi.fn<BatchGossipHandlerFn>(async (items) => items.map(() => null));
   const handlers: GossipHandlers = {
@@ -51,6 +57,7 @@ function fixture(metrics: Metrics | null = null) {
     clock: new ClockStopped(64),
     forkChoice: {...base.forkChoice, hasBlockHexUnsafe: vi.fn(() => false)},
     seenBlock: () => false,
+    seenBlockProposers: new SeenBlockProposers(),
     blsThreadPoolCanAcceptWork: vi.fn(() => true),
     regenCanAcceptWork: () => true,
   };
@@ -69,7 +76,7 @@ function fixture(metrics: Metrics | null = null) {
       core: {} as INetworkCore,
       logger: getMockedLogger(),
       metrics,
-      gossipHandlers: handlers,
+      gossipHandlers: stubbed ? handlers : undefined,
     },
     {},
     gossip,
@@ -227,6 +234,49 @@ describe("native gossip host execution", () => {
       expect(f.executor.check(checks)).toEqual([true, true, true]);
       expect(f.chain.forkChoice.hasBlockHexUnsafe).toHaveBeenCalledTimes(2);
       expect(search).toHaveBeenCalledTimes(3);
+    } finally {
+      f.executor.stop();
+    }
+  });
+
+  it("validates a block with its handler alone, which searches an unknown parent once or rejects the block", async () => {
+    const f = fixture(null, false);
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 2;
+    signedBlock.message.parentRoot.fill(9);
+    const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const block: PendingGossipsubMessage = {
+      ...message("block"),
+      topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: 0}},
+      msg: {type: "unsigned", topic: "test", data: ssz.phase0.SignedBeaconBlock.serialize(signedBlock)},
+    };
+    const blockInput = BlockInputPreData.createFromBlock({
+      block: signedBlock,
+      blockRootHex,
+      forkName: ForkName.phase0,
+      daOutOfRange: false,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: 0,
+      peerIdStr: "peer",
+    });
+    vi.mocked(f.chain.seenBlockInputCache.getByBlock).mockReturnValue(blockInput);
+    f.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
+    f.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    const recovery = vi.fn();
+    const search = vi.fn();
+    f.chain.emitter.on(ChainEvent.blockUnknownParent, recovery);
+    f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
+    try {
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      expect(recovery).toHaveBeenCalledOnce();
+      expect(recovery).toHaveBeenCalledWith(expect.objectContaining({blockInput, peer: "peer"}));
+      expect(search).not.toHaveBeenCalled();
+      // A known parent at the block's slot fails validation.
+      f.chain.forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
+        root === blockInput.parentRootHex ? ({slot: 2} as ProtoBlock) : null
+      );
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Reject]);
+      expect(recovery).toHaveBeenCalledOnce();
     } finally {
       f.executor.stop();
     }
