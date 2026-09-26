@@ -116,8 +116,7 @@ describe("chain / archive / ArchiveStore", () => {
   it("init keeps earliestAvailableSlot at the anchor when checkpoint-synced despite older retained blocks", async () => {
     const controller = new AbortController();
     const emitter = new ChainEventEmitter();
-    // Node checkpoint-synced this startup from anchor 313312, but the DB still holds older, non-contiguous
-    // blocks (firstKey 246560). Until backfill exists we cannot serve the gap, so EAS must stay at the anchor.
+    // Checkpoint sync can leave a gap below the anchor, so EAS must stay at the anchor (not the lower firstKey).
     const chain = {bufferPool: {}, emitter, regen: {}, earliestAvailableSlot: 313312};
     const firstKey = vi.fn().mockResolvedValue(246560);
     const archiveStore = new ArchiveStore(

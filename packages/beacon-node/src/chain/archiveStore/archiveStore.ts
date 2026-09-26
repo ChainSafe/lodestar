@@ -28,7 +28,6 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   dbName: string;
   dataColumnDir: string;
   anchorState: {finalizedCheckpoint: Checkpoint};
-  /** True when the anchor was loaded from a weak-subjectivity checkpoint this startup (see init()). */
   isCheckpointState: boolean;
 };
 
@@ -120,17 +119,9 @@ export class ArchiveStore {
       );
     }
 
-    // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
-    // above), rather than the anchor state slot set in the constructor. On an in-place restart the DB
-    // still holds finalized history below the anchor; leaving the value at the anchor makes the node
-    // reject by_range requests (beacon_blocks, execution_payload_envelopes and data_column_sidecars
-    // all gate on this slot) for data it still retains.
-    //
-    // This is only safe when the retained archive is contiguous up to the anchor. A weak-subjectivity
-    // checkpoint sync this startup can leave a gap between the anchor and any older blocks still in the
-    // DB (e.g. the node synced, was stopped, then checkpoint-synced from a higher slot), and we cannot
-    // serve that gap until backfill exists (#7997). In that case keep the anchor slot set in the
-    // constructor rather than the misleadingly low earliest retained block.
+    // blockArchive.firstKey() is only a valid earliestAvailableSlot floor when the archive is
+    // contiguous up to the anchor. A checkpoint sync this startup can leave an unservable gap below
+    // the anchor (no backfill yet, #7997), so only lower to the retained floor when we did not.
     if (this.opts.isCheckpointState) {
       this.logger.verbose("Checkpoint-synced anchor, keeping earliestAvailableSlot at the anchor slot", {
         earliestAvailableSlot: this.chain.earliestAvailableSlot,
