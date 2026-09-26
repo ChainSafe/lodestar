@@ -1170,14 +1170,21 @@ export function createLodestarMetrics(
       }),
       duration: register.histogram<{outcome: string}>({
         name: "lodestar_dispatch_gate_seconds",
-        help: "Duration of each treatment wait before the state transition, by outcome",
+        help: "Whole delay of each treatment wait before the state transition, from its start to the verification resuming, by outcome",
         labelNames: ["outcome"],
-        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1],
+        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1, 0.25, 0.5],
       }),
-      overshoot: register.histogram({
-        name: "lodestar_dispatch_gate_overshoot_seconds",
-        help: "How late the deadline's timeout ran for treatment waits that fell back",
-        buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25],
+      settle: register.histogram<{outcome: string}>({
+        name: "lodestar_dispatch_gate_settle_seconds",
+        help: "From each treatment wait's start to the engine requests' first attempts ending or the deadline's timeout running, by outcome",
+        labelNames: ["outcome"],
+        buckets: [0.0005, 0.001, 0.002, 0.005, 0.01, 0.015, 0.025, 0.05, 0.1, 0.25, 0.5],
+      }),
+      pastDeadline: register.histogram<{outcome: string}>({
+        name: "lodestar_dispatch_gate_past_deadline_seconds",
+        help: "How far each treatment wait's whole delay passed its 10 ms deadline, 0 within it, by outcome",
+        labelNames: ["outcome"],
+        buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
       }),
     },
     importPayload: {

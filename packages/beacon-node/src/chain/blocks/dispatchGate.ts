@@ -30,26 +30,39 @@ export const DISPATCH_GATE_DEADLINE_MS = 10;
 export type DispatchGateOutcome = "both_sent" | "new_payload_only" | "fell_back" | "skipped";
 /** The root's getBlobs call when the gate started: none in progress or it sent nothing, not yet sent, or sent */
 export type GetBlobsAtGate = "none" | "pending" | "dispatched";
-export type DispatchGateResult = {
+/** What ended the gate's wait, before the awaiting verification resumed */
+export type DispatchGateSettlement = {
   outcome: DispatchGateOutcome;
   getBlobs: GetBlobsAtGate;
   /** The `performance.now()` time the gate started */
   start: number;
-  /** From the gate's start to its end */
-  ms: number;
-  /** How late the deadline's timeout ran, NaN unless the gate fell back */
-  overshootMs: number;
+  /** From the start to the first attempts ending or the deadline's timeout running */
+  settledMs: number;
 };
+/** A gate's settlement and the whole delay it added before the state transition */
+export type DispatchGateResult = DispatchGateSettlement & {
+  /**
+   * From the start to the awaiting verification resuming, which the state transition follows at once; it includes work
+   * that ran after the settlement
+   */
+  ms: number;
+};
+
+/** How far a gate's whole delay passed the deadline, 0 within it */
+export function pastDeadlineMs(gate: DispatchGateResult): number {
+  return Math.max(0, gate.ms - DISPATCH_GATE_DEADLINE_MS);
+}
 
 /**
  * Waits until newPayload's first attempt, and the root's getBlobs call's when it has not sent yet, has handed its body to
- * the connection or ended, for at most `deadlineMs`. It waits for no response and starts no request.
+ * the connection or ended, for at most `deadlineMs`. It waits for no response and starts no request. The caller measures
+ * its own resumption, which can come later than the settlement.
  */
 export function awaitEngineDispatch(
   newPayload: HttpRequestTimes,
   getBlobs: HttpRequestTimes | null,
   deadlineMs: number
-): Promise<DispatchGateResult> {
+): Promise<DispatchGateSettlement> {
   const start = performance.now();
   const getBlobsAtGate: GetBlobsAtGate =
     getBlobs === null || (getBlobs.firstAttemptEnded && Number.isNaN(getBlobs.firstSent))
@@ -61,37 +74,36 @@ export function awaitEngineDispatch(
 
   return new Promise((resolve) => {
     let timeout: NodeJS.Timeout | undefined;
-    const finish = (timedOutAt: number): void => {
+    const finish = (fellBack: boolean): void => {
       clearTimeout(timeout);
       newPayload.onFirstAttemptEnd = null;
       if (waited) waited.onFirstAttemptEnd = null;
-      const fellBack = !Number.isNaN(timedOutAt);
       const newPayloadSent = !Number.isNaN(newPayload.firstSent);
       const getBlobsSent = getBlobs !== null && !Number.isNaN(getBlobs.firstSent);
       resolve({
         outcome: fellBack ? "fell_back" : !newPayloadSent ? "skipped" : getBlobsSent ? "both_sent" : "new_payload_only",
         getBlobs: getBlobsAtGate,
         start,
-        ms: performance.now() - start,
-        overshootMs: fellBack ? timedOutAt - start - deadlineMs : NaN,
+        settledMs: performance.now() - start,
       });
     };
     const onEnd = (): void => {
-      if (newPayload.firstAttemptEnded && (waited === null || waited.firstAttemptEnded)) finish(NaN);
+      if (newPayload.firstAttemptEnded && (waited === null || waited.firstAttemptEnded)) finish(false);
     };
     newPayload.onFirstAttemptEnd = onEnd;
     if (waited) waited.onFirstAttemptEnd = onEnd;
-    timeout = setTimeout(() => finish(performance.now()), deadlineMs);
+    timeout = setTimeout(() => finish(true), deadlineMs);
     onEnd();
   });
 }
 
-export function observeDispatchGate(metrics: Metrics | null, result: DispatchGateResult): void {
+export function observeDispatchGate(metrics: Metrics | null, gate: DispatchGateResult): void {
   if (!metrics) return;
-  const {outcome, getBlobs, ms, overshootMs} = result;
+  const {outcome, getBlobs, settledMs, ms} = gate;
   metrics.dispatchGate.gates.inc({outcome, getblobs: getBlobs});
   metrics.dispatchGate.duration.observe({outcome}, ms / 1000);
-  if (!Number.isNaN(overshootMs)) metrics.dispatchGate.overshoot.observe(overshootMs / 1000);
+  metrics.dispatchGate.settle.observe({outcome}, settledMs / 1000);
+  metrics.dispatchGate.pastDeadline.observe({outcome}, pastDeadlineMs(gate) / 1000);
 }
 
 /** From `startEpoch`, `pairs` pairs of arms, each pair's order drawn from `seed` */

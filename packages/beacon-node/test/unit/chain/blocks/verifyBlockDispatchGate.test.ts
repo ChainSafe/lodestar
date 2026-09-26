@@ -1,3 +1,4 @@
+import {subscribe, unsubscribe} from "node:diagnostics_channel";
 import http from "node:http";
 import {AddressInfo} from "node:net";
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
@@ -17,7 +18,7 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GetBlobsTracker} from "../../../../src/chain/GetBlobsTracker.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {ExecutionEngineHttp} from "../../../../src/execution/engine/http.js";
-import {JsonRpcHttpClient} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
+import {HttpRequestTimes, JsonRpcHttpClient} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -185,7 +186,7 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
   it("hands newPayload and getBlobs to the connection before the state transition starts when the gate succeeds", async () => {
     const {root, milestones} = await verify(DispatchArm.treatment, {getBlobs: true});
     expect(root.arm).toBe(DispatchArm.treatment);
-    expect(root.dispatchGate).toMatchObject({outcome: "both_sent", getBlobs: "pending", overshootMs: null});
+    expect(root.dispatchGate).toMatchObject({outcome: "both_sent", getBlobs: "pending"});
     const {execution_dispatch, getblobs_dispatch, state_transition_start} = milestones;
     expect(execution_dispatch).not.toBeNull();
     expect(getblobs_dispatch).not.toBeNull();
@@ -211,6 +212,37 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     );
   });
 
+  it("counts work after the settlement until the verification resumes in the gate's delay", async () => {
+    // Joins this process's HTTP diagnostics channels before the stall below subscribes behind them
+    await new JsonRpcHttpClient([url]).fetch(
+      {method: "engine_getBlobsV2", params: []},
+      {times: new HttpRequestTimes()}
+    );
+    const STALL_MS = 40;
+    let stalled = false;
+    const stall = (): void => {
+      if (stalled) return;
+      stalled = true;
+      const from = performance.now();
+      while (performance.now() - from < STALL_MS);
+    };
+    subscribe("undici:request:bodySent", stall);
+    try {
+      const {root, milestones} = await verify(DispatchArm.treatment, {getBlobs: false});
+      const gate = root.dispatchGate;
+      expect(gate).toMatchObject({outcome: "new_payload_only", getBlobs: "none"});
+      if (gate === null) throw Error("No gate");
+      expect(gate.ms - gate.settledMs).toBeGreaterThanOrEqual(STALL_MS - 1);
+      expect(gate.pastDeadlineMs).toBe(Math.round((gate.ms - 10) * 1000) / 1000);
+      expect(root.waits.dispatchGate?.endMs).toBeLessThanOrEqual(milestones.state_transition_start as number);
+      expect((root.waits.dispatchGate?.endMs as number) - (root.waits.dispatchGate?.beginMs as number)).toBeGreaterThan(
+        STALL_MS
+      );
+    } finally {
+      unsubscribe("undici:request:bodySent", stall);
+    }
+  });
+
   it("falls back at the deadline when newPayload waits behind an earlier engine request", async () => {
     forkchoiceDelayMs = 300;
     const {root, milestones} = await verify(DispatchArm.treatment, {
@@ -227,7 +259,8 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     const gate = root.dispatchGate;
     expect(gate).toMatchObject({outcome: "fell_back", getBlobs: "none"});
     if (gate === null) throw Error("No gate");
-    expect(gate.ms).toBeGreaterThanOrEqual(9);
+    expect(gate.settledMs).toBeGreaterThanOrEqual(9);
+    expect(gate.ms).toBeGreaterThanOrEqual(gate.settledMs);
     expect(gate.ms).toBeLessThan(forkchoiceDelayMs / 2);
     // The state transition started without waiting for the queued request, which kept its order behind forkchoiceUpdated
     expect(milestones.execution_dispatch).toBeGreaterThan((milestones.state_transition_start as number) + STF_MS);

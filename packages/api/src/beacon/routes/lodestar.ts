@@ -130,13 +130,15 @@ export type BlockTraceRoot = {
   arm: DispatchArm | null;
   /**
    * The treatment's wait before the latest attempt's state transition for the first engine request writes: its outcome,
-   * the getBlobs call's state when it started, its duration, and how late its deadline's timeout ran when it fell back
+   * the getBlobs call's state when it started, the time until the first attempts ended or the deadline's timeout ran,
+   * the whole delay until the verification resumed, and how far that passed the 10 ms deadline
    */
   dispatchGate: {
     outcome: "both_sent" | "new_payload_only" | "fell_back" | "skipped";
     getBlobs: "none" | "pending" | "dispatched";
+    settledMs: number;
     ms: number;
-    overshootMs: number | null;
+    pastDeadlineMs: number;
   } | null;
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];

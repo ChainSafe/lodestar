@@ -7,7 +7,7 @@ import {Metrics} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import type {CellComputeTimes} from "../../util/dataColumns.js";
 import type {DataAvailableVia, IBlockInput} from "../blocks/blockInput/types.js";
-import {DispatchArm, DispatchGateResult} from "../blocks/dispatchGate.js";
+import {DispatchArm, DispatchGateResult, pastDeadlineMs} from "../blocks/dispatchGate.js";
 import {BlsJobTimes} from "../bls/interface.js";
 import {ConsumerTarget, ConsumerTargetsMs, getConsumerTargetsMs} from "./consumerTargets.js";
 
@@ -981,8 +981,8 @@ export class BlockTrace {
 
 function gateSnapshot(gate: DispatchGateResult | null): routes.lodestar.BlockTraceRoot["dispatchGate"] {
   if (gate === null) return null;
-  const {outcome, getBlobs, ms, overshootMs} = gate;
-  return {outcome, getBlobs, ms: round(ms), overshootMs: Number.isNaN(overshootMs) ? null : round(overshootMs)};
+  const {outcome, getBlobs, settledMs, ms} = gate;
+  return {outcome, getBlobs, settledMs: round(settledMs), ms: round(ms), pastDeadlineMs: round(pastDeadlineMs(gate))};
 }
 
 function samplingCoverage(coverage: number): "full" | "partial" | "none" {

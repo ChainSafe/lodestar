@@ -317,12 +317,13 @@ describe("BlockTrace", () => {
     t.at(1002);
     t.trace.attestationBatchStart(null);
     t.at(1008);
-    attempt?.recordGate({outcome: "both_sent", getBlobs: "pending", start, ms: 8, overshootMs: NaN});
+    attempt?.recordGate({outcome: "both_sent", getBlobs: "pending", start, settledMs: 3, ms: 8});
     expect(t.slot(slot).roots[0].dispatchGate).toEqual({
       outcome: "both_sent",
       getBlobs: "pending",
+      settledMs: 3,
       ms: 8,
-      overshootMs: null,
+      pastDeadlineMs: 0,
     });
     expect(t.slot(slot).roots[0].waits.dispatchGate).toMatchObject({beginMs: 1000, endMs: 1008, attestationStarts: 1});
 

@@ -4,6 +4,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {BlockInputColumns, BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
+  DISPATCH_GATE_DEADLINE_MS,
   DispatchArm,
   DispatchGateSwitch,
   DispatchSchedule,
@@ -11,6 +12,7 @@ import {
   awaitEngineDispatch,
   firstArmOfPair,
   parseDispatchSchedule,
+  pastDeadlineMs,
 } from "../../../../src/chain/blocks/dispatchGate.js";
 import {HttpRequestTimes} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {Metrics} from "../../../../src/metrics/index.js";
@@ -161,10 +163,10 @@ describe("chain / blocks / dispatchGate / awaitEngineDispatch", () => {
     endAfter(newPayload, 1);
     endAfter(getBlobs, 3);
     const result = await awaitEngineDispatch(newPayload, getBlobs, 1000);
-    expect(result).toMatchObject({outcome: "both_sent", getBlobs: "pending", overshootMs: NaN});
+    expect(result).toMatchObject({outcome: "both_sent", getBlobs: "pending"});
     expect(result.start).toBeLessThanOrEqual(newPayload.firstSent);
-    expect(result.ms).toBeGreaterThanOrEqual(getBlobs.firstSent - newPayload.firstSent);
-    expect(result.ms).toBeLessThan(500);
+    expect(result.settledMs).toBeGreaterThanOrEqual(getBlobs.firstSent - newPayload.firstSent);
+    expect(result.settledMs).toBeLessThan(500);
     expect(newPayload.onFirstAttemptEnd).toBeNull();
     expect(getBlobs.onFirstAttemptEnd).toBeNull();
   });
@@ -203,16 +205,20 @@ describe("chain / blocks / dispatchGate / awaitEngineDispatch", () => {
     expect(await awaitEngineDispatch(newPayload, null, 1000)).toMatchObject({outcome: "skipped", getBlobs: "none"});
   });
 
-  it("falls back at the deadline and records how late its timeout ran", async () => {
+  it("falls back at the deadline", async () => {
     const [newPayload, getBlobs] = [new HttpRequestTimes(), new HttpRequestTimes()];
     endAfter(getBlobs, 1);
     const result = await awaitEngineDispatch(newPayload, getBlobs, 10);
     expect(result.outcome).toBe("fell_back");
     // Timers run on the event loop's millisecond clock, so the timeout can run up to 1 ms early by this clock
-    expect(result.ms).toBeGreaterThanOrEqual(9);
-    expect(result.ms).toBeLessThan(200);
-    expect(result.overshootMs).toBeGreaterThanOrEqual(-1);
-    expect(result.overshootMs).toBeLessThanOrEqual(result.ms - 9);
+    expect(result.settledMs).toBeGreaterThanOrEqual(9);
+    expect(result.settledMs).toBeLessThan(200);
     expect(newPayload.onFirstAttemptEnd).toBeNull();
+  });
+
+  it("counts only the whole delay past the deadline", () => {
+    const gate = {outcome: "both_sent", getBlobs: "none", start: 0, settledMs: 2} as const;
+    expect(pastDeadlineMs({...gate, ms: 4})).toBe(0);
+    expect(pastDeadlineMs({...gate, ms: 61})).toBe(61 - DISPATCH_GATE_DEADLINE_MS);
   });
 });

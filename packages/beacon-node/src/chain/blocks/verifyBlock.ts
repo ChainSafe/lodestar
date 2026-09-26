@@ -192,11 +192,12 @@ export async function verifyBlocksInEpoch(
       verifyExecutionPayloadsPromise.catch(ignore);
       daAvailabilityPromise.catch(ignore);
       // Hand newPayload, and a getBlobs call not yet sent, to the connection before the synchronous state transition
-      const gate = await awaitEngineDispatch(
+      const settlement = await awaitEngineDispatch(
         gatedRequest,
         this.getBlobsTracker.requestInProgress(blockInputs[0].blockRootHex),
         DISPATCH_GATE_DEADLINE_MS
       );
+      const gate = {...settlement, ms: performance.now() - settlement.start};
       observeDispatchGate(this.metrics, gate);
       attempt?.recordGate(gate);
     }
