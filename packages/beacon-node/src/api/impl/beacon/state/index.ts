@@ -441,5 +441,41 @@ export function getBeaconStateApi({
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
+
+    async getBuilderPendingPayments({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder payments for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingPayments = state.builderPendingPayments;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingPayments.serialize(builderPendingPayments)
+          : builderPendingPayments,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBuilderPendingWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder withdrawals for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingWithdrawals = state.builderPendingWithdrawals;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingWithdrawals.serialize(builderPendingWithdrawals)
+          : builderPendingWithdrawals,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
   };
 }
