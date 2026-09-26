@@ -214,7 +214,7 @@ export type DispatchGateState = {
     epochsPerArm: number;
     firstArms: DispatchArm[];
   } | null;
-  /** Whether blocks starting processing now take the control arm whatever the schedule */
+  /** Whether blocks starting processing now take the control arm whatever the schedule, until cleared through the API */
   forceControl: boolean;
   currentEpoch: Epoch;
   /** The arm a live block of the current epoch starting processing now takes */
@@ -369,7 +369,7 @@ export type Endpoints = {
     DispatchGateState,
     EmptyMeta
   >;
-  /** Force blocks that start processing from now to the control arm, or return them to the schedule */
+  /** Force blocks that start processing from now to the control arm, persisting across restarts, or clear it */
   setDispatchGateControl: Endpoint<
     "POST",
     {forceControl: boolean},

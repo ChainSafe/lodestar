@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {digest} from "@chainsafe/as-sha256";
 import {routes} from "@lodestar/api";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -18,6 +19,8 @@ export enum DispatchArm {
 
 /** Epochs in each arm of a crossover pair */
 export const EPOCHS_PER_ARM = 4;
+/** The file in the beacon data directory whose presence forces control across restarts, until the API clears it */
+export const DISPATCH_GATE_CONTROL_FILE = "dispatch_gate_force_control.json";
 /** Requested bound of the treatment's wait before the state transition; the event loop can run its timeout late */
 export const DISPATCH_GATE_DEADLINE_MS = 10;
 
@@ -144,25 +147,29 @@ export function parseDispatchSchedule(opts: {
 /**
  * Assigns each block processing attempt an arm of the dispatch experiment when its verification starts, so a block in
  * flight keeps its arm. Blocks are control unless the seeded crossover schedule puts their epoch in a treatment arm,
- * and the control override, set at runtime through the API, forces control whatever the schedule.
+ * and the control override, set at runtime through the API, forces control whatever the schedule. The override
+ * persists in `controlFile`, so a restart cannot resume treatment until the API clears it.
  */
 export class DispatchGateSwitch {
-  private forceControl = false;
+  private forceControl: boolean;
   private readonly firstArms: DispatchArm[];
 
   constructor(
     private readonly schedule: DispatchSchedule | null,
     private readonly clock: IClock,
     private readonly logger: Logger,
-    metrics: Metrics | null
+    metrics: Metrics | null,
+    private readonly controlFile: string | null
   ) {
     this.firstArms = [];
     for (let pair = 0; schedule !== null && pair < schedule.pairs; pair++) {
       this.firstArms.push(firstArmOfPair(schedule.seed, pair));
     }
+    this.forceControl = controlFile !== null && fs.existsSync(controlFile);
     if (schedule !== null) {
       logger.info("Dispatch gate crossover schedule", {...schedule, epochsPerArm: EPOCHS_PER_ARM});
     }
+    if (this.forceControl) logger.warn("Dispatch gate control forced by a persisted override", {file: controlFile});
     if (metrics) {
       const {arm, forcedControl} = metrics.dispatchGate;
       arm.addCollect(() => arm.set(this.armAt(this.clock.currentEpoch) === DispatchArm.treatment ? 1 : 0));
@@ -180,9 +187,24 @@ export class DispatchGateSwitch {
     return this.armAt(computeEpochAtSlot(block.slot));
   }
 
+  /**
+   * Sets or clears the control override for attempts that start verification afterwards. Setting applies before it
+   * persists and clearing only once the file is gone, so a persistence failure leaves control forced and throws.
+   */
   setForceControl(forceControl: boolean): void {
-    if (forceControl !== this.forceControl) this.logger.info("Dispatch gate control override", {forceControl});
+    const changed = forceControl !== this.forceControl;
+    if (forceControl) this.forceControl = true;
+    if (this.controlFile !== null) {
+      if (forceControl) {
+        const staged = `${this.controlFile}.tmp`;
+        fs.writeFileSync(staged, JSON.stringify({forceControl: true, since: new Date().toISOString()}));
+        fs.renameSync(staged, this.controlFile);
+      } else {
+        fs.rmSync(this.controlFile, {force: true});
+      }
+    }
     this.forceControl = forceControl;
+    if (changed) this.logger.info("Dispatch gate control override", {forceControl, file: this.controlFile});
   }
 
   getState(): routes.lodestar.DispatchGateState {

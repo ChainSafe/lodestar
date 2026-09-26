@@ -186,6 +186,7 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
       arm === DispatchArm.treatment ? {seed, startEpoch: epoch, pairs: 1} : null,
       clock,
       logger,
+      null,
       null
     );
     const getBlobsTracker = new GetBlobsTracker({
@@ -271,6 +272,23 @@ describe("chain / blocks / verifyBlocksInEpoch / dispatch gate over loopback", (
     expect(root.dispatchGate?.settledMs).toBeLessThan(DISPATCH_GATE_DEADLINE_MS);
     expect(milestones.execution_dispatch).toBeNull();
     expect(milestones.state_transition_start).not.toBeNull();
+  });
+
+  it("keeps an attempt's arm when control is forced during its prestate regeneration, and forces the next", async () => {
+    const shared = setupChain(DispatchArm.treatment);
+    const first = await verify(
+      DispatchArm.treatment,
+      {getBlobs: false, whilePrestate: (gate) => gate.setForceControl(true)},
+      shared
+    );
+    expect(first.error).toBeNull();
+    expect(first.root.arm).toBe(DispatchArm.treatment);
+    expect(first.root.dispatchGate).toMatchObject({outcome: "new_payload_only"});
+    const second = await verify(DispatchArm.treatment, {getBlobs: false, root: "0xbb", proposerIndex: 1}, shared);
+    expect(second.error).toBeNull();
+    expect(second.root.arm).toBe(DispatchArm.control);
+    expect(second.root.dispatchGate).toBeNull();
+    expect(second.milestones.execution_dispatch).toBeGreaterThan(second.milestones.state_transition_start as number);
   });
 
   it("sends newPayload only after the synchronous state transition in the control arm", async () => {

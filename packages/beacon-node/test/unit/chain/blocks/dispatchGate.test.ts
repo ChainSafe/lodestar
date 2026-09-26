@@ -1,9 +1,13 @@
 import {createHash} from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {describe, expect, it, vi} from "vitest";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {BlockInputColumns, BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
+  DISPATCH_GATE_CONTROL_FILE,
   DISPATCH_GATE_DEADLINE_MS,
   DispatchArm,
   DispatchGateSwitch,
@@ -37,12 +41,18 @@ function fuluBlock(slot: number, source = BlockInputSource.gossip): IBlockInput 
   });
 }
 
-function setup(scheduleOrNull: DispatchSchedule | null, epoch = startEpoch) {
+function setup(scheduleOrNull: DispatchSchedule | null, epoch = startEpoch, controlFile: string | null = null) {
   const clock = new ClockStopped(epoch * SLOTS_PER_EPOCH);
   const collects: (() => void)[] = [];
   const gauge = () => ({set: vi.fn(), addCollect: (fn: () => void) => collects.push(fn)});
   const metrics = {dispatchGate: {arm: gauge(), forcedControl: gauge()}};
-  const gate = new DispatchGateSwitch(scheduleOrNull, clock, getMockedLogger(), metrics as unknown as Metrics);
+  const gate = new DispatchGateSwitch(
+    scheduleOrNull,
+    clock,
+    getMockedLogger(),
+    metrics as unknown as Metrics,
+    controlFile
+  );
   return {
     gate,
     clock,
@@ -117,6 +127,38 @@ describe("chain / blocks / dispatchGate / switch", () => {
 
     t.gate.setForceControl(false);
     expect(t.armAt(treatmentEpoch)).toBe(DispatchArm.treatment);
+  });
+
+  it("keeps the control override across restarts until the API clears it", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dispatch-gate-"));
+    const controlFile = path.join(dir, DISPATCH_GATE_CONTROL_FILE);
+    const treatmentEpoch =
+      startEpoch + (firstArmOfPair(schedule.seed, 0) === DispatchArm.treatment ? 0 : EPOCHS_PER_ARM);
+    try {
+      setup(schedule, startEpoch, controlFile).gate.setForceControl(true);
+      expect(fs.existsSync(controlFile)).toBe(true);
+
+      const restarted = setup(schedule, startEpoch, controlFile);
+      expect(restarted.gate.getState().forceControl).toBe(true);
+      expect(restarted.armAt(treatmentEpoch)).toBe(DispatchArm.control);
+      restarted.gate.setForceControl(false);
+      expect(fs.existsSync(controlFile)).toBe(false);
+
+      const cleared = setup(schedule, startEpoch, controlFile);
+      expect(cleared.armAt(treatmentEpoch)).toBe(DispatchArm.treatment);
+    } finally {
+      fs.rmSync(dir, {recursive: true, force: true});
+    }
+  });
+
+  it("forces control and throws when the override cannot persist", () => {
+    const controlFile = path.join(os.tmpdir(), "dispatch-gate-missing-dir", "sub", DISPATCH_GATE_CONTROL_FILE);
+    const t = setup(schedule, startEpoch, controlFile);
+    const treatmentEpoch =
+      startEpoch + (firstArmOfPair(schedule.seed, 0) === DispatchArm.treatment ? 0 : EPOCHS_PER_ARM);
+    expect(() => t.gate.setForceControl(true)).toThrow();
+    expect(t.gate.getState().forceControl).toBe(true);
+    expect(t.armAt(treatmentEpoch)).toBe(DispatchArm.control);
   });
 
   it("assigns an arm only to a single live Fulu gossip block that verifies its payload", () => {
