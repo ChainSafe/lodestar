@@ -2163,7 +2163,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     const existingNextSlot = this.voteNextSlots[validatorIndex];
-    if (existingNextSlot === INIT_VOTE_SLOT || computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot)) {
+    // Pre-Gloas a vote is only replaced by one from a later epoch, from Gloas by one from a later slot
+    const isNewerVote = isForkPostGloas(this.config.getForkName(nextSlot))
+      ? nextSlot > existingNextSlot
+      : computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot);
+    if (existingNextSlot === INIT_VOTE_SLOT || isNewerVote) {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextSlots[validatorIndex] = nextSlot;
