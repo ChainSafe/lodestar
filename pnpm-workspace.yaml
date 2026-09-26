@@ -1,27 +1,6 @@
 packages:
   - packages/*
 
-allowBuilds:
-  "@chainsafe/lodestar-z": true
-  "@parcel/watcher": true
-  "@swc/core": true
-  "@vekexasia/bigint-buffer2": true
-  aws-sdk: true
-  classic-level: true
-  core-js: true
-  cpu-features: true
-  electron: true
-  esbuild: true
-  nx: true
-  ssh2: true
-
-catalog:
-  "@chainsafe/lodestar-z": "^1.0.0"
-  "@vitest/browser": "^4.0.7"
-  "@vitest/browser-playwright": "^4.0.7"
-  "@vitest/coverage-v8": "^4.0.7"
-  vitest: "^4.0.7"
-
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
@@ -34,6 +13,27 @@ minimumReleaseAgeExclude:
 
 nodeLinker: isolated
 
+catalog:
+  "@chainsafe/lodestar-z": "^1.0.0"
+  "@vitest/browser": "^4.0.7"
+  "@vitest/browser-playwright": "^4.0.7"
+  "@vitest/coverage-v8": "^4.0.7"
+  vitest: "^4.0.7"
+
+allowBuilds:
+  "@chainsafe/lodestar-z": true
+  "@parcel/watcher": true
+  "@swc/core": true
+  aws-sdk: true
+  "@vekexasia/bigint-buffer2": true
+  classic-level: true
+  core-js: true
+  cpu-features: true
+  electron: true
+  esbuild: true
+  nx: true
+  ssh2: true
+
 overrides:
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
@@ -45,5 +45,4 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
-  classic-level@1.4.1: patches/classic-level@1.4.1.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch
