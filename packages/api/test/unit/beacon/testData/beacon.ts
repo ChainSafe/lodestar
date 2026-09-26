@@ -241,6 +241,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false},
     },
   },
+  getStatePtc: {
+    args: {stateId: "head", slot: 2},
+    res: {
+      data: {slot: 2, validators: ssz.gloas.PayloadTimelinessCommittee.defaultValue()},
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   getPendingDeposits: {
     args: {stateId: "head"},
     res: {

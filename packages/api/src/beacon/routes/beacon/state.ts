@@ -90,6 +90,10 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   },
   {jsonCase: "eth2"}
 );
+export const PtcResponseType = new ContainerType({
+  slot: ssz.Slot,
+  validators: ssz.gloas.PayloadTimelinessCommittee,
+});
 export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
 export const BuilderResponseListType = ArrayOf(BuilderResponseType);
 export const ValidatorIdentitiesType = ArrayOf(ValidatorIdentityType);
@@ -103,6 +107,7 @@ export type BuilderResponse = ValueOf<typeof BuilderResponseType>;
 export type EpochCommitteeResponse = ValueOf<typeof EpochCommitteeResponseType>;
 export type ValidatorBalance = ValueOf<typeof ValidatorBalanceType>;
 export type EpochSyncCommitteeResponse = ValueOf<typeof EpochSyncCommitteeResponseType>;
+export type PtcResponse = ValueOf<typeof PtcResponseType>;
 
 export type ValidatorResponseList = ValueOf<typeof ValidatorResponseListType>;
 export type BuilderResponseList = ValueOf<typeof BuilderResponseListType>;
@@ -315,6 +320,14 @@ export type Endpoints = {
     ExecutionOptimisticAndFinalizedMeta
   >;
 
+  getStatePtc: Endpoint<
+    "GET",
+    StateArgs & {slot?: Slot},
+    {params: {state_id: string}; query: {slot?: number}},
+    PtcResponse,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
   /**
    * Get State Pending Deposits
    *
@@ -414,6 +427,23 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: EpochSyncCommitteeResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getStatePtc: {
+      url: "/eth/v1/beacon/states/{state_id}/ptc",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, slot}) => ({params: {state_id: stateId.toString()}, query: {slot}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, slot: query.slot}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {slot: Schema.Uint},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: PtcResponseType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
