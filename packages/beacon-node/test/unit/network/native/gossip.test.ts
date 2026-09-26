@@ -12,7 +12,6 @@ import {
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {defer} from "@lodestar/utils";
-import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
 import {NativeClaim, NativeDrain, NativeJob} from "../../../../src/network/core/native/drain.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
@@ -46,7 +45,7 @@ const idle: NativeExchange = {
 
 type Demand = ReturnType<NativeGossip["demand"]>;
 
-async function fixture(events = new NetworkEventBus(), attach = true, register: RegistryMetricCreator | null = null) {
+async function fixture(events = new NetworkEventBus(), attach = true) {
   const peer = await generateKeyPair("secp256k1");
   let queued: NativeGossipMessage[] = [];
   let checks: NativeGossipDependencyCheck[] = [];
@@ -74,13 +73,12 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
       demand.claimOrdinary && demand.ordinary ? queued.filter((message) => message.topic !== blockTopic) : [];
     const messages = [...urgent, ...ordinary].slice(0, demand.messages);
     queued = queued.filter((message) => !messages.includes(message));
-    const claimedAt = performance.now();
     const jobs: NativeJob[] = grouped
-      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages, claimedAt}]
+      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages}]
       : messages.map((message) =>
           message.topic === blockTopic
-            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message], claimedAt}
-            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message], claimedAt}
+            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message]}
+            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message]}
         );
     const result = messages.length > 0 ? jobs.map((job) => new NativeClaim(job)) : [];
     claims.push(result);
@@ -88,7 +86,7 @@ async function fixture(events = new NetworkEventBus(), attach = true, register: 
   });
   const onError = vi.fn();
   const onFailure = vi.fn();
-  const gossip = new NativeGossip(runtime, ledger, config, events, defaultNetworkOptions, onError, onFailure, register);
+  const gossip = new NativeGossip(runtime, ledger, config, events, defaultNetworkOptions, onError, onFailure);
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
@@ -371,115 +369,6 @@ describe("native gossip host ownership", () => {
     }
   });
 
-  it("measures a checked message's delay from its dependency check to its job's dispatch", async () => {
-    const register = new RegistryMetricCreator();
-    const node = await fixture(undefined, true, register);
-    try {
-      // Native claims a classified message in the exchange that carries its classification.
-      const message = node.message();
-      node.dependencyChecks([
-        {handle: message.handle, root: new Uint8Array(32), slot: 1n, peerId: message.peerId, topic},
-      ]);
-      node.admit(message);
-      node.turn();
-      expect(await register.getSingleMetricAsString("lodestar_native_gossip_check_to_dispatch_seconds")).toContain(
-        'lodestar_native_gossip_check_to_dispatch_seconds_count{kind="voluntary_exit"} 1'
-      );
-    } finally {
-      await node.close();
-    }
-  });
-
-  it("times urgent jobs' stages and hands the ledger their settlement, but not ordinary jobs", async () => {
-    const register = new RegistryMetricCreator();
-    const node = await fixture(undefined, true, register);
-    try {
-      const block = node.message(2, blockTopic);
-      node.admit(block, node.message());
-      node.turn();
-      await node.retire(node.pending[0]);
-      await node.retire(node.pending[1]);
-      const [[handle, verdict, settledAt], ordinary] = node.ledger.verdict.mock.calls;
-      expect([handle, verdict, typeof settledAt]).toEqual([block.handle, "accept", "number"]);
-      expect(ordinary).toEqual([node.message().handle, "accept"]);
-      const metric = await register.getSingleMetricAsString("lodestar_native_gossip_host_stage_seconds");
-      for (const interval of ["claim_to_dispatch", "dispatch_to_start", "start_to_complete"])
-        expect(metric).toContain(
-          `lodestar_native_gossip_host_stage_seconds_count{kind="beacon_block",interval="${interval}"} 1`
-        );
-      expect(metric).not.toContain('kind="voluntary_exit"');
-    } finally {
-      await node.close();
-    }
-  });
-
-  it("starts host stages at native's claim, after settlement and the mutex, and sends a verdict's wait", async () => {
-    const register = new RegistryMetricCreator();
-    const node = await fixture(undefined, true, register);
-    let now = 1000;
-    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
-    const block = node.message(2, blockTopic);
-    const exchange = vi.fn((_actions: readonly NativeAction[], _demand: unknown): NativeExchange => idle);
-    // Native settles and waits for the mutex 20 ms before it claims, then builds the result for 5 ms.
-    exchange.mockImplementationOnce(() => {
-      now += 25;
-      return {
-        ...idle,
-        gossip: {
-          messages: [block],
-          jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}],
-          claimOffsetMs: 20,
-        },
-      };
-    });
-    const pump = new NativeDrain(
-      {exchange, fail: vi.fn<NativeNetworkApplicationRuntime["fail"]>(), closed: new Promise(() => {})},
-      {budgetMs: 8, settle: 32},
-      () => ({
-        demand: () => {
-          now += 4;
-          return {
-            bytes: 1 << 20,
-            capacity: null,
-            checks: 64,
-            claimOrdinary: true,
-            messages: 64,
-            peers: 32,
-            servingStarts: 8,
-          };
-        },
-        deliver: ({checks, jobs}, deadline) => {
-          now += 3;
-          return node.gossip.deliver(checks, jobs, deadline);
-        },
-      }),
-      node.onError,
-      node.onFailure,
-      null
-    );
-    node.ledger.verdict.mockImplementation((handle, verdict, settledAt) => pump.verdict(handle, verdict, settledAt));
-    try {
-      pump.request();
-      await flush();
-      now += 10;
-      await node.retire(node.pending[0]);
-      await flush();
-      // The call at 1004 claimed at 1024 and dispatched at 1032; validation settled at 1042, 4 ms before the next call.
-      expect(exchange.mock.calls[1][0]).toEqual([
-        {handle: block.handle, type: "verdict", verdict: "accept", waitedMs: 4},
-      ]);
-      const metric = await register.getSingleMetricAsString("lodestar_native_gossip_host_stage_seconds");
-      const sum = (interval: string) =>
-        Number(new RegExp(`_sum\\{kind="beacon_block",interval="${interval}"\\} (\\S+)`).exec(metric)?.[1]);
-      expect(sum("claim_to_dispatch")).toBeCloseTo(0.008, 9);
-      expect(sum("dispatch_to_start")).toBeCloseTo(0, 9);
-      expect(sum("start_to_complete")).toBeCloseTo(0.01, 9);
-    } finally {
-      clock.mockRestore();
-      await node.close();
-    }
-  });
-
   it("waits for an executor before acquiring native work", async () => {
     const node = await fixture(undefined, false);
     try {
@@ -617,11 +506,7 @@ describe("native gossip host ownership", () => {
     const exchange = vi.fn((_actions: readonly NativeAction[], _demand: unknown): NativeExchange => idle);
     exchange.mockReturnValueOnce({
       ...idle,
-      gossip: {
-        messages: [message],
-        jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}],
-        claimOffsetMs: 0,
-      },
+      gossip: {messages: [message], jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}]},
     });
     const pump = new NativeDrain(
       {exchange, fail: vi.fn<NativeNetworkApplicationRuntime["fail"]>(), closed: new Promise(() => {})},

@@ -7,11 +7,8 @@ import {
   NativeGossipHandle,
   NativeGossipMessage,
   NativeNetworkApplicationRuntime,
-  NativeTopicKind,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {Histogram} from "@lodestar/utils";
-import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
@@ -24,16 +21,11 @@ type GossipLedger = Pick<NativeDrain, "verdict" | "classify" | "block" | "dropQu
 type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe">;
 /** Gossip bounds of one exchange. */
 export type NativeGossipLimits = {checks: number; messages: number; bytes: number};
-/** Intervals between an urgent job's claim, dispatch, handler start and settlement. */
-type HostStage = "claim_to_dispatch" | "dispatch_to_start" | "start_to_complete";
-/** An urgent job's kind and latest stage time. */
-type JobTiming = {kind: NativeTopicKind; at: number};
 type GossipJob = {
   handle: NativeGossipHandle;
   message?: PendingGossipsubMessage;
   result: TopicValidatorResult;
   completed: boolean;
-  timing: JobTiming | null;
 };
 /** One validator job: a single message, or an attestation group validated together. */
 type GossipExecution = {jobs: GossipJob[]; grouped: boolean};
@@ -43,10 +35,6 @@ export class NativeGossip {
   private processor: GossipExecutor | undefined;
   /** Claimed ordinary jobs a spent drain budget left for the next drain, at most one batch. */
   private queued: GossipExecution[] = [];
-  /** When each processor slot's latest dependency check reached the host; bounded by the processor capacity. */
-  private readonly checked = new Map<number, {generation: bigint; at: number}>();
-  private readonly checkToDispatch: Histogram<{kind: NativeTopicKind}> | undefined;
-  private readonly stages: Histogram<{kind: NativeTopicKind; interval: HostStage}> | undefined;
   constructor(
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "publishGossip">,
     private readonly ledger: GossipLedger,
@@ -54,22 +42,8 @@ export class NativeGossip {
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
     private readonly onError: (error: unknown) => void,
-    private readonly onFailure: (error: unknown) => void,
-    register: RegistryMetricCreator | null = null
-  ) {
-    this.checkToDispatch = register?.histogram<{kind: NativeTopicKind}>({
-      name: "lodestar_native_gossip_check_to_dispatch_seconds",
-      help: "Delay from a gossip message's latest dependency check reaching the host to the dispatch of its job",
-      labelNames: ["kind"],
-      buckets: [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
-    });
-    this.stages = register?.histogram<{kind: NativeTopicKind; interval: HostStage}>({
-      name: "lodestar_native_gossip_host_stage_seconds",
-      help: "Stages of each urgent gossip job on the host: its claim (the exchange call plus native's claim offset, after settlement and the runtime mutex) to dispatch, dispatch to handler start, and handler start to the host observing settlement, continuation delay included; native times the verdict from settlement to application. Add means only over comparable populations, never quantiles",
-      labelNames: ["kind", "interval"],
-      buckets: [0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5],
-    });
-  }
+    private readonly onFailure: (error: unknown) => void
+  ) {}
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
       throw new NativeNetworkError({
@@ -112,10 +86,6 @@ export class NativeGossip {
     const processor = this.processor;
     if (this.closed || !processor) return false;
     if (checks.length > 0) {
-      if (this.checkToDispatch) {
-        const at = performance.now();
-        for (const {handle} of checks) this.checked.set(handle.index, {generation: handle.generation, at});
-      }
       let available: boolean[] = [];
       try {
         available = processor.check(checks);
@@ -161,27 +131,19 @@ export class NativeGossip {
   private complete(job: GossipJob): void {
     if (job.completed) return;
     job.completed = true;
-    if (this.closed) return;
-    const verdict =
-      job.result === TopicValidatorResult.Accept
-        ? "accept"
-        : job.result === TopicValidatorResult.Reject
-          ? "reject"
-          : "ignore";
-    // A timed job's latest stage is its settlement.
-    if (job.timing) this.ledger.verdict(job.handle, verdict, job.timing.at);
-    else this.ledger.verdict(job.handle, verdict);
-  }
-  private stamp(timing: JobTiming, interval: HostStage, at: number): void {
-    this.stages?.observe({kind: timing.kind, interval}, Math.max(0, at - timing.at) / 1000);
-    timing.at = at;
+    if (!this.closed)
+      this.ledger.verdict(
+        job.handle,
+        job.result === TopicValidatorResult.Accept
+          ? "accept"
+          : job.result === TopicValidatorResult.Reject
+            ? "reject"
+            : "ignore"
+      );
   }
   private dispatch(claims: NativeClaim<NativeJob>[], processor: GossipExecutor): void {
-    const dispatchedAt = performance.now();
     const prepared = claims.map(({item}) =>
-      item.messages.map(
-        ({handle}) => ({handle, result: TopicValidatorResult.Ignore, completed: false, timing: null}) as GossipJob
-      )
+      item.messages.map(({handle}) => ({handle, result: TopicValidatorResult.Ignore, completed: false}) as GossipJob)
     );
     const errors: unknown[] = [];
     try {
@@ -195,25 +157,12 @@ export class NativeGossip {
       void this.execute(prepared.flat(), false, processor, errors).catch(this.onError);
       return;
     }
-    const at = performance.now();
     for (const [i, {item: job}] of claims.entries()) {
       const jobs = prepared[i];
-      for (const {handle} of jobs) {
-        const check = this.checked.get(handle.index);
-        if (check?.generation !== handle.generation) continue;
-        this.checked.delete(handle.index);
-        this.checkToDispatch?.observe({kind: job.kind}, (at - check.at) / 1000);
-      }
       // Claims come in priority order, so urgent jobs start first and none waits for the budget.
       claims[i].adopt();
-      if (job.urgent) {
-        if (this.stages)
-          for (const message of jobs) {
-            message.timing = {kind: job.kind, at: job.claimedAt};
-            this.stamp(message.timing, "claim_to_dispatch", dispatchedAt);
-          }
-        void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
-      } else this.queued.push({jobs, grouped: job.grouped});
+      if (job.urgent) void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
+      else this.queued.push({jobs, grouped: job.grouped});
     }
   }
   private async execute(
@@ -226,7 +175,6 @@ export class NativeGossip {
     const executing: GossipJob[] = [];
     let results: TopicValidatorResult[] = [];
     const completionErrors: unknown[] = [];
-    let started = false;
     try {
       for (const job of jobs)
         if (job.message) {
@@ -234,15 +182,12 @@ export class NativeGossip {
           executing.push(job);
         }
       if (pending.length > 0 && errors.length === 0) {
-        started = true;
-        this.time(executing, "dispatch_to_start");
         results = await processor.execute(pending, grouped);
         for (const [i, job] of executing.entries()) job.result = results[i] ?? TopicValidatorResult.Ignore;
       }
     } catch (error) {
       errors.push(error);
     } finally {
-      if (started) this.time(executing, "start_to_complete");
       for (const job of jobs) {
         try {
           this.complete(job);
@@ -276,12 +221,6 @@ export class NativeGossip {
     }
     if (errors.length === 1) throw errors[0];
     if (errors.length > 1) throw new AggregateError(errors, "Native gossip job failed");
-  }
-  /** Stamps the timed jobs in `jobs` at one moment. */
-  private time(jobs: GossipJob[], interval: HostStage): void {
-    if (!this.stages) return;
-    const at = performance.now();
-    for (const {timing} of jobs) if (timing) this.stamp(timing, interval, at);
   }
   async publish(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     if (this.closed)

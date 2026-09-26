@@ -420,7 +420,6 @@ describe("native pump", () => {
           {kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true},
           {kind: "voluntary_exit", start: 1, length: 2, grouped: false, urgent: false},
         ],
-        claimOffsetMs: 0,
       },
     });
     const failure = new Error("handler failed");
@@ -438,50 +437,6 @@ describe("native pump", () => {
     expect(node.calls()[1][0]).toEqual([
       {handle: handle(2), type: "verdict", verdict: "ignore"},
       {handle: handle(3), type: "verdict", verdict: "ignore"},
-    ]);
-  });
-
-  it("states a timed verdict's wait at each exchange call and places delivered jobs at native's claim", async () => {
-    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
-    const node = fixture();
-    const actions: unknown[][] = [];
-    node.runtime.exchange.mockImplementation((batch) => {
-      actions.push((batch as object[]).map((action) => ({...action})));
-      return idle;
-    });
-    node.runtime.exchange.mockImplementationOnce(() => {
-      throw new Error("exchange failed");
-    });
-    node.runtime.exchange.mockImplementationOnce((batch) => {
-      actions.push((batch as object[]).map((action) => ({...action})));
-      return {
-        ...idle,
-        gossip: {
-          messages: [{handle: handle(3)} as NativeGossipMessage],
-          jobs: [{kind: "beacon_block", start: 0, length: 1, grouped: false, urgent: true}],
-          claimOffsetMs: 7,
-        },
-      };
-    });
-    node.drain.verdict(handle(1), "accept", 0);
-    node.drain.verdict(handle(2), "ignore");
-    node.advance(5);
-    await macrotask();
-    node.advance(20);
-    vi.advanceTimersByTime(25);
-    await macrotask();
-    // The retry restates the wait from the settlement at 0 to its own call at 25.
-    expect(actions[0]).toEqual([
-      {handle: handle(1), type: "verdict", verdict: "accept", waitedMs: 25},
-      {handle: handle(2), type: "verdict", verdict: "ignore"},
-    ]);
-    expect(node.stages.deliver.mock.calls[0][0].jobs[0].item.claimedAt).toBe(32);
-    // The unadopted job's ignore and an untimed verdict state no wait.
-    node.drain.verdict(handle(1), "accept");
-    await macrotask();
-    expect(actions[1]).toEqual([
-      {handle: handle(3), type: "verdict", verdict: "ignore"},
-      {handle: handle(1), type: "verdict", verdict: "accept"},
     ]);
   });
 
