@@ -33,6 +33,7 @@ export {
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,
+  type JustifiedBalancesWithTotal,
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {

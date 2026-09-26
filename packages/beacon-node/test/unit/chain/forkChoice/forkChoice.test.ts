@@ -71,7 +71,7 @@ describe("LodestarForkChoice", () => {
       state,
       true,
       {},
-      (_: CheckpointWithHex) => justifiedBalances,
+      (_: CheckpointWithHex) => ({balances: justifiedBalances, totalBalance: 6}),
       () => null,
       null
     );

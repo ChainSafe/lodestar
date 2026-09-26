@@ -9,6 +9,7 @@ import {
   EpochDifference,
   ForkChoiceStateGetter,
   IForkChoice,
+  JustifiedBalancesWithTotal,
   PayloadStatus,
   ProtoBlock,
   UpdateHeadOpt,
@@ -23,7 +24,6 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
   computeEndSlotAtEpoch,
@@ -78,7 +78,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
+import {CheckpointBalancesCache, getJustifiedBalances} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -1604,12 +1604,12 @@ export class BeaconChain implements IBeaconChain {
   private justifiedBalancesGetter(
     checkpoint: CheckpointWithHex,
     blockState: IBeaconStateView
-  ): EffectiveBalanceIncrements {
+  ): JustifiedBalancesWithTotal {
     this.metrics?.balancesCache.requests.inc();
 
-    const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
-    if (effectiveBalances) {
-      return effectiveBalances;
+    const justifiedBalances = this.checkpointBalancesCache.get(checkpoint);
+    if (justifiedBalances) {
+      return justifiedBalances;
     }
     // not expected, need metrics
     this.metrics?.balancesCache.misses.inc();
@@ -1630,7 +1630,7 @@ export class BeaconChain implements IBeaconChain {
       });
     }
 
-    return state.getEffectiveBalanceIncrementsZeroInactive();
+    return getJustifiedBalances(state);
   }
 
   /**
@@ -1867,7 +1867,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Update custody requirement based on finalized state
     let effectiveBalances: number[];
-    const effectiveBalanceIncrements = this.checkpointBalancesCache.get(finalizedCheckpoint);
+    const effectiveBalanceIncrements = this.checkpointBalancesCache.get(finalizedCheckpoint)?.balances;
     if (effectiveBalanceIncrements) {
       effectiveBalances = validatorIndices.map(
         (index) => (effectiveBalanceIncrements[index] ?? 0) * EFFECTIVE_BALANCE_INCREMENT

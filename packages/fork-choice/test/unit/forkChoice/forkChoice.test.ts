@@ -74,6 +74,7 @@ describe("Forkchoice", () => {
         rootHex: finalizedRoot,
       },
       balances: new Uint16Array([32]),
+      totalBalance: 32,
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
@@ -85,7 +86,7 @@ describe("Forkchoice", () => {
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
     },
-    justifiedBalancesGetter: () => new Uint16Array([32]),
+    justifiedBalancesGetter: () => ({balances: new Uint16Array([32]), totalBalance: 32}),
     equivocatingIndices: new Set(),
     confirmedRoot: finalizedRoot,
     previousEpochObservedJustifiedCheckpoint: {
@@ -185,8 +186,8 @@ describe("Forkchoice", () => {
       (genesisSlot + 1) as Slot,
       justifiedCheckpoint,
       finalizedCheckpoint,
-      new Uint16Array([32]),
-      () => new Uint16Array([32]),
+      {balances: new Uint16Array([32]), totalBalance: 32},
+      () => ({balances: new Uint16Array([32]), totalBalance: 32}),
       () => null
     );
 

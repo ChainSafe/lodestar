@@ -8,7 +8,7 @@ describe("ForkChoiceStore", () => {
   const root = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const nextRoot = "0x1111111111111111111111111111111111111111111111111111111111111111";
   const checkpoint = {epoch: 0, root: fromHexString(root)};
-  const justifiedBalances = new Uint16Array([32]);
+  const justifiedBalances = {balances: new Uint16Array([32]), totalBalance: 32};
   const justifiedBalancesGetter = () => justifiedBalances;
   const stateGetter = () => null;
 

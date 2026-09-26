@@ -65,7 +65,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, JustifiedBalancesWithTotal, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -1901,13 +1901,14 @@ export class ForkChoice implements IForkChoice {
   private updateCheckpoints(
     justifiedCheckpoint: CheckpointWithHex,
     finalizedCheckpoint: CheckpointWithHex,
-    getJustifiedBalances: () => JustifiedBalances
+    getJustifiedBalances: () => JustifiedBalancesWithTotal
   ): boolean {
     let updated = false;
 
     // Update justified checkpoint.
     if (justifiedCheckpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
-      this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
+      const {balances, totalBalance} = getJustifiedBalances();
+      this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances, totalBalance};
       this.justifiedProposerBoostScore = null;
       updated = true;
     }
@@ -1928,13 +1929,11 @@ export class ForkChoice implements IForkChoice {
   private updateUnrealizedCheckpoints(
     unrealizedJustifiedCheckpoint: CheckpointWithHex,
     unrealizedFinalizedCheckpoint: CheckpointWithHex,
-    getJustifiedBalances: () => JustifiedBalances
+    getJustifiedBalances: () => JustifiedBalancesWithTotal
   ): void {
     if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
-      this.fcStore.unrealizedJustified = {
-        checkpoint: unrealizedJustifiedCheckpoint,
-        balances: getJustifiedBalances(),
-      };
+      const {balances, totalBalance} = getJustifiedBalances();
+      this.fcStore.unrealizedJustified = {checkpoint: unrealizedJustifiedCheckpoint, balances, totalBalance};
     }
     if (unrealizedFinalizedCheckpoint.epoch > this.fcStore.unrealizedFinalizedCheckpoint.epoch) {
       this.fcStore.unrealizedFinalizedCheckpoint = unrealizedFinalizedCheckpoint;
@@ -2236,7 +2235,7 @@ export class ForkChoice implements IForkChoice {
     return this.updateCheckpoints(
       this.fcStore.unrealizedJustified.checkpoint,
       this.fcStore.unrealizedFinalizedCheckpoint,
-      () => this.fcStore.unrealizedJustified.balances
+      () => this.fcStore.unrealizedJustified
     );
   }
 
