@@ -258,7 +258,18 @@ export class PrepareNextSlotScheduler {
             parentBlockHash,
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {
+            data,
+            version: fork,
+            // Post-gloas the builder submits its own forkchoiceUpdated, so it needs the safe and finalized
+            // execution block hashes the beacon node would use. Omitted pre-gloas to keep the standard shape.
+            ...(isForkPostGloas(fork)
+              ? {
+                  safeBlockHash: getSafeExecutionBlockHash(this.chain.forkChoice, this.logger),
+                  finalizedBlockHash: getFinalizedExecutionBlockHash(this.chain.forkChoice),
+                }
+              : {}),
+          });
           payloadAttributes = data.payloadAttributes;
         }
 
