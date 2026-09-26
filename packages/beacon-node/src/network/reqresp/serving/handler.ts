@@ -1,6 +1,11 @@
 import {ProtocolHandler, RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {ServingConfigurationError, ServingContext, isServingCapacityError} from "../../../chain/serving/context.js";
+import {
+  ServingConfigurationError,
+  ServingContext,
+  ServingUnavailableError,
+  isServingCapacityError,
+} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getReqRespHandlers} from "../handlers/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
@@ -11,6 +16,14 @@ export class LocalServingResponseError extends ResponseError {
   readonly code = "HOST_SERVING_CAPACITY";
   constructor() {
     super(RespStatus.SERVER_ERROR, "Local serving capacity exhausted");
+  }
+}
+
+/** Stored data serving refuses until its reason clears, such as a block awaiting size verification */
+export class LocalServingUnavailableError extends ResponseError {
+  readonly code = "HOST_SERVING_UNAVAILABLE";
+  constructor(error: ServingUnavailableError) {
+    super(RespStatus.RESOURCE_UNAVAILABLE, error.message);
   }
 }
 
@@ -129,6 +142,7 @@ export function startServingHandler(
           }
         }
         if (isServingCapacityError(error)) throw new LocalServingResponseError();
+        if (error instanceof ServingUnavailableError) throw new LocalServingUnavailableError(error);
         throw error;
       } finally {
         pulling = false;

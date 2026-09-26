@@ -2,11 +2,14 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
 import {NativeIncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
-import {RequestErrorCode} from "@lodestar/reqresp";
-import {defer} from "@lodestar/utils";
+import {RequestErrorCode, RespStatus} from "@lodestar/reqresp";
+import {defer, toRootHex} from "@lodestar/utils";
+import {BeaconChain} from "../../../../src/chain/chain.js";
+import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {NativeClaim} from "../../../../src/network/core/native/drain.js";
 import {nativeProtocols} from "../../../../src/network/core/native/protocols.js";
 import {NativeRequests, outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
+import {onBeaconBlocksByRoot} from "../../../../src/network/reqresp/handlers/beaconBlocksByRoot.js";
 import {HostServingBudget} from "../../../../src/network/reqresp/serving/budget.js";
 import * as handlers from "../../../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../../../src/network/reqresp/serving/policy.js";
@@ -172,6 +175,42 @@ it("waits for quota before producing data and for host retirement before taking 
     await Promise.all(active.map((handler) => handler.retired));
   }
   expect(budget.snapshot().occupancy).toBe(0);
+});
+
+it("answers an uncertified stored block with RESOURCE_UNAVAILABLE before reading it", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+  vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
+  const root = new Uint8Array(32).fill(3);
+  const getBinary = vi.fn(async () => new Uint8Array(1));
+  // A hot block in fork choice, while this run's hot scan has not passed
+  const chain = {
+    config,
+    db: {block: {getBinary}, blockCertification: {hotVerified: false}},
+    seenBlockInputCache: {get: () => undefined},
+    forkChoice: {getBlockHexDefaultStatus: () => ({blockRoot: toRootHex(root), slot: 1})},
+  };
+  (chain as unknown as IBeaconChain).getSerializedBlockByRoot = BeaconChain.prototype.getSerializedBlockByRoot;
+  const factory: handlers.BoundedReqRespHandlers = () => () =>
+    handlers.startServingHandler(budget, (context) =>
+      onBeaconBlocksByRoot([root], chain as unknown as IBeaconChain, context)
+    );
+  const {request, permission} = await incoming();
+  const owner = new NativeRequests(config, factory, 32, vi.fn());
+  try {
+    expect(serveTurn(owner, [request])).toBe(1);
+    permission.resolve();
+    await vi.waitFor(() => expect(request.fail).toHaveBeenCalledOnce());
+    expect(request.fail).toHaveBeenCalledWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
+    expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe(
+      "Local serving unavailable: uncertified_block"
+    );
+    expect(getBinary).not.toHaveBeenCalled();
+    expect(request.respond).not.toHaveBeenCalled();
+  } finally {
+    owner.close();
+  }
+  await vi.waitFor(() => expect(budget.snapshot().occupancy).toBe(0));
 });
 
 it("reports no serving capacity while an earlier adapter holds the shared budget, without a timer of its own", async () => {

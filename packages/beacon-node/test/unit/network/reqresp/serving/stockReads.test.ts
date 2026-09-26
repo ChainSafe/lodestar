@@ -236,7 +236,7 @@ describe("stock serving reads", () => {
         const served = Array.fromAsync(source(new ServingContext(policy)));
         if (name === "blocksByRoot" || name === "blocksByRange") {
           // No stored block is certified before the certification loads and this run's hot scan passes
-          await expect(served, name).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+          await expect(served, name).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
           expect(reads, name).toEqual([]);
           continue;
         }
@@ -278,12 +278,12 @@ describe("stock serving reads", () => {
       await db.blockCertification.unverifyOversized([{slot: 1, bytes: config.MAX_PAYLOAD_SIZE + 1}]);
       reads.length = 0;
       await expect(Array.fromAsync(blocksByRange(new ServingContext(policy)))).rejects.toMatchObject({
-        code: "HOST_SERVING_CAPACITY",
+        code: "HOST_SERVING_UNAVAILABLE",
       });
       expect(reads).toEqual([]);
       // Only the root index row is read before the block behind it is refused
       await expect(Array.fromAsync(archivedByRoot(new ServingContext(policy)))).rejects.toMatchObject({
-        code: "HOST_SERVING_CAPACITY",
+        code: "HOST_SERVING_UNAVAILABLE",
       });
       expect(reads).toEqual([{call: "get", fillCache: false}]);
     }));
@@ -311,7 +311,7 @@ describe("stock serving reads", () => {
           new ServingContext(policy)
         )
       );
-      await expect(served).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+      await expect(served).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
       // The column lookup ran; the block read behind the missing column never did
       expect(reads).toEqual([{call: "getMany", fillCache: false}]);
     }));

@@ -497,7 +497,10 @@ describe("actual serving sources", () => {
       await db.blockArchive.putBinary(slot, new Uint8Array(policy.sourceBytes + 1));
       const getBinary = vi.spyOn(db.blockArchive, "getBinary");
       const bad = handler(request, peer, "test");
-      await expect(bad.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY", status: RespStatus.SERVER_ERROR});
+      await expect(bad.next()).rejects.toMatchObject({
+        code: "HOST_SERVING_UNAVAILABLE",
+        status: RespStatus.RESOURCE_UNAVAILABLE,
+      });
       await bad.retired;
       expect(getBinary).not.toHaveBeenCalled();
       expect(budget.snapshot().occupancy).toBe(0);

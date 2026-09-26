@@ -207,7 +207,7 @@ export class BeaconNode {
     const unverified = await db.blockCertification.load();
     if (boundedServing && unverified !== null) {
       logger.info(
-        "Serving refuses archived blocks awaiting size verification, run `lodestar beacon verify-blocks` with the node stopped",
+        "Serving refuses archived blocks awaiting size verification with RESOURCE_UNAVAILABLE, on which some clients disconnect; run `lodestar beacon verify-blocks` with the node stopped",
         {fromSlot: unverified.from, toSlot: unverified.to}
       );
     }
@@ -290,7 +290,10 @@ export class BeaconNode {
       // Serving reads stored blocks only after this scan finds none above MAX_PAYLOAD_SIZE
       const oversized = await db.blockCertification.scanHot();
       if (oversized) {
-        logger.warn("Hot block above MAX_PAYLOAD_SIZE, serving refuses stored blocks until restart", {...oversized});
+        logger.warn(
+          "Hot block above MAX_PAYLOAD_SIZE, serving refuses stored blocks until restart with RESOURCE_UNAVAILABLE, on which some clients disconnect",
+          {...oversized}
+        );
       }
     }
 

@@ -7,6 +7,16 @@ export class ServingCapacityError extends Error {
   }
 }
 
+/** Why serving refuses data it stores: unavailable, rather than over capacity, until the reason clears */
+export type ServingUnavailableReason = "uncertified_block";
+
+export class ServingUnavailableError extends Error {
+  readonly code = "HOST_SERVING_UNAVAILABLE";
+  constructor(readonly reason: ServingUnavailableReason) {
+    super(`Local serving unavailable: ${reason}`);
+  }
+}
+
 export class ServingConfigurationError extends Error {
   readonly code = "HOST_SERVING_CONFIGURATION";
 }
@@ -156,8 +166,8 @@ export function servingRead<T>(
 
 /**
  * Refuses serving a stored block that is not certified to fit MAX_PAYLOAD_SIZE, before any read of it; the peer sees a
- * resource-unavailable response. Reads outside serving are not refused.
+ * resource-unavailable response until verification or a restart certifies it. Reads outside serving are not refused.
  */
 export function assertServableBlock(context: ServingContext | undefined, certified: boolean): void {
-  if (context && !certified) throw new ServingCapacityError("uncertified block");
+  if (context && !certified) throw new ServingUnavailableError("uncertified_block");
 }

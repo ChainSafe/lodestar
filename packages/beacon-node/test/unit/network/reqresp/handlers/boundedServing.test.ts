@@ -111,14 +111,14 @@ describe("bounded serving actual behavior", () => {
         ])
       );
     // Slots 0 and 1 are archived and certified; slot 2 is unfinalized and this run's hot scan has not passed
-    await expect(serve(3)).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+    await expect(serve(3)).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
     expect(stream).not.toHaveBeenCalled();
     await expect(serve(2)).resolves.toEqual([]);
     expect(stream).toHaveBeenCalledOnce();
     expect(certification.isArchiveRangeVerified).toHaveBeenLastCalledWith(0, 1);
     // An archived slot outside the certified interval refuses the range too
     certification.isArchiveRangeVerified.mockReturnValue(false);
-    await expect(serve(1)).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+    await expect(serve(1)).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
     expect(stream).toHaveBeenCalledOnce();
   });
 
