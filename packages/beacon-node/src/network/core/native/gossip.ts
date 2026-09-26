@@ -24,13 +24,8 @@ type GossipLedger = Pick<NativeDrain, "verdict" | "classify" | "block" | "dropQu
 type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe">;
 /** Gossip bounds of one exchange. */
 export type NativeGossipLimits = {checks: number; messages: number; bytes: number};
-/** Intervals between an urgent job's exchange, dispatch, handler start and settlement, queued verdict and its exchange. */
-type HostStage =
-  | "exchange_to_dispatch"
-  | "dispatch_to_start"
-  | "start_to_complete"
-  | "complete_to_queued"
-  | "queued_to_sent";
+/** Intervals between an urgent job's claim, dispatch, handler start and settlement. */
+type HostStage = "claim_to_dispatch" | "dispatch_to_start" | "start_to_complete";
 /** An urgent job's kind and latest stage time. */
 type JobTiming = {kind: NativeTopicKind; at: number};
 type GossipJob = {
@@ -70,7 +65,7 @@ export class NativeGossip {
     });
     this.stages = register?.histogram<{kind: NativeTopicKind; interval: HostStage}>({
       name: "lodestar_native_gossip_host_stage_seconds",
-      help: "Stages of each urgent gossip job on the host: its exchange's start to dispatch, dispatch to handler start, handler start to settlement, settlement to its verdict queued, and queued to the start of the exchange that applies it",
+      help: "Stages of each urgent gossip job on the host: its claim (the exchange call plus native's claim offset, after settlement and the runtime mutex) to dispatch, dispatch to handler start, and handler start to the host observing settlement, continuation delay included; native times the verdict from settlement to application. Add means only over comparable populations, never quantiles",
       labelNames: ["kind", "interval"],
       buckets: [0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5],
     });
@@ -173,11 +168,9 @@ export class NativeGossip {
         : job.result === TopicValidatorResult.Reject
           ? "reject"
           : "ignore";
-    const timing = job.timing;
-    if (timing) {
-      this.stamp(timing, "complete_to_queued", performance.now());
-      this.ledger.verdict(job.handle, verdict, (at) => this.stamp(timing, "queued_to_sent", at));
-    } else this.ledger.verdict(job.handle, verdict);
+    // A timed job's latest stage is its settlement.
+    if (job.timing) this.ledger.verdict(job.handle, verdict, job.timing.at);
+    else this.ledger.verdict(job.handle, verdict);
   }
   private stamp(timing: JobTiming, interval: HostStage, at: number): void {
     this.stages?.observe({kind: timing.kind, interval}, Math.max(0, at - timing.at) / 1000);
@@ -216,8 +209,8 @@ export class NativeGossip {
       if (job.urgent) {
         if (this.stages)
           for (const message of jobs) {
-            message.timing = {kind: job.kind, at: job.exchangedAt};
-            this.stamp(message.timing, "exchange_to_dispatch", dispatchedAt);
+            message.timing = {kind: job.kind, at: job.claimedAt};
+            this.stamp(message.timing, "claim_to_dispatch", dispatchedAt);
           }
         void this.execute(jobs, job.grouped, processor, []).catch(this.onError);
       } else this.queued.push({jobs, grouped: job.grouped});

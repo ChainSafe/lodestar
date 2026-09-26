@@ -38,10 +38,10 @@ export class NativeClaim<T> {
   }
 }
 
-/** A claimed job, with when the exchange that claimed it started, on the performance clock. */
+/** A claimed job, with when native claimed it on the performance clock: its exchange call plus the claim offset. */
 export type NativeJob = Omit<NativeGossipJob, "start" | "length"> & {
   messages: NativeGossipMessage[];
-  exchangedAt: number;
+  claimedAt: number;
 };
 
 /** One exchange's payload, with jobs and serving starts to adopt. */
@@ -120,8 +120,8 @@ export class NativeDrain {
   /** Consecutive turns whose demand threw or whose exchange could not run. */
   private failures = 0;
   private readonly obligations: NativeAction[] = [];
-  /** Queued verdicts' callbacks for the start of the exchange that applies them. */
-  private readonly sent = new Map<NativeAction, (at: number) => void>();
+  /** When timed verdicts' validation settled, until an exchange applies them. */
+  private readonly settled = new Map<NativeAction, number>();
   /** One entry per imported root, per penalized peer and action, and for a recheck or a drop, in arrival order. */
   private readonly coalesced = new Map<string, Coalesced>();
   private blocks = 0;
@@ -153,11 +153,14 @@ export class NativeDrain {
     this.schedule();
   };
 
-  /** One per delivered message. `sent` hears when the exchange that applies it starts. */
-  verdict(handle: NativeGossipHandle, verdict: NativeGossipVerdict, sent?: (at: number) => void): void {
+  /**
+   * One per delivered message. With `settledAt`, when its validation settled on the performance clock, each exchange
+   * that carries it states the wait since, so native times its way to application.
+   */
+  verdict(handle: NativeGossipHandle, verdict: NativeGossipVerdict, settledAt?: number): void {
     const action: NativeAction = {handle, type: "verdict", verdict};
     this.obligations.push(action);
-    if (sent) this.sent.set(action, sent);
+    if (settledAt !== undefined) this.settled.set(action, settledAt);
     this.schedule();
   }
   /** One per delivered dependency check. */
@@ -301,6 +304,12 @@ export class NativeDrain {
     }
     const batch = this.take();
     const exchangedAt = performance.now();
+    if (this.settled.size > 0)
+      for (const action of batch) {
+        const settledAt = this.settled.get(action);
+        if (settledAt !== undefined && action.type === "verdict")
+          action.waitedMs = Math.max(0, exchangedAt - settledAt);
+      }
     let result: NativeExchange;
     try {
       result = this.runtime.exchange(batch, demand);
@@ -317,6 +326,7 @@ export class NativeDrain {
     }
     // Any exchange that ran without a failed demand ends the run, a settling one after close included.
     if (!failed) this.failures = 0;
+    if (this.settled.size > 0) for (const action of batch) this.settled.delete(action);
     let held = false;
     let failure: unknown = result.failure;
     try {
@@ -330,14 +340,6 @@ export class NativeDrain {
     if (result.more || held || (budgetEnded && result.disabledWaiting)) next = "now";
     else if (failed || result.parked.serving || result.parked.ordinary || result.disabledWaiting) next = "later";
     if (failure !== null) this.onFailure(failure);
-    // Last, so a throwing observer cannot cost a delivery its adoption or ignore verdicts.
-    if (this.sent.size > 0)
-      for (const action of batch) {
-        const sent = this.sent.get(action);
-        if (!sent) continue;
-        this.sent.delete(action);
-        sent(exchangedAt);
-      }
     return next;
   }
 
@@ -347,10 +349,11 @@ export class NativeDrain {
    */
   private deliver(stages: NativeDrainStages, result: NativeExchange, deadline: number, exchangedAt: number): boolean {
     const gossip = result.gossip;
+    const claimedAt = exchangedAt + (gossip?.claimOffsetMs ?? 0);
     const jobs = (gossip?.jobs ?? []).map(
       ({kind, grouped, urgent, start, length}) =>
         new NativeClaim<NativeJob>({
-          exchangedAt,
+          claimedAt,
           grouped,
           kind,
           messages: gossip?.messages.slice(start, start + length) ?? [],
