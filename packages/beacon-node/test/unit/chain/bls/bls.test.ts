@@ -7,7 +7,6 @@ import {SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsJobTimes} from "../../../../src/chain/bls/index.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 
@@ -75,20 +74,6 @@ describe("BlsVerifier ", () => {
         expect(() => Signature.fromBytes(malformedSignature, true, true)).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSets(sets)).toBe(false);
-      });
-
-      it("should record a traced job's stages in order when verified on workers", async () => {
-        const times = new BlsJobTimes();
-        const before = performance.now();
-        expect(await verifier.verifySignatureSets(sets, undefined, times)).toBe(true);
-        if (verifier instanceof BlsSingleThreadVerifier) {
-          expect(times).toEqual(new BlsJobTimes());
-          return;
-        }
-        const stages = [times.selected, times.prepared, times.workerStart, times.workerEnd, times.received];
-        expect(stages.every((at, i) => at >= (i === 0 ? before : stages[i - 1]))).toBe(true);
-        expect(times.received).toBeLessThanOrEqual(performance.now());
-        expect(times.dispatchSets).toBeGreaterThanOrEqual(sets.length);
       });
 
       it("should split sets larger than the native batch bound", async () => {

@@ -7,13 +7,12 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockMilestone, BlockTrace, GetBlobsResult} from "../chain/blockTrace/index.js";
+import {BlockMilestone, BlockTrace} from "../chain/blockTrace/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
 import {
-  CellComputeTimes,
   getCellsAndProofs,
   getDataColumnSidecarsFromBlock,
   getDataColumnSidecarsFromColumnSidecar,
@@ -164,17 +163,12 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const times = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex);
-  const traceResponse = (result: GetBlobsResult): void => {
-    if (times !== undefined) blockTrace?.getBlobsResponse(input.slot, input.blockRootHex, result);
-  };
+  const traced = blockTrace?.getBlobsRequest(input.slot, input.blockRootHex) === true;
   const blobs = await executionEngine
-    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers, times)
-    .catch((e) => {
-      traceResponse("error");
-      throw e;
+    .getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers)
+    .finally(() => {
+      if (traced) blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsResponse);
     });
-  traceResponse(blobs === null ? "null" : "full");
   timer?.();
 
   // Execution engine was unable to find one or more blobs
@@ -190,11 +184,8 @@ export async function getDataColumnSidecarsFromExecution(
 
   let dataColumnSidecars: DataColumnSidecar[];
   const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-  const cellTimes: CellComputeTimes = {submitted: [], resumed: []};
-  let assemblyStart = NaN;
   try {
-    const cellsAndProofs = await getCellsAndProofs(blobs, cellTimes);
-    assemblyStart = performance.now();
+    const cellsAndProofs = await getCellsAndProofs(blobs);
     if (isPayloadInput) {
       dataColumnSidecars = getGloasDataColumnSidecars(input.slot, fromHex(input.blockRootHex), cellsAndProofs);
     } else if (input.hasBlock()) {
@@ -209,15 +200,6 @@ export async function getDataColumnSidecarsFromExecution(
     }
   } finally {
     compTimer?.();
-  }
-  const assemblyMs = performance.now() - assemblyStart;
-  for (let i = 0; i < cellTimes.resumed.length; i++) {
-    metrics?.getBlobsComputation.blobCells.observe((cellTimes.resumed[i] - cellTimes.submitted[i]) / 1000);
-  }
-  metrics?.getBlobsComputation.sidecarAssembly.observe(assemblyMs / 1000);
-  if (times !== undefined) {
-    blockTrace?.getBlobsComputed(input.slot, input.blockRootHex, cellTimes, assemblyMs);
-    blockTrace?.mark(input.slot, input.blockRootHex, BlockMilestone.getBlobsUsable);
   }
 
   // Publish columns if and only if subscribed to them

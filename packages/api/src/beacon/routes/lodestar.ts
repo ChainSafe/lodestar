@@ -93,24 +93,10 @@ export type BlockProcessorQueueItem = {
   addedTimeMs: number;
 };
 
-/**
- * A wait of a block's import work, in ms from its slot's start, and the gossip attestation segments that started during
- * it. Attestation work during a wait co-occurred with it; that does not establish it delayed the block.
- */
+/** A wait that proxies runnable import work, in ms from its slot's start */
 export type BlockTraceWait = {
   beginMs: number;
   endMs: number;
-  attestationStarts: number;
-  attestationContinuations: number;
-  /**
-   * Synchronous time of the segments timed in sampled time, which exists only with attestation timing on. It excludes
-   * promise resolution between segments, so it undercounts attestation JS time: by about 2 to 16% in a local harness.
-   */
-  attestationJsMs: number;
-  /** Fraction of the wait inside sampled time; `attestationJsMs` is complete only at 1 */
-  sampledCoverage: number;
-  /** Whether the attestation log no longer covered the start of the wait */
-  attestationLogTruncated: boolean;
 };
 
 /** A traced block root */
@@ -126,27 +112,11 @@ export type BlockTraceRoot = {
   /** Each milestone of `milestoneNames` in ms from the slot start, null when not recorded */
   milestones: (number | null)[];
   /**
-   * Signature sets in the BLS worker dispatch that carried the latest attempt's signature job, own sets included; the
-   * largest dispatch's when the job was split
-   */
-  signatureDispatchSets: number | null;
-  /** What the first getBlobs call returned: every blob, null for a missing one, or an error */
-  getBlobsResult: "full" | "null" | "error" | null;
-  /**
-   * The first getBlobs call's cell computation, in ms from the slot start: each blob's submission to the KZG library and
-   * the resumption of its JS continuation, in blob order, then the duration of the sidecar assembly that followed
-   */
-  getBlobsCells: {submittedMs: number[]; resumedMs: number[]; assemblyMs: number} | null;
-  /**
    * What first completed the data: the source of the completing item, `none` when the block needed no data, and whether
    * it completed as enough columns to reconstruct before all sampled columns arrived
    */
   dataAvailableVia: {source: string; reconstructable: boolean} | null;
-  waits: {
-    dispatch: BlockTraceWait | null;
-    processor: BlockTraceWait | null;
-    signatureReturn: BlockTraceWait | null;
-  };
+  waits: {dispatch: BlockTraceWait | null; processor: BlockTraceWait | null};
 };
 
 /** A slot of the block trace; times are ms from the slot start */
@@ -154,13 +124,9 @@ export type BlockTraceSlot = {
   slot: Slot;
   fork: ForkName;
   closed: boolean;
-  /** Whether attestation segments were timed in this slot */
-  sampled: boolean;
   targetsMs: Record<string, number | null>;
   /** The first head root the attestation data API returned for this slot and when it selected it */
   attestationData: {ms: number; root: RootHex; count: number; rootChanged: boolean} | null;
-  /** Gossip attestation batch work that ran during this clock slot */
-  attestationWork: {starts: number; continuations: number; jsMs: number | null};
   /** Changes of overflowing root, not distinct roots */
   rootsOverflow: number;
   roots: BlockTraceRoot[];
@@ -169,7 +135,6 @@ export type BlockTraceSlot = {
 export type BlockTrace = {
   currentSlot: Slot;
   slotDurationMs: number;
-  sampleEverySlots: number;
   /** Milestone names in critical-path order */
   milestoneNames: string[];
   /** Milestones stamped when the JS continuation ran after an external result, whose callback delay is unknown */

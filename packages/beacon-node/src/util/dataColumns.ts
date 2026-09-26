@@ -252,12 +252,6 @@ export function getDataColumns(config: ChainForkConfig, nodeId: NodeId, custodyG
 }
 
 /**
- * `performance.now()` times of each blob's cell computation, in blob order: its submission to the KZG library, which
- * exposes no start or end of its own, and the resumption of its JS continuation
- */
-export type CellComputeTimes = {submitted: number[]; resumed: number[]};
-
-/**
  * Computes the cells for each blob and combines them with cell proofs.
  * Similar to the computeMatrix function described below.
  *
@@ -265,14 +259,11 @@ export type CellComputeTimes = {submitted: number[]; resumed: number[]};
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_matrix
  */
 export async function getCellsAndProofs(
-  blobBundles: fulu.BlobAndProofV2[],
-  times?: CellComputeTimes
+  blobBundles: fulu.BlobAndProofV2[]
 ): Promise<{cells: Uint8Array[]; proofs: Uint8Array[]}[]> {
   const blobsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[] = [];
   for (const {blob, proofs} of blobBundles) {
-    times?.submitted.push(performance.now());
     const cells = await kzg.asyncComputeCells(blob);
-    times?.resumed.push(performance.now());
     blobsAndProofs.push({cells, proofs});
   }
   return blobsAndProofs;

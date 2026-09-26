@@ -108,18 +108,9 @@ export async function verifyBlocksInEpoch(
 
   try {
     // Start execution payload verification first (async request to execution client)
-    const executionRequests = attempt ? blockInputs.map((b) => attempt.executionRequest(b.blockRootHex)) : undefined;
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(
-            this,
-            parentBlock,
-            blockInputs,
-            preState0,
-            abortController.signal,
-            opts,
-            executionRequests
-          )
+        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
@@ -197,7 +188,6 @@ export async function verifyBlocksInEpoch(
     // All signatures at once
     // TODO GLOAS: can verify payload signatures in batch too
     // maybe chain with the above verifyBlocksSignatures()
-    const signatureJobs = attempt ? blockInputs.map((b) => attempt.signatureJob(b.blockRootHex)) : undefined;
     const signaturesPromise = verifyBlocksSignatures(
       this.config,
       this.bls,
@@ -206,8 +196,7 @@ export async function verifyBlocksInEpoch(
       preState0,
       blocks,
       indexedAttestationsByBlock,
-      opts,
-      signatureJobs
+      opts
     );
 
     if (attempt) {
@@ -217,10 +206,10 @@ export async function verifyBlocksInEpoch(
         ({verifyStateTime}) => attempt.markUnixMs(BlockMilestone.stateTransitionEnd, verifyStateTime),
         ignore
       );
-      signaturesPromise.then(({verifySignaturesTime}) => {
-        attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime);
-        attempt.recordSignatureReturn();
-      }, ignore);
+      signaturesPromise.then(
+        ({verifySignaturesTime}) => attempt.markUnixMs(BlockMilestone.signaturesDone, verifySignaturesTime),
+        ignore
+      );
       verifyExecutionPayloadsPromise.then((status) => {
         if (status.execAborted === null && status.executionTime !== undefined) {
           attempt.markUnixMs(BlockMilestone.executionDone, status.executionTime);

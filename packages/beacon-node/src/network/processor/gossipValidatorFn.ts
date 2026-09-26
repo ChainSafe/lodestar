@@ -43,7 +43,6 @@ export function getGossipValidatorBatchFn(
           topic: messageInfo.topic,
           peerIdStr: messageInfo.propagationSource,
           seenTimestampSec: messageInfo.seenTimestampSec,
-          startProcessUnixSec: messageInfo.startProcessUnixSec,
         }))
       );
 

@@ -1361,8 +1361,6 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       if (attestationCount === 0) {
         return results;
       }
-      const trace = chain.blockTrace;
-      const start = trace?.attestationBatchStart(gossipHandlerParams[0].startProcessUnixSec) ?? -1;
       // all attestations should have same attestation data as filtered by network processor
       const {fork} = gossipHandlerParams[0].topic.boundary;
       const validationParams = gossipHandlerParams.map((param) => ({
@@ -1372,10 +1370,11 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         attDataBase64: param.gossipData.indexed,
         subnet: param.topic.subnet,
       })) as GossipAttestation[];
-      const validation = validateGossipAttestationsSameAttData(fork, chain, validationParams);
-      if (start >= 0) trace?.attestationSegmentEnd(start);
-      const {results: validationResults, batchableBls} = await validation;
-      const segment = trace?.attestationMicrotask() ?? -1;
+      const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
+        fork,
+        chain,
+        validationParams
+      );
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
           results.push(validationResult.err as AttestationError);
@@ -1447,7 +1446,6 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }
 
-      if (segment >= 0) trace?.attestationSegmentEnd(segment);
       return results;
     },
   };

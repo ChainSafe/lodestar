@@ -324,10 +324,7 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
-    this.blockTrace =
-      opts.blockTrace === false
-        ? null
-        : new BlockTrace(config, clock, metrics, opts.blockTraceAttestationTiming === true);
+    this.blockTrace = opts.blockTrace === false ? null : new BlockTrace(config, clock, metrics);
     this.eventLoopDelayByPhase = metrics
       ? new EventLoopDelayByPhase(this.genesisTime * 1000, config.SLOT_DURATION_MS, metrics.eventLoopDelayByPhase)
       : null;

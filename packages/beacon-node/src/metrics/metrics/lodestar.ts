@@ -1096,53 +1096,14 @@ export function createLodestarMetrics(
       }),
       wait: register.histogram<{wait: string}>({
         name: "lodestar_block_trace_wait_seconds",
-        help: "Traced block waits: dispatch and processor proxy runnable import work without establishing eligibility; signature_return runs from the block's BLS worker end to its result reaching JS; persistence waits for write capacity",
+        help: "Traced block waits: dispatch and processor proxy runnable import work without establishing eligibility; persistence waits for write capacity",
         labelNames: ["wait"],
         buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
-      }),
-      interval: register.histogram<{interval: string}>({
-        name: "lodestar_block_trace_interval_seconds",
-        help: "Traced block intervals between two milestones of the same root, `<from>_to_<to>`, negative when the second came first",
-        labelNames: ["interval"],
-        buckets: [-1, -0.25, -0.1, -0.025, 0, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 4],
-      }),
-      waitAttestationSegments: register.histogram<{wait: string; kind: string}>({
-        name: "lodestar_block_trace_wait_attestation_segments",
-        help: "Gossip attestation batch starts and continuations that co-occurred with a traced block's dispatch, processor or signature return wait",
-        labelNames: ["wait", "kind"],
-        buckets: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512],
-      }),
-      waitAttestationJs: register.histogram<{wait: string}>({
-        name: "lodestar_block_trace_wait_attestation_js_seconds",
-        help: "Timed synchronous gossip attestation batch time during a traced block's wait, with attestation timing on and only for waits wholly in sampled slots with a complete log; excludes promise resolution between segments",
-        labelNames: ["wait"],
-        buckets: [0, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-      }),
-      waitSampling: register.counter<{wait: string; coverage: string}>({
-        name: "lodestar_block_trace_wait_sampling_total",
-        help: "Traced block waits, with attestation timing on, by how much of each lay in sampled slots: full, partial or none, or truncated when the attestation log no longer covered it",
-        labelNames: ["wait", "coverage"],
-      }),
-      attestationLogTruncated: register.counter({
-        name: "lodestar_block_trace_attestation_log_truncated_total",
-        help: "Traced block waits that began before the oldest logged attestation segment",
       }),
       attestationData: register.counter<{selected: string}>({
         name: "lodestar_block_trace_attestation_data_total",
         help: "Slots by the first head root the attestation data API returned: the slot's block, another root, or no traced block",
         labelNames: ["selected"],
-      }),
-    },
-    getBlobsComputation: {
-      blobCells: register.histogram({
-        name: "lodestar_getblobs_blob_cells_seconds",
-        help: "Per blob of a getBlobsV2 response, from submitting its cell computation to the KZG library to its JS continuation resuming; blobs run one after another",
-        buckets: [0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.5, 1],
-      }),
-      sidecarAssembly: register.histogram({
-        name: "lodestar_getblobs_sidecar_assembly_seconds",
-        help: "Assembly of the data column sidecars of a getBlobsV2 response from its computed cells",
-        buckets: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25],
       }),
     },
     eventLoopDelayByPhase: register.histogram<{phase_bps: string}>({

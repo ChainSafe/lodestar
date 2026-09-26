@@ -12,7 +12,7 @@ import {Metrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {BlsJobTimes, IBlsVerifier, SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
+import {IBlsVerifier, SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInBatches} from "../utils.js";
 import {JobQueueItem, jobItemSigSets, jobItemWorkReq} from "./jobItem.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -25,7 +25,7 @@ import {
   WorkResultError,
   WorkerData,
 } from "./types.js";
-import {chunkifyMaxChunkSize, measureHrtimeOffsetMs} from "./utils.js";
+import {chunkifyMaxChunkSize} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
@@ -102,9 +102,6 @@ type WorkerDescriptor = {
 };
 
 type BufferFlushReason = "size" | "timeout";
-
-/** `process.hrtime()` in ms minus `performance.now()`, to express worker result times on the `performance.now()` scale */
-const HRTIME_OFFSET_MS = measureHrtimeOffsetMs();
 type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 
 /**
@@ -116,7 +113,6 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
-  resultAt = NaN;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
@@ -159,11 +155,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     );
   }
 
-  async verifySignatureSets(
-    sets: ISignatureSet[],
-    opts: VerifySignatureOpts = {},
-    times?: BlsJobTimes
-  ): Promise<boolean> {
+  async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
     if (opts.priority) {
@@ -195,7 +187,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               addedTimeMs: Date.now(),
               opts,
               sets: setsChunk,
-              times,
             });
           })
       )
@@ -374,8 +365,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (jobsInput.length === 0) {
       return;
     }
-    const traced = tracedJobTimes(jobsInput);
-    if (traced !== null) stampJobTimes(traced, "selected", performance.now());
 
     // TODO: After sending the work to the worker the main thread can drop the job arguments
     // and free-up memory, only needs to keep the job's Promise handlers.
@@ -425,7 +414,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           startedSetsDefault += job.sets.length;
         }
       }
-      if (traced !== null) stampJobTimes(traced, "prepared", performance.now());
       const [preparationSeconds, preparationNanoseconds] = process.hrtime(preparationStartTime);
       this.metrics?.blsThreadPool.workRequestPreparationDuration.observe(
         preparationSeconds + preparationNanoseconds / 1e9
@@ -451,18 +439,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      this.resultAt = jobEndSec * 1000 + jobEndNs / 1e6 - HRTIME_OFFSET_MS;
       const {workerId, batchRetries, batchSigsSuccess, verificationCalls, workerStartTime, workerEndTime, results} =
         workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
-      if (traced !== null) {
-        stampJobTimes(traced, "workerStart", workerStartSec * 1000 + workerStartNs / 1e6 - HRTIME_OFFSET_MS);
-        stampJobTimes(traced, "workerEnd", workerEndSec * 1000 + workerEndNs / 1e6 - HRTIME_OFFSET_MS);
-        stampJobTimes(traced, "received", this.resultAt);
-        for (const times of traced) times.dispatchSets = Math.max(times.dispatchSets, startedSigSets);
-      }
 
       let successCount = 0;
       let errorCount = 0;
@@ -613,28 +594,6 @@ function completeJob(
 
       job.resolve(jobResult.result);
       return jobResult.result.every(Boolean) ? "valid" : "invalid";
-  }
-}
-
-/** The stage times of a dispatch's traced jobs, null when none is traced */
-function tracedJobTimes(jobs: JobQueueItem[]): BlsJobTimes[] | null {
-  let traced: BlsJobTimes[] | null = null;
-  for (const job of jobs) {
-    if (job.type !== JobQueueItemType.default || job.times === undefined) continue;
-    traced ??= [];
-    traced.push(job.times);
-  }
-  return traced;
-}
-
-/** Stamps `stage` at `at` unless a later job of the same verification stamped it later */
-function stampJobTimes(
-  traced: BlsJobTimes[],
-  stage: "selected" | "prepared" | "workerStart" | "workerEnd" | "received",
-  at: number
-): void {
-  for (const times of traced) {
-    if (!(times[stage] > at)) times[stage] = at;
   }
 }
 
