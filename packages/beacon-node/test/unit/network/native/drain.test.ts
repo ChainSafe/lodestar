@@ -1,4 +1,3 @@
-import {Histogram} from "prom-client";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {
   NativeExchange,
@@ -73,11 +72,6 @@ function macrotask(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-async function yields(register: RegistryMetricCreator): Promise<Record<string, number>> {
-  const metric = await register.getSingleMetric("lodestar_native_drain_yields_total")?.get();
-  return Object.fromEntries((metric?.values ?? []).map(({labels, value}) => [String(labels.reason), value]));
-}
-
 async function histogram(register: RegistryMetricCreator, name: string): Promise<{sum: number; count: number}> {
   const text = await register.getSingleMetricAsString(name);
   const read = (suffix: string) => Number(new RegExp(`^${name}_${suffix} (\\S+)$`, "m").exec(text)?.[1]);
@@ -145,7 +139,6 @@ describe("native pump", () => {
     );
     await macrotask();
     expect(node.runtime.exchange).toHaveBeenCalledOnce();
-    expect(await yields(node.register)).toEqual({idle: 1});
   });
 
   it("turns again at once for held jobs, and yields them to the time budget", async () => {
@@ -161,7 +154,6 @@ describe("native pump", () => {
     expect(node.stages.demand).toHaveBeenLastCalledWith(2 * limits.budgetMs);
     await macrotask();
     expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
-    expect(await yields(node.register)).toEqual({budget: 1, idle: 1});
   });
 
   it("turns again at once when the time budget left ordinary work unclaimed", async () => {
@@ -182,7 +174,6 @@ describe("native pump", () => {
     for (let i = 0; i < 5; i++) await macrotask();
     expect(node.runtime.exchange).toHaveBeenCalledTimes(4);
     expect(vi.getTimerCount()).toBe(0);
-    expect(await yields(node.register)).toEqual({caps: 3, idle: 1});
   });
 
   it("retries parked external capacity on the single timer until capacity returns", async () => {
@@ -457,11 +448,8 @@ describe("native pump", () => {
     await macrotask();
     await macrotask();
     const burst = await histogram(node.register, "lodestar_native_drain_burst_seconds");
-    const duration = await histogram(node.register, "lodestar_native_drain_seconds");
     // Two turns: each burst adds the continuation's 2 ms to the turn's own 1 ms, and neither includes the other.
     expect(burst.count).toBe(2);
-    expect(duration.count).toBe(2);
-    expect(duration.sum).toBeCloseTo(0.002, 9);
     expect(burst.sum).toBeCloseTo(0.006, 9);
   });
 
@@ -477,7 +465,7 @@ describe("native pump", () => {
     expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
   });
 
-  it("schedules the next turn while native holds more whatever error reporting or instrumentation throws", async () => {
+  it("schedules the next turn while native holds more whatever error reporting throws", async () => {
     const node = fixture();
     const queued = immediates();
     const failure = new Error("reporting failed");
@@ -490,12 +478,7 @@ describe("native pump", () => {
     // The burst end, then the next turn.
     expect(queued).toHaveLength(2);
     queued.shift()?.();
-    const duration = node.register.getSingleMetric("lodestar_native_drain_seconds") as Histogram;
-    vi.spyOn(duration, "observe").mockImplementation(() => {
-      throw failure;
-    });
-    expect(() => queued.shift()?.()).toThrow(failure);
+    queued.shift()?.();
     expect(node.runtime.exchange).toHaveBeenCalledTimes(2);
-    expect(queued).toHaveLength(2);
   });
 });

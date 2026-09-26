@@ -13,6 +13,7 @@ import {
   NativePeerAction,
   NativePeerObservation,
 } from "@chainsafe/lodestar-z/network";
+import {Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/utils/registryMetricCreator.js";
 
 /** Actions one exchange applies; native refuses a longer batch. */
@@ -58,34 +59,6 @@ export type NativeDrainStages = {
 
 type Coalesced = Exclude<NativeAction, {type: "verdict" | "classify"}>;
 
-type NativeDrainMetrics = ReturnType<typeof createNativeDrainMetrics>;
-
-function createNativeDrainMetrics(register: RegistryMetricCreator) {
-  const buckets = [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2];
-  return {
-    duration: register.histogram({
-      name: "lodestar_native_drain_seconds",
-      help: "Duration of each native drain macrotask",
-      buckets,
-    }),
-    yields: register.counter<{reason: "budget" | "caps" | "idle"}>({
-      name: "lodestar_native_drain_yields_total",
-      help: "Native drains that ended with work left by the time budget or a cap, or with none left",
-      labelNames: ["reason"],
-    }),
-    notifyToDrain: register.histogram({
-      name: "lodestar_native_notify_to_drain_seconds",
-      help: "Delay from a native work notification to the start of the drain it scheduled",
-      buckets,
-    }),
-    burst: register.histogram({
-      name: "lodestar_native_drain_burst_seconds",
-      help: "Time from a native drain macrotask's start to the next setImmediate checkpoint, including the promise continuations it triggered",
-      buckets,
-    }),
-  };
-}
-
 /** Now; after the retry timer, also for queued actions unless the exchange failed ("retry"); or on request. */
 type Next = "now" | "later" | "retry" | "idle";
 
@@ -112,7 +85,6 @@ export class NativeDrain {
   private running = false;
   private stopped = false;
   private retry: NodeJS.Timeout | undefined;
-  private notifiedAt: number | undefined;
   /** Consecutive turns whose demand threw or whose exchange could not run. */
   private failures = 0;
   private readonly obligations: NativeAction[] = [];
@@ -122,7 +94,8 @@ export class NativeDrain {
   private reports = 0;
   /** Peer penalties dropped because the coalescing table was full. */
   reportsDropped = 0;
-  private readonly metrics: NativeDrainMetrics | null;
+  /** Temporary: moves into the binding with the pump. */
+  private readonly burst: Histogram | null;
 
   constructor(
     private readonly runtime: Pick<NativeNetworkApplicationRuntime, "exchange" | "fail" | "closed">,
@@ -134,7 +107,12 @@ export class NativeDrain {
     private readonly onFailure: (error: unknown) => void,
     register: RegistryMetricCreator | null
   ) {
-    this.metrics = register ? createNativeDrainMetrics(register) : null;
+    this.burst =
+      register?.histogram({
+        name: "lodestar_native_drain_burst_seconds",
+        help: "Time from a native drain macrotask's start to the next setImmediate checkpoint, including the promise continuations it triggered",
+        buckets: [0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+      }) ?? null;
     void runtime.closed.then(
       () => this.stop(),
       () => this.stop()
@@ -142,10 +120,7 @@ export class NativeDrain {
   }
 
   /** A native notification, or capacity the host released. */
-  readonly request = (): void => {
-    this.notifiedAt ??= performance.now();
-    this.schedule();
-  };
+  readonly request = (): void => this.schedule();
 
   /** One per delivered message. */
   verdict(handle: NativeGossipHandle, verdict: NativeGossipVerdict): void {
@@ -257,8 +232,6 @@ export class NativeDrain {
     this.scheduled = false;
     if (this.stopped) return;
     const started = performance.now();
-    const notifiedAt = this.notifiedAt;
-    this.notifiedAt = undefined;
     this.running = true;
     // A turn that throws in host code runs again, since native may hold more.
     let next: Next = "now";
@@ -267,15 +240,11 @@ export class NativeDrain {
     } finally {
       this.running = false;
       // The burst end is queued first, so it covers only this turn.
-      if (this.metrics) setImmediate(this.burstEnd, started);
+      if (this.burst) setImmediate(this.burstEnd, started);
       // Actions queued while the turn ran need one too, unless its exchange failed.
       if (next === "now" || (next !== "retry" && this.pending())) this.schedule();
       else if (next !== "idle") this.retryLater(next === "retry");
     }
-    const budget = performance.now() >= started + this.limits.budgetMs;
-    if (notifiedAt !== undefined) this.metrics?.notifyToDrain.observe((started - notifiedAt) / 1000);
-    this.metrics?.duration.observe((performance.now() - started) / 1000);
-    this.metrics?.yields.inc({reason: next !== "now" ? "idle" : budget ? "budget" : "caps"});
   };
 
   private turn(deadline: number): Next {
@@ -351,7 +320,7 @@ export class NativeDrain {
   }
 
   private readonly burstEnd = (started: number): void => {
-    this.metrics?.burst.observe((performance.now() - started) / 1000);
+    this.burst?.observe((performance.now() - started) / 1000);
   };
 }
 
