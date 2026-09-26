@@ -46,20 +46,44 @@ export const kinds: readonly NativeTopicKind[] = [
   "data_column_sidecar",
 ];
 
-export function gossipExecutionLimits(
+/**
+ * Native gossip limits per kind. The processor holds up to `items` messages of the kind in `minMiB` MiB, or in its
+ * largest compressed message when that is larger. The host executes a share of its gossip item and byte budgets, in
+ * proportion to the kind's `executionItems` and `executionBytes` weights.
+ */
+const gossipKindLimits: Readonly<
+  Record<NativeTopicKind, {items: number; minMiB: number; executionItems: number; executionBytes: number}>
+> = {
+  beacon_block: {items: 8, minMiB: 24, executionItems: 1, executionBytes: 32},
+  beacon_aggregate_and_proof: {items: 2048, minMiB: 8, executionItems: 8, executionBytes: 4},
+  // `items` rises to one slot of attesters with 10% headroom
+  beacon_attestation: {items: 128, minMiB: 8, executionItems: 32, executionBytes: 8},
+  proposer_slashing: {items: 32, minMiB: 1, executionItems: 1, executionBytes: 1},
+  attester_slashing: {items: 32, minMiB: 4, executionItems: 1, executionBytes: 4},
+  voluntary_exit: {items: 128, minMiB: 1, executionItems: 1, executionBytes: 1},
+  sync_committee_contribution_and_proof: {items: 128, minMiB: 2, executionItems: 2, executionBytes: 2},
+  sync_committee: {items: 1024, minMiB: 2, executionItems: 4, executionBytes: 2},
+  light_client_finality_update: {items: 8, minMiB: 2, executionItems: 1, executionBytes: 2},
+  light_client_optimistic_update: {items: 8, minMiB: 2, executionItems: 1, executionBytes: 2},
+  bls_to_execution_change: {items: 128, minMiB: 1, executionItems: 1, executionBytes: 1},
+  blob_sidecar: {items: 256, minMiB: 8, executionItems: 4, executionBytes: 8},
+  data_column_sidecar: {items: 256, minMiB: 16, executionItems: 8, executionBytes: 24},
+};
+
+function gossipExecutionLimits(
   opts: NetworkOptions,
   maxSszSizes: Readonly<Record<NativeTopicKind, number>>
 ): {items: number; bytes: number}[] {
-  const byteWeights = [32, 4, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 24];
-  const itemWeights = [1, 8, 32, 1, 1, 1, 2, 4, 1, 1, 1, 4, 8];
-  const byteTotal = byteWeights.reduce((sum, weight) => sum + weight, 0);
-  const itemTotal = itemWeights.reduce((sum, weight) => sum + weight, 0);
+  const limits = Object.values(gossipKindLimits);
+  const byteTotal = limits.reduce((sum, limit) => sum + limit.executionBytes, 0);
+  const itemTotal = limits.reduce((sum, limit) => sum + limit.executionItems, 0);
   const itemBudget = nativeInteger(opts.native?.hostGossipItems ?? 4096, "host gossip items", 16384, 1);
   const byteBudget = nativeInteger(opts.native?.hostGossipBytes ?? 64 * MiB, "host gossip bytes", 1024 * MiB, 1);
   const concurrency = nativeInteger(opts.maxGossipTopicConcurrency ?? itemBudget, "gossip topic concurrency", 16384, 1);
-  return kinds.map((kind, i) => {
-    const items = Math.min(concurrency, Math.floor((itemBudget * itemWeights[i]) / itemTotal));
-    const bytes = Math.floor((byteBudget * byteWeights[i]) / byteTotal);
+  return kinds.map((kind) => {
+    const {executionItems, executionBytes} = gossipKindLimits[kind];
+    const items = Math.min(concurrency, Math.floor((itemBudget * executionItems) / itemTotal));
+    const bytes = Math.floor((byteBudget * executionBytes) / byteTotal);
     const largest = maxSszSizes[kind];
     if (items < 1 || bytes < largest)
       throw new NativeNetworkError({
@@ -335,27 +359,18 @@ export function createNativeConfig(
       );
     }
   }
-  const items: Record<NativeTopicKind, number> = {
-    beacon_block: 8,
-    beacon_attestation: Math.max(128, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1)),
-    beacon_aggregate_and_proof: 2048,
-    blob_sidecar: 256,
-    data_column_sidecar: 256,
-    sync_committee: 1024,
-    sync_committee_contribution_and_proof: 128,
-    proposer_slashing: 32,
-    attester_slashing: 32,
-    voluntary_exit: 128,
-    bls_to_execution_change: 128,
-    light_client_finality_update: 8,
-    light_client_optimistic_update: 8,
-  };
-  const byteWeights = [24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16];
-  const processor = kinds.map((kind, i) => {
+  const processor = kinds.map((kind) => {
+    const {items, minMiB} = gossipKindLimits[kind];
     const largest = maxSszSizes[kind];
     const compressedMax = 32 + largest + Math.floor(largest / 6);
-    const pages = Math.ceil(Math.max(4096, compressedMax, byteWeights[i] * MiB) / 4096);
-    return {items: items[kind], bytes: pages * 4096};
+    const pages = Math.ceil(Math.max(4096, compressedMax, minMiB * MiB) / 4096);
+    return {
+      items:
+        kind === "beacon_attestation"
+          ? Math.max(items, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1))
+          : items,
+      bytes: pages * 4096,
+    };
   });
   nativeInteger(
     processor.reduce((sum, limit) => sum + limit.items, 0),
