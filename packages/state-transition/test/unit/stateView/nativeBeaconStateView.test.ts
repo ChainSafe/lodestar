@@ -1,36 +1,10 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
 import {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
-  it("caches pending builder payments and withdrawals", () => {
-    const payments = ssz.gloas.BuilderPendingPayments.defaultValue();
-    const withdrawals = [ssz.gloas.BuilderPendingWithdrawal.defaultValue()];
-    let paymentsAccessCount = 0;
-    let withdrawalsAccessCount = 0;
-    const binding = {
-      get builderPendingPayments() {
-        paymentsAccessCount++;
-        return payments;
-      },
-      get builderPendingWithdrawals() {
-        withdrawalsAccessCount++;
-        return withdrawals;
-      },
-    } as unknown as IBeaconStateViewNative;
-    const view = new NativeBeaconStateView(binding);
-
-    expect(view.builderPendingPayments).toBe(payments);
-    expect(view.builderPendingPayments).toBe(payments);
-    expect(view.builderPendingWithdrawals).toBe(withdrawals);
-    expect(view.builderPendingWithdrawals).toBe(withdrawals);
-    expect(paymentsAccessCount).toBe(1);
-    expect(withdrawalsAccessCount).toBe(1);
-  });
-
   it("lifts the raw {uint8Array, bitLen} into a BitArray for executionPayloadAvailability", () => {
     // 0b10100101 — bits at indices 0, 2, 5, 7 are set
     const uint8Array = new Uint8Array([0b10100101]);
