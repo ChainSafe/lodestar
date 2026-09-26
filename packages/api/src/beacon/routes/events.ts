@@ -1,6 +1,6 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -68,6 +68,24 @@ const headV2 = new ContainerType(
     executionOptimistic: ssz.Boolean,
   },
   {typeName: "HeadV2", jsonCase: "eth2"}
+);
+const blockBase = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "Block", jsonCase: "eth2"}
+);
+const blockGloas = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    blockHash: stringType,
+    builderIndex: ssz.BuilderIndex,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "BlockGloas", jsonCase: "eth2"}
 );
 type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
@@ -185,6 +203,8 @@ export type EventData = {
   [EventType.block]: {
     slot: Slot;
     block: RootHex;
+    blockHash?: RootHex;
+    builderIndex?: BuilderIndex;
     executionOptimistic: boolean;
   };
   [EventType.blockGossip]: {
@@ -330,14 +350,17 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.headV2]: WithVersion(() => headV2),
 
-    [EventType.block]: new ContainerType(
-      {
-        slot: ssz.Slot,
-        block: stringType,
-        executionOptimistic: ssz.Boolean,
+    [EventType.block]: {
+      toJson: (val) => {
+        if (config.getForkSeq(val.slot) < ForkSeq.gloas) return blockBase.toJson(val);
+        if (val.blockHash === undefined || val.builderIndex === undefined) {
+          throw Error(`Missing block hash or builder index for block at ${val.slot}`);
+        }
+        return blockGloas.toJson({...val, blockHash: val.blockHash, builderIndex: val.builderIndex});
       },
-      {jsonCase: "eth2"}
-    ),
+      fromJson: (json) =>
+        (config.getForkSeq((json as {slot: Slot}).slot) >= ForkSeq.gloas ? blockGloas : blockBase).fromJson(json),
+    },
     [EventType.blockGossip]: new ContainerType(
       {
         slot: ssz.Slot,

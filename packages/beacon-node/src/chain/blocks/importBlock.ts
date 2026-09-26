@@ -28,6 +28,7 @@ import {
 import {
   Attestation,
   BeaconBlock,
+  BuilderIndex,
   Epoch,
   altair,
   capella,
@@ -534,10 +535,16 @@ export async function importBlock(
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
       if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        let gloasFields: undefined | {blockHash: string; builderIndex: BuilderIndex};
+        if (isGloasBeaconBlock(block.message)) {
+          const bid = block.message.body.signedExecutionPayloadBid.message;
+          gloasFields = {blockHash: toRootHex(bid.blockHash), builderIndex: bid.builderIndex};
+        }
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...gloasFields,
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
