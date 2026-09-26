@@ -74,12 +74,8 @@ async function fixture(events = new NetworkEventBus(), attach = true) {
     const messages = [...urgent, ...ordinary].slice(0, demand.messages);
     queued = queued.filter((message) => !messages.includes(message));
     const jobs: NativeJob[] = grouped
-      ? [{kind: "beacon_attestation", grouped: true, urgent: false, messages}]
-      : messages.map((message) =>
-          message.topic === blockTopic
-            ? {kind: "beacon_block", grouped: false, urgent: true, messages: [message]}
-            : {kind: "voluntary_exit", grouped: false, urgent: false, messages: [message]}
-        );
+      ? [{grouped: true, urgent: false, messages}]
+      : messages.map((message) => ({grouped: false, urgent: message.topic === blockTopic, messages: [message]}));
     const result = messages.length > 0 ? jobs.map((job) => new NativeClaim(job)) : [];
     claims.push(result);
     return result;

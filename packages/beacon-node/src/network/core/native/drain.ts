@@ -39,7 +39,7 @@ export class NativeClaim<T> {
   }
 }
 
-export type NativeJob = Omit<NativeGossipJob, "start" | "length"> & {messages: NativeGossipMessage[]};
+export type NativeJob = Pick<NativeGossipJob, "grouped" | "urgent"> & {messages: NativeGossipMessage[]};
 
 /** One exchange's payload, with jobs and serving starts to adopt. */
 export type NativeDelivery = {
@@ -301,10 +301,9 @@ export class NativeDrain {
   private deliver(stages: NativeDrainStages, result: NativeExchange, deadline: number): boolean {
     const gossip = result.gossip;
     const jobs = (gossip?.jobs ?? []).map(
-      ({kind, grouped, urgent, start, length}) =>
+      ({grouped, urgent, start, length}) =>
         new NativeClaim<NativeJob>({
           grouped,
-          kind,
           messages: gossip?.messages.slice(start, start + length) ?? [],
           urgent,
         })
