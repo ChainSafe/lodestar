@@ -1756,7 +1756,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (topic) (rate({__name__=~\"gossipsub_mesh_peer_inclusion_events(_(fanout|random|subscribed|outbound|not_enough|opportunistic|unknown))?_total\"}[$rate_interval]))",
+          "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (topic)",
           "interval": "",
           "legendFormat": "+ {{topic}}",
           "range": true,
@@ -1769,7 +1769,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "-sum by (topic) (rate({__name__=~\"gossipsub_peer_churn_events(_(disconnected|bad_score|prune|excess|unknown))?_total\"}[$rate_interval]))",
+          "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (topic)",
           "hide": false,
           "interval": "",
           "legendFormat": "- {{topic}}",
@@ -1778,8 +1778,7 @@
         }
       ],
       "title": "Mesh inclusion (+) / churn (-) events - sum by topic",
-      "type": "timeseries",
-      "description": "Mesh membership transitions grouped by topic type. Supports native reason labels and upstream reason-specific metric names. Native local unsubscribe is included in removals."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1858,7 +1857,7 @@
           "hide": false,
           "legendFormat": "+ fanout",
           "range": true,
-          "refId": "A"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -1870,7 +1869,7 @@
           "hide": false,
           "legendFormat": "+ random",
           "range": true,
-          "refId": "B"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -1882,30 +1881,6 @@
           "hide": false,
           "legendFormat": "+ subscribed",
           "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate({__name__=~\"gossipsub_mesh_peer_inclusion_events(_outbound)?_total\",reason=~\"outbound|\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ outbound",
-          "range": true,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate({__name__=~\"gossipsub_mesh_peer_inclusion_events(_not_enough)?_total\",reason=~\"underfull|\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ not_enough",
-          "range": true,
           "refId": "E"
         },
         {
@@ -1914,9 +1889,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate({__name__=~\"gossipsub_mesh_peer_inclusion_events(_opportunistic)?_total\",reason=~\"opportunistic|\"}[$rate_interval]))",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_outbound_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "+ opportunistic",
+          "legendFormat": "+ outbound",
           "range": true,
           "refId": "F"
         },
@@ -1926,9 +1901,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "- sum(rate({__name__=~\"gossipsub_peer_churn_events(_disconnected)?_total\",reason=~\"disconnected|\"}[$rate_interval]))",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_not_enough_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "- disconnected",
+          "legendFormat": "+ not_enough",
           "range": true,
           "refId": "G"
         },
@@ -1938,9 +1913,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "- sum(rate({__name__=~\"gossipsub_peer_churn_events(_bad_score)?_total\",reason=~\"bad_score|\"}[$rate_interval]))",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_opportunistic_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "- bad_score",
+          "legendFormat": "+ opportunistic",
           "range": true,
           "refId": "H"
         },
@@ -1950,9 +1925,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "- sum(rate({__name__=~\"gossipsub_peer_churn_events(_prune)?_total\",reason=~\"prune|\"}[$rate_interval]))",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_disconnected_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "- prune",
+          "legendFormat": "- disconnected",
           "range": true,
           "refId": "I"
         },
@@ -1962,9 +1937,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "- sum(rate({__name__=~\"gossipsub_peer_churn_events(_excess)?_total\",reason=~\"excess|\"}[$rate_interval]))",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_bad_score_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "- excess",
+          "legendFormat": "- bad_score",
           "range": true,
           "refId": "J"
         },
@@ -1974,9 +1949,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_total{reason=\"remote_graft\"}[$rate_interval]))",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_prune_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "+ remote_graft",
+          "legendFormat": "- prune",
           "range": true,
           "refId": "K"
         },
@@ -1986,64 +1961,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "-sum(rate(gossipsub_peer_churn_events_total{reason=\"remote_unsubscribe\"}[$rate_interval]))",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_excess_total[$rate_interval]))",
           "hide": false,
-          "legendFormat": "- remote_unsubscribe",
+          "legendFormat": "- excess",
           "range": true,
           "refId": "L"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "-sum(rate(gossipsub_peer_churn_events_total{reason=\"local_unsubscribe\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- local_unsubscribe",
-          "range": true,
-          "refId": "M"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "-sum(rate(gossipsub_peer_churn_events_total{reason=\"stream_unavailable\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- stream_unavailable",
-          "range": true,
-          "refId": "N"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "-sum(rate(gossipsub_peer_churn_events_total{reason=\"direct\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- direct",
-          "range": true,
-          "refId": "O"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "-sum(rate(gossipsub_peer_churn_events_total{reason=\"backoff\"}[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- backoff",
-          "range": true,
-          "refId": "P"
         }
       ],
       "title": "Mesh inclusion (+) / churn (-) events - sum by reason",
-      "type": "timeseries",
-      "description": "Upstream reasons and native actual membership transitions. Native rejected nonmember GRAFTs and duplicate PRUNEs do not count. Local unsubscribe is distinct from peer failures."
+      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -7713,15 +7639,14 @@
         }
       ],
       "title": "Gossipsub heartbeat duration",
-      "type": "timeseries",
-      "description": "Elapsed time of completed heartbeat cycles. Native cycles include the gaps between bounded topic-processing slices."
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Completed cycles and skipped starts. Native skips count serviced heartbeat deadlines while the previous sliced cycle is still active. Use lateness and freshness panels to detect stalled scheduling.",
+      "description": "If skipped: heartbeat run took longer than heartbeat interval so next is skipped. This is bad and should not happen.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -7804,7 +7729,7 @@
           "expr": "rate(gossipsub_heartbeat_skipped[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "upstream skips",
+          "legendFormat": "skips",
           "refId": "B"
         }
       ],
@@ -9463,7 +9388,7 @@
       ],
       "title": "Native metrics export freshness",
       "type": "timeseries",
-      "description": "Ages use Prometheus time, so they continue growing if the network owner stalls. Completion age is absent until the first completed cycle; inspect the active-cycle panel during startup."
+      "description": "Age of the native network owner's last metrics update. It uses Prometheus time, so it keeps growing if the owner stalls."
     }
   ],
   "refresh": "10s",

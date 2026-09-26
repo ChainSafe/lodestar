@@ -74,6 +74,7 @@ it("isolates throwing loggers and reports cumulative native loss without floodin
   expect(() => vi.advanceTimersByTime(250)).not.toThrow();
   // The second record is still delivered after the first one's logger threw
   expect(f.logger.debug).toHaveBeenCalledTimes(2);
+  expect(f.logs.deliveryErrors).toBe(2);
   expect(f.logger.warn).toHaveBeenCalledOnce();
   expect(f.logger.warn).toHaveBeenCalledWith("Native log records limited", {
     dropped: "1",
@@ -103,6 +104,7 @@ it("contains native drain failures and still retires the polling timer", () => {
   });
   expect(() => vi.advanceTimersByTime(1000)).not.toThrow();
   expect(f.logger.warn).toHaveBeenCalledWith("Native log delivery failed", {}, expect.any(Error));
+  expect(f.logs.deliveryErrors).toBeGreaterThan(0);
   expect(() => f.logs.close()).not.toThrow();
   expect(vi.getTimerCount()).toBe(0);
 });

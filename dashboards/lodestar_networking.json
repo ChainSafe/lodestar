@@ -2105,13 +2105,12 @@
           "expr": "rate(lodestar_peer_manager_heartbeat_duration_seconds_sum[$rate_interval])\n/\nrate(lodestar_peer_manager_heartbeat_duration_seconds_count[$rate_interval])",
           "format": "heatmap",
           "interval": "",
-          "legendFormat": "upstream heartbeat average",
+          "legendFormat": "avg",
           "refId": "A"
         }
       ],
-      "title": "Peer manager work duration",
-      "type": "timeseries",
-      "description": "Upstream periodic heartbeat and native revision/deadline-triggered selection measure different work. Cached native turns do not add observations."
+      "title": "Peer manager heartbeat duration",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -7510,7 +7509,7 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval])",
-          "legendFormat": "upstream attnets avg",
+          "legendFormat": "attnets avg",
           "range": true,
           "refId": "A"
         },
@@ -7521,14 +7520,14 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval])",
-          "legendFormat": "upstream syncnets avg",
+          "legendFormat": "syncnets avg",
           "range": true,
           "refId": "B"
         }
       ],
       "title": "Peers per active subnet",
       "type": "timeseries",
-      "description": "Upstream averages observations over the rate window. Native shows the current usable coverage distribution for demanded subnets, so its sum and count must not be passed through rate()."
+      "description": "Connected peer count per active subnet (avg per type).\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant."
     },
     {
       "datasource": {
@@ -7805,7 +7804,7 @@
       ],
       "title": "Native current peer demand",
       "type": "timeseries",
-      "description": "Current selection gauges are separate from cumulative requested-peer counters. Below target does not indicate chain-head starvation."
+      "description": "Whether the running node is below its peer target. Below target does not indicate chain-head starvation."
     },
     {
       "datasource": {

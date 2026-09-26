@@ -2,6 +2,7 @@ import {NativeNetworkApplicationRuntime} from "@chainsafe/lodestar-z/network";
 import {Logger} from "@lodestar/utils";
 
 export class NativeLogs {
+  deliveryErrors = 0;
   private readonly timer: NodeJS.Timeout;
   private reportedDropped = 0n;
   private reportedSuppressed = 0n;
@@ -35,7 +36,9 @@ export class NativeLogs {
               nativeMonotonicMs: record.monotonicMs.toString(),
               nativeTruncated: record.truncated,
             });
-          } catch {}
+          } catch {
+            this.deliveryErrors++;
+          }
         }
         const now = Date.now();
         if (
@@ -56,11 +59,14 @@ export class NativeLogs {
         if (!batch.more) break;
       }
     } catch (error) {
+      this.deliveryErrors++;
       if (Date.now() - this.lastWarning >= 30000) {
         this.lastWarning = Date.now();
         try {
           this.logger.warn("Native log delivery failed", {}, error as Error);
-        } catch {}
+        } catch {
+          this.deliveryErrors++;
+        }
       }
     }
   }

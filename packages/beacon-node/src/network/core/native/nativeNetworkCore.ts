@@ -338,7 +338,12 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return [this.runtime.getMetrics(), (await this.modules.metricsRegistry?.metrics()) ?? ""].join("");
+    return [
+      this.runtime.getMetrics(),
+      "# TYPE lodestar_native_log_delivery_errors_total counter\n",
+      `lodestar_native_log_delivery_errors_total ${this.logs?.deliveryErrors ?? 0}\n`,
+      (await this.modules.metricsRegistry?.metrics()) ?? "",
+    ].join("");
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

@@ -456,6 +456,8 @@ describe("native Lodestar integration", () => {
                 ([, context]) => (context as Record<string, unknown> | undefined)?.nativeScope === "network_reqresp"
               )
             ).toBe(true);
+            expect(metrics).toContain("# TYPE lodestar_native_log_delivery_errors_total counter\n");
+            expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
           },
           {timeout: 5000}
         );

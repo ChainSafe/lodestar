@@ -548,7 +548,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -565,13 +565,12 @@
           "exemplar": false,
           "expr": "sum(lodestar_discovery_dial_time_seconds_count{status=\"error\"})/sum(lodestar_discovery_dial_time_seconds_count)",
           "interval": "",
-          "legendFormat": "upstream discovery",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Completed dial error fraction (cumulative)",
-      "type": "timeseries",
-      "description": "Native completed endpoint attempts include manual, direct and discovery demand; local capacity deferrals are excluded. Upstream covers logical discovery calls."
+      "title": "dial error rate (cumulative)",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1182,13 +1181,12 @@
           "exemplar": false,
           "expr": "rate(lodestar_discovery_dial_time_seconds_sum[$rate_interval])/rate(lodestar_discovery_dial_time_seconds_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "upstream discovery {{status}}",
+          "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
       "title": "dial time seconds",
-      "type": "timeseries",
-      "description": "Native elapsed time per completed endpoint attempt across all origins. Upstream elapsed time per logical discovery dial call."
+      "type": "timeseries"
     },
     {
       "datasource": {
