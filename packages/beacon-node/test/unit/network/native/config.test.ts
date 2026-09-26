@@ -1,10 +1,13 @@
-import {generateKeyPair} from "@libp2p/crypto/keys";
+import {createHash} from "node:crypto";
+import {generateKeyPair, privateKeyFromRaw} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
 import {createBeaconConfig} from "@lodestar/config";
+import {genesisData, networksChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {UINT64_MAX, createNativeConfig, kinds, nativeTopicScore} from "../../../../src/network/core/native/config.js";
 import {NativeNetworkError} from "../../../../src/network/core/native/errors.js";
 import {computeGossipPeerScoreParams} from "../../../../src/network/gossip/scoringParameters.js";
@@ -312,3 +315,44 @@ it.each([16, 1_000_000])(
     }
   }
 );
+
+/** A stable text of a resolved native config: bigints, bytes and non-finite numbers made explicit */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, item) => {
+    if (typeof item === "bigint") return `${item}n`;
+    if (item instanceof Uint8Array) return Buffer.from(item).toString("hex");
+    if (typeof item === "number" && !Number.isFinite(item)) return String(item);
+    return item;
+  });
+}
+
+describe("native gossip limits", () => {
+  const key = privateKeyFromRaw(new Uint8Array(32).fill(7));
+
+  it.each(["mainnet", "hoodi"] as const)("resolve the %s native config unchanged", (network) => {
+    const beaconConfig = createBeaconConfig(
+      networksChainConfig[network],
+      fromHex(genesisData[network].genesisValidatorsRoot)
+    );
+    const resolved = [16, 1_000_000].map((validators) => {
+      const {application} = createNativeConfig(
+        {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/9000/quic-v1"]},
+        beaconConfig,
+        key,
+        0,
+        ssz.fulu.Status.defaultValue(),
+        beaconConfig.CUSTODY_REQUIREMENT,
+        validators
+      );
+      const {processor, execution} = application.gossipPolicy;
+      return {
+        validators,
+        limits: Object.fromEntries(
+          kinds.map((kind, i) => [kind, {processor: processor[i], execution: execution?.[i]}])
+        ),
+        sha256: createHash("sha256").update(canonical(application)).digest("hex"),
+      };
+    });
+    expect(resolved).toMatchSnapshot();
+  });
+});

@@ -1,0 +1,555 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`native gossip limits > resolve the hoodi native config unchanged 1`] = `
+[
+  {
+    "limits": {
+      "attester_slashing": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 4194304,
+          "items": 32,
+        },
+      },
+      "beacon_aggregate_and_proof": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 504,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 2048,
+        },
+      },
+      "beacon_attestation": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 128,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 128,
+        },
+      },
+      "beacon_block": {
+        "execution": {
+          "bytes": 23598721,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 25165824,
+          "items": 8,
+        },
+      },
+      "blob_sidecar": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 256,
+        },
+      },
+      "bls_to_execution_change": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+      "data_column_sidecar": {
+        "execution": {
+          "bytes": 17699041,
+          "items": 256,
+        },
+        "processor": {
+          "bytes": 16777216,
+          "items": 256,
+        },
+      },
+      "light_client_finality_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "light_client_optimistic_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "proposer_slashing": {
+        "execution": {
+          "bytes": 737460,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 32,
+        },
+      },
+      "sync_committee": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 1024,
+        },
+      },
+      "sync_committee_contribution_and_proof": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 126,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 128,
+        },
+      },
+      "voluntary_exit": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+    },
+    "sha256": "1a75fd2211e2e9bd6484ac77db3f8c707fe179899bb1147eb5cc0748a061262b",
+    "validators": 16,
+  },
+  {
+    "limits": {
+      "attester_slashing": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 4194304,
+          "items": 32,
+        },
+      },
+      "beacon_aggregate_and_proof": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 504,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 2048,
+        },
+      },
+      "beacon_attestation": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 2016,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 34375,
+        },
+      },
+      "beacon_block": {
+        "execution": {
+          "bytes": 23598721,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 25165824,
+          "items": 8,
+        },
+      },
+      "blob_sidecar": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 256,
+        },
+      },
+      "bls_to_execution_change": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+      "data_column_sidecar": {
+        "execution": {
+          "bytes": 17699041,
+          "items": 256,
+        },
+        "processor": {
+          "bytes": 16777216,
+          "items": 256,
+        },
+      },
+      "light_client_finality_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "light_client_optimistic_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "proposer_slashing": {
+        "execution": {
+          "bytes": 737460,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 32,
+        },
+      },
+      "sync_committee": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 1024,
+        },
+      },
+      "sync_committee_contribution_and_proof": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 126,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 128,
+        },
+      },
+      "voluntary_exit": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+    },
+    "sha256": "34802be66c0b77c88ab2327025dfdedf9012b0c1f87e4ed8d7ca8fa95894f72c",
+    "validators": 1000000,
+  },
+]
+`;
+
+exports[`native gossip limits > resolve the mainnet native config unchanged 1`] = `
+[
+  {
+    "limits": {
+      "attester_slashing": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 4194304,
+          "items": 32,
+        },
+      },
+      "beacon_aggregate_and_proof": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 504,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 2048,
+        },
+      },
+      "beacon_attestation": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 128,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 128,
+        },
+      },
+      "beacon_block": {
+        "execution": {
+          "bytes": 23598721,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 25165824,
+          "items": 8,
+        },
+      },
+      "blob_sidecar": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 256,
+        },
+      },
+      "bls_to_execution_change": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+      "data_column_sidecar": {
+        "execution": {
+          "bytes": 17699041,
+          "items": 256,
+        },
+        "processor": {
+          "bytes": 16777216,
+          "items": 256,
+        },
+      },
+      "light_client_finality_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "light_client_optimistic_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "proposer_slashing": {
+        "execution": {
+          "bytes": 737460,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 32,
+        },
+      },
+      "sync_committee": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 1024,
+        },
+      },
+      "sync_committee_contribution_and_proof": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 126,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 128,
+        },
+      },
+      "voluntary_exit": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+    },
+    "sha256": "1a75fd2211e2e9bd6484ac77db3f8c707fe179899bb1147eb5cc0748a061262b",
+    "validators": 16,
+  },
+  {
+    "limits": {
+      "attester_slashing": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 4194304,
+          "items": 32,
+        },
+      },
+      "beacon_aggregate_and_proof": {
+        "execution": {
+          "bytes": 2949840,
+          "items": 504,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 2048,
+        },
+      },
+      "beacon_attestation": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 2016,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 34375,
+        },
+      },
+      "beacon_block": {
+        "execution": {
+          "bytes": 23598721,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 25165824,
+          "items": 8,
+        },
+      },
+      "blob_sidecar": {
+        "execution": {
+          "bytes": 5899680,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 8388608,
+          "items": 256,
+        },
+      },
+      "bls_to_execution_change": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+      "data_column_sidecar": {
+        "execution": {
+          "bytes": 17699041,
+          "items": 256,
+        },
+        "processor": {
+          "bytes": 16777216,
+          "items": 256,
+        },
+      },
+      "light_client_finality_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "light_client_optimistic_update": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 8,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 8,
+        },
+      },
+      "proposer_slashing": {
+        "execution": {
+          "bytes": 737460,
+          "items": 32,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 32,
+        },
+      },
+      "sync_committee": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 252,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 1024,
+        },
+      },
+      "sync_committee_contribution_and_proof": {
+        "execution": {
+          "bytes": 1474920,
+          "items": 126,
+        },
+        "processor": {
+          "bytes": 2097152,
+          "items": 128,
+        },
+      },
+      "voluntary_exit": {
+        "execution": {
+          "bytes": 737460,
+          "items": 63,
+        },
+        "processor": {
+          "bytes": 1048576,
+          "items": 128,
+        },
+      },
+    },
+    "sha256": "34802be66c0b77c88ab2327025dfdedf9012b0c1f87e4ed8d7ca8fa95894f72c",
+    "validators": 1000000,
+  },
+]
+`;
