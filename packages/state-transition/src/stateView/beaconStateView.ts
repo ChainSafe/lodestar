@@ -104,8 +104,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
-  private cachedBuilderPendingPayments: gloas.BuilderPendingPayments | null = null;
-  private cachedBuilderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
+  private _builderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private _builderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -421,10 +421,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Pending builder payments are not supported before Gloas");
     }
 
-    if (this.cachedBuilderPendingPayments === null) {
-      this.cachedBuilderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+    if (this._builderPendingPayments === null) {
+      this._builderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
     }
-    return this.cachedBuilderPendingPayments;
+    return this._builderPendingPayments;
   }
 
   get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
@@ -432,12 +432,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Pending builder withdrawals are not supported before Gloas");
     }
 
-    if (this.cachedBuilderPendingWithdrawals === null) {
-      this.cachedBuilderPendingWithdrawals = (
+    if (this._builderPendingWithdrawals === null) {
+      this._builderPendingWithdrawals = (
         this.cachedState as CachedBeaconStateGloas
       ).builderPendingWithdrawals.toValue();
     }
-    return this.cachedBuilderPendingWithdrawals;
+    return this._builderPendingWithdrawals;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {

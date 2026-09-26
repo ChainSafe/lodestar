@@ -118,8 +118,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _latestBlockHash: Bytes32 | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
-  private cachedBuilderPendingPayments: gloas.BuilderPendingPayments | null = null;
-  private cachedBuilderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
+  private _builderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private _builderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   // Per-argument caches for argument-taking methods. The binding is treated as
   // immutable for the view's lifetime, so a given argument always yields the
@@ -895,17 +895,17 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get builderPendingPayments(): gloas.BuilderPendingPayments {
-    if (this.cachedBuilderPendingPayments === null) {
-      this.cachedBuilderPendingPayments = this.binding.builderPendingPayments;
+    if (this._builderPendingPayments === null) {
+      this._builderPendingPayments = this.binding.builderPendingPayments;
     }
-    return this.cachedBuilderPendingPayments;
+    return this._builderPendingPayments;
   }
 
   get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
-    if (this.cachedBuilderPendingWithdrawals === null) {
-      this.cachedBuilderPendingWithdrawals = this.binding.builderPendingWithdrawals;
+    if (this._builderPendingWithdrawals === null) {
+      this._builderPendingWithdrawals = this.binding.builderPendingWithdrawals;
     }
-    return this.cachedBuilderPendingWithdrawals;
+    return this._builderPendingWithdrawals;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {
