@@ -134,6 +134,11 @@ describe("stock LevelDB serving reads", () => {
       Array.from({length: 6}, () => ({call: "nextv", size: 1}))
     );
 
+    // classic-level reads a limit of -1 as no limit
+    expect(await Array.fromAsync(rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5, limit: -1}))).toHaveLength(
+      5
+    );
+
     calls.length = 0;
     const limited = await Array.fromAsync(rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5, limit: 2}));
     expect(limited).toHaveLength(2);

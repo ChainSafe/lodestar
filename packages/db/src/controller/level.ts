@@ -258,8 +258,16 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       closing ??= iterator.close();
       return closing;
     };
-    // A bounded iterator reads only the rows its limit allows; a stock row-at-a-time stream reads to its end
-    const rows = this.rowAtATimeIterator(iterator, opts.limit ?? (opts.readLimits === undefined ? Infinity : 0), close);
+    // A bounded iterator reads only the rows its limit allows. A stock stream follows classic-level, where a limit
+    // that is not a non-negative integer, -1 included, means no limit.
+    const {limit} = opts;
+    const rowLimit =
+      opts.readLimits !== undefined
+        ? (limit ?? 0)
+        : limit !== undefined && Number.isInteger(limit) && limit >= 0
+          ? limit
+          : Infinity;
+    const rows = this.rowAtATimeIterator(iterator, rowLimit, close);
     const measured = this.metricsIterator(rows, getValue, bucket)[Symbol.asyncIterator]();
     // The snapshot already exists even if neither generator has started.
     const stream: AsyncIterableIterator<K> = {
