@@ -2,21 +2,23 @@ import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {describe, expect, it, vi} from "vitest";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db";
+import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {LevelDbController, encodeKey} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../src/db/beacon.js";
-import {ServingBlockCertification} from "../../../src/db/blockCertification.js";
+import {ServingBlockCertification, WRITER_CANARY_ID} from "../../../src/db/blockCertification.js";
+import {Bucket} from "../../../src/db/buckets.js";
 
 const MAX_PAYLOAD_SIZE = 64 * 1024;
-const config = createChainForkConfig({
+const chainConfig = {
   ...defaultChainConfig,
   ALTAIR_FORK_EPOCH: 0,
   BELLATRIX_FORK_EPOCH: 0,
   CAPELLA_FORK_EPOCH: 0,
   MAX_PAYLOAD_SIZE,
-});
+};
+const config = createChainForkConfig(chainConfig);
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 
 /** A Capella block at `slot`, above MAX_PAYLOAD_SIZE when `oversized` */
@@ -28,12 +30,18 @@ function block(slot: number, oversized = false) {
   return {bytes, root: toRootHex(ssz.capella.BeaconBlock.hashTreeRoot(signedBlock.message))};
 }
 
-async function withDb(run: (db: BeaconDb, restart: () => BeaconDb) => Promise<void>): Promise<void> {
+async function withDb(
+  run: (db: BeaconDb, restart: (config?: ChainForkConfig) => BeaconDb, controller: LevelDbController) => Promise<void>
+): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-block-certification-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
     // A restart constructs the certification again over the same database
-    await run(new BeaconDb(config, controller), () => new BeaconDb(config, controller));
+    await run(
+      new BeaconDb(config, controller),
+      (restartConfig = config) => new BeaconDb(restartConfig, controller),
+      controller
+    );
   } finally {
     await controller.close();
     await rm(path, {recursive: true, force: true});
@@ -45,7 +53,7 @@ async function archive(db: BeaconDb, slots: number[], oversized: number[] = []):
 }
 
 describe("serving block certification", () => {
-  it("certifies no block until loaded, then leaves the archived slots after genesis unverified", async () =>
+  it("certifies no block until loaded and hot scanned, then leaves the archived slots after genesis unverified", async () =>
     withDb(async (db) => {
       await archive(db, [0, 5, 9]);
       const certification = db.blockCertification;
@@ -53,6 +61,8 @@ describe("serving block certification", () => {
       for (const slot of [0, 5, 100]) expect(certification.isArchiveSlotVerified(slot)).toBe(false);
 
       expect(await certification.load()).toEqual({from: 5, to: 9});
+      expect(certification.isArchiveSlotVerified(0)).toBe(false);
+      expect(await certification.scanHot()).toBeNull();
       expect([0, 4, 5, 9, 10].map((slot) => certification.isArchiveSlotVerified(slot))).toEqual([
         true,
         true,
@@ -68,6 +78,7 @@ describe("serving block certification", () => {
   it("certifies a new database and its genesis block", async () =>
     withDb(async (db, restart) => {
       expect(await db.blockCertification.load()).toBeNull();
+      expect(await db.blockCertification.scanHot()).toBeNull();
       expect(db.blockCertification.isArchiveRangeVerified(0, 100)).toBe(true);
       await archive(db, [0]);
       expect(await restart().blockCertification.load()).toBeNull();
@@ -92,8 +103,11 @@ describe("serving block certification", () => {
       await archive(db, [5, 6, 7, 8, 9]);
       await db.blockCertification.load();
       expect(await db.blockCertification.verifyArchive()).toBeNull();
-      // An older build prunes every hot blob sidecar row at start, then its backfill writes inside the verified slots
-      await db.blobSidecars.batchDelete(await db.blobSidecars.keys());
+      // The downgrade contract: an older build's start prunes every key its hot blob sidecar repository decodes,
+      // the canary included, then its backfill writes inside the verified slots
+      const keys = await db.blobSidecars.keys();
+      expect(keys.map((key) => Buffer.from(key))).toContainEqual(WRITER_CANARY_ID);
+      await db.blobSidecars.batchDelete(keys);
       await archive(db, [7], [7]);
 
       const restarted = restart().blockCertification;
@@ -106,6 +120,7 @@ describe("serving block certification", () => {
       await archive(db, [1, 2, 3, 4, 5, 6], [4]);
       const certification = db.blockCertification;
       await certification.load();
+      await certification.scanHot();
       const stream = vi.spyOn(db.blockArchive, "binaryEntriesStream");
       const oversized = block(4, true);
       expect(await certification.verifyArchive({persistEvery: 2})).toEqual({
@@ -166,6 +181,29 @@ describe("serving block certification", () => {
         bytes: oversized.bytes.byteLength,
       });
       expect(db.blockCertification.hotVerified).toBe(false);
+      // Finalization may copy that block into the archive, so no archive block is certified either
+      expect(await db.blockCertification.load()).toBeNull();
+      expect(db.blockCertification.isArchiveSlotVerified(4)).toBe(false);
+      expect(db.blockCertification.isArchiveRangeVerified(0, 100)).toBe(false);
+    }));
+
+  it("invalidates verification made under another MAX_PAYLOAD_SIZE, or recorded without one", async () =>
+    withDb(async (db, restart, controller) => {
+      await archive(db, [5, 6, 7], [6]);
+      // Slot 6 fits a larger limit
+      const largerConfig = createChainForkConfig({...chainConfig, MAX_PAYLOAD_SIZE: 2 * MAX_PAYLOAD_SIZE});
+      const larger = restart(largerConfig).blockCertification;
+      expect(await larger.load()).toEqual({from: 5, to: 7});
+      expect(await larger.verifyArchive()).toBeNull();
+      expect(await restart(largerConfig).blockCertification.load()).toBeNull();
+
+      const certification = restart().blockCertification;
+      expect(await certification.load()).toEqual({from: 5, to: 7});
+      expect(await certification.verifyArchive()).toMatchObject({slot: 6});
+
+      // A marker without its limit
+      await controller.put(encodeKey(Bucket.index_servingBlockCertification, "unverified"), new Uint8Array(16));
+      expect(await restart().blockCertification.load()).toEqual({from: 5, to: 7});
     }));
 
   it("leaves oversized blocks that finalization copies into the archive unverified", async () =>

@@ -11,14 +11,20 @@ import {BlockRepository} from "./repositories/block.js";
 import {BlockArchiveRepository} from "./repositories/blockArchive.js";
 
 /**
- * Present while no build without this certification has started since it was written: every Lodestar start since
- * v1.3 deletes the hot blob sidecar bucket, and this build's prune keeps this key
+ * Present while no build without this certification has started since it was written. The downgrade contract covers
+ * builds from v1.3 (December 2022) on: each start runs `pruneHotDb`, which deletes every key of the hot blob sidecar
+ * bucket, and that bucket's key decoding accepts this id. This build's prune keeps the key.
+ * A build older than v1.3 keeps it too, so a downgrade to one is not detected.
  */
 export const WRITER_CANARY_ID = Buffer.from("serving-block-certification");
 const WRITER_CANARY_KEY = encodeKey(Bucket.deneb_blobSidecars, WRITER_CANARY_ID);
-/** The archive slots [from, to] whose stored blocks may exceed MAX_PAYLOAD_SIZE; empty when from > to */
+/** The archive slots [from, to] whose stored blocks may exceed maxPayloadSize; empty when from > to */
 const UNVERIFIED_KEY = encodeKey(Bucket.index_servingBlockCertification, "unverified");
-const intervalType = new ContainerType({from: new UintNumberType(8), to: new UintNumberType(8)});
+const markerType = new ContainerType({
+  maxPayloadSize: new UintNumberType(8),
+  from: new UintNumberType(8),
+  to: new UintNumberType(8),
+});
 type Interval = {from: Slot; to: Slot};
 const NONE: Interval = {from: 1, to: 0};
 
@@ -28,8 +34,10 @@ export type OversizedBlock = {slot: Slot | null; root: RootHex | null; bytes: nu
  * Which stored blocks serving may read with stock reads: blocks within MAX_PAYLOAD_SIZE by their writers or by
  * verification. Every current block writer is capped: gossip and req/resp decoding, local publication, genesis, and
  * finalization, which copies hot rows and marks any oversized one unverified. Rows written before this certification,
- * or by a build without it, are unverified until `verifyArchive` reads them. Until `load` and `scanHot` run, no block
- * is certified.
+ * by a build without it, or under another MAX_PAYLOAD_SIZE are unverified until `verifyArchive` reads them.
+ *
+ * No archive block is certified until this run's `scanHot` succeeds: finalization could otherwise copy an oversized hot
+ * block into a slot that a pending stock read already selected as verified.
  */
 export class ServingBlockCertification {
   /** Whether every hot block fitted MAX_PAYLOAD_SIZE when this process scanned them; later hot writes are capped */
@@ -50,23 +58,28 @@ export class ServingBlockCertification {
   }
 
   isArchiveSlotVerified(slot: Slot): boolean {
-    return slot < this.unverified.from || slot > this.unverified.to;
+    return this.hotVerified && (slot < this.unverified.from || slot > this.unverified.to);
   }
 
   /** Whether every archive slot in [start, end] is verified */
   isArchiveRangeVerified(start: Slot, end: Slot): boolean {
     const {from, to} = this.unverified;
-    return from > to || end < from || start > to || end < start;
+    return this.hotVerified && (from > to || end < from || start > to || end < start);
   }
 
   /**
-   * Loads the unverified archive slots. A new certification, or one that a build without it may have written past,
-   * marks every archived block unverified except genesis, which only the genesis block can fill.
+   * Loads the unverified archive slots. A new certification, one that a build without it may have written past, or one
+   * verified under another MAX_PAYLOAD_SIZE marks every archived block unverified except genesis, which only the
+   * genesis block can fill.
    */
   async load(): Promise<Interval | null> {
     const [marker, canary] = await Promise.all([this.db.get(UNVERIFIED_KEY), this.db.get(WRITER_CANARY_KEY)]);
-    if (marker !== null && canary !== null) {
-      this.unverified = intervalType.deserialize(marker);
+    const certified =
+      marker !== null && canary !== null && marker.length === markerType.fixedSize
+        ? markerType.deserialize(marker)
+        : null;
+    if (certified !== null && certified.maxPayloadSize === this.config.MAX_PAYLOAD_SIZE) {
+      this.unverified = {from: certified.from, to: certified.to};
     } else {
       const [[first], last] = await Promise.all([
         this.blockArchive.keys({gte: GENESIS_SLOT + 1, limit: 1}),
@@ -74,7 +87,7 @@ export class ServingBlockCertification {
       ]);
       const unverified = first === undefined || last === null || last < first ? NONE : {from: first, to: last};
       await this.db.batchPut([
-        {key: UNVERIFIED_KEY, value: intervalType.serialize(unverified)},
+        {key: UNVERIFIED_KEY, value: this.serialize(unverified)},
         {key: WRITER_CANARY_KEY, value: new Uint8Array([1])},
       ]);
       this.unverified = unverified;
@@ -83,7 +96,11 @@ export class ServingBlockCertification {
     return this.unverifiedArchive;
   }
 
-  /** Reads every hot block once, one at a time outside the block cache, and stops at the first oversized one */
+  /**
+   * Reads every hot block once, one at a time outside the block cache, and stops at the first oversized one. This
+   * startup maintenance runs outside the serving lease and bounds concurrent rows, not bytes: the size check follows
+   * allocation, so memory follows the largest stored row.
+   */
   async scanHot(): Promise<OversizedBlock | null> {
     this.hotVerified = false;
     for await (const {key, value} of this.block.binaryEntriesStream({fillCache: false, rowAtATime: true})) {
@@ -114,7 +131,7 @@ export class ServingBlockCertification {
   /**
    * Verifies the unverified archived blocks in slot order, one at a time outside the block cache, recording progress
    * every `persistEvery` blocks so a later run resumes. Stops at the first block above MAX_PAYLOAD_SIZE, which stays
-   * unverified with every later slot.
+   * unverified with every later slot. Like `scanHot`, it bounds concurrent rows, not bytes.
    */
   async verifyArchive({
     persistEvery = 1024,
@@ -149,8 +166,12 @@ export class ServingBlockCertification {
 
   private async persist(unverified: Interval): Promise<void> {
     const next = unverified.from > unverified.to ? NONE : unverified;
-    await this.db.put(UNVERIFIED_KEY, intervalType.serialize(next));
+    await this.db.put(UNVERIFIED_KEY, this.serialize(next));
     this.unverified = next;
+  }
+
+  private serialize({from, to}: Interval): Uint8Array {
+    return markerType.serialize({maxPayloadSize: this.config.MAX_PAYLOAD_SIZE, from, to});
   }
 
   private rootOf(slot: Slot, bytes: Uint8Array): RootHex | null {

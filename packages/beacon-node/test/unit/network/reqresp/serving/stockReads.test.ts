@@ -321,6 +321,46 @@ describe("stock serving reads", () => {
       {stock: true}
     ));
 
+  it("keep a missing-column block read bounded when finalization copies an oversized hot block before it runs", async () => {
+    const gate = defer<void>();
+    const held = defer<void>();
+    await withDb(async (db, reads, level) => {
+      expect(await db.blockCertification.load()).toBeNull();
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.body.executionPayload.transactions = [new Uint8Array(config.MAX_PAYLOAD_SIZE)];
+      const bytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+      await db.block.putBinary(root, bytes);
+      expect(await db.blockCertification.scanHot()).toMatchObject({slot, bytes: bytes.byteLength});
+
+      // Hold the block read that the missing column triggers until finalization has run
+      const get = level.get.bind(level);
+      level.get = async (key, opts) => {
+        held.resolve();
+        await gate.promise;
+        return get(key, opts);
+      };
+      reads.length = 0;
+      const served = Array.fromAsync(
+        onDataColumnSidecarsByRange(
+          {startSlot: slot, count: 1, columns: [1]},
+          makeChain(db),
+          db,
+          peer,
+          "test",
+          new ServingContext(policy)
+        )
+      );
+      await held.promise;
+      // Finalization marks the oversized hot block unverified, then copies it into the slot the read selected
+      await db.blockCertification.unverifyOversized([{slot, bytes: bytes.byteLength}]);
+      await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
+      gate.resolve();
+      await Promise.allSettled([served]);
+      expect(reads.filter((read) => read.call === "get")).toEqual([{call: "get", fillCache: false, bounded: true}]);
+    });
+  });
+
   it("read a stock range one row per native read and keep its snapshot under writes", async () =>
     withDb(async (db, reads) => {
       const chain = makeChain(db);
