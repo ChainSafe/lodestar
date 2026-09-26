@@ -103,7 +103,7 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      const blockCutoffSlot = await callFnWhenAwait(
+      await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
@@ -116,7 +116,26 @@ export class ArchiveStore {
         30_000,
         this.signal
       );
-      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+    }
+
+    // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
+    // above), rather than the anchor state slot set in the constructor. On an in-place restart the DB
+    // still holds finalized history below the anchor; leaving the value at the anchor makes the node
+    // reject by_range requests (beacon_blocks, execution_payload_envelopes and data_column_sidecars
+    // all gate on this slot) for data it still retains. An empty archive (e.g. a fresh checkpoint
+    // sync with nothing below the anchor) leaves the constructor's anchor slot in place.
+    const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
+    if (earliestArchivedBlockSlot != null) {
+      const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
+      this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
+      this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
+        oldEarliestAvailableSlot,
+        newEarliestAvailableSlot: earliestArchivedBlockSlot,
+      });
+    } else {
+      this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
+        earliestAvailableSlot: this.chain.earliestAvailableSlot,
+      });
     }
 
     if (this.opts.serveHistoricalState) {
