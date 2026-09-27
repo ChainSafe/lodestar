@@ -4704,7 +4704,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"6\"}[32m])",
+          "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"6|6.0\"}[32m])",
           "hide": true,
           "interval": "",
           "legendFormat": "< 6",
@@ -4716,7 +4716,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"6\"}[32m]))",
+          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"12|12.0\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"6|6.0\"}[32m]))",
           "hide": true,
           "interval": "",
           "legendFormat": "6 << 12",
@@ -4728,7 +4728,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"12\"}[32m]))",
+          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"24|24.0\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"12|12.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "12 << 24",
@@ -4740,7 +4740,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"24\"}[32m]))",
+          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"48|48.0\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"24|24.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "24 << 48",
@@ -4752,7 +4752,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"48\"}[32m]))",
+          "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=~\"48|48.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "48 << +Inf",
@@ -5452,7 +5452,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "(\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n  -\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})\n)\n/\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})",
+          "expr": "(\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n  -\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"})\n)\n/\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "share of total peers",
@@ -5464,7 +5464,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "count",
@@ -5559,7 +5559,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"1.5\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"3|3.0\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"1.5\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "1.5 << 3",
@@ -5571,7 +5571,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"3|3.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "3 << 6",
@@ -5583,7 +5583,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"12\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"12|12.0\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "6 << 12",
@@ -5595,7 +5595,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"24\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"12\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"24|24.0\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"12|12.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "12 << 24",
@@ -5607,7 +5607,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"24\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"24|24.0\"})",
           "interval": "",
           "legendFormat": "24 << +Inf",
           "refId": "24"
@@ -5689,7 +5689,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"3|3.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "3 << 6",
@@ -5701,7 +5701,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
+          "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=~\"6|6.0\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "6 << +Inf",
@@ -6112,7 +6112,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12.0\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "late",
@@ -6140,7 +6140,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n  -\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48.0\"}[32m]))\n)\n/\nsum(rate(gossipsub_iwant_promise_broken[$rate_interval]))",
+          "expr": "(\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n  -\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))\n)\n/\nsum(rate(gossipsub_iwant_promise_broken[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "never / broken ratio",
@@ -6224,7 +6224,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
+          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m])",
           "hide": true,
           "interval": "",
           "legendFormat": "< 6",
@@ -6236,7 +6236,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m]))",
           "hide": true,
           "interval": "",
           "legendFormat": "6 << 12",
@@ -6248,7 +6248,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "12 << 24",
@@ -6260,7 +6260,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "24 << 48",
@@ -6272,7 +6272,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "48 << +Inf",
@@ -6474,7 +6474,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
+          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m])",
           "hide": true,
           "interval": "",
           "legendFormat": "< 6",
@@ -6486,7 +6486,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m]))",
           "hide": true,
           "interval": "",
           "legendFormat": "6 << 12",
@@ -6498,7 +6498,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))",
           "hide": true,
           "interval": "",
           "legendFormat": "12 << 24",
@@ -6510,7 +6510,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))",
           "hide": true,
           "interval": "",
           "legendFormat": "24 << 48",
@@ -6522,7 +6522,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "48 << +Inf",
@@ -6605,7 +6605,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
+          "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m])",
           "hide": true,
           "interval": "",
           "legendFormat": "< 6",
@@ -6617,7 +6617,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"6|6.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "6 << 12",
@@ -6629,7 +6629,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"12|12.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "12 << 24",
@@ -6641,7 +6641,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"24|24.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "24 << 48",
@@ -6653,7 +6653,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
+          "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=~\"48|48.0\"}[32m]))",
           "hide": false,
           "interval": "",
           "legendFormat": "48 << +Inf",

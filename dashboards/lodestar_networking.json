@@ -5365,7 +5365,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"1|1.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s",
           "range": true,
@@ -5377,7 +5377,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"2|2.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s",
           "range": true,
@@ -5389,7 +5389,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"4|4.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=4s",
           "range": true,
@@ -5401,7 +5401,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"6|6.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=6s",
           "range": true,
@@ -5495,7 +5495,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"1|1.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s {{source}}",
           "range": true,
@@ -5507,7 +5507,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"2|2.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s {{source}}",
           "range": true,
@@ -5519,7 +5519,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"4|4.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=4s {{source}}",
@@ -5532,7 +5532,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"6|6.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=6s {{source}}",
@@ -5827,7 +5827,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"1|1.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s {{source}}",
           "range": true,
@@ -5839,7 +5839,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"2|2.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s {{source}}",
           "range": true,
@@ -5851,7 +5851,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"4|4.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=4s {{source}}",
@@ -5864,7 +5864,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"6|6.0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=6s {{source}}",
@@ -6388,7 +6388,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "60 * (\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
+          "expr": "60 * (\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_count[$rate_interval])\n    - sum without (le) (rate(beacon_reqresp_incoming_request_handler_time_seconds_bucket{le=~\"5|5.0\"}[$rate_interval]))\n)",
           "interval": "",
           "legendFormat": "{{method}}",
           "range": true,
@@ -6638,7 +6638,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
+          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])\n    - sum without (le) (rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=~\"5|5.0\"}[$rate_interval]))\n)",
           "interval": "",
           "legendFormat": "{{method}}",
           "range": true,

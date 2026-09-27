@@ -1593,7 +1593,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(validator_monitor_unaggregated_attestation_submitted_sent_peers_count_bucket{le=\"0\"} [$rate_interval])\n/ on(instance)\nrate(validator_monitor_unaggregated_attestation_submitted_sent_peers_count_count [$rate_interval])",
+          "expr": "sum without (le) (rate(validator_monitor_unaggregated_attestation_submitted_sent_peers_count_bucket{le=~\"0|0.0\"}[$rate_interval]))\n/\nrate(validator_monitor_unaggregated_attestation_submitted_sent_peers_count_count[$rate_interval])",
           "format": "time_series",
           "legendFormat": "__auto",
           "range": true,
