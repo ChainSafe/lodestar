@@ -273,9 +273,16 @@ export function readGrafanaDashboard(filepath) {
  * @param {Dashboard} json
  */
 export function writeGrafanaDashboard(filepath, json) {
+  fs.writeFileSync(filepath, formatGrafanaDashboard(json));
+}
+
+/**
+ * @param {Dashboard} json
+ * @returns {string}
+ */
+export function formatGrafanaDashboard(json) {
   // Add new line
-  const jsonStrOut = JSON.stringify(json, null, 2) + "\n";
-  fs.writeFileSync(filepath, jsonStrOut);
+  return JSON.stringify(json, null, 2) + "\n";
 }
 
 /**
