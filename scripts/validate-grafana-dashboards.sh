@@ -1,17 +1,8 @@
 #!/bin/bash
 
-# This script will mutate the dashboards if anything needs linting
-node scripts/lint-grafana-dashboards.mjs ./dashboards
-
-if [[ $? -ne 0 ]]; then
-  echo 'linting dashboards failed'
+# Checks every dashboard is linted, without rewriting it; `pnpm lint-dashboards` fixes them
+if ! node scripts/lint-grafana-dashboards.mjs ./dashboards --check; then
+  echo 'dashboards need fixing: run pnpm lint-dashboards'
   exit 1
 fi
-
-if [[ $(git diff --stat ./dashboards) != '' ]]; then
-  git --no-pager diff
-  echo 'dashboards need fixing'
-  exit 1
-else
-  echo 'dashboards clean'
-fi
+echo 'dashboards clean'

@@ -306,6 +306,23 @@ function assertTemplatingListItemContent(json, varName, item) {
 }
 
 /**
+ * Prometheus 3 stores integer histogram bounds as `le="5.0"` and earlier versions keep the exposition's `le="5"`, so a
+ * selector of an integer bound must accept both spellings, as `le=~"5|5[.]0"`.
+ * @param {string} expr
+ */
+function assertHistogramBoundSelectors(expr) {
+  for (const [, operator, value] of expr.matchAll(/\ble\s*(=~|!~|!=|=)\s*"([^"]*)"/g)) {
+    const alternatives = operator === "=~" || operator === "!~" ? value.split("|") : [value];
+    for (const alternative of alternatives) {
+      const bound = /^(-?\d+)(\.0|\[\.\]0)?$/.exec(alternative)?.[1];
+      if (bound === undefined) continue;
+      if (alternatives.includes(bound) && alternatives.includes(`${bound}[.]0`) && operator.endsWith("~")) continue;
+      throw Error(`select integer le bounds by both spellings, as le=~"${bound}|${bound}[.]0": ${expr}`);
+    }
+  }
+}
+
+/**
  * @param {Panel[]} panels
  */
 function assertPanels(panels) {
@@ -352,6 +369,8 @@ function assertPanels(panels) {
           if (target.expr.includes("delta(")) {
             throw Error(`promql function 'delta' is not allowed, use 'rate' instead: ${target.expr}`);
           }
+
+          assertHistogramBoundSelectors(target.expr);
           // increase() is allowed for rare-event counters (eg. fast confirmation reorgs/fallbacks/restarts)
           // where a per-window event count reads clearer than the near-zero per-second value rate would show.
           // if (target.expr.includes("increase(")) {

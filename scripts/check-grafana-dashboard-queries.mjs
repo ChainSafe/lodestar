@@ -11,8 +11,7 @@ import {readGrafanaDashboard} from "./lint-grafana-dashboard.mjs";
 // node scripts/check-grafana-dashboard-queries.mjs ./dashboards
 //
 // Evaluates dashboard queries offline with `promtool test rules` against the canned series of
-// `grafana-dashboard-query-fixtures.mjs`, and checks that no integer histogram bucket is selected by one spelling of `le`.
-// Requires promtool on PATH.
+// `grafana-dashboard-query-fixtures.mjs`. Requires promtool on PATH.
 
 const dirpath = process.argv[2];
 if (!dirpath) throw Error("Must provide dirpath argument");
@@ -33,20 +32,10 @@ function* walkPanels(panels) {
   }
 }
 
-/** Prometheus 3 stores integer bounds as `le="5.0"` and earlier versions as `le="5"`, so select both. */
-const singleSpellingLe = /le="\d+(\.0)?"/;
-
 const problems = [];
 const dashboards = new Map();
 for (const filename of fs.readdirSync(dirpath).filter((filename) => filename.endsWith(".json"))) {
-  const json = readGrafanaDashboard(path.join(dirpath, filename));
-  dashboards.set(filename, json);
-  for (const panel of walkPanels(json.panels)) {
-    for (const target of panel.targets ?? []) {
-      if (target.expr && singleSpellingLe.test(target.expr))
-        problems.push(`${filename} #${panel.id} ${target.refId}: select integer le bounds as le=~"N|N.0"`);
-    }
-  }
+  dashboards.set(filename, readGrafanaDashboard(path.join(dirpath, filename)));
 }
 
 const groups = [];

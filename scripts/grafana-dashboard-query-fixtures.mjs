@@ -98,6 +98,16 @@ function discv5Gauge(name, panel) {
           {labels: `${name}{${libp2p}}`, value: 30},
         ],
       },
+      {
+        name: "a target exporting both names reads the native one, its zero included",
+        series: {[`lodestar_${name}{${native}}`]: constant(0), [`${name}{${native}}`]: constant(30)},
+        expect: [{labels: `lodestar_${name}{${native}}`, value: 0}],
+      },
+      {
+        name: "neither name exported has no result",
+        series: {[`lodestar_discv5_decode_enr_attempt_count{${libp2p}}`]: perSecond(1)},
+        expect: [],
+      },
     ],
   };
 }
