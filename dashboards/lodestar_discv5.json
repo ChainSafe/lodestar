@@ -2153,7 +2153,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Discovery datagrams rejected as malformed or abusive, by stage and reason.",
+      "description": "Discovery datagrams rejected while processing, by stage and reason: malformed or unexpected input, and local admission pressure, where admission_limited refuses a valid handshake until admission credits refill.",
       "fieldConfig": {
         "defaults": {
           "unit": "short"

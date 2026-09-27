@@ -1489,7 +1489,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossip validation queues - Length",
+      "title": "Gossip validation queues - Length (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2246,7 +2246,7 @@
           "refId": "A"
         }
       ],
-      "title": "Received VALID msg / sec (log)",
+      "title": "Received VALID msg / sec (log) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2499,7 +2499,7 @@
           "refId": "A"
         }
       ],
-      "title": "RPC not accepted from rate (no data = no invalid msgs)",
+      "title": "RPC not accepted from rate (no data = no invalid msgs) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2610,7 +2610,7 @@
           "refId": "C"
         }
       ],
-      "title": "Async validation result - IGNORE / REJECT rates",
+      "title": "Async validation result - IGNORE / REJECT rates (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2693,7 +2693,7 @@
           "refId": "A"
         }
       ],
-      "title": "Async validation result - mcache hit / miss rates",
+      "title": "Async validation result - mcache hit / miss rates (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3066,7 +3066,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish msg data bytes / sec",
+      "title": "Publish msg data bytes / sec (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3231,7 +3231,7 @@
           "refId": "A"
         }
       ],
-      "title": "Published msg avg peers sent per RPC",
+      "title": "Published msg avg peers sent per RPC (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3395,7 +3395,7 @@
           "refId": "A"
         }
       ],
-      "title": "Forward msg avg peers sent per RPC",
+      "title": "Forward msg avg peers sent per RPC (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3756,7 +3756,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score weights AVG",
+      "title": "Score weights AVG (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3837,7 +3837,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score weights MIN",
+      "title": "Score weights MIN (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3919,7 +3919,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score weights AVG (log · > 1)",
+      "title": "Score weights AVG (log · > 1) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4001,7 +4001,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score weights AVG (inverted · log · > 10)",
+      "title": "Score weights AVG (inverted · log · > 10) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4193,7 +4193,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossipsub - score debug P3",
+      "title": "Gossipsub - score debug P3 (libp2p backend)",
       "type": "row"
     },
     {
@@ -5092,7 +5092,7 @@
           "refId": "min"
         }
       ],
-      "title": "Gossip score weight P7 max / avg / min",
+      "title": "Gossip score weight P7 max / avg / min (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5323,7 +5323,7 @@
           "refId": "avg"
         }
       ],
-      "title": "Gossip score weight P7 avg",
+      "title": "Gossip score weight P7 avg (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5471,7 +5471,7 @@
           "refId": "count"
         }
       ],
-      "title": "Peers with behaviour_penalty > 6",
+      "title": "Peers with behaviour_penalty > 6 (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5613,7 +5613,7 @@
           "refId": "24"
         }
       ],
-      "title": "Peer stat behaviour penalties histogram",
+      "title": "Peer stat behaviour penalties histogram (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5708,7 +5708,7 @@
           "refId": "6"
         }
       ],
-      "title": "Peers with behaviour_penalty > 3",
+      "title": "Peers with behaviour_penalty > 3 (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5809,7 +5809,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer stat behaviour penalties histogram (exclude lowest value)",
+      "title": "Peer stat behaviour penalties histogram (exclude lowest value) (libp2p backend)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -6148,7 +6148,7 @@
           "refId": "broken_ratio"
         }
       ],
-      "title": "gossipsub_iwant_promise broken ratio",
+      "title": "gossipsub_iwant_promise broken ratio (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6279,7 +6279,7 @@
           "refId": "12"
         }
       ],
-      "title": "IWANT promise delivery time histogram > 12",
+      "title": "IWANT promise delivery time histogram > 12 (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6384,7 +6384,7 @@
           "refId": "A"
         }
       ],
-      "title": "IWANT promise delivery time seconds",
+      "title": "IWANT promise delivery time seconds (libp2p backend)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -6529,7 +6529,7 @@
           "refId": "12"
         }
       ],
-      "title": "IWANT promise delivery time histogram > 48",
+      "title": "IWANT promise delivery time histogram > 48 (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6660,7 +6660,7 @@
           "refId": "12"
         }
       ],
-      "title": "IWANT promise delivery time histogram > 6",
+      "title": "IWANT promise delivery time histogram > 6 (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6686,7 +6686,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossipsub - control debug",
+      "title": "Gossipsub - control debug (libp2p backend)",
       "type": "row"
     },
     {
@@ -7532,7 +7532,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossipsub - misc, heartbeat",
+      "title": "Gossipsub - misc, heartbeat (libp2p backend)",
       "type": "row"
     },
     {

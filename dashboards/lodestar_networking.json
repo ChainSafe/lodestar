@@ -865,7 +865,7 @@
           "refId": "A"
         }
       ],
-      "title": "Committee Subscriptions - Seconds to stable mesh",
+      "title": "Committee Subscriptions - Seconds to stable mesh (libp2p backend)",
       "type": "heatmap"
     },
     {
@@ -947,7 +947,7 @@
           "refId": "A"
         }
       ],
-      "title": "Mesh peers by client",
+      "title": "Mesh peers by client (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -1581,7 +1581,7 @@
           "refId": "A"
         }
       ],
-      "title": "Long lived attnets per peer",
+      "title": "Long lived attnets per peer (libp2p backend)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1682,7 +1682,7 @@
           "refId": "A"
         }
       ],
-      "title": "Goodbye reason for peer disconnecting after 1 day",
+      "title": "Goodbye reason for peer disconnecting after 1 day (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -1895,7 +1895,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score (app level, not gossip)",
+      "title": "Score (app level, not gossip) (libp2p backend)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -2020,7 +2020,7 @@
           "expr": "rate(lodestar_peer_disconnected_total[$rate_interval])>0",
           "hide": false,
           "interval": "",
-          "legendFormat": "disconnect_{{direction}}",
+          "legendFormat": "disconnect_{{direction}} (libp2p backend)",
           "refId": "B"
         }
       ],
@@ -2195,7 +2195,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer connect events offset (must be 0-1)",
+      "title": "Peer connect events offset (must be 0-1) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2386,7 +2386,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested peers to connect and disconnect (rate / min)",
+      "title": "Requested peers to connect and disconnect (rate / min) (libp2p backend)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2482,7 +2482,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Peer Manager - Requested subnets to query (rate / min)",
+      "title": "Peer Manager - Requested subnets to query (rate / min) (libp2p backend)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2578,7 +2578,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Peer Manager - Requested total peers in subnets (rate / min)",
+      "title": "Peer Manager - Requested total peers in subnets (rate / min) (libp2p backend)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2792,7 +2792,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer Discovery - Subnets to connect",
+      "title": "Peer Discovery - Subnets to connect (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3243,7 +3243,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossip validation queues - Length",
+      "title": "Gossip validation queues - Length (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -3680,7 +3680,7 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_network_processor_execute_work_calls_total[$rate_interval])",
-          "legendFormat": "execute calls",
+          "legendFormat": "execute calls (libp2p backend)",
           "range": true,
           "refId": "A"
         },
@@ -3692,7 +3692,7 @@
           "editorMode": "code",
           "expr": "rate(lodestar_network_processor_can_not_accept_work_total[$rate_interval])",
           "hide": false,
-          "legendFormat": "cannot accept work",
+          "legendFormat": "cannot accept work (libp2p backend)",
           "range": true,
           "refId": "B"
         },
@@ -4120,7 +4120,7 @@
           "refId": "A"
         }
       ],
-      "title": "Queue Concurrency",
+      "title": "Queue Concurrency (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4214,7 +4214,7 @@
           "refId": "A"
         }
       ],
-      "title": "Errors Per Slot",
+      "title": "Errors Per Slot (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4431,7 +4431,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages",
+      "title": "Awaiting Block Gossip Messages (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4622,7 +4622,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages - Resolved",
+      "title": "Awaiting Block Gossip Messages - Resolved (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4732,7 +4732,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages - Rejected",
+      "title": "Awaiting Block Gossip Messages - Rejected (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -4938,7 +4938,7 @@
           "refId": "C"
         }
       ],
-      "title": "Indexed Gossip Queue",
+      "title": "Indexed Gossip Queue (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6728,7 +6728,7 @@
           "refId": "A"
         }
       ],
-      "title": "Dial errors rate",
+      "title": "Dial errors rate (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6894,7 +6894,7 @@
           "refId": "A"
         }
       ],
-      "title": "Rate limiter errors / sec",
+      "title": "Rate limiter errors / sec (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -8574,7 +8574,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Socket buffer sizes the kernel granted to native sockets.",
+      "description": "Native socket buffer sizes as getsockopt reports them. Linux reports double the size requested with setsockopt, as it counts its bookkeeping overhead.",
       "fieldConfig": {
         "defaults": {
           "unit": "bytes"
@@ -8595,7 +8595,7 @@
           "refId": "A"
         }
       ],
-      "title": "Native UDP socket buffers",
+      "title": "Native UDP socket buffers (kernel-reported)",
       "type": "timeseries"
     }
   ],

@@ -768,14 +768,23 @@ function discv5Native() {
       file,
       58,
       "A",
-      {'lodestar_native_discovery_datagram_rejections_total{%T,reason="malformed_packet",stage="packet"}': perSecond(0.25)},
-      [{labels: '{%T,reason="malformed_packet",stage="packet"}', value: 15}]
+      {
+        'lodestar_native_discovery_datagram_rejections_total{%T,reason="malformed_packet",stage="packet"}': perSecond(0.25),
+        'lodestar_native_discovery_datagram_rejections_total{%T,reason="admission_limited",stage="admission"}': perSecond(1),
+      },
+      [
+        {labels: '{%T,reason="malformed_packet",stage="packet"}', value: 15},
+        {labels: '{%T,reason="admission_limited",stage="admission"}', value: 60},
+      ]
     ),
     ...selectedAttempts(file, 59),
   ];
 }
 
-/** The vm_host dashboard's native backend row; the step histogram's integer bound uses the Prometheus 3 spelling */
+/**
+ * The vm_host dashboard's memory totals, which sum the threads a target runs, and its native backend row, whose step
+ * histogram fixture uses the Prometheus 3 spelling of an integer bound
+ */
 function vmHostNative() {
   const file = "lodestar_vm_host.json";
   const steps = {
@@ -785,7 +794,47 @@ function vmHostNative() {
     "lodestar_native_network_step_seconds_sum{%T}": perSecond(0.5),
     "lodestar_native_network_step_seconds_count{%T}": perSecond(2),
   };
+  const memory = (refId, name) => ({
+    dashboard: file,
+    panel: 44,
+    refId,
+    cases: [
+      {
+        name: "a native target has no worker threads",
+        series: {[`nodejs_${name}{${native}}`]: constant(100)},
+        expect: [{labels: "{}", value: 100}],
+      },
+      {
+        name: "a libp2p target adds its network and discv5 workers",
+        series: {
+          [`nodejs_${name}{${libp2p}}`]: constant(100),
+          [`network_worker_nodejs_${name}{${libp2p}}`]: constant(50),
+          [`discv5_worker_nodejs_${name}{${libp2p}}`]: constant(20),
+        },
+        expect: [{labels: "{}", value: 170}],
+      },
+      {
+        name: "mixed targets, one with a historical state worker",
+        series: {
+          [`nodejs_${name}{${native}}`]: constant(100),
+          [`lodestar_historical_state_worker_nodejs_${name}{${native}}`]: constant(5),
+          [`nodejs_${name}{${libp2p}}`]: constant(100),
+          [`network_worker_nodejs_${name}{${libp2p}}`]: constant(50),
+          [`discv5_worker_nodejs_${name}{${libp2p}}`]: constant(20),
+        },
+        expect: [{labels: "{}", value: 275}],
+      },
+      {
+        name: "no memory reported has no result, not a zero",
+        series: {[`process_resident_memory_bytes{${native}}`]: constant(1000)},
+        expect: [],
+      },
+    ],
+  });
   return [
+    memory("B", "heap_size_total_bytes"),
+    memory("C", "heap_size_used_bytes"),
+    memory("D", "external_memory_bytes"),
     nativeQuery(file, 565, "A", steps, [{labels: "{%T}", value: 0.5}]),
     nativeQuery(file, 565, "B", steps, [{labels: "{%T}", value: 0.99}]),
     nativeQuery(file, 565, "C", steps, [{labels: "{%T}", value: 0.25}]),
