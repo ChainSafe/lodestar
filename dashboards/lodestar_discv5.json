@@ -1444,7 +1444,7 @@
       },
       "id": 34,
       "panels": [],
-      "title": "Worker VM",
+      "title": "Worker VM (libp2p backend)",
       "type": "row"
     },
     {
@@ -1825,7 +1825,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Resources",
+      "title": "Active Resources (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -1905,7 +1905,7 @@
           "refId": "A"
         }
       ],
-      "title": "GC pause time rate",
+      "title": "GC pause time rate (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -1984,7 +1984,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Handles",
+      "title": "Active Handles (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2064,7 +2064,151 @@
           "refId": "A"
         }
       ],
-      "title": "Event Loop Lag",
+      "title": "Event Loop Lag (libp2p backend)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 97
+      },
+      "id": 55,
+      "panels": [],
+      "title": "Native backend - discovery",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Lookups started, and lookups finished by reason.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 98
+      },
+      "id": 56,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_discovery_lookups_started_total[$rate_interval])",
+          "legendFormat": "started",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(lodestar_native_discovery_lookup_finishes_total[$rate_interval])",
+          "legendFormat": "finished {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native discovery lookups (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Candidates discovery handed to peer management, and candidates it refused by reason. Candidates are decoded records, not the raw ENRs queries return; published and refused are separate stages, not a success rate.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 98
+      },
+      "id": 57,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_discovery_candidates_published_total[$rate_interval])",
+          "legendFormat": "published",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(lodestar_native_discovery_candidate_rejections_total[$rate_interval])",
+          "legendFormat": "refused {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native discovery candidates (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Discovery datagrams rejected as malformed or abusive, by stage and reason.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 106
+      },
+      "id": 58,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_discovery_datagram_rejections_total[$rate_interval])",
+          "legendFormat": "{{stage}} {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native discovery datagrams rejected (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Connection attempts the native peer manager selected, by the demand that selected them, and how attempts ended. Outcomes other than connected include local policy (deferred, cancelled, admission_refused), so they are not all failures.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 106
+      },
+      "id": 59,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
+          "legendFormat": "selected {{source}}",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(lodestar_native_peer_dial_outcomes_total[$rate_interval])",
+          "legendFormat": "{{outcome}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native selected attempts and their outcomes (per min)",
       "type": "timeseries"
     }
   ],

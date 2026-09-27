@@ -394,6 +394,8 @@ export const fixtures = [
   },
   ...networkingNative(),
   ...debugGossipsubNative(),
+  ...discv5Native(),
+  ...vmHostNative(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -425,22 +427,7 @@ function networkingNative() {
         {labels: '{%T,reason="remote_goodbye"}', value: 0},
       ]
     ),
-    nativeQuery(file, 648, "A", {'lodestar_native_peer_dial_selections_total{%T,source="discovery"}': perSecond(1)}, [
-      {labels: '{%T,source="discovery"}', value: 60},
-    ]),
-    nativeQuery(
-      file,
-      648,
-      "B",
-      {
-        'lodestar_native_peer_dial_outcomes_total{%T,outcome="connected"}': perSecond(0.25),
-        'lodestar_native_peer_dial_outcomes_total{%T,outcome="deferred"}': perSecond(0.5),
-      },
-      [
-        {labels: '{%T,outcome="connected"}', value: 15},
-        {labels: '{%T,outcome="deferred"}', value: 30},
-      ]
-    ),
+    ...selectedAttempts(file, 648),
     nativeQuery(file, 643, "D", {"lodestar_native_peer_outbound_deficit{%T}": constant(2)}, [
       {labels: "lodestar_native_peer_outbound_deficit{%T}", value: 2},
     ]),
@@ -728,5 +715,80 @@ function debugGossipsubNative() {
       },
       [{labels: "{%T}", value: 40}]
     ),
+  ];
+}
+
+/** Selected attempts and their outcomes, a panel of the networking and discv5 native rows */
+function selectedAttempts(dashboard, panel) {
+  return [
+    nativeQuery(dashboard, panel, "A", {'lodestar_native_peer_dial_selections_total{%T,source="discovery"}': perSecond(1)}, [
+      {labels: '{%T,source="discovery"}', value: 60},
+    ]),
+    nativeQuery(
+      dashboard,
+      panel,
+      "B",
+      {
+        'lodestar_native_peer_dial_outcomes_total{%T,outcome="connected"}': perSecond(0.25),
+        'lodestar_native_peer_dial_outcomes_total{%T,outcome="deferred"}': perSecond(0.5),
+      },
+      [
+        {labels: '{%T,outcome="connected"}', value: 15},
+        {labels: '{%T,outcome="deferred"}', value: 30},
+      ]
+    ),
+  ];
+}
+
+/** The discv5 dashboard's native backend row */
+function discv5Native() {
+  const file = "lodestar_discv5.json";
+  return [
+    nativeQuery(file, 56, "A", {"lodestar_native_discovery_lookups_started_total{%T}": perSecond(0.25)}, [
+      {labels: "{%T}", value: 15},
+    ]),
+    nativeQuery(
+      file,
+      56,
+      "B",
+      {'lodestar_native_discovery_lookup_finishes_total{%T,reason="converged"}': perSecond(0.25)},
+      [{labels: '{%T,reason="converged"}', value: 15}]
+    ),
+    nativeQuery(file, 57, "A", {"lodestar_native_discovery_candidates_published_total{%T}": perSecond(0.5)}, [
+      {labels: "{%T}", value: 30},
+    ]),
+    nativeQuery(
+      file,
+      57,
+      "B",
+      {'lodestar_native_discovery_candidate_rejections_total{%T,reason="missing_eth2"}': perSecond(1)},
+      [{labels: '{%T,reason="missing_eth2"}', value: 60}]
+    ),
+    nativeQuery(
+      file,
+      58,
+      "A",
+      {'lodestar_native_discovery_datagram_rejections_total{%T,reason="malformed_packet",stage="packet"}': perSecond(0.25)},
+      [{labels: '{%T,reason="malformed_packet",stage="packet"}', value: 15}]
+    ),
+    ...selectedAttempts(file, 59),
+  ];
+}
+
+/** The vm_host dashboard's native backend row; the step histogram's integer bound uses the Prometheus 3 spelling */
+function vmHostNative() {
+  const file = "lodestar_vm_host.json";
+  const steps = {
+    'lodestar_native_network_step_seconds_bucket{%T,le="0.5"}': perSecond(1),
+    'lodestar_native_network_step_seconds_bucket{%T,le="1.0"}': perSecond(2),
+    'lodestar_native_network_step_seconds_bucket{%T,le="+Inf"}': perSecond(2),
+    "lodestar_native_network_step_seconds_sum{%T}": perSecond(0.5),
+    "lodestar_native_network_step_seconds_count{%T}": perSecond(2),
+  };
+  return [
+    nativeQuery(file, 565, "A", steps, [{labels: "{%T}", value: 0.5}]),
+    nativeQuery(file, 565, "B", steps, [{labels: "{%T}", value: 0.99}]),
+    nativeQuery(file, 565, "C", steps, [{labels: "{%T}", value: 0.25}]),
+    nativeQuery(file, 566, "A", steps, [{labels: "{%T}", value: 0.5}]),
   ];
 }
