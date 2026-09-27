@@ -5,6 +5,7 @@
 // producer must stay missing rather than read as zero.
 
 const native = 'instance="native",job="beacon"';
+const nativeOther = 'instance="native-2",job="beacon"';
 const libp2p = 'instance="libp2p",job="beacon"';
 const libp2pOther = 'instance="libp2p-2",job="beacon"';
 
@@ -16,6 +17,31 @@ function perSecond(n) {
 /** A gauge holding `n` */
 function constant(n) {
   return `${n}x40`;
+}
+
+/**
+ * Cases for a query over native families: a native target, a libp2p target alone, and two native targets beside a
+ * libp2p target. `series` and `expect` describe one native target, with `%T` for its labels.
+ */
+function nativeQuery(dashboard, panel, refId, series, expect) {
+  const place = (target, text) => text.replace("%T", target);
+  const seriesOf = (target) => Object.fromEntries(Object.entries(series).map(([name, values]) => [place(target, name), values]));
+  const expectOf = (target) => expect.map(({labels, value}) => ({labels: place(target, labels), value}));
+  const libp2pSeries = {[`lodestar_peer_connected_total{${libp2p},direction="inbound",status="open"}`]: constant(3)};
+  return {
+    dashboard,
+    panel,
+    refId,
+    cases: [
+      {name: "native target", series: seriesOf(native), expect: expectOf(native)},
+      {name: "a libp2p target has no result", series: libp2pSeries, expect: []},
+      {
+        name: "two native targets beside a libp2p target",
+        series: {...seriesOf(native), ...seriesOf(nativeOther), ...libp2pSeries},
+        expect: [...expectOf(native), ...expectOf(nativeOther)],
+      },
+    ],
+  };
 }
 
 /** Requests of a method over 5 s per minute, from a histogram with buckets 5 and 10 */
@@ -366,6 +392,7 @@ export const fixtures = [
       },
     ],
   },
+  ...networkingNative(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -379,3 +406,208 @@ export const fixtures = [
     ],
   },
 ];
+
+/** The networking dashboard's native backend rows */
+function networkingNative() {
+  const file = "lodestar_networking.json";
+  return [
+    nativeQuery(
+      file,
+      647,
+      "A",
+      {
+        'lodestar_native_peer_closes_total{%T,reason="count_pruning"}': perSecond(0.5),
+        'lodestar_native_peer_closes_total{%T,reason="remote_goodbye"}': perSecond(0),
+      },
+      [
+        {labels: '{%T,reason="count_pruning"}', value: 30},
+        {labels: '{%T,reason="remote_goodbye"}', value: 0},
+      ]
+    ),
+    nativeQuery(file, 648, "A", {'lodestar_native_peer_dial_selections_total{%T,source="discovery"}': perSecond(1)}, [
+      {labels: '{%T,source="discovery"}', value: 60},
+    ]),
+    nativeQuery(
+      file,
+      648,
+      "B",
+      {
+        'lodestar_native_peer_dial_outcomes_total{%T,outcome="connected"}': perSecond(0.25),
+        'lodestar_native_peer_dial_outcomes_total{%T,outcome="deferred"}': perSecond(0.5),
+      },
+      [
+        {labels: '{%T,outcome="connected"}', value: 15},
+        {labels: '{%T,outcome="deferred"}', value: 30},
+      ]
+    ),
+    nativeQuery(file, 643, "D", {"lodestar_native_peer_outbound_deficit{%T}": constant(2)}, [
+      {labels: "lodestar_native_peer_outbound_deficit{%T}", value: 2},
+    ]),
+    {
+      dashboard: file,
+      panel: 649,
+      refId: "A",
+      cases: [
+        {
+          name: "outbound share per target on both backends, a real zero included",
+          series: {
+            [`lodestar_peers_by_direction_count{${libp2p},direction="inbound"}`]: constant(6),
+            [`lodestar_peers_by_direction_count{${libp2p},direction="outbound"}`]: constant(2),
+            [`lodestar_peers_by_direction_count{${native},direction="inbound"}`]: constant(5),
+            [`lodestar_peers_by_direction_count{${native},direction="outbound"}`]: constant(0),
+          },
+          expect: [
+            {labels: `{${libp2p}}`, value: 0.25},
+            {labels: `{${native}}`, value: 0},
+          ],
+        },
+        {
+          name: "a target without outbound peers exported has no result",
+          series: {[`lodestar_peers_by_direction_count{${native},direction="inbound"}`]: constant(5)},
+          expect: [],
+        },
+      ],
+    },
+    nativeQuery(
+      file,
+      652,
+      "A",
+      {
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="queued"}': constant(7),
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="waiting"}': constant(4),
+      },
+      [{labels: 'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="queued"}', value: 7}]
+    ),
+    nativeQuery(
+      file,
+      653,
+      "A",
+      {
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="waiting"}': constant(4),
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="queued"}': constant(7),
+      },
+      [{labels: 'lodestar_native_gossip_processor_items{%T,kind="beacon_attestation",state="waiting"}', value: 4}]
+    ),
+    nativeQuery(
+      file,
+      653,
+      "B",
+      {'lodestar_native_gossip_processor_items{%T,kind="beacon_aggregate_and_proof",state="checking"}': constant(0)},
+      [{labels: 'lodestar_native_gossip_processor_items{%T,kind="beacon_aggregate_and_proof",state="checking"}', value: 0}]
+    ),
+    nativeQuery(
+      file,
+      654,
+      "A",
+      {
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_block",state="executing"}': constant(5),
+        'lodestar_native_gossip_processor_items{%T,kind="beacon_block",state="queued"}': constant(9),
+        'lodestar_native_gossip_processor_execution_credit_limit{%T,kind="beacon_block",credit="items"}': constant(20),
+        'lodestar_native_gossip_processor_execution_credit_limit{%T,kind="beacon_block",credit="bytes"}': constant(4096),
+      },
+      [{labels: '{%T,kind="beacon_block"}', value: 0.25}]
+    ),
+    nativeQuery(
+      file,
+      655,
+      "A",
+      {'lodestar_native_gossip_processor_refusals_total{%T,kind="beacon_attestation",reason="ineligible"}': perSecond(0.5)},
+      [{labels: '{%T,kind="beacon_attestation",reason="ineligible"}', value: 6}]
+    ),
+    nativeQuery(
+      file,
+      655,
+      "B",
+      {'lodestar_native_gossipsub_storage_refusals_total{%T,reason="payload_capacity"}': perSecond(0.25)},
+      [{labels: '{%T,reason="payload_capacity"}', value: 3}]
+    ),
+    nativeQuery(
+      file,
+      657,
+      "A",
+      {'lodestar_native_reqresp_admission_refusals_total{%T,method="status",reason="peer_quota"}': perSecond(0.5)},
+      [{labels: '{%T,method="status",reason="peer_quota"}', value: 0.5}]
+    ),
+    {
+      dashboard: file,
+      panel: 658,
+      refId: "A",
+      cases: [
+        {
+          name: "dial timeouts per target on both backends, not other reasons",
+          series: {
+            [`beacon_reqresp_outgoing_requests_error_reason_total{${libp2p},reason="REQUEST_ERROR_DIAL_TIMEOUT"}`]:
+              perSecond(0.5),
+            [`beacon_reqresp_outgoing_requests_error_reason_total{${libp2p},reason="REQUEST_ERROR_DIAL_ERROR"}`]:
+              perSecond(1),
+            [`beacon_reqresp_outgoing_requests_error_reason_total{${native},reason="REQUEST_ERROR_DIAL_TIMEOUT"}`]:
+              perSecond(0),
+          },
+          expect: [
+            {labels: `{${libp2p},reason="REQUEST_ERROR_DIAL_TIMEOUT"}`, value: 0.5},
+            {labels: `{${native},reason="REQUEST_ERROR_DIAL_TIMEOUT"}`, value: 0},
+          ],
+        },
+      ],
+    },
+    ...[
+      [659, "A", "lodestar_native_reqresp_resources_serving_occupied", 5],
+      [659, "B", "lodestar_native_reqresp_resources_retiring", 1],
+      [659, "C", "lodestar_native_reqresp_resources_serving_capacity", 32],
+      [660, "B", "lodestar_native_host_serving_source_pending_bytes", 0],
+      [662, "A", "lodestar_native_quic_connections_active", 40],
+      [662, "B", "lodestar_native_quic_connections_handshaking", 3],
+    ].map(([panel, refId, name, value]) =>
+      nativeQuery(file, panel, refId, {[`${name}{%T}`]: constant(value)}, [{labels: `${name}{%T}`, value}])
+    ),
+    nativeQuery(
+      file,
+      660,
+      "A",
+      {
+        'lodestar_native_host_serving_reserved_bytes{%T,scope="total"}': constant(4096),
+        'lodestar_native_host_serving_reserved_bytes{%T,scope="source"}': constant(1024),
+      },
+      [
+        {labels: 'lodestar_native_host_serving_reserved_bytes{%T,scope="total"}', value: 4096},
+        {labels: 'lodestar_native_host_serving_reserved_bytes{%T,scope="source"}', value: 1024},
+      ]
+    ),
+    nativeQuery(
+      file,
+      663,
+      "A",
+      {'lodestar_native_quic_connections_established_total{%T,direction="inbound"}': perSecond(0.5)},
+      [{labels: '{%T,direction="inbound"}', value: 30}]
+    ),
+    nativeQuery(
+      file,
+      663,
+      "B",
+      {'lodestar_native_quic_connections_closed_total{%T,direction="outbound",reason="handshake_timeout"}': perSecond(0.25)},
+      [{labels: '{%T,direction="outbound",reason="handshake_timeout"}', value: 15}]
+    ),
+    ...[
+      [664, "A", "lodestar_native_quic_udp_received_bytes_total"],
+      [664, "B", "lodestar_native_quic_udp_sent_bytes_total"],
+      [665, "A", "lodestar_native_quic_udp_received_datagrams_total"],
+      [665, "B", "lodestar_native_quic_udp_sent_datagrams_total"],
+    ].map(([panel, refId, name]) =>
+      nativeQuery(file, panel, refId, {[`${name}{%T}`]: perSecond(2)}, [{labels: "{%T}", value: 2}])
+    ),
+    nativeQuery(
+      file,
+      666,
+      "A",
+      {'lodestar_native_udp_socket_drops_total{%T,family="ip4",role="quic"}': perSecond(0.5)},
+      [{labels: '{%T,family="ip4",role="quic"}', value: 0.5}]
+    ),
+    nativeQuery(
+      file,
+      667,
+      "A",
+      {'lodestar_native_udp_socket_buffer_bytes{%T,direction="receive",family="ip4",role="quic"}': constant(8388608)},
+      [{labels: 'lodestar_native_udp_socket_buffer_bytes{%T,direction="receive",family="ip4",role="quic"}', value: 8388608}]
+    ),
+  ];
+}

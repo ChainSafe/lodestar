@@ -960,7 +960,7 @@
       },
       "id": 608,
       "panels": [],
-      "title": "Network Worker",
+      "title": "Network Worker (libp2p backend)",
       "type": "row"
     },
     {
@@ -1481,7 +1481,7 @@
           "refId": "A"
         }
       ],
-      "title": "Goodbyes sent",
+      "title": "Goodbyes sent (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2109,7 +2109,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer manager heartbeat duration",
+      "title": "Peer manager heartbeat duration (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2277,7 +2277,7 @@
           "refId": "A"
         }
       ],
-      "title": "Leaked connections",
+      "title": "Leaked connections (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -6920,7 +6920,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer manager internals",
+      "title": "Peer manager internals (libp2p backend)",
       "type": "row"
     },
     {
@@ -7722,89 +7722,80 @@
       "description": "Entry counts of peer manager data structures (**not bytes**).\n\n**Metrics:** `lodestar_peer_manager_score_map_size`, `lodestar_peer_manager_connected_peers_map_size`, `libp2p_peers`\n\n- *connected peers map* should track *libp2p_peers*; a persistent gap indicates a connection leak.\n- *score map* reflects prune-to-MAX_ENTRIES / SCORE_THRESHOLD retention."
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 335
+      },
+      "id": 646,
+      "panels": [],
+      "title": "Native backend - peers",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Every peer the native backend closes or loses, by reason: local decisions such as count_pruning or health_timeout, and remote ones such as remote_goodbye or transport_closed.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
           "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 335
+        "y": 336
       },
-      "id": 643,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
+      "id": 647,
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_native_peer_below_target",
-          "interval": "",
-          "legendFormat": "below peer target",
-          "refId": "C"
+          "expr": "60 * rate(lodestar_native_peer_closes_total[$rate_interval])",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
         }
       ],
-      "title": "Native current peer demand",
-      "type": "timeseries",
-      "description": "Whether the running node is below its peer target. Below target does not indicate chain-head starvation."
+      "title": "Native peer departures by reason (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Connection attempts the native peer manager selected, by the demand that selected them, and how attempts ended. Outcomes other than connected include local policy (deferred, cancelled, admission_refused), so they are not all failures.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 336
+      },
+      "id": 648,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
+          "legendFormat": "selected {{source}}",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(lodestar_native_peer_dial_outcomes_total[$rate_interval])",
+          "legendFormat": "{{outcome}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native selected attempts and their outcomes (per min)",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -7856,9 +7847,128 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 343
+        "y": 344
+      },
+      "id": 643,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_native_peer_below_target",
+          "interval": "",
+          "legendFormat": "below peer target",
+          "refId": "C"
+        },
+        {
+          "expr": "lodestar_native_peer_outbound_deficit",
+          "legendFormat": "relevant outbound deficit",
+          "refId": "D"
+        }
+      ],
+      "title": "Native current peer demand",
+      "type": "timeseries",
+      "description": "Whether the running node is below its peer target, and how many relevant outbound peers it lacks. Below target does not indicate chain-head starvation."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Outbound peers as a share of connected peers, per target. Both backends export the peers-by-direction gauge; the libp2p peer manager's ratio counts healthy peers only.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 344
+      },
+      "id": 649,
+      "targets": [
+        {
+          "expr": "sum without (direction) (lodestar_peers_by_direction_count{direction=\"outbound\"})\n/\nsum without (direction) (lodestar_peers_by_direction_count)",
+          "legendFormat": "outbound share",
+          "refId": "A"
+        }
+      ],
+      "title": "Outbound share of connected peers",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 352
       },
       "id": 644,
       "options": {
@@ -7963,9 +8073,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 351
+        "w": 12,
+        "x": 12,
+        "y": 352
       },
       "id": 645,
       "options": {
@@ -7997,6 +8107,496 @@
       "title": "Native remote data-column subscriptions",
       "type": "timeseries",
       "description": "Accepted remote subscription memberships include topics with no local mesh or overlay row. Advertised subscriptions are distinct from usable policy coverage."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 360
+      },
+      "id": 651,
+      "panels": [],
+      "title": "Native backend - gossip processor",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages admitted and queued for Lodestar validation, per kind. Messages waiting on a dependency are in the next panel.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 361
+      },
+      "id": 652,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossip_processor_items{state=\"queued\"}",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native queued gossip work by kind",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "waiting: messages held until their block root is known. checking: messages awaiting Lodestar's dependency answer.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 361
+      },
+      "id": 653,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossip_processor_items{state=\"waiting\"}",
+          "legendFormat": "waiting {{kind}}",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_gossip_processor_items{state=\"checking\"}",
+          "legendFormat": "checking {{kind}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native dependency-waiting gossip work by kind",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages executing on the host, as a share of each kind's execution item credits.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 369
+      },
+      "id": 654,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossip_processor_items{state=\"executing\"}\n/ ignoring(state, credit)\nlodestar_native_gossip_processor_execution_credit_limit{credit=\"items\"}",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native execution credit use by kind",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages refused admission: by the processor per kind, where ineligible means outside the eligible slot window or on an unknown fork digest, not only past-slot; and by gossipsub storage pool limits.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 369
+      },
+      "id": 655,
+      "targets": [
+        {
+          "expr": "12 * rate(lodestar_native_gossip_processor_refusals_total[$rate_interval])",
+          "legendFormat": "{{kind}} {{reason}}",
+          "refId": "A"
+        },
+        {
+          "expr": "12 * rate(lodestar_native_gossipsub_storage_refusals_total[$rate_interval])",
+          "legendFormat": "storage {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native gossip admission refusals by reason (per slot)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 377
+      },
+      "id": 656,
+      "panels": [],
+      "title": "Native backend - reqresp serving",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Inbound requests the native backend refused for local capacity, by method and reason.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 378
+      },
+      "id": 657,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_reqresp_admission_refusals_total[$rate_interval])",
+          "legendFormat": "{{method}} {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native local request admission refusals / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Outgoing requests that could not open a stream before the dial timeout. Both backends; other dial failures are among the outgoing error reasons.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 378
+      },
+      "id": 658,
+      "targets": [
+        {
+          "expr": "rate(beacon_reqresp_outgoing_requests_error_reason_total{reason=\"REQUEST_ERROR_DIAL_TIMEOUT\"}[$rate_interval])",
+          "legendFormat": "dial timeouts",
+          "refId": "A"
+        }
+      ],
+      "title": "Outgoing request dial timeouts / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Serving entries in use, retiring entries included; entries retiring after their stream ended while host work finishes; and serving capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 386
+      },
+      "id": 659,
+      "targets": [
+        {
+          "expr": "lodestar_native_reqresp_resources_serving_occupied",
+          "legendFormat": "occupied (retiring included)",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_reqresp_resources_retiring",
+          "legendFormat": "retiring",
+          "refId": "B"
+        },
+        {
+          "expr": "lodestar_native_reqresp_resources_serving_capacity",
+          "legendFormat": "capacity",
+          "refId": "C"
+        }
+      ],
+      "title": "Native serving entries",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Host serving allowance still charged, retiring leases included, and source reads outstanding. Reservations, not allocated memory; source is part of total, so do not add the scopes.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 386
+      },
+      "id": 660,
+      "targets": [
+        {
+          "expr": "lodestar_native_host_serving_reserved_bytes",
+          "legendFormat": "reserved {{scope}}",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_host_serving_source_pending_bytes",
+          "legendFormat": "source reads pending",
+          "refId": "B"
+        }
+      ],
+      "title": "Native host serving reservations",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 394
+      },
+      "id": 661,
+      "panels": [],
+      "title": "Native backend - transport",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Open QUIC connections, handshakes included, and the handshakes among them. Do not add the two.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 395
+      },
+      "id": 662,
+      "targets": [
+        {
+          "expr": "lodestar_native_quic_connections_active",
+          "legendFormat": "open (handshakes included)",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_quic_connections_handshaking",
+          "legendFormat": "handshaking",
+          "refId": "B"
+        }
+      ],
+      "title": "Native QUIC connections",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Authenticated connections by direction, and closes by direction and reason, handshake failures included.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 395
+      },
+      "id": 663,
+      "targets": [
+        {
+          "expr": "60 * rate(lodestar_native_quic_connections_established_total[$rate_interval])",
+          "legendFormat": "established {{direction}}",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(lodestar_native_quic_connections_closed_total[$rate_interval])",
+          "legendFormat": "closed {{direction}} {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native QUIC connections established and closed (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "UDP bytes the native QUIC transport received and sent.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 403
+      },
+      "id": 664,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_quic_udp_received_bytes_total[$rate_interval])",
+          "legendFormat": "received",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(lodestar_native_quic_udp_sent_bytes_total[$rate_interval])",
+          "legendFormat": "sent",
+          "refId": "B"
+        }
+      ],
+      "title": "Native QUIC UDP traffic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "UDP datagrams the native QUIC transport received and sent.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 403
+      },
+      "id": 665,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_quic_udp_received_datagrams_total[$rate_interval])",
+          "legendFormat": "received",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(lodestar_native_quic_udp_sent_datagrams_total[$rate_interval])",
+          "legendFormat": "sent",
+          "refId": "B"
+        }
+      ],
+      "title": "Native QUIC UDP datagrams",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Datagrams the kernel dropped at native sockets, per socket role and address family.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 411
+      },
+      "id": 666,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_udp_socket_drops_total[$rate_interval])",
+          "legendFormat": "{{role}} {{family}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native UDP socket receive drops",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Socket buffer sizes the kernel granted to native sockets.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 411
+      },
+      "id": 667,
+      "targets": [
+        {
+          "expr": "lodestar_native_udp_socket_buffer_bytes",
+          "legendFormat": "{{role}} {{family}} {{direction}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native UDP socket buffers",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
