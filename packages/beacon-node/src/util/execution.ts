@@ -259,8 +259,8 @@ export async function getDataColumnSidecarsFromExecution(
   return DataColumnEngineResult.SuccessResolved;
 }
 
-/** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
-const MAX_BODIES_REQUEST = 32;
+/** engine_getPayloadBodiesByHashV2: every EL must accept requests of up to 32 hashes, larger ones may fail with -38004 */
+const MAX_BODIES_PER_REQUEST = 32;
 
 type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
@@ -299,7 +299,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
 
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelope(bytes)});
-    if (batch.length === MAX_BODIES_REQUEST) {
+    if (batch.length === MAX_BODIES_PER_REQUEST) {
       yield* reconstructBatch(executionEngine, logger, metrics, batch);
       batch = [];
     }
@@ -359,9 +359,13 @@ export async function reconstructExecutionPayloadEnvelopes(
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
-  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_REQUEST) {
+  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_PER_REQUEST) {
     out.push(
-      ...(await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
+      ...(await reconstructEnvelopesBatch(
+        executionEngine,
+        metrics,
+        headerEnvelopes.slice(i, i + MAX_BODIES_PER_REQUEST)
+      ))
     );
   }
   return out;
@@ -409,7 +413,7 @@ async function reconstructEnvelopesBatch(
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,
       });
-      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "ok"});
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "success"});
       return envelope;
     } catch (e) {
       if (
