@@ -2187,7 +2187,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "lodestar_peer_connected_total - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
+          "expr": "sum without (status) (lodestar_peer_connected_total) - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 3,
@@ -3407,9 +3407,9 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(\n  rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n  -\n  rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n)\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_received_to_block_import_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_received_to_block_import_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "processed minus received {{source}}",
+          "legendFormat": "received to import",
           "range": true,
           "refId": "A"
         },

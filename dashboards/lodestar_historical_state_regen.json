@@ -2284,7 +2284,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_historical_state_stfn_hash_tree_root_seconds_sum[$rate_interval])\n/ on(source)\nrate(lodestar_historical_state_stfn_hash_tree_root_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_historical_state_stfn_hash_tree_root_seconds_sum[$rate_interval])\n/\nrate(lodestar_historical_state_stfn_hash_tree_root_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "__auto",
           "range": true,

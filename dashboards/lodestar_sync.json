@@ -162,7 +162,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_peers_sync_count - sum(lodestar_sync_range_sync_peers)",
+          "expr": "lodestar_peers_sync_count - sum without (syncType) (lodestar_sync_range_sync_peers)",
           "hide": false,
           "interval": "",
           "legendFormat": "Non-sync",
