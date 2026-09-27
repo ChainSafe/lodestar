@@ -8574,7 +8574,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Native socket buffer sizes as getsockopt reports them. Linux reports double the size requested with setsockopt, as it counts its bookkeeping overhead.",
+      "description": "Native socket buffer sizes as getsockopt reports them. Linux reports double the size it granted, which the system limits can cap below the size requested, as it counts its bookkeeping overhead.",
       "fieldConfig": {
         "defaults": {
           "unit": "bytes"
