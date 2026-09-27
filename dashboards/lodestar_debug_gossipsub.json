@@ -8023,7 +8023,7 @@
           "refId": "RUN_RATE"
         }
       ],
-      "title": "Score fn runs / cached calls",
+      "title": "Score fn runs / cached calls (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -8130,7 +8130,7 @@
           "refId": "C"
         }
       ],
-      "title": "Score fn delta on run (log)",
+      "title": "Score fn delta on run (log) (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -8156,7 +8156,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossipsub - RPC sent/recv details",
+      "title": "Gossipsub - RPC sent/recv details (libp2p backend)",
       "type": "row"
     },
     {
@@ -9308,6 +9308,324 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 364
+      },
+      "id": 513,
+      "panels": [],
+      "title": "Applied validation verdicts",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages whose applied validation verdict was accept, per topic. Both backends; the received VALID panel counts prevalidation instead.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            }
+          },
+          "unit": "cps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 365
+      },
+      "id": 514,
+      "targets": [
+        {
+          "expr": "rate(gossipsub_accepted_messages_total[$rate_interval])",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Accepted msg / sec by topic (log)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of applied verdicts per topic over 32 minutes, exactly 5 epochs. Both backends; the async validation result panel divides by prevalidated messages instead.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 365
+      },
+      "id": 515,
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(gossipsub_ignored_messages_total[32m]))\n/\nsum by (topic) (\n  label_replace(rate(gossipsub_accepted_messages_total[32m]), \"verdict\", \"accepted\", \"\", \"\")\n  or label_replace(rate(gossipsub_ignored_messages_total[32m]), \"verdict\", \"ignored\", \"\", \"\")\n  or label_replace(rate(gossipsub_rejected_messages_total[32m]), \"verdict\", \"rejected\", \"\", \"\")\n)",
+          "legendFormat": "IGNORE {{topic}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (topic) (rate(gossipsub_rejected_messages_total[32m]))\n/\nsum by (topic) (\n  label_replace(rate(gossipsub_accepted_messages_total[32m]), \"verdict\", \"accepted\", \"\", \"\")\n  or label_replace(rate(gossipsub_ignored_messages_total[32m]), \"verdict\", \"ignored\", \"\", \"\")\n  or label_replace(rate(gossipsub_rejected_messages_total[32m]), \"verdict\", \"rejected\", \"\", \"\")\n)",
+          "legendFormat": "REJECT {{topic}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Applied verdicts - IGNORE / REJECT shares",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 373
+      },
+      "id": 516,
+      "panels": [],
+      "title": "Native backend - gossipsub",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recipients selected for local publications and forwarded messages, by outcome. completed means QUIC accepted the final byte, not that the peer received the message.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 374
+      },
+      "id": 517,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_gossip_data_recipients_total{origin=~\"publication|forward\"}[$rate_interval])",
+          "legendFormat": "{{origin}} {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native publication and forwarding QUIC-acceptance funnel / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recipients queued for forwarding, per accepted message forwarded to at least one recipient.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 374
+      },
+      "id": 518,
+      "targets": [
+        {
+          "expr": "sum without (origin, outcome) (rate(lodestar_native_gossip_data_recipients_total{origin=\"forward\",outcome=\"queued\"}[$rate_interval]))\n/\nsum without (topic) (rate(gossipsub_msg_forward_count_total[$rate_interval]))",
+          "legendFormat": "recipients per forwarded message",
+          "refId": "A"
+        }
+      ],
+      "title": "Native forward recipients queued per forwarded message",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "IWANT message ids the native backend queued for sending, and those it could not serve: history misses, refusals, limits and suppressions.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 382
+      },
+      "id": 519,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_gossip_iwant_ids_total[$rate_interval])",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native IWANT message ids by outcome / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Messages holding a validation slot, against the pool capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 382
+      },
+      "id": 520,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossipsub_pending_validations",
+          "legendFormat": "in use",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_gossipsub_validation_capacity",
+          "legendFormat": "capacity",
+          "refId": "B"
+        }
+      ],
+      "title": "Native gossip validation slots",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Receive pages in use against their capacity, and message store pages in use.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 390
+      },
+      "id": 521,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossipsub_receive_pages",
+          "legendFormat": "receive in use",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_gossipsub_receive_page_capacity",
+          "legendFormat": "receive capacity",
+          "refId": "B"
+        },
+        {
+          "expr": "lodestar_native_gossipsub_store_pages",
+          "legendFormat": "store in use",
+          "refId": "C"
+        }
+      ],
+      "title": "Native gossip receive and store pages",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Delivery descriptors in use against the pool capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 390
+      },
+      "id": 522,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossipsub_delivery_descriptors_capacity - lodestar_native_gossipsub_delivery_descriptors_available",
+          "legendFormat": "in use",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_gossipsub_delivery_descriptors_capacity",
+          "legendFormat": "capacity",
+          "refId": "B"
+        }
+      ],
+      "title": "Native gossip delivery descriptors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Outgoing gossip bytes queued for sending.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 398
+      },
+      "id": 523,
+      "targets": [
+        {
+          "expr": "lodestar_native_gossipsub_queued_bytes",
+          "legendFormat": "queued",
+          "refId": "A"
+        }
+      ],
+      "title": "Native outgoing gossip bytes queued",
+      "type": "timeseries"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -9356,9 +9674,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 372
+        "w": 12,
+        "x": 12,
+        "y": 398
       },
       "id": 512,
       "options": {

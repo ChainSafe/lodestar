@@ -393,6 +393,7 @@ export const fixtures = [
     ],
   },
   ...networkingNative(),
+  ...debugGossipsubNative(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -608,6 +609,124 @@ function networkingNative() {
       "A",
       {'lodestar_native_udp_socket_buffer_bytes{%T,direction="receive",family="ip4",role="quic"}': constant(8388608)},
       [{labels: 'lodestar_native_udp_socket_buffer_bytes{%T,direction="receive",family="ip4",role="quic"}', value: 8388608}]
+    ),
+  ];
+}
+
+/** The debug gossipsub dashboard's applied verdict and native backend rows */
+function debugGossipsubNative() {
+  const file = "lodestar_debug_gossipsub.json";
+  const verdicts = {
+    [`gossipsub_accepted_messages_total{${libp2p},topic="beacon_attestation"}`]: perSecond(3),
+    [`gossipsub_ignored_messages_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
+    [`gossipsub_rejected_messages_total{${libp2p},topic="beacon_attestation"}`]: perSecond(0),
+    [`gossipsub_accepted_messages_total{${native},topic="beacon_attestation"}`]: perSecond(1),
+    [`gossipsub_ignored_messages_total{${native},topic="beacon_attestation"}`]: perSecond(1),
+    [`gossipsub_rejected_messages_total{${native},topic="beacon_attestation"}`]: perSecond(2),
+    [`gossipsub_accepted_messages_total{${libp2p},topic="voluntary_exit"}`]: perSecond(1),
+    [`gossipsub_ignored_messages_total{${libp2p},topic="voluntary_exit"}`]: perSecond(1),
+  };
+  return [
+    {
+      dashboard: file,
+      panel: 514,
+      refId: "A",
+      cases: [
+        {
+          name: "accepted messages per target on both backends",
+          series: verdicts,
+          expect: [
+            {labels: `{${libp2p},topic="beacon_attestation"}`, value: 3},
+            {labels: `{${native},topic="beacon_attestation"}`, value: 1},
+            {labels: `{${libp2p},topic="voluntary_exit"}`, value: 1},
+          ],
+        },
+        {
+          name: "a target without verdicts has no result",
+          series: {[`lodestar_native_peer_below_target{${native}}`]: constant(0)},
+          expect: [],
+        },
+      ],
+    },
+    {
+      dashboard: file,
+      panel: 515,
+      refId: "A",
+      cases: [
+        {
+          name: "ignored share of applied verdicts per topic across backends",
+          series: verdicts,
+          expect: [
+            {labels: '{topic="beacon_attestation"}', value: 0.25},
+            {labels: '{topic="voluntary_exit"}', value: 0.5},
+          ],
+        },
+      ],
+    },
+    {
+      dashboard: file,
+      panel: 515,
+      refId: "B",
+      cases: [
+        {
+          name: "rejected share per topic; a topic never rejected has no result, not a zero",
+          series: verdicts,
+          expect: [{labels: '{topic="beacon_attestation"}', value: 0.25}],
+        },
+      ],
+    },
+    nativeQuery(
+      file,
+      517,
+      "A",
+      {
+        'lodestar_native_gossip_data_recipients_total{%T,origin="forward",outcome="completed"}': perSecond(3),
+        'lodestar_native_gossip_data_recipients_total{%T,origin="iwant",outcome="queued"}': perSecond(1),
+      },
+      [{labels: '{%T,origin="forward",outcome="completed"}', value: 3}]
+    ),
+    {
+      dashboard: file,
+      panel: 518,
+      refId: "A",
+      cases: [
+        {
+          name: "native recipients queued per forwarded message; a libp2p forward count alone has no result",
+          series: {
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="forward",outcome="queued"}`]: perSecond(4),
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="forward",outcome="completed"}`]:
+              perSecond(3),
+            [`gossipsub_msg_forward_count_total{${native},topic="beacon_block"}`]: perSecond(1),
+            [`gossipsub_msg_forward_count_total{${native},topic="beacon_attestation"}`]: perSecond(1),
+            [`gossipsub_msg_forward_count_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
+          },
+          expect: [{labels: `{${native}}`, value: 2}],
+        },
+      ],
+    },
+    nativeQuery(file, 519, "A", {'lodestar_native_gossip_iwant_ids_total{%T,outcome="miss"}': perSecond(0.5)}, [
+      {labels: '{%T,outcome="miss"}', value: 0.5},
+    ]),
+    ...[
+      [520, "A", "lodestar_native_gossipsub_pending_validations", 12],
+      [520, "B", "lodestar_native_gossipsub_validation_capacity", 4096],
+      [521, "A", "lodestar_native_gossipsub_receive_pages", 0],
+      [521, "B", "lodestar_native_gossipsub_receive_page_capacity", 512],
+      [521, "C", "lodestar_native_gossipsub_store_pages", 40],
+      [522, "B", "lodestar_native_gossipsub_delivery_descriptors_capacity", 100],
+      [523, "A", "lodestar_native_gossipsub_queued_bytes", 65536],
+    ].map(([panel, refId, name, value]) =>
+      nativeQuery(file, panel, refId, {[`${name}{%T}`]: constant(value)}, [{labels: `${name}{%T}`, value}])
+    ),
+    nativeQuery(
+      file,
+      522,
+      "A",
+      {
+        "lodestar_native_gossipsub_delivery_descriptors_capacity{%T}": constant(100),
+        "lodestar_native_gossipsub_delivery_descriptors_available{%T}": constant(60),
+      },
+      [{labels: "{%T}", value: 40}]
     ),
   ];
 }
