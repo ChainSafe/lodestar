@@ -220,7 +220,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "lodestar_discv5_connected_peer_count",
+          "expr": "discv5_connected_peer_count",
           "interval": "",
           "legendFormat": "peers",
           "refId": "A"
@@ -480,7 +480,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(lodestar_discv5_rcvd_message_count[$rate_interval])",
+          "expr": "rate(discv5_rcvd_message_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -644,7 +644,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(lodestar_discv5_sent_message_count[$rate_interval])",
+          "expr": "rate(discv5_sent_message_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -807,7 +807,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "lodestar_discv5_active_session_count",
+          "expr": "lodestar_discv5_active_session_count or discv5_active_session_count",
           "interval": "",
           "legendFormat": "sessions",
           "refId": "A"
@@ -900,7 +900,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_discv5_lookup_count[$rate_interval])",
+          "expr": "rate(discv5_lookup_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "lookups",
@@ -1065,7 +1065,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_discv5_kad_table_size",
+          "expr": "lodestar_discv5_kad_table_size or discv5_kad_table_size",
           "interval": "",
           "legendFormat": "ENR count",
           "refId": "A"
