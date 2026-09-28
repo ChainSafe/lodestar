@@ -1,10 +1,14 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {
+  archiveBlocks,
+  deleteOrphanedExecutionPayloadEnvelopes,
+  migrateExecutionPayloadEnvelopesFromHotToColdDb,
+} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
 import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
@@ -127,5 +131,68 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     expect(migrated).toEqual([]);
     expect(await db.executionPayloadEnvelopeArchive.getBinary(10)).toBeNull();
     expect(await db.executionPayloadEnvelopeArchive.getBinary(11)).toBeNull();
+  });
+});
+
+describe("deleteOrphanedExecutionPayloadEnvelopes", () => {
+  const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
+  const logger = testLogger();
+  let db: BeaconDb;
+  let closeDb: () => Promise<void>;
+
+  beforeEach(async () => {
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-orphaned-envelopes-"));
+  });
+
+  afterEach(() => closeDb());
+
+  /** Put a full envelope in the hot db and return its block root */
+  async function seedHot(slot: number): Promise<string> {
+    const envelope = generateSignedExecutionPayloadEnvelope(slot);
+    await db.executionPayloadEnvelope.put(envelope.message.beaconBlockRoot, envelope);
+    return toRootHex(envelope.message.beaconBlockRoot);
+  }
+
+  /** Fork choice that only knows `roots`, with nothing to archive */
+  function forkChoiceWith(roots: string[]): IForkChoice {
+    const known = new Set(roots);
+    return {
+      getAllAncestorAndNonAncestorBlocksDefaultStatus: () => ({ancestors: [], nonAncestors: []}),
+      hasBlockHexUnsafe: (root: string) => known.has(root),
+    } as unknown as IForkChoice;
+  }
+
+  async function hotRoots(): Promise<string[]> {
+    return (await db.executionPayloadEnvelope.keys()).map(toRootHex).sort();
+  }
+
+  it("deletes only hot envelopes whose block is not in fork choice", async () => {
+    const orphan = await seedHot(10);
+    const kept = [await seedHot(11), await seedHot(12)];
+
+    const deleted = await deleteOrphanedExecutionPayloadEnvelopes(db, forkChoiceWith(kept));
+
+    expect(deleted.map(toRootHex)).toEqual([orphan]);
+    expect(await hotRoots()).toEqual([...kept].sort());
+  });
+
+  it("drops orphans left from before a restart when archiving a finalized checkpoint", async () => {
+    // Orphan from before the restart: its block is unknown to the fork choice rebuilt from the anchor
+    await seedHot(10);
+    const anchor = await seedHot(32);
+
+    await archiveBlocks(
+      config,
+      db,
+      forkChoiceWith([anchor]),
+      undefined,
+      logger,
+      {epoch: 1, root: fromHex(anchor), rootHex: anchor},
+      2,
+      null,
+      false
+    );
+
+    expect(await hotRoots()).toEqual([anchor]);
   });
 });
