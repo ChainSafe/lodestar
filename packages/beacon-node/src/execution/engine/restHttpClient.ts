@@ -56,7 +56,7 @@ export class EngineRestResponseError extends LodestarError<{
   reason: string;
 }> {
   constructor(routeId: string, reason: string) {
-    super({code: "ENGINE_REST_INVALID_RESPONSE", routeId, reason});
+    super({code: "ENGINE_REST_INVALID_RESPONSE", routeId, reason}, `Invalid engine REST response: ${reason}, ${routeId}`);
   }
 }
 

@@ -9,7 +9,7 @@ import {
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
 import {
   ClientCode,
   ClientVersion,
@@ -19,7 +19,7 @@ import {
   VersionedHashes,
 } from "./interface.js";
 import {JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
-import {EngineRestHttpClient} from "./restHttpClient.js";
+import {EngineRestHttpClient, EngineRestResponseError} from "./restHttpClient.js";
 import {
   BlobsRequest,
   BlobsV1Response,
@@ -65,8 +65,14 @@ import {
 export type EngineCapabilities = {
   supportedForks: Set<string>;
   blobsRevisions: Set<string>;
+  limits: {bodiesMaxCount: number; blobsMaxVersionedHashes: number; payloadMaxBytes: number};
 };
 
+const DEFAULT_LIMITS: EngineCapabilities["limits"] = {
+  bodiesMaxCount: MAX_BODIES_REQUEST,
+  blobsMaxVersionedHashes: MAX_BLOBS_REQUEST,
+  payloadMaxBytes: 2 ** 26,
+};
 const BLOB_BYTES = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB;
 const PROOF_BYTES = 48;
 
@@ -104,6 +110,8 @@ export function formatClientVersionHeader(clientVersion: ClientVersion): string 
  * https://github.com/ethereum/execution-apis/blob/main/src/engine/refactor.md
  */
 export class RestEngineTransport implements IEngineTransport {
+  private limits = DEFAULT_LIMITS;
+
   constructor(private readonly client: EngineRestHttpClient) {}
 
   get emitter(): JsonRpcHttpClientEventEmitter {
@@ -116,14 +124,44 @@ export class RestEngineTransport implements IEngineTransport {
       {method: "GET", path: "/capabilities", responseType: "json"},
       getCapabilitiesOpts
     );
-    const capabilities = parseJson(body) as {supported_forks?: unknown; independently_versioned?: {blobs?: unknown}};
-    if (!Array.isArray(capabilities.supported_forks)) {
-      throw Error("Invalid capabilities response, supported_forks must be an array");
+    const capabilities = parseJson(body, "getCapabilities");
+    if (
+      !isRecord(capabilities) ||
+      !Array.isArray(capabilities.supported_forks) ||
+      !capabilities.supported_forks.every(isString)
+    ) {
+      throw new EngineRestResponseError("getCapabilities", "supported_forks must be an array of strings");
     }
-    const blobs = capabilities.independently_versioned?.blobs;
+    const versioned = capabilities.independently_versioned;
+    if (versioned !== undefined && !isRecord(versioned)) {
+      throw new EngineRestResponseError("getCapabilities", "independently_versioned must be an object");
+    }
+    const blobs = versioned?.blobs ?? [];
+    if (!Array.isArray(blobs) || !blobs.every(isString)) {
+      throw new EngineRestResponseError("getCapabilities", "blobs revisions must be an array of strings");
+    }
+    const advertisedLimits = capabilities.limits;
+    if (advertisedLimits !== undefined && !isRecord(advertisedLimits)) {
+      throw new EngineRestResponseError("getCapabilities", "limits must be an object");
+    }
+    const limits = {...DEFAULT_LIMITS};
+    for (const [key, name] of [
+      ["bodies.max_count", "bodiesMaxCount"],
+      ["blobs.max_versioned_hashes", "blobsMaxVersionedHashes"],
+      ["payload.max_bytes", "payloadMaxBytes"],
+    ] as const) {
+      const value = advertisedLimits?.[key];
+      if (value === undefined) continue;
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+        throw new EngineRestResponseError("getCapabilities", `${key} must be a positive integer`);
+      }
+      limits[name] = Math.min(value, DEFAULT_LIMITS[name]);
+    }
+    this.limits = limits;
     return {
-      supportedForks: new Set(capabilities.supported_forks.filter(isString).map((fork) => fork.toLowerCase())),
-      blobsRevisions: new Set(Array.isArray(blobs) ? blobs.filter(isString).map((rev) => rev.toLowerCase()) : []),
+      supportedForks: new Set(capabilities.supported_forks.map((fork) => fork.toLowerCase())),
+      blobsRevisions: new Set(blobs.map((rev) => rev.toLowerCase())),
+      limits,
     };
   }
 
@@ -167,6 +205,14 @@ export class RestEngineTransport implements IEngineTransport {
       body = ExecutionPayloadEnvelopeCapella.serialize({payload: executionPayload as capella.ExecutionPayload});
     } else {
       body = ExecutionPayloadEnvelopeBellatrix.serialize({payload: executionPayload});
+    }
+
+    if (body.length > this.limits.payloadMaxBytes) {
+      throw new LodestarError({
+        code: "ENGINE_REST_REQUEST_TOO_LARGE",
+        size: body.length,
+        limit: this.limits.payloadMaxBytes,
+      });
     }
 
     const res = await this.client.request(
@@ -298,7 +344,7 @@ export class RestEngineTransport implements IEngineTransport {
     start: number,
     count: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
-    assertReqSizeLimit(count, MAX_BODIES_REQUEST);
+    assertReqSizeLimit(count, this.limits.bodiesMaxCount);
     const res = await this.client.request(
       {
         method: "GET",
@@ -319,7 +365,7 @@ export class RestEngineTransport implements IEngineTransport {
     fork: ForkName,
     blockHashes: RootHex[]
   ): Promise<(ExecutionPayloadBodyV2 | null)[]> {
-    assertReqSizeLimit(blockHashes.length, MAX_BODIES_REQUEST);
+    assertReqSizeLimit(blockHashes.length, this.limits.bodiesMaxCount);
     const body = BodiesByHashRequest.serialize({blockHashes: blockHashes.map((hash) => fromHex(hash))});
     const res = await this.client.request(
       {method: "POST", path: "/bodies/hash", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
@@ -333,7 +379,7 @@ export class RestEngineTransport implements IEngineTransport {
   }
 
   async getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
-    assertReqSizeLimit(versionedHashes.length, MAX_BLOBS_REQUEST);
+    assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
     const res = await this.client.request(
       {method: "POST", path: "/blobs/v1", body: BlobsRequest.serialize({versionedHashes}), responseType: "ssz"},
       getBlobsV1Opts
@@ -351,7 +397,7 @@ export class RestEngineTransport implements IEngineTransport {
   }
 
   async getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
-    assertReqSizeLimit(versionedHashes.length, MAX_BLOBS_REQUEST);
+    assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
     if (buffers) {
       // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
       if (buffers.length < versionedHashes.length) {
@@ -406,20 +452,26 @@ export class RestEngineTransport implements IEngineTransport {
       {method: "GET", path: "/identity", responseType: "json"},
       getClientVersionOpts
     );
-    const versions = parseJson(body);
+    const versions = parseJson(body, "getClientVersion");
     if (!Array.isArray(versions)) {
-      throw Error("Invalid identity response, expected an array of client versions");
+      throw new EngineRestResponseError("getClientVersion", "Expected an array of client versions");
     }
-    return versions.map((cv: {code?: unknown; name?: unknown; version?: unknown; commit?: unknown}) => {
-      const code =
-        typeof cv.code === "string" && cv.code in ClientCode
-          ? ClientCode[cv.code as keyof typeof ClientCode]
-          : ClientCode.XX;
+    return versions.map((cv: unknown, i) => {
+      if (
+        !isRecord(cv) ||
+        typeof cv.code !== "string" ||
+        typeof cv.name !== "string" ||
+        typeof cv.version !== "string" ||
+        typeof cv.commit !== "string"
+      ) {
+        throw new EngineRestResponseError("getClientVersion", `Invalid client version at index ${i}`);
+      }
+      const code = Object.hasOwn(ClientCode, cv.code) ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
       return {
         code,
-        name: typeof cv.name === "string" ? cv.name : "",
-        version: typeof cv.version === "string" ? cv.version : "",
-        commit: typeof cv.commit === "string" ? strip0xPrefix(cv.commit) : "",
+        name: cv.name,
+        version: cv.version,
+        commit: strip0xPrefix(cv.commit),
       };
     });
   }
@@ -498,10 +550,18 @@ function deserializeBodiesResponse(fork: ForkName, data: Uint8Array): (Execution
   );
 }
 
-function parseJson(body: Uint8Array): unknown {
-  return JSON.parse(textDecoder.decode(body));
+function parseJson(body: Uint8Array, routeId: string): unknown {
+  try {
+    return JSON.parse(textDecoder.decode(body));
+  } catch (e) {
+    throw new EngineRestResponseError(routeId, `Invalid JSON: ${(e as Error).message}`);
+  }
 }
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

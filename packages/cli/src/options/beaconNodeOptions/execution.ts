@@ -73,7 +73,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
 
   "execution.engineApi": {
     description:
-      "Engine API used to communicate with the execution client. 'auto' uses the REST API with SSZ encoding if the execution client advertises support for it and JSON-RPC otherwise, 'ssz' always uses the REST API and 'json-rpc' always uses JSON-RPC",
+      "Engine API transport. 'auto' negotiates REST with SSZ for a single execution URL and uses JSON-RPC for multiple URLs or unsupported features. 'ssz' requires a single REST-capable execution URL without JSON-RPC fallback. 'json-rpc' always uses JSON-RPC",
     type: "string",
     choices: engineApiModes,
     default: defaultExecutionEngineHttpOpts.engineApi,

@@ -1,4 +1,4 @@
-import {fromHex, toPrintableUrl} from "@lodestar/utils";
+import {LodestarError, fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getLodestarClientVersion} from "../../util/metadata.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {
@@ -41,6 +41,12 @@ export function getExecutionEngineHttp(
   const jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
   const metrics = modules.metrics?.executionEnginerHttpClient;
   const engineApi = opts.engineApi ?? "auto";
+  if (engineApi === "ssz" && opts.urls.length !== 1) {
+    throw new LodestarError({code: "ENGINE_REST_REQUIRES_SINGLE_URL", count: opts.urls.length});
+  }
+  if (engineApi === "auto" && opts.urls.length > 1) {
+    modules.logger.info("Using JSON-RPC for multiple execution URLs", {count: opts.urls.length});
+  }
 
   const rpc = new JsonRpcHttpClient(opts.urls, {
     ...opts,
@@ -52,7 +58,7 @@ export function getExecutionEngineHttp(
   });
 
   const rest =
-    engineApi === "json-rpc"
+    engineApi === "json-rpc" || opts.urls.length !== 1
       ? undefined
       : new RestEngineTransport(
           new EngineRestHttpClient(opts.urls, {

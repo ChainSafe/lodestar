@@ -1178,7 +1178,7 @@ export function createLodestarMetrics(
     }),
     engineApiTransport: register.gauge<{transport: string}>({
       name: "lodestar_execution_engine_api_transport",
-      help: "Engine API transport selected from the execution client capabilities, 1 for the active transport",
+      help: "Engine API transports used since startup, 1 for each transport used",
       labelNames: ["transport"],
     }),
     opPool: {

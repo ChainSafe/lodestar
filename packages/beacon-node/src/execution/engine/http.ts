@@ -11,6 +11,7 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {FetchError, TimeoutError} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -27,10 +28,10 @@ import {
 } from "./interface.js";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
-import {EngineRestError} from "./restHttpClient.js";
+import {EngineRestError, EngineRestResponseError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
-import {IEngineTransport} from "./transport.js";
+import {IEngineTransport, PayloadStatusResult} from "./transport.js";
 import {ExecutionPayloadBody, ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -42,7 +43,7 @@ export type ExecutionEngineModules = {
 
 /**
  * Engine API transport selection
- * - `auto`: use the REST API with SSZ encoding if the execution client advertises it, otherwise JSON-RPC
+ * - `auto`: negotiate REST with one execution URL; use JSON-RPC for multiple URLs or unadvertised features
  * - `ssz`: always use the REST API with SSZ encoding
  * - `json-rpc`: always use the legacy JSON-RPC API
  */
@@ -98,7 +99,10 @@ export type ExecutionEngineTransports = {
   rest?: RestEngineTransport;
 };
 
-type RestSupport = {state: "pending"} | {state: "unsupported"} | {state: "supported"; capabilities: EngineCapabilities};
+type RestSupport =
+  | {state: "pending"; error?: Error}
+  | {state: "unsupported"}
+  | {state: "supported"; capabilities: EngineCapabilities};
 
 /**
  * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
@@ -114,10 +118,9 @@ const REST_PROBE_RETRY_MS = 12_000;
  * or the REST API with SSZ encoded bodies.
  * https://github.com/ethereum/execution-apis/tree/main/src/engine
  *
- * In `auto` mode the transport is picked from `GET /engine/v1/capabilities`: a 404 or any other
- * error response means the execution client has no REST API and JSON-RPC is used for the lifetime
- * of the connection, as the spec's transition rules prescribe. Forks and blob revisions the
- * execution client does not advertise are also served over JSON-RPC.
+ * In `auto` mode a capabilities 404 selects JSON-RPC until the EL reconnects. Transient discovery
+ * failures use JSON-RPC while awaiting another probe; authentication and malformed responses fail
+ * visibly. Forks and blob revisions the EL does not advertise also use JSON-RPC.
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
@@ -148,7 +151,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly engineApi: EngineApiMode;
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
-  private lastRestProbeMs = 0;
+  private lastRestProbeMs = Number.NEGATIVE_INFINITY;
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -165,6 +168,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.jsonRpc = jsonRpc;
     this.rest = rest ?? null;
     this.engineApi = opts?.engineApi ?? "auto";
+    this.metrics?.engineApiTransport.set({transport: "ssz"}, 0);
+    this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 0);
 
     if (this.engineApi === "ssz" && this.rest === null) {
       throw Error("REST transport is required for engineApi=ssz");
@@ -232,16 +237,22 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       }
     }
 
-    const {status, latestValidHash, validationError} = await this.enqueue(() =>
-      this.withTransport(fork, undefined, (transport) =>
-        transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
-      )
-    ).catch((e: Error) => {
-      if (isEngineResponseError(e)) {
-        return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-      }
-      return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-    });
+    let result: PayloadStatusResult;
+    try {
+      result = await this.enqueue(() =>
+        this.withTransport(fork, undefined, (transport) =>
+          transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
+        )
+      );
+    } catch (e) {
+      this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}));
+      return {
+        status: isEngineResponseError(e as Error) ? ExecutionPayloadStatus.ELERROR : ExecutionPayloadStatus.UNAVAILABLE,
+        latestValidHash: null,
+        validationError: (e as Error).message,
+      };
+    }
+    const {status, latestValidHash, validationError} = result;
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
@@ -435,11 +446,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fn: (transport: IEngineTransport) => Promise<T>
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
+    this.metrics?.engineApiTransport.set({transport: transport === this.rest ? "ssz" : "json-rpc"}, 1);
     try {
       return await fn(transport);
     } catch (e) {
       if (fork !== undefined && transport === this.rest && this.engineApi === "auto" && isUnsupportedForkError(e)) {
         this.disableRestForFork(fork, e);
+        this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 1);
         return fn(this.jsonRpc);
       }
       throw e;
@@ -465,11 +478,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (this.rest === null || this.engineApi === "json-rpc") {
       return this.jsonRpc;
     }
+    const restSupport = await this.probeRestSupport(this.rest);
+    if (restSupport.state === "pending" && restSupport.error) {
+      this.updateEngineState(getExecutionEngineState({payloadError: restSupport.error, oldState: this.state}));
+      throw restSupport.error;
+    }
     if (this.engineApi === "ssz") {
       return this.rest;
     }
-
-    const restSupport = await this.probeRestSupport(this.rest);
     if (restSupport.state !== "supported") {
       return this.jsonRpc;
     }
@@ -508,21 +524,20 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             supportedForks: Array.from(capabilities.supportedForks).join(","),
             blobsRevisions: Array.from(capabilities.blobsRevisions).join(","),
           });
-          this.metrics?.engineApiTransport.set({transport: "ssz"}, 1);
-          this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 0);
           return this.restSupport;
         },
         (e: Error): RestSupport => {
-          if (e instanceof EngineRestError) {
+          if (this.engineApi === "auto" && e instanceof EngineRestError && e.status === 404) {
             this.restSupport = {state: "unsupported"};
             this.logger.info("Execution client does not support engine API over REST, using JSON-RPC", {
               status: e.status,
               type: e.type ?? "unknown",
             });
-            this.metrics?.engineApiTransport.set({transport: "ssz"}, 0);
-            this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 1);
           } else {
-            this.logger.debug("Unable to probe engine API capabilities", {}, e);
+            const transient =
+              (e instanceof EngineRestError && e.status >= 500) || e instanceof FetchError || e instanceof TimeoutError;
+            this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};
+            this.logger.debug("Unable to probe engine API capabilities", {retryAfterMs: REST_PROBE_RETRY_MS}, e);
           }
           return this.restSupport;
         }
@@ -560,7 +575,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.logger.info("Execution client became online", {oldState, newState});
         // The execution client may have been upgraded while offline
         this.restSupport = {state: "pending"};
-        this.lastRestProbeMs = 0;
+        this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.debug("Unable to get execution client version", {}, e);
           this.clientVersion = null;
@@ -586,7 +601,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
 /** The execution client answered, as opposed to being unreachable */
 function isEngineResponseError(e: Error): boolean {
-  return e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse || e instanceof EngineRestError;
+  return (
+    e instanceof HttpRpcError ||
+    e instanceof ErrorJsonRpcResponse ||
+    e instanceof EngineRestError ||
+    e instanceof EngineRestResponseError
+  );
 }
 
 function isUnsupportedForkError(e: unknown): e is EngineRestError {

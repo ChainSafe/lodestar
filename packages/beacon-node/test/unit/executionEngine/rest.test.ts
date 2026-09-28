@@ -96,7 +96,10 @@ describe("ExecutionEngine / rest", () => {
     server.get("/engine/v1/bodies", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/blobs/v1", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/blobs/v2", async (req, reply) => sendSsz(req, reply));
-    server.post("/", async (req) => {
+    server.post<{Body: {method: string}}>("/", async (req) => {
+      if (req.body.method === "engine_getClientVersionV1") {
+        return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
+      }
       record(req);
       return {jsonrpc: "2.0", id: 1, result: jsonRpcResult};
     });
@@ -225,13 +228,13 @@ describe("ExecutionEngine / rest", () => {
     });
 
     it("always uses REST with engineApi=ssz", async () => {
-      capabilities = {status: 404, body: {}};
       sszResponse.body = ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []});
       const engine = createEngine("ssz");
 
       await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
 
-      expect(requests.some((r) => r.url === "/engine/v1/capabilities")).toBe(false);
+      expect(requests.some((r) => r.url === "/engine/v1/capabilities")).toBe(true);
+      expect(jsonRpcMethods()).toEqual([]);
       expect(lastRequest("/engine/v1/forkchoice").headers["eth-execution-version"]).toBe("paris");
     });
   });

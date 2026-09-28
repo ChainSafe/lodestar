@@ -8,7 +8,7 @@ import {
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
 } from "./jsonRpcHttpClient.js";
-import {EngineRestError} from "./restHttpClient.js";
+import {EngineRestError, EngineRestResponseError} from "./restHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
@@ -200,7 +200,8 @@ function getExecutionEngineStateForPayloadError(
   if (
     payloadError instanceof HttpRpcError ||
     payloadError instanceof ErrorJsonRpcResponse ||
-    payloadError instanceof EngineRestError
+    payloadError instanceof EngineRestError ||
+    payloadError instanceof EngineRestResponseError
   ) {
     return ExecutionEngineState.SYNCING;
   }
