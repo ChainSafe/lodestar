@@ -1,4 +1,4 @@
-import {ErrorAborted, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
+import {ErrorAborted, FetchError, LodestarError, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
 import {
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
@@ -47,6 +47,16 @@ export class EngineRestError extends Error {
     super(
       `Engine REST error: status=${status} type=${type ?? "unknown"}${detail ? ` detail=${detail}` : ""}, ${routeId}`
     );
+  }
+}
+
+export class EngineRestResponseError extends LodestarError<{
+  code: "ENGINE_REST_INVALID_RESPONSE";
+  routeId: string;
+  reason: string;
+}> {
+  constructor(routeId: string, reason: string) {
+    super({code: "ENGINE_REST_INVALID_RESPONSE", routeId, reason});
   }
 }
 
@@ -125,6 +135,9 @@ export class EngineRestHttpClient {
       try {
         return await this.requestOneUrl(this.urls[i], req, opts);
       } catch (e) {
+        if (!isRetryableError(e as Error)) {
+          throw e;
+        }
         lastError = e as Error;
       }
     }
@@ -135,8 +148,7 @@ export class EngineRestHttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts.timeout ?? REQUEST_TIMEOUT);
 
-    const onParentSignalAbort = (): void => controller.abort();
-    this.opts.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    const signal = this.opts.signal ? AbortSignal.any([controller.signal, this.opts.signal]) : controller.signal;
 
     const routeId = opts?.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
@@ -171,12 +183,18 @@ export class EngineRestHttpClient {
         method: req.method,
         body: req.body as BodyInit | undefined,
         headers,
-        signal: controller.signal,
+        signal,
       });
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
-      const body = new Uint8Array(await res.arrayBuffer());
-      streamTimer?.();
+      let body: Uint8Array;
+      try {
+        body = new Uint8Array(await res.arrayBuffer());
+      } catch (e) {
+        throw new FetchError(url, e);
+      } finally {
+        streamTimer?.();
+      }
       this.metrics?.responseBytes.inc({routeId}, body.length);
 
       if (!res.ok) {
@@ -184,16 +202,19 @@ export class EngineRestHttpClient {
         throw new EngineRestError(res.status, type, detail, routeId);
       }
 
-      const contentType = res.headers.get("content-type");
-      if (res.status !== 204 && req.responseType === "ssz" && !contentType?.startsWith(MEDIA_TYPE_SSZ)) {
-        throw Error(`Unexpected engine REST response content type ${contentType} status=${res.status}, ${routeId}`);
+      if (res.status !== 200 && res.status !== 204) {
+        throw new EngineRestResponseError(routeId, `Unexpected status ${res.status}`);
+      }
+      const contentType = res.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+      const expectedContentType = req.responseType === "ssz" ? MEDIA_TYPE_SSZ : MEDIA_TYPE_JSON;
+      if (res.status !== 204 && contentType !== expectedContentType) {
+        throw new EngineRestResponseError(routeId, `Unexpected content type ${contentType}`);
       }
 
       return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
-      if (controller.signal.aborted) {
-        // controller will abort on both parent signal abort + timeout of this specific request
+      if (signal.aborted) {
         if (this.opts.signal?.aborted) {
           throw new ErrorAborted("request");
         }
@@ -205,25 +226,35 @@ export class EngineRestHttpClient {
       this.metrics?.activeRequests.dec({routeId}, 1);
 
       clearTimeout(timeout);
-      this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }
 
 /** Client errors are deterministic, only transport failures and server errors are worth retrying */
 function isRetryableError(e: Error): boolean {
-  return !(e instanceof EngineRestError) || e.status >= 500;
+  return (
+    (e instanceof EngineRestError && e.status >= 500) ||
+    e instanceof TimeoutError ||
+    (e instanceof FetchError && e.type !== "input" && e.type !== "aborted")
+  );
 }
 
 function parseProblemBody(body: Uint8Array): {type: string | null; detail: string | null} {
-  const text = new TextDecoder().decode(body).slice(0, MAX_ERROR_DETAIL_LENGTH);
+  const text = new TextDecoder().decode(body);
   try {
-    const problem = JSON.parse(text) as {type?: unknown; detail?: unknown};
-    return {
-      type: typeof problem.type === "string" ? problem.type : null,
-      detail: typeof problem.detail === "string" ? problem.detail : null,
-    };
+    const problem: unknown = JSON.parse(text);
+    if (typeof problem === "object" && problem !== null) {
+      return {
+        type: "type" in problem && typeof problem.type === "string" ? problem.type : null,
+        detail:
+          ("detail" in problem && typeof problem.detail === "string" ? problem.detail : text).slice(
+            0,
+            MAX_ERROR_DETAIL_LENGTH
+          ) || null,
+      };
+    }
   } catch {
-    return {type: null, detail: text || null};
+    // Legacy endpoints and proxies may return plain text instead of a problem document.
   }
+  return {type: null, detail: text.slice(0, MAX_ERROR_DETAIL_LENGTH) || null};
 }
