@@ -1,14 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostGloas, ForkSeq, ZERO_HASH} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  BeaconStateGloas,
-  IBeaconStateView,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, BeaconStateGloas, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {Logger, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -33,7 +27,8 @@ export async function persistAnchorState(
     const latestBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(latestBlockHeader);
 
     if (!byteArrayEquals(blockRoot, latestBlockRoot)) {
-      throw Error(
+      throw new LodestarError(
+        {code: "GENESIS_BLOCK_ROOT_MISMATCH"},
         `Genesis block root ${toRootHex(blockRoot)} does not match genesis state latest block root ${toRootHex(latestBlockRoot)}`
       );
     }
@@ -84,52 +79,6 @@ export async function initStateFromDb(
   });
 
   return state;
-}
-
-/**
- * Initialize and persist an anchor state (either weak subjectivity or genesis)
- */
-export async function checkAndPersistAnchorState(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  logger: Logger,
-  anchorState: BeaconStateAllForks,
-  anchorStateBytes: Uint8Array,
-  {
-    isWithinWeakSubjectivityPeriod,
-    isCheckpointState,
-  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
-): Promise<void> {
-  const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
-  const expectedForkVersion = toHex(expectedFork.version);
-  const stateFork = toHex(anchorState.fork.currentVersion);
-  if (stateFork !== expectedForkVersion) {
-    throw Error(
-      `State current fork version ${stateFork} not equal to current config ${expectedForkVersion}. Maybe caused by importing a state from a different network`
-    );
-  }
-
-  const stateInfo = isCheckpointState ? "checkpoint" : "db";
-  if (isWithinWeakSubjectivityPeriod) {
-    logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
-      slot: anchorState.slot,
-      epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toRootHex(anchorState.hashTreeRoot()),
-      isWithinWeakSubjectivityPeriod,
-    });
-  } else {
-    logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
-      slot: anchorState.slot,
-      epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toRootHex(anchorState.hashTreeRoot()),
-      isWithinWeakSubjectivityPeriod,
-    });
-    logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
-  }
-
-  if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
-    await persistAnchorState(config, db, anchorState, anchorStateBytes);
-  }
 }
 
 export function initBeaconMetrics(metrics: Metrics, state: IBeaconStateView): void {
