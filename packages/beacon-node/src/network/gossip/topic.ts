@@ -154,8 +154,8 @@ export function getGossipSSZType(topic: GossipTopic) {
 /**
  * Return the maximum uncompressed SSZ byte length allowed by the type and configured network bounds.
  */
-export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig, sszType?: CompositeTypeAny): number {
-  const maxSize = Math.min((sszType ?? getGossipSSZType(topic)).maxSize, config.MAX_PAYLOAD_SIZE);
+export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig, sszType: CompositeTypeAny): number {
+  const maxSize = Math.min(sszType.maxSize, config.MAX_PAYLOAD_SIZE);
   if (topic.type === GossipType.inclusion_list) {
     return Math.min(maxSize, MAX_SIGNED_INCLUSION_LIST_SIZE);
   }

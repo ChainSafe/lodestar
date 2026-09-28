@@ -1,3 +1,4 @@
+import {GENESIS_EPOCH} from "@lodestar/params";
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger, toPubkeyHex} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
@@ -10,6 +11,8 @@ import {
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
   Interchange,
+  InterchangeError,
+  InterchangeErrorErrorCode,
   InterchangeFormatVersion,
   InterchangeLodestar,
   parseInterchange,
@@ -59,8 +62,28 @@ export class SlashingProtection implements ISlashingProtection {
     return (await this.attestationService.getAttestationForEpoch(pubKey, epoch)) !== null;
   }
 
-  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {
+  async importInterchange(
+    interchange: Interchange,
+    genesisValidatorsRoot: Root,
+    logger?: Logger,
+    currentEpoch?: Epoch
+  ): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
+    if (currentEpoch !== undefined) {
+      // Min-max span updates read the db for each epoch between source and target, allow one epoch of clock disparity
+      const maxTargetEpoch = Math.max(currentEpoch, GENESIS_EPOCH) + 1;
+      for (const validator of data) {
+        for (const {targetEpoch} of validator.signedAttestations) {
+          if (targetEpoch > maxTargetEpoch) {
+            throw new InterchangeError({
+              code: InterchangeErrorErrorCode.FUTURE_TARGET_EPOCH,
+              targetEpoch,
+              currentEpoch,
+            });
+          }
+        }
+      }
+    }
     for (const validator of data) {
       logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);

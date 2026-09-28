@@ -1,8 +1,13 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {Mocked, beforeEach, describe, expect, it, vi} from "vitest";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
+import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
+import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "../../../../../../src/chain/opPools/types.js";
 import {AttestationValidationResult} from "../../../../../../src/chain/validation/attestation.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -27,11 +32,11 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
 
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconPoolApi>;
-  let attestationPool: {add: ReturnType<typeof vi.fn>};
+  let attestationPool: Pick<Mocked<AttestationPool>, "add" | "getAll">;
 
   beforeEach(() => {
     modules = getApiTestModules({config});
-    attestationPool = {add: vi.fn().mockReturnValue(InsertOutcome.NewData)};
+    attestationPool = {add: vi.fn().mockReturnValue(InsertOutcome.NewData), getAll: vi.fn()};
     Object.defineProperty(modules.chain, "attestationPool", {value: attestationPool});
     modules.network.publishBeaconAttestation = vi.fn().mockResolvedValue(1);
     // No aggregator duty registered for this (subnet, slot), ie. the validator client did not send
@@ -79,5 +84,42 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     await api.submitPoolAttestationsV2({signedAttestations: [attestation]});
 
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
+  });
+
+  it("exposes a submitted single attestation through the filtered pool endpoint", async () => {
+    const pool = new AttestationPool(config, modules.chain.clock);
+    attestationPool.add.mockImplementation(pool.add.bind(pool));
+    attestationPool.getAll.mockImplementation(pool.getAll.bind(pool));
+    modules.chain.aggregatedAttestationPool.getAll = vi.fn().mockReturnValue([]);
+
+    const committeeIndex = 3;
+    const validatorCommitteeIndex = 2;
+    const committeeSize = 64;
+    const attestation = {...ssz.electra.SingleAttestation.defaultValue(), committeeIndex};
+    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
+    attestation.signature = SecretKey.fromBytes(Buffer.alloc(32, 1)).sign(dataRoot).toBytes();
+    vi.mocked(validateGossipFnRetryUnknownRoot<AttestationValidationResult>).mockResolvedValue({
+      attestation,
+      indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
+      subnet,
+      attDataRootHex: toRootHex(dataRoot),
+      committeeIndex,
+      validatorCommitteeIndex,
+      committeeSize,
+    });
+
+    await api.submitPoolAttestationsV2({signedAttestations: [attestation]});
+
+    expect(await api.getPoolAttestationsV2({slot: attestation.data.slot, committeeIndex})).toEqual({
+      data: [
+        {
+          data: attestation.data,
+          signature: attestation.signature,
+          aggregationBits: BitArray.fromSingleBit(committeeSize, validatorCommitteeIndex),
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex),
+        },
+      ],
+      meta: {version: ForkName.electra},
+    });
   });
 });

@@ -22,7 +22,7 @@ import {
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
-import {ExecutionPayloadBody} from "./types.js";
+import {ExecutionPayloadBody, ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
@@ -197,6 +197,9 @@ export interface IExecutionEngine {
   }>;
 
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
+
+  /** Amsterdam: like V1 but also returns the block access list (null if the EL no longer has it) */
+  getPayloadBodiesByHashV2(blockHash: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 

@@ -48,8 +48,7 @@ async function validateProposerSlashing(
   const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
-      code: ProposerSlashingErrorCode.INVALID,
-      error: Error("Invalid signature"),
+      code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
     });
   }
 }

@@ -25,6 +25,10 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
+  getPayloadBodiesByHashV2(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
   getPayloadBodiesByRange(): Promise<never> {
     throw Error("Execution engine disabled");
   }
