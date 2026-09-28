@@ -1,11 +1,4 @@
-import {
-  BYTES_PER_FIELD_ELEMENT,
-  CELLS_PER_EXT_BLOB,
-  FIELD_ELEMENTS_PER_BLOB,
-  ForkName,
-  ForkSeq,
-  isForkPostBellatrix,
-} from "@lodestar/params";
+import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
@@ -54,7 +47,6 @@ import {
 } from "./sszTypes.js";
 import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
 import {
-  BLOB_AND_PROOF_V2_RPC_BYTES,
   ExecutionPayloadBody,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
@@ -73,8 +65,6 @@ const DEFAULT_LIMITS: EngineCapabilities["limits"] = {
   blobsMaxVersionedHashes: MAX_BLOBS_REQUEST,
   payloadMaxBytes: 2 ** 26,
 };
-const BLOB_BYTES = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB;
-const PROOF_BYTES = 48;
 
 /** Payload ids are opaque `Bytes8` tokens, hex encoded in the `GET /payloads/{payloadId}` path */
 const PAYLOAD_ID_REGEX = /^0x[0-9a-fA-F]{16}$/;
@@ -396,19 +386,9 @@ export class RestEngineTransport implements IEngineTransport {
     return entries.map((entry) => (entry.available ? entry.contents : null));
   }
 
-  async getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
+  /** SSZ decoding already allocates fresh arrays, copying them into the pooled buffers would only add aliasing */
+  async getBlobsV2(versionedHashes: VersionedHashes, _buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
     assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
-    if (buffers) {
-      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
-      if (buffers.length < versionedHashes.length) {
-        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashes.length}`);
-      }
-      for (const [i, buffer] of buffers.entries()) {
-        if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
-          throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
-        }
-      }
-    }
 
     const res = await this.client.request(
       {method: "POST", path: "/blobs/v2", body: BlobsRequest.serialize({versionedHashes}), responseType: "ssz"},
@@ -427,23 +407,11 @@ export class RestEngineTransport implements IEngineTransport {
       return null;
     }
 
-    return entries.map(({contents}, i) => {
+    return entries.map(({contents}) => {
       if (contents.proofs.length !== CELLS_PER_EXT_BLOB) {
         throw Error(`Invalid proofs length ${contents.proofs.length}, expected ${CELLS_PER_EXT_BLOB}`);
       }
-      if (!buffers) {
-        return contents;
-      }
-      // getBlobsV2() is designed to be called once per slot so we expect to have buffers
-      const buffer = buffers[i];
-      buffer.set(contents.blob, 0);
-      const proofs: Uint8Array[] = [];
-      for (const [j, proof] of contents.proofs.entries()) {
-        const offset = BLOB_BYTES + j * PROOF_BYTES;
-        buffer.set(proof, offset);
-        proofs.push(buffer.subarray(offset, offset + PROOF_BYTES));
-      }
-      return {blob: buffer.subarray(0, BLOB_BYTES), proofs};
+      return contents;
     });
   }
 

@@ -533,18 +533,17 @@ describe("ExecutionEngine / rest", () => {
       expect(BlobsRequest.deserialize(req.body as Uint8Array)).toEqual({versionedHashes: [hash]});
     });
 
-    it("decodes blobs/v2 into the provided buffers", async () => {
+    it("decodes blobs/v2 without writing into the provided buffers", async () => {
       const engine = createEngine();
       const proofs = Array.from({length: 128}, () => proof);
       sszResponse.body = BlobsV2Response.serialize({entries: [{available: true, contents: {blob, proofs}}]});
-      // Callers preallocate buffers for the max blobs per block, more buffers than hashes is expected
-      const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
+      const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
 
       const res = await engine.getBlobs(ForkName.fulu, [hash], buffers);
 
       expect(res).toEqual([{blob, proofs}]);
-      expect(res?.[0].blob.buffer).toBe(buffers[0].buffer);
-      expect(buffers[0][0]).toBe(0x11);
+      expect(res?.[0].blob.buffer).not.toBe(buffers[0].buffer);
+      expect(buffers[0][0]).toBe(0);
     });
 
     it("returns partial results for blobs/v1", async () => {
