@@ -335,7 +335,7 @@ export type PayloadStatusSsz = ValueOf<typeof PayloadStatus>;
 /** Fork names accepted in the `Eth-Execution-Version` header */
 export type ExecutionForkName = "paris" | "shanghai" | "cancun" | "prague" | "osaka" | "amsterdam";
 
-/** Heze has no execution fork name in the spec yet, calls for it stay on JSON-RPC */
+/** Heze has no execution fork name in the spec yet, auto mode serves it over JSON-RPC and ssz mode fails the call */
 export const executionForkName: Record<ForkPostBellatrix, ExecutionForkName | null> = {
   [ForkName.bellatrix]: "paris",
   [ForkName.capella]: "shanghai",
