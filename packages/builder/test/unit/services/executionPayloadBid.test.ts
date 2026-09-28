@@ -14,6 +14,7 @@ describe("createExecutionPayloadBid", () => {
   const parentBlockRoot = Buffer.alloc(32, 1);
   const feeRecipient = Buffer.alloc(20, 2);
   const builderIndex = 7;
+  const prevRandao = Buffer.alloc(32, 5);
 
   it("constructs a Gloas bid from exact payload material", () => {
     const payload = createBuiltPayload(ForkName.gloas);
@@ -24,6 +25,7 @@ describe("createExecutionPayloadBid", () => {
       fork: ForkName.gloas,
       slot,
       parentBlockRoot,
+      prevRandao,
       builderIndex,
       feeRecipient,
       value: 123,
@@ -55,6 +57,7 @@ describe("createExecutionPayloadBid", () => {
       fork: ForkName.heze,
       slot,
       parentBlockRoot,
+      prevRandao,
       builderIndex,
       feeRecipient,
       value: 456,
@@ -64,6 +67,61 @@ describe("createExecutionPayloadBid", () => {
 
     expect(bid.inclusionListBits).toBe(inclusionListBits);
     expect(bid.executionRequestsRoot).toEqual(ssz.heze.ExecutionRequests.hashTreeRoot(payload.executionRequests));
+  });
+
+  it.each([1, INCLUSION_LIST_COMMITTEE_SIZE - 1, INCLUSION_LIST_COMMITTEE_SIZE + 1, 24])(
+    "rejects Heze inclusion-list bits with length %s",
+    (bitLen) => {
+      expect(() =>
+        createExecutionPayloadBid({
+          fork: ForkName.heze,
+          slot,
+          parentBlockRoot,
+          prevRandao,
+          builderIndex,
+          feeRecipient,
+          value: 1,
+          payload: createBuiltPayload(ForkName.heze),
+          inclusionListBits: BitArray.fromBitLen(bitLen),
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          type: {code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS, bitLen},
+        })
+      );
+    }
+  );
+
+  it.each([ForkName.gloas, ForkName.heze] as const)("rejects a %s payload with a different prevRandao", (fork) => {
+    const payload = createBuiltPayload(fork);
+    payload.executionPayload.prevRandao = Buffer.alloc(32, 6);
+    const input = {
+      slot,
+      parentBlockRoot,
+      prevRandao,
+      builderIndex,
+      feeRecipient,
+      value: 1,
+      payload,
+    };
+
+    expect(() =>
+      fork === ForkName.heze
+        ? createExecutionPayloadBid({
+            ...input,
+            fork,
+            inclusionListBits: BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE),
+          })
+        : createExecutionPayloadBid({...input, fork})
+    ).toThrowError(
+      expect.objectContaining({
+        type: {
+          code: ExecutionPayloadBidErrorCode.PREV_RANDAO_MISMATCH,
+          expectedPrevRandao: `0x${"05".repeat(32)}`,
+          payloadPrevRandao: `0x${"06".repeat(32)}`,
+        },
+      })
+    );
   });
 
   it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number("0x20000000000001"), Number("0xffffffffffffffff")])(
@@ -76,6 +134,7 @@ describe("createExecutionPayloadBid", () => {
           fork: ForkName.gloas,
           slot,
           parentBlockRoot,
+          prevRandao,
           builderIndex,
           feeRecipient,
           value: 1,
@@ -92,6 +151,7 @@ describe("createExecutionPayloadBid", () => {
       fork: ForkName.gloas,
       slot,
       parentBlockRoot,
+      prevRandao,
       builderIndex,
       feeRecipient,
       value: 1,
@@ -108,6 +168,7 @@ describe("createExecutionPayloadBid", () => {
           fork: ForkName.gloas,
           slot,
           parentBlockRoot,
+          prevRandao,
           builderIndex,
           feeRecipient,
           value,
@@ -130,6 +191,7 @@ describe("createExecutionPayloadBid", () => {
         fork: ForkName.gloas,
         slot,
         parentBlockRoot,
+        prevRandao,
         builderIndex,
         feeRecipient,
         value: 1,
@@ -153,6 +215,7 @@ describe("createExecutionPayloadBid", () => {
         fork: ForkName.gloas,
         slot,
         parentBlockRoot,
+        prevRandao,
         builderIndex,
         feeRecipient,
         value: 1,
