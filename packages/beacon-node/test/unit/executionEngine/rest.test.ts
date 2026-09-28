@@ -1,3 +1,4 @@
+import {RLP} from "@ethereumjs/rlp";
 import {FastifyReply, FastifyRequest, fastify} from "fastify";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
@@ -240,6 +241,65 @@ describe("ExecutionEngine / rest", () => {
   });
 
   describe("notifyNewPayload", () => {
+    it.each([ForkName.deneb, ForkName.electra, ForkName.fulu, ForkName.gloas] as const)(
+      "rejects mismatched blob commitments before contacting the EL in %s",
+      async (fork) => {
+        const engine = createEngine("ssz");
+        sszResponse.body = PayloadStatus.serialize(validStatus);
+        const payload = ssz[fork].ExecutionPayload.defaultValue();
+        const transaction = RLP.encode([
+          1,
+          0,
+          1,
+          1,
+          21000,
+          new Uint8Array(20),
+          0,
+          new Uint8Array(),
+          [],
+          1,
+          [hash],
+          0,
+          1,
+          1,
+        ]);
+        payload.transactions = [new Uint8Array([0x03, ...transaction])];
+        const executionRequests =
+          fork === ForkName.gloas
+            ? ssz.gloas.ExecutionRequests.defaultValue()
+            : ssz.electra.ExecutionRequests.defaultValue();
+        const res = await engine.notifyNewPayload(fork, payload, [new Uint8Array(32)], hash, executionRequests);
+        expect(res).toMatchObject({status: "INVALID", latestValidHash: null});
+        expect(requests.some((req) => req.url === "/engine/v1/payloads" || req.url === "/")).toBe(false);
+      }
+    );
+
+    it("submits a payload whose transaction blob hashes match the beacon commitments", async () => {
+      const engine = createEngine("ssz");
+      sszResponse.body = PayloadStatus.serialize(validStatus);
+      const payload = ssz.deneb.ExecutionPayload.defaultValue();
+      const transaction = RLP.encode([
+        1,
+        0,
+        1,
+        1,
+        21000,
+        new Uint8Array(20),
+        0,
+        new Uint8Array(),
+        [],
+        1,
+        [hash],
+        0,
+        1,
+        1,
+      ]);
+      payload.transactions = [new Uint8Array([0x03, ...transaction])];
+      const res = await engine.notifyNewPayload(ForkName.deneb, payload, [hash], hash);
+      expect(res.status).toBe("VALID");
+      expect(requests.some((req) => req.url === "/engine/v1/payloads")).toBe(true);
+    });
+
     for (const fork of [
       ForkName.bellatrix,
       ForkName.capella,

@@ -16,6 +16,7 @@ import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
 import {
   ClientVersion,
   ExecutePayloadResponse,
@@ -234,6 +235,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       }
       if (ForkSeq[fork] >= ForkSeq.electra && executionRequests === undefined) {
         throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+      }
+      if (!isValidBlobVersionedHashes(executionPayload.transactions, versionedHashes)) {
+        return {
+          status: ExecutionPayloadStatus.INVALID,
+          latestValidHash: null,
+          validationError: "Payload blob versioned hashes do not match the beacon commitments",
+        };
       }
     }
 
