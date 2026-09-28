@@ -43,7 +43,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
 
   let envelopesBytes: (Uint8Array | null)[];
   try {
-    // by-root allows omission, so a mismatched envelope is left out rather than failing the response
+    // by-root allows omission, so an envelope that cannot be rebuilt is left out rather than failing the response
     envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(requests, "omit");
   } catch (e) {
     if (e instanceof EnvelopeReconstructionError) {

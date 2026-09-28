@@ -4,6 +4,8 @@ import {LodestarError} from "@lodestar/utils";
 export enum EnvelopeReconstructionErrorCode {
   /** The EL failed to answer engine_getPayloadBodiesByHashV2 (transport / EL down). Transient. */
   ENGINE_UNAVAILABLE = "ENVELOPE_RECONSTRUCTION_ERROR_ENGINE_UNAVAILABLE",
+  /** The EL does not have the block, or has pruned its block access list. Not transient. */
+  BODY_UNAVAILABLE = "ENVELOPE_RECONSTRUCTION_ERROR_BODY_UNAVAILABLE",
   /** A body returned by the EL does not hash to the root stored in the header envelope. Local DB/EL inconsistency. */
   BODY_ROOT_MISMATCH = "ENVELOPE_RECONSTRUCTION_ERROR_BODY_ROOT_MISMATCH",
   /** A by-range stream stopped short at a slot that cannot be served; the response so far is still valid */
@@ -12,6 +14,7 @@ export enum EnvelopeReconstructionErrorCode {
 
 export type EnvelopeReconstructionErrorType =
   | {code: EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE}
+  | {code: EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE; slot: Slot}
   | {
       code: EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH;
       slot: Slot;
