@@ -38,7 +38,7 @@ export class NativePeerReports {
   );
   constructor(private readonly network: Pick<NativeNetwork, "reportPeer">) {}
 
-  /** Counts each submission native accepts, including one native merges into a pending report for the same peer. */
+  /** Counts each call that returns normally, including one native merges into a pending report for the same peer. */
   report(peer: string, action: PeerAction, actionName: string): void {
     const nativeAction = actions[action];
     this.network.reportPeer(peer, nativeAction);
