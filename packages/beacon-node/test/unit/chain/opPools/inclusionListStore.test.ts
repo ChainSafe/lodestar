@@ -157,6 +157,20 @@ describe("chain / opPools / InclusionListStore", () => {
     });
   });
 
+  describe("seenTwice", () => {
+    it("counts inclusion lists per (slot, dependent_root)", () => {
+      const otherDependentRoot = Buffer.alloc(32, 0xbb);
+      process(makeInclusionList(1, [txA]), true);
+      process(makeInclusionList(1, [txB]), true);
+
+      expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(true);
+      expect(store.seenTwice(slot, toRootHex(otherDependentRoot), 1)).toBe(false);
+
+      process(makeInclusionList(1, [txA], {dependentRoot: otherDependentRoot}), true);
+      expect(store.seenTwice(slot, toRootHex(otherDependentRoot), 1)).toBe(false);
+    });
+  });
+
   describe("prune", () => {
     it("retains MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots beyond the inclusion list slot", () => {
       process(makeInclusionList(1, [txA]), true);
@@ -178,10 +192,10 @@ describe("chain / opPools / InclusionListStore", () => {
     it("forgets the first-or-second rule counters of pruned slots", () => {
       process(makeInclusionList(1, [txA]), true);
       process(makeInclusionList(1, [txB]), true);
-      expect(store.seenTwice(slot, 1)).toBe(true);
+      expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(true);
 
       store.prune(slot + 2);
-      expect(store.seenTwice(slot, 1)).toBe(false);
+      expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(false);
     });
   });
 });

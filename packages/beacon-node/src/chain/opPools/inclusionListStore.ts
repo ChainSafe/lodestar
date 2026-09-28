@@ -50,9 +50,9 @@ export class InclusionListStore {
   private readonly equivocators = new MapDef<Slot, MapDef<RootHex, Set<ValidatorIndex>>>(
     () => new MapDef<RootHex, Set<ValidatorIndex>>(() => new Set())
   );
-  /** slot -> validator index -> count, for the p2p "first or second message" rule */
-  private readonly validatorIlCountBySlot = new MapDef<Slot, Map<ValidatorIndex, number>>(
-    () => new Map<ValidatorIndex, number>()
+  /** slot -> dependent_root -> validator index -> count, for the p2p "first or second message" rule */
+  private readonly validatorIlCounts = new MapDef<Slot, MapDef<RootHex, Map<ValidatorIndex, number>>>(
+    () => new MapDef<RootHex, Map<ValidatorIndex, number>>(() => new Map())
   );
 
   private lowestPermissibleSlot = 0;
@@ -87,10 +87,10 @@ export class InclusionListStore {
       return InclusionListInsertOutcome.Old;
     }
 
-    const counts = this.validatorIlCountBySlot.getOrDefault(slot);
+    const dependentRoot = toRootHex(inclusionList.dependentRoot);
+    const counts = this.validatorIlCounts.getOrDefault(slot).getOrDefault(dependentRoot);
     counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
 
-    const dependentRoot = toRootHex(inclusionList.dependentRoot);
     const stored = this.inclusionLists.getOrDefault(slot).getOrDefault(dependentRoot);
 
     const entry = stored.get(validatorIndex);
@@ -116,10 +116,10 @@ export class InclusionListStore {
 
   /**
    * Used by gossip validation to enforce "the message is either the first or second valid message
-   * received from the validator with index validator_index" for the slot.
+   * received from the validator with index validator_index" for the `(slot, dependent_root)`.
    */
-  seenTwice(slot: Slot, validatorIndex: ValidatorIndex): boolean {
-    return (this.validatorIlCountBySlot.get(slot)?.get(validatorIndex) ?? 0) >= 2;
+  seenTwice(slot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
+    return (this.validatorIlCounts.get(slot)?.get(dependentRoot)?.get(validatorIndex) ?? 0) >= 2;
   }
 
   /** Deduplicated transactions from valid, non-equivocating inclusion lists at `(slot, dependentRoot)`. */
@@ -187,9 +187,9 @@ export class InclusionListStore {
         this.equivocators.delete(slot);
       }
     }
-    for (const slot of this.validatorIlCountBySlot.keys()) {
+    for (const slot of this.validatorIlCounts.keys()) {
       if (slot < horizon) {
-        this.validatorIlCountBySlot.delete(slot);
+        this.validatorIlCounts.delete(slot);
       }
     }
 

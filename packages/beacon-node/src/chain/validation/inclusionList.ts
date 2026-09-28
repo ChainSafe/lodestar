@@ -78,6 +78,25 @@ async function validateInclusionList(
     });
   }
 
+  // [IGNORE] The message is either the first or second valid message received from validatorIndex
+  // for (message.slot, message.dependent_root)
+  const dependentRootHex = toRootHex(dependentRoot);
+  if (chain.inclusionListStore.seenTwice(slot, dependentRootHex, validatorIndex)) {
+    ignore(InvalidInclusionListReason.seenTwice, {
+      code: InclusionListErrorCode.MORE_THAN_TWO,
+      validatorIndex,
+    });
+  }
+
+  // [IGNORE] message.slot is equal to the current slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
+  if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
+    ignore(InvalidInclusionListReason.slotOutOfRange, {
+      code: InclusionListErrorCode.INVALID_SLOT,
+      inclusionListSlot: slot,
+      currentSlot: chain.clock.currentSlot,
+    });
+  }
+
   // [IGNORE] The size of message.transactions is greater than 0
   if (inclusionListSize === 0) {
     ignore(InvalidInclusionListReason.emptyTransactions, {code: InclusionListErrorCode.EMPTY_TRANSACTIONS});
@@ -101,26 +120,7 @@ async function validateInclusionList(
     });
   }
 
-  // [IGNORE] message.slot is equal to the current slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
-  if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
-    ignore(InvalidInclusionListReason.slotOutOfRange, {
-      code: InclusionListErrorCode.INVALID_SLOT,
-      inclusionListSlot: slot,
-      currentSlot: chain.clock.currentSlot,
-    });
-  }
-
-  // [IGNORE] The message is either the first or second valid message received from validatorIndex.
-  // Checked before the dependent root and committee lookups below, which are the expensive part.
-  if (chain.inclusionListStore.seenTwice(slot, validatorIndex)) {
-    ignore(InvalidInclusionListReason.seenTwice, {
-      code: InclusionListErrorCode.MORE_THAN_TWO,
-      validatorIndex,
-    });
-  }
-
   // [IGNORE] The block with root message.dependent_root has been seen
-  const dependentRootHex = toRootHex(dependentRoot);
   // Thrown inline rather than via ignore() so the type guard narrows dependentBlock below;
   // control-flow analysis does not follow never-returning arrow functions.
   const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
