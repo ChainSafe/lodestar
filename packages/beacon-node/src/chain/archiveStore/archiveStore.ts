@@ -1,5 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -15,7 +16,6 @@ import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.j
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
-import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -24,7 +24,11 @@ type ArchiveStoreModules = {
   metrics: Metrics | null;
 };
 
-type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
+type ArchiveStoreInitOpts = ArchiveStoreOpts & {
+  dbName: string;
+  dataColumnDir: string;
+  anchorState: {finalizedCheckpoint: Checkpoint};
+};
 
 export enum ArchiveStoreTask {
   ArchiveBlocks = "archive_blocks",
@@ -32,7 +36,6 @@ export enum ArchiveStoreTask {
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
   ForkchoicePrune = "forkchoice_prune",
-  UpdateBackfillRange = "update_backfill_range",
 }
 
 /**
@@ -115,11 +118,32 @@ export class ArchiveStore {
       );
     }
 
+    // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
+    // above), rather than the anchor state slot set in the constructor. On an in-place restart the DB
+    // still holds finalized history below the anchor; leaving the value at the anchor makes the node
+    // reject by_range requests (beacon_blocks, execution_payload_envelopes and data_column_sidecars
+    // all gate on this slot) for data it still retains. An empty archive (e.g. a fresh checkpoint
+    // sync with nothing below the anchor) leaves the constructor's anchor slot in place.
+    const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
+    if (earliestArchivedBlockSlot != null) {
+      const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
+      this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
+      this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
+        oldEarliestAvailableSlot,
+        newEarliestAvailableSlot: earliestArchivedBlockSlot,
+      });
+    } else {
+      this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
+        earliestAvailableSlot: this.chain.earliestAvailableSlot,
+      });
+    }
+
     if (this.opts.serveHistoricalState) {
       this.historicalStateRegen = await HistoricalStateRegen.init({
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          dataColumnDir: this.opts.dataColumnDir,
           nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,
@@ -208,6 +232,9 @@ export class ArchiveStore {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
+      // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
+      const isNodeSynced = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot <= SLOTS_PER_EPOCH;
+
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
@@ -217,15 +244,18 @@ export class ArchiveStore {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
+        this.metrics,
+        isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir
+        this.chain.opts.persistOrphanedBlocksDir,
+        this.chain.opts.dedupePayloads
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        await pruneHistory(
+        const blockCutoffSlot = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
@@ -233,6 +263,7 @@ export class ArchiveStore {
           finalizedEpoch,
           this.chain.clock.currentEpoch
         );
+        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
@@ -249,10 +280,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
-      timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

@@ -47,7 +47,6 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
@@ -60,7 +59,11 @@ import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
+import {
+  createSpecTestBeaconMetrics,
+  expectNoProgressiveBalancesMismatches,
+  expectValidProgressiveBalances,
+} from "./progressiveBalances.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -88,6 +91,7 @@ export const forkChoiceTestRunner =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
+        const metrics = createSpecTestBeaconMetrics(anchorState.genesisTime);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isGloasStateType(anchorState)
@@ -130,7 +134,6 @@ export const forkChoiceTestRunner =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
           },
@@ -144,7 +147,7 @@ export const forkChoiceTestRunner =
             logger,
             processShutdownCallback: () => {},
             clock,
-            metrics: null,
+            metrics,
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
@@ -449,19 +452,20 @@ export const forkChoiceTestRunner =
                   seenTimestampSec: tickTime,
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
+                  // A block the spec store already has is a no-op for on_block. Lodestar would reject it instead,
+                  // as already known or, once pruned by finalization, for being at or below the finalized slot.
+                  ignoreIfKnown: isValid,
+                  ignoreIfFinalized: isValid,
                 });
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+                if (protoBlock === null) {
+                  throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
+                }
+                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
+                expectValidProgressiveBalances(postState, metrics);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                // Runner accommodation with a known limitation: the spec re-processes a duplicate
-                // block (re-runs the state transition and may refresh timeliness/boost/checkpoint
-                // state), while lodestar's production import path rejects duplicates with
-                // ALREADY_KNOWN. Treat as success; a vector that relies on duplicate-block side
-                // effects would diverge here.
-                if (isValid && e instanceof BlockError && e.type.code === BlockErrorCode.ALREADY_KNOWN) {
-                  logger.debug(`Step ${i}/${stepsLen} block already known — treating as no-op success`, {
-                    id: step.block,
-                  });
-                } else if (isValid || (e as Error).message === "Expect error since this is a negative test") {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") {
                   throw e;
                 }
               }
@@ -626,20 +630,38 @@ export const forkChoiceTestRunner =
                   }))
                   .sort(cmpViableHead);
 
-                // The set of viable heads is determined by justified/finalized epochs, not weight,
-                // so identity must match exactly. Comparing the full sets (not a subset) also
-                // rejects a degenerate empty result.
-                expect(actual.map(({root, payloadStatus}) => ({root, payloadStatus}))).toEqualWithMessage(
-                  expected.map(({root, payloadStatus}) => ({root, payloadStatus})),
-                  `Invalid viable head roots at step ${i}`
-                );
-
-                for (const [k, act] of actual.entries()) {
-                  const exp = expected[k];
-                  expect(act.weightGwei).toEqualWithMessage(
-                    exp.weightGwei,
-                    `Invalid viable head weight for ${act.root} at step ${i}`
+                if (isGloas) {
+                  // TODO GLOAS: Assert set equality once https://github.com/ethereum/consensus-specs/issues/5496 is
+                  // resolved. Lodestar prunes payload-status variants failing the FFG check while the spec keeps them.
+                  expect(actual.length).toBeGreaterThan(0);
+                  const expectedByKey = new Map(expected.map((e) => [`${e.root}/${e.payloadStatus}`, e]));
+                  for (const act of actual) {
+                    const exp = expectedByKey.get(`${act.root}/${act.payloadStatus}`);
+                    expect(exp !== undefined).toEqualWithMessage(
+                      true,
+                      `Viable head ${act.root} (payloadStatus ${act.payloadStatus}) not in spec's leaf set at step ${i}`
+                    );
+                    expect(act.weightGwei).toEqualWithMessage(
+                      exp?.weightGwei,
+                      `Invalid viable head weight for ${act.root} at step ${i}`
+                    );
+                  }
+                } else {
+                  // The set of viable heads is determined by justified/finalized epochs, not weight,
+                  // so identity must match exactly. Comparing the full sets (not a subset) also
+                  // rejects a degenerate empty result.
+                  expect(actual.map(({root, payloadStatus}) => ({root, payloadStatus}))).toEqualWithMessage(
+                    expected.map(({root, payloadStatus}) => ({root, payloadStatus})),
+                    `Invalid viable head roots at step ${i}`
                   );
+
+                  for (const [k, act] of actual.entries()) {
+                    const exp = expected[k];
+                    expect(act.weightGwei).toEqualWithMessage(
+                      exp.weightGwei,
+                      `Invalid viable head weight for ${act.root} at step ${i}`
+                    );
+                  }
                 }
               }
               if (step.checks.should_override_forkchoice_update) {
@@ -682,6 +704,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
+          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
         } finally {
           await chain.close();
         }
@@ -758,27 +781,10 @@ export const forkChoiceTestRunner =
             payloadAttestationMessages,
           };
         },
-        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
-        timeout: 15000,
+        // Must exceed BLOB_AVAILABILITY_TIMEOUT for on_block_peerdas__not_available to fail as expected.
+        // Gloas compliance vectors have up to ~650 steps and need the extra headroom.
+        timeout: 60000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION: these are skipped here because the testId is the same for the whole directory
-        // (`deneb/fork_choice/on_block/pyspec_tests`) so a prefix match cannot single them out.
-        //
-        // All four are negative vectors whose only invalid property is the blob data. Blob download,
-        // gossip and validation were removed for deneb..electra, so the runner never loads the blobs
-        // and the block imports successfully — the expected rejection can no longer be produced.
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          name.includes("invalid_data_unavailable") ||
-          name.includes("invalid_wrong_blobs_length") ||
-          name.includes("invalid_wrong_proofs_length") ||
-          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          ((name.includes("gloas") || name.includes("heze")) &&
-            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
-              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))),
       },
     };
   };

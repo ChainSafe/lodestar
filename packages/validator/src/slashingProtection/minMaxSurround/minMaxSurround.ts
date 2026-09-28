@@ -1,4 +1,4 @@
-import {BLSPubkey} from "@lodestar/types";
+import {BLSPubkey, Epoch} from "@lodestar/types";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestation} from "./interface.js";
 
@@ -9,7 +9,8 @@ import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestatio
  * Number of epochs in the past to check for surrounding attestations.
  *
  * This value can be limited to a reasonable high amount as Lodestar does not solely rely on this strategy but also
- * implements the minimal strategy which has been formally proven to be safe (https://github.com/michaelsproul/slashing-proofs).
+ * rejects any source epoch below `minSpanCoverageStart` of the latest recorded attestation, which is the minimal
+ * strategy (formally proven safe, https://github.com/michaelsproul/slashing-proofs) relaxed by this lookback.
  *
  * Limiting this value is required due to practical reasons as otherwise there would be a min-span DB read and write
  * for each validator from current epoch until genesis which massively increases DB size and causes I/O lag, resulting in
@@ -30,6 +31,11 @@ export class MinMaxSurround implements IMinMaxSurround {
     this.maxEpochLookback = options?.maxEpochLookback ?? DEFAULT_MAX_EPOCH_LOOKBACK;
   }
 
+  /** Lowest epoch with a min-span entry after inserting an attestation with `sourceEpoch` */
+  minSpanCoverageStart(sourceEpoch: Epoch): Epoch {
+    return Math.max(0, sourceEpoch - 1 - this.maxEpochLookback);
+  }
+
   async assertNoSurround(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
     await this.assertNotSurrounding(pubKey, attestation);
     await this.assertNotSurrounded(pubKey, attestation);
@@ -45,7 +51,7 @@ export class MinMaxSurround implements IMinMaxSurround {
   private async updateMinSpan(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
     await this.assertNotSurrounding(pubKey, attestation);
 
-    const untilEpoch = Math.max(0, attestation.sourceEpoch - 1 - this.maxEpochLookback);
+    const untilEpoch = this.minSpanCoverageStart(attestation.sourceEpoch);
 
     const values: DistanceEntry[] = [];
     for (let epoch = attestation.sourceEpoch - 1; epoch >= untilEpoch; epoch--) {

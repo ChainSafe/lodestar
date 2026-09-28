@@ -217,7 +217,29 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         }
       }
     } else {
-      await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+      const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+      // We log orphaned payloads to work with different clients
+      // in the future, consider applying penalties in certain conditions
+      // make sure the payload source was from range sync in that case
+      for (const {slot, payloadEnvelopeInput} of orphaned) {
+        const {peerIdStr, source} = payloadEnvelopeInput.getPayloadEnvelopeSource();
+        let client = "unknown";
+        if (peerIdStr !== undefined) {
+          try {
+            client = this.getConnectedPeerSyncMeta(peerIdStr).client;
+          } catch {
+            // peer disconnected since serving the envelope, keep "unknown"
+          }
+        }
+        this.logger.debug("Orphaned payload envelope in range sync batch", {
+          slot,
+          root: payloadEnvelopeInput.blockRootHex,
+          peer: peerIdStr ?? "unknown",
+          source,
+          client,
+          skipped,
+        });
+      }
     }
   };
 

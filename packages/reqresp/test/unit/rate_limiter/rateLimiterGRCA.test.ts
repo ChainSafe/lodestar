@@ -17,12 +17,16 @@ describe("rateLimiterGRCA", () => {
   });
 
   describe("allows()", () => {
-    it("should throw error if requested for a zero value", () => {
-      expect(() => rateLimiter.allows(null, 0)).toThrow("Token value should always be positive. Given: 0");
+    it("should charge (not throw) a zero-token request, clamping it to 1", () => {
+      expect(rateLimiter.allows(null, 0)).toBe(true);
+      expect(rateLimiter.allows(null, -1)).toBe(true);
     });
 
-    it("should throw error if requested for a negative value", () => {
-      expect(() => rateLimiter.allows(null, -1)).toThrow("Token value should always be positive. Given: -1");
+    it("should count clamped zero-token requests against the quota until it is exhausted", () => {
+      for (let i = 0; i < limit; i++) {
+        expect(rateLimiter.allows(null, 0), `zero-token request ${i} should be charged and allowed`).toBe(true);
+      }
+      expect(rateLimiter.allows(null, 0)).toBe(false);
     });
 
     it("should return valid number of requests within request window", () => {

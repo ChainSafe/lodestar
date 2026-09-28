@@ -2,6 +2,7 @@ import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
+import {OrphanedPayloadEnvelope} from "./utils/chainSegment.js";
 
 type DataColumnData = {
   dataColumn: fulu.DataColumnSidecar;
@@ -80,4 +81,12 @@ export type FullyVerifiedBlock = {
   seenTimestampSec: number;
   /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
   executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
+};
+
+/**
+ * Result of processing a chain segment.
+ */
+export type ProcessBlocksResult = {
+  orphaned: OrphanedPayloadEnvelope[];
+  skipped: boolean;
 };

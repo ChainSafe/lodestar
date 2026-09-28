@@ -732,7 +732,8 @@ export class ForkChoice implements IForkChoice {
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    blockDelaySec: number,
+    receiveDelaySec: number,
+    importDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -804,7 +805,7 @@ export class ForkChoice implements IForkChoice {
     // Decide whether this block should receive proposer boost, and whether the block is timely.
     // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
     // `protoArray.onBlock()` succeeds
-    const isTimely = this.isBlockTimely(block, blockDelaySec);
+    const isTimely = this.isBlockReceivedTimely(block, receiveDelaySec);
     const isProposerBoostBlock =
       this.opts?.proposerBoost === true &&
       isTimely &&
@@ -875,7 +876,8 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
-      ptcTimeliness: this.isBlockPtcTimely(block, blockDelaySec),
+      ptcTimeliness: this.isBlockPtcTimely(block, receiveDelaySec),
+      importedTimely: this.isBlockImportedTimely(block, importDelaySec),
       proposerIndex: block.proposerIndex,
 
       justifiedEpoch: stateJustifiedEpoch,
@@ -1731,7 +1733,7 @@ export class ForkChoice implements IForkChoice {
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockReceivedTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const fork = this.config.getForkName(block.slot);
     const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(fork);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
@@ -1750,6 +1752,17 @@ export class ForkChoice implements IForkChoice {
   protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
     return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
+  }
+
+  /**
+   * Return true if THIS node finished importing the block before the attestation cutoff, ie. the
+   * block was imported in a timely manner for its own slot.
+   * This is not part of the spec, we use this to determine late canonical blocks.
+   */
+  protected isBlockImportedTimely(block: BeaconBlock, importDelaySec: number): boolean {
+    const fork = this.config.getForkName(block.slot);
+    const isBeforeLateBlockCutoff = importDelaySec * 1000 < this.config.getAttestationDueMs(fork);
+    return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
   /**

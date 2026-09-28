@@ -148,6 +148,9 @@ export type ProtoBlock = BlockExtraMeta & {
   // Spec: gloas/fork-choice.md#modified-record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
   ptcTimeliness: boolean;
 
+  // Indicate whether THIS node finished importing the block before the attestation cutoff
+  importedTimely: boolean;
+
   // The index of the block proposer. Used by should_apply_proposer_boost to detect proposer equivocations
   proposerIndex: ValidatorIndex;
 

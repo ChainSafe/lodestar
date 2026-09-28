@@ -35,7 +35,7 @@ import {
   isSignedExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -47,6 +47,8 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -217,7 +219,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_gossip_failure"
+              "api_reject_gossip_failure",
+              blockRoot
             );
             throw error;
           }
@@ -240,7 +243,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_parent_unknown"
+              "api_reject_parent_unknown",
+              blockRoot
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
@@ -260,7 +264,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw error;
           }
@@ -289,7 +294,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw e;
           }
@@ -1041,16 +1047,6 @@ export function getBeaconBlockApi({
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(elapsedSec * 1000)
-        );
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
-
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
@@ -1063,7 +1059,7 @@ export function getBeaconBlockApi({
         builderIndex: bid.builderIndex,
         blockHash: toRootHex(bid.blockHash),
         parentBlockHash: toRootHex(bid.parentBlockHash),
-        value: bid.value,
+        value: prettyGweiToEth(bid.value),
         sentPeers,
       });
     },
@@ -1083,9 +1079,20 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      try {
+        data = context?.returnBytes
+          ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+          : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      } catch (e) {
+        if (e instanceof EnvelopeReconstructionError) {
+          throw new ApiError(
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ? 503 : 500,
+            `Failed to reconstruct execution payload envelope: ${e.message}`
+          );
+        }
+        throw e;
+      }
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);

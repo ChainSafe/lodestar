@@ -3,6 +3,7 @@ export * from "./attesterSlashingError.js";
 export * from "./blockError.js";
 export * from "./blsToExecutionChangeError.js";
 export * from "./dataColumnSidecarError.js";
+export * from "./envelopeReconstructionError.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
 export * from "./gossipValidation.js";

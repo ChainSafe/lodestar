@@ -110,7 +110,7 @@ export function upgradeStateToGloas(
     ssz.gloas.PendingConsolidations
   );
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
-  stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
+  stateGloasView.ptcWindow = ssz.gloas.PayloadTimelinessCommitteeWindow.toViewDU(initializePtcWindow(stateFulu));
 
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);
