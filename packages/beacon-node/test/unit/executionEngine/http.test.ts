@@ -1,9 +1,10 @@
 import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
-import {ForkName} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
+  BLOB_AND_PROOF_V2_RPC_BYTES,
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
@@ -313,6 +314,29 @@ describe("ExecutionEngine / http", () => {
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+  });
+
+  it("getBlobs does not write into the caller's pooled buffers", async () => {
+    const proofHex = `0x${"22".repeat(48)}`;
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 1,
+      result: [
+        {
+          blob: `0x${"11".repeat(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)}`,
+          proofs: Array.from({length: CELLS_PER_EXT_BLOB}, () => proofHex),
+        },
+      ],
+    };
+    // GetBlobsTracker pools one buffer per max blob, which is usually more than the requested blobs
+    const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
+
+    const res = await executionEngine.getBlobs(ForkName.fulu, [new Uint8Array(32)], buffers);
+
+    expect(res?.length).toBe(1);
+    expect(res?.[0].proofs[0]).toEqual(new Uint8Array(48).fill(0x22));
+    // Sidecars keep the returned proofs after the tracker reuses its buffers, so they must not alias them
+    expect(buffers.every((buffer) => buffer.every((byte) => byte === 0))).toBe(true);
   });
 
   it("error - unknown payload", async () => {

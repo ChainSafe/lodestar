@@ -6,12 +6,11 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   SLOTS_PER_EPOCH,
-  isForkPostDeneb,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BLSSignature, RootHex, SignedBeaconBlock, Slot, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
@@ -20,19 +19,15 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlockInput,
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
-  ForkBlobsDA,
   IBlockInput,
   LogMetaBasic,
-  LogMetaBlobs,
   LogMetaColumns,
   SourceMeta,
-  isBlockInputBlobs,
   isBlockInputColumns,
   isDaOutOfRange,
 } from "../blocks/blockInput/index.js";
@@ -61,20 +56,17 @@ export type SeenBlockInputCacheModules = {
   logger?: Logger;
 };
 
-export type GetByBlobOptions = {
+export type GetByColumnOptions = {
   throwErrorIfAlreadyKnown?: boolean;
 };
 
 /**
  * Consumers that create BlockInputs or change types of old BlockInputs
  *
- * - gossipHandlers (block and blob)
- * - beaconBlocksMaybeBlobsByRange
- * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
+ * - gossipHandlers (block and data column)
+ * - cacheByRangeResponses in sync/utils/downloadByRange.ts
+ * - downloadByRoot in sync/utils/downloadByRoot.ts
  * - publishBlock in the beacon/blocks/index.ts API
- *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
- * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
- *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
  *
  *
  * Pruning management for SeenBlockInputCache
@@ -214,17 +206,6 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-      } else if (!isForkPostDeneb(forkName)) {
-        // Pre-deneb
-        blockInput = BlockInputPreData.createFromBlock({
-          block,
-          blockRootHex,
-          daOutOfRange,
-          forkName,
-          source,
-          seenTimestampSec,
-          peerIdStr,
-        });
       } else if (isForkPostFulu(forkName)) {
         // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
@@ -239,9 +220,8 @@ export class SeenBlockInput {
           peerIdStr,
         });
       } else {
-        // Deneb and Electra
-        blockInput = BlockInputBlobs.createFromBlock({
-          block: block as SignedBeaconBlock<ForkBlobsDA>,
+        blockInput = BlockInputPreData.createFromBlock({
+          block,
           blockRootHex,
           daOutOfRange,
           forkName,
@@ -264,66 +244,6 @@ export class SeenBlockInput {
     return blockInput as BlockInput;
   }
 
-  getByBlob(
-    {
-      blockRootHex,
-      blobSidecar,
-      source,
-      seenTimestampSec,
-      peerIdStr,
-    }: SourceMeta & {blockRootHex: RootHex; blobSidecar: deneb.BlobSidecar},
-    opts: GetByBlobOptions = {}
-  ): BlockInputBlobs {
-    // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
-    let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
-    let created = false;
-    if (!blockInput) {
-      created = true;
-      const {forkName, daOutOfRange} = this.buildCommonProps(blobSidecar.signedBlockHeader.message.slot);
-      blockInput = BlockInputBlobs.createFromBlob({
-        blobSidecar,
-        blockRootHex,
-        daOutOfRange,
-        forkName,
-        source,
-        seenTimestampSec,
-        peerIdStr,
-      });
-      this.metrics?.seenCache.blockInput.createdByBlob.inc();
-      this.blockInputs.set(blockRootHex, blockInput);
-    }
-
-    if (!isBlockInputBlobs(blockInput)) {
-      throw new SeenBlockInputCacheError(
-        {
-          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
-          cachedType: blockInput.type,
-          requestedType: DAType.Blobs,
-          ...blockInput.getLogMeta(),
-        },
-        `BlockInputType mismatch adding blobIndex=${blobSidecar.index}`
-      );
-    }
-
-    if (!blockInput.hasBlob(blobSidecar.index)) {
-      blockInput.addBlob({blobSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
-    } else if (!created) {
-      this.logger?.debug(
-        `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
-        blockInput.getLogMeta()
-      );
-      this.metrics?.seenCache.blockInput.duplicateBlobCount.inc({source});
-      if (opts.throwErrorIfAlreadyKnown) {
-        throw new SeenBlockInputCacheError({
-          code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN,
-          ...blockInput.getLogMeta(),
-        });
-      }
-    }
-
-    return blockInput;
-  }
-
   getByColumn(
     {
       blockRootHex,
@@ -332,7 +252,7 @@ export class SeenBlockInput {
       source,
       peerIdStr,
     }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
-    opts: GetByBlobOptions = {}
+    opts: GetByColumnOptions = {}
   ): BlockInputColumns {
     let blockInput = this.blockInputs.get(blockRootHex);
     let created = false;
@@ -449,7 +369,6 @@ export class SeenBlockInput {
 
 enum SeenBlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
-  GOSSIP_BLOB_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_BLOB_ALREADY_KNOWN",
   GOSSIP_COLUMN_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_COLUMN_ALREADY_KNOWN",
 }
 
@@ -458,9 +377,6 @@ type SeenBlockInputCacheErrorType =
       code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
       cachedType: DAType;
       requestedType: DAType;
-    })
-  | (LogMetaBlobs & {
-      code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN;
     })
   | (LogMetaColumns & {
       code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN;

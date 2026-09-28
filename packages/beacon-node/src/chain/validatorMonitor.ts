@@ -21,7 +21,6 @@ import {
   SubnetID,
   ValidatorIndex,
   altair,
-  deneb,
   gloas,
 } from "@lodestar/types";
 import {
@@ -70,7 +69,6 @@ export type ValidatorMonitor = {
     balances?: number[]
   ): void;
   registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
-  registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerExecutionPayloadEnvelope(
     src: OpSource,
     delaySec: Seconds,
@@ -460,10 +458,6 @@ export function createValidatorMonitor(
           successfullyImported: false,
         });
       }
-    },
-
-    registerBlobSidecar(_src, _seenTimestampSec, _blob) {
-      //TODO: freetheblobs
     },
 
     registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {

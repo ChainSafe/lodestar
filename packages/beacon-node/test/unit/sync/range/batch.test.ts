@@ -175,7 +175,6 @@ describe("sync / range / batch", async () => {
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
 
@@ -186,33 +185,10 @@ describe("sync / range / batch", async () => {
       let batch: Batch;
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
-      it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
+      it("should make blocks-only requests for deneb-era epochs (blob download removed)", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should make default ForkDABlobs requests if current epoch is the last in request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should not make ForkDABlobs requests if current epoch is ahead of request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -227,7 +203,6 @@ describe("sync / range / batch", async () => {
 
       it("should make ForkDAColumns requests if no existing blocks are passed", () => {
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -242,7 +217,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -257,7 +231,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -266,7 +239,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
     });
 
@@ -282,7 +254,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
         startSlot: batch.startSlot,
         count: batch.count,

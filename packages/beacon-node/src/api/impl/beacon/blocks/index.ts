@@ -36,7 +36,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -66,7 +66,6 @@ import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
-  getBlobSidecars,
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
@@ -135,40 +134,27 @@ export function getBeaconBlockApi({
       });
     }
 
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
+    // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
+    // Legacy pre-fulu block contents are accepted, but their blobs are discarded.
+    let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
 
-    if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostGloas(fork)) {
-        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
-        blobSidecars = [];
-        dataColumnSidecars = [];
-      } else if (isForkPostFulu(fork)) {
-        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        // If the block was produced by this node, we will already have computed cells
-        // Otherwise, we will compute them from the blobs in this function
-        const cells =
-          (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
-          signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
-        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
-          cells: rowCells,
-          proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
-        }));
-        dataColumnSidecars = getDataColumnSidecarsFromBlock(
-          config,
-          signedBlock as SignedBeaconBlock<ForkPostFulu>,
-          cellsAndProofs
-        ) as fulu.DataColumnSidecar[];
-        timer?.();
-        blobSidecars = [];
-      } else if (isForkPostDeneb(fork)) {
-        blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
-        dataColumnSidecars = [];
-      } else {
-        throw Error(`Invalid data fork=${fork} for publish`);
-      }
-    } else {
-      blobSidecars = [];
-      dataColumnSidecars = [];
+    if (isDenebBlockContents(signedBlockContents) && isForkPostFulu(fork) && !isForkPostGloas(fork)) {
+      const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+      // If the block was produced by this node, we will already have computed cells
+      // Otherwise, we will compute them from the blobs in this function
+      const cells =
+        (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
+        signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
+      const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+        cells: rowCells,
+        proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+      }));
+      dataColumnSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        signedBlock as SignedBeaconBlock<ForkPostFulu>,
+        cellsAndProofs
+      ) as fulu.DataColumnSidecar[];
+      timer?.();
     }
 
     if (isBlockInputColumns(blockForImport)) {
@@ -183,19 +169,6 @@ export function getBeaconBlockApi({
           // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
           // Data columns may arrive via gossip from another node before the API publish completes,
           // so we allow duplicates here instead of throwing an error.
-          {throwOnDuplicateAdd: false}
-        );
-      }
-    } else if (isBlockInputBlobs(blockForImport)) {
-      for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob(
-          {
-            blockRootHex: blockRoot,
-            blobSidecar,
-            source: BlockInputSource.api,
-            seenTimestampSec,
-          },
-          // Same as above for columns
           {throwOnDuplicateAdd: false}
         );
       }
@@ -398,7 +371,6 @@ export function getBeaconBlockApi({
       //
       () => network.publishBeaconBlock(signedBlock),
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
@@ -469,20 +441,6 @@ export function getBeaconBlockApi({
             kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
-      }
-    } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-      const blobSidecars = blockForImport.getBlobs();
-      const versionedHashes = blockForImport.getVersionedHashes();
-
-      for (const blobSidecar of blobSidecars) {
-        const {index, kzgCommitment} = blobSidecar;
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot,
-          slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(versionedHashes[index]),
-        });
       }
     }
   };

@@ -3,7 +3,7 @@ import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -12,11 +12,9 @@ import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
  *
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
- *
- * Block+blobs (pre-fulu) and data columns (fulu+) are written in parallel.
  */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];
+  const promises: Promise<void>[] = [writeBlockToDb.call(this, blockInput)];
 
   if (isBlockInputColumns(blockInput)) {
     promises.push(writeDataColumnsToDb.call(this, blockInput));
@@ -26,7 +24,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockI
   this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot, root: blockInput.blockRootHex});
 }
 
-async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
+async function writeBlockToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   const block = blockInput.getBlock();
   const slot = block.message.slot;
   const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
@@ -34,38 +32,17 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
   const numBlobs = isForkPostDeneb(blockInput.forkName)
     ? getBlobKzgCommitments(blockInput.forkName, block as SignedBeaconBlock<ForkPostDeneb>).length
     : undefined;
-  const fnPromises: Promise<void>[] = [];
+  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
 
   const blockBytes = this.serializedCache.get(block);
   if (blockBytes) {
     // skip serializing data if we already have it
     this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
+    await this.db.block.putBinary(this.db.block.getId(block), blockBytes);
   } else {
     this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    fnPromises.push(this.db.block.add(block));
+    await this.db.block.add(block);
   }
-
-  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
-
-  if (isBlockInputBlobs(blockInput)) {
-    fnPromises.push(
-      (async () => {
-        if (!blockInput.hasAllData()) {
-          await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-        }
-        const blobSidecars = blockInput.getBlobs();
-        await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          slot,
-          root: blockRootHex,
-          numBlobs: blobSidecars.length,
-        });
-      })()
-    );
-  }
-
-  await Promise.all(fnPromises);
 }
 
 /**

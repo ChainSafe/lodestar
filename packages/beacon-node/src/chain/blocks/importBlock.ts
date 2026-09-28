@@ -46,7 +46,7 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
-import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
+import {isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -583,10 +583,6 @@ export async function importBlock(
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
       this.metrics?.dataColumns.bySource.inc({source});
-    }
-  } else if (isBlockInputBlobs(blockInput)) {
-    for (const {source} of blockInput.getAllBlobsWithSource()) {
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
     }
   }
 

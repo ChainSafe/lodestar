@@ -1,7 +1,6 @@
 import {Logger} from "@lodestar/logger";
-import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -34,7 +33,6 @@ import {
   ExecutionPayloadBody,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
-  deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBody,
@@ -115,7 +113,6 @@ const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 
@@ -505,48 +502,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getBlobs(
-    fork: ForkPostFulu,
+    _fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
-  async getBlobs(
-    fork: ForkName,
-    versionedHashes: VersionedHashes
-  ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
+    _buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
-    if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex);
-    }
-    return await this.getBlobsV1(versionedHashesHex);
-  }
-
-  private async getBlobsV1(versionedHashesHex: string[]) {
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV1"],
-      EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >(
-      {
-        method: "engine_getBlobsV1",
-        params: [versionedHashesHex],
-      },
-      getBlobsV1Opts
-    );
-
-    const invalidLength = response.length !== versionedHashesHex.length;
-
-    if (invalidLength) {
-      const error = `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashesHex.length}`;
-      this.logger.error(error);
-      throw Error(error);
-    }
-
-    return response.map(deserializeBlobAndProofs);
+    // Pooled buffers are not forwarded: GetBlobsTracker sizes them by max blobs rather than the request,
+    // and data column sidecars retain the returned proofs after the tracker reuses the buffers
+    return await this.getBlobsV2(versionedHashesHex);
   }
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {

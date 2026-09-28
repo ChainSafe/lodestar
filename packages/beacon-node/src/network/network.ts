@@ -23,7 +23,6 @@ import {
   SubnetID,
   altair,
   capella,
-  deneb,
   fulu,
   gloas,
   isGloasDataColumnSidecar,
@@ -41,7 +40,6 @@ import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
   BeaconBlocksByRootRequest,
-  BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
@@ -151,7 +149,6 @@ export class Network implements INetwork {
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
@@ -249,7 +246,6 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
@@ -358,15 +354,6 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock);
-  }
-
-  async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
-    const epoch = computeEpochAtSlot(blobSidecar.signedBlockHeader.message.slot);
-    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
-
-    const subnet = blobSidecar.index;
-
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar);
   }
 
   async publishDataColumnSidecar(
@@ -639,28 +626,6 @@ export class Network implements INetwork {
     );
   }
 
-  async sendBlobSidecarsByRange(
-    peerId: PeerIdStr,
-    request: deneb.BlobSidecarsByRangeRequest
-  ): Promise<deneb.BlobSidecar[]> {
-    const epoch = computeEpochAtSlot(request.startSlot);
-    return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
-      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * this.config.getMaxBlobsPerBlock(epoch),
-      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
-    );
-  }
-
-  async sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]> {
-    return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
-      request.length,
-      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot],
-      this.chain.serializedCache
-    );
-  }
-
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
@@ -849,10 +814,6 @@ export class Network implements INetwork {
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
     await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
-  };
-
-  private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
   };
 
   private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
