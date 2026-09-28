@@ -398,6 +398,7 @@ export const fixtures = [
   ...vmHostNative(),
   ...gossipScores(),
   ...gossipMessages(),
+  ...peerReportsAndDialTime(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -1173,5 +1174,65 @@ function gossipMessages() {
         {labels: '{%T,reason="graft_flood"}', value: 0},
       ]
     ),
+  ];
+}
+
+/** Host peer report submissions beside libp2p's, and the native time from selecting an attempt to its outcome */
+function peerReportsAndDialTime() {
+  const buckets = (target, le) => ({
+    [`lodestar_native_peer_dial_time_seconds_bucket{${target},outcome="connected",le="0.25"}`]: perSecond(16),
+    [`lodestar_native_peer_dial_time_seconds_bucket{${target},outcome="connected",le="${le}"}`]: perSecond(20),
+    [`lodestar_native_peer_dial_time_seconds_bucket{${target},outcome="connected",le="+Inf"}`]: perSecond(20),
+  });
+  return [
+    nativeQuery(
+      "lodestar_networking.json",
+      507,
+      "B",
+      {
+        'lodestar_native_peer_reports_total{%T,reason="BadGossipBlock",action="low_tolerance"}': perSecond(0.5),
+        'lodestar_native_peer_reports_total{%T,reason="BadGossipBlock",action="mid_tolerance"}': perSecond(0.25),
+        'lodestar_native_peer_reports_total{%T,reason="other",action="fatal"}': perSecond(0),
+      },
+      [
+        {labels: '{%T,reason="BadGossipBlock"}', value: 0.75},
+        {labels: '{%T,reason="other"}', value: 0},
+      ]
+    ),
+    nativeQuery(
+      "lodestar_discv5.json",
+      60,
+      "A",
+      {
+        'lodestar_native_peer_dial_time_seconds_sum{%T,outcome="connected"}': perSecond(0.5),
+        'lodestar_native_peer_dial_time_seconds_count{%T,outcome="connected"}': perSecond(2),
+        'lodestar_native_peer_dial_time_seconds_sum{%T,outcome="deferred"}': perSecond(0.1),
+        'lodestar_native_peer_dial_time_seconds_count{%T,outcome="deferred"}': perSecond(1),
+      },
+      [
+        {labels: '{%T,outcome="connected"}', value: 0.25},
+        {labels: '{%T,outcome="deferred"}', value: 0.1},
+      ]
+    ),
+    {
+      dashboard: "lodestar_discv5.json",
+      panel: 60,
+      refId: "B",
+      cases: [
+        {
+          name: "p95 per target and outcome with either le spelling; a libp2p dial histogram has no result",
+          series: {
+            ...buckets(native, "1.0"),
+            ...buckets(nativeOther, "1"),
+            [`lodestar_discovery_dial_time_seconds_bucket{${libp2p},status="success",le="5"}`]: perSecond(1),
+            [`lodestar_discovery_dial_time_seconds_bucket{${libp2p},status="success",le="+Inf"}`]: perSecond(1),
+          },
+          expect: [
+            {labels: `{${native},outcome="connected"}`, value: 0.8125},
+            {labels: `{${nativeOther},outcome="connected"}`, value: 0.8125},
+          ],
+        },
+      ],
+    },
   ];
 }

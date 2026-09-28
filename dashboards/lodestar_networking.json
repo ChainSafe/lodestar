@@ -1324,6 +1324,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Peer misbehaviour reports Lodestar submitted per second, by reason. libp2p counts each report as its peer score store applies it; native counts each submission before native merges a peer's pending reports, so the native series counts submissions, not applied penalties. Native reasons outside Lodestar's fixed report names, such as sync download error messages, read as other.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1402,9 +1403,14 @@
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
           "refId": "A"
+        },
+        {
+          "expr": "sum without (action) (rate(lodestar_native_peer_reports_total[$rate_interval]))",
+          "legendFormat": "{{reason}}",
+          "refId": "B"
         }
       ],
-      "title": "Peer bad behaviour reports by reason",
+      "title": "Peer bad behaviour reports submitted by reason / sec",
       "type": "timeseries"
     },
     {

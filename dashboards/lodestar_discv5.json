@@ -1185,7 +1185,7 @@
           "refId": "A"
         }
       ],
-      "title": "dial time seconds",
+      "title": "dial time seconds (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -2209,6 +2209,40 @@
         }
       ],
       "title": "Native selected attempts and their outcomes (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time from selecting a connection attempt to its outcome, mean and p95 by outcome. It includes local start deferrals, and a connected attempt ends at connection admission, before Status and Metadata, so this is not handshake latency. Each outcome's count equals its selected attempt outcome count.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 114
+      },
+      "id": 60,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_peer_dial_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_native_peer_dial_time_seconds_count[$rate_interval])",
+          "legendFormat": "mean {{outcome}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(lodestar_native_peer_dial_time_seconds_bucket[$rate_interval]))",
+          "legendFormat": "p95 {{outcome}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Native selected attempt to outcome time",
       "type": "timeseries"
     }
   ],
