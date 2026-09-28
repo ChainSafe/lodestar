@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
+[![Eth Consensus Spec v1.7.0-beta.2](https://img.shields.io/badge/ETH%20consensus--spec-1.7.0--beta.2-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.7.0-beta.2)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-24.x-green)
 
