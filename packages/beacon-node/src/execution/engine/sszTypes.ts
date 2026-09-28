@@ -12,7 +12,8 @@ import {CELLS_PER_EXT_BLOB, ForkName, ForkPostBellatrix, MAX_BYTES_PER_TRANSACTI
 import {ssz} from "@lodestar/types";
 
 /**
- * SSZ containers of the REST engine API, per execution-apis `src/engine/refactor-ssz.md`.
+ * SSZ containers of the REST engine API, per execution-apis `src/engine/refactor-ssz.md`
+ * at 5bcdc34a477b10af278c079525374e6a4046f291.
  *
  * Execution payloads, withdrawals and blobs bundles are shared with the consensus types since
  * they serialize identically. Everything else is transport-only and therefore defined here.

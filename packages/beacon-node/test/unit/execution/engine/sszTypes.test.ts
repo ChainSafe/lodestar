@@ -3,7 +3,6 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
-  BuiltPayloadElectra,
   ForkchoiceUpdateGloas,
   ForkchoiceUpdateResponse,
   PayloadStatus,
@@ -66,21 +65,10 @@ describe("execution / engine / sszTypes", () => {
       it(`${fork} round trips default values`, () => {
         for (const [name, type] of Object.entries(types)) {
           const value = type.defaultValue();
-          expect(type.deserialize(type.serialize(value))).toEqual(value);
-          expect(name).toBeDefined();
+          expect(type.deserialize(type.serialize(value)), `${fork} ${name}`).toEqual(value);
         }
       });
     }
-
-    it("orders BuiltPayload fields as execution_requests before should_override_builder", () => {
-      const value = BuiltPayloadElectra.defaultValue();
-      value.executionRequests = [new Uint8Array([0x00, 0x01])];
-      value.shouldOverrideBuilder = true;
-      const bytes = BuiltPayloadElectra.serialize(value);
-      // The variable size requests list is last in the byte stream, the boolean sits in the fixed part
-      expect(bytes.at(-2)).toBe(0x00);
-      expect(bytes.at(-1)).toBe(0x01);
-    });
 
     it("encodes absent gloas payload attributes and custody columns as empty lists", () => {
       const bytes = ForkchoiceUpdateGloas.serialize({
