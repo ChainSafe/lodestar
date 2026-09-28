@@ -147,6 +147,13 @@ export class PayloadOrchestrator {
 
   private async runJob(job: PayloadBuildJob, signal: AbortSignal): Promise<BuiltPayload> {
     const prepareTimeout = job.getPayloadAt - Date.now();
+    if (prepareTimeout > MAX_TIMER_DELAY) {
+      throw new PayloadOrchestratorError({
+        code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT,
+        jobId: job.id,
+        getPayloadAt: job.getPayloadAt,
+      });
+    }
     if (prepareTimeout <= 0) {
       throw new PayloadOrchestratorError(
         {

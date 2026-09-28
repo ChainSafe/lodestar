@@ -130,6 +130,32 @@ describe("PayloadOrchestrator", () => {
     expect(orchestrator.activeJobCount).toBe(0);
   });
 
+  it("rejects a preparation delay that overflows after the clock moves backwards", async () => {
+    const source = new StubPayloadSource();
+    const pendingPrepare = defer<BuildHandle>();
+    source.prepareImpl = () => pendingPrepare.promise;
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const getPayloadAt = NOW + 2 ** 31 - 1;
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValueOnce(NOW)
+      .mockReturnValue(NOW - 1);
+
+    try {
+      const rejected = expect(
+        orchestrator.run(buildJob("clock-change", getPayloadAt), new AbortController().signal)
+      ).rejects.toMatchObject({
+        type: {code: PayloadOrchestratorErrorCode.INVALID_GET_PAYLOAD_AT, jobId: "clock-change", getPayloadAt},
+      });
+      await Promise.all([rejected, vi.advanceTimersByTimeAsync(1)]);
+      expect(source.prepareCalls).toHaveLength(0);
+      expect(orchestrator.activeJobCount).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("prepares immediately and retrieves at the requested time", async () => {
     const source = new StubPayloadSource();
     const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 2, getPayloadTimeout: 50});
