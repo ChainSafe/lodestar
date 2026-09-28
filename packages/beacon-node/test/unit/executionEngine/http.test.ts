@@ -326,7 +326,11 @@ describe("ExecutionEngine / http", () => {
     // GetBlobsTracker preallocates one buffer per max blobs of the epoch, not per requested hash
     const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
 
-    const res = await executionEngine.getBlobs(ForkName.fulu, [Uint8Array.from(Buffer.from(versionedHash.slice(2), "hex"))], buffers);
+    const res = await executionEngine.getBlobs(
+      ForkName.fulu,
+      [Uint8Array.from(Buffer.from(versionedHash.slice(2), "hex"))],
+      buffers
+    );
 
     expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getBlobsV2", params: [[versionedHash]]});
     expect(res?.length).toBe(1);
