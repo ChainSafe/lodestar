@@ -112,7 +112,7 @@ Use `--execution.engineApi` to select how Lodestar communicates with the executi
 
 In `auto` mode, a capabilities `404` selects JSON-RPC until the execution client reconnects. Temporary discovery failures, such as timeouts or server errors, use JSON-RPC while allowing another probe after 12 seconds. Authentication failures and malformed capability responses remain errors.
 
-After REST is selected, request failures do not switch protocols. The exception in `auto` mode is an explicit `400 /engine-api/errors/unsupported-fork`: Lodestar logs a warning, retries through JSON-RPC, and remembers that choice for the fork until reconnection. An unknown payload, invalid forkchoice, or invalid payload does not trigger this workaround.
+After REST is selected, request failures do not switch protocols. The exception in `auto` mode is an explicit `400 /engine-api/errors/unsupported-fork`: Lodestar retries through JSON-RPC and remembers that choice for the fork until reconnection. An unknown payload, invalid forkchoice, or invalid payload does not trigger this workaround.
 
 Both REST modes honor advertised request-size limits. Oversized requests fail locally; Lodestar does not split them into smaller requests automatically.
 

@@ -11,9 +11,11 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
+import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
 import {
@@ -253,12 +255,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         )
       );
     } catch (e) {
-      this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}), e as Error);
-      return {
-        status: isEngineResponseError(e as Error) ? ExecutionPayloadStatus.ELERROR : ExecutionPayloadStatus.UNAVAILABLE,
-        latestValidHash: null,
-        validationError: (e as Error).message,
-      };
+      const status = isEngineResponseError(e as Error)
+        ? ExecutionPayloadStatus.ELERROR
+        : ExecutionPayloadStatus.UNAVAILABLE;
+      // Only newPayload treats an unreachable execution client, including a timeout, as offline
+      const newState =
+        status === ExecutionPayloadStatus.UNAVAILABLE && !isErrorAborted(e) && !isQueueErrorAborted(e)
+          ? getExecutionEngineState({payloadStatus: status, oldState: this.state})
+          : getExecutionEngineState({payloadError: e, oldState: this.state});
+      this.updateEngineState(newState, e as Error);
+      return {status, latestValidHash: null, validationError: (e as Error).message};
     }
     const {status, latestValidHash, validationError} = result;
 
@@ -606,7 +612,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     switch (newState) {
       case ExecutionEngineState.ONLINE:
-        this.logger.debug("Execution client became online", {oldState, newState});
+        this.logger.info("Execution client became online", {oldState, newState});
         // The execution client may have been upgraded while offline
         this.restSupport = {state: "pending"};
         this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
@@ -619,10 +625,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.logger.error("Execution client went offline", {oldState, newState}, error);
         break;
       case ExecutionEngineState.SYNCED:
-        this.logger.debug("Execution client is synced", {oldState, newState});
+        this.logger.info("Execution client is synced", {oldState, newState});
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.debug(
+        this.logger.warn(
           error ? "Execution client request failed" : "Execution client is syncing",
           {oldState, newState},
           error

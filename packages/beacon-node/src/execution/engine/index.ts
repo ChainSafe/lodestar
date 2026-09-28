@@ -73,7 +73,7 @@ export function getExecutionEngineHttp(
           })
         );
 
-  modules.logger.debug("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});
+  modules.logger.info("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});
   return new ExecutionEngineHttp({jsonRpc: new JsonRpcEngineTransport(rpc), rest}, modules, opts);
 }
 

@@ -1,13 +1,4 @@
-import {
-  TimeoutError,
-  bigIntToBytes,
-  bytesToBigInt,
-  fromHex,
-  fromHexInto,
-  isErrorAborted,
-  isFetchError,
-  toHex,
-} from "@lodestar/utils";
+import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, isErrorAborted, isFetchError, toHex} from "@lodestar/utils";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
 import {
@@ -215,10 +206,7 @@ function getExecutionEngineStateForPayloadError(
     return ExecutionEngineState.SYNCING;
   }
 
-  if (
-    payloadError instanceof TimeoutError ||
-    (isFetchError(payloadError) && HTTP_FATAL_ERROR_CODES.includes(payloadError.code))
-  ) {
+  if (isFetchError(payloadError) && HTTP_FATAL_ERROR_CODES.includes(payloadError.code)) {
     return ExecutionEngineState.OFFLINE;
   }
 

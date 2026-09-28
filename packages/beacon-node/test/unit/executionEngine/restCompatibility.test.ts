@@ -3,7 +3,7 @@ import {FastifyInstance, FastifyReply, fastify} from "fastify";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {FetchError, defer} from "@lodestar/utils";
+import {FetchError, TimeoutError, defer} from "@lodestar/utils";
 import {EngineApiMode, ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {getExecutionEngineHttp} from "../../../src/execution/engine/index.js";
 import {ExecutionEngineState} from "../../../src/execution/engine/interface.js";
@@ -30,6 +30,7 @@ describe("REST engine compatibility", () => {
   let malformedResponse: boolean;
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
+  let beforeForkchoice: (() => Promise<void>) | undefined;
   let logger: MockedLogger;
 
   beforeEach(async () => {
@@ -39,6 +40,7 @@ describe("REST engine compatibility", () => {
     restError = undefined;
     malformedResponse = false;
     beforePayload = undefined;
+    beforeForkchoice = undefined;
     requests = [];
     server = fastify({forceCloseConnections: true});
     server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_, body, done) => done(null, body));
@@ -52,8 +54,9 @@ describe("REST engine compatibility", () => {
       await beforePayload?.();
       return sendResponse(reply, PayloadStatus.serialize(validStatus));
     });
-    server.post("/engine/v1/forkchoice", (_, reply) => {
+    server.post("/engine/v1/forkchoice", async (_, reply) => {
       requests.push("REST forkchoice");
+      await beforeForkchoice?.();
       return sendResponse(reply, ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []}));
     });
     server.post<{Body: {method: string}}>("/", (req) => {
@@ -86,8 +89,17 @@ describe("REST engine compatibility", () => {
     return reply.type("application/octet-stream").send(Buffer.from(malformedResponse ? [] : body));
   }
 
-  function createEngine(engineApi: EngineApiMode = "auto", urls = [url]) {
-    return getExecutionEngineHttp({urls, engineApi, retries: 0, retryDelay: 0}, {signal: controller.signal, logger});
+  function createEngine(engineApi: EngineApiMode = "auto", urls = [url], timeout?: number) {
+    return getExecutionEngineHttp(
+      {urls, engineApi, retries: 0, retryDelay: 0, timeout},
+      {signal: controller.signal, logger}
+    );
+  }
+
+  function expectCompatibilityLogsAtDebugOnly(): void {
+    for (const level of ["info", "warn", "error"] as const) {
+      expect(logger[level].mock.calls.filter(([message]) => /REST|JSON-RPC/.test(message))).toEqual([]);
+    }
   }
 
   it("remembers a discovery 404 for the connection", async () => {
@@ -99,9 +111,7 @@ describe("REST engine compatibility", () => {
     discovery = {status: 200, body: capabilities};
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
-    expect(logger.info).not.toHaveBeenCalled();
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
+    expectCompatibilityLogsAtDebugOnly();
   });
 
   it("rediscovers REST after the execution client reconnects", async () => {
@@ -145,9 +155,7 @@ describe("REST engine compatibility", () => {
       {engineApi: "auto", fallback: "json-rpc", retryAfterMs: 12_000},
       expect.objectContaining({status: 503})
     );
-    expect(logger.info).not.toHaveBeenCalled();
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
+    expectCompatibilityLogsAtDebugOnly();
   });
 
   it("logs compatibility routing once per fork and blob revision", async () => {
@@ -168,9 +176,7 @@ describe("REST engine compatibility", () => {
       ["Using JSON-RPC for a fork not advertised by the REST engine API", {fork: "capella", executionFork: "shanghai"}],
       ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v1"}],
     ]);
-    expect(logger.info).not.toHaveBeenCalled();
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
+    expectCompatibilityLogsAtDebugOnly();
   });
 
   it.each([401, 403])("surfaces discovery authentication failure %s without downgrading", async (status) => {
@@ -195,6 +201,33 @@ describe("REST engine compatibility", () => {
     expect(result.status).toBe("ELERROR");
     expect(engine.state).toBe(ExecutionEngineState.AUTH_FAILED);
     expect(requests).toEqual(["capabilities"]);
+  });
+
+  it("treats a newPayload timeout as an offline execution client", async () => {
+    const hang = defer<void>();
+    beforePayload = () => hang.promise;
+    const engine = createEngine("auto", [url], 500);
+    const result = await engine.notifyNewPayload(ForkName.bellatrix, ssz.bellatrix.ExecutionPayload.defaultValue());
+    hang.resolve();
+    expect(result.status).toBe("UNAVAILABLE");
+    expect(engine.state).toBe(ExecutionEngineState.OFFLINE);
+    expect(logger.error).toHaveBeenCalledWith(
+      "Execution client went offline",
+      {oldState: ExecutionEngineState.ONLINE, newState: ExecutionEngineState.OFFLINE},
+      expect.any(TimeoutError)
+    );
+  });
+
+  it("keeps the engine state when a forkchoice update times out", async () => {
+    const hang = defer<void>();
+    beforeForkchoice = () => hang.promise;
+    const engine = createEngine("auto", [url], 500);
+    await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toBeInstanceOf(
+      TimeoutError
+    );
+    hang.resolve();
+    expect(engine.state).toBe(ExecutionEngineState.ONLINE);
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it.each([null, {supported_forks: "paris"}])("rejects malformed capabilities %j without downgrading", async (body) => {
@@ -277,8 +310,6 @@ describe("REST engine compatibility", () => {
         detail: "x".repeat(500),
       }
     );
-    expect(logger.info).not.toHaveBeenCalled();
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
+    expectCompatibilityLogsAtDebugOnly();
   });
 });

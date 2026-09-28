@@ -86,11 +86,11 @@ describe("execution / engine / utils", () => {
         "request timeout",
         new TimeoutError("request"),
         [
-          [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
-          [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+          [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
           [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
-          [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
-          [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
+          [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
         ],
       ],
       [
