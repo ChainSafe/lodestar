@@ -152,6 +152,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
   private lastRestProbeMs = Number.NEGATIVE_INFINITY;
+  private readonly loggedRestFallbacks = new Set<ForkName | "v1" | "v2">();
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -177,7 +178,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     for (const transport of [this.jsonRpc, this.rest]) {
       transport?.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
-        this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
+        this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}), error);
       });
 
       transport?.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
@@ -252,7 +253,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         )
       );
     } catch (e) {
-      this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}));
+      this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}), e as Error);
       return {
         status: isEngineResponseError(e as Error) ? ExecutionPayloadStatus.ELERROR : ExecutionPayloadStatus.UNAVAILABLE,
         latestValidHash: null,
@@ -471,10 +472,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (this.restSupport.state === "supported" && executionFork !== null) {
       this.restSupport.capabilities.supportedForks.delete(executionFork);
     }
-    this.logger.warn("Execution client rejected an advertised fork over REST engine API, using JSON-RPC for it", {
-      fork: executionFork ?? fork,
-      detail: e.detail ?? e.type ?? "",
-    });
+    if (!this.loggedRestFallbacks.has(fork)) {
+      this.loggedRestFallbacks.add(fork);
+      this.logger.debug("REST engine API rejected an advertised fork, using JSON-RPC until reconnect", {
+        fork,
+        executionFork,
+        status: e.status,
+        type: e.type,
+        detail: e.detail,
+      });
+    }
   }
 
   /**
@@ -487,7 +494,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
     const restSupport = await this.probeRestSupport(this.rest);
     if (restSupport.state === "pending" && restSupport.error) {
-      this.updateEngineState(getExecutionEngineState({payloadError: restSupport.error, oldState: this.state}));
+      this.updateEngineState(
+        getExecutionEngineState({payloadError: restSupport.error, oldState: this.state}),
+        restSupport.error
+      );
       throw restSupport.error;
     }
     if (this.engineApi === "ssz") {
@@ -500,10 +510,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (fork !== undefined) {
       const executionFork = isForkPostBellatrix(fork) ? executionForkName[fork] : null;
       if (executionFork === null || !restSupport.capabilities.supportedForks.has(executionFork)) {
+        if (!this.loggedRestFallbacks.has(fork)) {
+          this.loggedRestFallbacks.add(fork);
+          this.logger.debug("Using JSON-RPC for a fork not advertised by the REST engine API", {fork, executionFork});
+        }
         return this.jsonRpc;
       }
     }
     if (blobsRevision !== undefined && !restSupport.capabilities.blobsRevisions.has(blobsRevision)) {
+      if (!this.loggedRestFallbacks.has(blobsRevision)) {
+        this.loggedRestFallbacks.add(blobsRevision);
+        this.logger.debug("Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision});
+      }
       return this.jsonRpc;
     }
 
@@ -527,23 +545,33 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       .then(
         (capabilities): RestSupport => {
           this.restSupport = {state: "supported", capabilities};
-          this.logger.info("Using engine API over REST with SSZ encoding", {
+          this.loggedRestFallbacks.clear();
+          this.logger.debug("Discovered REST engine API capabilities", {
             supportedForks: Array.from(capabilities.supportedForks).join(","),
             blobsRevisions: Array.from(capabilities.blobsRevisions).join(","),
+            ...capabilities.limits,
           });
           return this.restSupport;
         },
         (e: Error): RestSupport => {
           if (this.engineApi === "auto" && e instanceof EngineRestError && e.status === 404) {
             this.restSupport = {state: "unsupported"};
-            this.logger.info("Execution client does not support engine API over REST, using JSON-RPC", {
+            this.logger.debug("Execution client does not support engine API over REST, using JSON-RPC", {
               status: e.status,
               type: e.type ?? "unknown",
             });
           } else {
             const transient = isRetryableEngineRestError(e);
             this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};
-            this.logger.debug("Unable to probe engine API capabilities", {retryAfterMs: REST_PROBE_RETRY_MS}, e);
+            this.logger.debug(
+              "Unable to probe engine API capabilities",
+              {
+                engineApi: this.engineApi,
+                fallback: this.restSupport.error ? "none" : "json-rpc",
+                retryAfterMs: REST_PROBE_RETRY_MS,
+              },
+              e
+            );
           }
           return this.restSupport;
         }
@@ -571,14 +599,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return clientVersions;
   }
 
-  private updateEngineState(newState: ExecutionEngineState): void {
+  private updateEngineState(newState: ExecutionEngineState, error?: Error): void {
     const oldState = this.state;
 
     if (oldState === newState) return;
 
     switch (newState) {
       case ExecutionEngineState.ONLINE:
-        this.logger.info("Execution client became online", {oldState, newState});
+        this.logger.debug("Execution client became online", {oldState, newState});
         // The execution client may have been upgraded while offline
         this.restSupport = {state: "pending"};
         this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
@@ -588,16 +616,20 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         });
         break;
       case ExecutionEngineState.OFFLINE:
-        this.logger.error("Execution client went offline", {oldState, newState});
+        this.logger.error("Execution client went offline", {oldState, newState}, error);
         break;
       case ExecutionEngineState.SYNCED:
-        this.logger.info("Execution client is synced", {oldState, newState});
+        this.logger.debug("Execution client is synced", {oldState, newState});
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.warn("Execution client is syncing", {oldState, newState});
+        this.logger.debug(
+          error ? "Execution client request failed" : "Execution client is syncing",
+          {oldState, newState},
+          error
+        );
         break;
       case ExecutionEngineState.AUTH_FAILED:
-        this.logger.error("Execution client authentication failed", {oldState, newState});
+        this.logger.error("Execution client authentication failed", {oldState, newState}, error);
         break;
     }
 

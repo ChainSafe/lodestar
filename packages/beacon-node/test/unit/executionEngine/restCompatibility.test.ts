@@ -1,7 +1,6 @@
 import {setImmediate} from "node:timers/promises";
 import {FastifyInstance, FastifyReply, fastify} from "fastify";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {getEnvLogger} from "@lodestar/logger/env";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {FetchError, defer} from "@lodestar/utils";
@@ -13,6 +12,7 @@ import {JsonRpcEngineTransport} from "../../../src/execution/engine/jsonRpcTrans
 import {EngineRestHttpClient} from "../../../src/execution/engine/restHttpClient.js";
 import {RestEngineTransport} from "../../../src/execution/engine/restTransport.js";
 import {ForkchoiceUpdateResponse, PayloadStatus, PayloadStatusCode} from "../../../src/execution/engine/sszTypes.js";
+import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 
 const hash = `0x${"11".repeat(32)}`;
 const capabilities = {
@@ -30,9 +30,11 @@ describe("REST engine compatibility", () => {
   let malformedResponse: boolean;
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
+  let logger: MockedLogger;
 
   beforeEach(async () => {
     controller = new AbortController();
+    logger = getMockedLogger();
     discovery = {status: 200, body: capabilities};
     restError = undefined;
     malformedResponse = false;
@@ -60,6 +62,9 @@ describe("REST engine compatibility", () => {
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
       requests.push(method);
+      if (method.startsWith("engine_getBlobs")) {
+        return {jsonrpc: "2.0", id: 1, result: []};
+      }
       const status = {status: "VALID", latestValidHash: null, validationError: null};
       return {
         jsonrpc: "2.0",
@@ -82,10 +87,7 @@ describe("REST engine compatibility", () => {
   }
 
   function createEngine(engineApi: EngineApiMode = "auto", urls = [url]) {
-    return getExecutionEngineHttp(
-      {urls, engineApi, retries: 0, retryDelay: 0},
-      {signal: controller.signal, logger: getEnvLogger()}
-    );
+    return getExecutionEngineHttp({urls, engineApi, retries: 0, retryDelay: 0}, {signal: controller.signal, logger});
   }
 
   it("remembers a discovery 404 for the connection", async () => {
@@ -97,6 +99,9 @@ describe("REST engine compatibility", () => {
     discovery = {status: 200, body: capabilities};
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
+    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("rediscovers REST after the execution client reconnects", async () => {
@@ -107,7 +112,7 @@ describe("REST engine compatibility", () => {
         jsonRpc: new JsonRpcEngineTransport(rpc),
         rest: new RestEngineTransport(new EngineRestHttpClient([url], {signal: controller.signal})),
       },
-      {signal: controller.signal, logger: getEnvLogger()}
+      {signal: controller.signal, logger}
     );
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
@@ -135,6 +140,37 @@ describe("REST engine compatibility", () => {
     now.mockReturnValue(112_001);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests.slice(-2)).toEqual(["capabilities", "REST forkchoice"]);
+    expect(logger.debug).toHaveBeenCalledWith(
+      "Unable to probe engine API capabilities",
+      {engineApi: "auto", fallback: "json-rpc", retryAfterMs: 12_000},
+      expect.objectContaining({status: 503})
+    );
+    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("logs compatibility routing once per fork and blob revision", async () => {
+    discovery = {...discovery, body: {...capabilities, independently_versioned: {blobs: []}}};
+    const engine = createEngine();
+    await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
+    await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
+    await engine.getBlobs(ForkName.deneb, []);
+    await engine.getBlobs(ForkName.deneb, []);
+    expect(requests).toEqual([
+      "capabilities",
+      "engine_forkchoiceUpdatedV2",
+      "engine_forkchoiceUpdatedV2",
+      "engine_getBlobsV1",
+      "engine_getBlobsV1",
+    ]);
+    expect(logger.debug.mock.calls.filter(([message]) => message.startsWith("Using JSON-RPC for"))).toEqual([
+      ["Using JSON-RPC for a fork not advertised by the REST engine API", {fork: "capella", executionFork: "shanghai"}],
+      ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v1"}],
+    ]);
+    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it.each([401, 403])("surfaces discovery authentication failure %s without downgrading", async (status) => {
@@ -144,6 +180,12 @@ describe("REST engine compatibility", () => {
     await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toMatchObject({status});
     expect(engine.state).toBe(ExecutionEngineState.AUTH_FAILED);
     expect(requests).toEqual(["capabilities"]);
+    expect(logger.error).toHaveBeenCalledWith(
+      "Execution client authentication failed",
+      {oldState: ExecutionEngineState.ONLINE, newState: ExecutionEngineState.AUTH_FAILED},
+      expect.objectContaining({status})
+    );
+    expect(logger.error).toHaveBeenCalledOnce();
   });
 
   it("preserves authentication state when newPayload returns ELERROR", async () => {
@@ -225,5 +267,18 @@ describe("REST engine compatibility", () => {
     expect((await payload).status).toBe("VALID");
     await forkchoice;
     expect(requests).toEqual(["capabilities", "REST newPayload", "engine_newPayloadV1", "engine_forkchoiceUpdatedV1"]);
+    expect(logger.debug).toHaveBeenCalledWith(
+      "REST engine API rejected an advertised fork, using JSON-RPC until reconnect",
+      {
+        fork: "bellatrix",
+        executionFork: "paris",
+        status: 400,
+        type: "/engine-api/errors/unsupported-fork",
+        detail: "x".repeat(500),
+      }
+    );
+    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

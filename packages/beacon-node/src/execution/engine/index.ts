@@ -45,7 +45,7 @@ export function getExecutionEngineHttp(
     throw new LodestarError({code: "ENGINE_REST_REQUIRES_SINGLE_URL", count: opts.urls.length});
   }
   if (engineApi === "auto" && opts.urls.length > 1) {
-    modules.logger.info("Using JSON-RPC for multiple execution URLs", {count: opts.urls.length});
+    modules.logger.debug("Using JSON-RPC for multiple execution URLs", {count: opts.urls.length});
   }
 
   const rpc = new JsonRpcHttpClient(opts.urls, {
@@ -73,7 +73,7 @@ export function getExecutionEngineHttp(
           })
         );
 
-  modules.logger.info("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});
+  modules.logger.debug("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});
   return new ExecutionEngineHttp({jsonRpc: new JsonRpcEngineTransport(rpc), rest}, modules, opts);
 }
 
