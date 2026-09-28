@@ -401,7 +401,7 @@ export class RestEngineTransport implements IEngineTransport {
     if (buffers) {
       // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
       if (buffers.length < versionedHashes.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashes.length}`);
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashes.length}`);
       }
       for (const [i, buffer] of buffers.entries()) {
         if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {

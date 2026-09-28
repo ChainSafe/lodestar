@@ -1,9 +1,11 @@
 import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
-import {ForkName} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
+import {toHex} from "@lodestar/utils";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
+  BLOB_AND_PROOF_V2_RPC_BYTES,
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
@@ -313,6 +315,28 @@ describe("ExecutionEngine / http", () => {
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+  });
+
+  it("getBlobsV2 with more preallocated buffers than versioned hashes", async () => {
+    const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+    blob[0] = 0x11;
+    const proofs = Array.from({length: CELLS_PER_EXT_BLOB}, () => `0x${"cc".repeat(48)}`);
+    const versionedHash = `0x${"01".repeat(32)}`;
+    returnValue = {jsonrpc: "2.0", id: 67, result: [{blob: toHex(blob), proofs}]};
+    // GetBlobsTracker preallocates one buffer per max blobs of the epoch, not per requested hash
+    const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
+
+    const res = await executionEngine.getBlobs(
+      ForkName.fulu,
+      [Uint8Array.from(Buffer.from(versionedHash.slice(2), "hex"))],
+      buffers
+    );
+
+    expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getBlobsV2", params: [[versionedHash]]});
+    expect(res?.length).toBe(1);
+    expect(res?.[0].blob.buffer).toBe(buffers[0].buffer);
+    expect(res?.[0].blob[0]).toBe(0x11);
+    expect(res?.[0].proofs.length).toBe(CELLS_PER_EXT_BLOB);
   });
 
   it("error - unknown payload", async () => {
