@@ -122,10 +122,10 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # deneb
-    # Blob sidecar gossip, reqresp and production were removed (#9956): the blob retention
+    # Legacy blob sidecar networking and production were removed (#9956): the blob retention
     # window (FULU_FORK_EPOCH + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) has expired on all
     # supported networks and blob_sidecars_by_range/root are deprecated at the spec level,
-    # so blobs are no longer gossiped, served, downloaded or produced.
+    # so blob sidecars are no longer gossiped, served over req/resp, downloaded or produced.
     - compute_subnet_for_blob_sidecar#deneb
     - get_blob_sidecars#deneb
     - is_within_epoch#deneb

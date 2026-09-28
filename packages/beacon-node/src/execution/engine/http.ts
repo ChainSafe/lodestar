@@ -504,11 +504,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getBlobs(
     _fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
+    _buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
-    return await this.getBlobsV2(versionedHashesHex, buffers);
+    // Pooled buffers are not forwarded: GetBlobsTracker sizes them by max blobs rather than the request,
+    // and data column sidecars retain the returned proofs after the tracker reuses the buffers
+    return await this.getBlobsV2(versionedHashesHex);
   }
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {

@@ -63,13 +63,10 @@ export type GetByColumnOptions = {
 /**
  * Consumers that create BlockInputs or change types of old BlockInputs
  *
- * - gossipHandlers (block and blob)
- * - beaconBlocksMaybeBlobsByRange
- * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
+ * - gossipHandlers (block and data column)
+ * - cacheByRangeResponses in sync/utils/downloadByRange.ts
+ * - downloadByRoot in sync/utils/downloadByRoot.ts
  * - publishBlock in the beacon/blocks/index.ts API
- *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
- * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
- *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
  *
  *
  * Pruning management for SeenBlockInputCache

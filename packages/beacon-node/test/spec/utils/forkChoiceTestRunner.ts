@@ -6,7 +6,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreFulu, ForkPreGloas, ForkSeq} from "@lodestar/params";
+import {ForkPostFulu, ForkPostGloas, ForkPreFulu, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -427,20 +427,11 @@ export const forkChoiceTestRunner =
                     });
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
-                  // Blocks import with DataAvailabilityStatus.OutOfRange, blob data is not tracked
+                } else {
+                  // Pre-fulu blocks carry no tracked sidecar data, deneb..electra blobs are not loaded (#9956)
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
                     block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
-                    blockRootHex,
-                    source: BlockInputSource.gossip,
-                    seenTimestampSec: 0,
-                    daOutOfRange: false,
-                  });
-                } else {
-                  blockImport = BlockInputPreData.createFromBlock({
-                    forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,

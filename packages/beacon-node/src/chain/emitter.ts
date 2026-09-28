@@ -46,10 +46,6 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * This event signals that blobs have been fetched from the execution engine
-   * and are ready to be published.
-   */
-  /**
    * This event signals that a proposer slashing has been produced from an observed equivocation
    * and is ready to be published.
    */

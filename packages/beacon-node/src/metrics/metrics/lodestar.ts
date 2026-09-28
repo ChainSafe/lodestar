@@ -1138,11 +1138,6 @@ export function createLodestarMetrics(
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
-      blobsBySource: register.gauge<{blobsSource: BlockInputSource}>({
-        name: "lodestar_import_blobs_by_source_total",
-        help: "Total number of imported blobs by source",
-        labelNames: ["blobsSource"],
-      }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",

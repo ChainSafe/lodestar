@@ -14,7 +14,7 @@ import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
  * are handled properly for eventual consistency.
  */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];
+  const promises: Promise<void>[] = [writeBlockToDb.call(this, blockInput)];
 
   if (isBlockInputColumns(blockInput)) {
     promises.push(writeDataColumnsToDb.call(this, blockInput));
@@ -24,7 +24,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockI
   this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot, root: blockInput.blockRootHex});
 }
 
-async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
+async function writeBlockToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   const block = blockInput.getBlock();
   const slot = block.message.slot;
   const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
@@ -32,21 +32,17 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
   const numBlobs = isForkPostDeneb(blockInput.forkName)
     ? getBlobKzgCommitments(blockInput.forkName, block as SignedBeaconBlock<ForkPostDeneb>).length
     : undefined;
-  const fnPromises: Promise<void>[] = [];
+  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
 
   const blockBytes = this.serializedCache.get(block);
   if (blockBytes) {
     // skip serializing data if we already have it
     this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
+    await this.db.block.putBinary(this.db.block.getId(block), blockBytes);
   } else {
     this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    fnPromises.push(this.db.block.add(block));
+    await this.db.block.add(block);
   }
-
-  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
-
-  await Promise.all(fnPromises);
 }
 
 /**

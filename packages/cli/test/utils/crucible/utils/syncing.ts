@@ -115,8 +115,8 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHeadRoot = toHex(
     env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
   );
-  // Blob sidecars are no longer persisted or served for deneb..electra blocks (#9956), so only
-  // post-fulu heads (reconstructed from data columns) can and need to include blobs on publish
+  // Blob sidecars are no longer persisted for deneb..electra blocks (#9956), so only post-fulu
+  // heads (reconstructed from data columns) can and need to include blobs on publish
   const currentSidecars = isForkPostFulu(env.forkConfig.getForkName(currentHead.message.slot))
     ? (await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})).value()
     : [];
