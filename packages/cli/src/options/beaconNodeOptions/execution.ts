@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {IBeaconNodeOptions, defaultExecutionEngineHttpOpts} from "@lodestar/beacon-node";
+import {EngineApiMode, IBeaconNodeOptions, defaultExecutionEngineHttpOpts, engineApiModes} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {extractJwtHexSecret} from "../../util/index.js";
 
@@ -8,6 +8,7 @@ export type ExecutionEngineArgs = {
   "execution.timeout"?: number;
   "execution.retries": number;
   "execution.retryDelay": number;
+  "execution.engineApi"?: EngineApiMode;
   "execution.engineMock"?: boolean;
   jwtSecret?: string;
   jwtId?: string;
@@ -26,6 +27,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
     timeout: args["execution.timeout"],
     retries: args["execution.retries"],
     retryDelay: args["execution.retryDelay"],
+    engineApi: args["execution.engineApi"],
     /**
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
@@ -66,6 +68,15 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
     default: defaultExecutionEngineHttpOpts.retryDelay,
+    group: "execution",
+  },
+
+  "execution.engineApi": {
+    description:
+      "Engine API used to communicate with the execution client. 'auto' uses the REST API with SSZ encoding if the execution client advertises support for it and JSON-RPC otherwise, 'ssz' always uses the REST API and 'json-rpc' always uses JSON-RPC",
+    type: "string",
+    choices: engineApiModes,
+    default: defaultExecutionEngineHttpOpts.engineApi,
     group: "execution",
   },
 

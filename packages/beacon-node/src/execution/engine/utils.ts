@@ -8,6 +8,7 @@ import {
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
 } from "./jsonRpcHttpClient.js";
+import {EngineRestError} from "./restHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
@@ -191,8 +192,16 @@ function getExecutionEngineStateForPayloadError(
     return oldState;
   }
 
+  if (payloadError instanceof EngineRestError && (payloadError.status === 401 || payloadError.status === 403)) {
+    return ExecutionEngineState.AUTH_FAILED;
+  }
+
   // Originally this case was handled with {status: ExecutePayloadStatus.ELERROR}
-  if (payloadError instanceof HttpRpcError || payloadError instanceof ErrorJsonRpcResponse) {
+  if (
+    payloadError instanceof HttpRpcError ||
+    payloadError instanceof ErrorJsonRpcResponse ||
+    payloadError instanceof EngineRestError
+  ) {
     return ExecutionEngineState.SYNCING;
   }
 
