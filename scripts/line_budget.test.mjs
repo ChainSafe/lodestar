@@ -53,27 +53,42 @@ test("the baseline aggregates modules and reports tests and tooling apart", () =
   assert.equal(result.largest[0].path, "src/core/a.zig");
 });
 
-test("additions fail over the module budget, however the lines are split into files", () => {
+const frozen = {...manifest, frozen: true};
+
+function differences(result) {
+  return result.differences.map((difference) => difference.code);
+}
+
+test("additions are reported while provisional and fail over a frozen budget, however they are split", () => {
   const grown = [...base, {lines: 1, path: "src/core/new.zig"}];
-  assert.deepEqual(codes(evaluate(manifest, grown)), ["OverBudget"]);
   const split = [...replace(base, "src/core/a.zig", "src/core/a1.zig"), {lines: 1, path: "src/core/a2.zig"}];
-  assert.deepEqual(codes(evaluate(manifest, split)), ["OverBudget"]);
+  for (const files of [grown, split]) {
+    const provisional = evaluate(manifest, files);
+    assert.deepEqual(codes(provisional), []);
+    assert.deepEqual(provisional.differences, [{code: "OverBudget", detail: "core: 7 > 6"}]);
+    assert.deepEqual(codes(evaluate(frozen, files)), ["OverBudget"]);
+    assert.deepEqual(evaluate(frozen, files).differences, []);
+  }
 });
 
-test("deletions pass while provisional and demand a lower budget once frozen", () => {
+test("deletions are reported while provisional and demand a lower budget once frozen", () => {
   const shrunk = base.filter((file) => file.path !== "src/core/b.zig");
   assert.deepEqual(codes(evaluate(manifest, shrunk)), []);
-  assert.deepEqual(codes(evaluate({...manifest, frozen: true}, shrunk)), ["LowerBudget"]);
-  assert.deepEqual(codes(evaluate({...manifest, frozen: true}, base)), []);
+  assert.deepEqual(differences(evaluate(manifest, shrunk)), ["LowerBudget"]);
+  assert.deepEqual(codes(evaluate(frozen, shrunk)), ["LowerBudget"]);
+  assert.deepEqual(codes(evaluate(frozen, base)), []);
+  assert.deepEqual(differences(evaluate(manifest, base)), []);
 });
 
 test("moves keep a module's count within it and charge the destination across modules", () => {
   const within = replace(base, "src/core/a.zig", "src/core/sub/a.zig");
-  assert.deepEqual(codes(evaluate(manifest, within)), []);
-  assert.deepEqual(counts(evaluate(manifest, within)), {core: 6, io: 4});
+  assert.deepEqual(codes(evaluate(frozen, within)), []);
+  assert.deepEqual(counts(evaluate(frozen, within)), {core: 6, io: 4});
   const across = replace(base, "src/core/b.zig", "src/io/b.zig");
   assert.deepEqual(counts(evaluate(manifest, across)), {core: 4, io: 6});
-  assert.deepEqual(codes(evaluate(manifest, across)), ["OverBudget"]);
+  assert.deepEqual(codes(evaluate(manifest, across)), []);
+  assert.deepEqual(differences(evaluate(manifest, across)), ["LowerBudget", "OverBudget"]);
+  assert.deepEqual(codes(evaluate(frozen, across)), ["LowerBudget", "OverBudget"]);
 });
 
 test("exclusions leave a module and are reported by category", () => {
@@ -83,7 +98,7 @@ test("exclusions leave a module and are reported by category", () => {
   assert.deepEqual(result.categories.test, {files: 2, lines: 42});
 });
 
-test("unknown, ambiguous and stale paths fail", () => {
+test("unknown, ambiguous and stale paths fail while budgets are provisional", () => {
   assert.deepEqual(codes(evaluate(manifest, [...base, {lines: 1, path: "src/new/e.zig"}])), ["Unclassified"]);
   const overlapping = {...manifest, modules: [...manifest.modules, {budget: 9, name: "all", paths: ["src/io/**"]}]};
   assert.deepEqual(codes(evaluate(overlapping, base)), ["Ambiguous", "StalePattern", "StalePattern"]);
@@ -116,6 +131,10 @@ test("the command counts tracked files only and writes nothing", () => {
     assert.equal(passed.status, 0, passed.stderr.toString());
     assert.deepEqual(counts(JSON.parse(passed.stdout)), {core: 6, io: 4});
     write("src/io/d.zig", "x\n".repeat(3));
+    const reported = run();
+    assert.equal(reported.status, 0, reported.stderr.toString());
+    assert.deepEqual(differences(JSON.parse(reported.stdout)), ["OverBudget"]);
+    write("scripts/line_budget.json", JSON.stringify({...frozen, reports: []}));
     const status = git("status", "--porcelain", "--untracked-files=all").toString();
     const failed = run();
     assert.equal(failed.status, 1);

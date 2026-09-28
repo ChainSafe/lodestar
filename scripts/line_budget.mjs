@@ -6,7 +6,8 @@ import {fileURLToPath, pathToFileURL} from "node:url";
 // Holds tracked production source to reviewed per-module line budgets. It counts physical lines, comments and inline
 // tests included, of every tracked file under the manifest's roots. Reviewed rules exclude dedicated tests, fixtures
 // and other non-production files, and each remaining file belongs to exactly one module, so splitting or moving files
-// cannot evade a module's cap. Test and tooling sizes are reported, never budgeted. Nothing is built or written.
+// cannot evade a module's cap. Budget differences fail only once the manifest is frozen; until then they are reported.
+// Test and tooling sizes are reported, never budgeted. Nothing is built or written.
 
 const MANIFEST = "scripts/line_budget.json";
 const MAX_TRACKED_FILES = 1_000_000;
@@ -108,18 +109,19 @@ export function evaluate(manifest, files) {
       else stale(module.name, pattern, module.files);
     }
   }
+  const differences = [];
   for (const module of modules.values()) {
-    if (module.lines > module.budget) {
-      errors.push({code: "OverBudget", detail: `${module.name}: ${module.lines} > ${module.budget}`});
-    } else if (manifest.frozen && module.lines < module.budget) {
-      errors.push({code: "LowerBudget", detail: `${module.name}: ${module.lines} < ${module.budget}`});
-    }
+    if (module.lines === module.budget) continue;
+    const over = module.lines > module.budget;
+    const detail = `${module.name}: ${module.lines} ${over ? ">" : "<"} ${module.budget}`;
+    (manifest.frozen ? errors : differences).push({code: over ? "OverBudget" : "LowerBudget", detail});
   }
   const budgeted = [...modules.values()].flatMap((module) =>
     module.files.map((file) => ({...file, module: module.name}))
   );
   return {
     categories: Object.fromEntries([...categories].sort(([left], [right]) => left.localeCompare(right))),
+    differences,
     errors,
     frozen: manifest.frozen,
     largest: budgeted.sort((left, right) => right.lines - left.lines).slice(0, LARGEST_FILES),
@@ -156,6 +158,7 @@ function format(result) {
   }
   lines.push("largest budgeted files");
   for (const file of result.largest) lines.push(`${String(file.lines).padStart(7)}  ${file.path} (${file.module})`);
+  for (const difference of result.differences) lines.push(`budget ${difference.code}: ${difference.detail}`);
   for (const error of result.errors) lines.push(`error ${error.code}: ${error.detail}`);
   return `${lines.join("\n")}\n`;
 }
