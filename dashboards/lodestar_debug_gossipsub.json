@@ -2279,7 +2279,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Messages received per unique message, per topic over 32 minutes: one plus the duplicates each message arrives with. libp2p divides by messages that passed prevalidation; native by received messages that were not duplicates, invalid ones included.",
+      "description": "Messages received per nonduplicate message, per topic over 32 minutes: one plus the duplicates each message arrives with. A nonduplicate is a message's first receipt, invalid ones included, and a topic without duplicates reads 1. Both backends, each target's own counters summed across targets.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2350,14 +2350,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total[32m])\n  or rate(lodestar_native_gossip_messages_received_total[32m])\n)\n/\nsum by (topic) (\n  rate(gossipsub_pre_validation_valid_total[32m])\n  or (rate(lodestar_native_gossip_messages_received_total[32m]) - rate(lodestar_native_gossip_messages_duplicate_total[32m]))\n)",
+          "expr": "sum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total[32m])\n  or rate(lodestar_native_gossip_messages_received_total[32m])\n)\n/\n(\n  sum by (topic) (\n    rate(gossipsub_msg_received_prevalidation_total[32m])\n    or rate(lodestar_native_gossip_messages_received_total[32m])\n  )\n  -\n  (\n    sum by (topic) (\n      rate(gossipsub_pre_validation_duplicate_total[32m])\n      or rate(lodestar_native_gossip_messages_duplicate_total[32m])\n    )\n    or 0 * sum by (topic) (\n      rate(gossipsub_msg_received_prevalidation_total[32m])\n      or rate(lodestar_native_gossip_messages_received_total[32m])\n    )\n  )\n)",
           "interval": "",
           "legendFormat": "{{topic}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Received msg per unique msg - by topic",
+      "title": "Received msg per nonduplicate msg - by topic",
       "type": "timeseries"
     },
     {

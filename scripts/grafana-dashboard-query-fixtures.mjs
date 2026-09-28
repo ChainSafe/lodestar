@@ -1075,15 +1075,16 @@ function gossipMessages() {
       refId: "A",
       cases: [
         {
-          name: "libp2p divides by prevalidated messages",
+          name: "libp2p received per nonduplicate",
           series: {
             [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_block"}`]: perSecond(6),
-            [`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(2),
+            [`gossipsub_pre_validation_duplicate_total{${libp2p},topic="beacon_block"}`]: perSecond(4),
+            [`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(1),
           },
           expect: [{labels: '{topic="beacon_block"}', value: 3}],
         },
         {
-          name: "native divides by received messages that were not duplicates",
+          name: "native received per nonduplicate",
           series: {
             [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_block"}`]: perSecond(6),
             [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(4),
@@ -1091,14 +1092,34 @@ function gossipMessages() {
           expect: [{labels: '{topic="beacon_block"}', value: 3}],
         },
         {
-          name: "mixed targets sum their own counters",
+          name: "identical traffic reads the same on either backend and mixed",
           series: {
             [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_block"}`]: perSecond(6),
-            [`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(2),
+            [`gossipsub_pre_validation_duplicate_total{${libp2p},topic="beacon_block"}`]: perSecond(4),
             [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_block"}`]: perSecond(6),
-            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(3),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(4),
           },
-          expect: [{labels: '{topic="beacon_block"}', value: 2.4}],
+          expect: [{labels: '{topic="beacon_block"}', value: 3}],
+        },
+        {
+          name: "a target without duplicate series for a topic counts none; a topic without any reads 1",
+          series: {
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_block"}`]: perSecond(6),
+            [`gossipsub_msg_received_prevalidation_total{${libp2pOther},topic="beacon_block"}`]: perSecond(6),
+            [`gossipsub_pre_validation_duplicate_total{${libp2pOther},topic="beacon_block"}`]: perSecond(8),
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="voluntary_exit"}`]: perSecond(1),
+            [`lodestar_native_gossip_messages_received_total{${native},topic="voluntary_exit"}`]: perSecond(1),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="voluntary_exit"}`]: perSecond(0),
+          },
+          expect: [
+            {labels: '{topic="beacon_block"}', value: 3},
+            {labels: '{topic="voluntary_exit"}', value: 1},
+          ],
+        },
+        {
+          name: "libp2p creates duplicate series lazily, so a topic never duplicated anywhere reads 1",
+          series: {[`gossipsub_msg_received_prevalidation_total{${libp2p},topic="proposer_slashing"}`]: perSecond(1)},
+          expect: [{labels: '{topic="proposer_slashing"}', value: 1}],
         },
         {
           name: "no received counter has no result",
