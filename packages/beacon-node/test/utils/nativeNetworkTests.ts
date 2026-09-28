@@ -26,6 +26,7 @@ import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore
 import {NativePeers} from "../../src/network/core/native/peers.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
+import {PeerAction} from "../../src/network/peers/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {ClockStopped} from "../mocks/clock.js";
 import {nativeBindingProcess} from "./nativeBindingProcess.js";
@@ -479,6 +480,7 @@ describe("native Lodestar integration", () => {
         ).toBe(true);
         const meshPeers = await left.network.dumpMeshPeers();
         expect(Object.keys(meshPeers).length).toBeGreaterThan(0);
+        await left.network.reportPeer(remote.peerId, PeerAction.HighToleranceError, "InvalidResponseSsz");
 
         await vi.waitFor(
           async () => {
@@ -513,6 +515,11 @@ describe("native Lodestar integration", () => {
             expect(metrics.match(/^# TYPE lodestar_native_host_serving_source_pending_bytes gauge$/gm)).toHaveLength(1);
             expect(metrics).toContain('lodestar_native_host_serving_reserved_bytes{scope="total"} 0\n');
             expect(metrics).toContain("lodestar_native_host_serving_source_pending_bytes 0\n");
+            // The adapter renders its report counter once, with the report above
+            expect(metrics.match(/^# TYPE lodestar_native_peer_reports_total counter$/gm)).toHaveLength(1);
+            expect(metrics).toContain(
+              'lodestar_native_peer_reports_total{reason="InvalidResponseSsz",action="high_tolerance"} 1\n'
+            );
           },
           {timeout: 5000}
         );

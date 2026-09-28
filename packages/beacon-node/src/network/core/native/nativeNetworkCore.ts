@@ -1,6 +1,6 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
-import {NativeHost, NativeNetwork, NativePeerAction, createNativeNetwork} from "@chainsafe/lodestar-z/network";
+import {NativeHost, NativeNetwork, createNativeNetwork} from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
@@ -24,16 +24,10 @@ import {NativeLogs} from "./logs.js";
 import {NativePeers, formatNativePeer} from "./peers.js";
 import {nativeProtocols} from "./protocols.js";
 import {RememberedPeersWriter, readRememberedPeers} from "./rememberedPeers.js";
+import {NativePeerReports} from "./reports.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
 
-const actions: Record<PeerAction, NativePeerAction> = {
-  [PeerAction.Fatal]: "fatal",
-  [PeerAction.LowToleranceError]: "low_tolerance",
-  [PeerAction.MidToleranceError]: "mid_tolerance",
-  [PeerAction.HighToleranceError]: "high_tolerance",
-};
-
-/** The binding renders its metric families, and the adapter adds its serving reservation gauges. */
+/** The binding renders its metric families, and the adapter adds its serving reservation gauges and report counter. */
 type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry">;
 
 export class NativeNetworkCore implements INetworkCore {
@@ -41,6 +35,7 @@ export class NativeNetworkCore implements INetworkCore {
   private gossip!: NativeGossip;
   private peers!: NativePeers;
   private requests!: NativeRequests;
+  private reports!: NativePeerReports;
   private network!: NativeNetwork;
   private logs!: NativeLogs;
   private remembered: RememberedPeersWriter | undefined;
@@ -94,6 +89,7 @@ export class NativeNetworkCore implements INetworkCore {
       core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
       core.requests = new NativeRequests(config, modules.getReqRespHandler, core.network.limits.incomingCapacity);
+      core.reports = new NativePeerReports(core.network);
       void core.network.closed
         .then((result) => {
           if (result.reason === "failed" && !core.failure)
@@ -218,8 +214,8 @@ export class NativeNetworkCore implements INetworkCore {
   setTargetGroupCount(count: number): Promise<void> {
     return this.intent.custody(count);
   }
-  reportPeer(peer: string, action: PeerAction, _actionName: string): void {
-    this.network.reportPeer(peer, actions[action]);
+  reportPeer(peer: string, action: PeerAction, actionName: string): void {
+    this.reports.report(peer, action, actionName);
   }
   reStatusPeers(peers: string[]): Promise<void> {
     nativeInteger(peers.length, "re-status peers", this.modules.opts.maxPeers);
@@ -295,7 +291,7 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return this.network.metrics() + this.requests.metrics();
+    return this.network.metrics() + this.requests.metrics() + this.reports.metrics();
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));
