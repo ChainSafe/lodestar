@@ -6,7 +6,6 @@ import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {
   archiveBlocks,
-  deleteOrphanedExecutionPayloadEnvelopes,
   migrateExecutionPayloadEnvelopesFromHotToColdDb,
 } from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
@@ -134,7 +133,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   });
 });
 
-describe("deleteOrphanedExecutionPayloadEnvelopes", () => {
+describe("archiveBlocks orphaned hot envelopes", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
   const logger = testLogger();
   let db: BeaconDb;
@@ -146,53 +145,33 @@ describe("deleteOrphanedExecutionPayloadEnvelopes", () => {
 
   afterEach(() => closeDb());
 
-  /** Put a full envelope in the hot db and return its block root */
   async function seedHot(slot: number): Promise<string> {
     const envelope = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelope.put(envelope.message.beaconBlockRoot, envelope);
     return toRootHex(envelope.message.beaconBlockRoot);
   }
 
-  /** Fork choice that only knows `roots`, with nothing to archive */
-  function forkChoiceWith(roots: string[]): IForkChoice {
-    const known = new Set(roots);
-    return {
-      getAllAncestorAndNonAncestorBlocksDefaultStatus: () => ({ancestors: [], nonAncestors: []}),
-      hasBlockHexUnsafe: (root: string) => known.has(root),
-    } as unknown as IForkChoice;
-  }
-
-  async function hotRoots(): Promise<string[]> {
-    return (await db.executionPayloadEnvelope.keys()).map(toRootHex).sort();
-  }
-
-  it("deletes only hot envelopes whose block is not in fork choice", async () => {
-    const orphan = await seedHot(10);
-    const kept = [await seedHot(11), await seedHot(12)];
-
-    const deleted = await deleteOrphanedExecutionPayloadEnvelopes(db, forkChoiceWith(kept));
-
-    expect(deleted.map(toRootHex)).toEqual([orphan]);
-    expect(await hotRoots()).toEqual([...kept].sort());
-  });
-
-  it("drops orphans left from before a restart when archiving a finalized checkpoint", async () => {
-    // Orphan from before the restart: its block is unknown to the fork choice rebuilt from the anchor
+  it("deletes hot envelopes whose block is not in fork choice", async () => {
+    // Orphan from before a restart, unknown to the fork choice rebuilt from the anchor
     await seedHot(10);
-    const anchor = await seedHot(32);
+    const kept = [await seedHot(32), await seedHot(40)];
+    const forkChoice = {
+      getAllAncestorAndNonAncestorBlocksDefaultStatus: () => ({ancestors: [], nonAncestors: []}),
+      hasBlockHexUnsafe: (root: string) => kept.includes(root),
+    } as unknown as IForkChoice;
 
     await archiveBlocks(
       config,
       db,
-      forkChoiceWith([anchor]),
+      forkChoice,
       undefined,
       logger,
-      {epoch: 1, root: fromHex(anchor), rootHex: anchor},
+      {epoch: 1, root: fromHex(kept[0]), rootHex: kept[0]},
       2,
       null,
       false
     );
 
-    expect(await hotRoots()).toEqual([anchor]);
+    expect((await db.executionPayloadEnvelope.keys()).map(toRootHex).sort()).toEqual([...kept].sort());
   });
 });

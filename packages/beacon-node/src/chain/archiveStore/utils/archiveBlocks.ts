@@ -231,10 +231,17 @@ export async function archiveBlocks(
     }
   }
 
+  // Envelopes whose block already left fork choice are missed above, e.g. orphans from before a restart
   if (finalizedPostGloas) {
-    const deletedRoots = await deleteOrphanedExecutionPayloadEnvelopes(db, forkChoice);
-    if (deletedRoots.length > 0) {
-      logger.verbose("Deleted orphaned executionPayloadEnvelopes from hot DB", {...logCtx, count: deletedRoots.length});
+    const orphanedRoots = (await db.executionPayloadEnvelope.keys()).filter(
+      (root) => !forkChoice.hasBlockHexUnsafe(toRootHex(root))
+    );
+    if (orphanedRoots.length > 0) {
+      await db.executionPayloadEnvelope.batchDelete(orphanedRoots);
+      logger.verbose("Deleted orphaned executionPayloadEnvelopes from hot DB", {
+        ...logCtx,
+        count: orphanedRoots.length,
+      });
     }
   }
 
@@ -480,26 +487,6 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 
   // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
-}
-
-/**
- * Delete hot envelopes whose block is no longer in fork choice. The walk from the finalized block migrates
- * canonical envelopes and deletes non-canonical ones, but misses any whose block already left fork choice,
- * e.g. orphans from before a restart since fork choice is rebuilt from the anchor. These can't be dropped on
- * startup like hot blobs, as the anchor block's envelope is only archived in the next run.
- * The finalized block and its descendants are in fork choice, so their envelopes are kept.
- */
-export async function deleteOrphanedExecutionPayloadEnvelopes(
-  db: IBeaconDb,
-  forkChoice: IForkChoice
-): Promise<Uint8Array[]> {
-  const orphanedRoots = (await db.executionPayloadEnvelope.keys()).filter(
-    (root) => !forkChoice.hasBlockHexUnsafe(toRootHex(root))
-  );
-  if (orphanedRoots.length > 0) {
-    await db.executionPayloadEnvelope.batchDelete(orphanedRoots);
-  }
-  return orphanedRoots;
 }
 
 /**
