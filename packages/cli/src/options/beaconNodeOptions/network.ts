@@ -63,6 +63,8 @@ export type NetworkArgs = {
   "network.maxPeers"?: number;
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
+  "network.discv5RateLimitGlobal"?: number;
+  "network.discv5RateLimitPerIp"?: number;
   "network.dontSendGossipAttestationsToForkchoice"?: boolean;
   "network.allowPublishToZeroPeers"?: boolean;
   "network.gossipsubD"?: number;
@@ -185,6 +187,12 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args.discv5 ?? true;
 
+  const discv5RateLimitGlobal = args["network.discv5RateLimitGlobal"];
+  const discv5RateLimitPerIp = args["network.discv5RateLimitPerIp"];
+  if ((discv5RateLimitGlobal === undefined) !== (discv5RateLimitPerIp === undefined)) {
+    throw new YargsError("network.discv5RateLimitGlobal and network.discv5RateLimitPerIp must be set together");
+  }
+
   // TODO: Okay to set to empty array?
   const bootEnrs = args.bootnodes ?? [];
   // throw if user-provided enrs are invalid
@@ -205,6 +213,13 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
+          rateLimiterOpts:
+            discv5RateLimitGlobal !== undefined && discv5RateLimitPerIp !== undefined
+              ? {
+                  globalQuota: {replenishAllEvery: 1000, maxTokens: discv5RateLimitGlobal},
+                  byIPQuota: {replenishAllEvery: 1000, maxTokens: discv5RateLimitPerIp},
+                }
+              : undefined,
           // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
           enr: undefined as any,
         }
@@ -403,6 +418,22 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "Delay the 1st heart beat of Peer Manager after starting Discv5",
     hidden: true,
     defaultDescription: String(defaultOptions.network.discv5FirstQueryDelayMs),
+    group: "network",
+  },
+
+  "network.discv5RateLimitGlobal": {
+    type: "number",
+    description:
+      "Max inbound discv5 packets per second from all IPs combined. Enables the discv5 rate limiter, requires network.discv5RateLimitPerIp",
+    hidden: true,
+    group: "network",
+  },
+
+  "network.discv5RateLimitPerIp": {
+    type: "number",
+    description:
+      "Max inbound discv5 packets per second from a single IP, an IP exceeding it is ignored until restart. Enables the discv5 rate limiter, requires network.discv5RateLimitGlobal",
+    hidden: true,
     group: "network",
   },
 

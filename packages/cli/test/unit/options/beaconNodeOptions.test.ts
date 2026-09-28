@@ -88,6 +88,8 @@ describe("options / beaconNodeOptions", () => {
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
+      "network.discv5RateLimitGlobal": 100,
+      "network.discv5RateLimitPerIp": 10,
       "network.requestCountPeerLimit": 5,
       "network.blockCountTotalLimit": 1000,
       "network.blockCountPeerLimit": 500,
@@ -189,6 +191,10 @@ describe("options / beaconNodeOptions", () => {
           bootEnrs: [
             "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
           ],
+          rateLimiterOpts: {
+            globalQuota: {replenishAllEvery: 1000, maxTokens: 100},
+            byIPQuota: {replenishAllEvery: 1000, maxTokens: 10},
+          },
         },
         maxPeers: 30,
         targetPeers: 25,
@@ -290,6 +296,12 @@ describe("options / network / tcp and quic flags", () => {
   it("should pass tcp through to network options", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
     expect(result.tcp).toBe(false);
+  });
+
+  it("should throw when only one discv5 rate limit is set", () => {
+    expect(() =>
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, "network.discv5RateLimitGlobal": 100} as NetworkArgs)
+    ).toThrow("network.discv5RateLimitGlobal and network.discv5RateLimitPerIp must be set together");
   });
 
   it("should throw when both TCP and QUIC are disabled", () => {

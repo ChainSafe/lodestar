@@ -56,6 +56,7 @@ const discv5 = Discv5.create({
     ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
   },
   config: workerData.config,
+  rateLimiterOpts: workerData.rateLimiterOpts,
   metricsRegistry,
 }) as Discv5 & Discv5EventEmitter;
 

@@ -6,6 +6,7 @@ import {LoggerNodeOpts} from "@lodestar/logger/node";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
+type Discv5RateLimiterOpts = Parameters<(typeof Discv5)["create"]>[0]["rateLimiterOpts"];
 
 type BindAddrs =
   | {
@@ -26,6 +27,7 @@ export type LodestarDiscv5Opts = {
   enr: string;
   bindAddrs: BindAddrs;
   bootEnrs: string[];
+  rateLimiterOpts?: Discv5RateLimiterOpts;
 };
 
 /** discv5 worker constructor data */
@@ -35,6 +37,7 @@ export interface Discv5WorkerData {
   bindAddrs: BindAddrs;
   config: Discv5Config;
   bootEnrs: string[];
+  rateLimiterOpts?: Discv5RateLimiterOpts;
   metrics: boolean;
   chainConfig: ChainConfig;
   genesisValidatorsRoot: Uint8Array;
