@@ -413,7 +413,7 @@ export async function validateResponses({
     DownloadByRangeError
   >
 > {
-  // Blocks are always required for blob/column validation
+  // Blocks are always required for column validation
   // If a blocksRequest is provided, blocks have just been downloaded
   // If no blocksRequest is provided, batchBlocks must have been provided from cache
   if (columnsRequest && !(blocks || batchBlocks)) {
@@ -443,12 +443,11 @@ export async function validateResponses({
   }
 
   const needsEnvelopeValidation = !!envelopesRequest || parentPayloadCommitments !== undefined;
-  const dataRequest = columnsRequest;
-  if (!dataRequest && !needsEnvelopeValidation) {
+  if (!columnsRequest && !needsEnvelopeValidation) {
     return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
   }
 
-  if (!dataRequest) {
+  if (!columnsRequest) {
     // Only envelope and/or parent-by-root validation needed
     if (parentPayloadCommitments !== undefined) {
       const parentValidated = await validateParentPayloadColumns(
@@ -470,7 +469,7 @@ export async function validateResponses({
   }
 
   const blocksForDataValidation = getBlocksForDataValidation(
-    dataRequest,
+    columnsRequest,
     batchBlocks,
     validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
@@ -485,27 +484,25 @@ export async function validateResponses({
     );
   }
 
-  if (columnsRequest) {
-    if (!columnSidecars) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-          ...requestsLogMeta({columnsRequest}),
-        },
-        "No columnSidecars to check columnRequest against"
-      );
-    }
-
-    const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
-      config,
-      columnsRequest,
-      blocksForDataValidation,
-      columnSidecars,
-      peerDasMetrics
+  if (!columnSidecars) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
+        ...requestsLogMeta({columnsRequest}),
+      },
+      "No columnSidecars to check columnRequest against"
     );
-    validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
-    warnings = validatedColumnSidecarsResult.warnings;
   }
+
+  const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+    config,
+    columnsRequest,
+    blocksForDataValidation,
+    columnSidecars,
+    peerDasMetrics
+  );
+  validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
+  warnings = validatedColumnSidecarsResult.warnings;
 
   // Parent columns (by-root): KZG-validate against parent's bid commitments and append.
   if (parentPayloadCommitments !== undefined) {

@@ -428,7 +428,7 @@ export const forkChoiceTestRunner =
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
                 } else {
-                  // Pre-fulu blocks carry no tracked sidecar data, deneb..electra blobs are not loaded (#9956)
+                  // Pre-fulu blocks carry no tracked sidecar data, legacy deneb..electra blobs are not loaded
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
                     block: signedBlock as SignedBeaconBlock<ForkPreFulu>,

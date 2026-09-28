@@ -34,10 +34,8 @@ export async function verifyBlocksDataAvailability(
       return DataAvailabilityStatus.NotRequired;
     }
     if (blockInput.type === DAType.PreData) {
-      // deneb..electra blocks are tracked without blob data since blob support was removed (#9956),
-      // their DA is no longer enforced which matches NotRequired. The state transition rejects
-      // PreData for post-deneb forks, and OutOfRange would wrongly block validator duties on such
-      // a head (see notOnOutOfRangeData).
+      // Legacy deneb..electra blob sidecars are not tracked, so these blocks are imported without a DA check.
+      // PreData cannot represent them because the state transition rejects it for post-deneb forks.
       return ForkSeq[blockInput.forkName] >= ForkSeq.deneb
         ? DataAvailabilityStatus.NotRequired
         : DataAvailabilityStatus.PreData;

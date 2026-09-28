@@ -134,37 +134,27 @@ export function getBeaconBlockApi({
       });
     }
 
-    let dataColumnSidecars: fulu.DataColumnSidecar[];
+    // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
+    // Legacy pre-fulu block contents are accepted, but their blobs are discarded.
+    let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
 
-    if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostGloas(fork)) {
-        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
-        dataColumnSidecars = [];
-      } else if (isForkPostFulu(fork)) {
-        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        // If the block was produced by this node, we will already have computed cells
-        // Otherwise, we will compute them from the blobs in this function
-        const cells =
-          (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
-          signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
-        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
-          cells: rowCells,
-          proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
-        }));
-        dataColumnSidecars = getDataColumnSidecarsFromBlock(
-          config,
-          signedBlock as SignedBeaconBlock<ForkPostFulu>,
-          cellsAndProofs
-        ) as fulu.DataColumnSidecar[];
-        timer?.();
-      } else {
-        // Deneb..electra block contents are still accepted from the validator client, but blob
-        // sidecars are no longer published or persisted (#9956): the blob retention window has
-        // expired on all networks and blob gossip has been removed, so the blobs are dropped here.
-        dataColumnSidecars = [];
-      }
-    } else {
-      dataColumnSidecars = [];
+    if (isDenebBlockContents(signedBlockContents) && isForkPostFulu(fork) && !isForkPostGloas(fork)) {
+      const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+      // If the block was produced by this node, we will already have computed cells
+      // Otherwise, we will compute them from the blobs in this function
+      const cells =
+        (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
+        signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
+      const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+        cells: rowCells,
+        proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+      }));
+      dataColumnSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        signedBlock as SignedBeaconBlock<ForkPostFulu>,
+        cellsAndProofs
+      ) as fulu.DataColumnSidecar[];
+      timer?.();
     }
 
     if (isBlockInputColumns(blockForImport)) {

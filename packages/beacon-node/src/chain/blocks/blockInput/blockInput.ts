@@ -187,12 +187,10 @@ type BlockInputPreDataState = {
 };
 
 /**
- * BlockInput without tracked sidecar data, it only has a single state.
+ * Pre-fulu BlockInput, it only has a single state.
  * - the block simply exists
  *
- * Used for pre-deneb blocks and for deneb..electra blocks: their blob retention window has
- * expired on all networks and blob download/gossip support has been removed, so blob data
- * is no longer tracked alongside the block.
+ * Legacy deneb..electra blob sidecars are not tracked.
  */
 export class BlockInputPreData extends AbstractBlockInput<ForkPreFulu, null> {
   type = DAType.PreData as const;

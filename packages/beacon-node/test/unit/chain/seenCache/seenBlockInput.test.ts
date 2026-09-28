@@ -304,7 +304,7 @@ describe("SeenBlockInputCache", async () => {
         expect(isBlockInputPreData(blockInput)).toBeTruthy();
       });
 
-      it("should return a BlockInputPreData for deneb (blob data no longer tracked)", () => {
+      it("should return a BlockInputPreData for deneb (legacy blobs are not tracked)", () => {
         const {block, rootHex} = generateBlock({forkName: ForkName.deneb});
         const blockInput = cache.getByBlock({
           block,

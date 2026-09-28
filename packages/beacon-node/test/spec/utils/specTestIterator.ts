@@ -84,9 +84,8 @@ export const defaultSkipOpts: SkipOpts = {
   ],
   skippedTests: [
     // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
-    // Blob sidecars are no longer downloaded, gossiped or validated for these forks
-    // (https://github.com/ChainSafe/lodestar/issues/9956), so the runner never loads the blobs and the
-    // block imports successfully.
+    // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
+    // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
     /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
   ],
   skippedRunners: [],
