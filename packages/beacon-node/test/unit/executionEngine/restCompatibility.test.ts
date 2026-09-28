@@ -27,6 +27,7 @@ describe("REST engine compatibility", () => {
   let controller: AbortController;
   let discovery: {status: number; body: unknown};
   let restError: {status: number; body: unknown} | undefined;
+  let jsonRpcError: {code: number; message: string} | undefined;
   let malformedResponse: boolean;
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
@@ -38,6 +39,7 @@ describe("REST engine compatibility", () => {
     logger = getMockedLogger();
     discovery = {status: 200, body: capabilities};
     restError = undefined;
+    jsonRpcError = undefined;
     malformedResponse = false;
     beforePayload = undefined;
     beforeForkchoice = undefined;
@@ -69,6 +71,7 @@ describe("REST engine compatibility", () => {
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
       requests.push(method);
+      if (jsonRpcError) return {jsonrpc: "2.0", id: 1, error: jsonRpcError};
       if (method.startsWith("engine_getBlobs")) {
         return {jsonrpc: "2.0", id: 1, result: []};
       }
@@ -101,9 +104,12 @@ describe("REST engine compatibility", () => {
   }
 
   function expectCompatibilityLogsAtDebugOnly(): void {
-    for (const level of ["info", "warn", "error"] as const) {
-      expect(logger[level].mock.calls.filter(([message]) => /REST|JSON-RPC/.test(message))).toEqual([]);
-    }
+    expect(logger.info.mock.calls).toEqual([
+      ["Execution client", {urls: url, engineApi: "auto"}],
+      ["Execution client is synced", {oldState: ExecutionEngineState.ONLINE, newState: ExecutionEngineState.SYNCED}],
+    ]);
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   }
 
   it("remembers a discovery 404 for the connection", async () => {
@@ -275,6 +281,7 @@ describe("REST engine compatibility", () => {
     const engine = createEngine();
     await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toMatchObject({status});
     expect(requests).toEqual(["capabilities", "REST forkchoice"]);
+    expect(engine.state).toBe(status === 401 ? ExecutionEngineState.AUTH_FAILED : ExecutionEngineState.SYNCING);
   });
 
   it("does not downgrade malformed SSZ responses", async () => {
@@ -300,6 +307,71 @@ describe("REST engine compatibility", () => {
       status: 400,
     });
     expect(requests).toEqual(["capabilities", "REST forkchoice"]);
+    expect(engine.state).toBe(ExecutionEngineState.SYNCING);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Execution client request failed",
+      {oldState: ExecutionEngineState.ONLINE, newState: ExecutionEngineState.SYNCING},
+      expect.objectContaining({status: 400, type: "/engine-api/errors/unsupported-fork"})
+    );
+  });
+
+  it.each(["newPayload", "forkchoice"] as const)("keeps a successful %s fallback at debug level", async (method) => {
+    const engine = createEngine();
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
+    vi.clearAllMocks();
+    requests = [];
+    restError = {status: 400, body: {type: "/engine-api/errors/unsupported-fork", detail: "Fork not supported"}};
+
+    if (method === "newPayload") {
+      const result = await engine.notifyNewPayload(ForkName.bellatrix, ssz.bellatrix.ExecutionPayload.defaultValue());
+      expect(result.status).toBe("VALID");
+    } else {
+      await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    }
+
+    expect(requests).toEqual([
+      `REST ${method}`,
+      method === "newPayload" ? "engine_newPayloadV1" : "engine_forkchoiceUpdatedV1",
+    ]);
+    expect(engine.state).toBe(ExecutionEngineState.SYNCED);
+    expect(logger.debug).toHaveBeenCalledWith(
+      "REST engine API rejected an advertised fork, using JSON-RPC until reconnect",
+      {
+        fork: "bellatrix",
+        executionFork: "paris",
+        status: 400,
+        type: "/engine-api/errors/unsupported-fork",
+        detail: "Fork not supported",
+      }
+    );
+    for (const level of ["info", "warn", "error"] as const) {
+      expect(logger[level], `successful fallback must not log at ${level}`).not.toHaveBeenCalled();
+    }
+  });
+
+  it("reports the JSON-RPC failure when an unsupported-fork fallback fails", async () => {
+    const engine = createEngine();
+    const payload = ssz.bellatrix.ExecutionPayload.defaultValue();
+    await engine.notifyNewPayload(ForkName.bellatrix, payload);
+    await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
+    vi.clearAllMocks();
+    requests = [];
+    restError = {status: 400, body: {type: "/engine-api/errors/unsupported-fork"}};
+    jsonRpcError = {code: -32603, message: "Internal error"};
+
+    expect((await engine.notifyNewPayload(ForkName.bellatrix, payload)).status).toBe("ELERROR");
+    expect(requests).toEqual(["REST newPayload", "engine_newPayloadV1"]);
+    expect(engine.state).toBe(ExecutionEngineState.SYNCING);
+    expect(logger.warn.mock.calls).toEqual([
+      [
+        "Execution client request failed",
+        {oldState: ExecutionEngineState.SYNCED, newState: ExecutionEngineState.SYNCING},
+        expect.objectContaining({response: expect.objectContaining({error: jsonRpcError})}),
+      ],
+    ]);
+    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("keeps multiple execution URLs on JSON-RPC in auto mode", async () => {

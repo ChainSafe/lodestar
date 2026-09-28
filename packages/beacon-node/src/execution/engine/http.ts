@@ -178,11 +178,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       throw Error("REST transport is required for engineApi=ssz");
     }
 
-    for (const transport of [this.jsonRpc, this.rest]) {
-      transport?.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
-        this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}), error);
-      });
+    // REST errors are handled in withTransport after compatibility fallback.
+    this.jsonRpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}), error);
+    });
 
+    for (const transport of [this.jsonRpc, this.rest]) {
       transport?.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
         if (this.clientVersion === undefined) {
           this.clientVersion = null;
@@ -468,6 +469,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.disableRestForFork(fork, e);
         this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 1);
         return fn(this.jsonRpc);
+      }
+      if (transport === this.rest) {
+        this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}), e as Error);
       }
       throw e;
     }
