@@ -142,7 +142,7 @@ interface MetaYaml {
   current_time_ms?: bigint;
   messages: {
     offset_ms?: bigint;
-    /** Absolute receive time, emitted by some generators (e.g. heze inclusion lists) instead of `offset_ms` */
+    /** Absolute receive time. TODO: temporary, not in the documented format, see messageTimeMs below */
     current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
@@ -512,6 +512,11 @@ export async function runGossipValidationTest(
 
     const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
+      // TODO: the format only documents `offset_ms`
+      // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.2/tests/formats/networking/gossip_validation.md?plain=1#L58),
+      // but since consensus-specs#5294 the gloas and later generators also write an absolute per-message
+      // `current_time_ms`. Accepting both is temporary until upstream clarifies. If `current_time_ms` stays,
+      // upstream this to unstable; if the generators revert to `offset_ms`, drop the per-message branch.
       const messageTimeMs =
         message.current_time_ms !== undefined
           ? Number(message.current_time_ms)
