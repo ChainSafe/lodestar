@@ -255,6 +255,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Score-threshold populations: connected gossip peers whose score is at or above each configured gate. The gates are cumulative, so the series do not add up; native all counts every connected gossip peer, and its nonnegative gate is the one libp2p labels mesh. Direct peers count by their numeric score, so this is not a count of peers whose RPCs would be accepted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -328,9 +329,14 @@
           "interval": "",
           "legendFormat": "{{threshold}}",
           "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\"}",
+          "legendFormat": "{{threshold}}",
+          "refId": "B"
         }
       ],
-      "title": "Peer count per gossip score threshold",
+      "title": "Connected gossip peers per score threshold",
       "type": "timeseries"
     },
     {
@@ -338,6 +344,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Minimum, mean and maximum gossip score of connected gossip peers; libp2p labels the mean avg. A native target without connected gossip peers has no statistics rather than zeros.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -501,9 +508,14 @@
           "interval": "",
           "legendFormat": "min",
           "refId": "min"
+        },
+        {
+          "expr": "lodestar_native_gossip_score{scope=\"connected\"}",
+          "legendFormat": "{{stat}}",
+          "refId": "native"
         }
       ],
-      "title": "Gossip score avg / min / max",
+      "title": "Connected gossip peer score min / mean / max",
       "type": "timeseries"
     },
     {

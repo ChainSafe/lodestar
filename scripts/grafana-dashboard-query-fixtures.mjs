@@ -396,6 +396,7 @@ export const fixtures = [
   ...debugGossipsubNative(),
   ...discv5Native(),
   ...vmHostNative(),
+  ...gossipScores(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -839,5 +840,87 @@ function vmHostNative() {
     nativeQuery(file, 565, "B", steps, [{labels: "{%T}", value: 0.99}]),
     nativeQuery(file, 565, "C", steps, [{labels: "{%T}", value: 0.25}]),
     nativeQuery(file, 566, "A", steps, [{labels: "{%T}", value: 0.5}]),
+  ];
+}
+
+/**
+ * Score-threshold populations and score statistics of connected gossip peers, shared with libp2p's panels, and of mesh
+ * peers in the native row. A population without peers has no statistics, which must stay missing rather than zero.
+ */
+function gossipScores() {
+  const networking = "lodestar_networking.json";
+  const debug = "lodestar_debug_gossipsub.json";
+  const populations = {
+    'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="all"}': constant(50),
+    'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="graylist"}': constant(48),
+    'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="nonnegative"}': constant(0),
+    'lodestar_native_gossip_score_peers{%T,scope="mesh",threshold="all"}': constant(20),
+  };
+  const connected = (name) => [
+    {labels: `${name}{%T,scope="connected",threshold="all"}`, value: 50},
+    {labels: `${name}{%T,scope="connected",threshold="graylist"}`, value: 48},
+    {labels: `${name}{%T,scope="connected",threshold="nonnegative"}`, value: 0},
+  ];
+  /** Statistics of one scope: a target whose population is empty exports none */
+  const statistics = (dashboard, panel, refId, scope) => {
+    const other = scope === "mesh" ? "connected" : "mesh";
+    const stats = (target) => ({
+      [`lodestar_native_gossip_score_peers{${target},scope="${scope}",threshold="all"}`]: constant(3),
+      [`lodestar_native_gossip_score{${target},scope="${scope}",stat="min"}`]: constant(-12.5),
+      [`lodestar_native_gossip_score{${target},scope="${scope}",stat="mean"}`]: constant(0),
+      [`lodestar_native_gossip_score{${target},scope="${scope}",stat="max"}`]: constant(40),
+      [`lodestar_native_gossip_score{${target},scope="${other}",stat="max"}`]: constant(7),
+    });
+    const expect = (target) => [
+      {labels: `lodestar_native_gossip_score{${target},scope="${scope}",stat="min"}`, value: -12.5},
+      {labels: `lodestar_native_gossip_score{${target},scope="${scope}",stat="mean"}`, value: 0},
+      {labels: `lodestar_native_gossip_score{${target},scope="${scope}",stat="max"}`, value: 40},
+    ];
+    const empty = {[`lodestar_native_gossip_score_peers{${nativeOther},scope="${scope}",threshold="all"}`]: constant(0)};
+    return {
+      dashboard,
+      panel,
+      refId,
+      cases: [
+        {name: "native target, a real zero mean included", series: stats(native), expect: expect(native)},
+        {name: "an empty population has no statistics, not zeros", series: empty, expect: []},
+        {
+          name: "a libp2p target has no native statistics",
+          series: {[`lodestar_gossip_score_avg_min_max_max{${libp2p}}`]: constant(9)},
+          expect: [],
+        },
+        {
+          name: "a native target beside an empty one and a libp2p target",
+          series: {...stats(native), ...empty, [`gossipsub_score_max{${libp2p}}`]: constant(9)},
+          expect: expect(native),
+        },
+      ],
+    };
+  };
+  return [
+    nativeQuery(networking, 330, "B", populations, connected("lodestar_native_gossip_score_peers")),
+    nativeQuery(debug, 330, "B", populations, connected("")),
+    nativeQuery(debug, 445, "B", populations, connected("lodestar_native_gossip_score_peers")),
+    nativeQuery(
+      "lodestar_summary.json",
+      21,
+      "C",
+      populations,
+      [{labels: 'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="nonnegative"}', value: 0}]
+    ),
+    nativeQuery(
+      debug,
+      524,
+      "A",
+      {...populations, 'lodestar_native_gossip_score_peers{%T,scope="mesh",threshold="publish"}': constant(0)},
+      [
+        {labels: 'lodestar_native_gossip_score_peers{%T,scope="mesh",threshold="all"}', value: 20},
+        {labels: 'lodestar_native_gossip_score_peers{%T,scope="mesh",threshold="publish"}', value: 0},
+      ]
+    ),
+    statistics(networking, 331, "native", "connected"),
+    statistics(debug, 331, "native", "connected"),
+    statistics(debug, 447, "native", "connected"),
+    statistics(debug, 525, "A", "mesh"),
   ];
 }
