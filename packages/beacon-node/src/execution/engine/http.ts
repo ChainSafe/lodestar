@@ -554,7 +554,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (buffers) {
       // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
       if (buffers.length < versionedHashesHex.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
       }
 
       for (const [i, buffer] of buffers.entries()) {
