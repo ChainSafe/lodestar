@@ -42,6 +42,10 @@ describe("REST engine compatibility", () => {
     beforePayload = undefined;
     beforeForkchoice = undefined;
     requests = [];
+    await startServer();
+  });
+
+  async function startServer(port = 0): Promise<void> {
     server = fastify({forceCloseConnections: true});
     server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_, body, done) => done(null, body));
     server.get("/engine/v1/capabilities", (_, reply) => {
@@ -75,8 +79,8 @@ describe("REST engine compatibility", () => {
         result: method.startsWith("engine_forkchoiceUpdated") ? {payloadStatus: status, payloadId: null} : status,
       };
     });
-    url = await server.listen({host: "127.0.0.1", port: 0});
-  });
+    url = await server.listen({host: "127.0.0.1", port});
+  }
 
   afterEach(async () => {
     controller.abort();
@@ -138,6 +142,35 @@ describe("REST engine compatibility", () => {
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests.at(-1)).toBe("REST forkchoice");
   });
+
+  it.each(["auto", "ssz"] as const)(
+    "rediscovers a JSON-RPC-only client after a REST disconnect in %s mode",
+    async (engineApi) => {
+      const engine = createEngine(engineApi);
+      const payload = ssz.bellatrix.ExecutionPayload.defaultValue();
+      expect((await engine.notifyNewPayload(ForkName.bellatrix, payload)).status).toBe("VALID");
+      await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
+      expect(requests).toEqual(["capabilities", "REST newPayload"]);
+
+      const port = Number(new URL(url).port);
+      await server.close();
+      expect((await engine.notifyNewPayload(ForkName.bellatrix, payload)).status).toBe("UNAVAILABLE");
+      expect(engine.state).toBe(ExecutionEngineState.OFFLINE);
+
+      discovery = {status: 404, body: {}};
+      restError = {status: 404, body: {}};
+      await startServer(port);
+      requests = [];
+
+      const status = engineApi === "auto" ? "VALID" : "ELERROR";
+      expect((await engine.notifyNewPayload(ForkName.bellatrix, payload)).status).toBe(status);
+      expect((await engine.notifyNewPayload(ForkName.bellatrix, payload)).status).toBe(status);
+      expect(requests).toEqual(
+        engineApi === "auto" ? ["capabilities", "engine_newPayloadV1", "engine_newPayloadV1"] : ["capabilities"]
+      );
+      expect(engine.state).toBe(engineApi === "auto" ? ExecutionEngineState.SYNCED : ExecutionEngineState.SYNCING);
+    }
+  );
 
   it("reprobes after a temporary discovery failure without probing every call", async () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(100_000);

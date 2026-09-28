@@ -613,15 +613,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
-        // The execution client may have been upgraded while offline
-        this.restSupport = {state: "pending"};
-        this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
+        if (oldState === ExecutionEngineState.AUTH_FAILED) {
+          this.restSupport = {state: "pending"};
+          this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
+        }
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.debug("Unable to get execution client version", {}, e);
           this.clientVersion = null;
         });
         break;
       case ExecutionEngineState.OFFLINE:
+        // Reprobe before choosing a transport for the next call after a disconnect.
+        this.restSupport = {state: "pending"};
+        this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
         this.logger.error("Execution client went offline", {oldState, newState}, error);
         break;
       case ExecutionEngineState.SYNCED:
