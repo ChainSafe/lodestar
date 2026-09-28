@@ -334,8 +334,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
     MAX_ATTESTER_SLASHING_SIZE: false,
-    MAX_DATA_COLUMN_SIDECAR_SIZE: false,
-    MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
     GAS_LIMIT_SCHEDULE: false,

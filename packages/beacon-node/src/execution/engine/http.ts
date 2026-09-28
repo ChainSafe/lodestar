@@ -32,11 +32,13 @@ import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBody,
+  ExecutionPayloadBodyV2,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBody,
+  deserializeExecutionPayloadBodyV2,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
@@ -474,6 +476,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
+    const method = "engine_getPayloadBodiesByHashV2";
+    assertReqSizeLimit(blockHashes.length, 32);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
+    return response.map(deserializeExecutionPayloadBodyV2);
   }
 
   async getPayloadBodiesByRange(

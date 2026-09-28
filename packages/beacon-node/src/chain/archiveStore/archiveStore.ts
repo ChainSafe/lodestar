@@ -16,7 +16,6 @@ import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.j
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
-import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -37,7 +36,6 @@ export enum ArchiveStoreTask {
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
   ForkchoicePrune = "forkchoice_prune",
-  UpdateBackfillRange = "update_backfill_range",
 }
 
 /**
@@ -105,7 +103,7 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      await callFnWhenAwait(
+      const blockCutoffSlot = await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
@@ -118,6 +116,7 @@ export class ArchiveStore {
         30_000,
         this.signal
       );
+      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
     }
 
     if (this.opts.serveHistoricalState) {
@@ -230,13 +229,14 @@ export class ArchiveStore {
         isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir
+        this.chain.opts.persistOrphanedBlocksDir,
+        this.chain.opts.dedupePayloads
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        await pruneHistory(
+        const blockCutoffSlot = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
@@ -244,6 +244,7 @@ export class ArchiveStore {
           finalizedEpoch,
           this.chain.clock.currentEpoch
         );
+        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
@@ -260,10 +261,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
-      timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

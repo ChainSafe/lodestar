@@ -295,12 +295,12 @@ describe("chain / blocks / processBlocks", () => {
         DataAvailabilityStatus.NotRequired,
         {validSignature: false}
       );
-      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(
+      expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(
         parent.payloadInput.blockRootHex
       );
     } else {
       expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot - 1, slot]);
-      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+      expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
     }
     // the batch's own map is left untouched, range sync still owns it
     expect(payloadEnvelopes.size).toBe(2);
@@ -375,7 +375,7 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).not.toHaveBeenCalled();
     if (headOnEmpty && skipAttestations) {
       expect(importExecutionPayload).not.toHaveBeenCalled();
-      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockRootHex);
+      expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRootHex);
       expect(chain.recomputeForkChoiceHead).not.toHaveBeenCalled();
       // the skipped orphaned envelope is returned so range sync can log the serving peer/client
       expect(result).toEqual({orphaned: [{slot, payloadEnvelopeInput: payloadInput}], skipped: true});
@@ -383,7 +383,7 @@ describe("chain / blocks / processBlocks", () => {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
         validSignature: false,
       });
-      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+      expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
       expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
       expect(result).toEqual({orphaned: [], skipped: false});
     }

@@ -7,6 +7,7 @@ import {
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
+  serializeExecutionPayloadBodyV2,
 } from "../../../src/execution/engine/types.js";
 import {RpcPayload, numToQuantity} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
@@ -222,6 +223,47 @@ describe("ExecutionEngine / http", () => {
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+  });
+
+  it("getPayloadBodiesByHashV2", async () => {
+    const hash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [hash, hash],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+          blockAccessList: "0xc0",
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [hash],
+          withdrawals: [],
+          blockAccessList: null, // pruned by the EL (EIP-7928 retention) or pre-Amsterdam block
+        },
+      ],
+    };
+    const reqBlockHashes = [hash, `${hash.slice(0, -3)}111`, `${hash.slice(0, -3)}000`];
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByHashV2(reqBlockHashes);
+
+    expect(reqJsonRpcPayload).toEqual({
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByHashV2",
+      params: [reqBlockHashes],
+    });
+    expect(res.map(serializeExecutionPayloadBodyV2)).toEqual(response.result);
+    expect(res[2]?.blockAccessList).toBeNull();
   });
 
   it("getPayloadBodiesByRange", async () => {

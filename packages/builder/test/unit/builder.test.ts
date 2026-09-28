@@ -33,10 +33,10 @@ describe("Builder", () => {
     preferences.message.proposalSlot = 2;
     const dependentRoot = toRootHex(preferences.message.dependentRoot);
     proposerPreferencesTracker.onProposerPreferences(preferences);
-    const store = new PayloadStore();
+    const payloadStore = new PayloadStore();
     const payload = mockBuiltPayload({slot: 0});
     const blockHash = toRootHex(payload.executionPayload.blockHash);
-    store.add({slot: 0, parentBlockRoot: Buffer.alloc(32), blockHash, payload});
+    payloadStore.add({slot: 0, parentBlockRoot: Buffer.alloc(32), blockHash, payload});
     const clockStart = vi.spyOn(clock, "start");
     const observerStart = vi.spyOn(blockObserver, "start").mockImplementation(() => {});
     const preferencesStart = vi.spyOn(proposerPreferencesTracker, "start").mockImplementation(() => {});
@@ -59,7 +59,7 @@ describe("Builder", () => {
       proposerPreferencesTracker,
       clock,
       index: 1,
-      store,
+      payloadStore,
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
@@ -69,10 +69,10 @@ describe("Builder", () => {
     expect(clockStart.mock.invocationCallOrder[0]).toBeLessThan(preferencesStart.mock.invocationCallOrder[0]);
     expect(controller.signal.aborted).toBe(false);
 
-    expect(store.has(blockHash)).toBe(true);
+    expect(payloadStore.has(blockHash)).toBe(true);
     expect(proposerPreferencesTracker.get(2, dependentRoot)).toBe(preferences);
     await clock.tickSlotFns(3, controller.signal);
-    expect(store.has(blockHash)).toBe(false);
+    expect(payloadStore.has(blockHash)).toBe(false);
     expect(proposerPreferencesTracker.get(2, dependentRoot)).toBeNull();
 
     await builder.close();

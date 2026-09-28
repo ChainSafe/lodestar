@@ -11,7 +11,6 @@ import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -61,8 +60,6 @@ export class BeaconDb implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
-
   readonly dataColumns: IDataColumnStore;
   lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
@@ -96,8 +93,6 @@ export class BeaconDb implements IBeaconDb {
     this.checkpointHeader = new CheckpointHeaderRepository(config, db);
     this.syncCommittee = new SyncCommitteeRepository(config, db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
-
-    this.backfilledRanges = new BackfilledRanges(config, db);
 
     this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);
     this.dataColumns = new LegacyDataColumnStore(

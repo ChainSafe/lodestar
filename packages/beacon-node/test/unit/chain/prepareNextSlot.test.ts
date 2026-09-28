@@ -169,6 +169,10 @@ describe("PrepareNextSlot scheduler", () => {
       executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
     );
     expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
+    // attributes computed for the event are reused for the EL payload preparation
+    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][4]).toBe(
+      spy.mock.calls[0][0].data.payloadAttributes
+    );
     expect(loggerStub.error).not.toHaveBeenCalled();
   });
 
