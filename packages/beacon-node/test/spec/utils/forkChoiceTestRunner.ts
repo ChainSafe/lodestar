@@ -70,7 +70,11 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
+import {
+  createSpecTestBeaconMetrics,
+  expectNoProgressiveBalancesMismatches,
+  expectValidProgressiveBalances,
+} from "./progressiveBalances.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -98,6 +102,7 @@ export const forkChoiceTestRunner =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
+        const metrics = createSpecTestBeaconMetrics(anchorState.genesisTime);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isGloasStateType(anchorState)
@@ -140,7 +145,6 @@ export const forkChoiceTestRunner =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
           },
@@ -154,7 +158,7 @@ export const forkChoiceTestRunner =
             logger,
             processShutdownCallback: () => {},
             clock,
-            metrics: null,
+            metrics,
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
@@ -512,6 +516,12 @@ export const forkChoiceTestRunner =
                   ignoreIfKnown: isValid,
                   ignoreIfFinalized: isValid,
                 });
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+                if (protoBlock === null) {
+                  throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
+                }
+                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
+                expectValidProgressiveBalances(postState, metrics);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") {
@@ -753,6 +763,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
+          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
         } finally {
           await chain.close();
         }
@@ -833,21 +844,10 @@ export const forkChoiceTestRunner =
         // Gloas compliance vectors have up to ~650 steps and need the extra headroom.
         timeout: 60000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
+        // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          ((name.includes("gloas") || name.includes("heze")) &&
-            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
-              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))),
+        shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
       },
     };
   };

@@ -19,4 +19,10 @@ describe("builderConfigDataFromJson", () => {
       );
     }
   });
+
+  it("suggests the ASCII form of a builder url with an internationalized hostname", () => {
+    expect(() => builderConfigDataFromJson({builders: [{url: "https://platåberget.dev"}]})).toThrow(
+      "use https://xn--platberget-45a.dev/ instead"
+    );
+  });
 });
