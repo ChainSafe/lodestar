@@ -13,6 +13,7 @@ import {encodeArchivedHeaderEnvelope} from "../../../../../src/db/repositories/i
 import {IExecutionEngine} from "../../../../../src/execution/index.js";
 import {onExecutionPayloadEnvelopesByRange} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.js";
+import {MAX_BODIES_REQUEST} from "../../../../../src/util/execution.js";
 import {toSignedHeaderEnvelope} from "../../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../../utils/db.js";
 import {
@@ -75,14 +76,35 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
     return full;
   }
 
-  function elServes(fulls: gloas.SignedExecutionPayloadEnvelope[]): void {
+  function elServes(fulls: gloas.SignedExecutionPayloadEnvelope[]) {
     const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), payloadBodiesOf(f)]));
-    getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
+    const serve = async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null);
+    getPayloadBodiesByHashV2.mockImplementation(serve);
+    return serve;
   }
 
   async function byRange(startSlot: number, count: number): Promise<number[]> {
     const slots: number[] = [];
     for await (const {data} of onExecutionPayloadEnvelopesByRange({startSlot, count}, chain, db, peerId, "test")) {
+      slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
+    }
+    return slots;
+  }
+
+  async function seedSlots(fromSlot: number, count: number): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    const fulls: gloas.SignedExecutionPayloadEnvelope[] = [];
+    for (let slot = fromSlot; slot < fromSlot + count; slot++) fulls.push(await seed(slot));
+    // Roots resolve through blockArchive.getSlotByRoot; map the seeded roots to their slots
+    const slotByRoot = new Map(fulls.map((f) => [toRootHex(f.message.beaconBlockRoot), f.message.payload.slotNumber]));
+    vi.spyOn(db.blockArchive, "getSlotByRoot").mockImplementation(
+      async (root) => slotByRoot.get(toRootHex(root)) ?? null
+    );
+    return fulls;
+  }
+
+  async function byRoot(roots: Uint8Array[]): Promise<number[]> {
+    const slots: number[] = [];
+    for await (const {data} of onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")) {
       slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
     }
     return slots;
@@ -131,6 +153,39 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
         slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
       }
       expect(slots).toEqual([11]);
+    });
+
+    it("serves a repeated root once, with a single EL lookup", async () => {
+      const fulls = await seedSlots(10, 1);
+      elServes(fulls);
+      expect(await byRoot(Array.from({length: 128}, () => fulls[0].message.beaconBlockRoot))).toEqual([10]);
+      expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
+      expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(1);
+    });
+
+    it("yields the first EL batch before rebuilding the next one", async () => {
+      const fulls = await seedSlots(10, MAX_BODIES_REQUEST + 1);
+      elServes(fulls);
+      const roots = fulls.map((f) => f.message.beaconBlockRoot);
+      const iterator = onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")[Symbol.asyncIterator]();
+      await iterator.next();
+      expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
+    });
+
+    it("ends the response short when the EL fails on a later batch", async () => {
+      const fulls = await seedSlots(10, MAX_BODIES_REQUEST + 1);
+      const serve = elServes(fulls);
+      getPayloadBodiesByHashV2.mockImplementationOnce(serve).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+      const slots = await byRoot(fulls.map((f) => f.message.beaconBlockRoot));
+      expect(slots).toEqual(fulls.slice(0, MAX_BODIES_REQUEST).map((f) => f.message.payload.slotNumber));
+    });
+
+    it("maps an EL outage on the first batch to RESOURCE_UNAVAILABLE", async () => {
+      const fulls = await seedSlots(10, 2);
+      getPayloadBodiesByHashV2.mockRejectedValue(new Error("ECONNREFUSED"));
+      expect(await respStatusOf(byRoot(fulls.map((f) => f.message.beaconBlockRoot)))).toBe(
+        RespStatus.RESOURCE_UNAVAILABLE
+      );
     });
   });
 });
