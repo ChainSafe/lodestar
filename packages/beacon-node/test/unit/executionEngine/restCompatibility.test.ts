@@ -4,10 +4,14 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
-import {EngineApiMode} from "../../../src/execution/engine/http.js";
+import {FetchError, defer} from "@lodestar/utils";
+import {EngineApiMode, ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {getExecutionEngineHttp} from "../../../src/execution/engine/index.js";
 import {ExecutionEngineState} from "../../../src/execution/engine/interface.js";
+import {JsonRpcHttpClient, JsonRpcHttpClientEvent} from "../../../src/execution/engine/jsonRpcHttpClient.js";
+import {JsonRpcEngineTransport} from "../../../src/execution/engine/jsonRpcTransport.js";
+import {EngineRestHttpClient} from "../../../src/execution/engine/restHttpClient.js";
+import {RestEngineTransport} from "../../../src/execution/engine/restTransport.js";
 import {ForkchoiceUpdateResponse, PayloadStatus, PayloadStatusCode} from "../../../src/execution/engine/sszTypes.js";
 
 const hash = `0x${"11".repeat(32)}`;
@@ -93,6 +97,31 @@ describe("REST engine compatibility", () => {
     discovery = {status: 200, body: capabilities};
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
+  });
+
+  it("rediscovers REST after the execution client reconnects", async () => {
+    discovery = {status: 404, body: {}};
+    const rpc = new JsonRpcHttpClient([url], {signal: controller.signal, retries: 0});
+    const engine = new ExecutionEngineHttp(
+      {
+        jsonRpc: new JsonRpcEngineTransport(rpc),
+        rest: new RestEngineTransport(new EngineRestHttpClient([url], {signal: controller.signal})),
+      },
+      {signal: controller.signal, logger: getEnvLogger()}
+    );
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
+    const failure = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("connection refused"), {code: "ECONNREFUSED"}),
+    });
+    rpc.emitter.emit(JsonRpcHttpClientEvent.ERROR, {error: new FetchError(url, failure)});
+    expect(engine.state).toBe(ExecutionEngineState.OFFLINE);
+
+    discovery = {status: 200, body: capabilities};
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    await vi.waitFor(() => expect(requests.filter((request) => request === "capabilities")).toHaveLength(2));
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    expect(requests.at(-1)).toBe("REST forkchoice");
   });
 
   it("reprobes after a temporary discovery failure without probing every call", async () => {

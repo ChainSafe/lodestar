@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {ErrorAborted, FetchError} from "@lodestar/utils";
+import {ErrorAborted, FetchError, TimeoutError} from "@lodestar/utils";
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
@@ -82,6 +82,17 @@ describe("execution / engine / utils", () => {
 
     type ErrorTestCase = [string, Error, [oldState: ExecutionEngineState, newState: ExecutionEngineState][]];
     const testCasesError: ErrorTestCase[] = [
+      [
+        "request timeout",
+        new TimeoutError("request"),
+        [
+          [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
+        ],
+      ],
       [
         "abort error",
         new ErrorAborted(),

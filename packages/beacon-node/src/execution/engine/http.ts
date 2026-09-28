@@ -11,7 +11,6 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {FetchError, TimeoutError} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -29,7 +28,7 @@ import {
 } from "./interface.js";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
-import {EngineRestError, EngineRestResponseError} from "./restHttpClient.js";
+import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
 import {IEngineTransport, PayloadStatusResult} from "./transport.js";
@@ -542,8 +541,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
               type: e.type ?? "unknown",
             });
           } else {
-            const transient =
-              (e instanceof EngineRestError && e.status >= 500) || e instanceof FetchError || e instanceof TimeoutError;
+            const transient = isRetryableEngineRestError(e);
             this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};
             this.logger.debug("Unable to probe engine API capabilities", {retryAfterMs: REST_PROBE_RETRY_MS}, e);
           }

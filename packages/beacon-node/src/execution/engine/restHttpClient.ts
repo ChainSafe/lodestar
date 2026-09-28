@@ -56,7 +56,10 @@ export class EngineRestResponseError extends LodestarError<{
   reason: string;
 }> {
   constructor(routeId: string, reason: string) {
-    super({code: "ENGINE_REST_INVALID_RESPONSE", routeId, reason}, `Invalid engine REST response: ${reason}, ${routeId}`);
+    super(
+      {code: "ENGINE_REST_INVALID_RESPONSE", routeId, reason},
+      `Invalid engine REST response: ${reason}, ${routeId}`
+    );
   }
 }
 
@@ -115,7 +118,7 @@ export class EngineRestHttpClient {
     return retry(() => this.requestAnyUrl(req, opts), {
       retries: opts?.retries ?? this.opts.retries ?? 0,
       retryDelay: opts?.retryDelay ?? this.opts.retryDelay,
-      shouldRetry: opts?.shouldRetry ?? isRetryableError,
+      shouldRetry: opts?.shouldRetry ?? isRetryableEngineRestError,
       signal: this.opts.signal,
       onRetry: () => {
         this.metrics?.retryCount.inc({routeId});
@@ -135,7 +138,7 @@ export class EngineRestHttpClient {
       try {
         return await this.requestOneUrl(this.urls[i], req, opts);
       } catch (e) {
-        if (!isRetryableError(e as Error)) {
+        if (!isRetryableEngineRestError(e as Error)) {
           throw e;
         }
         lastError = e as Error;
@@ -231,7 +234,7 @@ export class EngineRestHttpClient {
 }
 
 /** Client errors are deterministic, only transport failures and server errors are worth retrying */
-function isRetryableError(e: Error): boolean {
+export function isRetryableEngineRestError(e: Error): boolean {
   return (
     (e instanceof EngineRestError && e.status >= 500) ||
     e instanceof TimeoutError ||
