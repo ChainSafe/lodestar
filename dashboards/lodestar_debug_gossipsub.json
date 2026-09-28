@@ -1797,6 +1797,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Committed mesh joins (+) and leaves (-) per second by reason; GRAFT and PRUNE controls that change no membership do not count. The backends name their reasons differently: libp2p inclusion and churn events; native joins by fill_mesh, fill_outbound, opportunistic and remote_graft, and leaves by ineligible, excess, remote_prune, local_unsubscribe, remote_unsubscribe, session_end, direct_peer and refused_graft.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1978,6 +1979,16 @@
           "legendFormat": "- excess",
           "range": true,
           "refId": "L"
+        },
+        {
+          "expr": "sum by (reason) (rate(lodestar_native_gossip_mesh_changes_total{event=\"join\"}[$rate_interval]))",
+          "legendFormat": "+ {{reason}}",
+          "refId": "M"
+        },
+        {
+          "expr": "- sum by (reason) (rate(lodestar_native_gossip_mesh_changes_total{event=\"leave\"}[$rate_interval]))",
+          "legendFormat": "- {{reason}}",
+          "refId": "N"
         }
       ],
       "title": "Mesh inclusion (+) / churn (-) events - sum by reason",
@@ -2014,6 +2025,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Gossip messages received from peers per second by topic, before duplicate filtering and validation, so duplicates and invalid messages count. Both backends; native topics outside the fixed gossip kinds read as unknown.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2083,7 +2095,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossipsub_msg_received_prevalidation_total[$rate_interval])",
+          "expr": "rate(gossipsub_msg_received_prevalidation_total[$rate_interval])\nor rate(lodestar_native_gossip_messages_received_total[$rate_interval])",
           "interval": "",
           "legendFormat": "{{topic}}",
           "refId": "A"
@@ -2097,6 +2109,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Duplicates as a share of received messages per topic over 32 minutes, exactly 5 epochs; a duplicate was already seen or is awaiting validation. Both backends, each target's own counters summed across targets.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2166,14 +2179,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_pre_validation_duplicate_total{topic!~\"light.*\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_prevalidation_total{topic!~\"light.*\"} [32m])) by (topic))",
+          "expr": "sum by (topic) (\n  rate(gossipsub_pre_validation_duplicate_total{topic!~\"light.*\"}[32m])\n  or rate(lodestar_native_gossip_messages_duplicate_total{topic!~\"light.*\"}[32m])\n)\n/\nsum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total{topic!~\"light.*\"}[32m])\n  or rate(lodestar_native_gossip_messages_received_total{topic!~\"light.*\"}[32m])\n)",
           "interval": "",
-          "legendFormat": "{{topic}} {{status}}",
+          "legendFormat": "{{topic}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Received msg duplicate / valid rate (except light_* topics)",
+      "title": "Received msg duplicate share (except light_* topics)",
       "type": "timeseries"
     },
     {
@@ -2266,6 +2279,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Messages received per unique message, per topic over 32 minutes: one plus the duplicates each message arrives with. libp2p divides by messages that passed prevalidation; native by received messages that were not duplicates, invalid ones included.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2336,14 +2350,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_msg_received_prevalidation_total [32m])) by (topic))\n/\n(sum(rate(gossipsub_pre_validation_valid_total [32m])) by (topic))",
+          "expr": "sum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total[32m])\n  or rate(lodestar_native_gossip_messages_received_total[32m])\n)\n/\nsum by (topic) (\n  rate(gossipsub_pre_validation_valid_total[32m])\n  or (rate(lodestar_native_gossip_messages_received_total[32m]) - rate(lodestar_native_gossip_messages_duplicate_total[32m]))\n)",
           "interval": "",
           "legendFormat": "{{topic}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Received msg pre-validation / valid rate - by topic",
+      "title": "Received msg per unique msg - by topic",
       "type": "timeseries"
     },
     {
@@ -3086,6 +3100,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Local publications admitted to gossip per second by topic, including those without recipients; a duplicate publication does not count. Both backends.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3155,7 +3170,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(gossipsub_msg_publish_count_total[$rate_interval])",
+          "expr": "rate(gossipsub_msg_publish_count_total[$rate_interval])\nor rate(lodestar_native_gossip_messages_published_total[$rate_interval])",
           "interval": "",
           "legendFormat": "{{topic}}",
           "refId": "A"
@@ -3169,6 +3184,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Recipients each local publication was queued to. libp2p per topic; native across topics, where publications admitted without recipients count too. Queued is not delivery: native completed means QUIC accepted the final byte, not that the peer received the message.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3241,9 +3257,14 @@
           "interval": "",
           "legendFormat": "{{topic}}",
           "refId": "A"
+        },
+        {
+          "expr": "sum without (origin, outcome) (rate(lodestar_native_gossip_data_recipients_total{origin=\"publication\",outcome=\"queued\"}[$rate_interval]))\n/\nsum without (topic) (rate(lodestar_native_gossip_messages_published_total[$rate_interval]))",
+          "legendFormat": "recipients per publication",
+          "refId": "B"
         }
       ],
-      "title": "Published msg avg peers sent per RPC (libp2p backend)",
+      "title": "Published msg avg recipients queued per publication",
       "type": "timeseries"
     },
     {
@@ -5198,7 +5219,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score penalties / sec",
+      "title": "Score penalties / sec (libp2p backend)",
       "type": "timeseries"
     },
     {
@@ -5875,6 +5896,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Sampled IWANT promises: one message id per IWANT request, broken when no peer delivers it before the deadline; broken counts on both backends. Native arms a promise when the request's send completes with its sample outstanding, and local cancellation can remove one before it expires. Broken / armed is a ratio of sampled promises, not peer delivery reliability.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5986,7 +6008,7 @@
           "exemplar": false,
           "expr": "rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
           "interval": "",
-          "legendFormat": "sent",
+          "legendFormat": "sent (libp2p backend)",
           "refId": "A"
         },
         {
@@ -5998,7 +6020,7 @@
           "expr": "rate(gossipsub_iwant_promise_resolved_total[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "resolved",
+          "legendFormat": "resolved (libp2p backend)",
           "refId": "B"
         },
         {
@@ -6022,11 +6044,21 @@
           "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])/rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "broken ratio",
+          "legendFormat": "broken ratio (libp2p backend)",
           "refId": "broken_ratio"
+        },
+        {
+          "expr": "rate(lodestar_native_gossip_iwant_promises_started_total[$rate_interval])",
+          "legendFormat": "armed (native backend)",
+          "refId": "D"
+        },
+        {
+          "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])\n/\nrate(lodestar_native_gossip_iwant_promises_started_total[$rate_interval])",
+          "legendFormat": "broken / armed (native backend)",
+          "refId": "E"
         }
       ],
-      "title": "gossipsub_iwant_promise broken ratio",
+      "title": "Sampled IWANT promises broken / armed",
       "type": "timeseries"
     },
     {
@@ -9788,6 +9820,35 @@
         }
       ],
       "title": "Native mesh peer score min / mean / max",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Behaviour penalty units applied to peers per second, by protocol violation: GRAFT during backoff or flooding, broken IWANT promises, malformed RPCs and frames, and large frame timeouts. Applied units, not the decaying score value; local receive pressure never counts. libp2p's score penalties panel also counts message deficits and IP colocation.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 414
+      },
+      "id": 526,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_gossip_behaviour_penalties_total[$rate_interval])",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native P7 behaviour penalties by violation / sec",
       "type": "timeseries"
     }
   ],

@@ -397,6 +397,7 @@ export const fixtures = [
   ...discv5Native(),
   ...vmHostNative(),
   ...gossipScores(),
+  ...gossipMessages(),
   {
     dashboard: "lodestar_discv5.json",
     panel: 14,
@@ -922,5 +923,255 @@ function gossipScores() {
     statistics(debug, 331, "native", "connected"),
     statistics(debug, 447, "native", "connected"),
     statistics(debug, 525, "A", "mesh"),
+  ];
+}
+
+/**
+ * Received, duplicate and published messages, mesh changes, P7 penalties and sampled IWANT promises. Panels that read
+ * equivalent libp2p and native counters take each target's own counter with `or` before summing.
+ */
+function gossipMessages() {
+  const file = "lodestar_debug_gossipsub.json";
+  /** A per-target counter rate on both backends, by topic */
+  const eitherCounter = (panel, libp2pName, nativeName) => ({
+    dashboard: file,
+    panel,
+    refId: "A",
+    cases: [
+      {
+        name: "libp2p only",
+        series: {[`${libp2pName}{${libp2p},topic="beacon_block"}`]: perSecond(2)},
+        expect: [{labels: `{${libp2p},topic="beacon_block"}`, value: 2}],
+      },
+      {
+        name: "native only, a real zero included",
+        series: {
+          [`${nativeName}{${native},topic="beacon_block"}`]: perSecond(3),
+          [`${nativeName}{${native},topic="unknown"}`]: perSecond(0),
+        },
+        expect: [
+          {labels: `{${native},topic="beacon_block"}`, value: 3},
+          {labels: `{${native},topic="unknown"}`, value: 0},
+        ],
+      },
+      {
+        name: "mixed targets keep their own series",
+        series: {
+          [`${libp2pName}{${libp2p},topic="beacon_block"}`]: perSecond(2),
+          [`${nativeName}{${native},topic="beacon_block"}`]: perSecond(3),
+          [`${nativeName}{${nativeOther},topic="beacon_block"}`]: perSecond(1),
+        },
+        expect: [
+          {labels: `{${libp2p},topic="beacon_block"}`, value: 2},
+          {labels: `{${native},topic="beacon_block"}`, value: 3},
+          {labels: `{${nativeOther},topic="beacon_block"}`, value: 1},
+        ],
+      },
+      {
+        name: "a target without either counter has no result, not a zero",
+        series: {[`gossipsub_accepted_messages_total{${native},topic="beacon_block"}`]: perSecond(1)},
+        expect: [],
+      },
+    ],
+  });
+  const promises = {
+    [`gossipsub_iwant_promise_broken{${libp2p}}`]: perSecond(1),
+    [`gossipsub_iwant_promise_sent_total{${libp2p}}`]: perSecond(4),
+    [`gossipsub_iwant_promise_broken{${native}}`]: perSecond(0.5),
+    [`lodestar_native_gossip_iwant_promises_started_total{${native}}`]: perSecond(2),
+    [`gossipsub_iwant_promise_broken{${nativeOther}}`]: perSecond(0),
+    [`lodestar_native_gossip_iwant_promises_started_total{${nativeOther}}`]: perSecond(2),
+  };
+  /** Committed joins (M) or leaves (N) summed over targets by reason; leaves plot below zero */
+  const meshChanges = (refId, event, sign) => {
+    const changes = (target) => ({
+      [`lodestar_native_gossip_mesh_changes_total{${target},topic="beacon_attestation",event="join",reason="fill_mesh"}`]:
+        perSecond(0.5),
+      [`lodestar_native_gossip_mesh_changes_total{${target},topic="beacon_block",event="join",reason="remote_graft"}`]:
+        perSecond(0),
+      [`lodestar_native_gossip_mesh_changes_total{${target},topic="beacon_block",event="leave",reason="excess"}`]:
+        perSecond(0.25),
+      [`lodestar_native_gossip_mesh_changes_total{${target},topic="unknown",event="leave",reason="session_end"}`]:
+        perSecond(0),
+    });
+    const reasons = event === "join" ? {fill_mesh: 0.5, remote_graft: 0} : {excess: 0.25, session_end: 0};
+    const expect = (targets) =>
+      Object.entries(reasons).map(([reason, rate]) => ({labels: `{reason="${reason}"}`, value: sign * rate * targets}));
+    return {
+      dashboard: file,
+      panel: 386,
+      refId,
+      cases: [
+        {name: `native ${event}s by reason, real zeros included`, series: changes(native), expect: expect(1)},
+        {
+          name: "a libp2p target has no native result",
+          series: {[`gossipsub_mesh_peer_inclusion_events_random_total{${libp2p},topic="beacon_block"}`]: perSecond(1)},
+          expect: [],
+        },
+        {
+          name: "two native targets beside a libp2p target sum by reason",
+          series: {
+            ...changes(native),
+            ...changes(nativeOther),
+            [`gossipsub_peer_churn_events_prune_total{${libp2p},topic="beacon_block"}`]: perSecond(1),
+          },
+          expect: expect(2),
+        },
+      ],
+    };
+  };
+  return [
+    eitherCounter(424, "gossipsub_msg_received_prevalidation_total", "lodestar_native_gossip_messages_received_total"),
+    eitherCounter(411, "gossipsub_msg_publish_count_total", "lodestar_native_gossip_messages_published_total"),
+    {
+      dashboard: file,
+      panel: 425,
+      refId: "A",
+      cases: [
+        {
+          name: "libp2p only, light client topics excluded",
+          series: {
+            [`gossipsub_pre_validation_duplicate_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_attestation"}`]: perSecond(4),
+            [`gossipsub_pre_validation_duplicate_total{${libp2p},topic="light_client_finality_update"}`]: perSecond(1),
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="light_client_finality_update"}`]: perSecond(1),
+          },
+          expect: [{labels: '{topic="beacon_attestation"}', value: 0.25}],
+        },
+        {
+          name: "native only, a topic without duplicates reads zero",
+          series: {
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_attestation"}`]: perSecond(3),
+            [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_attestation"}`]: perSecond(4),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(0),
+            [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_block"}`]: perSecond(2),
+          },
+          expect: [
+            {labels: '{topic="beacon_attestation"}', value: 0.75},
+            {labels: '{topic="beacon_block"}', value: 0},
+          ],
+        },
+        {
+          name: "mixed targets sum their own counters",
+          series: {
+            [`gossipsub_pre_validation_duplicate_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_attestation"}`]: perSecond(4),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_attestation"}`]: perSecond(3),
+            [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_attestation"}`]: perSecond(4),
+          },
+          expect: [{labels: '{topic="beacon_attestation"}', value: 0.5}],
+        },
+        {
+          name: "no received counter has no result",
+          series: {[`gossipsub_accepted_messages_total{${native},topic="beacon_attestation"}`]: perSecond(1)},
+          expect: [],
+        },
+      ],
+    },
+    {
+      dashboard: file,
+      panel: 433,
+      refId: "A",
+      cases: [
+        {
+          name: "libp2p divides by prevalidated messages",
+          series: {
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_block"}`]: perSecond(6),
+            [`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(2),
+          },
+          expect: [{labels: '{topic="beacon_block"}', value: 3}],
+        },
+        {
+          name: "native divides by received messages that were not duplicates",
+          series: {
+            [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_block"}`]: perSecond(6),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(4),
+          },
+          expect: [{labels: '{topic="beacon_block"}', value: 3}],
+        },
+        {
+          name: "mixed targets sum their own counters",
+          series: {
+            [`gossipsub_msg_received_prevalidation_total{${libp2p},topic="beacon_block"}`]: perSecond(6),
+            [`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(2),
+            [`lodestar_native_gossip_messages_received_total{${native},topic="beacon_block"}`]: perSecond(6),
+            [`lodestar_native_gossip_messages_duplicate_total{${native},topic="beacon_block"}`]: perSecond(3),
+          },
+          expect: [{labels: '{topic="beacon_block"}', value: 2.4}],
+        },
+        {
+          name: "no received counter has no result",
+          series: {[`gossipsub_pre_validation_valid_total{${libp2p},topic="beacon_block"}`]: perSecond(2)},
+          expect: [],
+        },
+      ],
+    },
+    {
+      dashboard: file,
+      panel: 412,
+      refId: "B",
+      cases: [
+        {
+          name: "native recipients queued per publication across topics, another origin or outcome excluded",
+          series: {
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="publication",outcome="queued"}`]: perSecond(8),
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="publication",outcome="selected"}`]: perSecond(9),
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="forward",outcome="queued"}`]: perSecond(90),
+            [`lodestar_native_gossip_messages_published_total{${native},topic="beacon_attestation"}`]: perSecond(1),
+            [`lodestar_native_gossip_messages_published_total{${native},topic="beacon_block"}`]: perSecond(1),
+          },
+          expect: [{labels: `{${native}}`, value: 4}],
+        },
+        {
+          name: "publications without recipients read zero per target; libp2p has no native result",
+          series: {
+            [`lodestar_native_gossip_data_recipients_total{${native},origin="publication",outcome="queued"}`]: perSecond(0),
+            [`lodestar_native_gossip_messages_published_total{${native},topic="beacon_attestation"}`]: perSecond(1),
+            [`lodestar_native_gossip_data_recipients_total{${nativeOther},origin="publication",outcome="queued"}`]:
+              perSecond(6),
+            [`lodestar_native_gossip_messages_published_total{${nativeOther},topic="beacon_attestation"}`]: perSecond(2),
+            [`gossipsub_msg_publish_peers_total{${libp2p},topic="beacon_attestation"}`]: perSecond(8),
+            [`gossipsub_msg_publish_count_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
+          },
+          expect: [
+            {labels: `{${native}}`, value: 0},
+            {labels: `{${nativeOther}}`, value: 3},
+          ],
+        },
+      ],
+    },
+    meshChanges("M", "join", 1),
+    meshChanges("N", "leave", -1),
+    nativeQuery(file, 462, "D", {"lodestar_native_gossip_iwant_promises_started_total{%T}": perSecond(2)}, [
+      {labels: "{%T}", value: 2},
+    ]),
+    {
+      dashboard: file,
+      panel: 462,
+      refId: "E",
+      cases: [
+        {
+          name: "native broken per armed promise per target, a real zero included; libp2p has no armed promises",
+          series: promises,
+          expect: [
+            {labels: `{${native}}`, value: 0.25},
+            {labels: `{${nativeOther}}`, value: 0},
+          ],
+        },
+      ],
+    },
+    nativeQuery(
+      file,
+      526,
+      "A",
+      {
+        'lodestar_native_gossip_behaviour_penalties_total{%T,reason="broken_iwant"}': perSecond(0.5),
+        'lodestar_native_gossip_behaviour_penalties_total{%T,reason="graft_flood"}': perSecond(0),
+      },
+      [
+        {labels: '{%T,reason="broken_iwant"}', value: 0.5},
+        {labels: '{%T,reason="graft_flood"}', value: 0},
+      ]
+    ),
   ];
 }
