@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
@@ -144,6 +145,50 @@ describe("PtcService", () => {
     expect(api.validator.producePayloadAttestationData).toHaveBeenCalledWith({slot});
     expect(validatorStore.signPayloadAttestation).not.toHaveBeenCalled();
     expect(api.beacon.submitPayloadAttestationMessages).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 2])("Should merge a new PTC duty into %i cached duties", async (existingCount) => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const duties: routes.validator.PtcDuty[] = Array.from({length: existingCount + 1}, (_, validatorIndex) => ({
+      slot: 0,
+      validatorIndex,
+      pubkey: SecretKey.fromBytes(Buffer.alloc(32, validatorIndex + 1))
+        .toPublicKey()
+        .toBytes(),
+    }));
+    const existingIndices = duties.slice(0, existingCount).map((duty) => duty.validatorIndex);
+    validatorStore.getAllLocalIndices.mockReturnValue(existingIndices);
+    api.validator.getPtcDuties.mockImplementation(async ({epoch, indices}) =>
+      mockApiResponse({
+        data: duties
+          .filter((duty) => indices.includes(duty.validatorIndex))
+          .map((duty) => ({...duty, slot: epoch * SLOTS_PER_EPOCH})),
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+    const ptcDutiesService = new PtcDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(0, controller.signal);
+    expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties.slice(0, existingCount));
+
+    validatorStore.pollValidatorIndices.mockResolvedValueOnce([existingCount]);
+    await clock.tickEpochFns(0, controller.signal);
+
+    expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 0, indices: [existingCount]});
+    expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties);
+    expect(ptcDutiesService.getDutiesAtSlot(SLOTS_PER_EPOCH)).toEqual(
+      duties.map((duty) => ({...duty, slot: SLOTS_PER_EPOCH}))
+    );
   });
 
   it("Should redownload PTC duties when dependent root changes", async () => {
