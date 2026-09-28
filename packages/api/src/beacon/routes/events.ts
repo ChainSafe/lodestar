@@ -353,13 +353,16 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.block]: {
       toJson: (val) => {
         if (config.getForkSeq(val.slot) < ForkSeq.gloas) return blockBase.toJson(val);
-        if (val.blockHash === undefined || val.builderIndex === undefined) {
+        const {blockHash, builderIndex} = val;
+        if (blockHash === undefined || builderIndex === undefined) {
           throw Error(`Missing block hash or builder index for block at ${val.slot}`);
         }
-        return blockGloas.toJson({...val, blockHash: val.blockHash, builderIndex: val.builderIndex});
+        return blockGloas.toJson({...val, blockHash, builderIndex});
       },
-      fromJson: (json) =>
-        (config.getForkSeq((json as {slot: Slot}).slot) >= ForkSeq.gloas ? blockGloas : blockBase).fromJson(json),
+      fromJson: (json) => {
+        const slot = ssz.Slot.fromJson((json as {slot: unknown}).slot);
+        return (config.getForkSeq(slot) >= ForkSeq.gloas ? blockGloas : blockBase).fromJson(json);
+      },
     },
     [EventType.blockGossip]: new ContainerType(
       {
