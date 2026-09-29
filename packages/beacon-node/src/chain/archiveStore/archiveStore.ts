@@ -1,6 +1,7 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -47,6 +48,8 @@ export class ArchiveStore {
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private archiveDataEpochs?: number;
+  // Finalized state writes are monotonic; reset on restart to include the newly persisted anchor.
+  private statePruneFromSlot: Slot = 0;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
@@ -103,7 +106,7 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      await callFnWhenAwait(
+      const {stateCutoffSlot} = await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
@@ -116,6 +119,7 @@ export class ArchiveStore {
         30_000,
         this.signal
       );
+      this.statePruneFromSlot = stateCutoffSlot;
     }
 
     // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
@@ -255,14 +259,16 @@ export class ArchiveStore {
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        const blockCutoffSlot = await pruneHistory(
+        const {blockCutoffSlot, stateCutoffSlot} = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
           this.metrics,
           finalizedEpoch,
-          this.chain.clock.currentEpoch
+          this.chain.clock.currentEpoch,
+          this.statePruneFromSlot
         );
+        this.statePruneFromSlot = stateCutoffSlot;
         this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
