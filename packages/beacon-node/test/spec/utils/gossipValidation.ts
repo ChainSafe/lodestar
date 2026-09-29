@@ -643,17 +643,17 @@ async function validateMessageForTopic(
 
     case GossipType.proposer_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
-      await validateGossipProposerSlashing(chain, slashing);
+      const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing);
+      chain.opPool.insertProposerSlashing(slashing, verifiedDomain);
       break;
     }
 
     case GossipType.attester_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
-      await validateGossipAttesterSlashing(chain, slashing);
+      const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing);
+      chain.opPool.insertAttesterSlashing(fork, slashing, verifiedDomains);
       chain.forkChoice.onAttesterSlashing(slashing);
       break;
     }

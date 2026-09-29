@@ -611,7 +611,7 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -1329,13 +1329,13 @@ export class BeaconChain implements IBeaconChain {
       };
 
       try {
-        await validateApiProposerSlashing(this, proposerSlashing);
+        const verifiedDomain = await validateApiProposerSlashing(this, proposerSlashing);
+        this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       } catch (e) {
         this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
         return;
       }
 
-      this.opPool.insertProposerSlashing(proposerSlashing);
       this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();
