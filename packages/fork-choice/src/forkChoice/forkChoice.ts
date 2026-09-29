@@ -31,7 +31,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -53,7 +53,6 @@ import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlo
 import {
   type FastConfirmationContext,
   FastConfirmationRule,
-  FastConfirmationSteps,
   type IFastConfirmationRule,
   type IFastConfirmationSpecStore,
 } from "./fastConfirmation/fastConfirmationRule.js";
@@ -161,7 +160,6 @@ export class ForkChoice implements IForkChoice {
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
-  private fastConfirmationPaused = false;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -190,7 +188,6 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fastConfirmationContext = this.createFastConfirmationContext();
-      metrics?.fastConfirmation.paused.set(0);
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -253,44 +250,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   resumeFastConfirmation(): void {
-    this.toggleFastConfirmation(false);
+    if (this.fastConfirmationContext) this.fastConfirmationRule?.resume(this.fastConfirmationContext);
   }
 
   pauseFastConfirmation(): void {
-    this.toggleFastConfirmation(true);
-  }
-
-  private toggleFastConfirmation(paused: boolean): void {
-    if (!this.fastConfirmationRule) return;
-    if (paused === this.fastConfirmationPaused) return;
-    this.fastConfirmationPaused = paused;
-    if (paused) {
-      // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
-      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-      try {
-        this.notifyConfirmedRoot();
-      } catch (err) {
-        // Callers run in clock/network handler context with no catch above
-        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
-      }
-    }
-    this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
-    this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
-      slot: this.fcStore.currentSlot,
-    });
-  }
-
-  private notifyConfirmedRoot(): void {
-    const confirmedRoot = this.fcStore.confirmedRoot;
-    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
-    if (confirmedBlock === null) {
-      throw new Error(`Fast confirmation produced root not in protoArray: ${confirmedRoot}`);
-    }
-    this.fcStore.notifyFastConfirmation?.({
-      block: confirmedRoot,
-      slot: confirmedBlock.slot,
-      currentSlot: this.fcStore.currentSlot,
-    });
+    if (this.fastConfirmationContext) this.fastConfirmationRule?.pause(this.fastConfirmationContext);
   }
 
   /**
@@ -671,6 +635,7 @@ export class ForkChoice implements IForkChoice {
     const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
 
     this.head = head;
+    if (this.fastConfirmationContext) this.fastConfirmationRule?.onForkChoiceUpdated(this.fastConfirmationContext);
     return this.head;
   }
 
@@ -2298,40 +2263,9 @@ export class ForkChoice implements IForkChoice {
     const fastConfirmationContext = this.fastConfirmationContext;
     if (!fastConfirmationRule || !fastConfirmationContext) return false;
 
-    if (this.fastConfirmationPaused) {
-      // Keep consumers on a safe, available root while the rule is paused
-      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-      try {
-        this.notifyConfirmedRoot();
-      } catch (err) {
-        // Runs outside the timed try/catch below; a throw would escape to the clock listener
-        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
-      }
-      return false;
-    }
-
-    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
-      try {
-        withObservedDuration(
-          this.metrics?.fastConfirmation.stepsDuration.startTimer({
-            step: FastConfirmationSteps.updateHead,
-          }),
-          () => this.updateHead()
-        );
-
-        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
-        this.fcStore.confirmedRoot = result.confirmedRoot;
-        this.notifyConfirmedRoot();
-      } catch (err) {
-        this.logger?.debug(
-          "Fast confirmation failed",
-          {slot: this.fcStore.currentSlot, head: this.head.blockRoot, confirmedRoot: this.fcStore.confirmedRoot},
-          err as Error
-        );
-      }
-    });
-
-    return true;
+    return fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext, () =>
+      this.updateHead()
+    );
   }
 
   private createFastConfirmationContext(): FastConfirmationContext {
@@ -2348,6 +2282,7 @@ export class ForkChoice implements IForkChoice {
       getCurrentSlot: () => this.fcStore.currentSlot,
       getHead: () => this.head,
       getBlock: (root: RootHex) => this.getBlockHexDefaultStatus(root),
+      hasBlock: (root: RootHex) => this.hasBlockHexUnsafe(root),
       getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot).blockRoot,
       isDescendant: (ancestor: RootHex, descendant: RootHex) => {
         const ancestorStatus = this.protoArray.getDefaultVariant(ancestor);

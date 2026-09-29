@@ -16,17 +16,72 @@ export * from "./metrics.js";
 export * from "./types.js";
 
 export class FastConfirmationRule implements IFastConfirmationRule {
+  private paused = false;
+
   constructor(
     private readonly store: IFastConfirmationStore,
     readonly metrics: FastConfirmationMetrics | null,
     readonly logger?: Logger
-  ) {}
+  ) {
+    metrics?.fastConfirmation.paused.set(0);
+  }
 
   getConfirmedRoot(): RootHex {
     return this.store.confirmedRoot;
   }
 
-  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FastConfirmationResult {
+  pause(ctx: FastConfirmationContext): void {
+    if (this.paused) return;
+    this.paused = true;
+    this.pinConfirmedRootToFinalized(ctx);
+    this.metrics?.fastConfirmation.paused.set(1);
+    this.logger?.info("Paused fast confirmation", {slot: ctx.getCurrentSlot()});
+  }
+
+  resume(ctx: FastConfirmationContext): void {
+    if (!this.paused) return;
+    this.paused = false;
+    this.metrics?.fastConfirmation.paused.set(0);
+    this.logger?.info("Resumed fast confirmation", {slot: ctx.getCurrentSlot()});
+  }
+
+  onForkChoiceUpdated(ctx: FastConfirmationContext): void {
+    const confirmedRoot = this.store.confirmedRoot;
+    if (ctx.getBlock(confirmedRoot) !== null || !ctx.hasBlock(confirmedRoot)) return;
+
+    this.pinConfirmedRootToFinalized(ctx);
+  }
+
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext, updateHead: () => void): boolean {
+    if (this.paused) {
+      this.pinConfirmedRootToFinalized(ctx);
+      return false;
+    }
+
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
+      try {
+        withObservedDuration(
+          this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.updateHead}),
+          updateHead
+        );
+        this.updateConfirmedRoot(ctx);
+      } catch (err) {
+        this.logger?.debug(
+          "Fast confirmation failed",
+          {
+            slot: ctx.getCurrentSlot(),
+            head: ctx.getHead().blockRoot,
+            confirmedRoot: this.store.confirmedRoot,
+          },
+          err as Error
+        );
+      }
+    });
+
+    return true;
+  }
+
+  private updateConfirmedRoot(ctx: FastConfirmationContext): FastConfirmationResult {
     const currentSlot = ctx.getCurrentSlot();
     const previousConfirmedRoot = this.store.confirmedRoot;
 
@@ -94,8 +149,31 @@ export class FastConfirmationRule implements IFastConfirmationRule {
 
     this.store.confirmedRoot = confirmedRoot;
     this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset, didReorg, didFallback, didRestart});
+    this.notifyConfirmedRoot(ctx);
 
     return {confirmedRoot, didReset};
+  }
+
+  private pinConfirmedRootToFinalized(ctx: FastConfirmationContext): void {
+    this.store.confirmedRoot = ctx.getFinalizedCheckpoint().rootHex;
+    try {
+      this.notifyConfirmedRoot(ctx);
+    } catch (err) {
+      this.logger?.debug("Fast confirmation notify failed", {slot: ctx.getCurrentSlot()}, err as Error);
+    }
+  }
+
+  private notifyConfirmedRoot(ctx: FastConfirmationContext): void {
+    const confirmedRoot = this.store.confirmedRoot;
+    const confirmedBlock = ctx.getBlock(confirmedRoot);
+    if (confirmedBlock === null) {
+      throw new Error(`Fast confirmation produced root not in protoArray: ${confirmedRoot}`);
+    }
+    this.store.notifyFastConfirmation?.({
+      block: confirmedRoot,
+      slot: confirmedBlock.slot,
+      currentSlot: ctx.getCurrentSlot(),
+    });
   }
 
   private updateFastConfirmationVariables(ctx: FastConfirmationContext): void {
