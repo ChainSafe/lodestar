@@ -31,6 +31,7 @@ export function makeBlock(
       | "justifiedRoot"
       | "unrealizedJustifiedEpoch"
       | "unrealizedJustifiedRoot"
+      | "payloadStatus"
     >
   > = {}
 ): ProtoBlock {
@@ -51,7 +52,7 @@ export function makeBlock(
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_ROOT,
     parentBlockHash: null,
-    payloadStatus: PayloadStatus.FULL,
+    payloadStatus: opts.payloadStatus ?? PayloadStatus.FULL,
     timeliness: false,
     importedTimely: false,
     ptcTimeliness: false,
@@ -153,7 +154,7 @@ export function makeContext(
   currentSlot: Slot,
   headRoot: RootHex,
   blocks: ProtoBlock[],
-  latestMessages: Map<ValidatorIndex, {root: RootHex; epoch: Epoch}>,
+  latestMessages: Map<ValidatorIndex, {root: RootHex; epoch: Epoch; payloadStatus?: PayloadStatus}>,
   unrealizedCheckpoint: {epoch: Epoch; rootHex: RootHex},
   state: IBeaconStateView,
   equivocatingIndices: ValidatorIndex[] = [],
@@ -189,7 +190,16 @@ export function makeContext(
       }
       return false;
     },
-    getLatestMessage: (validatorIndex: ValidatorIndex) => latestMessages.get(validatorIndex) ?? null,
+    getLatestMessage: (validatorIndex: ValidatorIndex) => {
+      const message = latestMessages.get(validatorIndex);
+      if (!message) return null;
+      return {root: message.root, epoch: message.epoch, payloadStatus: message.payloadStatus ?? PayloadStatus.FULL};
+    },
+    getParentPayloadStatus: (blockRoot: RootHex) => {
+      const block = blocksByRoot.get(blockRoot);
+      const parent = block && blocksByRoot.get(block.parentRoot);
+      return parent ? parent.payloadStatus : null;
+    },
     getUnrealizedJustified: () => ({
       checkpoint: checkpoint(unrealizedCheckpoint.epoch, unrealizedCheckpoint.rootHex),
       balances: unrealizedBalances,
