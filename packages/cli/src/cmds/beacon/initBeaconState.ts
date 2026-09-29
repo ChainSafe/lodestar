@@ -77,7 +77,19 @@ async function readLatestArchivedStateBytes({
   logger.verbose("Found the last archived state", {slot, size: formatBytes(bytes.length)});
   const stateBytes = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const metadata = readBeaconStateBytesMetadata(stateBytes);
+  if (metadata === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      "Cannot read metadata from archived state bytes"
+    );
+  }
   const weakSubjectivity = computeWeakSubjectivitySummaryFromStateBytes(chainForkConfig, stateBytes, metadata);
+  if (weakSubjectivity === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      "Cannot extract weak subjectivity summary from archived state bytes"
+    );
+  }
   return {
     stateBytes,
     metadata,

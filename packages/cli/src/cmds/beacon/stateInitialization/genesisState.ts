@@ -30,7 +30,19 @@ export async function prepareGenesisInitialization(
   const stateBytes = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   logger.info("Loaded genesis state", {size: formatBytes(stateBytes.length)});
   const metadata = readBeaconStateBytesMetadata(stateBytes);
+  if (metadata === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      "Cannot read metadata from genesis state bytes"
+    );
+  }
   const weakSubjectivity = computeWeakSubjectivitySummaryFromStateBytes(chainForkConfig, stateBytes, metadata);
+  if (weakSubjectivity === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      "Cannot extract weak subjectivity summary from genesis state bytes"
+    );
+  }
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   const expectedRoot = getGenesisStateRoot(options.network);
   return {

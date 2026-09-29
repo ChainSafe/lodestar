@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {afterEach, assert, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, forkAll} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
@@ -48,6 +48,7 @@ describe("state bytes weak subjectivity", () => {
 
     for (const input of [bytes, backing.subarray(17)]) {
       const metadata = readBeaconStateBytesMetadata(input);
+      assert(metadata !== null, `${fork}: metadata should be readable`);
       expect(metadata, fork).toEqual({
         slot: state.slot,
         genesisTime: state.genesisTime,
@@ -58,6 +59,7 @@ describe("state bytes weak subjectivity", () => {
         totalActiveBalanceIncrements: 32 + 2048 + 33,
       });
       const summary = computeWeakSubjectivitySummaryFromStateBytes(config, input, metadata);
+      assert(summary !== null, `${fork}: weak subjectivity summary should be computable`);
       expect(summary, fork).toEqual({checkpointEpoch: 4, genesisTime: state.genesisTime, period});
       for (const [epoch, expected] of [
         [-1, true],
@@ -81,26 +83,30 @@ describe("state bytes weak subjectivity", () => {
     const state = stateType.defaultViewDU();
     const bytes = state.serialize();
     const metadata = readBeaconStateBytesMetadata(bytes);
-    expect(computeWeakSubjectivitySummaryFromStateBytes(config, bytes, metadata).period).toBe(
-      computeWeakSubjectivityPeriod(config, state)
-    );
+    assert(metadata !== null, `${fork}: metadata should be readable`);
+    const summary = computeWeakSubjectivitySummaryFromStateBytes(config, bytes, metadata);
+    assert(summary !== null, `${fork}: weak subjectivity summary should be computable`);
+    expect(summary.period).toBe(computeWeakSubjectivityPeriod(config, state));
   });
 
   it("copies the genesis root without retaining the state buffer", () => {
     const bytes = new Uint8Array(48);
     const metadata = readBeaconStateBytesMetadata(bytes);
+    assert(metadata !== null);
     bytes.fill(1);
     expect(metadata.genesisValidatorsRoot).toEqual(new Uint8Array(32));
   });
 
-  it("rejects truncated metadata and invalid SSZ ranges", () => {
-    expect(() => readBeaconStateBytesMetadata(new Uint8Array(47))).toThrow("Missing genesis identity or slot");
-    expect(() => scanActiveValidatorsFromStateBytes(new Uint8Array(48), ssz.phase0.BeaconState, 0)).toThrow(
-      "Invalid SSZ field ranges"
-    );
+  it("returns null for truncated metadata and invalid SSZ ranges", () => {
+    expect(readBeaconStateBytesMetadata(new Uint8Array(47))).toBeNull();
+    const bytes = new Uint8Array(48);
+    const metadata = readBeaconStateBytesMetadata(bytes);
+    assert(metadata !== null);
+    expect(scanActiveValidatorsFromStateBytes(bytes, ssz.phase0.BeaconState, 0)).toBeNull();
+    expect(computeWeakSubjectivitySummaryFromStateBytes(createChainForkConfig({}), bytes, metadata)).toBeNull();
   });
 
-  it("rejects a partial validator record", () => {
+  it("returns null for a partial validator record", () => {
     const type = ssz.phase0.BeaconState;
     const state = type.defaultViewDU();
     state.validators.push(ssz.phase0.Validator.defaultViewDU());
@@ -112,7 +118,10 @@ describe("state bytes weak subjectivity", () => {
     }
     const view = new DataView(bytes.buffer);
     view.setUint32(offset, view.getUint32(offset, true) - 1, true);
-    expect(() => scanActiveValidatorsFromStateBytes(bytes, type, 0)).toThrow("Partial validator record");
+    const metadata = readBeaconStateBytesMetadata(bytes);
+    assert(metadata !== null);
+    expect(scanActiveValidatorsFromStateBytes(bytes, type, 0)).toBeNull();
+    expect(computeWeakSubjectivitySummaryFromStateBytes(createChainForkConfig({}), bytes, metadata)).toBeNull();
   });
 
   it("includes the expiry epoch and uses the current time by default", () => {

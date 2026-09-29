@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {EFFECTIVE_BALANCE_INCREMENT, ForkAll, ForkSeq} from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, ssz} from "@lodestar/types";
-import {LodestarError, bytesToInt} from "@lodestar/utils";
+import {bytesToInt} from "@lodestar/utils";
 
 const UINT64_SIZE = 8;
 const ROOT_SIZE = 32;
@@ -53,16 +53,9 @@ export function getStateSlotFromBytes(bytes: Uint8Array): Slot {
 
 export type StateBytesMetadata = {slot: Slot; genesisTime: number; genesisValidatorsRoot: Uint8Array};
 
-class StateBytesError extends LodestarError<{code: "MALFORMED_STATE_BYTES"; reason: string}> {
-  constructor(reason: string, cause?: unknown) {
-    super({code: "MALFORMED_STATE_BYTES", reason}, `Malformed state bytes: ${reason}`);
-    this.cause = cause;
-  }
-}
-
-export function readBeaconStateBytesMetadata(bytes: Uint8Array): StateBytesMetadata {
+export function readBeaconStateBytesMetadata(bytes: Uint8Array): StateBytesMetadata | null {
   if (bytes.length < STATE_SLOT_OFFSET + UINT64_SIZE) {
-    throw new StateBytesError("Missing genesis identity or slot");
+    return null;
   }
   const data = {uint8Array: bytes, dataView: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)};
   return {
@@ -83,7 +76,7 @@ export function scanActiveValidatorsFromStateBytes(
   stateBytes: Uint8Array,
   stateType: SSZTypesFor<ForkAll, "BeaconState">,
   epoch: Epoch
-): {activeValidatorCount: number; totalActiveBalanceIncrements: number} {
+): {activeValidatorCount: number; totalActiveBalanceIncrements: number} | null {
   const data = {
     uint8Array: stateBytes,
     dataView: new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength),
@@ -93,14 +86,14 @@ export function scanActiveValidatorsFromStateBytes(
     const containerType = stateType as (typeof ssz)[ForkAll]["BeaconState"];
     const ranges = containerType.getFieldRanges(data.dataView, 0, stateBytes.length);
     range = ranges[Object.keys(containerType.fields).indexOf("validators")];
-    if (!range || range.start < 0 || range.end > stateBytes.length || range.end < range.start) {
-      throw new StateBytesError("Invalid validator range");
-    }
-  } catch (error) {
-    throw new StateBytesError("Invalid SSZ field ranges", error);
+  } catch {
+    return null;
+  }
+  if (!range || range.start < 0 || range.end > stateBytes.length || range.end < range.start) {
+    return null;
   }
   if ((range.end - range.start) % VALIDATOR_BYTES_SIZE !== 0) {
-    throw new StateBytesError("Partial validator record");
+    return null;
   }
 
   let activeValidatorCount = 0;

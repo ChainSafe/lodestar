@@ -138,6 +138,12 @@ function prepareCheckpointInitialization(
   {chainForkConfig, db, logger}: StatePreparationContext
 ): StateInitialization {
   const candidateMetadata = readBeaconStateBytesMetadata(candidate.stateBytes);
+  if (candidateMetadata === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      `Cannot read state metadata from ${candidate.source}`
+    );
+  }
   if (
     archived !== null &&
     (archived.metadata.genesisTime !== candidateMetadata.genesisTime ||
@@ -166,6 +172,12 @@ function prepareCheckpointInitialization(
           candidateMetadata
         ),
       };
+  if (weakSubjectivity === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      `Cannot extract weak subjectivity summary from ${candidate.source}`
+    );
+  }
   const expectedCheckpoint = useArchived ? null : candidate.expectedCheckpoint;
   const source = useArchived ? "db" : candidate.source;
   const {isFinalized, ignoreWeakSubjectivityCheck} = policy;

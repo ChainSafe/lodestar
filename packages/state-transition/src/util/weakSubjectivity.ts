@@ -209,18 +209,12 @@ export function computeWeakSubjectivitySummaryFromStateBytes(
   config: ChainForkConfig,
   bytes: Uint8Array,
   metadata: StateBytesMetadata
-): WeakSubjectivitySummary {
+): WeakSubjectivitySummary | null {
   const {slot, genesisTime} = metadata;
   const stateType = getStateTypeFromBytes(config, bytes);
-  const {activeValidatorCount, totalActiveBalanceIncrements} = scanActiveValidatorsFromStateBytes(
-    bytes,
-    stateType,
-    computeEpochAtSlot(slot)
-  );
-  const period = computeWeakSubjectivityPeriodFromActiveValidators(config, slot, {
-    activeValidatorCount,
-    totalActiveBalanceIncrements,
-  });
+  const activeValidators = scanActiveValidatorsFromStateBytes(bytes, stateType, computeEpochAtSlot(slot));
+  if (activeValidators === null) return null;
+  const period = computeWeakSubjectivityPeriodFromActiveValidators(config, slot, activeValidators);
   return {checkpointEpoch: computeCheckpointEpochAtStateSlot(slot), genesisTime, period};
 }
 
