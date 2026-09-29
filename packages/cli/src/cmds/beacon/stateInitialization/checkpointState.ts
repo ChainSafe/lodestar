@@ -2,8 +2,6 @@ import {DbCPStateDatastore, FileCPStateDatastore, persistAnchorState} from "@lod
 import {createBeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
-  WeakSubjectivityError,
-  WeakSubjectivityErrorCode,
   computeAnchorCheckpoint,
   computeCheckpointEpochAtStateSlot,
   computeEpochAtSlot,
@@ -185,8 +183,8 @@ function prepareCheckpointInitialization(
       const passedValidation =
         archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
       if (!passedValidation && !ignoreWeakSubjectivityCheck) {
-        throw new WeakSubjectivityError(
-          {code: WeakSubjectivityErrorCode.STALE_CHECKPOINT},
+        throw new StateInitializationError(
+          {code: StateInitializationErrorCode.STALE_CHECKPOINT},
           `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs. Please verify your checkpoint source`
         );
       }

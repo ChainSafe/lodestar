@@ -10,7 +10,6 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {Epoch, Root, Slot, TimeSeconds, ssz} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
@@ -202,12 +201,6 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
   }
   return ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 }
-
-export enum WeakSubjectivityErrorCode {
-  STALE_CHECKPOINT = "STALE_CHECKPOINT",
-}
-
-export class WeakSubjectivityError extends LodestarError<{code: WeakSubjectivityErrorCode}> {}
 
 export type WeakSubjectivitySummary = {checkpointEpoch: Epoch; genesisTime: number; period: number};
 
