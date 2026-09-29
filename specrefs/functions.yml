@@ -8427,7 +8427,9 @@
 - name: is_within_weak_subjectivity_period#phase0
   sources:
     - file: packages/state-transition/src/util/weakSubjectivity.ts
-      search: export function isWithinWeakSubjectivityPeriod(
+      search: export function isWithinWeakSubjectivityPeriodFromSummary(
+    - file: packages/cli/src/cmds/beacon/stateInitialization/checkpointState.ts
+      search: function assertStateMatchesCheckpoint(
   spec: |
     <spec fn="is_within_weak_subjectivity_period" fork="phase0" hash="aef08e82">
     def is_within_weak_subjectivity_period(
@@ -8446,7 +8448,9 @@
 - name: is_within_weak_subjectivity_period#electra
   sources:
     - file: packages/state-transition/src/util/weakSubjectivity.ts
-      search: export function isWithinWeakSubjectivityPeriod(
+      search: export function isWithinWeakSubjectivityPeriodFromSummary(
+    - file: packages/cli/src/cmds/beacon/stateInitialization/checkpointState.ts
+      search: function assertStateMatchesCheckpoint(
   spec: |
     <spec fn="is_within_weak_subjectivity_period" fork="electra" hash="d05d230d">
     def is_within_weak_subjectivity_period(
