@@ -6,6 +6,7 @@ import {
   computeCheckpointEpochAtStateSlot,
   computeEpochAtSlot,
   computeWeakSubjectivitySummaryFromStateBytes,
+  getCurrentSlot,
   getLatestBlockRoot,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
@@ -64,8 +65,13 @@ export async function prepareCheckpointApiInitialization(
   context: StatePreparationContext
 ): Promise<StateInitialization> {
   const {chainForkConfig, logger} = context;
-  const url = new URL(checkpointSyncUrl);
-  logger.info("Fetching checkpoint state", {checkpointSyncUrl: url.origin});
+  try {
+    const url = new URL(checkpointSyncUrl);
+    logger.info("Fetching checkpoint state", {checkpointSyncUrl: url.origin});
+  } catch (error) {
+    logger.error("Invalid checkpoint sync URL", {checkpointSyncUrl}, error as Error);
+    throw error;
+  }
   const {stateBytes, expectedCheckpoint} = await fetchWeakSubjectivityStateBytes(chainForkConfig, logger, {
     checkpointSyncUrl,
     wssCheckpoint: options.wssCheckpoint,
@@ -195,9 +201,10 @@ function prepareCheckpointInitialization(
       const passedValidation =
         archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
       if (!passedValidation && !ignoreWeakSubjectivityCheck) {
+        const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, weakSubjectivity.genesisTime));
         throw new StateInitializationError(
           {code: StateInitializationErrorCode.STALE_CHECKPOINT},
-          `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs. Please verify your checkpoint source`
+          `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
         );
       }
       if (isFinalized) {
