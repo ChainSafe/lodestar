@@ -1,7 +1,7 @@
+import {deepStrictEqual} from "node:assert";
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {createBeaconConfig} from "@lodestar/config";
-import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {
   ForkName,
   MAX_ATTESTER_SLASHINGS,
@@ -9,8 +9,13 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {BeaconStateView, CachedBeaconStateAltair} from "@lodestar/state-transition";
-import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
+import {
+  BeaconStateView,
+  CachedBeaconStateAltair,
+  getAttesterSlashingSignatureSets,
+  getProposerSlashingSignatureSets,
+} from "@lodestar/state-transition";
+import {generatePerfTestCachedStateAltair, getSecretKeyFromIndexCached} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
@@ -23,28 +28,33 @@ import {
 
 describe("opPool", () => {
   let originalState: BeaconStateView;
-  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
+  let defaultPool: OpPool;
+  let largePool: OpPool;
 
   beforeAll(
     () => {
       originalState = new BeaconStateView(generatePerfTestCachedStateAltair({goBackOneSlot: true}));
+      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
+      defaultPool = createPool(beaconState);
+      largePool = createPool(beaconState, 2_000);
+      for (const [name, pool] of [
+        ["default", defaultPool],
+        ["2k", largePool],
+      ] as const) {
+        const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(originalState, BlockType.Full, null);
+        deepStrictEqual(
+          [attesterSlashings.length, proposerSlashings.length],
+          [MAX_ATTESTER_SLASHINGS, MAX_PROPOSER_SLASHINGS],
+          `Invalid slashing fixtures in ${name} pool`
+        );
+      }
     },
-    2 * 60 * 1000 // Generating the states for the first time is very slow
+    10 * 60 * 1000 // Generate the state and sign all evidence outside the timed benchmark.
   );
 
   bench({
     id: "getSlashingsAndExits - default max",
-    beforeEach: () => {
-      const pool = new OpPool(config);
-      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
-      fillAttesterSlashing(pool, beaconState, MAX_ATTESTER_SLASHINGS);
-      fillProposerSlashing(pool, beaconState, MAX_PROPOSER_SLASHINGS);
-      fillVoluntaryExits(pool, beaconState, MAX_VOLUNTARY_EXITS);
-      // TODO: feed pubkeyCache separately instead of getting from originalState
-      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, MAX_BLS_TO_EXECUTION_CHANGES);
-
-      return pool;
-    },
+    beforeEach: () => defaultPool,
     fn: (pool) => {
       pool.getSlashingsAndExits(originalState, BlockType.Full, null);
     },
@@ -52,30 +62,37 @@ describe("opPool", () => {
 
   bench({
     id: "getSlashingsAndExits - 2k",
-    beforeEach: () => {
-      const pool = new OpPool(config);
-      const maxItemsInPool = 2_000;
-      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
-      fillAttesterSlashing(pool, beaconState, maxItemsInPool);
-      fillProposerSlashing(pool, beaconState, maxItemsInPool);
-      fillVoluntaryExits(pool, beaconState, maxItemsInPool);
-      // TODO: feed pubkeyCache separately instead of getting from originalState
-      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, maxItemsInPool);
-
-      return pool;
-    },
+    beforeEach: () => largePool,
     fn: (pool) => {
       pool.getSlashingsAndExits(originalState, BlockType.Full, null);
     },
   });
 });
 
+function createPool(state: CachedBeaconStateAltair, count?: number): OpPool {
+  const pool = new OpPool(state.config);
+  fillAttesterSlashing(pool, state, count ?? MAX_ATTESTER_SLASHINGS);
+  fillProposerSlashing(pool, state, count ?? MAX_PROPOSER_SLASHINGS);
+  fillVoluntaryExits(pool, state, count ?? MAX_VOLUNTARY_EXITS);
+  fillBlsToExecutionChanges(state.epochCtx.pubkeyCache, pool, state, count ?? MAX_BLS_TO_EXECUTION_CHANGES);
+  return pool;
+}
+
 function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const attestation of generateIndexedAttestations(state, count)) {
-    pool.insertAttesterSlashing(ForkName.phase0, {
+    attestation.attestingIndices.sort((a, b) => a - b);
+    const slashing = {
       attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
       attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
-    });
+    };
+    slashing.attestation2.data.beaconBlockRoot[0] ^= 1;
+    const sets = getAttesterSlashingSignatureSets(state.config, state.slot, slashing);
+    for (const [i, indexedAttestation] of [slashing.attestation1, slashing.attestation2].entries()) {
+      indexedAttestation.signature = aggregateSignatures(
+        indexedAttestation.attestingIndices.map((index) => getSecretKeyFromIndexCached(index).sign(sets[i].signingRoot))
+      ).toBytes();
+    }
+    pool.insertAttesterSlashing(ForkName.phase0, slashing);
   }
 
   return pool;
@@ -83,14 +100,20 @@ function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, coun
 
 function fillProposerSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const blockHeader of generateSignedBeaconBlockHeader(state, count)) {
-    pool.insertProposerSlashing({
+    const slashing = {
       signedHeader1: ssz.phase0.SignedBeaconBlockHeaderBigint.fromJson(
         ssz.phase0.SignedBeaconBlockHeader.toJson(blockHeader)
       ),
       signedHeader2: ssz.phase0.SignedBeaconBlockHeaderBigint.fromJson(
         ssz.phase0.SignedBeaconBlockHeader.toJson(blockHeader)
       ),
-    });
+    };
+    slashing.signedHeader2.message.bodyRoot[0] ^= 1;
+    const sets = getProposerSlashingSignatureSets(state.config, state.slot, slashing);
+    const secretKey = getSecretKeyFromIndexCached(blockHeader.message.proposerIndex);
+    slashing.signedHeader1.signature = secretKey.sign(sets[0].signingRoot).toBytes();
+    slashing.signedHeader2.signature = secretKey.sign(sets[1].signingRoot).toBytes();
+    pool.insertProposerSlashing(slashing);
   }
 
   return pool;

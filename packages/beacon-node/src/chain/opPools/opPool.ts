@@ -12,6 +12,8 @@ import {
 } from "@lodestar/params";
 import {
   IBeaconStateView,
+  assertValidAttesterSlashing,
+  assertValidProposerSlashing,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
@@ -103,7 +105,9 @@ export class OpPool {
       persistDiff(
         db.proposerSlashing,
         Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value})),
-        (index) => index
+        (index) => index,
+        // New evidence can replace an expired slashing under the same validator index.
+        {updateExisting: true}
       ),
       persistDiff(
         db.voluntaryExit,
@@ -208,6 +212,13 @@ export class OpPool {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
       const validator = state.getValidator(index);
       if (!validator.slashed && validator.activationEpoch <= stateEpoch && stateEpoch < validator.withdrawableEpoch) {
+        try {
+          // Admission may have verified the signatures against a different fork domain.
+          assertValidProposerSlashing(this.config, state.slot, proposerSlashing, validator);
+        } catch {
+          this.proposerSlashings.delete(index);
+          continue;
+        }
         proposerSlashings.push(proposerSlashing);
         // Set of validators to be slashed, so we don't attempt to construct invalid attester slashings.
         toBeSlashedIndices.add(index);
@@ -223,7 +234,7 @@ export class OpPool {
     const endAttesterSlashings = stepsMetrics?.startTimer();
     const attesterSlashings: AttesterSlashing[] = [];
     const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
-    attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
+    attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings) {
       /** Indices slashable in this attester slashing */
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
@@ -245,6 +256,12 @@ export class OpPool {
       // If there were slashable indices in this slashing
       // Then include the slashing and count the slashable indices
       if (slashableIndices.size > 0) {
+        try {
+          assertValidAttesterSlashing(this.config, state.slot, state.validatorCount, attesterSlashing.attesterSlashing);
+        } catch {
+          this.attesterSlashings.delete(key);
+          continue;
+        }
         attesterSlashings.push(attesterSlashing.attesterSlashing);
         for (const index of slashableIndices) {
           toBeSlashedIndices.add(index);
@@ -436,14 +453,15 @@ function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean 
 async function persistDiff<K extends Id, V>(
   dbRepo: Repository<K, V>,
   items: {key: K; value: V}[],
-  serializeKey: (key: K) => number | string
+  serializeKey: (key: K) => number | string,
+  opts: {updateExisting?: boolean} = {}
 ): Promise<void> {
   const persistedKeys = await dbRepo.keys();
   const batch: DbBatch<K, V> = [];
 
   const persistedKeysSerialized = new Set(persistedKeys.map(serializeKey));
   for (const item of items) {
-    if (!persistedKeysSerialized.has(serializeKey(item.key))) {
+    if (opts.updateExisting || !persistedKeysSerialized.has(serializeKey(item.key))) {
       batch.push({type: "put", key: item.key, value: item.value});
     }
   }
