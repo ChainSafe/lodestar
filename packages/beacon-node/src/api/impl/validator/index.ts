@@ -878,7 +878,7 @@ export function getValidatorApi(
   }
 
   /**
-   * Gloas block production shared by produceBlockV4 and produceBlockV4WithBid. A bid supplied by
+   * Gloas block production shared by produceBlockV4 and produceBlockV4WithBid. A valid bid supplied by
    * the validator client takes the place of builder API and p2p bids, competing only with the
    * local payload.
    */
@@ -975,27 +975,17 @@ export function getValidatorApi(
     const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> =
       circuitBreakerActive || suppliedBid !== undefined
         ? Promise.resolve(null)
-        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
-            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-            // Discard p2p bids below the proposer's configured floor on the total payment.
-            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-              logger.info("Best p2p bid below configured minimum", {
-                slot,
-                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-                minBid: prettyGweiToEth(builderConfig.minBid),
-              });
-              return null;
-            }
-            return p2pBid;
-          });
+        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() =>
+            chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex)
+          );
 
     // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
     // by the top-level factors and each builder API bid by its own entry. Ties prefer the
     // earliest received builder API bid, so the signed block can be routed back to its
     // builder directly.
     const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-      const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+      const [builderApiBids, selectedP2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+      let p2pBid = selectedP2pBid;
       let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
 
       const candidates = (
@@ -1065,7 +1055,18 @@ export function getValidatorApi(
             {slot, builderIndex: suppliedBid.message.builderIndex},
             e as Error
           );
+          p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
         }
+      }
+
+      // Gossip validation enforces executionPayment=0, so only the value counts toward the floor.
+      if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+        logger.info("Best p2p bid below configured minimum", {
+          slot,
+          bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+          minBid: prettyGweiToEth(builderConfig.minBid),
+        });
+        p2pBid = null;
       }
 
       if (p2pBid !== null) {

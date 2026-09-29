@@ -655,7 +655,8 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("falls back to the local payload when the supplied bid fails validation", async () => {
+  it.each([true, false])("falls back to a p2p bid when the supplied bid fails validation (full=%s)", async (full) => {
+    modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(full);
     const suppliedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     suppliedBid.message.value = 2;
 
@@ -673,10 +674,93 @@ describe("api/validator - produceBlockV4", () => {
       signedExecutionPayloadBid: suppliedBid,
     });
 
-    // The p2p bid is not a fallback, the validator client already picked from the bids it saw
-    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledWith(
+      slot,
+      full ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash,
+      parentBlock.blockRoot
+    );
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
+    expect(block).toEqual(bidBlock);
+  });
+
+  it.each([
+    {p2pBid: null, localValue: 0n, boost: 100n},
+    {p2pBid: toPooledBid(builderBid), localValue: 2_000_000_000n, boost: 100n},
+    {p2pBid: toPooledBid(builderBid), localValue: 1n, boost: 0n},
+  ])("keeps the local fallback when it wins: %s", async ({p2pBid, localValue, boost}) => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid bid"));
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+      executionPayloadValue: localValue,
+      consensusBlockValue: 0n,
+    }));
+
+    const {data: block} = await api.produceBlockV4WithBid({
+      slot,
+      randaoReveal,
+      includePayload: false,
+      builderBoostFactor: boost,
+      signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+    });
+
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalled();
     expect(block).toEqual(engineBlock);
+  });
+
+  it("uses the p2p fallback before the bid deadline without waiting", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+      vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid bid"));
+
+      const {data: block} = await api.produceBlockV4WithBid({
+        slot,
+        randaoReveal,
+        includePayload: false,
+        builderBoostFactor: 100n,
+        signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+      });
+
+      expect(block).toEqual(bidBlock);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns the p2p fallback at the cutoff while local production is pending", async () => {
+    vi.useFakeTimers();
+    const engineResult = {block: engineBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
+    const engineDeferred = defer<typeof engineResult>();
+    try {
+      vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(600);
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+      vi.mocked(validateBuilderApiExecutionPayloadBid).mockRejectedValueOnce(new Error("Invalid bid"));
+      modules.chain.produceBlock.mockImplementation((attrs: {builderBid?: unknown}) =>
+        attrs.builderBid !== undefined
+          ? Promise.resolve({block: bidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n})
+          : engineDeferred.promise
+      );
+
+      const blockPromise = api.produceBlockV4WithBid({
+        slot,
+        randaoReveal,
+        includePayload: false,
+        builderBoostFactor: 100n,
+        signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+      });
+      await vi.advanceTimersByTimeAsync(1_400);
+      const {data: block} = await blockPromise;
+
+      expect(block).toEqual(bidBlock);
+    } finally {
+      engineDeferred.resolve(engineResult);
+      vi.useRealTimers();
+    }
   });
 
   it("ignores the supplied bid when the builder circuit breaker is active", async () => {
@@ -696,6 +780,7 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(validateBuilderApiExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
   });
