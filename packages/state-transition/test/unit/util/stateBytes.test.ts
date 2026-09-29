@@ -14,6 +14,130 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("scanActiveValidatorsFromStateBytes", () => {
+  it.each(forkAll)("scans the registry with populated surrounding fields for %s", (fork) => {
+    const stateType = sszTypesFor(fork).BeaconState;
+    const state = stateType.defaultViewDU();
+    const largeEpoch = 2 ** 32 + 3;
+    state.historicalRoots.push(new Uint8Array(32).fill(0xa5));
+    state.eth1DataVotes.push(ssz.phase0.Eth1Data.defaultViewDU());
+    for (const [activationEpoch, exitEpoch, effectiveBalance, slashed] of [
+      [0, Infinity, 32_000_000_000, false],
+      [3, 4, 2_048_600_000_000, true],
+      [3, 4, 33_600_000_000, false],
+      [4, 5, 0, false],
+      [Infinity, Infinity, 32_000_000_000, false],
+      [largeEpoch, largeEpoch + 2, 65_000_000_000, false],
+      [0, 3, 8_000_000_000, false],
+      [3, 3, 50_000_000_000, false],
+    ] as const) {
+      state.validators.push(
+        ssz.phase0.Validator.toViewDU({
+          ...ssz.phase0.Validator.defaultValue(),
+          activationEpoch,
+          exitEpoch,
+          effectiveBalance,
+          slashed,
+        })
+      );
+      state.balances.push(999_000_000_000);
+    }
+    const bytes = state.serialize();
+    for (const [epoch, activeValidatorCount, totalActiveBalanceIncrements] of [
+      [0, 2, 40], // Active indices: 0, 6. Balance increments: 32 + 8.
+      [2, 2, 40], // Active indices: 0, 6. Validator 6 has not exited yet.
+      [3, 3, 2113], // Active indices: 0, 1 (slashed), 2. Validator 6 exits; validator 7 is never active.
+      [4, 2, 32], // Active indices: 0, 3 (zero balance). Validators 1 and 2 exit.
+      [5, 1, 32], // Active index: 0. Validator 3 exits.
+      [largeEpoch - 1, 1, 32], // Active index: 0. Validator 5 has not activated yet.
+      [largeEpoch, 2, 97], // Active indices: 0, 5. Validator 5 activates; balance increments: 32 + 65.
+      [largeEpoch + 1, 2, 97], // Active indices: 0, 5. Validator 5 has not exited yet.
+      [largeEpoch + 2, 1, 32], // Active index: 0. Validator 5 exits.
+    ]) {
+      expect(scanActiveValidatorsFromStateBytes(bytes, stateType, epoch), `${fork}, epoch ${epoch}`).toEqual({
+        activeValidatorCount,
+        totalActiveBalanceIncrements,
+      });
+    }
+  });
+
+  it.each([
+    {name: "empty registry", validators: [], activeValidatorCount: 0},
+    {
+      name: "only inactive validators",
+      validators: [
+        {activationEpoch: 4, exitEpoch: Infinity, effectiveBalance: 32_000_000_000},
+        {activationEpoch: 0, exitEpoch: 3, effectiveBalance: 32_000_000_000},
+      ],
+      activeValidatorCount: 0,
+    },
+    {
+      name: "zero active balance",
+      validators: [{activationEpoch: 0, exitEpoch: Infinity, effectiveBalance: 0}],
+      activeValidatorCount: 1,
+    },
+    {
+      name: "active balances below one increment",
+      validators: [
+        {activationEpoch: 0, exitEpoch: Infinity, effectiveBalance: 900_000_000},
+        {activationEpoch: 0, exitEpoch: Infinity, effectiveBalance: 900_000_000},
+        {activationEpoch: 0, exitEpoch: Infinity, effectiveBalance: 900_000_000},
+      ],
+      activeValidatorCount: 3,
+    },
+  ])("preserves the validator count and minimum balance for $name", ({validators, activeValidatorCount}) => {
+    const stateType = ssz.phase0.BeaconState;
+    const state = stateType.defaultViewDU();
+    for (const validator of validators) {
+      state.validators.push(ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), ...validator}));
+    }
+    expect(scanActiveValidatorsFromStateBytes(state.serialize(), stateType, 3)).toEqual({
+      activeValidatorCount,
+      totalActiveBalanceIncrements: 1,
+    });
+  });
+
+  it.each(forkAll)("returns null for malformed registry ranges in %s", (fork) => {
+    const stateType = ssz[fork].BeaconState;
+    const state = stateType.defaultViewDU();
+    state.validators.push(ssz.phase0.Validator.defaultViewDU());
+    state.balances.push(32_000_000_000);
+    const bytes = state.serialize();
+    const fieldOffsets: Record<string, number> = {};
+    let fixedEnd = 0;
+    for (const [name, field] of Object.entries(stateType.fields)) {
+      fieldOffsets[name] = fixedEnd;
+      fixedEnd += field.fixedSize ?? ssz.Uint32.fixedSize;
+    }
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const validatorStart = view.getUint32(fieldOffsets.validators, true);
+    const validatorEnd = view.getUint32(fieldOffsets.balances, true);
+    const malformedInputs: [string, Uint8Array][] = [
+      ["empty state", bytes.subarray(0, 0)],
+      ["truncated fixed section", bytes.subarray(0, fixedEnd - 1)],
+    ];
+    for (const [name, field, offset] of [
+      ["wrong first offset", "historicalRoots", fixedEnd + 1],
+      ["validator offset before preceding field", "validators", validatorStart - 1],
+      ["validator offset past end", "validators", bytes.length + 1],
+      ["balances offset before validators", "balances", validatorStart - 1],
+      ["balances offset past end", "balances", bytes.length + 1],
+      ["partial validator record", "balances", validatorEnd - 1],
+    ] as const) {
+      const malformed = bytes.slice();
+      new DataView(malformed.buffer, malformed.byteOffset, malformed.byteLength).setUint32(
+        fieldOffsets[field],
+        offset,
+        true
+      );
+      malformedInputs.push([name, malformed]);
+    }
+    for (const [name, input] of malformedInputs) {
+      expect(scanActiveValidatorsFromStateBytes(input, stateType, 0), `${fork}: ${name}`).toBeNull();
+    }
+  });
+});
+
 describe("state bytes weak subjectivity", () => {
   it.each(forkAll)("matches state-based calculations for %s", (fork) => {
     const config = createBeaconConfig({}, new Uint8Array(32));
