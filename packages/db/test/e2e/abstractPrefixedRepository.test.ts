@@ -18,7 +18,7 @@ type TestPrefixedType = {column: Column; value: string};
 
 // Fake SSZ-like Type for string values
 const testPrefixedType = {
-  serialize: (v: TestPrefixedType): Uint8Array => Buffer.from(JSON.stringify(v), "utf8"),
+  serialize: (v: TestPrefixedType): Uint8Array => new TextEncoder().encode(JSON.stringify(v)),
   deserialize: (d: Uint8Array): TestPrefixedType => JSON.parse(Buffer.from(d).toString("utf8")) as TestPrefixedType,
   hashTreeRoot: (v: string): Uint8Array => Buffer.from("id:" + v, "utf8"),
 } as any;

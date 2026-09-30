@@ -8,9 +8,9 @@ export type DatabaseOptions = {
 };
 
 export interface FilterOptions<K> {
-  /** Forwarded to classic-level; false keeps the blocks this read loads out of the LevelDB block cache */
+  /** Defaults to true. False keeps the blocks this read loads out of the LevelDB block cache. */
   fillCache?: boolean;
-  /** Read one row per native call, so a stream holds at most one row natively and one in JS */
+  /** Request native iterator pages of one row. */
   rowAtATime?: boolean;
   gt?: K;
   gte?: K;
@@ -23,7 +23,7 @@ export interface FilterOptions<K> {
 }
 
 export type DbReqOpts = {
-  /** Forwarded to classic-level; false keeps the blocks this read loads out of the LevelDB block cache */
+  /** Defaults to true. False keeps the blocks this read loads out of the LevelDB block cache. */
   fillCache?: boolean;
   /** For metrics */
   bucketId?: string;

@@ -559,8 +559,8 @@ describe("actual serving sources", () => {
       const actual = await Array.fromAsync(onBlobSidecarsByRoot(request, chain, context));
       expect(actual).toEqual(expected);
       expect(actual.map((item) => item.data.buffer.byteLength)).toEqual([
-        44 + ssz.deneb.BlobSidecar.maxSize,
-        44 + ssz.deneb.BlobSidecar.maxSize,
+        ssz.deneb.BlobSidecar.maxSize,
+        ssz.deneb.BlobSidecar.maxSize,
       ]);
       expect(context.snapshot().peakBackingBytes).toBe(44 + ssz.deneb.BlobSidecar.maxSize);
     }));

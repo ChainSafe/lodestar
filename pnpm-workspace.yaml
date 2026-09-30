@@ -26,7 +26,6 @@ allowBuilds:
   "@swc/core": true
   aws-sdk: true
   "@vekexasia/bigint-buffer2": true
-  classic-level: true
   core-js: true
   cpu-features: true
   electron: true

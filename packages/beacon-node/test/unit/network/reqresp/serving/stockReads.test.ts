@@ -3,6 +3,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {PeerId} from "@libp2p/interface";
 import {describe, expect, it, vi} from "vitest";
+import {LevelDb} from "@chainsafe/lodestar-z/leveldb";
 import {LevelDbController} from "@lodestar/db";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -39,32 +40,18 @@ const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(),
 const peer = {toString: () => "peer"} as PeerId;
 
 type Read = {
-  call: "get" | "getMany" | "iterator" | "nextv" | "next";
+  call: "get" | "getMany" | "iterator" | "next";
   fillCache?: boolean;
-  size?: number;
-};
-type LevelOptions = {fillCache?: boolean};
-type LevelIterator = {
-  nextv(size: number, ...rest: unknown[]): Promise<unknown>;
-  next(...rest: unknown[]): Promise<unknown>;
-};
-/** The classic-level instance behind the controller, as far as these tests touch it */
-type Level = {
-  get(key: Uint8Array, opts?: LevelOptions): Promise<unknown>;
-  getMany(keys: Uint8Array[], opts?: LevelOptions): Promise<unknown>;
-  iterator(opts?: LevelOptions): LevelIterator;
-  compactRange(start: Uint8Array, end: Uint8Array): Promise<void>;
-  getProperty(name: string): string;
+  maxEntries?: number;
 };
 
-/** A real LevelDB whose classic-level reads are recorded */
 async function withDb(
-  run: (db: BeaconDb, reads: Read[], level: Level) => Promise<void>,
+  run: (db: BeaconDb, reads: Read[], level: LevelDb) => Promise<void>,
   {delay}: {delay?: Promise<void>} = {}
 ): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-stock-reads-"));
-  const controller = await LevelDbController.create({name: path}, {logger});
-  const level = (controller as unknown as {db: Level}).db;
+  const level = await LevelDb.open(path);
+  const controller = await LevelDbController.create({name: path, db: level}, {logger});
   const reads: Read[] = [];
   const wait = async (): Promise<void> => {
     if (delay) await delay;
@@ -83,18 +70,13 @@ async function withDb(
     return getMany(keys, opts);
   };
   level.iterator = (opts) => {
-    reads.push({call: "iterator", fillCache: opts?.fillCache});
+    reads.push({call: "iterator", fillCache: opts?.fillCache, maxEntries: opts?.maxEntries});
     const it = iterator(opts);
-    const nextv = it.nextv.bind(it);
     const next = it.next.bind(it);
-    it.nextv = async (size, ...rest) => {
-      reads.push({call: "nextv", size});
-      await wait();
-      return nextv(size, ...rest);
-    };
-    it.next = (...rest) => {
+    it.next = async () => {
       reads.push({call: "next"});
-      return next(...rest);
+      await wait();
+      return next();
     };
     return it;
   };
@@ -241,9 +223,9 @@ describe("stock serving reads", () => {
           continue;
         }
         expect(await served, name).toEqual(expected);
-        const opened = reads.filter((read) => read.call !== "nextv" && read.call !== "next");
+        const opened = reads.filter((read) => read.call !== "next");
         expect(opened.length, name).toBeGreaterThan(0);
-        expect(opened, name).toEqual(opened.map(({call}) => ({call, fillCache: false})));
+        expect(opened, name).toEqual(opened.map((read) => ({...read, fillCache: false})));
       }
     }));
 
@@ -269,9 +251,9 @@ describe("stock serving reads", () => {
         const expected = await Array.fromAsync(source());
         reads.length = 0;
         expect(await Array.fromAsync(source(new ServingContext(policy)))).toEqual(expected);
-        const opened = reads.filter((read) => read.call !== "nextv" && read.call !== "next");
+        const opened = reads.filter((read) => read.call !== "next");
         expect(opened.length).toBeGreaterThan(0);
-        expect(opened).toEqual(opened.map(({call}) => ({call, fillCache: false})));
+        expect(opened).toEqual(opened.map((read) => ({...read, fillCache: false})));
       }
 
       // Finalization copied an oversized block into slot 1, so serving refuses it and any range holding it
@@ -336,10 +318,10 @@ describe("stock serving reads", () => {
       } finally {
         await iterator.return?.();
       }
-      expect(reads.filter((read) => read.call === "iterator")).toEqual([{call: "iterator", fillCache: false}]);
-      // Each native read returns one row; default batching never runs
-      const pulls = reads.filter((read) => read.call === "nextv" || read.call === "next");
-      expect(pulls.every((read) => read.call === "nextv" && read.size === 1)).toBe(true);
+      expect(reads.filter((read) => read.call === "iterator")).toEqual([
+        {call: "iterator", fillCache: false, maxEntries: 1},
+      ]);
+      const pulls = reads.filter((read) => read.call === "next");
       expect(pulls.length).toBeGreaterThanOrEqual(3);
     }));
 
@@ -392,7 +374,7 @@ describe("stock serving reads", () => {
           ReqRespMethod.BlobSidecarsByRange
         );
         const next = handler.next();
-        await vi.waitFor(() => expect(reads.some((read) => read.call === "nextv")).toBe(true));
+        await vi.waitFor(() => expect(reads.some((read) => read.call === "next")).toBe(true));
         handler.cancel();
         let retired = false;
         void handler.retired.then(() => {
@@ -419,8 +401,8 @@ describe("stock serving reads", () => {
       }
       // Move the rows out of the memtable, so reads load compressed table blocks
       await level.compactRange(new Uint8Array([0]), new Uint8Array([255]));
-      const usage = (): number => Number(level.getProperty("leveldb.approximate-memory-usage"));
-      const before = usage();
+      const usage = async (): Promise<number> => Number(await level.getProperty("leveldb.approximate-memory-usage"));
+      const before = await usage();
       const unfinalized = {...chain, forkChoice: {...chain.forkChoice, getFinalizedBlock: () => ({slot: 0})}};
       const blobs = await Array.fromAsync(
         onBlobSidecarsByRoot([{blockRoot: root, index: 0}], unfinalized as IBeaconChain, new ServingContext(policy))
@@ -437,10 +419,10 @@ describe("stock serving reads", () => {
       );
       expect(blobs).toHaveLength(1);
       expect(columns).toHaveLength(NUMBER_OF_COLUMNS);
-      expect(usage() - before).toBeLessThan(64 * 1024);
+      expect((await usage()) - before).toBeLessThan(64 * 1024);
       // The same rows read with the stock default fill the cache
       await db.blobSidecars.getBinary(root);
       await db.dataColumnSidecarArchive.getManyBinary(slot, [0, 1, 2]);
-      expect(usage() - before).toBeGreaterThan(1024 * 1024);
+      expect((await usage()) - before).toBeGreaterThan(1024 * 1024);
     }));
 });

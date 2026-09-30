@@ -24,13 +24,11 @@ import {ReqRespMethod} from "../../../../../src/network/reqresp/types.js";
 import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 
 /**
- * Pins the maximum legal stored value of each repository the serving handlers read, as the writers encode it, and
- * checks it against the lease charges under the stock classic-level 1.4.1 read model. A pull holds the working charge
- * and the time between pulls only the retained charge. In a pull, a `get` holds the native value and its JS copy at
- * once, and a `getMany` holds every native value plus the JS copy in conversion; after the pull only the JS copies
- * remain. A serving range stream reads one row per native read, and stock keeps that row's native copy until the next
- * read, so between pulls it holds the row natively and in JS. LevelDB's own block buffers and block cache are outside
- * the lease.
+ * Pins the maximum legal stored values against the existing serving lease charges. Native read results coexist
+ * with their JS copies during completion, including the whole getMany batch. Row-at-a-time cursors materialize one
+ * row per page and release native page output after completion. The unchanged retained charges remain conservative.
+ * Engine block buffers, decompression and block cache are outside the lease; certification still governs which
+ * stored blocks may be served.
  */
 
 const MAX_BLOBS = 21;
@@ -51,13 +49,13 @@ function forkSlot(fork: ForkName): number {
   return config.forks[fork].epoch * SLOTS_PER_EPOCH;
 }
 
-/** Stock `get` in a pull: the native value and its JS copy coexist in the completion callback */
-function stockGetPull(bytes: number): number {
+/** Native `get` in a pull: the native value and its JS copy coexist in the completion callback */
+function nativeGetPull(bytes: number): number {
   return 2 * bytes;
 }
 
-/** Stock row-at-a-time stream, in a pull and between pulls: the row natively and in JS */
-function stockRangeRow(bytes: number): number {
+/** Native row-at-a-time completion: the copied native row and its JS copy coexist */
+function nativeRangeRow(bytes: number): number {
   return 2 * bytes;
 }
 
@@ -94,7 +92,7 @@ function maxUpdate(fork: ForkName): LightClientUpdate {
   return update;
 }
 
-describe("serving source bounds with stock reads", () => {
+describe("serving source bounds with native reads", () => {
   it("stores the largest blob sidecar wrapper of each blob fork within the blob charges", async () => {
     const blobs = work(ReqRespMethod.BlobSidecarsByRange);
     expect(work(ReqRespMethod.BlobSidecarsByRoot)).toEqual(blobs);
@@ -124,10 +122,10 @@ describe("serving source bounds with stock reads", () => {
     expect(BLOB_SIDECARS_IN_WRAPPER_INDEX + 10 * BLOB_SIDECAR_FIXED_SIZE).toBeGreaterThan(policy.wrapperBytes);
     // By root reads the wrapper with a get and holds its JS copy across the sidecar writes; by range holds the
     // archive stream's row
-    expect(stockGetPull(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
+    expect(nativeGetPull(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
     expect(policy.wrapperBytes).toBeLessThanOrEqual(blobs.retainedBytes);
-    expect(stockRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
-    expect(stockRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.retainedBytes);
+    expect(nativeRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.workingBytes);
+    expect(nativeRangeRow(policy.wrapperBytes)).toBeLessThanOrEqual(blobs.retainedBytes);
   });
 
   it("stores the largest column batch of the blob schedule within the column charges", async () => {
@@ -159,11 +157,11 @@ describe("serving source bounds with stock reads", () => {
     });
     expect(batchBytes).toBe(policy.columnBatchBytes);
     expect(largest).toBeLessThanOrEqual(policy.columnBytes);
-    // Stock getMany: every native value plus the JS copy in conversion; the JS batch is held across its yields
-    expect(batchBytes + largest).toBeLessThanOrEqual(columns.workingBytes);
+    // Native completion holds the whole output batch while building its JS copies.
+    expect(2 * batchBytes).toBeLessThanOrEqual(columns.workingBytes);
     expect(batchBytes).toBeLessThanOrEqual(columns.retainedBytes);
     // A missing column reads the block for its blob count while the batch is held
-    expect(stockGetPull(policy.blockBytes)).toBeLessThanOrEqual(columns.workingBytes);
+    expect(nativeGetPull(policy.blockBytes)).toBeLessThanOrEqual(columns.workingBytes);
     // A single column at the schema maximum fits the source, a batch of them would not: the batch bound rests on the
     // blob count guards of gossip, req/resp and the state transition, not on the schema
     expect(ssz.fulu.DataColumnSidecar.maxSize).toBe(
@@ -213,8 +211,8 @@ describe("serving source bounds with stock reads", () => {
     const bootstrapReads = lightClient.witness + 2 * lightClient.committee + lightClient.header;
     const bootstrap = sszTypesFor(ForkName.fulu).LightClientBootstrap.maxSize;
     expect(bootstrapReads).toBeLessThanOrEqual(light.limits.sourceBytes);
-    expect(stockGetPull(bootstrapReads) + bootstrap).toBeLessThanOrEqual(light.workingBytes);
-    expect(stockGetPull(lightClient.update) + lightClient.update).toBeLessThanOrEqual(light.workingBytes);
+    expect(nativeGetPull(bootstrapReads) + bootstrap).toBeLessThanOrEqual(light.workingBytes);
+    expect(nativeGetPull(lightClient.update) + lightClient.update).toBeLessThanOrEqual(light.workingBytes);
     expect(Math.max(bootstrap, lightClient.update)).toBeLessThanOrEqual(light.retainedBytes);
   });
 
@@ -258,17 +256,16 @@ describe("serving source bounds with stock reads", () => {
       // From Bellatrix the schema admits about 2^50 bytes of transactions, so it bounds nothing
       if (isForkPostBellatrix(fork)) expect(schema).toBeGreaterThan(2 ** 49);
     }
-    // A block at the network cap fits a stock get: both copies in the pull, the JS copy between pulls
-    expect(stockGetPull(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
+    // A block at the network cap fits both copies in the pull and the JS copy between pulls.
+    expect(nativeGetPull(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
     expect(config.MAX_PAYLOAD_SIZE).toBeLessThanOrEqual(blocks.retainedBytes);
-    // A block range's row stream holds the row natively and in JS between pulls, with its 9-byte key twice and its
-    // JS row objects in the remaining allowance
-    expect(stockRangeRow(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
-    const rowMetadata = ranges.retainedBytes - stockRangeRow(config.MAX_PAYLOAD_SIZE);
+    // The existing retained allowance also covers both copies of the key and row metadata.
+    expect(nativeRangeRow(config.MAX_PAYLOAD_SIZE)).toBeLessThanOrEqual(blocks.workingBytes);
+    const rowMetadata = ranges.retainedBytes - nativeRangeRow(config.MAX_PAYLOAD_SIZE);
     expect(rowMetadata).toBeGreaterThanOrEqual(2 * 9 + 1024);
     expect(rowMetadata).toBeLessThan(64 * 1024);
     // Local publication now refuses blocks above the cap, but the repository keeps whatever a writer put before: a
-    // stock read would return every stored byte before any serving check can run
+    // repository read with the default native cap still accepts a row above the protocol bound.
     await withDb(async (db) => {
       await db.block.putBinary(root, new Uint8Array(blocks.limits.sourceBytes + 1));
       expect((await db.block.getBinary(root))?.byteLength).toBe(blocks.limits.sourceBytes + 1);

@@ -30,8 +30,6 @@ const knownMissingTargets = new Set([
   "@chainsafe/hashtree@1.0.2:x86_64-apple-darwin",
   "@crate-crypto/node-eth-kzg@0.9.1:aarch64-unknown-linux-musl",
   "@crate-crypto/node-eth-kzg@0.9.1:x86_64-unknown-linux-musl",
-  "classic-level@1.4.1:aarch64-unknown-linux-musl",
-  "classic-level@3.0.0:aarch64-unknown-linux-musl",
 ]);
 
 const vexInstructionPattern =

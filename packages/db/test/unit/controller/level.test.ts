@@ -26,7 +26,7 @@ describe("LevelDB controller", () => {
     const key = Buffer.from("test");
     const value = Buffer.from("some value");
     await db.put(key, value);
-    expect(await db.get(key)).toEqual(value);
+    expect(await db.get(key)).toEqual(Uint8Array.from(value));
     await db.delete(key);
     expect(await db.get(key)).toBe(null);
   });
@@ -40,9 +40,9 @@ describe("LevelDB controller", () => {
     const value2 = Buffer.from("some value 2");
     await db.put(key2, value2);
 
-    await expect(db.getMany([key1, key2])).resolves.toEqual([value1, value2]);
+    await expect(db.getMany([key1, key2])).resolves.toEqual([Uint8Array.from(value1), Uint8Array.from(value2)]);
     await db.delete(key1);
-    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, value2]);
+    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, Uint8Array.from(value2)]);
   });
 
   it("test batchPut", async () => {
@@ -89,8 +89,8 @@ describe("LevelDB controller", () => {
       {key: k4, value: v4},
       {key: k5, value: v5},
     ] = Array.from({length: 5}, (_, i) => ({
-      key: Buffer.from(`test${i}`),
-      value: Buffer.from(`some value ${i}`),
+      key: new TextEncoder().encode(`test${i}`),
+      value: new TextEncoder().encode(`some value ${i}`),
     }));
     await db.put(k1, v1);
     await db.put(k2, v2);
