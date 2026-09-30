@@ -27,6 +27,7 @@ import {
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
+import {EarliestAvailableSlot} from "./single/index.js";
 
 export type BeaconDbOpts = {
   dataColumnDir: string;
@@ -37,6 +38,7 @@ export type BeaconDbOpts = {
 export class BeaconDb implements IBeaconDb {
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
+  earliestAvailableSlot: EarliestAvailableSlot;
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
@@ -72,6 +74,7 @@ export class BeaconDb implements IBeaconDb {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(config, db);
     this.blockArchive = new BlockArchiveRepository(config, db);
+    this.earliestAvailableSlot = new EarliestAvailableSlot(config, db);
 
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);

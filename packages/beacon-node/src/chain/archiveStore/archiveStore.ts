@@ -101,10 +101,11 @@ export class ArchiveStore {
   }
 
   async init(): Promise<void> {
+    let blockCutoffSlot = 0;
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      await callFnWhenAwait(
+      blockCutoffSlot = await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
@@ -119,21 +120,22 @@ export class ArchiveStore {
       );
     }
 
-    // blockArchive.firstKey() is only a valid earliestAvailableSlot floor when the archive is
-    // contiguous up to the anchor. A checkpoint sync this startup can leave an unservable gap below
-    // the anchor (no backfill yet, #7997), so only lower to the retained floor when we did not.
+    // Checkpoint sync can leave a gap below the anchor. Persist its floor so later database
+    // restarts cannot lower it to older retained blocks before that gap.
     if (this.opts.isCheckpointState) {
       this.logger.verbose("Checkpoint-synced anchor, keeping earliestAvailableSlot at the anchor slot", {
         earliestAvailableSlot: this.chain.earliestAvailableSlot,
       });
     } else {
-      const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
-      if (earliestArchivedBlockSlot != null) {
+      const persistedEarliestAvailableSlot = await this.db.earliestAvailableSlot.get();
+      const earliestAvailableSlot = persistedEarliestAvailableSlot ?? (await this.db.blockArchive.firstKey());
+      if (earliestAvailableSlot != null) {
         const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
-        this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
-        this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
+        this.chain.earliestAvailableSlot = earliestAvailableSlot;
+        this.logger.verbose("Initialized earliestAvailableSlot", {
           oldEarliestAvailableSlot,
-          newEarliestAvailableSlot: earliestArchivedBlockSlot,
+          newEarliestAvailableSlot: earliestAvailableSlot,
+          source: persistedEarliestAvailableSlot != null ? "database" : "retained block archive",
         });
       } else {
         this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
@@ -141,6 +143,8 @@ export class ArchiveStore {
         });
       }
     }
+    this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+    await this.db.earliestAvailableSlot.put(this.chain.earliestAvailableSlot);
 
     if (this.opts.serveHistoricalState) {
       this.historicalStateRegen = await HistoricalStateRegen.init({
@@ -268,6 +272,7 @@ export class ArchiveStore {
           this.chain.clock.currentEpoch
         );
         this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+        await this.db.earliestAvailableSlot.put(this.chain.earliestAvailableSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 

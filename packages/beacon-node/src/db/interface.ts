@@ -22,6 +22,7 @@ import {
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
+import {EarliestAvailableSlot} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -33,6 +34,7 @@ export interface IBeaconDb {
   block: BlockRepository;
   // finalized blocks
   blockArchive: BlockArchiveRepository;
+  earliestAvailableSlot: EarliestAvailableSlot;
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
