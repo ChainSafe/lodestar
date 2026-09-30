@@ -7,7 +7,8 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
+import {LogLevel, defer} from "@lodestar/utils";
+import {ChainEvent} from "../../../src/chain/emitter.js";
 import {INetworkCore} from "../../../src/network/core/types.js";
 import {NetworkEvent, NetworkEventBus} from "../../../src/network/events.js";
 import {Network} from "../../../src/network/network.js";
@@ -22,12 +23,14 @@ import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 async function fixture(close: () => Promise<void>) {
   const config = createBeaconConfig(defaultConfig, new Uint8Array(32));
   const clock = new ClockStopped(0);
-  const chain = {...getMockedBeaconChain(), clock, config};
+  const chain = {...getMockedBeaconChain(), clock, config, getStatus: vi.fn(() => ssz.fulu.Status.defaultValue())};
   const events = new NetworkEventBus();
   const logger = testLogger();
   const aggregatorTracker = new AggregatorTracker();
   const publishGossip = vi.fn(async () => 0);
-  const core = {close, publishGossip} as unknown as INetworkCore;
+  const updateStatus = vi.fn<INetworkCore["updateStatus"]>().mockResolvedValue(undefined);
+  const setTargetGroupCount = vi.fn<INetworkCore["setTargetGroupCount"]>().mockResolvedValue(undefined);
+  const core = {close, publishGossip, updateStatus, setTargetGroupCount} as unknown as INetworkCore;
   const networkProcessor = new NetworkProcessor(
     {chain, db: getMockedBeaconDb(), config, logger, metrics: null, events, core, aggregatorTracker},
     {}
@@ -43,7 +46,7 @@ async function fixture(close: () => Promise<void>) {
     core,
     aggregatorTracker,
   });
-  return {network, events, chain, clock, publishGossip};
+  return {network, events, chain, clock, publishGossip, updateStatus, setTargetGroupCount, logger};
 }
 
 describe("outer network retirement", () => {
@@ -106,5 +109,61 @@ describe("outer network retirement", () => {
     expect(close).toHaveBeenCalledOnce();
     expect(EventEmitter.prototype.listenerCount.call(events, NetworkEvent.pendingGossipsubMessage)).toBe(0);
     expect(clock.listenerCount(ClockEvent.slot)).toBe(0);
+  });
+});
+
+describe("network event command failures", () => {
+  it.each([ChainEvent.updateStatus, routes.events.EventType.head])(
+    "handles %s rejection without retrying",
+    async (event) => {
+      const {network, chain, updateStatus, logger} = await fixture(async () => {});
+      const error = new Error("status admission refused");
+      const failed = Promise.reject(error);
+      void failed.catch(() => {});
+      updateStatus.mockReturnValue(failed);
+      const log = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
+      try {
+        const [listener] = EventEmitter.prototype.listeners.call(chain.emitter, event) as (() => Promise<void>)[];
+        await expect(listener()).resolves.toBeUndefined();
+        expect(updateStatus).toHaveBeenCalledOnce();
+        expect(log).toHaveBeenCalledWith("Error updating network status", {}, error);
+      } finally {
+        await network.close();
+      }
+    }
+  );
+
+  it("handles custody rejection without retrying or changing the count", async () => {
+    const {network, chain, setTargetGroupCount, logger} = await fixture(async () => {});
+    const error = new Error("custody admission refused");
+    const failed = Promise.reject(error);
+    void failed.catch(() => {});
+    setTargetGroupCount.mockReturnValue(failed);
+    const log = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
+    try {
+      const [listener] = chain.emitter.listeners(ChainEvent.updateTargetCustodyGroupCount);
+      await expect(listener(12)).resolves.toBeUndefined();
+      expect(setTargetGroupCount).toHaveBeenCalledExactlyOnceWith(12);
+      expect(log).toHaveBeenCalledWith("Error updating network custody group count", {count: 12}, error);
+    } finally {
+      await network.close();
+    }
+  });
+
+  it("handles a synchronous status failure", async () => {
+    const {network, chain, updateStatus, logger} = await fixture(async () => {});
+    const error = new Error("status construction failed");
+    chain.getStatus.mockImplementation(() => {
+      throw error;
+    });
+    const log = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
+    try {
+      const [listener] = chain.emitter.listeners(ChainEvent.updateStatus);
+      await expect(listener()).resolves.toBeUndefined();
+      expect(updateStatus).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith("Error updating network status", {}, error);
+    } finally {
+      await network.close();
+    }
   });
 });
