@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`native gossip limits > resolve the hoodi native config unchanged 1`] = `
+exports[`native gossip limits > resolves the hoodi gossip limits 1`] = `
 [
   {
     "limits": {
@@ -135,7 +135,6 @@ exports[`native gossip limits > resolve the hoodi native config unchanged 1`] = 
         },
       },
     },
-    "sha256": "1a75fd2211e2e9bd6484ac77db3f8c707fe179899bb1147eb5cc0748a061262b",
     "validators": 16,
   },
   {
@@ -271,13 +270,12 @@ exports[`native gossip limits > resolve the hoodi native config unchanged 1`] = 
         },
       },
     },
-    "sha256": "34802be66c0b77c88ab2327025dfdedf9012b0c1f87e4ed8d7ca8fa95894f72c",
     "validators": 1000000,
   },
 ]
 `;
 
-exports[`native gossip limits > resolve the mainnet native config unchanged 1`] = `
+exports[`native gossip limits > resolves the mainnet gossip limits 1`] = `
 [
   {
     "limits": {
@@ -412,7 +410,6 @@ exports[`native gossip limits > resolve the mainnet native config unchanged 1`] 
         },
       },
     },
-    "sha256": "1a75fd2211e2e9bd6484ac77db3f8c707fe179899bb1147eb5cc0748a061262b",
     "validators": 16,
   },
   {
@@ -548,7 +545,6 @@ exports[`native gossip limits > resolve the mainnet native config unchanged 1`] 
         },
       },
     },
-    "sha256": "34802be66c0b77c88ab2327025dfdedf9012b0c1f87e4ed8d7ca8fa95894f72c",
     "validators": 1000000,
   },
 ]

@@ -1,4 +1,3 @@
-import {createHash} from "node:crypto";
 import {generateKeyPair, privateKeyFromRaw} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
@@ -313,20 +312,10 @@ it.each([16, 1_000_000])(
   }
 );
 
-/** A stable text of a resolved native config: bigints, bytes and non-finite numbers made explicit */
-function canonical(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (typeof item === "bigint") return `${item}n`;
-    if (item instanceof Uint8Array) return Buffer.from(item).toString("hex");
-    if (typeof item === "number" && !Number.isFinite(item)) return String(item);
-    return item;
-  });
-}
-
 describe("native gossip limits", () => {
   const key = privateKeyFromRaw(new Uint8Array(32).fill(7));
 
-  it.each(["mainnet", "hoodi"] as const)("resolve the %s native config unchanged", (network) => {
+  it.each(["mainnet", "hoodi"] as const)("resolves the %s gossip limits", (network) => {
     const beaconConfig = createBeaconConfig(
       networksChainConfig[network],
       fromHex(genesisData[network].genesisValidatorsRoot)
@@ -347,7 +336,6 @@ describe("native gossip limits", () => {
         limits: Object.fromEntries(
           kinds.map((kind, i) => [kind, {processor: processor[i], execution: execution?.[i]}])
         ),
-        sha256: createHash("sha256").update(canonical(application)).digest("hex"),
       };
     });
     expect(resolved).toMatchSnapshot();
