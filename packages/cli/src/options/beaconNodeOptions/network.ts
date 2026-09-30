@@ -217,7 +217,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     default: "libp2p",
     group: "network",
     description:
-      "Networking backend. Native requires TCP disabled, one listen address and an explicit ENR IP for discovery; learned peers are not persisted.",
+      "Networking backend. Native requires TCP disabled and QUIC enabled, supports one listener per IP family, and remembers qualified peers when a peer store is configured.",
   },
   discv5: {
     type: "boolean",
