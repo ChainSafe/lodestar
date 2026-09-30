@@ -184,16 +184,36 @@ export class NativeNetworkCore implements INetworkCore {
     const completion = defer<void>();
     this.closePromise = completion.promise;
     this.closed = true;
-    this.modules.clock.off(ClockEvent.slot, this.onSlot);
-    this.gossip?.close();
-    this.requests?.close();
-    this.peers?.close();
-    this.intent?.close();
-    this.network?.notifyCapacity();
-    // The network refuses the final remembered peers snapshot once it closes.
-    void (this.remembered?.close() ?? Promise.resolve())
-      .then(() => this.network?.close())
-      .then(() => completion.resolve(), completion.reject);
+    void (async () => {
+      const errors: unknown[] = [];
+      for (const cleanup of [
+        () => this.modules.clock.off(ClockEvent.slot, this.onSlot),
+        () => this.gossip?.close(),
+        () => this.requests?.close(),
+        () => this.peers?.close(),
+        () => this.intent?.close(),
+        () => this.network?.notifyCapacity(),
+      ]) {
+        try {
+          cleanup();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      // The network refuses the final remembered peers snapshot once it closes.
+      try {
+        await this.remembered?.close();
+      } catch (error) {
+        errors.push(error);
+      }
+      try {
+        await this.network?.close();
+      } catch (error) {
+        errors.push(error);
+      }
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, "Native network cleanup failed");
+    })().then(() => completion.resolve(), completion.reject);
     return this.closePromise;
   }
   prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
