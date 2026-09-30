@@ -172,12 +172,43 @@ describe("native gossip host execution", () => {
       held.resolve();
       const results = await execution;
       expect(results).toEqual([TopicValidatorResult.Accept]);
-      expect(() => f.executor.observe(messages, results)).toThrow("completion metric failed");
+      expect(() => f.executor.observe(messages)).toThrow("completion metric failed");
       expect(results).toEqual([TopicValidatorResult.Accept]);
     } finally {
       held.resolve();
       f.executor.stop();
       submitted.mockRestore();
+      observed.mockRestore();
+    }
+  });
+
+  it("records completed work for accepted, rejected and ignored messages in a mixed batch", async () => {
+    const metrics = createMetricsTest();
+    const observed = vi.spyOn(metrics.gossipValidationQueue.jobTime, "observe");
+    const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+    const f = fixture(metrics);
+    try {
+      f.batch.mockResolvedValueOnce([
+        null,
+        new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE}),
+        new AttestationError(GossipAction.IGNORE, {code: AttestationErrorCode.INVALID_SIGNATURE}),
+      ]);
+      const messages = [message("accept", true), message("reject", true), message("ignore", true)];
+      const results = await f.executor.execute(messages, true, reported);
+      expect(results).toEqual([TopicValidatorResult.Accept, TopicValidatorResult.Reject, TopicValidatorResult.Ignore]);
+      expect(observed).not.toHaveBeenCalled();
+      now.mockReturnValue(1300);
+      f.executor.observe(messages);
+      expect(observed).toHaveBeenCalledTimes(3);
+      for (const [labels, duration] of observed.mock.calls) {
+        expect(labels).toEqual({topic: GossipType.beacon_attestation});
+        expect(duration).toBeCloseTo(0.1);
+      }
+      f.executor.observe([message("never started")]);
+      expect(observed).toHaveBeenCalledTimes(3);
+    } finally {
+      f.executor.stop();
+      now.mockRestore();
       observed.mockRestore();
     }
   });

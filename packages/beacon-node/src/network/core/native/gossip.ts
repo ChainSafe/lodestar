@@ -56,7 +56,7 @@ export class NativeGossip {
     const results = await processor.execute(messages, job.grouped, job.reported);
     const errors: unknown[] = [];
     try {
-      processor.observe(messages, results);
+      processor.observe(messages);
     } catch (error) {
       errors.push(error);
     }

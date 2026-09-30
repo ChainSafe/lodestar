@@ -91,14 +91,13 @@ export class NativeGossipExecutor {
       : [await this.validate(infos[0], reported)];
   }
 
-  observe(messages: PendingGossipsubMessage[], results: TopicValidatorResult[]): void {
-    for (const [i, message] of messages.entries()) {
+  observe(messages: PendingGossipsubMessage[]): void {
+    for (const message of messages) {
       if (message.startProcessUnixSec === null) continue;
-      if (results[i] === TopicValidatorResult.Accept)
-        this.modules.metrics?.gossipValidationQueue.jobTime.observe(
-          {topic: message.topic.type},
-          Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
-        );
+      this.modules.metrics?.gossipValidationQueue.jobTime.observe(
+        {topic: message.topic.type},
+        Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
+      );
     }
   }
 
