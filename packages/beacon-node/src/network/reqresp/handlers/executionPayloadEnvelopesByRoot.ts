@@ -20,7 +20,8 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
-  // Duplicate roots can amplify expensive EL fetches and envelope reconstruction.
+  // Resolve slots first so archived envelopes can be reconstructed in EL batches.
+  // Duplicate roots are served once, since each archived envelope costs an EL fetch and a rebuild.
   const requests: {blockSlot: Slot; blockRootHex: RootHex}[] = [];
   const seenRoots = new Set<RootHex>();
   for (const root of requestBody) {
@@ -52,7 +53,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     const batch = requests.slice(i, i + MAX_BODIES_PER_REQUEST);
     let envelopesBytes: (Uint8Array | null)[];
     try {
-      // By-root permits omission of envelopes that fail reconstruction checks.
+      // By-root allows omission, so a mismatched envelope is left out rather than failing the response.
       envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(batch, "omit");
     } catch (e) {
       if (e instanceof EnvelopeReconstructionError) {
