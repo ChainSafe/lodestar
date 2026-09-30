@@ -537,6 +537,54 @@ export type Endpoints = {
   >;
 
   /**
+   * Requests a beacon node to produce a valid block with best-effort inclusion of the supplied
+   * execution payload bid, which the validator client selected itself among the bids it received.
+   *
+   * The beacon node solicits no builder API bids and considers no p2p bids. The supplied bid is
+   * validated like a builder API bid, with its execution payment counted in full, and weighed by
+   * `builderBoostFactor` against the local payload. An invalid bid or an active circuit breaker
+   * falls back to the local payload, the validator client can tell by the bid in the returned block.
+   *
+   * The response follows `produceBlockV4` without the `Eth-Builder-Url` header, the validator client
+   * already knows which builder to submit the signed block to.
+   * This endpoint is specific to the post-Gloas forks and is not backwards compatible with previous forks.
+   */
+  produceBlockV4WithBid: Endpoint<
+    "POST",
+    {
+      /** The slot for which the block should be proposed */
+      slot: Slot;
+      /** The validator's randao reveal value */
+      randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
+      graffiti?: string;
+      skipRandaoVerification?: boolean;
+      /** Percentage multiplier applied to the supplied bid when choosing between it and the local payload */
+      builderBoostFactor: bigint;
+      /** Include execution payload envelope and blobs in the response when self-building */
+      includePayload: boolean;
+      /** The bid selected by the validator client */
+      signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid;
+    } & ExtraProduceBlockV4Opts,
+    {
+      params: {slot: number};
+      query: {
+        randao_reveal: string;
+        graffiti?: string;
+        skip_randao_verification?: string;
+        fee_recipient?: string;
+        strict_fee_recipient_check?: boolean;
+        builder_boost_factor: string;
+        include_payload: boolean;
+      };
+      body: unknown;
+      headers: {[MetaHeader.Version]: string};
+    },
+    BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>,
+    ProduceBlockV4Meta
+  >;
+
+  /**
    * Get execution payload envelope.
    * Retrieves the cached execution payload envelope for a given slot and beacon block root,
    * to be signed and published via `publishExecutionPayloadEnvelope`.
@@ -1112,6 +1160,131 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
             executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
             builderUrl: headers.get(MetaHeader.BuilderUrl) ?? undefined,
+          }),
+        },
+      },
+    },
+    produceBlockV4WithBid: {
+      url: "/eth/v4/validator/blocks/{slot}/with_bid",
+      method: "POST",
+      req: {
+        writeReqJson: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          strictFeeRecipientCheck,
+          builderBoostFactor,
+          includePayload,
+          signedExecutionPayloadBid,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHex(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            builder_boost_factor: builderBoostFactor.toString(),
+            include_payload: includePayload,
+          },
+          body: ssz.gloas.SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
+          headers: {[MetaHeader.Version]: config.getForkName(slot)},
+        }),
+        parseReqJson: ({params, query, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            randaoReveal: fromHex(query.randao_reveal),
+            graffiti: fromGraffitiHex(query.graffiti),
+            skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+            feeRecipient: query.fee_recipient,
+            strictFeeRecipientCheck: query.strict_fee_recipient_check,
+            builderBoostFactor: BigInt(query.builder_boost_factor),
+            includePayload: query.include_payload,
+            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.fromJson(body),
+          };
+        },
+        writeReqSsz: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          strictFeeRecipientCheck,
+          builderBoostFactor,
+          includePayload,
+          signedExecutionPayloadBid,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHex(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            builder_boost_factor: builderBoostFactor.toString(),
+            include_payload: includePayload,
+          },
+          body: ssz.gloas.SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
+          headers: {[MetaHeader.Version]: config.getForkName(slot)},
+        }),
+        parseReqSsz: ({params, query, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            randaoReveal: fromHex(query.randao_reveal),
+            graffiti: fromGraffitiHex(query.graffiti),
+            skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+            feeRecipient: query.fee_recipient,
+            strictFeeRecipientCheck: query.strict_fee_recipient_check,
+            builderBoostFactor: BigInt(query.builder_boost_factor),
+            includePayload: query.include_payload,
+            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.deserialize(body),
+          };
+        },
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            skip_randao_verification: Schema.String,
+            fee_recipient: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+            builder_boost_factor: Schema.StringRequired,
+            include_payload: Schema.BooleanRequired,
+          },
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+      resp: {
+        data: WithMeta(
+          ({version, executionPayloadIncluded}) =>
+            (executionPayloadIncluded
+              ? getPostGloasForkTypes(version).BlockContents
+              : getPostGloasForkTypes(version).BeaconBlock) as Type<
+              BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>
+            >
+        ),
+        meta: {
+          toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
+          fromJson: (val) => ProduceBlockV4MetaType.fromJson(val),
+          toHeadersObject: (meta) => ({
+            [MetaHeader.Version]: meta.version,
+            [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+            [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
+          }),
+          fromHeaders: (headers) => ({
+            version: toForkName(headers.getRequired(MetaHeader.Version)),
+            consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+            executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
           }),
         },
       },

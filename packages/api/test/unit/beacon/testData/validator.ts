@@ -113,6 +113,28 @@ export const testData: GenericServerTestCases<Endpoints> = {
       },
     },
   },
+  produceBlockV4WithBid: {
+    args: {
+      slot: 32000,
+      randaoReveal,
+      graffiti,
+      skipRandaoVerification: true,
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      builderBoostFactor: 100n,
+      includePayload: true,
+      signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+    },
+    res: {
+      data: ssz.gloas.BlockContents.defaultValue(),
+      meta: {
+        version: ForkName.gloas,
+        consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        executionPayloadIncluded: true,
+      },
+    },
+  },
   getExecutionPayloadEnvelope: {
     args: {slot: 32000, beaconBlockRoot: ZERO_HASH},
     res: {

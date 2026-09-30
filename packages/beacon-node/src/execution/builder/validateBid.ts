@@ -1,4 +1,3 @@
-import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
@@ -9,7 +8,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {BLSPubkey, RootHex, Slot, gloas} from "@lodestar/types";
 import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
@@ -22,9 +21,10 @@ export function getBuilderBidTotalGwei(bid: gloas.ExecutionPayloadBid, maxExecut
 
 /**
  * Validate a bid received from a builder over the builder API in response to a bid request
- * made during block production. Unlike gossip validation, the bid must match the requested
- * slot and parent exactly, may carry a non-zero `executionPayment` which is counted at most at
- * the entry's `maxExecutionPayment`, and is not subject to gossip anti-spam rules.
+ * made during block production, or supplied by the validator client. Unlike gossip validation,
+ * the bid must match the requested slot and parent exactly, may carry a non-zero
+ * `executionPayment` which is counted at most at `maxExecutionPayment`, and is not
+ * subject to gossip anti-spam rules.
  *
  * Throws with a description of the failure, the caller drops the bid.
  */
@@ -36,12 +36,24 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
-    entry: routes.validator.BuilderEntry;
+    /** Builder pubkeys to accept bids from, empty accepts any builder */
+    builderPubkeys: BLSPubkey[];
+    maxExecutionPayment: bigint;
+    minBid: bigint;
     getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
+  const {
+    slot,
+    parentBlock,
+    parentBlockHash,
+    parentBlockRoot,
+    builderPubkeys,
+    maxExecutionPayment,
+    minBid,
+    getParentExecutionRequests,
+  } = request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -66,13 +78,13 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
   }
 
-  const totalPayment = getBuilderBidTotalGwei(bid, entry.maxExecutionPayment);
-  if (totalPayment < entry.minBid) {
+  const totalPayment = getBuilderBidTotalGwei(bid, maxExecutionPayment);
+  if (totalPayment < minBid) {
     throw Error(
       `Bid total payment=${prettyGweiToEth(totalPayment)} ` +
         `(value=${prettyGweiToEth(bid.value)} ` +
         `executionPayment=${prettyGweiToEth(bid.executionPayment)}) ` +
-        `is below minBid=${prettyGweiToEth(entry.minBid)}`
+        `is below minBid=${prettyGweiToEth(minBid)}`
     );
   }
 
@@ -99,14 +111,11 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(`Invalid builder version=${builder.version} expected=${PAYLOAD_BUILDER_VERSION}`);
   }
 
-  // A bid not signed by one of the builder pubkeys the entry accepts bids from must not be accepted
-  if (
-    entry.builderPubkeys.length > 0 &&
-    !entry.builderPubkeys.some((pubkey) => byteArrayEquals(pubkey, builder.pubkey))
-  ) {
+  // A bid not signed by one of the accepted builder pubkeys must not be accepted
+  if (builderPubkeys.length > 0 && !builderPubkeys.some((pubkey) => byteArrayEquals(pubkey, builder.pubkey))) {
     throw Error(
-      `Bid builder pubkey=${toHex(builder.pubkey)} is not in the entry's ` +
-        `builderPubkeys=${entry.builderPubkeys.map(toHex).join(",")}`
+      `Bid builder pubkey=${toHex(builder.pubkey)} is not in the accepted ` +
+        `builderPubkeys=${builderPubkeys.map(toHex).join(",")}`
     );
   }
 
