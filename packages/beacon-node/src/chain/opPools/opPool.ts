@@ -94,18 +94,15 @@ export class OpPool {
 
     // Persisted operations have no verification context. Rebuild it before they can enter the pool.
     // The startup anchor may precede a fork whose slashings are already persisted.
-    const validationSlot = Math.max(state.slot, currentSlot);
     for (const {key, value: attesterSlashing} of attesterSlashings) {
       try {
-        assertValidAttesterSlashing(this.config, validationSlot, state.validatorCount, attesterSlashing, false);
+        assertValidAttesterSlashing(this.config, currentSlot, state.validatorCount, attesterSlashing, false);
       } catch {
         continue;
       }
-      const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, validationSlot, attesterSlashing);
+      const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, currentSlot, attesterSlashing);
       if (
-        !(await bls.verifySignatureSets(
-          getAttesterSlashingSignatureSets(this.config, validationSlot, attesterSlashing)
-        ))
+        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing)))
       ) {
         continue;
       }
@@ -124,11 +121,9 @@ export class OpPool {
       ) {
         continue;
       }
-      const verifiedDomain = getProposerSlashingSignatureDomain(this.config, validationSlot, proposerSlashing);
+      const verifiedDomain = getProposerSlashingSignatureDomain(this.config, currentSlot, proposerSlashing);
       if (
-        !(await bls.verifySignatureSets(
-          getProposerSlashingSignatureSets(this.config, validationSlot, proposerSlashing)
-        ))
+        !(await bls.verifySignatureSets(getProposerSlashingSignatureSets(this.config, currentSlot, proposerSlashing)))
       ) {
         continue;
       }
@@ -270,7 +265,7 @@ export class OpPool {
 
     const endProposerSlashing = stepsMetrics?.startTimer();
     for (const [key, {proposerSlashing, verifiedDomain}] of this.proposerSlashings) {
-      // A fork can change the domain required by previously verified evidence, including future-slot headers.
+      // A fork can change the required domain even for verified slashings, including those with future-slot headers.
       if (
         !byteArrayEquals(verifiedDomain, getProposerSlashingSignatureDomain(this.config, state.slot, proposerSlashing))
       ) {

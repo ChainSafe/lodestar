@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository} from "@lodestar/db";
+import {BUCKET_LENGTH, Db, Repository} from "@lodestar/db";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
@@ -15,6 +15,6 @@ export class ProposerSlashingRepository extends Repository<ValidatorIndex, phase
   }
 
   decodeKey(data: Uint8Array): ValidatorIndex {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt(data.subarray(BUCKET_LENGTH), "be");
   }
 }

@@ -143,7 +143,7 @@ function makeAttesterSlashing(
 }
 
 describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConfig}) => {
-  it("excludes future-slot proposer evidence that becomes invalid at the fork", async () => {
+  it("excludes proposer slashings with future-slot headers that become invalid at the fork", async () => {
     const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
     const slashing = makeProposerSlashing(afterSlot, beforeSlot, beaconConfig);
     const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
@@ -160,7 +160,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     expect(pool.hasSeenProposerSlashing(0)).toBe(false);
   });
 
-  it("excludes future-target attester evidence that becomes invalid at the fork", async () => {
+  it("excludes attester slashings with future target epochs that become invalid at the fork", async () => {
     const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
     const slashing = makeAttesterSlashing(1, beforeSlot, beaconConfig);
     const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
@@ -180,7 +180,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     expect(pool.hasSeenAttesterSlashing([0])).toBe(true);
   });
 
-  it("keeps ordinary evidence across the fork without repeating BLS verification", async () => {
+  it("keeps slashings for pre-fork messages across the fork without repeating BLS verification", async () => {
     const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
     const proposerSlashing = makeProposerSlashing(beforeSlot, beforeSlot, beaconConfig);
     const attesterSlashing = makeAttesterSlashing(0, beforeSlot, beaconConfig, 1);
@@ -245,7 +245,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
 });
 
 describe("slashing verification context", () => {
-  it("excludes ordinary evidence after a second fork changes its domain", async () => {
+  it("excludes slashings for pre-fork messages after a second fork changes their domains", async () => {
     const chain = makeChain(makeState(beforeSlot));
     const proposerSlashing = makeProposerSlashing(beforeSlot, beforeSlot);
     const attesterSlashing = makeAttesterSlashing(0, beforeSlot, config, 1);
@@ -402,7 +402,7 @@ describe("persisted slashings", () => {
     }
   });
 
-  it("persists replacement proposer evidence for the same validator", async () => {
+  it("persists a replacement proposer slashing for the same validator", async () => {
     const before = makeState(beforeSlot);
     const after = makeState(afterSlot);
     const chain = makeChain(before);
@@ -433,7 +433,7 @@ describe("persisted slashings", () => {
     {anchorSlot: afterSlot, currentSlot: afterSlot},
     {anchorSlot: beforeSlot, currentSlot: afterSlot},
   ])(
-    "revalidates on reload from slot $anchorSlot at slot $currentSlot and removes stale evidence from disk",
+    "revalidates on reload from slot $anchorSlot at slot $currentSlot and removes invalid slashings from disk",
     async ({anchorSlot, currentSlot}) => {
       const chain = makeChain(makeState(beforeSlot));
       const pool = new OpPool(config);
