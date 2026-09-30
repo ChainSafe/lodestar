@@ -111,7 +111,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith(fulls.map((f) => toRootHex(f.message.payload.blockHash)));
   });
 
-  it("chunks EL fetches at MAX_BODIES_REQUEST (32), not one per slot", async () => {
+  it("chunks EL fetches at MAX_BODIES_PER_REQUEST (32), not one per slot", async () => {
     const fulls = [];
     for (let slot = 0; slot < 33; slot++) fulls.push(await seed(slot));
     elServes(fulls);

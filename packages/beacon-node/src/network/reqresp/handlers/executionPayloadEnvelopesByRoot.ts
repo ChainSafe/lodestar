@@ -6,7 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {MAX_BODIES_REQUEST} from "../../../util/execution.js";
+import {MAX_BODIES_PER_REQUEST} from "../../../util/execution.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 
@@ -49,8 +49,8 @@ export async function* onExecutionPayloadEnvelopesByRoot(
 
   // Rebuild and yield one EL batch at a time, so only one batch of envelopes is held in memory
   let yielded = 0;
-  for (let i = 0; i < requests.length; i += MAX_BODIES_REQUEST) {
-    const batch = requests.slice(i, i + MAX_BODIES_REQUEST);
+  for (let i = 0; i < requests.length; i += MAX_BODIES_PER_REQUEST) {
+    const batch = requests.slice(i, i + MAX_BODIES_PER_REQUEST);
     let envelopesBytes: (Uint8Array | null)[];
     try {
       // by-root allows omission, so a mismatched envelope is left out rather than failing the response

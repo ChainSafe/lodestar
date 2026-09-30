@@ -13,7 +13,7 @@ import {encodeArchivedHeaderEnvelope} from "../../../../../src/db/repositories/i
 import {IExecutionEngine} from "../../../../../src/execution/index.js";
 import {onExecutionPayloadEnvelopesByRange} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.js";
-import {MAX_BODIES_REQUEST} from "../../../../../src/util/execution.js";
+import {MAX_BODIES_PER_REQUEST} from "../../../../../src/util/execution.js";
 import {toSignedHeaderEnvelope} from "../../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../../utils/db.js";
 import {
@@ -164,7 +164,7 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
     });
 
     it("yields the first EL batch before rebuilding the next one", async () => {
-      const fulls = await seedSlots(10, MAX_BODIES_REQUEST + 1);
+      const fulls = await seedSlots(10, MAX_BODIES_PER_REQUEST + 1);
       elServes(fulls);
       const roots = fulls.map((f) => f.message.beaconBlockRoot);
       const iterator = onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")[Symbol.asyncIterator]();
@@ -173,11 +173,11 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
     });
 
     it("ends the response short when the EL fails on a later batch", async () => {
-      const fulls = await seedSlots(10, MAX_BODIES_REQUEST + 1);
+      const fulls = await seedSlots(10, MAX_BODIES_PER_REQUEST + 1);
       const serve = elServes(fulls);
       getPayloadBodiesByHashV2.mockImplementationOnce(serve).mockRejectedValueOnce(new Error("ECONNREFUSED"));
       const slots = await byRoot(fulls.map((f) => f.message.beaconBlockRoot));
-      expect(slots).toEqual(fulls.slice(0, MAX_BODIES_REQUEST).map((f) => f.message.payload.slotNumber));
+      expect(slots).toEqual(fulls.slice(0, MAX_BODIES_PER_REQUEST).map((f) => f.message.payload.slotNumber));
     });
 
     it("maps an EL outage on the first batch to RESOURCE_UNAVAILABLE", async () => {

@@ -5,17 +5,18 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {pruneHistory} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {BeaconDb} from "../../../../src/db/index.js";
-import {startTmpBeaconDb} from "../../../utils/db.js";
+import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 
 describe("chain / archiveStore / pruneHistory", () => {
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
 
   beforeEach(async () => {
-    db = await startTmpBeaconDb(config);
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-prune-history-"));
   });
 
   afterEach(async () => {
-    await db.close();
+    await closeDb();
   });
 
   it("prunes blocks and execution payload envelopes older than MIN_EPOCHS_FOR_BLOCK_REQUESTS", async () => {
