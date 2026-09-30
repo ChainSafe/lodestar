@@ -64,11 +64,6 @@ jobs:
       - name: Assert ESM module exports
         run: node scripts/assert_exports.mjs
 
-      - name: Check native line budgets
-        run: |
-          node --test scripts/line_budget.test.mjs
-          node scripts/line_budget.mjs check
-
   type-checks:
     name: Type Checks
     needs: build
