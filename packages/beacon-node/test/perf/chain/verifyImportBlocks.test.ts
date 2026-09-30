@@ -105,6 +105,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           validatorMonitor: null,
           anchorState: new BeaconStateView(state),
           isAnchorStateFinalized: true,
+          isCheckpointState: false,
           executionEngine: new ExecutionEngineDisabled(),
         }
       );

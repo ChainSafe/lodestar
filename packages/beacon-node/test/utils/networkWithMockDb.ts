@@ -88,6 +88,7 @@ export async function getNetworkForTest(
       validatorMonitor: null,
       anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
+      isCheckpointState: false,
       executionEngine: new ExecutionEngineDisabled(),
     }
   );

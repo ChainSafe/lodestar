@@ -149,6 +149,7 @@ export async function getDevBeaconNode(
     peerStoreDir,
     anchorState: new BeaconStateView(cachedState),
     isAnchorStateFinalized: true,
+    isCheckpointState: false,
   });
 }
 

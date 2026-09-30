@@ -55,6 +55,7 @@ export type BeaconNodeInitModules = {
   peerStoreDir?: string;
   anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
+  isCheckpointState: boolean;
   metricsRegistries?: Registry[];
 };
 
@@ -153,6 +154,7 @@ export class BeaconNode {
     peerStoreDir,
     anchorState,
     isAnchorStateFinalized,
+    isCheckpointState,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
@@ -248,6 +250,7 @@ export class BeaconNode {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
+      isCheckpointState,
       executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
         signal,
