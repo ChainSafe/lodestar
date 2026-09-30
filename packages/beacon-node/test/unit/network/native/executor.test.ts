@@ -19,13 +19,17 @@ import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {BatchGossipHandlerFn, GossipHandlers, GossipType} from "../../../../src/network/gossip/interface.js";
+import {INetwork} from "../../../../src/network/interface.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {PendingGossipsubMessage} from "../../../../src/network/processor/types.js";
+import {defaultSyncOptions} from "../../../../src/sync/options.js";
+import {BlockInputSync} from "../../../../src/sync/unknownBlock.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
+import {getRandPeerIdStr} from "../../../utils/peer.js";
 import {createMetricsTest} from "../../metrics/utils.js";
 
 /** An executor over a mocked chain; `stubbed` replaces the gossip handlers with stubs. */
@@ -66,15 +70,17 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
   const result = vi.fn();
   events.on(NetworkEvent.gossipMessageValidationResult, result);
   const wake = vi.fn();
+  const config = createBeaconConfig({}, new Uint8Array(32));
+  const logger = getMockedLogger();
   const executor = new NativeGossipExecutor(
     {
       chain,
       events,
       db: getMockedBeaconDb(),
-      config: createBeaconConfig({}, new Uint8Array(32)),
+      config,
       aggregatorTracker: new AggregatorTracker(),
       core: {} as INetworkCore,
-      logger: getMockedLogger(),
+      logger,
       metrics,
       gossipHandlers: stubbed ? handlers : undefined,
     },
@@ -82,7 +88,7 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
     gossip,
     wake
   );
-  return {executor, chain, gossip, result, wake, single, batch};
+  return {executor, chain, gossip, result, wake, single, batch, config, logger};
 }
 
 /** The owner's disposition of a job's verdicts, which these tests never withhold. */
@@ -213,7 +219,7 @@ describe("native gossip host execution", () => {
     }
   });
 
-  it("queries authoritative chain state, searches an unknown root once per peer, and forwards imports", async () => {
+  it("queries authoritative chain state and forwards imports", async () => {
     const f = fixture();
     const key = await generateKeyPair("secp256k1");
     const root = new Uint8Array(32).fill(7);
@@ -225,20 +231,21 @@ describe("native gossip host execution", () => {
       topic: "test",
     };
     const search = vi.fn();
+    const envelopeSearch = vi.fn();
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
+    f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, envelopeSearch);
     try {
       expect(f.executor.check([check])).toEqual([false]);
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({rootHex: toRootHex(root), source: BlockInputSource.network_processor})
       );
-      // The same root from the same peer searches once while its search lasts, and once more after it expires.
-      expect(f.executor.check([check])).toEqual([false]);
-      expect(search).toHaveBeenCalledOnce();
-      const now = performance.now();
-      const clock = vi.spyOn(performance, "now").mockReturnValue(now + 30_000);
-      expect(f.executor.check([check])).toEqual([false]);
-      expect(search).toHaveBeenCalledTimes(2);
-      clock.mockRestore();
+      f.executor.searchUnknownEnvelope({slot: 64, root: toRootHex(root)}, BlockInputSource.gossip, check.peerId);
+      expect(envelopeSearch).toHaveBeenCalledExactlyOnceWith({
+        slot: 64,
+        rootHex: toRootHex(root),
+        source: BlockInputSource.gossip,
+        peer: check.peerId,
+      });
       f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
       expect(f.executor.check([check])).toEqual([true]);
       f.chain.emitter.emit(routes.events.EventType.block, {
@@ -255,21 +262,22 @@ describe("native gossip host execution", () => {
     const f = fixture();
     const search = vi.fn();
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
-    const checks = [0, 1, 2].map((index) => ({
+    const peers = Array.from({length: 10}, (_, index) => `peer-${index}`);
+    const checks = peers.map((peerId, index) => ({
       handle: {index, generation: 1n},
       root: new Uint8Array(32),
       slot: 64n,
-      peerId: `peer-${index}`,
+      peerId,
       topic: "test",
     }));
     try {
-      expect(f.executor.check(checks)).toEqual([false, false, false]);
+      expect(f.executor.check([...checks, ...checks])).toEqual(Array(20).fill(false));
       expect(f.chain.forkChoice.hasBlockHexUnsafe).toHaveBeenCalledOnce();
-      expect(search.mock.calls.map(([event]) => event.peer)).toEqual(["peer-0", "peer-1", "peer-2"]);
+      expect(search.mock.calls.map(([event]) => event.peer)).toEqual(peers);
       f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
-      expect(f.executor.check(checks)).toEqual([true, true, true]);
+      expect(f.executor.check(checks)).toEqual(Array(10).fill(true));
       expect(f.chain.forkChoice.hasBlockHexUnsafe).toHaveBeenCalledTimes(2);
-      expect(search).toHaveBeenCalledTimes(3);
+      expect(search).toHaveBeenCalledTimes(10);
     } finally {
       f.executor.stop();
     }
@@ -331,28 +339,123 @@ describe("native gossip host execution", () => {
   });
 });
 
-describe("native gossip executor searches", () => {
-  it("bounds unknown-root searches to eight peers and one anonymous request per root, and 96 roots", async () => {
-    const f = fixture();
-    const search = vi.fn();
-    f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
-    const check = (root: number, peerId: string) => ({
-      handle: {index: 0, generation: 1n},
-      root: new Uint8Array(32).fill(root),
-      slot: 64n,
-      peerId,
-      topic: "test",
+describe("native gossip recovery through BlockInputSync", () => {
+  function recoveryFixture(maxPendingBlocks = defaultSyncOptions.maxPendingBlocks) {
+    const metrics = createMetricsTest();
+    const f = fixture(metrics);
+    const requests = vi.spyOn(metrics.blockInputSync.requests, "inc");
+    const response = defer<Awaited<ReturnType<INetwork["sendBeaconBlocksByRoot"]>>>();
+    const network = {
+      events: new NetworkEventBus(),
+      getConnectedPeers: vi.fn((): string[] => []),
+      getConnectedPeerSyncMeta: (peerId: string) => ({
+        peerId,
+        client: "test",
+        custodyColumns: [],
+        earliestAvailableSlot: 0,
+      }),
+      custodyConfig: {sampledColumns: []},
+      sendBeaconBlocksByRoot: vi.fn<INetwork["sendBeaconBlocksByRoot"]>(() => response.promise),
+      reportPeer: vi.fn(),
+    };
+    const sync = new BlockInputSync(f.config, network as unknown as INetwork, f.chain, f.logger, metrics, {
+      ...defaultSyncOptions,
+      maxPendingBlocks,
     });
-    try {
-      for (let i = 0; i < 10; i++) f.executor.check([check(1, `peer-${i}`)]);
-      expect(search).toHaveBeenCalledTimes(8);
-      f.executor.searchUnknownBlock({slot: 64, root: toRootHex(new Uint8Array(32).fill(1))}, BlockInputSource.gossip);
-      f.executor.searchUnknownBlock({slot: 64, root: toRootHex(new Uint8Array(32).fill(1))}, BlockInputSource.gossip);
-      expect(search).toHaveBeenCalledTimes(9);
-      for (let root = 2; root < 98; root++) f.executor.check([check(root, "peer")]);
-      expect(search).toHaveBeenCalledTimes(9 + 95);
-    } finally {
+    sync.subscribeToNetwork();
+    const connect = (peer: string): void => {
+      network.events.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: ssz.phase0.Status.defaultValue(),
+        custodyColumns: [],
+        clientAgent: "test",
+      });
+    };
+    const close = (): void => {
       f.executor.stop();
+      sync.close();
+      response.resolve([]);
+      requests.mockRestore();
+    };
+    return {...f, network, requests, connect, close};
+  }
+
+  it("lets the JS pending queue admit fresh roots beyond 96, including peerless recovery", async () => {
+    const f = recoveryFixture(2);
+    const peer = await getRandPeerIdStr();
+    const roots = Array.from({length: 102}, (_, index) => new Uint8Array(32).fill(index));
+    try {
+      f.executor.check(
+        roots.slice(0, -1).map((root) => ({
+          root,
+          slot: 64n,
+          peerId: peer,
+          topic: "test",
+        }))
+      );
+      const peerless = {slot: 64, root: toRootHex(roots[101])};
+      f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
+      f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
+      expect(f.requests).toHaveBeenCalledTimes(roots.length);
+      expect(f.network.sendBeaconBlocksByRoot).not.toHaveBeenCalled();
+
+      f.network.getConnectedPeers.mockReturnValue([peer]);
+      f.connect(peer);
+      expect(f.network.sendBeaconBlocksByRoot.mock.calls).toEqual([
+        [peer, [roots[100]]],
+        [peer, [roots[101]]],
+      ]);
+      f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
+      expect(f.network.sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2);
+      expect(f.requests).toHaveBeenCalledTimes(roots.length);
+    } finally {
+      f.close();
+    }
+  });
+
+  it("preserves later peer hints without duplicating downloads and stops forwarding recovery on shutdown", async () => {
+    const f = recoveryFixture();
+    const [fallback, preferred] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+    const root = new Uint8Array(32).fill(7);
+    const slotRoot = {slot: 64, root: toRootHex(root)};
+    try {
+      for (let index = 0; index < 8; index++) {
+        f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip, `disconnected-${index}`);
+      }
+      f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip, preferred);
+      f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip, preferred);
+      f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip);
+      expect(f.requests).toHaveBeenCalledOnce();
+
+      f.connect(fallback);
+      f.connect(preferred);
+      f.network.getConnectedPeers.mockReturnValue([fallback, preferred]);
+      f.connect(preferred);
+      expect(f.network.sendBeaconBlocksByRoot).toHaveBeenCalledExactlyOnceWith(preferred, [root]);
+      f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip, preferred);
+      f.executor.searchUnknownBlock(slotRoot, BlockInputSource.gossip);
+      expect(f.requests).toHaveBeenCalledOnce();
+      expect(f.network.sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+      const envelope = vi.fn();
+      f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, envelope);
+      f.executor.stop();
+      const next = {slot: 65, root: toRootHex(new Uint8Array(32).fill(8))};
+      f.executor.searchUnknownBlock(next, BlockInputSource.gossip, preferred);
+      f.executor.searchUnknownEnvelope(next, BlockInputSource.gossip, preferred);
+      f.executor.check([
+        {
+          root: new Uint8Array(32).fill(9),
+          slot: 65n,
+          peerId: preferred,
+          topic: "test",
+        },
+      ]);
+      expect(envelope).not.toHaveBeenCalled();
+      expect(f.requests).toHaveBeenCalledOnce();
+      expect(f.network.sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+    } finally {
+      f.close();
     }
   });
 });
