@@ -243,7 +243,7 @@
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "{{type}} {{boundary}}",
+          "legendFormat": "{{type}}",
           "refId": "A"
         }
       ],
@@ -255,7 +255,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Score-threshold populations: connected gossip peers whose score is at or above each configured gate. The gates are cumulative, so the series do not add up; native all counts every connected gossip peer, and its nonnegative gate is the one libp2p labels mesh. Direct peers count by their numeric score, so this is not a count of peers whose RPCs would be accepted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -329,14 +328,9 @@
           "interval": "",
           "legendFormat": "{{threshold}}",
           "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\"}",
-          "legendFormat": "{{threshold}}",
-          "refId": "B"
         }
       ],
-      "title": "Connected gossip peers per score threshold",
+      "title": "Peer count per gossip score threshold",
       "type": "timeseries"
     },
     {
@@ -344,7 +338,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Minimum, mean and maximum gossip score of connected gossip peers; libp2p labels the mean avg. A native target without connected gossip peers has no statistics rather than zeros.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -508,14 +501,9 @@
           "interval": "",
           "legendFormat": "min",
           "refId": "min"
-        },
-        {
-          "expr": "lodestar_native_gossip_score{scope=\"connected\"}",
-          "legendFormat": "{{stat}}",
-          "refId": "native"
         }
       ],
-      "title": "Connected gossip peer score min / mean / max",
+      "title": "Gossip score avg / min / max",
       "type": "timeseries"
     },
     {
@@ -570,7 +558,7 @@
           "exemplar": false,
           "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
           "interval": "",
-          "legendFormat": "{{subnet}} {{boundary}}",
+          "legendFormat": "{{subnet}}",
           "refId": "A"
         }
       ],
@@ -628,7 +616,7 @@
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "{{type}} {{boundary}}",
+          "legendFormat": "{{type}}",
           "refId": "A"
         }
       ],
@@ -710,7 +698,7 @@
           "exemplar": false,
           "expr": "count(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count > 0)",
           "interval": "",
-          "legendFormat": "{{subnet}} {{boundary}}",
+          "legendFormat": "{{subnet}}",
           "refId": "A"
         }
       ],
@@ -877,7 +865,7 @@
           "refId": "A"
         }
       ],
-      "title": "Committee Subscriptions - Seconds to stable mesh (libp2p backend)",
+      "title": "Committee Subscriptions - Seconds to stable mesh",
       "type": "heatmap"
     },
     {
@@ -959,7 +947,7 @@
           "refId": "A"
         }
       ],
-      "title": "Mesh peers by client (libp2p backend)",
+      "title": "Mesh peers by client",
       "type": "timeseries"
     },
     {
@@ -972,7 +960,7 @@
       },
       "id": 608,
       "panels": [],
-      "title": "Network Worker (libp2p backend)",
+      "title": "Network Worker",
       "type": "row"
     },
     {
@@ -1324,7 +1312,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Peer misbehaviour reports Lodestar submitted per second, by reason. libp2p counts each report as its peer score store applies it; native counts each submission before native merges a peer's pending reports, so the native series counts submissions, not applied penalties. Native reasons outside Lodestar's fixed report names, such as sync download error messages, read as other.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1403,14 +1390,9 @@
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum without (action) (rate(lodestar_native_peer_reports_total[$rate_interval]))",
-          "legendFormat": "{{reason}}",
-          "refId": "B"
         }
       ],
-      "title": "Peer bad behaviour reports submitted by reason / sec",
+      "title": "Peer bad behaviour reports by reason",
       "type": "timeseries"
     },
     {
@@ -1499,7 +1481,7 @@
           "refId": "A"
         }
       ],
-      "title": "Goodbyes sent (libp2p backend)",
+      "title": "Goodbyes sent",
       "type": "timeseries"
     },
     {
@@ -1599,7 +1581,7 @@
           "refId": "A"
         }
       ],
-      "title": "Long lived attnets per peer (libp2p backend)",
+      "title": "Long lived attnets per peer",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1700,7 +1682,7 @@
           "refId": "A"
         }
       ],
-      "title": "Goodbye reason for peer disconnecting after 1 day (libp2p backend)",
+      "title": "Goodbye reason for peer disconnecting after 1 day",
       "type": "timeseries"
     },
     {
@@ -1913,7 +1895,7 @@
           "refId": "A"
         }
       ],
-      "title": "Score (app level, not gossip) (libp2p backend)",
+      "title": "Score (app level, not gossip)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -2038,7 +2020,7 @@
           "expr": "rate(lodestar_peer_disconnected_total[$rate_interval])>0",
           "hide": false,
           "interval": "",
-          "legendFormat": "disconnect_{{direction}} (libp2p backend)",
+          "legendFormat": "disconnect_{{direction}}",
           "refId": "B"
         }
       ],
@@ -2127,7 +2109,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer manager heartbeat duration (libp2p backend)",
+      "title": "Peer manager heartbeat duration",
       "type": "timeseries"
     },
     {
@@ -2205,7 +2187,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum without (status) (lodestar_peer_connected_total) - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
+          "expr": "lodestar_peer_connected_total - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 3,
@@ -2213,7 +2195,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer connect events offset (must be 0-1) (libp2p backend)",
+      "title": "Peer connect events offset (must be 0-1)",
       "type": "timeseries"
     },
     {
@@ -2295,7 +2277,7 @@
           "refId": "A"
         }
       ],
-      "title": "Leaked connections (libp2p backend)",
+      "title": "Leaked connections",
       "type": "timeseries"
     },
     {
@@ -2404,7 +2386,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested peers to connect and disconnect (rate / min) (libp2p backend)",
+      "title": "Requested peers to connect and disconnect (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2500,7 +2482,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Peer Manager - Requested subnets to query (rate / min) (libp2p backend)",
+      "title": "Peer Manager - Requested subnets to query (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2596,7 +2578,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Peer Manager - Requested total peers in subnets (rate / min) (libp2p backend)",
+      "title": "Peer Manager - Requested total peers in subnets (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2810,7 +2792,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer Discovery - Subnets to connect (libp2p backend)",
+      "title": "Peer Discovery - Subnets to connect",
       "type": "timeseries"
     },
     {
@@ -3261,7 +3243,7 @@
           "refId": "A"
         }
       ],
-      "title": "Gossip validation queues - Length (libp2p backend)",
+      "title": "Gossip validation queues - Length",
       "type": "timeseries"
     },
     {
@@ -3425,9 +3407,9 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_gossip_block_received_to_block_import_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_received_to_block_import_count[$rate_interval])",
+          "expr": "(\n  rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n  -\n  rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n)\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "received to import",
+          "legendFormat": "processed minus received {{source}}",
           "range": true,
           "refId": "A"
         },
@@ -3698,7 +3680,7 @@
           },
           "editorMode": "code",
           "expr": "rate(lodestar_network_processor_execute_work_calls_total[$rate_interval])",
-          "legendFormat": "execute calls (libp2p backend)",
+          "legendFormat": "execute calls",
           "range": true,
           "refId": "A"
         },
@@ -3710,7 +3692,7 @@
           "editorMode": "code",
           "expr": "rate(lodestar_network_processor_can_not_accept_work_total[$rate_interval])",
           "hide": false,
-          "legendFormat": "cannot accept work (libp2p backend)",
+          "legendFormat": "cannot accept work",
           "range": true,
           "refId": "B"
         },
@@ -4138,7 +4120,7 @@
           "refId": "A"
         }
       ],
-      "title": "Queue Concurrency (libp2p backend)",
+      "title": "Queue Concurrency",
       "type": "timeseries"
     },
     {
@@ -4232,7 +4214,7 @@
           "refId": "A"
         }
       ],
-      "title": "Errors Per Slot (libp2p backend)",
+      "title": "Errors Per Slot",
       "type": "timeseries"
     },
     {
@@ -4449,7 +4431,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages (libp2p backend)",
+      "title": "Awaiting Block Gossip Messages",
       "type": "timeseries"
     },
     {
@@ -4640,7 +4622,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages - Resolved (libp2p backend)",
+      "title": "Awaiting Block Gossip Messages - Resolved",
       "type": "timeseries"
     },
     {
@@ -4750,7 +4732,7 @@
           "refId": "B"
         }
       ],
-      "title": "Awaiting Block Gossip Messages - Rejected (libp2p backend)",
+      "title": "Awaiting Block Gossip Messages - Rejected",
       "type": "timeseries"
     },
     {
@@ -4956,7 +4938,7 @@
           "refId": "C"
         }
       ],
-      "title": "Indexed Gossip Queue (libp2p backend)",
+      "title": "Indexed Gossip Queue",
       "type": "timeseries"
     },
     {
@@ -5383,7 +5365,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"1|1[.]0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s",
           "range": true,
@@ -5395,7 +5377,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"2|2[.]0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s",
           "range": true,
@@ -5407,7 +5389,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"4|4[.]0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=4s",
           "range": true,
@@ -5419,7 +5401,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"6|6[.]0\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=6s",
           "range": true,
@@ -5513,7 +5495,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"1|1[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s {{source}}",
           "range": true,
@@ -5525,7 +5507,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"2|2[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s {{source}}",
           "range": true,
@@ -5537,7 +5519,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"4|4[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=4s {{source}}",
@@ -5550,7 +5532,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=~\"6|6[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=6s {{source}}",
@@ -5845,7 +5827,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"1|1[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s {{source}}",
           "range": true,
@@ -5857,7 +5839,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"2|2[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s {{source}}",
           "range": true,
@@ -5869,7 +5851,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"4|4[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=4s {{source}}",
@@ -5882,7 +5864,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=~\"6|6[.]0\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "<=6s {{source}}",
@@ -6406,7 +6388,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "60 * (\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_count[$rate_interval])\n    - sum without (le) (rate(beacon_reqresp_incoming_request_handler_time_seconds_bucket{le=~\"5|5[.]0\"}[$rate_interval]))\n)",
+          "expr": "60 * (\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_incoming_request_handler_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{method}}",
           "range": true,
@@ -6656,7 +6638,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])\n    - sum without (le) (rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=~\"5|5[.]0\"}[$rate_interval]))\n)",
+          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{method}}",
           "range": true,
@@ -6746,7 +6728,7 @@
           "refId": "A"
         }
       ],
-      "title": "Dial errors rate (libp2p backend)",
+      "title": "Dial errors rate",
       "type": "timeseries"
     },
     {
@@ -6912,7 +6894,7 @@
           "refId": "A"
         }
       ],
-      "title": "Rate limiter errors / sec (libp2p backend)",
+      "title": "Rate limiter errors / sec",
       "type": "timeseries"
     },
     {
@@ -6938,7 +6920,7 @@
           "refId": "A"
         }
       ],
-      "title": "Peer manager internals (libp2p backend)",
+      "title": "Peer manager internals",
       "type": "row"
     },
     {
@@ -7738,883 +7720,6 @@
       "title": "Peer manager map sizes",
       "type": "timeseries",
       "description": "Entry counts of peer manager data structures (**not bytes**).\n\n**Metrics:** `lodestar_peer_manager_score_map_size`, `lodestar_peer_manager_connected_peers_map_size`, `libp2p_peers`\n\n- *connected peers map* should track *libp2p_peers*; a persistent gap indicates a connection leak.\n- *score map* reflects prune-to-MAX_ENTRIES / SCORE_THRESHOLD retention."
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 335
-      },
-      "id": 646,
-      "panels": [],
-      "title": "Native backend - peers",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Every peer the native backend closes or loses, by reason: local decisions such as count_pruning or health_timeout, and remote ones such as remote_goodbye or transport_closed.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 336
-      },
-      "id": 647,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_peer_closes_total[$rate_interval])",
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native peer departures by reason (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Connection attempts the native peer manager selected, by the demand that selected them, and how attempts ended. Outcomes other than connected include local policy (deferred, cancelled, admission_refused), so they are not all failures.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 336
-      },
-      "id": 648,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
-          "legendFormat": "selected {{source}}",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_outcomes_total[$rate_interval])",
-          "legendFormat": "{{outcome}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native selected attempts and their outcomes (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 344
-      },
-      "id": 643,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_native_peer_below_target",
-          "interval": "",
-          "legendFormat": "below peer target",
-          "refId": "C"
-        },
-        {
-          "expr": "lodestar_native_peer_outbound_deficit",
-          "legendFormat": "relevant outbound deficit",
-          "refId": "D"
-        }
-      ],
-      "title": "Native current peer demand",
-      "type": "timeseries",
-      "description": "Whether the running node is below its peer target, and how many relevant outbound peers it lacks. Below target does not indicate chain-head starvation."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Outbound peers as a share of connected peers, per target. Both backends export the peers-by-direction gauge; the libp2p peer manager's ratio counts healthy peers only.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 344
-      },
-      "id": 649,
-      "targets": [
-        {
-          "expr": "sum without (direction) (lodestar_peers_by_direction_count{direction=\"outbound\"})\n/\nsum without (direction) (lodestar_peers_by_direction_count)",
-          "legendFormat": "outbound share",
-          "refId": "A"
-        }
-      ],
-      "title": "Outbound share of connected peers",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 352
-      },
-      "id": 644,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_beacon_attestation_subnet_count)",
-          "interval": "",
-          "legendFormat": "attnet {{boundary}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_sync_committee_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_sync_committee_subnet_count)",
-          "interval": "",
-          "legendFormat": "syncnet {{boundary}}",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_data_column_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_data_column_subnet_count)",
-          "interval": "",
-          "legendFormat": "column {{boundary}}",
-          "refId": "C"
-        }
-      ],
-      "title": "Native locally subscribed subnets with an empty mesh",
-      "type": "timeseries",
-      "description": "Counts zero-member meshes only where this node has a local subscription. Unsubscribed subnets are intentionally excluded. Each visible fork boundary is separate."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 352
-      },
-      "id": 645,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_topic_peers_by_data_column_subnet_count",
-          "interval": "",
-          "legendFormat": "column {{subnet}} {{boundary}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native remote data-column subscriptions",
-      "type": "timeseries",
-      "description": "Accepted remote subscription memberships include topics with no local mesh or overlay row. Advertised subscriptions are distinct from usable policy coverage."
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 360
-      },
-      "id": 651,
-      "panels": [],
-      "title": "Native backend - gossip processor",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages admitted and queued for Lodestar validation, per kind. Messages waiting on a dependency are in the next panel.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 361
-      },
-      "id": 652,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"queued\"}",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native queued gossip work by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "waiting: messages held until their block root is known. checking: messages awaiting Lodestar's dependency answer.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 361
-      },
-      "id": 653,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"waiting\"}",
-          "legendFormat": "waiting {{kind}}",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"checking\"}",
-          "legendFormat": "checking {{kind}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native dependency-waiting gossip work by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages executing on the host, as a share of each kind's execution item credits.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 369
-      },
-      "id": 654,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"executing\"}\n/ ignoring(state, credit)\nlodestar_native_gossip_processor_execution_credit_limit{credit=\"items\"}",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native execution credit use by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages refused admission: by the processor per kind, where ineligible means outside the eligible slot window or on an unknown fork digest, not only past-slot; and by gossipsub storage pool limits.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 369
-      },
-      "id": 655,
-      "targets": [
-        {
-          "expr": "12 * rate(lodestar_native_gossip_processor_refusals_total[$rate_interval])",
-          "legendFormat": "{{kind}} {{reason}}",
-          "refId": "A"
-        },
-        {
-          "expr": "12 * rate(lodestar_native_gossipsub_storage_refusals_total[$rate_interval])",
-          "legendFormat": "storage {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native gossip admission refusals by reason (per slot)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 377
-      },
-      "id": 656,
-      "panels": [],
-      "title": "Native backend - reqresp serving",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Inbound requests the native backend refused for local capacity, by method and reason.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 378
-      },
-      "id": 657,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_reqresp_admission_refusals_total[$rate_interval])",
-          "legendFormat": "{{method}} {{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native local request admission refusals / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Outgoing requests that could not open a stream before the dial timeout. Both backends; other dial failures are among the outgoing error reasons.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 378
-      },
-      "id": 658,
-      "targets": [
-        {
-          "expr": "rate(beacon_reqresp_outgoing_requests_error_reason_total{reason=\"REQUEST_ERROR_DIAL_TIMEOUT\"}[$rate_interval])",
-          "legendFormat": "dial timeouts",
-          "refId": "A"
-        }
-      ],
-      "title": "Outgoing request dial timeouts / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Serving entries in use, retiring entries included; entries retiring after their stream ended while host work finishes; and serving capacity.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 386
-      },
-      "id": 659,
-      "targets": [
-        {
-          "expr": "lodestar_native_reqresp_resources_serving_occupied",
-          "legendFormat": "occupied (retiring included)",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_reqresp_resources_retiring",
-          "legendFormat": "retiring",
-          "refId": "B"
-        },
-        {
-          "expr": "lodestar_native_reqresp_resources_serving_capacity",
-          "legendFormat": "capacity",
-          "refId": "C"
-        }
-      ],
-      "title": "Native serving entries",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Host serving allowance still charged, retiring leases included, and source reads outstanding. Reservations, not allocated memory; source is part of total, so do not add the scopes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 386
-      },
-      "id": 660,
-      "targets": [
-        {
-          "expr": "lodestar_native_host_serving_reserved_bytes",
-          "legendFormat": "reserved {{scope}}",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_host_serving_source_pending_bytes",
-          "legendFormat": "source reads pending",
-          "refId": "B"
-        }
-      ],
-      "title": "Native host serving reservations",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 394
-      },
-      "id": 661,
-      "panels": [],
-      "title": "Native backend - transport",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Open QUIC connections, handshakes included, and the handshakes among them. Do not add the two.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 395
-      },
-      "id": 662,
-      "targets": [
-        {
-          "expr": "lodestar_native_quic_connections_active",
-          "legendFormat": "open (handshakes included)",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_quic_connections_handshaking",
-          "legendFormat": "handshaking",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC connections",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Authenticated connections by direction, and closes by direction and reason, handshake failures included.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 395
-      },
-      "id": 663,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_quic_connections_established_total[$rate_interval])",
-          "legendFormat": "established {{direction}}",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_quic_connections_closed_total[$rate_interval])",
-          "legendFormat": "closed {{direction}} {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC connections established and closed (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "UDP bytes the native QUIC transport received and sent.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 403
-      },
-      "id": 664,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_quic_udp_received_bytes_total[$rate_interval])",
-          "legendFormat": "received",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(lodestar_native_quic_udp_sent_bytes_total[$rate_interval])",
-          "legendFormat": "sent",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC UDP traffic",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "UDP datagrams the native QUIC transport received and sent.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "pps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 403
-      },
-      "id": 665,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_quic_udp_received_datagrams_total[$rate_interval])",
-          "legendFormat": "received",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(lodestar_native_quic_udp_sent_datagrams_total[$rate_interval])",
-          "legendFormat": "sent",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC UDP datagrams",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Datagrams the kernel dropped at native sockets, per socket role and address family.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "pps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 411
-      },
-      "id": 666,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_udp_socket_drops_total[$rate_interval])",
-          "legendFormat": "{{role}} {{family}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native UDP socket receive drops",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Native socket buffer sizes as getsockopt reports them. Linux reports double the size it granted, which the system limits can cap below the size requested, as it counts its bookkeeping overhead.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 411
-      },
-      "id": 667,
-      "targets": [
-        {
-          "expr": "lodestar_native_udp_socket_buffer_bytes",
-          "legendFormat": "{{role}} {{family}} {{direction}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native UDP socket buffers (kernel-reported)",
-      "type": "timeseries"
     }
   ],
   "refresh": "10s",

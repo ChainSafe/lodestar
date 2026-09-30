@@ -992,7 +992,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Connected peers by direction, and connected gossip peers whose gossip score is nonnegative, the mesh gate: a score-threshold population, not a count of peers whose RPCs would be accepted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1078,11 +1077,6 @@
           "interval": "",
           "legendFormat": "with_gossip_mesh_score",
           "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\",threshold=\"nonnegative\"}",
-          "legendFormat": "with_gossip_mesh_score",
-          "refId": "C"
         }
       ],
       "title": "Peer count",
@@ -1661,7 +1655,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])\n- sum without (le) (rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=~\"4|4[.]0\"}[$rate_interval]))",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])\n- on(instance)\nrate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"4.0\"}[$rate_interval])",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"

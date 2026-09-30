@@ -44,65 +44,10 @@ function nativeQuery(dashboard, panel, refId, series, expect) {
   };
 }
 
-/** Requests of a method over 5 s per minute, from a histogram with buckets 5 and 10 */
-function slowRequests(name, dashboard, panel) {
-  return {
-    dashboard,
-    panel,
-    refId: "A",
-    cases: [
-      {
-        name: "each target's method against its own count, with either le spelling",
-        series: {
-          [`${name}_count{${libp2p},method="status"}`]: perSecond(2),
-          [`${name}_bucket{${libp2p},method="status",le="5"}`]: perSecond(1),
-          [`${name}_bucket{${libp2p},method="status",le="10"}`]: perSecond(2),
-          [`${name}_count{${native},method="status"}`]: perSecond(2),
-          [`${name}_bucket{${native},method="status",le="5.0"}`]: perSecond(2),
-          [`${name}_bucket{${native},method="status",le="10.0"}`]: perSecond(2),
-        },
-        expect: [
-          {labels: `{${libp2p},method="status"}`, value: 60},
-          {labels: `{${native},method="status"}`, value: 0},
-        ],
-      },
-      {
-        name: "a target without the histogram has no result, not a zero",
-        series: {[`beacon_reqresp_outgoing_requests_total{${native},method="status"}`]: perSecond(1)},
-        expect: [],
-      },
-    ],
-  };
-}
-
-/** Mean of a histogram per series, from targets with several sources */
-function meanPerSeries(name, dashboard, panel) {
-  return {
-    dashboard,
-    panel,
-    refId: "A",
-    cases: [
-      {
-        name: "several targets report the same source",
-        series: {
-          [`${name}_sum{${libp2p},source="block"}`]: perSecond(0.5),
-          [`${name}_count{${libp2p},source="block"}`]: perSecond(1),
-          [`${name}_sum{${native},source="block"}`]: perSecond(0.25),
-          [`${name}_count{${native},source="block"}`]: perSecond(1),
-        },
-        expect: [
-          {labels: `{${libp2p},source="block"}`, value: 0.5},
-          {labels: `{${native},source="block"}`, value: 0.25},
-        ],
-      },
-    ],
-  };
-}
-
 /** A gauge the native backend exports as `lodestar_<name>` and js discv5 as `<name>` */
 function discv5Gauge(name, panel) {
   return {
-    dashboard: "lodestar_discv5.json",
+    dashboard: "lodestar_native_network.json",
     panel,
     refId: "A",
     cases: [
@@ -138,260 +83,9 @@ function discv5Gauge(name, panel) {
   };
 }
 
-/** A js discv5 message counter by type, which the native backend does not export */
-function discv5Messages(name, panel) {
-  return {
-    dashboard: "lodestar_discv5.json",
-    panel,
-    refId: "A",
-    cases: [
-      {
-        name: "libp2p reports, native has no producer",
-        series: {
-          [`${name}{${libp2p},type="PING"}`]: perSecond(2),
-          [`lodestar_discv5_kad_table_size{${native}}`]: constant(12),
-        },
-        expect: [{labels: `{${libp2p},type="PING"}`, value: 2}],
-      },
-    ],
-  };
-}
-
 export const fixtures = [
-  slowRequests("beacon_reqresp_incoming_request_handler_time_seconds", "lodestar_networking.json", 605),
-  slowRequests("beacon_reqresp_outgoing_request_roundtrip_time_seconds", "lodestar_networking.json", 606),
-  {
-    dashboard: "lodestar_networking.json",
-    panel: 602,
-    refId: "B",
-    cases: [
-      {
-        name: "blocks processed within 1 s across targets with either le spelling",
-        series: {
-          [`lodestar_gossip_block_elapsed_time_till_processed_bucket{${libp2p},le="1"}`]: perSecond(1),
-          [`lodestar_gossip_block_elapsed_time_till_processed_count{${libp2p}}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_processed_bucket{${native},le="1.0"}`]: perSecond(1),
-          [`lodestar_gossip_block_elapsed_time_till_processed_bucket{${native},le="2.0"}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_processed_count{${native}}`]: perSecond(2),
-        },
-        expect: [{labels: "{}", value: 0.5}],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_networking.json",
-    panel: 604,
-    refId: "B",
-    cases: [
-      {
-        name: "blocks received within 1 s by source, with either le spelling",
-        series: {
-          [`lodestar_gossip_block_elapsed_time_till_received_bucket{${libp2p},source="gossip",le="1"}`]: perSecond(1),
-          [`lodestar_gossip_block_elapsed_time_till_received_count{${libp2p},source="gossip"}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_received_bucket{${native},source="gossip",le="1.0"}`]: perSecond(1),
-          [`lodestar_gossip_block_elapsed_time_till_received_count{${native},source="gossip"}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_received_bucket{${native},source="api",le="1.0"}`]: perSecond(1),
-          [`lodestar_gossip_block_elapsed_time_till_received_count{${native},source="api"}`]: perSecond(1),
-        },
-        expect: [
-          {labels: '{source="gossip"}', value: 0.5},
-          {labels: '{source="api"}', value: 1},
-        ],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_summary.json",
-    panel: 536,
-    refId: "A",
-    cases: [
-      {
-        name: "late imports per target, with either le spelling",
-        series: {
-          [`lodestar_gossip_block_elapsed_time_till_processed_count{${libp2p}}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_processed_bucket{${libp2p},le="4"}`]: perSecond(1.5),
-          [`lodestar_gossip_block_elapsed_time_till_processed_count{${native}}`]: perSecond(2),
-          [`lodestar_gossip_block_elapsed_time_till_processed_bucket{${native},le="4.0"}`]: perSecond(2),
-        },
-        expect: [
-          {labels: `{${libp2p}}`, value: 0.5},
-          {labels: `{${native}}`, value: 0},
-        ],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_validator_monitor.json",
-    panel: 32,
-    refId: "A",
-    cases: [
-      {
-        name: "share of attestations sent to zero peers per target, with either le spelling",
-        series: {
-          [`validator_monitor_unaggregated_attestation_submitted_sent_peers_count_bucket{${libp2p},le="0"}`]:
-            perSecond(1),
-          [`validator_monitor_unaggregated_attestation_submitted_sent_peers_count_bucket{${libp2p},le="1"}`]:
-            perSecond(2),
-          [`validator_monitor_unaggregated_attestation_submitted_sent_peers_count_count{${libp2p}}`]: perSecond(4),
-          [`validator_monitor_unaggregated_attestation_submitted_sent_peers_count_bucket{${native},le="0.0"}`]:
-            perSecond(0),
-          [`validator_monitor_unaggregated_attestation_submitted_sent_peers_count_count{${native}}`]: perSecond(4),
-        },
-        expect: [
-          {labels: `{${libp2p}}`, value: 0.25},
-          {labels: `{${native}}`, value: 0},
-        ],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_execution_engine.json",
-    panel: 478,
-    refId: "A",
-    cases: [
-      {
-        name: "requests over 1 s by route, with either le spelling",
-        series: {
-          [`lodestar_execution_engine_http_client_request_time_seconds_bucket{${libp2p},routeId="getPayload",le="1"}`]:
-            perSecond(3),
-          [`lodestar_execution_engine_http_client_request_time_seconds_count{${libp2p},routeId="getPayload"}`]:
-            perSecond(4),
-          [`lodestar_execution_engine_http_client_request_time_seconds_bucket{${native},routeId="getPayload",le="1.0"}`]:
-            perSecond(3),
-          [`lodestar_execution_engine_http_client_request_time_seconds_count{${native},routeId="getPayload"}`]:
-            perSecond(4),
-        },
-        expect: [{labels: '{routeId="getPayload"}', value: 0.25}],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_debug_gossipsub.json",
-    panel: 477,
-    refId: "3",
-    cases: [
-      {
-        name: "peers with behaviour penalty in (3, 6] across targets, with either le spelling",
-        series: {
-          [`gossipsub_peer_stat_behaviour_penalty_bucket{${libp2p},le="3"}`]: constant(5),
-          [`gossipsub_peer_stat_behaviour_penalty_bucket{${libp2p},le="6"}`]: constant(8),
-          [`gossipsub_peer_stat_behaviour_penalty_bucket{${libp2pOther},le="3.0"}`]: constant(1),
-          [`gossipsub_peer_stat_behaviour_penalty_bucket{${libp2pOther},le="6.0"}`]: constant(2),
-        },
-        expect: [{labels: "{}", value: 4}],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_debug_gossipsub.json",
-    panel: 470,
-    refId: "broken_ratio",
-    cases: [
-      {
-        name: "promises delivered after 48 s against broken promises, with either le spelling",
-        series: {
-          [`gossipsub_iwant_promise_delivery_seconds_bucket{${libp2p},le="48"}`]: perSecond(1),
-          [`gossipsub_iwant_promise_delivery_seconds_bucket{${libp2p},le="+Inf"}`]: perSecond(2),
-          [`gossipsub_iwant_promise_delivery_seconds_bucket{${libp2pOther},le="48.0"}`]: perSecond(1),
-          [`gossipsub_iwant_promise_delivery_seconds_bucket{${libp2pOther},le="+Inf"}`]: perSecond(2),
-          [`gossipsub_iwant_promise_broken{${libp2p}}`]: perSecond(2),
-          [`gossipsub_iwant_promise_broken{${libp2pOther}}`]: perSecond(2),
-        },
-        expect: [{labels: "{}", value: 0.5}],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_networking.json",
-    panel: 38,
-    refId: "A",
-    cases: [
-      {
-        name: "connect events of every status per target and direction",
-        series: {
-          [`lodestar_peer_connected_total{${libp2p},direction="inbound",status="open"}`]: constant(7),
-          [`lodestar_peer_connected_total{${libp2p},direction="inbound",status="closed"}`]: constant(3),
-          [`lodestar_peer_disconnected_total{${libp2p},direction="inbound"}`]: constant(6),
-          [`lodestar_peers_by_direction_count{${libp2p},direction="inbound"}`]: constant(4),
-          [`lodestar_peer_connected_total{${libp2pOther},direction="inbound",status="open"}`]: constant(5),
-          [`lodestar_peer_disconnected_total{${libp2pOther},direction="inbound"}`]: constant(3),
-          [`lodestar_peers_by_direction_count{${libp2pOther},direction="inbound"}`]: constant(1),
-          [`lodestar_native_peer_closes_total{${native},reason="host"}`]: constant(2),
-        },
-        expect: [
-          {labels: `{${libp2p},direction="inbound"}`, value: 0},
-          {labels: `{${libp2pOther},direction="inbound"}`, value: 1},
-        ],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_networking.json",
-    panel: 333,
-    refId: "A",
-    cases: [
-      {
-        name: "mean receive-to-import time per target",
-        series: {
-          [`lodestar_gossip_block_received_to_block_import_sum{${libp2p}}`]: perSecond(0.5),
-          [`lodestar_gossip_block_received_to_block_import_count{${libp2p}}`]: perSecond(1),
-          [`lodestar_gossip_block_received_to_block_import_sum{${native}}`]: perSecond(0.75),
-          [`lodestar_gossip_block_received_to_block_import_count{${native}}`]: perSecond(1),
-        },
-        expect: [
-          {labels: `{${libp2p}}`, value: 0.5},
-          {labels: `{${native}}`, value: 0.75},
-        ],
-      },
-    ],
-  },
-  {
-    dashboard: "lodestar_sync.json",
-    panel: 341,
-    refId: "B",
-    cases: [
-      {
-        name: "peers not syncing per target; a target without the sync peer count has none",
-        series: {
-          [`lodestar_peers_sync_count{${libp2p}}`]: constant(10),
-          [`lodestar_sync_range_sync_peers{${libp2p},syncType="Finalized"}`]: constant(3),
-          [`lodestar_sync_range_sync_peers{${libp2p},syncType="Head"}`]: constant(2),
-          [`lodestar_peers_sync_count{${libp2pOther}}`]: constant(4),
-          [`lodestar_sync_range_sync_peers{${libp2pOther},syncType="Finalized"}`]: constant(4),
-          [`lodestar_sync_range_sync_peers{${native},syncType="Finalized"}`]: constant(6),
-        },
-        expect: [
-          {labels: `{${libp2p}}`, value: 5},
-          {labels: `{${libp2pOther}}`, value: 0},
-        ],
-      },
-    ],
-  },
-  meanPerSeries("lodestar_stfn_hash_tree_root_seconds", "lodestar_block_processor.json", 526),
-  meanPerSeries(
-    "lodestar_historical_state_stfn_hash_tree_root_seconds",
-    "lodestar_historical_state_regen.json",
-    526
-  ),
-  discv5Gauge("discv5_kad_table_size", 26),
   discv5Gauge("discv5_active_session_count", 24),
-  discv5Messages("discv5_rcvd_message_count", 20),
-  discv5Messages("discv5_sent_message_count", 18),
-  {
-    dashboard: "lodestar_discv5.json",
-    panel: 22,
-    refId: "A",
-    cases: [
-      {
-        name: "libp2p reports connected peers, native has no producer",
-        series: {
-          [`discv5_connected_peer_count{${libp2p}}`]: constant(25),
-          [`lodestar_discv5_kad_table_size{${native}}`]: constant(12),
-        },
-        expect: [{labels: `discv5_connected_peer_count{${libp2p}}`, value: 25}],
-      },
-    ],
-  },
+  discv5Gauge("discv5_kad_table_size", 26),
   ...networkingNative(),
   ...debugGossipsubNative(),
   ...discv5Native(),
@@ -399,23 +93,11 @@ export const fixtures = [
   ...gossipScores(),
   ...gossipMessages(),
   ...peerReportsAndDialTime(),
-  {
-    dashboard: "lodestar_discv5.json",
-    panel: 14,
-    refId: "B",
-    cases: [
-      {
-        name: "libp2p lookups per second",
-        series: {[`discv5_lookup_count{${libp2p}}`]: perSecond(0.25)},
-        expect: [{labels: `{${libp2p}}`, value: 0.25}],
-      },
-    ],
-  },
 ];
 
-/** The networking dashboard's native backend rows */
+/** Peer, gossip processor, serving and transport queries */
 function networkingNative() {
-  const file = "lodestar_networking.json";
+  const file = "lodestar_native_network.json";
   return [
     nativeQuery(
       file,
@@ -603,9 +285,9 @@ function networkingNative() {
   ];
 }
 
-/** The debug gossipsub dashboard's applied verdict and native backend rows */
+/** Applied verdicts and gossip resource use */
 function debugGossipsubNative() {
-  const file = "lodestar_debug_gossipsub.json";
+  const file = "lodestar_native_network.json";
   const verdicts = {
     [`gossipsub_accepted_messages_total{${libp2p},topic="beacon_attestation"}`]: perSecond(3),
     [`gossipsub_ignored_messages_total{${libp2p},topic="beacon_attestation"}`]: perSecond(1),
@@ -721,7 +403,7 @@ function debugGossipsubNative() {
   ];
 }
 
-/** Selected attempts and their outcomes, a panel of the networking and discv5 native rows */
+/** Selected attempts and their outcomes */
 function selectedAttempts(dashboard, panel) {
   return [
     nativeQuery(dashboard, panel, "A", {'lodestar_native_peer_dial_selections_total{%T,source="discovery"}': perSecond(1)}, [
@@ -743,9 +425,9 @@ function selectedAttempts(dashboard, panel) {
   ];
 }
 
-/** The discv5 dashboard's native backend row */
+/** Discovery queries */
 function discv5Native() {
-  const file = "lodestar_discv5.json";
+  const file = "lodestar_native_network.json";
   return [
     nativeQuery(file, 56, "A", {"lodestar_native_discovery_lookups_started_total{%T}": perSecond(0.25)}, [
       {labels: "{%T}", value: 15},
@@ -780,16 +462,12 @@ function discv5Native() {
         {labels: '{%T,reason="admission_limited",stage="admission"}', value: 60},
       ]
     ),
-    ...selectedAttempts(file, 59),
   ];
 }
 
-/**
- * The vm_host dashboard's memory totals, which sum the threads a target runs, and its native backend row, whose step
- * histogram fixture uses the Prometheus 3 spelling of an integer bound
- */
+/** Owner step histogram queries, including the Prometheus 3 spelling of an integer bound */
 function vmHostNative() {
-  const file = "lodestar_vm_host.json";
+  const file = "lodestar_native_network.json";
   const steps = {
     'lodestar_native_network_step_seconds_bucket{%T,le="0.5"}': perSecond(1),
     'lodestar_native_network_step_seconds_bucket{%T,le="1.0"}': perSecond(2),
@@ -797,47 +475,7 @@ function vmHostNative() {
     "lodestar_native_network_step_seconds_sum{%T}": perSecond(0.5),
     "lodestar_native_network_step_seconds_count{%T}": perSecond(2),
   };
-  const memory = (refId, name) => ({
-    dashboard: file,
-    panel: 44,
-    refId,
-    cases: [
-      {
-        name: "a native target has no worker threads",
-        series: {[`nodejs_${name}{${native}}`]: constant(100)},
-        expect: [{labels: "{}", value: 100}],
-      },
-      {
-        name: "a libp2p target adds its network and discv5 workers",
-        series: {
-          [`nodejs_${name}{${libp2p}}`]: constant(100),
-          [`network_worker_nodejs_${name}{${libp2p}}`]: constant(50),
-          [`discv5_worker_nodejs_${name}{${libp2p}}`]: constant(20),
-        },
-        expect: [{labels: "{}", value: 170}],
-      },
-      {
-        name: "mixed targets, one with a historical state worker",
-        series: {
-          [`nodejs_${name}{${native}}`]: constant(100),
-          [`lodestar_historical_state_worker_nodejs_${name}{${native}}`]: constant(5),
-          [`nodejs_${name}{${libp2p}}`]: constant(100),
-          [`network_worker_nodejs_${name}{${libp2p}}`]: constant(50),
-          [`discv5_worker_nodejs_${name}{${libp2p}}`]: constant(20),
-        },
-        expect: [{labels: "{}", value: 275}],
-      },
-      {
-        name: "no memory reported has no result, not a zero",
-        series: {[`process_resident_memory_bytes{${native}}`]: constant(1000)},
-        expect: [],
-      },
-    ],
-  });
   return [
-    memory("B", "heap_size_total_bytes"),
-    memory("C", "heap_size_used_bytes"),
-    memory("D", "external_memory_bytes"),
     nativeQuery(file, 565, "A", steps, [{labels: "{%T}", value: 0.5}]),
     nativeQuery(file, 565, "B", steps, [{labels: "{%T}", value: 0.99}]),
     nativeQuery(file, 565, "C", steps, [{labels: "{%T}", value: 0.25}]),
@@ -850,8 +488,8 @@ function vmHostNative() {
  * peers in the native row. A population without peers has no statistics, which must stay missing rather than zero.
  */
 function gossipScores() {
-  const networking = "lodestar_networking.json";
-  const debug = "lodestar_debug_gossipsub.json";
+  const networking = "lodestar_native_network.json";
+  const debug = "lodestar_native_network.json";
   const populations = {
     'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="all"}': constant(50),
     'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="graylist"}': constant(48),
@@ -901,15 +539,6 @@ function gossipScores() {
   };
   return [
     nativeQuery(networking, 330, "B", populations, connected("lodestar_native_gossip_score_peers")),
-    nativeQuery(debug, 330, "B", populations, connected("")),
-    nativeQuery(debug, 445, "B", populations, connected("lodestar_native_gossip_score_peers")),
-    nativeQuery(
-      "lodestar_summary.json",
-      21,
-      "C",
-      populations,
-      [{labels: 'lodestar_native_gossip_score_peers{%T,scope="connected",threshold="nonnegative"}', value: 0}]
-    ),
     nativeQuery(
       debug,
       524,
@@ -921,8 +550,6 @@ function gossipScores() {
       ]
     ),
     statistics(networking, 331, "native", "connected"),
-    statistics(debug, 331, "native", "connected"),
-    statistics(debug, 447, "native", "connected"),
     statistics(debug, 525, "A", "mesh"),
   ];
 }
@@ -932,7 +559,7 @@ function gossipScores() {
  * equivalent libp2p and native counters take each target's own counter with `or` before summing.
  */
 function gossipMessages() {
-  const file = "lodestar_debug_gossipsub.json";
+  const file = "lodestar_native_network.json";
   /** A per-target counter rate on both backends, by topic */
   const eitherCounter = (panel, libp2pName, nativeName) => ({
     dashboard: file,
@@ -1207,7 +834,7 @@ function peerReportsAndDialTime() {
   });
   return [
     nativeQuery(
-      "lodestar_networking.json",
+      "lodestar_native_network.json",
       507,
       "B",
       {
@@ -1221,7 +848,7 @@ function peerReportsAndDialTime() {
       ]
     ),
     nativeQuery(
-      "lodestar_discv5.json",
+      "lodestar_native_network.json",
       60,
       "A",
       {
@@ -1236,7 +863,7 @@ function peerReportsAndDialTime() {
       ]
     ),
     {
-      dashboard: "lodestar_discv5.json",
+      dashboard: "lodestar_native_network.json",
       panel: 60,
       refId: "B",
       cases: [

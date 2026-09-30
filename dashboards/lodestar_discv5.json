@@ -220,7 +220,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "discv5_connected_peer_count",
+          "expr": "lodestar_discv5_connected_peer_count",
           "interval": "",
           "legendFormat": "peers",
           "refId": "A"
@@ -371,7 +371,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -388,24 +388,12 @@
           "exemplar": false,
           "expr": "rate(lodestar_discovery_total_dial_attempts[$rate_interval])",
           "interval": "",
-          "legendFormat": "upstream discovery dial calls",
+          "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "native selected {{source}}",
-          "refId": "B"
         }
       ],
-      "title": "Dial demand rate / second",
-      "type": "timeseries",
-      "description": "Upstream counts logical discovery dial calls. Native counts selected endpoint attempts by demand origin, including immediate errors and local capacity deferrals. These are distinct measurements."
+      "title": "dial attempt rate / second",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -480,7 +468,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(discv5_rcvd_message_count[$rate_interval])",
+          "expr": "rate(lodestar_discv5_rcvd_message_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -644,7 +632,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(discv5_sent_message_count[$rate_interval])",
+          "expr": "rate(lodestar_discv5_sent_message_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -807,7 +795,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "lodestar_discv5_active_session_count or discv5_active_session_count",
+          "expr": "lodestar_discv5_active_session_count",
           "interval": "",
           "legendFormat": "sessions",
           "refId": "A"
@@ -900,7 +888,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(discv5_lookup_count[$rate_interval])",
+          "expr": "rate(lodestar_discv5_lookup_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "lookups",
@@ -1065,7 +1053,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_discv5_kad_table_size or discv5_kad_table_size",
+          "expr": "lodestar_discv5_kad_table_size",
           "interval": "",
           "legendFormat": "ENR count",
           "refId": "A"
@@ -1185,7 +1173,7 @@
           "refId": "A"
         }
       ],
-      "title": "dial time seconds (libp2p backend)",
+      "title": "dial time seconds",
       "type": "timeseries"
     },
     {
@@ -1444,7 +1432,7 @@
       },
       "id": 34,
       "panels": [],
-      "title": "Worker VM (libp2p backend)",
+      "title": "Worker VM",
       "type": "row"
     },
     {
@@ -1825,7 +1813,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Resources (libp2p backend)",
+      "title": "Active Resources",
       "type": "timeseries"
     },
     {
@@ -1905,7 +1893,7 @@
           "refId": "A"
         }
       ],
-      "title": "GC pause time rate (libp2p backend)",
+      "title": "GC pause time rate",
       "type": "timeseries"
     },
     {
@@ -1984,7 +1972,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Handles (libp2p backend)",
+      "title": "Active Handles",
       "type": "timeseries"
     },
     {
@@ -2064,185 +2052,7 @@
           "refId": "A"
         }
       ],
-      "title": "Event Loop Lag (libp2p backend)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 97
-      },
-      "id": 55,
-      "panels": [],
-      "title": "Native backend - discovery",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Lookups started, and lookups finished by reason.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 98
-      },
-      "id": 56,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_lookups_started_total[$rate_interval])",
-          "legendFormat": "started",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_discovery_lookup_finishes_total[$rate_interval])",
-          "legendFormat": "finished {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native discovery lookups (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Candidates discovery handed to peer management, and candidates it refused by reason. Candidates are decoded records, not the raw ENRs queries return; published and refused are separate stages, not a success rate.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 98
-      },
-      "id": 57,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_candidates_published_total[$rate_interval])",
-          "legendFormat": "published",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_discovery_candidate_rejections_total[$rate_interval])",
-          "legendFormat": "refused {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native discovery candidates (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Discovery datagrams rejected while processing, by stage and reason: malformed or unexpected input, and local admission pressure. admission_limited can refuse valid traffic, including datagrams refused before decoding, until admission credits refill.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 106
-      },
-      "id": 58,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_datagram_rejections_total[$rate_interval])",
-          "legendFormat": "{{stage}} {{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native discovery datagrams rejected (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Connection attempts the native peer manager selected, by the demand that selected them, and how attempts ended. Outcomes other than connected include local policy (deferred, cancelled, admission_refused), so they are not all failures.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 106
-      },
-      "id": 59,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
-          "legendFormat": "selected {{source}}",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_outcomes_total[$rate_interval])",
-          "legendFormat": "{{outcome}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native selected attempts and their outcomes (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time from selecting a connection attempt to its outcome, mean and p95 by outcome. It includes local start deferrals, and a connected attempt ends at connection admission, before Status and Metadata, so this is not handshake latency. Each outcome's count equals its selected attempt outcome count.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 114
-      },
-      "id": 60,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_peer_dial_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_native_peer_dial_time_seconds_count[$rate_interval])",
-          "legendFormat": "mean {{outcome}}",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, rate(lodestar_native_peer_dial_time_seconds_bucket[$rate_interval]))",
-          "legendFormat": "p95 {{outcome}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native selected attempt to outcome time",
+      "title": "Event Loop Lag",
       "type": "timeseries"
     }
   ],

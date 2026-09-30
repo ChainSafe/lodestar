@@ -178,7 +178,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum({__name__=~\"nodejs_heap_size_total_bytes|network_worker_nodejs_heap_size_total_bytes|discv5_worker_nodejs_heap_size_total_bytes|lodestar_historical_state_worker_nodejs_heap_size_total_bytes\"})",
+          "expr": "(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes or vector(0)))\nor\n(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes or vector(0)))",
           "hide": false,
           "interval": "",
           "legendFormat": "node allocated heap",
@@ -192,7 +192,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum({__name__=~\"nodejs_heap_size_used_bytes|network_worker_nodejs_heap_size_used_bytes|discv5_worker_nodejs_heap_size_used_bytes|lodestar_historical_state_worker_nodejs_heap_size_used_bytes\"})",
+          "expr": "(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes or vector(0))) \nor\n(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes or vector(0))) ",
           "hide": false,
           "interval": "",
           "legendFormat": "node used heap",
@@ -206,7 +206,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum({__name__=~\"nodejs_external_memory_bytes|network_worker_nodejs_external_memory_bytes|discv5_worker_nodejs_external_memory_bytes|lodestar_historical_state_worker_nodejs_external_memory_bytes\"})",
+          "expr": "(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes or vector(0)))\nor\n(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes or vector(0)))",
           "hide": false,
           "interval": "",
           "legendFormat": "node external memory",
@@ -646,7 +646,7 @@
           "refId": "B"
         }
       ],
-      "title": "Network Worker Thread - Heap Allocations (libp2p backend)",
+      "title": "Network Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -764,7 +764,7 @@
           "refId": "C"
         }
       ],
-      "title": "Network Worker Thread - GC pause time rate + reclaimed bytes (libp2p backend)",
+      "title": "Network Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -863,7 +863,7 @@
           "refId": "B"
         }
       ],
-      "title": "Discv5 Worker Thread - Heap Allocations (libp2p backend)",
+      "title": "Discv5 Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -980,7 +980,7 @@
           "refId": "C"
         }
       ],
-      "title": "Discv5 Worker Thread - GC pause time rate + reclaimed bytes (libp2p backend)",
+      "title": "Discv5 Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -1928,7 +1928,7 @@
           "refId": "E"
         }
       ],
-      "title": "Event loop lag NETWORK WORKER (libp2p backend)",
+      "title": "Event loop lag NETWORK WORKER",
       "type": "timeseries"
     },
     {
@@ -2416,7 +2416,7 @@
           "refId": "E"
         }
       ],
-      "title": "Event loop lag DISCV5 WORKER (libp2p backend)",
+      "title": "Event loop lag DISCV5 WORKER",
       "type": "timeseries"
     },
     {
@@ -5813,87 +5813,6 @@
         }
       ],
       "title": "Approximate DB size duration",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 210
-      },
-      "id": 564,
-      "panels": [],
-      "title": "Native backend - network owner",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time per native owner loop step. It is not heartbeat lateness or event loop lag.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 211
-      },
-      "id": 565,
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.5, rate(lodestar_native_network_step_seconds_bucket[$rate_interval]))",
-          "legendFormat": "p50",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.99, rate(lodestar_native_network_step_seconds_bucket[$rate_interval]))",
-          "legendFormat": "p99",
-          "refId": "B"
-        },
-        {
-          "expr": "rate(lodestar_native_network_step_seconds_sum[$rate_interval])\n/\nrate(lodestar_native_network_step_seconds_count[$rate_interval])",
-          "legendFormat": "mean",
-          "refId": "C"
-        }
-      ],
-      "title": "Native owner step duration",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Owner loop step time accumulated per second of wall time.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 211
-      },
-      "id": 566,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_network_step_seconds_sum[$rate_interval])",
-          "legendFormat": "busy share",
-          "refId": "A"
-        }
-      ],
-      "title": "Native owner busy share",
       "type": "timeseries"
     }
   ],
