@@ -68,12 +68,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async batchPut(items: KeyValue<Slot, SignedBeaconBlock>[]): Promise<void> {
     await Promise.all([
       super.batchPut(items),
-      Array.from(items).map((item) => {
+      ...Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(item.value.message);
         return storeRootIndex(this.db, slot, blockRoot);
       }),
-      Array.from(items).map((item) => {
+      ...Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const parentRoot = item.value.message.parentRoot;
         return storeParentRootIndex(this.db, slot, parentRoot);
@@ -84,8 +84,8 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
-      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
-      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot)),
+      ...Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
+      ...Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot)),
     ]);
   }
 
@@ -100,10 +100,10 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async batchRemove(values: SignedBeaconBlock[]): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
-      Array.from(values).map((value) =>
+      ...Array.from(values).map((value) =>
         deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
       ),
-      Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
+      ...Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
   }
 
