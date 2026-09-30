@@ -20,8 +20,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
-  // Resolve slots first so archived header envelopes are rebuilt in EL batches, not one call per root.
-  // Duplicate roots are served once, since each archived envelope costs an EL fetch and a rebuild.
+  // Duplicate roots can amplify expensive EL fetches and envelope reconstruction.
   const requests: {blockSlot: Slot; blockRootHex: RootHex}[] = [];
   const seenRoots = new Set<RootHex>();
   for (const root of requestBody) {
@@ -47,17 +46,17 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     requests.push({blockSlot: slot, blockRootHex: rootHex});
   }
 
-  // Rebuild and yield one EL batch at a time, so only one batch of envelopes is held in memory
+  // Yield between EL batches so the first response does not wait for the entire request.
   let yielded = 0;
   for (let i = 0; i < requests.length; i += MAX_BODIES_PER_REQUEST) {
     const batch = requests.slice(i, i + MAX_BODIES_PER_REQUEST);
     let envelopesBytes: (Uint8Array | null)[];
     try {
-      // by-root allows omission, so a mismatched envelope is left out rather than failing the response
+      // By-root permits omission of envelopes that fail reconstruction checks.
       envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(batch, "omit");
     } catch (e) {
       if (e instanceof EnvelopeReconstructionError) {
-        // Our own EL failing: after some envelopes, end short; with nothing served, RESOURCE_UNAVAILABLE
+        // By-root permits partial responses, so an EL failure can end the response here.
         if (yielded > 0) return;
         throw new ResponseError(
           RespStatus.RESOURCE_UNAVAILABLE,
