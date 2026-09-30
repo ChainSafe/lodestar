@@ -147,7 +147,7 @@ describe("PtcService", () => {
     expect(api.beacon.submitPayloadAttestationMessages).not.toHaveBeenCalled();
   });
 
-  it.each([1, 2])("Should merge a new PTC duty into %i cached duties", async (existingCount) => {
+  it.each([1, 2])("Should merge duties for a newly-active validator discovered mid-epoch (dependentRoot unchanged) into %i already-cached duties", async (existingCount) => {
     const clock = new ClockMock();
     const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
     const duties: routes.validator.PtcDuty[] = Array.from({length: existingCount + 1}, (_, validatorIndex) => ({
