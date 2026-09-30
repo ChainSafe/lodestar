@@ -122,6 +122,7 @@ export class BeaconDb implements IBeaconDb {
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    // New columns are persisted in flat files, so this bucket only contains legacy hot data.
     await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
