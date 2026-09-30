@@ -120,6 +120,61 @@ describe("AttestationDutiesService", () => {
     expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 
+  it.each([1, 2])(
+    "Should merge duties for a newly discovered validator with %i cached duties",
+    async (existingCount) => {
+      const slot = 1;
+      const epoch = computeEpochAtSlot(slot);
+      const duties: routes.validator.AttesterDuty[] = Array.from({length: existingCount + 1}, (_, validatorIndex) => ({
+        slot,
+        committeeIndex: 0,
+        committeeLength: 120,
+        committeesAtSlot: 1,
+        validatorCommitteeIndex: validatorIndex,
+        validatorIndex,
+        pubkey: SecretKey.fromBytes(toBufferBE(BigInt(validatorIndex + 1), 32))
+          .toPublicKey()
+          .toBytes(),
+      }));
+
+      api.validator.getAttesterDuties.mockImplementation(async ({indices}) =>
+        mockApiResponse({
+          data: duties.filter((duty) => indices.includes(duty.validatorIndex)),
+          meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+        })
+      );
+      api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+      const existingIndices = duties.slice(0, existingCount).map((duty) => duty.validatorIndex);
+      vi.spyOn(validatorStore, "getAllLocalIndices").mockReturnValue(existingIndices);
+      const pollValidatorIndices = vi.spyOn(validatorStore, "pollValidatorIndices").mockResolvedValue([]);
+      vi.spyOn(validatorStore, "hasVotingPubkey").mockReturnValue(true);
+      vi.spyOn(validatorStore, "isDoppelgangerSafe").mockReturnValue(true);
+      vi.spyOn(validatorStore, "signAttestationSelectionProof").mockResolvedValue(new Uint8Array(96));
+
+      const clock = new ClockMock();
+      const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+      const dutiesService = new AttestationDutiesService(
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        chainHeadTracker,
+        syncingStatusTracker,
+        null
+      );
+
+      await clock.tickEpochFns(epoch, controller.signal);
+      expect(dutiesService.getDutiesAtSlot(slot).map(({duty}) => duty)).toEqual(duties.slice(0, existingCount));
+
+      pollValidatorIndices.mockResolvedValueOnce([existingCount]);
+      await clock.tickEpochFns(epoch, controller.signal);
+
+      expect(api.validator.getAttesterDuties).toHaveBeenCalledWith({epoch, indices: [existingCount]});
+      expect(dutiesService.getDutiesAtSlot(slot).map(({duty}) => duty)).toEqual(duties);
+    }
+  );
+
   it("Should remove signer from attestation duties", async () => {
     // Reply with some duties
     const slot = 1;
