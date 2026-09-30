@@ -23,7 +23,6 @@ export type ServingOptions = {
   totalBytes?: number;
   /** Maximum simultaneous source operations, excluding quota and response-write waits. */
   maxTasks?: number;
-  ancestrySteps?: number;
   transactionVisits?: number;
 };
 export type ServingPolicy = ServingLimits &
@@ -187,7 +186,6 @@ export function resolveServingPolicy(
     requestDecodedBytes,
     requestMetadata,
     requestScalars,
-    ancestrySteps: integer(options.ancestrySteps ?? Math.max(256 * SLOTS_PER_EPOCH, maxRange), "ancestry steps"),
     transactionVisits,
     blockBytes,
     columnBytes,

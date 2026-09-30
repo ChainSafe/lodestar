@@ -31,7 +31,6 @@ export type ServingLimits = Readonly<{
   requestDecodedBytes: number;
   requestMetadata: number;
   requestScalars: number;
-  ancestrySteps: number;
   transactionVisits: number;
   blockBytes: number;
   columnBytes: number;

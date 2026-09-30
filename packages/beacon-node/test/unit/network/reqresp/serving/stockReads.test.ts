@@ -270,7 +270,7 @@ describe("stock serving reads", () => {
       expect(reads).toEqual([{call: "get", fillCache: false}]);
     }));
 
-  it("refuse a missing-column block read while this run's hot scan has not passed", async () =>
+  it("serve missing columns without reading an uncertified diagnostic block", async () =>
     withDb(async (db, reads) => {
       // The archive is certified, but an oversized hot block may be copied into it by finalization at any time
       expect(await db.blockCertification.load()).toBeNull();
@@ -293,7 +293,7 @@ describe("stock serving reads", () => {
           new ServingContext(policy)
         )
       );
-      await expect(served).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
+      await expect(served).resolves.toEqual([]);
       // The column lookup ran; the block read behind the missing column never did
       expect(reads).toEqual([{call: "getMany", fillCache: false}]);
     }));

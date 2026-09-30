@@ -150,9 +150,7 @@ export function collectServingHeadRange(
   if (!Number.isSafeInteger(endSlot) || endSlot < startSlot || endSlot - startSlot > context.limits.maxIteratorRows)
     throw new ServingCapacityError("range slots");
   const records: Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus">[] = [];
-  let steps = 0;
   const visit = (block: ProtoBlock): boolean => {
-    if (++steps > context.limits.ancestrySteps) throw new ServingCapacityError("ancestry work");
     if (block.slot <= archiveMaxSlot || block.slot < startSlot) return false;
     if (block.slot < endSlot) {
       if (records.length >= endSlot - startSlot) throw new ServingCapacityError("ancestry records");

@@ -50,7 +50,6 @@ describe("serving policy", () => {
       expect(policy.capacity).toBe(16);
       expect(policy.maxTasks).toBe(6);
       expect(policy.workingBytes).toBe(3 * cap * MiB);
-      expect(policy.ancestrySteps).toBe(Math.max(256 * SLOTS_PER_EPOCH, servingConfig().MAX_REQUEST_BLOCKS));
       if (blobs === 21) expect(policy.columnBatchBytes).toBe(5808640);
     });
   }
@@ -59,13 +58,11 @@ describe("serving policy", () => {
     const policy = resolveServingPolicy(servingConfig(256), 16, 0, {
       totalBytes: 512 * MiB,
       maxTasks: 2,
-      ancestrySteps: 20000,
       transactionVisits: 17,
     });
     expect(policy.sourceBytes).toBe(68 * MiB);
     expect(policy.capacity).toBe(16);
     expect(policy.maxTasks).toBe(2);
-    expect(policy.ancestrySteps).toBe(20000);
     expect(policy.transactionVisits).toBe(17);
   });
   it("requires nonzero admission", () => {

@@ -145,20 +145,15 @@ describe("actual serving sources", () => {
           getAllAncestorBlocks: (root: string, status: PayloadStatus) => proto.getAllAncestorNodes(root, status),
         },
       } as unknown as IBeaconChain;
-      const records = collectServingHeadRange(chain, 1, 5, 0, new ServingContext({...policy, ancestrySteps: 5}));
+      const records = collectServingHeadRange(chain, 1, 5, 0, new ServingContext(policy));
       expect(records.map((record) => record.slot)).toEqual([2, 4]);
       expect(records.every((record) => Object.keys(record).sort().join() === "blockRoot,payloadStatus,slot")).toBe(
         true
       );
-      expect(() => collectServingHeadRange(chain, 1, 5, 0, new ServingContext({...policy, ancestrySteps: 4}))).toThrow(
-        "ancestry work"
-      );
       proto.maybePrune(rootFor(4));
-      expect(
-        collectServingHeadRange(chain, 1, 5, 0, new ServingContext({...policy, ancestrySteps: 3})).map(
-          (record) => record.slot
-        )
-      ).toEqual([4]);
+      expect(collectServingHeadRange(chain, 1, 5, 0, new ServingContext(policy)).map((record) => record.slot)).toEqual([
+        4,
+      ]);
       const node = proto.getNode(rootFor(4), PayloadStatus.FULL);
       if (!node) throw Error("Missing fixture node");
       node.slot = 44;
@@ -462,15 +457,17 @@ describe("actual serving sources", () => {
       }
     }));
 
-  it("bounds missing-column diagnostics without discarding earlier responses", async () =>
+  it("returns available columns and finishes without a diagnostic block read", async () =>
     withDb(async (db) => {
       const chain = makeChain(db);
-      await db.dataColumnSidecar.putBinary(root, 0, column(0));
-      await db.block.putBinary(root, new Uint8Array(policy.sourceBytes + 1));
+      const available = column(0);
+      await db.dataColumnSidecar.putBinary(root, 0, available);
+      const getBlock = vi.spyOn(db.block, "getBinary");
       const iterator = columns(chain, db, [0, 1], new ServingContext(policy))[Symbol.asyncIterator]();
       try {
-        expect((await iterator.next()).done).toBe(false);
-        await expect(iterator.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+        expect(await iterator.next()).toMatchObject({done: false, value: {data: available}});
+        expect(await iterator.next()).toEqual({done: true, value: undefined});
+        expect(getBlock).not.toHaveBeenCalled();
       } finally {
         await iterator.return?.();
       }
@@ -631,7 +628,7 @@ describe("actual serving sources", () => {
         db,
         peer,
         "test",
-        new ServingContext({...policy, ancestrySteps: 2})
+        new ServingContext(policy)
       )[Symbol.asyncIterator]();
       const next = iterator.next();
       try {

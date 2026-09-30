@@ -24,7 +24,7 @@ import {SerializedCache} from "../../../../../src/util/serializedCache.js";
 const config = createBeaconConfig({ALTAIR_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: Infinity}, new Uint8Array(32));
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 const policy = resolveServingPolicy(config, 6, 0);
-const bounds = new ServingContext({...policy, sourceBytes: 1024, ancestrySteps: 1});
+const bounds = new ServingContext({...policy, sourceBytes: 1024});
 
 describe("bounded serving actual behavior", () => {
   it("keeps actual archive handler next and return retirement independent", async () => {
@@ -171,7 +171,7 @@ describe("bounded serving actual behavior", () => {
     }
   });
 
-  it("rejects traversal work including newer skipped ancestors", async () => {
+  it("finishes an empty unfinalized range after traversing newer ancestors", async () => {
     const nodes = [10, 9, 8].map((slot) => ({slot, blockRoot: String(slot)}));
     const chain = {
       config,
@@ -192,7 +192,7 @@ describe("bounded serving actual behavior", () => {
       "test",
       bounds,
     ]);
-    await expect(Array.fromAsync(responses)).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+    await expect(Array.fromAsync(responses)).resolves.toEqual([]);
   });
 
   it("keeps cancelled bootstrap retirement pending for its rejected aggregate sibling", async () => {

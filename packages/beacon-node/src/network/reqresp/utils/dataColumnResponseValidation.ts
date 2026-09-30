@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {ServingContext, assertServableBlock, servingRead} from "../../../chain/serving/context.js";
+import {ServingContext} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -41,6 +41,9 @@ export async function handleColumnSidecarUnavailability({
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
+  // Diagnostic block reads must not fail a bounded column response or allocate outside its read contract.
+  if (context) return;
+
   // Post-gloas, columns exist only for FULL blocks; a finalized block is FULL if its envelope was
   // archived. Bid blobsCount is unreliable here since an EMPTY block's bid may still commit to blobs
   if (blockRoot === undefined && chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
@@ -48,14 +51,7 @@ export async function handleColumnSidecarUnavailability({
     if (!envelopeBytes) return;
   }
 
-  assertServableBlock(
-    context,
-    blockRoot ? db.blockCertification.hotVerified : db.blockCertification.isArchiveSlotVerified(slot)
-  );
-  const blockBytes = await servingRead(context, (opts) =>
-    blockRoot ? db.block.getBinary(blockRoot, opts) : db.blockArchive.getBinary(slot, opts)
-  );
-  if (blockBytes) context?.checkBacking(blockBytes);
+  const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,
