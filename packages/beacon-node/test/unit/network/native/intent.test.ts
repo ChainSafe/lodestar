@@ -79,6 +79,113 @@ async function fixture(
 }
 
 describe("native local intent transactions", () => {
+  it.each(["throw", "reject"])("retries an internal refresh after a no-effect capacity %s", async (mode) => {
+    const node = await fixture(false, 0, false);
+    const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});
+    vi.useFakeTimers();
+    try {
+      node.applyIntent.mockImplementationOnce(() => {
+        if (mode === "throw") throw full;
+        return Promise.reject(full);
+      });
+      node.intent.refresh();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(node.failed).not.toHaveBeenCalled();
+      expect(node.applyIntent).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(1);
+      node.clock.setSlot(2);
+      node.intent.refresh();
+      node.intent.refresh();
+      await vi.advanceTimersByTimeAsync(24);
+      expect(node.applyIntent).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(node.applyIntent).toHaveBeenCalledTimes(2);
+      expect(node.applyIntent.mock.calls.at(-1)?.[1]).toBe(2n);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects a refused caller command, retains the refresh and preserves later command order", async () => {
+    const node = await fixture();
+    const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});
+    const held = defer<void>();
+    vi.useFakeTimers();
+    try {
+      node.updateStatus.mockImplementationOnce(() => held.promise);
+      const active = node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 1});
+      node.clock.setSlot(1);
+      node.applyIntent.mockRejectedValueOnce(full);
+      const refused = node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 10});
+      const rejection = expect(refused).rejects.toBe(full);
+      node.intent.refresh();
+      held.resolve();
+      await active;
+      await rejection;
+      expect(node.failed).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(1);
+      const subscribed = node.intent.coreTopics(true);
+      const updated = node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 20});
+      await vi.advanceTimersByTimeAsync(25);
+      await Promise.all([subscribed, updated]);
+      expect(node.latest().update.local.status.headSlot).toBe(1n);
+      expect(node.applyIntent.mock.calls.at(-1)?.[1]).toBe(1n);
+      expect(subscriptionNames(node.latest()).some((name) => name.includes("/beacon_block/"))).toBe(true);
+      expect(node.updateStatus.mock.calls.map(([status]) => status.headSlot)).toEqual([1n, 20n]);
+    } finally {
+      held.resolve();
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("backs off persistent refresh pressure and cancels its only retry on close", async () => {
+    const node = await fixture(false, 0, false);
+    const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});
+    vi.useFakeTimers();
+    try {
+      node.applyIntent.mockRejectedValue(full);
+      node.intent.refresh();
+      await vi.advanceTimersByTimeAsync(75);
+      expect(node.applyIntent).toHaveBeenCalledTimes(4);
+      expect(node.failed).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(1);
+      node.intent.close();
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(node.applyIntent).toHaveBeenCalledTimes(4);
+    } finally {
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry a caller-only Status refusal or an unexpected internal failure", async () => {
+    const node = await fixture(false, 0, false);
+    const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});
+    const failure = new Error("Unexpected owner failure");
+    vi.useFakeTimers();
+    try {
+      node.updateStatus.mockRejectedValueOnce(full);
+      await expect(node.intent.updateStatus(ssz.fulu.Status.defaultValue())).rejects.toBe(full);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(node.updateStatus).toHaveBeenCalledOnce();
+      expect(node.applyIntent).not.toHaveBeenCalled();
+      node.applyIntent.mockRejectedValueOnce(failure);
+      node.intent.refresh();
+      await vi.advanceTimersByTimeAsync(100);
+      expect(node.failed).toHaveBeenCalledExactlyOnceWith(failure);
+      expect(node.applyIntent).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
   it("coalesces pending committee batches", async () => {
     const node = await fixture();
     const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();

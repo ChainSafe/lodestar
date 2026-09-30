@@ -46,6 +46,8 @@ type Update =
   | {type: "committee"; demand: CommitteeDemand};
 type Command = Update & {promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void};
 
+const REFRESH_RETRY_MS = 25;
+
 function snapshotStatus(status: Status): Status {
   const copyRoot = (value: Uint8Array, length: number): Uint8Array => {
     if (!(value instanceof Uint8Array) || value.length !== length)
@@ -70,6 +72,7 @@ export class NativeIntent {
   private busy = false;
   private dirty = false;
   private closed = false;
+  private retry: ReturnType<typeof setTimeout> | undefined;
   private appliedSlot: number;
   constructor(
     private readonly runtime: Pick<NativeNetwork, "applyIntent" | "updateStatus">,
@@ -145,11 +148,12 @@ export class NativeIntent {
     return completion.promise;
   }
   private start(): void {
-    if (this.busy || this.closed) return;
+    if (this.busy || this.closed || this.retry !== undefined) return;
     this.busy = true;
     void this.run().finally(() => {
       this.busy = false;
-      if (!this.closed && (this.commands.length || this.dirty)) setImmediate(() => this.start());
+      if (!this.closed && this.retry === undefined && (this.commands.length || this.dirty))
+        setImmediate(() => this.start());
     });
   }
   private async run(): Promise<void> {
@@ -191,6 +195,20 @@ export class NativeIntent {
         if (slot !== this.clock.currentSlot) this.dirty = true;
         command?.resolve();
       } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "NetworkCommandFull") {
+          command?.reject(error);
+          if (!this.closed) {
+            this.dirty ||= refresh || !command || this.appliedSlot !== this.clock.currentSlot;
+            if (this.dirty) {
+              this.retry = setTimeout(() => {
+                this.retry = undefined;
+                this.start();
+              }, REFRESH_RETRY_MS);
+              this.retry.unref();
+            }
+          }
+          return;
+        }
         if (command) command.reject(error);
         else this.onFailure(error);
       }
@@ -290,6 +308,8 @@ export class NativeIntent {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    clearTimeout(this.retry);
+    this.retry = undefined;
     this.dirty = false;
     for (const command of this.commands)
       command.reject(new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"}));
