@@ -11,6 +11,7 @@ type GlobalSingleArgs = {
   preset: string;
   presetFile?: string;
   rcConfig?: string;
+  zNodePoolCapacity?: number;
   supernode?: boolean;
   semiSupernode?: boolean;
 };
@@ -46,6 +47,13 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     hidden: true,
     description: "Preset configuration file to override the active preset with custom values",
     type: "string",
+  },
+
+  // hidden option to allow for LODESTAR_Z_NODE_POOL_CAPACITY to be set; the lodestar-z addon
+  // reads the env var itself when it loads, before args are parsed
+  zNodePoolCapacity: {
+    hidden: true,
+    type: "number",
   },
 
   rcConfig: {
