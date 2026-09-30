@@ -10,20 +10,21 @@ import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {startTmpBeaconDb} from "../../../utils/db.js";
+import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 describe("chain / archiveStore / state pruning progress", () => {
   const previousSlot = computeStartSlotAtEpoch(90);
   const nextSlot = computeStartSlotAtEpoch(100);
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
   let chain: MockedBeaconChain;
   let logger: ReturnType<typeof testLogger>;
   let controller: AbortController;
   let store: ArchiveStore;
 
   beforeEach(async () => {
-    db = await startTmpBeaconDb(config);
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-archive-store-pruning-"));
     chain = getMockedBeaconChain();
     chain.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 0}));
     chain.forkChoice.prune = vi.fn().mockReturnValue([]);
@@ -52,7 +53,7 @@ describe("chain / archiveStore / state pruning progress", () => {
     controller.abort();
     await store.close();
     vi.restoreAllMocks();
-    await db.close();
+    await closeDb();
   });
 
   it("reuses the startup cutoff and advances it after pruning a new state range", async () => {
