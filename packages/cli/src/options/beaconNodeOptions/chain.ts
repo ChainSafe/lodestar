@@ -240,7 +240,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.fastConfirmation": {
     type: "boolean",
-    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    description: "Enable Fast Confirmation Rule for faster block confirmation",
     defaultDescription: String(defaultOptions.chain.fastConfirmation),
     group: "chain",
   },
