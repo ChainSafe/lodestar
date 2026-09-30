@@ -13,7 +13,7 @@ import {
   getAttesterSlashingSignatureSets,
   getProposerSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
@@ -58,10 +58,15 @@ const forkTransitions = [
   },
 ];
 
-function makeState(slot: number, beaconConfig = config): BeaconStateView {
+function makeState(
+  slot: number,
+  beaconConfig = config,
+  validatorOverrides: Partial<phase0.Validator> = {}
+): BeaconStateView {
   const state = beaconConfig.getForkTypes(slot).BeaconState.defaultViewDU();
   state.slot = slot;
   const validators = generateState({}, config, true).validators.getAllReadonlyValues();
+  validators[0] = {...validators[0], ...validatorOverrides};
   for (const validator of validators) {
     state.validators.push(ssz.phase0.Validator.toViewDU(validator));
     state.balances.push(validator.effectiveBalance);
@@ -316,6 +321,55 @@ describe("slashing verification context", () => {
 });
 
 describe("persisted slashings", () => {
+  it("retains proposer slashings when the startup anchor precedes activation", async () => {
+    const activationEpoch = 6;
+    const head = makeState(activationEpoch * SLOTS_PER_EPOCH, config, {activationEpoch});
+    const anchor = makeState((activationEpoch - 1) * SLOTS_PER_EPOCH, config, {activationEpoch});
+    const chain = makeChain(head);
+    const slashing = makeProposerSlashing(head.slot, head.slot);
+    const pool = new OpPool(config);
+    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing(chain, slashing));
+    const {db, close} = await startIsolatedTmpBeaconDb(config);
+    try {
+      await pool.toPersisted(db);
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      expect(await bls.verifySignatureSets(getProposerSlashingSignatureSets(config, anchor.slot, slashing))).toBe(true);
+      const restored = new OpPool(config);
+      await restored.fromPersisted(db, anchor, bls);
+      expect(restored.proposerSlashingsSize).toBe(1);
+      expect(restored.getSlashingsAndExits(anchor, BlockType.Full, null)[1]).toHaveLength(0);
+      const selected = restored.getSlashingsAndExits(head, BlockType.Full, null)[1];
+      expect(selected).toHaveLength(1);
+      expect(() => assertValidProposerSlashing(config, head.slot, selected[0], head.getValidator(0))).not.toThrow();
+    } finally {
+      await close();
+    }
+  });
+
+  it("retains proposer slashings when the restoring state marks the proposer slashed", async () => {
+    const unslashed = makeState(beforeSlot);
+    const slashed = makeState(beforeSlot, config, {slashed: true});
+    const chain = makeChain(unslashed);
+    const slashing = makeProposerSlashing(beforeSlot, beforeSlot);
+    const pool = new OpPool(config);
+    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing(chain, slashing));
+    const {db, close} = await startIsolatedTmpBeaconDb(config);
+    try {
+      await pool.toPersisted(db);
+      const restored = new OpPool(config);
+      await restored.fromPersisted(db, slashed, new BlsSingleThreadVerifier({metrics: null}));
+      expect(restored.proposerSlashingsSize).toBe(1);
+      expect(restored.getSlashingsAndExits(slashed, BlockType.Full, null)[1]).toHaveLength(0);
+      const selected = restored.getSlashingsAndExits(unslashed, BlockType.Full, null)[1];
+      expect(selected).toHaveLength(1);
+      expect(() =>
+        assertValidProposerSlashing(config, unslashed.slot, selected[0], unslashed.getValidator(0))
+      ).not.toThrow();
+    } finally {
+      await close();
+    }
+  });
+
   it("persists replacement proposer evidence for the same validator", async () => {
     const before = makeState(beforeSlot);
     const after = makeState(afterSlot);
@@ -394,23 +448,47 @@ describe("persisted slashings", () => {
     }
   );
 
-  it("discards malformed persisted evidence without marking it seen", async () => {
-    const invalidProposer = makeProposerSlashing(beforeSlot, beforeSlot);
-    invalidProposer.signedHeader2.message.slot++;
-    const invalidAttester = makeAttesterSlashing(0, beforeSlot);
-    invalidAttester.attestation1.attestingIndices = [];
-    const {db, close} = await startIsolatedTmpBeaconDb(config);
-    try {
-      await db.proposerSlashing.add(invalidProposer);
-      await db.attesterSlashing.add(invalidAttester);
-      const pool = new OpPool(config);
-      await pool.fromPersisted(db, makeState(beforeSlot), new BlsSingleThreadVerifier({metrics: null}));
-      expect(pool.proposerSlashingsSize).toBe(0);
-      expect(pool.attesterSlashingsSize).toBe(0);
-      expect(pool.hasSeenProposerSlashing(0)).toBe(false);
-      expect(pool.hasSeenAttesterSlashing([0])).toBe(false);
-    } finally {
-      await close();
+  it.each(["mismatched slots", "mismatched indices", "identical headers", "unknown proposer", "invalid signature"])(
+    "discards persisted slashings with %s without marking them seen",
+    async (invalidReason) => {
+      const invalidProposer = makeProposerSlashing(beforeSlot, beforeSlot);
+      const state = makeState(beforeSlot);
+      switch (invalidReason) {
+        case "mismatched slots":
+          invalidProposer.signedHeader2.message.slot++;
+          break;
+        case "mismatched indices":
+          invalidProposer.signedHeader2.message.proposerIndex++;
+          break;
+        case "identical headers":
+          invalidProposer.signedHeader2.message = structuredClone(invalidProposer.signedHeader1.message);
+          break;
+        case "unknown proposer":
+          invalidProposer.signedHeader1.message.proposerIndex = state.validatorCount;
+          invalidProposer.signedHeader2.message.proposerIndex = state.validatorCount;
+          break;
+        case "invalid signature":
+          invalidProposer.signedHeader1.signature.fill(0);
+          break;
+      }
+      const invalidAttester = makeAttesterSlashing(0, beforeSlot);
+      invalidAttester.attestation1.attestingIndices = [];
+      const {db, close} = await startIsolatedTmpBeaconDb(config);
+      try {
+        await db.proposerSlashing.add(invalidProposer);
+        await db.attesterSlashing.add(invalidAttester);
+        const pool = new OpPool(config);
+        const bls = new BlsSingleThreadVerifier({metrics: null});
+        const verify = vi.spyOn(bls, "verifySignatureSets");
+        await pool.fromPersisted(db, state, bls);
+        expect(verify).toHaveBeenCalledTimes(invalidReason === "invalid signature" ? 1 : 0);
+        expect(pool.proposerSlashingsSize).toBe(0);
+        expect(pool.attesterSlashingsSize).toBe(0);
+        expect(pool.hasSeenProposerSlashing(invalidProposer.signedHeader1.message.proposerIndex)).toBe(false);
+        expect(pool.hasSeenAttesterSlashing([0])).toBe(false);
+      } finally {
+        await close();
+      }
     }
-  });
+  );
 });

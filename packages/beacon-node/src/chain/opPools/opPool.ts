@@ -13,7 +13,6 @@ import {
 import {
   IBeaconStateView,
   assertValidAttesterSlashing,
-  assertValidProposerSlashing,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
@@ -28,6 +27,7 @@ import {
   ValidatorIndex,
   capella,
   phase0,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex, toHex, toRootHex} from "@lodestar/utils";
@@ -108,15 +108,16 @@ export class OpPool {
       this.insertAttesterSlashing(ForkName.electra, attesterSlashing, verifiedDomains, key);
     }
     for (const proposerSlashing of proposerSlashings) {
-      try {
-        assertValidProposerSlashing(
-          this.config,
-          stateSlot,
-          proposerSlashing,
-          state.getValidator(proposerSlashing.signedHeader1.message.proposerIndex),
-          false
-        );
-      } catch {
+      const header1 = proposerSlashing.signedHeader1.message;
+      const header2 = proposerSlashing.signedHeader2.message;
+      // Startup may restore a state from before activation. Current slashability is checked
+      // when selecting operations, so it must not prevent restoring an otherwise valid slashing.
+      if (
+        header1.slot !== header2.slot ||
+        header1.proposerIndex !== header2.proposerIndex ||
+        header1.proposerIndex >= state.validatorCount ||
+        ssz.phase0.BeaconBlockHeaderBigint.equals(header1, header2)
+      ) {
         continue;
       }
       const verifiedDomain = getProposerSlashingSignatureDomain(this.config, stateSlot, proposerSlashing);
