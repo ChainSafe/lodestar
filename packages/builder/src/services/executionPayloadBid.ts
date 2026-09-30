@@ -10,7 +10,7 @@ import type {
   gloas,
   heze,
 } from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import type {BuiltPayload} from "./payloadSource.js";
 
@@ -126,10 +126,7 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
     value: input.value,
     executionPayment: 0n,
     blobKzgCommitments: blobsBundle.commitments,
-    executionRequestsRoot:
-      input.fork === ForkName.heze
-        ? ssz.heze.ExecutionRequests.hashTreeRoot(executionRequests)
-        : ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests),
+    executionRequestsRoot: sszTypesFor(input.fork).ExecutionRequests.hashTreeRoot(executionRequests),
   };
 
   if (input.fork === ForkName.heze) {
