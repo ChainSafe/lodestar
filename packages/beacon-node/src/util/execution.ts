@@ -260,7 +260,7 @@ export async function getDataColumnSidecarsFromExecution(
 }
 
 /** engine_getPayloadBodiesByHashV2: every EL must accept requests of up to 32 hashes, larger ones may fail with -38004 */
-const MAX_BODIES_PER_REQUEST = 32;
+export const MAX_BODIES_PER_REQUEST = 32;
 
 type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
