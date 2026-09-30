@@ -45,7 +45,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
-    const db = opts.db ?? (await LevelDb.open(opts.name || "beaconchain"));
+    const db = opts.db ?? (await LevelDb.open(opts.name || "beaconchain", {multithreading: true}));
 
     return new LevelDbController(logger, db, metrics ?? null);
   }
