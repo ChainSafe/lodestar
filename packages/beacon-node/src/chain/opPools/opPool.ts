@@ -149,7 +149,9 @@ export class OpPool {
         db.proposerSlashing,
         Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value: value.proposerSlashing})),
         (index) => index,
-        // New evidence can replace an expired slashing under the same validator index.
+        // A slashing invalidated by a fork may remain on disk after eviction from the pool.
+        // A new valid slashing for that validator has the same database key, so comparing
+        // keys alone would retain the invalid slashing and lose the replacement on restart.
         {updateExisting: true}
       ),
       persistDiff(
