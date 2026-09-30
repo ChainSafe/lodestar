@@ -611,7 +611,7 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */

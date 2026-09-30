@@ -321,6 +321,38 @@ describe("slashing verification context", () => {
 });
 
 describe("persisted slashings", () => {
+  it("restores post-fork slashings when the startup anchor is still pre-fork", async () => {
+    const anchor = makeState(beforeSlot);
+    const head = makeState(afterSlot);
+    const chain = makeChain(head);
+    const proposerSlashing = makeProposerSlashing(afterSlot, afterSlot);
+    const attesterSlashing = makeAttesterSlashing(1, afterSlot, config, 1);
+    const pool = new OpPool(config);
+    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertAttesterSlashing(
+      config.getForkName(afterSlot),
+      attesterSlashing,
+      await validateGossipAttesterSlashing(chain, attesterSlashing)
+    );
+    const {db, close} = await startIsolatedTmpBeaconDb(config);
+    try {
+      await pool.toPersisted(db);
+      const restored = new OpPool(config);
+      await restored.fromPersisted(db, anchor, new BlsSingleThreadVerifier({metrics: null}), afterSlot);
+      const [attesterSlashings, proposerSlashings] = restored.getSlashingsAndExits(head, BlockType.Full, null);
+      expect(proposerSlashings).toHaveLength(1);
+      expect(attesterSlashings).toHaveLength(1);
+      expect(() =>
+        assertValidProposerSlashing(config, head.slot, proposerSlashings[0], head.getValidator(0))
+      ).not.toThrow();
+      expect(() =>
+        assertValidAttesterSlashing(config, head.slot, head.validatorCount, attesterSlashings[0])
+      ).not.toThrow();
+    } finally {
+      await close();
+    }
+  });
+
   it("retains proposer slashings when the startup anchor precedes activation", async () => {
     const activationEpoch = 6;
     const head = makeState(activationEpoch * SLOTS_PER_EPOCH, config, {activationEpoch});
@@ -335,7 +367,7 @@ describe("persisted slashings", () => {
       const bls = new BlsSingleThreadVerifier({metrics: null});
       expect(await bls.verifySignatureSets(getProposerSlashingSignatureSets(config, anchor.slot, slashing))).toBe(true);
       const restored = new OpPool(config);
-      await restored.fromPersisted(db, anchor, bls);
+      await restored.fromPersisted(db, anchor, bls, head.slot);
       expect(restored.proposerSlashingsSize).toBe(1);
       expect(restored.getSlashingsAndExits(anchor, BlockType.Full, null)[1]).toHaveLength(0);
       const selected = restored.getSlashingsAndExits(head, BlockType.Full, null)[1];
@@ -357,7 +389,7 @@ describe("persisted slashings", () => {
     try {
       await pool.toPersisted(db);
       const restored = new OpPool(config);
-      await restored.fromPersisted(db, slashed, new BlsSingleThreadVerifier({metrics: null}));
+      await restored.fromPersisted(db, slashed, new BlsSingleThreadVerifier({metrics: null}), slashed.slot);
       expect(restored.proposerSlashingsSize).toBe(1);
       expect(restored.getSlashingsAndExits(slashed, BlockType.Full, null)[1]).toHaveLength(0);
       const selected = restored.getSlashingsAndExits(unslashed, BlockType.Full, null)[1];
@@ -387,7 +419,7 @@ describe("persisted slashings", () => {
       await pool.toPersisted(db);
 
       const restored = new OpPool(config);
-      await restored.fromPersisted(db, after, new BlsSingleThreadVerifier({metrics: null}));
+      await restored.fromPersisted(db, after, new BlsSingleThreadVerifier({metrics: null}), after.slot);
       const selected = restored.getSlashingsAndExits(after, BlockType.Full, null)[1];
       expect(selected).toHaveLength(1);
       expect(ssz.phase0.ProposerSlashing.equals(selected[0], replacement)).toBe(true);
@@ -396,9 +428,13 @@ describe("persisted slashings", () => {
     }
   });
 
-  it.each([beforeSlot, afterSlot])(
-    "revalidates on reload at slot %i and removes stale evidence from disk",
-    async (reloadSlot) => {
+  it.each([
+    {anchorSlot: beforeSlot, currentSlot: beforeSlot},
+    {anchorSlot: afterSlot, currentSlot: afterSlot},
+    {anchorSlot: beforeSlot, currentSlot: afterSlot},
+  ])(
+    "revalidates on reload from slot $anchorSlot at slot $currentSlot and removes stale evidence from disk",
+    async ({anchorSlot, currentSlot}) => {
       const chain = makeChain(makeState(beforeSlot));
       const pool = new OpPool(config);
       const validProposer = makeProposerSlashing(beforeSlot, beforeSlot);
@@ -421,7 +457,7 @@ describe("persisted slashings", () => {
         const bls = new BlsSingleThreadVerifier({metrics: null});
         const verify = vi.spyOn(bls, "verifySignatureSets");
         const restored = new OpPool(config);
-        await restored.fromPersisted(db, makeState(reloadSlot), bls);
+        await restored.fromPersisted(db, makeState(anchorSlot), bls, currentSlot);
         expect(verify).toHaveBeenCalledTimes(4);
         verify.mockClear();
 
@@ -480,7 +516,7 @@ describe("persisted slashings", () => {
         const pool = new OpPool(config);
         const bls = new BlsSingleThreadVerifier({metrics: null});
         const verify = vi.spyOn(bls, "verifySignatureSets");
-        await pool.fromPersisted(db, state, bls);
+        await pool.fromPersisted(db, state, bls, state.slot);
         expect(verify).toHaveBeenCalledTimes(invalidReason === "invalid signature" ? 1 : 0);
         expect(pool.proposerSlashingsSize).toBe(0);
         expect(pool.attesterSlashingsSize).toBe(0);

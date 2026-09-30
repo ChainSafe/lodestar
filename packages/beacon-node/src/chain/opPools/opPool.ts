@@ -24,6 +24,7 @@ import {
   Domain,
   Epoch,
   SignedBeaconBlock,
+  Slot,
   ValidatorIndex,
   capella,
   phase0,
@@ -83,7 +84,7 @@ export class OpPool {
     return this.blsToExecutionChanges.size;
   }
 
-  async fromPersisted(db: IBeaconDb, state: IBeaconStateView, bls: IBlsVerifier): Promise<void> {
+  async fromPersisted(db: IBeaconDb, state: IBeaconStateView, bls: IBlsVerifier, currentSlot: Slot): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] = await Promise.all([
       db.attesterSlashing.entries(),
       db.proposerSlashing.values(),
@@ -92,16 +93,19 @@ export class OpPool {
     ]);
 
     // Persisted operations have no verification context. Rebuild it before they can enter the pool.
-    const stateSlot = state.slot;
+    // The startup anchor may precede a fork whose slashings are already persisted.
+    const validationSlot = Math.max(state.slot, currentSlot);
     for (const {key, value: attesterSlashing} of attesterSlashings) {
       try {
-        assertValidAttesterSlashing(this.config, stateSlot, state.validatorCount, attesterSlashing, false);
+        assertValidAttesterSlashing(this.config, validationSlot, state.validatorCount, attesterSlashing, false);
       } catch {
         continue;
       }
-      const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, stateSlot, attesterSlashing);
+      const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, validationSlot, attesterSlashing);
       if (
-        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, stateSlot, attesterSlashing)))
+        !(await bls.verifySignatureSets(
+          getAttesterSlashingSignatureSets(this.config, validationSlot, attesterSlashing)
+        ))
       ) {
         continue;
       }
@@ -120,9 +124,11 @@ export class OpPool {
       ) {
         continue;
       }
-      const verifiedDomain = getProposerSlashingSignatureDomain(this.config, stateSlot, proposerSlashing);
+      const verifiedDomain = getProposerSlashingSignatureDomain(this.config, validationSlot, proposerSlashing);
       if (
-        !(await bls.verifySignatureSets(getProposerSlashingSignatureSets(this.config, stateSlot, proposerSlashing)))
+        !(await bls.verifySignatureSets(
+          getProposerSlashingSignatureSets(this.config, validationSlot, proposerSlashing)
+        ))
       ) {
         continue;
       }
