@@ -147,52 +147,49 @@ describe("PtcService", () => {
     expect(api.beacon.submitPayloadAttestationMessages).not.toHaveBeenCalled();
   });
 
-  it.each([1, 2])(
-    "Should merge duties for a newly-active validator discovered mid-epoch (dependentRoot unchanged) into %i already-cached duties",
-    async (existingCount) => {
-      const clock = new ClockMock();
-      const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
-      const duties: routes.validator.PtcDuty[] = Array.from({length: existingCount + 1}, (_, validatorIndex) => ({
-        slot: 0,
-        validatorIndex,
-        pubkey: SecretKey.fromBytes(Buffer.alloc(32, validatorIndex + 1))
-          .toPublicKey()
-          .toBytes(),
-      }));
-      const existingIndices = duties.slice(0, existingCount).map((duty) => duty.validatorIndex);
-      validatorStore.getAllLocalIndices.mockReturnValue(existingIndices);
-      api.validator.getPtcDuties.mockImplementation(async ({epoch, indices}) =>
-        mockApiResponse({
-          data: duties
-            .filter((duty) => indices.includes(duty.validatorIndex))
-            .map((duty) => ({...duty, slot: epoch * SLOTS_PER_EPOCH})),
-          meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
-        })
-      );
-      const ptcDutiesService = new PtcDutiesService(
-        config,
-        loggerVc,
-        api,
-        clock,
-        validatorStore,
-        chainHeadTracker,
-        syncingStatusTracker,
-        null
-      );
+  it.each([1, 2])("Should add duties for a newly discovered validator (%i cached duties)", async (existingCount) => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const duties: routes.validator.PtcDuty[] = Array.from({length: existingCount + 1}, (_, validatorIndex) => ({
+      slot: 0,
+      validatorIndex,
+      pubkey: SecretKey.fromBytes(Buffer.alloc(32, validatorIndex + 1))
+        .toPublicKey()
+        .toBytes(),
+    }));
+    const existingIndices = duties.slice(0, existingCount).map((duty) => duty.validatorIndex);
+    validatorStore.getAllLocalIndices.mockReturnValue(existingIndices);
+    api.validator.getPtcDuties.mockImplementation(async ({epoch, indices}) =>
+      mockApiResponse({
+        data: duties
+          .filter((duty) => indices.includes(duty.validatorIndex))
+          .map((duty) => ({...duty, slot: epoch * SLOTS_PER_EPOCH})),
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+    const ptcDutiesService = new PtcDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
 
-      await clock.tickEpochFns(0, controller.signal);
-      expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties.slice(0, existingCount));
+    await clock.tickEpochFns(0, controller.signal);
+    expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties.slice(0, existingCount));
 
-      validatorStore.pollValidatorIndices.mockResolvedValueOnce([existingCount]);
-      await clock.tickEpochFns(0, controller.signal);
+    validatorStore.pollValidatorIndices.mockResolvedValueOnce([existingCount]);
+    await clock.tickEpochFns(0, controller.signal);
 
-      expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 0, indices: [existingCount]});
-      expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties);
-      expect(ptcDutiesService.getDutiesAtSlot(SLOTS_PER_EPOCH)).toEqual(
-        duties.map((duty) => ({...duty, slot: SLOTS_PER_EPOCH}))
-      );
-    }
-  );
+    expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 0, indices: [existingCount]});
+    expect(ptcDutiesService.getDutiesAtSlot(0)).toEqual(duties);
+    expect(ptcDutiesService.getDutiesAtSlot(SLOTS_PER_EPOCH)).toEqual(
+      duties.map((duty) => ({...duty, slot: SLOTS_PER_EPOCH}))
+    );
+  });
 
   it("Should redownload PTC duties when dependent root changes", async () => {
     const slot = 0;
