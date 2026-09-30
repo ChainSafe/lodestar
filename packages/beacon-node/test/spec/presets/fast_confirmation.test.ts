@@ -153,6 +153,9 @@ const fastConfirmationTest =
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
+        // Spec tests drive fork choice white-box — reach it on the concrete engine
+        const engine = chain.beaconEngine as BeaconEngine;
+
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 
@@ -171,17 +174,12 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = (chain.beaconEngine as BeaconEngine).getHeadState();
+              const headState = engine.getHeadState();
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
               const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
-              chain.beaconEngine.forkChoice.onAttestation(
-                chain.beaconEngine.shufflingCache.getIndexedAttestation(
-                  attEpoch,
-                  decisionRoot,
-                  ForkSeq[fork],
-                  attestation
-                ),
+              engine.forkChoice.onAttestation(
+                engine.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }
@@ -194,7 +192,7 @@ const fastConfirmationTest =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
+              engine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // block step
@@ -379,11 +377,11 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = (chain.beaconEngine.forkChoice as ForkChoice).updateHead();
-              const proposerBootRoot = (chain.beaconEngine.forkChoice as ForkChoice).getProposerBoostRoot();
-              const justifiedCheckpoint = chain.beaconEngine.forkChoice.getJustifiedCheckpoint();
-              const finalizedCheckpoint = chain.beaconEngine.forkChoice.getFinalizedCheckpoint();
-              const confirmedRoot = chain.beaconEngine.forkChoice.getConfirmedRoot();
+              const head = (engine.forkChoice as ForkChoice).updateHead();
+              const proposerBootRoot = (engine.forkChoice as ForkChoice).getProposerBoostRoot();
+              const justifiedCheckpoint = engine.forkChoice.getJustifiedCheckpoint();
+              const finalizedCheckpoint = engine.forkChoice.getFinalizedCheckpoint();
+              const confirmedRoot = engine.forkChoice.getConfirmedRoot();
 
               if (step.checks.head) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
@@ -403,7 +401,7 @@ const fastConfirmationTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time && step.checks.time > 0)
-                expect(chain.beaconEngine.forkChoice.getTime()).toEqualWithMessage(
+                expect(engine.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
@@ -424,7 +422,7 @@ const fastConfirmationTest =
 
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const {proposerHead, notReorgedReason} = (chain.beaconEngine.forkChoice as ForkChoice).getProposerHead(
+                const {proposerHead, notReorgedReason} = (engine.forkChoice as ForkChoice).getProposerHead(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
@@ -461,7 +459,7 @@ const fastConfirmationTest =
 
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.beaconEngine.forkChoice.shouldOverrideForkChoiceUpdate(
+                const result = engine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot

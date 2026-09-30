@@ -64,9 +64,9 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
   ): Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}> {
     // For ancestors below head: check all 3 variants (PENDING, EMPTY, FULL).
     // For the head: range sync may have delivered the block but not its envelope yet.
-    const bn2Head = bn2.chain.beaconEngine.forkChoice.getHead();
+    const bn2Head = (bn2.chain.beaconEngine as BeaconEngine).forkChoice.getHead();
     const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
-    const bn2Ancestors = bn2.chain.beaconEngine.forkChoice.getAllAncestorBlocks(
+    const bn2Ancestors = (bn2.chain.beaconEngine as BeaconEngine).forkChoice.getAllAncestorBlocks(
       bn2Head.blockRoot,
       bn2Head.payloadStatus
     );
@@ -85,7 +85,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     );
 
     for (const {blockRoot, slot, variant} of variantsToCheck) {
-      const node = bn2.chain.beaconEngine.forkChoice.getBlockHex(blockRoot, variant);
+      const node = (bn2.chain.beaconEngine as BeaconEngine).forkChoice.getBlockHex(blockRoot, variant);
       expect(node?.executionStatus).toBeWithMessage(
         ExecutionStatus.Syncing,
         `expected gloas variant ${variant} of slot=${slot} root=${blockRoot} to be Syncing pre-validation`
@@ -106,12 +106,15 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     variantsToCheck: Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}>,
     loggerNodeB: ReturnType<typeof testLogger>
   ): void {
-    const bn2Head = bn2.chain.beaconEngine.forkChoice.getHead();
-    const nodeAHeadFull = bn.chain.beaconEngine.forkChoice.getBlockHex(bn2Head.blockRoot, PayloadStatus.FULL);
+    const bn2Head = (bn2.chain.beaconEngine as BeaconEngine).forkChoice.getHead();
+    const nodeAHeadFull = (bn.chain.beaconEngine as BeaconEngine).forkChoice.getBlockHex(
+      bn2Head.blockRoot,
+      PayloadStatus.FULL
+    );
     if (nodeAHeadFull === null || nodeAHeadFull.executionPayloadBlockHash === null) {
       throw Error(`No FULL variant found on Node A for synced head root=${bn2Head.blockRoot}`);
     }
-    bn2.chain.beaconEngine.forkChoice.onExecutionPayload(
+    (bn2.chain.beaconEngine as BeaconEngine).forkChoice.onExecutionPayload(
       bn2Head.blockRoot,
       nodeAHeadFull.executionPayloadBlockHash,
       nodeAHeadFull.executionPayloadNumber,
@@ -127,7 +130,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
       {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.FULL},
     ];
     for (const {blockRoot, slot, variant} of allVariants) {
-      const node = bn2.chain.beaconEngine.forkChoice.getBlockHex(blockRoot, variant);
+      const node = (bn2.chain.beaconEngine as BeaconEngine).forkChoice.getBlockHex(blockRoot, variant);
       expect(node?.executionStatus).toBeWithMessage(
         ExecutionStatus.Valid,
         `expected gloas variant ${variant} of slot=${slot} root=${blockRoot} to be Valid post-validation`
@@ -175,8 +178,8 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     // from slot 24 onward fetches the dangling parent payload envelope of block 23.
     const REORGED_SLOT = (GLOAS_FORK_EPOCH + 1) * SLOTS_PER_EPOCH; // 24
     const REORG_DISTANCE = 2; // block at slot 25 has parent at slot 23
-    (bn.chain.beaconEngine.forkChoice as ReorgedForkChoice).reorgedSlot = REORGED_SLOT;
-    (bn.chain.beaconEngine.forkChoice as ReorgedForkChoice).reorgDistance = REORG_DISTANCE;
+    ((bn.chain.beaconEngine as BeaconEngine).forkChoice as ReorgedForkChoice).reorgedSlot = REORGED_SLOT;
+    ((bn.chain.beaconEngine as BeaconEngine).forkChoice as ReorgedForkChoice).reorgDistance = REORG_DISTANCE;
 
     const {validators} = await getAndInitDevValidators({
       node: bn,
@@ -210,7 +213,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
 
     // Confirm the finalized checkpoint is the skipped-slot one: root must resolve to the
     // block at slot 23 (last block before the reorged slot 24), not slot 24.
-    const finalizedBlock = bn.chain.beaconEngine.forkChoice.getFinalizedBlock();
+    const finalizedBlock = (bn.chain.beaconEngine as BeaconEngine).forkChoice.getFinalizedBlock();
     expect(
       finalizedBlock.slot,
       "Skipped checkpoint expected: finalized block should be at slot 23, not slot 24"
@@ -258,7 +261,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     });
     afterEachCallbacks.push(() => bn2.close());
 
-    const headSummary = bn.chain.beaconEngine.forkChoice.getHead();
+    const headSummary = (bn.chain.beaconEngine as BeaconEngine).forkChoice.getHead();
     // 30s is plenty: Node B has to range-sync only ~17 blocks (slot 24 → ~slot 40) over
     // localhost loopback. A successful sync completes in seconds; this timeout exists to
     // bound the failure case so we surface a meaningful expect.fail message quickly.
@@ -350,7 +353,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     loggerNodeA.info("Node A reached the epoch-3 finalized checkpoint");
 
     // Confirm the finalized checkpoint resolves to the block AT the boundary slot (regular case).
-    const finalizedBlock = bn.chain.beaconEngine.forkChoice.getFinalizedBlock();
+    const finalizedBlock = (bn.chain.beaconEngine as BeaconEngine).forkChoice.getFinalizedBlock();
     expect(finalizedBlock.slot, "Regular checkpoint expected: finalized block should be at the boundary slot").toEqual(
       EPOCH_3_BOUNDARY_SLOT
     );
@@ -386,7 +389,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     });
     afterEachCallbacks.push(() => bn2.close());
 
-    const headSummary = bn.chain.beaconEngine.forkChoice.getHead();
+    const headSummary = (bn.chain.beaconEngine as BeaconEngine).forkChoice.getHead();
     const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
       bn2.chain.emitter,
       routes.events.EventType.head,

@@ -4,7 +4,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   BlockExecutionStatus,
   CheckpointWithHex,
-  IForkChoice,
   LVHExecResponse,
   PayloadExecutionStatus,
   PayloadStatus,
@@ -66,7 +65,6 @@ import {
 } from "../produceBlock/produceBlockBody.js";
 import {RegenRequest} from "../regen/index.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
-import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {GossipBlockValidationResult} from "../validation/block.js";
@@ -265,13 +263,6 @@ export type ApiStateResultWithFork<T> =
 
 export interface IBeaconEngine {
   readonly config: BeaconConfig;
-  // Full fork choice (read + write). The engine owns it; writes are routed here while the flows that
-  // perform them still live facade-side. TODO - beacon engine: narrow to a read facet as those flows
-  // (gossip → Phase 3, migrateFinalized/prune → Phase 5) move into the engine.
-  readonly forkChoice: IForkChoice;
-  // TODO - beacon engine: the engine owns the shuffling cache; exposed for the committees API
-  // (`getEpochCommittees`) until that read becomes an engine method.
-  readonly shufflingCache: ShufflingCache;
 
   // Block production. `produceCommonBlockBody` builds the fork-agnostic body part (reused across the
   // self-build / builder-bid paths). `produceBlockBase` computes the shared head once (proposer head,

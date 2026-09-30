@@ -169,6 +169,9 @@ const forkChoiceTest =
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
+        // Spec tests drive fork choice / regen white-box — reach them on the concrete engine
+        const engine = chain.beaconEngine as BeaconEngine;
+
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 
@@ -188,14 +191,14 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: isValid});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = (chain.beaconEngine as BeaconEngine).getHeadState() as BeaconStateView;
+              const headState = engine.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
                 ForkSeq[fork],
                 attestation
               );
               try {
-                chain.beaconEngine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+                engine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
@@ -210,7 +213,7 @@ const forkChoiceTest =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
+              engine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // payload attestation message step
@@ -227,13 +230,13 @@ const forkChoiceTest =
                 throw Error(`No payload attestation message ${step.payload_attestation_message}`);
               try {
                 const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
-                const protoBlock = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(blockRoot);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(blockRoot);
                 if (!protoBlock) {
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
 
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
-                  const blockState = await (chain.beaconEngine as BeaconEngine).regen.getBlockSlotState(
+                  const blockState = await engine.regen.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
                     {dontTransferCache: true},
@@ -274,7 +277,7 @@ const forkChoiceTest =
                   }
                   if (!signatureValidity) throw Error("Invalid payload attestation signature");
 
-                  chain.beaconEngine.forkChoice.notifyPtcMessages(
+                  engine.forkChoice.notifyPtcMessages(
                     blockRoot,
                     payloadAttestationMessage.data.slot,
                     ptcIndices,
@@ -488,9 +491,9 @@ const forkChoiceTest =
                 const gasLimit = envelope.message.payload.gasLimit;
 
                 // Verify envelope against the state
-                const protoBlock = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await (chain.beaconEngine as BeaconEngine).regen.getBlockSlotState(
+                const blockState = await engine.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},
@@ -516,7 +519,7 @@ const forkChoiceTest =
                   validationError: null,
                 });
 
-                (chain.beaconEngine.forkChoice as ForkChoice).onExecutionPayload(
+                (engine.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
@@ -549,8 +552,8 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = (chain.beaconEngine.forkChoice as ForkChoice).updateHead();
-              const proposerBootRoot = (chain.beaconEngine.forkChoice as ForkChoice).getProposerBoostRoot();
+              const head = (engine.forkChoice as ForkChoice).updateHead();
+              const proposerBootRoot = (engine.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
@@ -568,25 +571,25 @@ const forkChoiceTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
-                expect(chain.beaconEngine.forkChoice.getTime()).toEqualWithMessage(
+                expect(engine.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.beaconEngine.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
+                expect(toSpecTestCheckpoint(engine.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
                   step.checks.justified_checkpoint,
                   `Invalid justified checkpoint at step ${i}`
                 );
               }
               if (step.checks.finalized_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.beaconEngine.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
+                expect(toSpecTestCheckpoint(engine.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
                 );
               }
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const {proposerHead, notReorgedReason} = (chain.beaconEngine.forkChoice as ForkChoice).getProposerHead(
+                const {proposerHead, notReorgedReason} = (engine.forkChoice as ForkChoice).getProposerHead(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
@@ -609,7 +612,7 @@ const forkChoiceTest =
               }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.beaconEngine.forkChoice.shouldOverrideForkChoiceUpdate(
+                const result = engine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
@@ -624,9 +627,7 @@ const forkChoiceTest =
               }
               if (step.checks.payload_timeliness_vote) {
                 expect(
-                  chain.beaconEngine.forkChoice.getPayloadTimelinessVotes(
-                    step.checks.payload_timeliness_vote.block_root
-                  )
+                  engine.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
                 ).toEqualWithMessage(
                   step.checks.payload_timeliness_vote.votes,
                   `Invalid payload timeliness votes at step ${i}`
@@ -634,7 +635,7 @@ const forkChoiceTest =
               }
               if (step.checks.payload_data_availability_vote) {
                 expect(
-                  chain.beaconEngine.forkChoice.getPayloadDataAvailabilityVotes(
+                  engine.forkChoice.getPayloadDataAvailabilityVotes(
                     step.checks.payload_data_availability_vote.block_root
                   )
                 ).toEqualWithMessage(

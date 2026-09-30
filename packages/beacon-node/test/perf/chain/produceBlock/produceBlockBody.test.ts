@@ -7,6 +7,7 @@ import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/tes
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine/index.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
@@ -81,7 +82,7 @@ describe("produceBlockBody", () => {
     maxMs: Infinity,
     timeoutBench: 60 * 1000,
     beforeEach: async () => {
-      const head = chain.beaconEngine.forkChoice.getHead();
+      const head = (chain.beaconEngine as BeaconEngine).forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
       const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 

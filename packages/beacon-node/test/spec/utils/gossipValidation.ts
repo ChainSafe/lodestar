@@ -255,7 +255,7 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
     rootHex: checkpoint.rootHex,
   };
 
-  const forkChoice = chain.beaconEngine.forkChoice as unknown as {
+  const forkChoice = (chain.beaconEngine as BeaconEngine).forkChoice as unknown as {
     fcStore: {
       finalizedCheckpoint: typeof checkpointWithHex;
       unrealizedFinalizedCheckpoint: typeof checkpointWithHex;
@@ -305,16 +305,16 @@ function computePostState(
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
-  const parentBlock = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+  const parentBlock = (chain.beaconEngine as BeaconEngine).forkChoice.getBlockHexDefaultStatus(parentRootHex);
   if (!parentBlock?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: parent ${parentRootHex} has no latest valid execution hash`);
   }
-  const block = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const block = (chain.beaconEngine as BeaconEngine).forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!block?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
   }
 
-  chain.beaconEngine.forkChoice.validateLatestHash({
+  (chain.beaconEngine as BeaconEngine).forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
@@ -329,7 +329,10 @@ function isDescendantAtFinalizedCheckpoint(
 ): boolean {
   try {
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    return chain.beaconEngine.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
+    return (
+      (chain.beaconEngine as BeaconEngine).forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot ===
+      checkpoint.rootHex
+    );
   } catch {
     return false;
   }
@@ -490,8 +493,8 @@ export async function runGossipValidationTest(
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
           clock.setSlot(slot);
-          chain.beaconEngine.forkChoice.updateTime(slot);
-          chain.beaconEngine.forkChoice.onBlock(
+          (chain.beaconEngine as BeaconEngine).forkChoice.updateTime(slot);
+          (chain.beaconEngine as BeaconEngine).forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -506,8 +509,8 @@ export async function runGossipValidationTest(
 
         if (blockEntry.payload_status === "INVALIDATED") {
           clock.setSlot(slot);
-          chain.beaconEngine.forkChoice.updateTime(slot);
-          chain.beaconEngine.forkChoice.onBlock(
+          (chain.beaconEngine as BeaconEngine).forkChoice.updateTime(slot);
+          (chain.beaconEngine as BeaconEngine).forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -522,7 +525,7 @@ export async function runGossipValidationTest(
         }
 
         clock.setSlot(slot);
-        chain.beaconEngine.forkChoice.updateTime(slot);
+        (chain.beaconEngine as BeaconEngine).forkChoice.updateTime(slot);
 
         const blockImport = BlockInputPreData.createFromBlock({
           forkName: fork,
