@@ -6,7 +6,6 @@ import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -59,8 +58,6 @@ export interface IBeaconDb {
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
-
-  backfilledRanges: BackfilledRanges;
 
   dataColumns: IDataColumnStore;
   /** Highest legacy column slot at startup; later archival writes the block-root index first. */

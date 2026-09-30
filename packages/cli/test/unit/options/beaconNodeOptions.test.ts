@@ -31,12 +31,12 @@ describe("options / beaconNodeOptions", () => {
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoost": false,
       "chain.proposerBoostReorg": false,
+      "chain.dedupePayloads": false,
       "chain.disableImportExecutionFcU": false,
       "chain.preaggregateSlotDistance": 1,
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
@@ -107,7 +107,6 @@ describe("options / beaconNodeOptions", () => {
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
-      "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
     } as BeaconNodeArgs;
 
@@ -133,12 +132,12 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
         proposerBoost: false,
         proposerBoostReorg: false,
+        dedupePayloads: false,
         disableImportExecutionFcU: false,
         preaggregateSlotDistance: 1,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
         disableProposerSlashings: true,
         archiveStateEpochFrequency: 1024,
@@ -219,7 +218,6 @@ describe("options / beaconNodeOptions", () => {
         isSingleNode: true,
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
-        backfillBatchSize: 64,
         disableRangeSync: false,
       },
     };

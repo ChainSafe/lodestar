@@ -5,9 +5,10 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {DOMAIN_BUILDER_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
+import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
@@ -47,6 +48,40 @@ describe("ValidatorStore", () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  describe.each([false, true])("signBlock blinded=%s", (blinded) => {
+    beforeEach(async () => {
+      validatorStore = await initValidatorStore(secretKeys, api, {
+        ...chainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+      });
+    });
+
+    for (const blockSlot of [31, 33]) {
+      it(`rejects block slot ${blockSlot} for duty slot 32`, async () => {
+        const block = blinded ? ssz.fulu.BlindedBeaconBlock.defaultValue() : ssz.fulu.BeaconBlock.defaultValue();
+        block.slot = blockSlot;
+
+        await expect(validatorStore.signBlock(pubkeys[0], block, 32)).rejects.toMatchObject({
+          type: {code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blockSlot, dutySlot: 32},
+        });
+      });
+    }
+
+    it("signs a block matching the duty slot", async () => {
+      const block = blinded ? ssz.fulu.BlindedBeaconBlock.defaultValue() : ssz.fulu.BeaconBlock.defaultValue();
+      block.slot = 32;
+
+      const signedBlock = await validatorStore.signBlock(pubkeys[0], block, 32);
+      expect(signedBlock.message).toEqual(block);
+      expect(signedBlock.signature).toHaveLength(96);
+    });
   });
 
   it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async () => {
@@ -227,6 +262,28 @@ describe("ValidatorStore", () => {
     const otherSlot = computeSigningRoot(ssz.gloas.BuilderRequestAuth, {data, slot: proposalSlot + 1}, domain);
     expect(toHexString(otherData)).not.toBe(toHexString(signingRoot));
     expect(toHexString(otherSlot)).not.toBe(toHexString(signingRoot));
+  });
+
+  it("Should only sign an attestation with a target epoch matching the attestation slot", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const epoch = computeEpochAtSlot(slot);
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const data = {...ssz.phase0.AttestationData.defaultValue(), slot};
+
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch: epoch - 1, root: ZERO_HASH}}, epoch)
+    ).rejects.toThrow("Inconsistent attestation data during signing");
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch, root: ZERO_HASH}}, epoch)
+    ).resolves.toBeDefined();
   });
 
   it("Should reject builder request auth data with invalid length", async () => {

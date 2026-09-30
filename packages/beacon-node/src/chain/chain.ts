@@ -61,6 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -70,6 +71,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
+import {ReconstructMismatchPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
@@ -926,21 +928,71 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-    if (payloadInput?.hasPayloadEnvelope()) {
-      const envelope = payloadInput.getPayloadEnvelope();
-      const serialized = this.serializedCache.get(envelope);
-      if (serialized) {
-        return serialized;
+    const [bytes] = await this.getSerializedExecutionPayloadEnvelopes([{blockSlot, blockRootHex}]);
+    return bytes;
+  }
+
+  /**
+   * Batch variant: archived header envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
+   * A body root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
+   * returns null for that entry, for peer-facing paths where the spec allows omission.
+   */
+  async getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMismatch: ReconstructMismatchPolicy = "throw"
+  ): Promise<(Uint8Array | null)[]> {
+    const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
+    const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+    const headerEnvelopeIdxs: number[] = [];
+
+    for (let i = 0; i < requests.length; i++) {
+      const {blockSlot, blockRootHex} = requests[i];
+
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        const envelope = payloadInput.getPayloadEnvelope();
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        continue;
       }
-      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+      if (hot !== null) {
+        out[i] = hot;
+        continue;
+      }
+
+      const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+      if (archivedBytes === null) continue;
+
+      const archived = decodeArchivedEnvelope(archivedBytes);
+      if (archived.envelopeBytes !== undefined) {
+        out[i] = archived.envelopeBytes;
+        continue;
+      }
+      headerEnvelopes.push(archived.headerEnvelope);
+      headerEnvelopeIdxs.push(i);
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+    if (headerEnvelopes.length > 0) {
+      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, headerEnvelopes);
+      for (let j = 0; j < rebuilt.length; j++) {
+        const result = rebuilt[j];
+        if (isRebuildMiss(result)) {
+          if (result.reason === "mismatch") {
+            if (onMismatch === "throw") throw result.error;
+            this.logger.debug(
+              "Archived envelope failed body root check against EL bodies",
+              {slot: result.slot},
+              result.error
+            );
+          }
+          continue;
+        }
+        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+      }
+    }
+
+    return out;
   }
 
   async getExecutionPayloadEnvelope(
@@ -952,11 +1004,23 @@ export class BeaconChain implements IBeaconChain {
       return payloadInput.getPayloadEnvelope();
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+    if (archivedBytes === null) return null;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    if (archived.envelopeBytes !== undefined) {
+      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+    }
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
+      archived.headerEnvelope,
+    ]);
+    if (isRebuildMiss(result)) {
+      if (result.reason === "mismatch") throw result.error;
+      return null;
+    }
+    return result;
   }
 
   async getParentExecutionRequests(
@@ -967,11 +1031,23 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
+    // executionRequests is kept in the header envelope, so read it without reconstructing
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (hot !== null) return hot.message.executionRequests;
+
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
+    if (archivedBytes === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return envelope.message.executionRequests;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    return archived.envelopeBytes !== undefined
+      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
+      : archived.headerEnvelope.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {

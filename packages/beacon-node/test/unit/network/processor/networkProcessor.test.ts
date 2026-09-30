@@ -255,17 +255,18 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   });
 
   describe("which envelope lookups carry the payload slot", () => {
-    it("carries the slot when the message slot is the payload's slot", () => {
+    it("carries the slot, and no peer, when the message slot is the payload's slot", () => {
+      // optimistic search: the forwarding peer may not have the payload, so no peer is attached
       processPayloadAttestationMessage();
       expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
       expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
-      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: peerIdStr});
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: undefined});
 
       unknownEnvelopeBlockRootSlotSpy.mockClear();
       processDataColumn(0, 0xcf);
       expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
       expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
-      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: peerIdStr});
+      expect(lastEnvelopeSlotSearch()).toMatchObject({slot: clockSlot, peer: undefined});
     });
 
     it("carries no slot when the message slot is not necessarily the payload's slot", () => {
