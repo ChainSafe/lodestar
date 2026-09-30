@@ -292,10 +292,6 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
 
     if (canonicalBlockEntries.length === 0) continue;
 
-    // An oversized hot block stays unverified in the archive rather than certified by this copy
-    await db.blockCertification.unverifyOversized(
-      canonicalBlockEntries.map((entry) => ({slot: entry.slot, bytes: entry.value.byteLength}))
-    );
     await Promise.all([
       db.blockArchive.batchPutBinary(canonicalBlockEntries),
       db.block.batchDelete(canonicalBlockEntries.map((entry) => entry.blockRoot)),

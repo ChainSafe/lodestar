@@ -9,7 +9,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {Logger, defer, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
 import {IBeaconChain} from "../../../../../src/chain/interface.js";
 import {LightClientServer} from "../../../../../src/chain/lightClient/index.js";
@@ -204,7 +204,7 @@ function sources(
 }
 
 describe("stock serving reads", () => {
-  it("keep every serving read out of the block cache and refuse uncertified blocks before reading them", async () =>
+  it("keep every serving read out of the block cache without database certification", async () =>
     withDb(async (db, reads) => {
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
       // The root index row of the unknown by-root column request
@@ -216,12 +216,6 @@ describe("stock serving reads", () => {
         expect(expected.length, name).toBeGreaterThan(0);
         reads.length = 0;
         const served = Array.fromAsync(source(new ServingContext(policy)));
-        if (name === "blocksByRoot" || name === "blocksByRange") {
-          // No stored block is certified before the certification loads and this run's hot scan passes
-          await expect(served, name).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
-          expect(reads, name).toEqual([]);
-          continue;
-        }
         expect(await served, name).toEqual(expected);
         const opened = reads.filter((read) => read.call !== "next");
         expect(opened.length, name).toBeGreaterThan(0);
@@ -229,10 +223,8 @@ describe("stock serving reads", () => {
       }
     }));
 
-  it("read certified blocks outside the block cache and refuse blocks in unverified archive slots before reading them", async () =>
+  it("read hot and archived blocks without scanning and reject oversized archived values", async () =>
     withDb(async (db, reads) => {
-      // A database certified from its start: every block below was written by a capped writer
-      expect(await db.blockCertification.load()).toBeNull();
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
       const archivedRoot = new Uint8Array(32).fill(5);
       await db.blockArchive.batchPutBinary([
@@ -244,7 +236,6 @@ describe("stock serving reads", () => {
           parentRoot: root,
         },
       ]);
-      expect(await db.blockCertification.scanHot()).toBeNull();
       const {blocksByRoot, blocksByRange} = sources(chain, db);
       const archivedByRoot = (context?: ServingContext) => onBeaconBlocksByRoot([archivedRoot], chain, context);
       for (const source of [blocksByRoot, blocksByRange, archivedByRoot]) {
@@ -256,30 +247,89 @@ describe("stock serving reads", () => {
         expect(opened).toEqual(opened.map((read) => ({...read, fillCache: false})));
       }
 
-      // Finalization copied an oversized block into slot 1, so serving refuses it and any range holding it
-      await db.blockCertification.unverifyOversized([{slot: 1, bytes: config.MAX_PAYLOAD_SIZE + 1}]);
+      await db.blockArchive.putBinary(1, new Uint8Array(config.MAX_PAYLOAD_SIZE + 1));
       reads.length = 0;
       await expect(Array.fromAsync(blocksByRange(new ServingContext(policy)))).rejects.toMatchObject({
-        code: "HOST_SERVING_UNAVAILABLE",
+        code: "ValueTooLarge",
       });
-      expect(reads).toEqual([]);
-      // Only the root index row is read before the block behind it is refused
+      expect(reads).toEqual([{call: "iterator", fillCache: false, maxEntries: 1}, {call: "next"}, {call: "next"}]);
+      reads.length = 0;
       await expect(Array.fromAsync(archivedByRoot(new ServingContext(policy)))).rejects.toMatchObject({
-        code: "HOST_SERVING_UNAVAILABLE",
+        code: "HOST_SERVING_CAPACITY",
       });
-      expect(reads).toEqual([{call: "get", fillCache: false}]);
+      expect(reads).toEqual([
+        {call: "get", fillCache: false},
+        {call: "get", fillCache: false},
+      ]);
+      // The oversized archive row does not prevent serving an unrelated hot block.
+      expect(await Array.fromAsync(blocksByRoot(new ServingContext(policy)))).toHaveLength(1);
     }));
 
-  it("serve missing columns without reading an uncertified diagnostic block", async () =>
+  it("serves exact-limit stored blocks by root and range, rejects one extra byte, and leaves storage unchanged", async () =>
+    withDb(async (db, _reads, level) => {
+      const chain = makeChain(db);
+      const value = ssz.fulu.SignedBeaconBlock.defaultValue();
+      value.message.slot = slot;
+      const base = ssz.fulu.SignedBeaconBlock.value_serializedSize(value);
+      value.message.body.executionPayload.transactions = [new Uint8Array(policy.blockBytes - base - 4)];
+      const bytes = ssz.fulu.SignedBeaconBlock.serialize(value);
+      expect(bytes.byteLength).toBe(policy.blockBytes);
+      await db.block.putBinary(root, bytes);
+      await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
+      const keys = await Array.fromAsync(level.keys());
+      const get = vi.spyOn(level, "get");
+      const iterator = vi.spyOn(level, "iterator");
+      const archivedChain = {...chain, forkChoice: {...chain.forkChoice, getBlockHexDefaultStatus: () => null}};
+      const sources = [
+        (context: ServingContext) => onBeaconBlocksByRoot([root], chain, context),
+        (context: ServingContext) => onBeaconBlocksByRoot([root], archivedChain as IBeaconChain, context),
+        (context: ServingContext) =>
+          onBeaconBlocksByRange({startSlot: slot, count: 1, step: 1}, chain, db, peer, "test", context),
+      ];
+      for (const source of sources) {
+        const budget = HostServingBudget.forEnvironment(policy);
+        const handler = startServingHandler(budget, source);
+        const rows = await Array.fromAsync(handler);
+        await handler.retired;
+        expect(rows).toHaveLength(1);
+        expect(byteArrayEquals(rows[0].data, bytes)).toBe(true);
+        expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0});
+      }
+      expect(get).toHaveBeenCalledWith(
+        db.block.encodeKey(root),
+        expect.objectContaining({fillCache: false, maxValueBytes: policy.blockBytes})
+      );
+      expect(iterator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fillCache: false,
+          maxEntries: 1,
+          maxValueBytes: policy.blockBytes,
+          maxTotalBytes: policy.blockBytes + 9,
+        })
+      );
+      const oversized = new Uint8Array(bytes.byteLength + 1);
+      oversized.set(bytes);
+      await db.block.putBinary(root, oversized);
+      await db.blockArchive.putBinary(slot, oversized);
+      for (const source of sources) {
+        const budget = HostServingBudget.forEnvironment(policy);
+        const handler = startServingHandler(budget, source);
+        await expect(handler.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+        await handler.retired;
+        expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0, reservedBytes: 0});
+      }
+      expect(byteArrayEquals((await db.block.getBinary(root)) as Uint8Array, oversized)).toBe(true);
+      expect(byteArrayEquals((await db.blockArchive.getBinary(slot)) as Uint8Array, oversized)).toBe(true);
+      expect(await Array.fromAsync(level.keys())).toEqual(keys);
+    }));
+
+  it("serve missing columns without reading an oversized diagnostic block", async () =>
     withDb(async (db, reads) => {
-      // The archive is certified, but an oversized hot block may be copied into it by finalization at any time
-      expect(await db.blockCertification.load()).toBeNull();
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
       block.message.body.executionPayload.transactions = [new Uint8Array(config.MAX_PAYLOAD_SIZE)];
       const bytes = ssz.fulu.SignedBeaconBlock.serialize(block);
       await db.block.putBinary(root, bytes);
-      expect(await db.blockCertification.scanHot()).toMatchObject({slot, bytes: bytes.byteLength});
       await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
 
       reads.length = 0;

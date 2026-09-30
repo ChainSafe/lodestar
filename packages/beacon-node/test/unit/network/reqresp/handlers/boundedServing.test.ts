@@ -40,7 +40,6 @@ describe("bounded serving actual behavior", () => {
       forkChoice: {getFinalizedCheckpointSlot: () => 1},
     } as unknown as IBeaconChain;
     const archive = {
-      blockCertification: {isArchiveRangeVerified: () => true},
       blockArchive: {
         decodeKey: () => 0,
         binaryEntriesStream: () => ({
@@ -85,43 +84,6 @@ describe("bounded serving actual behavior", () => {
     expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0});
   });
 
-  it("refuses a range before any read when it reaches blocks that are not certified", async () => {
-    const chain = {
-      config,
-      logger,
-      earliestAvailableSlot: 0,
-      forkChoice: {
-        getFinalizedCheckpointSlot: () => 1,
-        getHead: () => ({slot: 1, blockRoot: "1"}),
-        getAllAncestorBlocks: () => [],
-        iterateAncestorBlocks: () => [].values(),
-      },
-    } as unknown as IBeaconChain;
-    const stream = vi.fn(() => [][Symbol.iterator]());
-    const certification = {hotVerified: false, isArchiveRangeVerified: vi.fn(() => true)};
-    const serve = (count: number) =>
-      Array.fromAsync(
-        Reflect.apply(onBeaconBlocksByRange, undefined, [
-          {startSlot: 0, count, step: 1},
-          chain,
-          {blockCertification: certification, blockArchive: {binaryEntriesStream: stream, decodeKey: () => 0}},
-          {toString: () => "peer"},
-          "test",
-          new ServingContext(policy),
-        ])
-      );
-    // Slots 0 and 1 are archived and certified; slot 2 is unfinalized and this run's hot scan has not passed
-    await expect(serve(3)).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
-    expect(stream).not.toHaveBeenCalled();
-    await expect(serve(2)).resolves.toEqual([]);
-    expect(stream).toHaveBeenCalledOnce();
-    expect(certification.isArchiveRangeVerified).toHaveBeenLastCalledWith(0, 1);
-    // An archived slot outside the certified interval refuses the range too
-    certification.isArchiveRangeVerified.mockReturnValue(false);
-    await expect(serve(1)).rejects.toMatchObject({code: "HOST_SERVING_UNAVAILABLE"});
-    expect(stream).toHaveBeenCalledOnce();
-  });
-
   it("rejects a small cached view with oversized backing", async () => {
     const block = ssz.altair.SignedBeaconBlock.defaultValue();
     const root = toRootHex(ssz.altair.BeaconBlock.hashTreeRoot(block.message));
@@ -153,9 +115,6 @@ describe("bounded serving actual behavior", () => {
       const db = new BeaconDb(config, controller);
       const root = new Uint8Array(32);
       await db.block.putBinary(root, new Uint8Array(2048));
-      // Within MAX_PAYLOAD_SIZE, so certified, but over this context's source cap
-      await db.blockCertification.load();
-      expect(await db.blockCertification.scanHot()).toBeNull();
       const chain = {
         config,
         db,
@@ -187,7 +146,7 @@ describe("bounded serving actual behavior", () => {
     const responses = Reflect.apply(onBeaconBlocksByRange, undefined, [
       {startSlot: 1, count: 1, step: 1},
       chain,
-      {blockCertification: {hotVerified: true}},
+      {},
       {toString: () => "peer"},
       "test",
       bounds,

@@ -6,7 +6,7 @@ import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ServingCapacityError, ServingContext, assertServableBlock} from "../../../chain/serving/context.js";
+import {ServingCapacityError, ServingContext} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
@@ -48,20 +48,11 @@ export async function* onBeaconBlocksByRange(
     );
   }
 
-  // A range with any block not certified to fit MAX_PAYLOAD_SIZE is refused before its first read
-  const {blockCertification} = db;
-  assertServableBlock(
-    context,
-    (startSlot > archiveMaxSlot ||
-      blockCertification.isArchiveRangeVerified(startSlot, Math.min(endSlot, archiveMaxSlot + 1) - 1)) &&
-      (endSlot <= archiveMaxSlot + 1 || blockCertification.hotVerified)
-  );
-
   // Finalized range of blocks
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({
-      ...(context ? {...context.streamOptions(), limit: count} : {}),
+      ...(context ? {...context.streamOptions(context.limits.blockBytes), limit: count} : {}),
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {

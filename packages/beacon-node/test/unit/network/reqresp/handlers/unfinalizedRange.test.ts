@@ -37,7 +37,7 @@ function fixture(slots: number[]) {
     },
     getSerializedBlockByRoot: read,
   } as unknown as IBeaconChain;
-  const db = {blockCertification: {hotVerified: true}} as unknown as IBeaconDb;
+  const db = {} as unknown as IBeaconDb;
   return {
     chain,
     db,

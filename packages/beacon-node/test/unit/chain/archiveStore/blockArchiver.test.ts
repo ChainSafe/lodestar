@@ -88,15 +88,6 @@ describe("block archiver task", () => {
       }));
 
     expect(dbStub.blockArchive.batchPutBinary).toHaveBeenNthCalledWith(1, expectedData);
-    // Sizes reach the serving block certification before the archive holds the blocks
-    expect(dbStub.blockCertification.unverifyOversized).toHaveBeenNthCalledWith(
-      1,
-      expectedData.map(({slot}) => ({slot, bytes: blockBytes.length}))
-    );
-    expect(vi.mocked(dbStub.blockCertification.unverifyOversized).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(dbStub.blockArchive.batchPutBinary).mock.invocationCallOrder[0]
-    );
-
     // delete canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith(
       [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))

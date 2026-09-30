@@ -1,4 +1,4 @@
-import {DbReqOpts, FilterOptions} from "@lodestar/db";
+import {BUCKET_LENGTH, DbReqOpts, FilterOptions, uintLen} from "@lodestar/db";
 
 export class ServingCapacityError extends Error {
   readonly code = "HOST_SERVING_CAPACITY";
@@ -7,22 +7,15 @@ export class ServingCapacityError extends Error {
   }
 }
 
-/** Why serving refuses data it stores: unavailable, rather than over capacity, until the reason clears */
-export type ServingUnavailableReason = "uncertified_block";
-
-export class ServingUnavailableError extends Error {
-  readonly code = "HOST_SERVING_UNAVAILABLE";
-  constructor(readonly reason: ServingUnavailableReason) {
-    super(`Local serving unavailable: ${reason}`);
-  }
-}
-
 export class ServingConfigurationError extends Error {
   readonly code = "HOST_SERVING_CONFIGURATION";
 }
 
 export function isServingCapacityError(error: unknown): boolean {
-  return error instanceof ServingCapacityError;
+  return (
+    error instanceof ServingCapacityError ||
+    (error instanceof Error && "code" in error && (error.code === "ValueTooLarge" || error.code === "BatchTooLarge"))
+  );
 }
 
 export type ServingLimits = Readonly<{
@@ -48,7 +41,7 @@ export type ServingLimits = Readonly<{
 
 /**
  * Retained sources survive yields; temporary source work stays charged until all reads settle. Every serving read
- * keeps the blocks it loads out of the LevelDB block cache and relies on the stored value bound of its repository.
+ * keeps the blocks it loads out of the LevelDB block cache and bounds native read output before copying it.
  */
 export class ServingContext {
   private operations = 0;
@@ -80,10 +73,18 @@ export class ServingContext {
   assertActive(): void {
     if (this.cancelled) throw Object.assign(new Error("Serving cancelled"), {code: "HOST_SERVING_CANCELLED"});
   }
-  /** Options of a stock range stream: one row per native read */
-  streamOptions(): Pick<FilterOptions<never>, "fillCache" | "rowAtATime"> {
-    this.assertActive();
-    return {fillCache: false, rowAtATime: true};
+  /** Slot-keyed range stream: one bounded value plus its encoded slot key per native read. */
+  streamOptions(
+    maxValueBytes = this.limits.sourceBytes
+  ): Pick<FilterOptions<never>, "fillCache" | "rowAtATime" | "maxValueBytes" | "maxTotalBytes"> {
+    maxValueBytes = Math.min(maxValueBytes, this.limits.sourceBytes);
+    this.checkSourcePhase(maxValueBytes, 1);
+    return {
+      fillCache: false,
+      rowAtATime: true,
+      maxValueBytes,
+      maxTotalBytes: maxValueBytes + BUCKET_LENGTH + uintLen,
+    };
   }
   private checkSourcePhase(maxValueBytes: number, maxEntries: number): void {
     this.assertActive();
@@ -98,14 +99,25 @@ export class ServingContext {
       throw new ServingCapacityError("source phase");
     }
   }
-  /** A read of a repository whose stored values are bounded; `maxValueBytes` and `maxEntries` size its charge */
+  /** Native output and its reservation are bounded until the read settles. */
   async read<T>(
     operation: (opts: DbReqOpts) => Promise<T>,
     maxValueBytes = this.limits.sourceBytes,
     maxEntries = 1
   ): Promise<T> {
     this.checkSourcePhase(maxValueBytes, maxEntries);
-    return this.track(operation, {fillCache: false}, maxValueBytes, maxEntries);
+    try {
+      return await this.track(
+        operation,
+        {fillCache: false, maxValueBytes, maxTotalBytes: Math.min(this.limits.sourceBytes, maxValueBytes * maxEntries)},
+        maxValueBytes,
+        maxEntries
+      );
+    } catch (error) {
+      if (!(error instanceof ServingCapacityError) && isServingCapacityError(error))
+        throw new ServingCapacityError("source bytes");
+      throw error;
+    }
   }
   private async track<T>(
     operation: (opts: DbReqOpts) => Promise<T>,
@@ -161,12 +173,4 @@ export function servingRead<T>(
   maxEntries?: number
 ): Promise<T> {
   return context ? context.read(operation, maxValueBytes, maxEntries) : operation();
-}
-
-/**
- * Refuses serving a stored block that is not certified to fit MAX_PAYLOAD_SIZE, before any read of it; the peer sees a
- * resource-unavailable response until verification or a restart certifies it. Reads outside serving are not refused.
- */
-export function assertServableBlock(context: ServingContext | undefined, certified: boolean): void {
-  if (context && !certified) throw new ServingUnavailableError("uncertified_block");
 }

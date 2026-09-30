@@ -203,15 +203,6 @@ export class BeaconNode {
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
     const boundedServing = opts.network.backend === "native";
-    // Before anything prunes or writes: a missing writer canary means a build without the certification ran
-    const unverified = await db.blockCertification.load();
-    if (boundedServing && unverified !== null) {
-      logger.info(
-        "Serving refuses archived blocks awaiting size verification with RESOURCE_UNAVAILABLE, on which some clients disconnect; run `lodestar beacon verify-blocks` with the node stopped",
-        {fromSlot: unverified.from, toSlot: unverified.to}
-      );
-    }
-
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
@@ -285,17 +276,6 @@ export class BeaconNode {
 
     // Load persisted data from disk to in-memory caches
     await chain.init();
-
-    if (boundedServing) {
-      // Serving reads stored blocks only after this scan finds none above MAX_PAYLOAD_SIZE
-      const oversized = await db.blockCertification.scanHot();
-      if (oversized) {
-        logger.warn(
-          "Hot block above MAX_PAYLOAD_SIZE, serving refuses stored blocks until restart with RESOURCE_UNAVAILABLE, on which some clients disconnect",
-          {...oversized}
-        );
-      }
-    }
 
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543

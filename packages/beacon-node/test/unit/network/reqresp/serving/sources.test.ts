@@ -45,14 +45,11 @@ const slot = 6 * SLOTS_PER_EPOCH;
 const logger = {debug: vi.fn(), verbose: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn()} as unknown as Logger;
 const peer = {toString: () => "peer"} as PeerId;
 
-/** A new database whose blocks serving may read: certified from its start, with a passed hot scan */
 async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Promise<void>): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-serving-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
     const db = new BeaconDb(config, controller);
-    expect(await db.blockCertification.load()).toBeNull();
-    expect(await db.blockCertification.scanHot()).toBeNull();
     await run(db, controller);
   } finally {
     await controller.close();
@@ -473,7 +470,7 @@ describe("actual serving sources", () => {
       }
     }));
 
-  it("serves a certified hot block and refuses an unverified archived block through the sole factory", async () =>
+  it("serves a hot block and refuses an oversized archived block through the sole factory", async () =>
     withDb(async (db, controller) => {
       const chain = makeChain(db);
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
@@ -488,18 +485,17 @@ describe("actual serving sources", () => {
       expect(await Array.fromAsync(bounded)).toEqual(expected);
       await bounded.retired;
       await db.block.delete(root);
-      // Finalization copies an oversized block into the archive and leaves its slot unverified
-      await db.blockCertification.unverifyOversized([{slot, bytes: policy.sourceBytes + 1}]);
+      // A stored oversized row is refused by the bounded native read.
       await controller.put(getRootIndexKey(root), intToBytes(slot, 8, "be"));
       await db.blockArchive.putBinary(slot, new Uint8Array(policy.sourceBytes + 1));
       const getBinary = vi.spyOn(db.blockArchive, "getBinary");
       const bad = handler(request, peer, "test");
       await expect(bad.next()).rejects.toMatchObject({
-        code: "HOST_SERVING_UNAVAILABLE",
-        status: RespStatus.RESOURCE_UNAVAILABLE,
+        code: "HOST_SERVING_CAPACITY",
+        status: RespStatus.SERVER_ERROR,
       });
       await bad.retired;
-      expect(getBinary).not.toHaveBeenCalled();
+      expect(getBinary).toHaveBeenCalledOnce();
       expect(budget.snapshot().occupancy).toBe(0);
     }));
 

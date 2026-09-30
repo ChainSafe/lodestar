@@ -27,8 +27,7 @@ import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
  * Pins the maximum legal stored values against the existing serving lease charges. Native read results coexist
  * with their JS copies during completion, including the whole getMany batch. Row-at-a-time cursors materialize one
  * row per page and release native page output after completion. The unchanged retained charges remain conservative.
- * Engine block buffers, decompression and block cache are outside the lease; certification still governs which
- * stored blocks may be served.
+ * Engine block buffers, decompression and block cache are outside the lease.
  */
 
 const MAX_BLOBS = 21;

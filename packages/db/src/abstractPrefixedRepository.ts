@@ -65,9 +65,9 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return this.type.hashTreeRoot(value) as I;
   }
 
-  /** The repository's read options, with `fillCache` when a read sets it */
+  /** Preserve repository attribution while forwarding the caller's read bounds and cache option. */
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    return opts?.fillCache === undefined ? this.dbReqOpts : {...this.dbReqOpts, fillCache: opts.fillCache};
+    return opts ? {...opts, ...this.dbReqOpts} : this.dbReqOpts;
   }
 
   async get(prefix: P, id: I, opts?: DbReqOpts): Promise<T | null> {
@@ -294,6 +294,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
 
     if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
     if (opts?.rowAtATime !== undefined) optsBuff.rowAtATime = opts.rowAtATime;
+    if (opts?.maxValueBytes !== undefined) optsBuff.maxValueBytes = opts.maxValueBytes;
+    if (opts?.maxTotalBytes !== undefined) optsBuff.maxTotalBytes = opts.maxTotalBytes;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 

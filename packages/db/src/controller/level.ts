@@ -1,4 +1,4 @@
-import {LevelDb, LevelDbIteratorOptions} from "@chainsafe/lodestar-z/leveldb";
+import {LevelDb, LevelDbIteratorOptions, LevelDbReadManyOptions} from "@chainsafe/lodestar-z/leveldb";
 import {Logger} from "@lodestar/utils";
 import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
@@ -246,18 +246,20 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 }
 
-function levelReadOptions(opts?: DbReqOpts): {fillCache?: boolean} {
-  return opts?.fillCache === undefined ? {} : {fillCache: opts.fillCache};
+function levelReadOptions(opts?: DbReqOpts): LevelDbReadManyOptions {
+  return {fillCache: opts?.fillCache, maxValueBytes: opts?.maxValueBytes, maxTotalBytes: opts?.maxTotalBytes};
 }
 
 function levelIteratorOptions(opts: FilterOptions<Uint8Array>): LevelDbIteratorOptions {
-  const {gt, gte, lt, lte, reverse, fillCache, limit} = opts;
+  const {gt, gte, lt, lte, reverse, fillCache, limit, maxValueBytes, maxTotalBytes} = opts;
   return {
     gt,
     gte,
     lt,
     lte,
     reverse,
+    maxValueBytes,
+    maxTotalBytes,
     fillCache: fillCache ?? true,
     limit: limit !== undefined && Number.isInteger(limit) && limit >= 0 ? limit : undefined,
     maxEntries: opts.rowAtATime === true ? 1 : undefined,

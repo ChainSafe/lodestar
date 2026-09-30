@@ -2,7 +2,6 @@ import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {beaconHandler} from "./handler.js";
 import {BeaconArgs, beaconOptions} from "./options.js";
-import {verifyBlocks} from "./verifyBlocks.js";
 
 export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   command: "beacon",
@@ -16,5 +15,4 @@ export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   ],
   options: beaconOptions as CliCommandOptions<BeaconArgs>,
   handler: beaconHandler,
-  subcommands: [verifyBlocks],
 };

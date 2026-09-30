@@ -126,13 +126,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {
-  ServingCapacityError,
-  ServingConfigurationError,
-  ServingContext,
-  assertServableBlock,
-  servingRead,
-} from "./serving/context.js";
+import {ServingCapacityError, ServingConfigurationError, ServingContext, servingRead} from "./serving/context.js";
 import {preflightServingBlock, preflightServingColumn, serializeServingValue} from "./serving/serialization.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
@@ -882,8 +876,11 @@ export class BeaconChain implements IBeaconChain {
           };
         }
       }
-      assertServableBlock(context, this.db.blockCertification.hotVerified);
-      const data = await servingRead(context, (opts) => this.db.block.getBinary(fromHex(root), opts));
+      const data = await servingRead(
+        context,
+        (opts) => this.db.block.getBinary(fromHex(root), opts),
+        context ? Math.min(context.limits.blockBytes, context.limits.sourceBytes) : undefined
+      );
       if (data) context?.checkResponse(data, context.limits.blockBytes);
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
@@ -903,11 +900,14 @@ export class BeaconChain implements IBeaconChain {
       const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
       return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
     }
-    // The eight-byte root index row, then the block if its slot is certified
+    // Bound the root index row separately from the block it points to
     const slot = await servingRead(context, (opts) => this.db.blockArchive.getSlotByRoot(fromHex(root), opts), 8);
     if (slot === null) return null;
-    assertServableBlock(context, this.db.blockCertification.isArchiveSlotVerified(slot));
-    const data = await servingRead(context, (opts) => this.db.blockArchive.getBinary(slot, opts));
+    const data = await servingRead(
+      context,
+      (opts) => this.db.blockArchive.getBinary(slot, opts),
+      Math.min(context.limits.blockBytes, context.limits.sourceBytes)
+    );
     if (data === null) return null;
     return {
       block: context.checkResponse(data, context.limits.blockBytes),

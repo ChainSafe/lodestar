@@ -222,16 +222,17 @@ it("reports a cancelled request's serving charges, to a later adapter too, until
   expect(request.respond).not.toHaveBeenCalled();
 });
 
-it("answers an uncertified stored block with RESOURCE_UNAVAILABLE before reading it", async () => {
+it("answers a stored block exceeding its native read bound with SERVER_ERROR", async () => {
   const config = servingConfig();
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   vi.spyOn(handlers, "servingBudget").mockReturnValue(budget);
   const root = new Uint8Array(32).fill(3);
-  const getBinary = vi.fn(async () => new Uint8Array(1));
-  // A hot block in fork choice, while this run's hot scan has not passed
+  const getBinary = vi.fn(async () => {
+    throw Object.assign(new Error("ValueTooLarge"), {code: "ValueTooLarge"});
+  });
   const chain = {
     config,
-    db: {block: {getBinary}, blockCertification: {hotVerified: false}},
+    db: {block: {getBinary}},
     seenBlockInputCache: {get: () => undefined},
     forkChoice: {getBlockHexDefaultStatus: () => ({blockRoot: toRootHex(root), slot: 1})},
   };
@@ -244,11 +245,12 @@ it("answers an uncertified stored block with RESOURCE_UNAVAILABLE before reading
   const owner = new NativeRequests(config, factory, 32);
   permission.resolve();
   await owner.serve(request);
-  expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
-  expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe(
-    "Local serving unavailable: uncertified_block"
+  expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.SERVER_ERROR, expect.any(Uint8Array));
+  expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe("Local serving capacity exhausted");
+  expect(getBinary).toHaveBeenCalledExactlyOnceWith(
+    root,
+    expect.objectContaining({fillCache: false, maxValueBytes: config.MAX_PAYLOAD_SIZE})
   );
-  expect(getBinary).not.toHaveBeenCalled();
   expect(request.respond).not.toHaveBeenCalled();
   expect(budget.snapshot().occupancy).toBe(0);
 });

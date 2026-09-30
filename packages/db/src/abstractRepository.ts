@@ -68,9 +68,9 @@ export abstract class BinaryRepository<I extends Id> {
     return key.slice(BUCKET_LENGTH) as I;
   }
 
-  /** The repository's read options, with `fillCache` when a read sets it */
+  /** Preserve repository attribution while forwarding the caller's read bounds and cache option. */
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    return opts?.fillCache === undefined ? this.dbReqOpts : {...this.dbReqOpts, fillCache: opts.fillCache};
+    return opts ? {...opts, ...this.dbReqOpts} : this.dbReqOpts;
   }
 
   async getBinary(id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
@@ -171,6 +171,8 @@ export abstract class BinaryRepository<I extends Id> {
 
     if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
     if (opts?.rowAtATime !== undefined) optsBuff.rowAtATime = opts.rowAtATime;
+    if (opts?.maxValueBytes !== undefined) optsBuff.maxValueBytes = opts.maxValueBytes;
+    if (opts?.maxTotalBytes !== undefined) optsBuff.maxTotalBytes = opts.maxTotalBytes;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
