@@ -269,6 +269,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
     },
   },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.gloas.BuilderPendingPayments.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.gloas.BuilderPendingWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
 
   // rewards
 

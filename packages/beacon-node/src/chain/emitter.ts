@@ -73,6 +73,10 @@ export enum ChainEvent {
    */
   unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**
+   * Same as unknownEnvelopeBlockRoot, but with slot
+   */
+  unknownEnvelopeBlockRootSlot = "unknownEnvelopeBlockRootSlot",
+  /**
    * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
    * cut-off window passes for waiting on gossip
    */
@@ -99,8 +103,8 @@ export type ChainEventData = {
     peer: PeerIdStr;
     source: BlockInputSource;
   };
-  // slot is the message slot, not necessarily the envelope's slot, but useful as a logging/prune hint
-  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -126,6 +130,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
   [ChainEvent.incompletePayloadEnvelope]: (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]) => void;
   [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]) => void;
 };
 
 /**

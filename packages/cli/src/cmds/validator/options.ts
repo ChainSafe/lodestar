@@ -290,7 +290,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.urls": {
     description:
-      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the UTF-8 bytes of the URL are used. Only used post-Gloas",
+      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas",
     type: "array",
     string: true,
     coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),

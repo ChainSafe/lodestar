@@ -12,6 +12,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
 import {ImportPayloadOpts} from "./types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -172,6 +173,9 @@ export async function importExecutionPayload(
   }
 
   // 4a. Run EL and signature verification in parallel
+  const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
+  this.logger.debug("Call engine api newPayload", logCtx);
+  const verifyStartSec = Date.now() / 1000;
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
@@ -191,6 +195,8 @@ export async function importExecutionPayload(
           this.bls
         ),
   ]);
+  this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+  this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
   // 4b. Check signature verification result
   if (!signatureValid) {
@@ -221,6 +227,14 @@ export async function importExecutionPayload(
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });
+  }
+
+  const {source, seenTimestampSec} = payloadInput.getPayloadEnvelopeSource();
+  if (execResult.status === ExecutionPayloadStatus.VALID && source === PayloadEnvelopeInputSource.gossip) {
+    const nowSec = Date.now() / 1000;
+    this.metrics?.gossipExecutionPayloadEnvelope.executionPayload.recvToValidation.observe(nowSec - seenTimestampSec);
+    // same metric as pre-gloas, it tracks EL verification time regardless of fork
+    this.metrics?.gossipBlock.executionPayload.validationTime.observe(nowSec - verifyStartSec);
   }
 
   // 5. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
