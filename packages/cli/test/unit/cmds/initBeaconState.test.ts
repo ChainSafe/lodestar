@@ -192,15 +192,16 @@ describe("initBeaconState", () => {
     const {checkpoint} = computeAnchorCheckpoint(config, checkpointFresh.state);
     const mismatchingCheckpoint = `${toRootHex(new Uint8Array(32).fill(0xab))}:${checkpoint.epoch}`;
 
-    for (const ignoreWeakSubjectivityCheck of [false, true]) {
-      await expect(
-        init(db, {
-          checkpointState: checkpointFresh.file,
-          wssCheckpoint: mismatchingCheckpoint,
-          ignoreWeakSubjectivityCheck,
-        })
-      ).rejects.toMatchObject({type: {code: StateInitializationErrorCode.CHECKPOINT_ROOT_MISMATCH}});
-    }
+    await expect(
+      init(db, {checkpointState: checkpointFresh.file, wssCheckpoint: mismatchingCheckpoint})
+    ).rejects.toMatchObject({type: {code: StateInitializationErrorCode.CHECKPOINT_ROOT_MISMATCH}});
+    await expect(
+      init(db, {
+        checkpointState: checkpointFresh.file,
+        wssCheckpoint: mismatchingCheckpoint,
+        ignoreWeakSubjectivityCheck: true,
+      })
+    ).rejects.toMatchObject({type: {code: StateInitializationErrorCode.CHECKPOINT_ROOT_MISMATCH}});
     expect(await db.stateArchive.keys()).toEqual([]);
 
     const result = await init(db, {
