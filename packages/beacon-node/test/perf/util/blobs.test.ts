@@ -47,8 +47,13 @@ describe("reconstructBlobs", () => {
       ];
 
       for (const {sidecars, name} of scenarios) {
+        // KZG cell reconstruction is CPU-heavy: normal run-to-run variance is small, but on the shared
+        // benchmark runner it occasionally spikes to a rare extreme outlier (a single ~250x-slower run)
+        // that no finite threshold can catch. Gate it report-only via noThreshold so it is still measured
+        // and posted to the comparison comment, but never fails CI.
         bench({
           id: `${name} - reconstruct all ${blobCount} blobs`,
+          noThreshold: true,
           fn: async () => {
             await reconstructBlobs(sidecars);
           },
@@ -56,6 +61,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct half of the blobs out of ${blobCount}`,
+          noThreshold: true,
           fn: async () => {
             const indices = Array.from({length: blobCount / 2}, (_, i) => i);
             await reconstructBlobs(sidecars, indices);
@@ -64,6 +70,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct single blob out of ${blobCount}`,
+          noThreshold: true,
           fn: async () => {
             await reconstructBlobs(sidecars, [0]);
           },

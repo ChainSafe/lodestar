@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding, TypeSizes} from "@lodestar/reqresp";
+import {computeMaxGloasDataColumnSidecarSize} from "../../util/sszBytes.js";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 
@@ -151,18 +152,42 @@ function toProtocol(protocol: ProtocolSummary) {
       encoding: Encoding.SSZ_SNAPPY,
       contextBytes: toContextBytes(protocol.contextBytesType, config),
       inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
-      requestSizes: requestType === null ? null : clampTypeSizes(requestType, config),
-      responseSizes: (fork) => clampTypeSizes(responseSszTypeByMethod[protocol.method](fork, protocol.version), config),
+      requestSizes: requestType === null ? null : clampTypeSizes(requestType, config.MAX_PAYLOAD_SIZE),
+      responseSizes: (fork) =>
+        clampResponseTypeSizes(
+          responseSszTypeByMethod[protocol.method](fork, protocol.version),
+          protocol.method,
+          fork,
+          config
+        ),
     };
   };
 }
 
+function clampResponseTypeSizes(
+  type: TypeSizes,
+  method: ReqRespMethod,
+  fork: ForkName,
+  config: BeaconConfig
+): TypeSizes {
+  let maxPayloadSize = config.MAX_PAYLOAD_SIZE;
+  if (isForkPostGloas(fork)) {
+    switch (method) {
+      case ReqRespMethod.DataColumnSidecarsByRange:
+      case ReqRespMethod.DataColumnSidecarsByRoot:
+        maxPayloadSize = Math.min(maxPayloadSize, computeMaxGloasDataColumnSidecarSize(config));
+        break;
+    }
+  }
+  return clampTypeSizes(type, maxPayloadSize);
+}
+
 /**
- * Length-prefix must be within the SSZ type bounds or MAX_PAYLOAD_SIZE, whichever is smaller
+ * Length-prefix must be within the SSZ type bounds or the configured payload limit, whichever is smaller.
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/p2p-interface.md#encoding-strategies
  */
-function clampTypeSizes(type: TypeSizes, config: BeaconConfig): TypeSizes {
-  return {minSize: type.minSize, maxSize: Math.min(type.maxSize, config.MAX_PAYLOAD_SIZE)};
+function clampTypeSizes(type: TypeSizes, maxPayloadSize: number): TypeSizes {
+  return {minSize: type.minSize, maxSize: Math.min(type.maxSize, maxPayloadSize)};
 }
 
 function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
