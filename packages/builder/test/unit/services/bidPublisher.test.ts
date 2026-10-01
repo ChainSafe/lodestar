@@ -15,7 +15,7 @@ import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/
 const builderIndex = 7;
 
 describe("BidPublisher", () => {
-  it("signs, records, and submits a bid with retained payload material", async () => {
+  it("signs, records, and submits a bid with a retained payload", async () => {
     const bid = createBid();
     const blockHash = toRootHex(bid.blockHash);
     const hasPayload = vi.fn(() => true);
@@ -77,14 +77,14 @@ describe("BidPublisher", () => {
           builderIndex,
           bidBuilderIndex: bid.builderIndex,
         },
-        `Bid Builder index does not match local Builder index builderIndex=${builderIndex} bidBuilderIndex=${bid.builderIndex}`
+        `Bid builder index does not match local builder index builderIndex=${builderIndex} bidBuilderIndex=${bid.builderIndex}`
       )
     );
     expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
-  it("rejects a bid whose reveal material is not retained", async () => {
+  it("rejects a bid whose payload is not retained", async () => {
     const bid = createBid();
     const identity = bidIdentity(bid);
     const {api, ledger, publisher} = createPublisher({hasPayload: vi.fn(() => false)});
@@ -194,7 +194,9 @@ describe("BidPublisher", () => {
     const {api, ledger, publisher} = createPublisher({hasPayload: vi.fn(() => true)});
     api.beacon.publishExecutionPayloadBid.mockResolvedValue(await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST));
 
-    await expect(publisher.publish(bid, new AbortController().signal)).rejects.toThrow();
+    await expect(publisher.publish(bid, new AbortController().signal)).rejects.toThrowError(
+      expect.objectContaining({status: HttpStatusCode.BAD_REQUEST})
+    );
     expect(ledger.hasSubmitted(bid.slot, toRootHex(bid.parentBlockHash), toRootHex(bid.parentBlockRoot))).toBe(true);
   });
 });

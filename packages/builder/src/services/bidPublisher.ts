@@ -1,7 +1,7 @@
 import type {ApiClient} from "@lodestar/api";
 import type {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
-import type {BuilderIndex, RootHex, gloas, heze} from "@lodestar/types";
+import type {BuilderIndex, RootHex, Slot, gloas, heze} from "@lodestar/types";
 import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import type {BidIdentity, BidLedger} from "./bidLedger.js";
@@ -25,7 +25,7 @@ export enum BidPublisherErrorCode {
 export type BidPublisherErrorType =
   | {
       code: BidPublisherErrorCode.PRE_GLOAS_BID;
-      slot: BidIdentity["slot"];
+      slot: Slot;
     }
   | {
       code: BidPublisherErrorCode.BUILDER_INDEX_MISMATCH;
@@ -34,7 +34,7 @@ export type BidPublisherErrorType =
     }
   | {
       code: BidPublisherErrorCode.PAYLOAD_NOT_RETAINED;
-      slot: BidIdentity["slot"];
+      slot: Slot;
       parentBlockHash: RootHex;
       parentBlockRoot: RootHex;
       blockHash: RootHex;
@@ -42,7 +42,7 @@ export type BidPublisherErrorType =
 
 export class BidPublisherError extends LodestarError<BidPublisherErrorType> {}
 
-/** Signs and submits a complete bid only after its reveal material is retained locally. */
+/** Signs and submits a bid only if its payload is retained locally. */
 export class BidPublisher {
   constructor(private readonly modules: BidPublisherModules) {}
 
@@ -63,7 +63,7 @@ export class BidPublisher {
           builderIndex,
           bidBuilderIndex: bid.builderIndex,
         },
-        `Bid Builder index does not match local Builder index builderIndex=${builderIndex} bidBuilderIndex=${bid.builderIndex}`
+        `Bid builder index does not match local builder index builderIndex=${builderIndex} bidBuilderIndex=${bid.builderIndex}`
       );
     }
 

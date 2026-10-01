@@ -208,7 +208,7 @@ describe("BidLedger", () => {
     ledger.prune(0);
 
     const error = getBidLedgerError(() => ledger.recordBid(bid));
-    expect(error.type).toEqual({code: BidLedgerErrorCode.BID_TOO_OLD, slot: bid.slot, oldestSlot: bid.slot + 1});
+    expect(error.type).toEqual({code: BidLedgerErrorCode.BID_TOO_OLD, slot: bid.slot, pruneCutoffSlot: bid.slot + 1});
     expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
   });
 

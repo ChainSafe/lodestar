@@ -51,7 +51,7 @@ export type BidLedgerErrorType =
   | {
       code: BidLedgerErrorCode.BID_TOO_OLD;
       slot: Slot;
-      oldestSlot: Slot;
+      pruneCutoffSlot: Slot;
     }
   | {
       code: BidLedgerErrorCode.REVEAL_CONFLICT;
@@ -75,7 +75,7 @@ const KEEP_SLOTS = RECORD_RETENTION_EPOCHS * SLOTS_PER_EPOCH;
 export class BidLedger {
   private readonly bidsBySlot = new Map<Slot, Map<string, MutableBidLedgerRecord>>();
   private readonly revealedPayloadByBlockRoot = new Map<RootHex, RevealedPayload>();
-  private oldestSlot = 0;
+  private pruneCutoffSlot = 0;
 
   hasSubmitted(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
     return this.bidsBySlot.get(slot)?.has(tupleKey(parentBlockHash, parentBlockRoot)) ?? false;
@@ -86,8 +86,8 @@ export class BidLedger {
     parentBlockHash,
     parentBlockRoot,
   }: Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot">): void {
-    if (slot < this.oldestSlot) {
-      throw new BidLedgerError({code: BidLedgerErrorCode.BID_TOO_OLD, slot, oldestSlot: this.oldestSlot});
+    if (slot < this.pruneCutoffSlot) {
+      throw new BidLedgerError({code: BidLedgerErrorCode.BID_TOO_OLD, slot, pruneCutoffSlot: this.pruneCutoffSlot});
     }
     if (this.hasSubmitted(slot, parentBlockHash, parentBlockRoot)) {
       throw new BidLedgerError(
@@ -211,10 +211,10 @@ export class BidLedger {
 
   prune(currentSlot: Slot): number {
     // Pruning must not make an expired slot eligible for another submission.
-    this.oldestSlot = Math.max(this.oldestSlot, currentSlot - KEEP_SLOTS);
+    this.pruneCutoffSlot = Math.max(this.pruneCutoffSlot, currentSlot - KEEP_SLOTS);
     let removed = 0;
     for (const [slot, bidsForSlot] of this.bidsBySlot) {
-      if (slot >= this.oldestSlot) {
+      if (slot >= this.pruneCutoffSlot) {
         continue;
       }
 
@@ -230,7 +230,7 @@ export class BidLedger {
     }
 
     for (const [blockRoot, revealedPayload] of this.revealedPayloadByBlockRoot) {
-      if (revealedPayload.slot < currentSlot - KEEP_SLOTS) {
+      if (revealedPayload.slot < this.pruneCutoffSlot) {
         this.revealedPayloadByBlockRoot.delete(blockRoot);
       }
     }
