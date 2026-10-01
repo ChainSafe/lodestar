@@ -197,6 +197,19 @@ type PreprocessResult =
   | {action: PreprocessAction.AwaitBlock; root: RootHex}
   | {action: PreprocessAction.AwaitEnvelope; root: RootHex};
 
+enum SearchTarget {
+  Block,
+  PayloadEnvelope,
+}
+
+type SearchUnknownRootTarget =
+  | {target: SearchTarget.Block}
+  | {
+      target: SearchTarget.PayloadEnvelope;
+      /** The message slot is the payload's slot, so it can be used for UnknownBlockInput search */
+      slotIsPayloadSlot: boolean;
+    };
+
 /**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
  * - Decides when to process work and what to process
@@ -450,7 +463,7 @@ export class NetworkProcessor {
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
-      this.searchUnknownRoot({slot, root}, true, false, peerId);
+      this.searchUnknownRoot({slot, root}, peerId, {target: SearchTarget.Block});
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
       // if "index = 1" we need to await for the Envelope instead
       preprocessResult = {action: PreprocessAction.AwaitBlock, root};
@@ -465,27 +478,28 @@ export class NetworkProcessor {
     if (topicType === GossipType.beacon_block) {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot) {
-        let searchParentBlock = false;
-        let searchParentEnvelope = false;
+        let search: SearchUnknownRootTarget | null = null;
         if (ForkSeq[fork] >= ForkSeq.gloas) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
           const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
           if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
-              searchParentBlock = true;
+              search = {target: SearchTarget.Block};
             } else if (
               protoBlock.executionPayloadBlockHash &&
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
               // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
-              searchParentEnvelope = true;
+              search = {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
             }
           }
         } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
-          searchParentBlock = true;
+          search = {target: SearchTarget.Block};
         }
-        this.searchUnknownRoot({slot, root: parentRoot}, searchParentBlock, searchParentEnvelope, peerId);
+        if (search !== null) {
+          this.searchUnknownRoot({slot, root: parentRoot}, peerId, search);
+        }
       }
       preprocessResult = {action: PreprocessAction.PushToQueue};
     }
@@ -504,7 +518,10 @@ export class NetworkProcessor {
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            this.searchUnknownRoot({slot, root}, peerId, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: false,
+            });
             preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
@@ -514,8 +531,12 @@ export class NetworkProcessor {
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // payload attestation votes that the payload is available but it is not yet known.
+            // this is optimistic search, the peer may not have the payload (only the ptc committee had).
             // the PTC vote's slot is the payload's slot
-            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
+            this.searchUnknownRoot({slot, root}, undefined, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: true,
+            });
             // do not await the envelope, payload attestation processing only requires that the block is known
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -524,8 +545,12 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+            // this is optimistic search, the peer may not have the payload.
             // the sidecar's slot is the block's (and so the payload's) slot
-            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
+            this.searchUnknownRoot({slot, root}, undefined, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: true,
+            });
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -536,7 +561,7 @@ export class NetworkProcessor {
           // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
           if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
-            this.searchUnknownRoot({slot, root: blockRoot}, true, false, peerId);
+            this.searchUnknownRoot({slot, root: blockRoot}, peerId, {target: SearchTarget.Block});
             // We always want to await the block
             // This allows us to properly forward the payload envelope
             preprocessResult = {action: PreprocessAction.AwaitBlock, root: blockRoot};
@@ -555,13 +580,16 @@ export class NetworkProcessor {
           ) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
             if (protoBlock === null) {
-              this.searchUnknownRoot({slot, root: parentBlockRoot}, true, false, peerId);
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {target: SearchTarget.Block});
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
             } else if (
               protoBlock.executionPayloadBlockHash &&
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
-              this.searchUnknownRoot({slot, root: parentBlockRoot}, false, true, peerId);
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {
+                target: SearchTarget.PayloadEnvelope,
+                slotIsPayloadSlot: false,
+              });
               preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
             }
           }
@@ -664,20 +692,21 @@ export class NetworkProcessor {
 
   /**
    * Search block/envelope given a SlotRootHex
-   * envelopeSlotIsPayloadSlot: the message slot is the payload's slot or not
+   * undefined peer id means optimistic search
    */
   private searchUnknownRoot(
     slotRoot: SlotRootHex,
-    searchBlock: boolean,
-    searchEnvelope: boolean,
-    peerId: PeerIdStr,
-    envelopeSlotIsPayloadSlot = false
+    peerId: PeerIdStr | undefined,
+    search: SearchUnknownRootTarget
   ): void {
-    if (!searchBlock && !searchEnvelope) return;
     if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
-    if (searchBlock) this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
-    if (searchEnvelope) {
-      this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, envelopeSlotIsPayloadSlot);
+    switch (search.target) {
+      case SearchTarget.Block:
+        this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
+        break;
+      case SearchTarget.PayloadEnvelope:
+        this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, search.slotIsPayloadSlot);
+        break;
     }
   }
 

@@ -12,6 +12,7 @@ import {
   ValidatorStatus,
   electra,
   fulu,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -366,6 +367,32 @@ export type Endpoints = {
     fulu.ProposerLookahead,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get State Builder Pending Payments
+   *
+   * Returns pending builder payments for state with given 'stateId'.
+   */
+  getBuilderPendingPayments: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    gloas.BuilderPendingPayments,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
+   * Get State Builder Pending Withdrawals
+   *
+   * Returns pending builder withdrawals for state with given 'stateId'.
+   */
+  getBuilderPendingWithdrawals: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    gloas.BuilderPendingWithdrawals,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
@@ -643,6 +670,24 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: stateIdOnlyReq,
       resp: {
         data: ssz.fulu.ProposerLookahead,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBuilderPendingPayments: {
+      url: "/eth/v1/beacon/states/{state_id}/builder_pending_payments",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.gloas.BuilderPendingPayments,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBuilderPendingWithdrawals: {
+      url: "/eth/v1/beacon/states/{state_id}/builder_pending_withdrawals",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.gloas.BuilderPendingWithdrawals,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

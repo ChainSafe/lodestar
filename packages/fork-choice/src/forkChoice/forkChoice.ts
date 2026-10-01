@@ -2325,15 +2325,39 @@ export class ForkChoice implements IForkChoice {
 
         const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
         this.fcStore.confirmedRoot = result.confirmedRoot;
-        this.notifyConfirmedRoot();
       } catch (err) {
-        this.logger?.debug(
-          "Fast confirmation failed",
-          {slot: this.fcStore.currentSlot, head: this.head.blockRoot, confirmedRoot: this.fcStore.confirmedRoot},
+        const previousConfirmedRoot = this.fcStore.confirmedRoot;
+        const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+        this.fcStore.confirmedRoot = finalizedRoot;
+        if (previousConfirmedRoot !== finalizedRoot) {
+          this.metrics?.fastConfirmation.resets.inc();
+          this.metrics?.fastConfirmation.fallbacks.inc();
+        }
+
+        const finalizedBlock = this.getBlockHexDefaultStatus(finalizedRoot);
+        if (finalizedBlock !== null) {
+          this.metrics?.fastConfirmation.confirmedEpoch.set(computeEpochAtSlot(finalizedBlock.slot));
+          this.metrics?.fastConfirmation.slot.set(finalizedBlock.slot);
+        }
+
+        this.logger?.warn(
+          "Fast confirmation failed, reverting to finalized",
+          {
+            slot: this.fcStore.currentSlot,
+            head: this.head.blockRoot,
+            previousConfirmedRoot,
+            confirmedRoot: finalizedRoot,
+          },
           err as Error
         );
       }
     });
+
+    try {
+      this.notifyConfirmedRoot();
+    } catch (err) {
+      this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+    }
 
     return true;
   }

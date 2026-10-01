@@ -1057,6 +1057,8 @@ export function getValidatorApi(
             rank: index + 1,
             source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
             builder: candidate.signedBid.message.builderIndex,
+            value: prettyGweiToEth(candidate.signedBid.message.value),
+            executionPayment: prettyGweiToEth(candidate.signedBid.message.executionPayment),
             total: prettyGweiToEth(candidate.totalGwei),
             boost: candidate.boostFactor,
             boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
@@ -2104,7 +2106,7 @@ export function getValidatorApi(
               auth: entry.auth,
             });
           } catch (e) {
-            failures.push({index: i, message: (e as Error).message});
+            failures.push({index: i, message: `${builder}: ${(e as Error).message}`});
             logger.verbose(
               `Error on submitBuilderPreferences [${i}]`,
               {slot: entry.auth.message.slot, builder},
