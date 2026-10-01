@@ -56,12 +56,7 @@ import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {AttestationErrorCode, SyncCommitteeErrorCode} from "../../../chain/errors/index.js";
 import {CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
-import {
-  BlockType,
-  type PreparedBlockScalars,
-  ProduceFullDeneb,
-  ProduceFullGloas,
-} from "../../../chain/produceBlock/index.js";
+import {BlockType, type ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -331,11 +326,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlock,
-      prepared,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
-      prepared: PreparedBlockScalars;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -370,7 +363,6 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
-        ...prepared,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -403,11 +395,9 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
-      prepared,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
-      prepared: PreparedBlockScalars;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -423,7 +413,6 @@ export function getValidatorApi(
         graffiti,
         feeRecipient,
         commonBlockBodyPromise,
-        ...prepared,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -505,14 +494,14 @@ export function getValidatorApi(
     const graffitiBytes = toGraffitiBytes(
       graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
     );
-    // Engine computes the shared head once (proposer head, forkChoice exec hashes, base-state scalars) and
+    // TODO (zig_engine_el_plan.md Step 5): replace preparation and the V3 race with one beaconEngine.produceBlock call.
+    // Engine selects the shared parent and
     // kicks off the deferred common-body packing. builderBid is gloas-only — discarded on the V3 path.
     const {
       parentBlock,
       builderBid: _builderBid,
       commonBlockBodyPromise,
-      ...prepared
-    } = await chain.beaconEngine.produceBlockBase({slot, randaoReveal, graffiti: graffitiBytes});
+    } = await chain.beaconEngine.prepareBlockProduction({slot, randaoReveal, graffiti: graffitiBytes});
     const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
     const parentBlockRoot = fromHex(parentBlockRootHex);
     notOnOutOfRangeData(parentBlockRoot);
@@ -565,7 +554,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlock,
-          prepared,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -575,7 +563,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlock,
-          prepared,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -821,8 +808,9 @@ export function getValidatorApi(
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
       // The engine computes the shared head once (proposer head, shouldBuildOnFull, best builder bid,
-      // forkChoice exec hashes, base-state scalars) and kicks off common-body packing.
-      const {parentBlock, builderBid, commonBlockBodyPromise, ...prepared} = await chain.beaconEngine.produceBlockBase({
+      // common-body packing.
+      // TODO (zig_engine_el_plan.md Step 5): replace preparation and the V4 race with one beaconEngine.produceBlockV4 call.
+      const {parentBlock, builderBid, commonBlockBodyPromise} = await chain.beaconEngine.prepareBlockProduction({
         slot,
         randaoReveal,
         graffiti: graffitiBytes,
@@ -854,7 +842,6 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
         feeRecipient,
         commonBlockBodyPromise,
-        ...prepared,
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});

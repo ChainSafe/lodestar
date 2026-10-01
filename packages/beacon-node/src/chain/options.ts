@@ -21,8 +21,6 @@ export type IChainOptions = IBeaconEngineOptions &
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
     skipCreateStateCacheIfAvailable?: boolean;
-    /** Ensure blobs returned by the execution engine are valid */
-    sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */

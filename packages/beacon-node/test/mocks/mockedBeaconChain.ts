@@ -41,7 +41,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   beaconEngine: BeaconEngine;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
-  // real `prepareForNextSlot` / `produceBlockBase` bound onto it call `this.recomputeForkChoiceHead`
+  // real `prepareForNextSlot` / `prepareBlockProduction` bound onto it call `this.recomputeForkChoiceHead`
   // etc.). No longer on the facade — stubbed here so tests can control head selection.
   recomputeForkChoiceHead: Mock<(caller: ForkchoiceCaller) => ProtoBlock>;
   updateBuilderStatus: Mock<(slot: Slot) => void>;
@@ -214,7 +214,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       shufflingCache: new ShufflingCache(),
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
-      produceBlockBase: vi.fn(),
+      // TODO (zig_engine_el_plan.md Step 5): replace transitional preparation mocks with the final V3/V4 race entries.
+      prepareBlockProduction: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),

@@ -2,9 +2,8 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BeaconStateView, CachedBeaconStateElectra, computeTimeAtSlot} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
-import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/index.js";
@@ -98,30 +97,14 @@ describe("produceBlockBody", () => {
         parentBlock: head,
       });
 
-      // Scalars normally precomputed by produceBlockBase; mirror the genesis exec hash so the EL mock
-      // (headBlockHash/finalizedBlockHash ∈ validBlocks) accepts the forkchoice update.
-      const parentBlockHash = state.latestExecutionPayloadHeader.blockHash;
-      const parentHashHex = toRootHex(parentBlockHash);
-      await produceBlockBody.call(chain, BlockType.Full, {
+      await produceBlockBody.call(chain.beaconEngine as BeaconEngine, BlockType.Full, state, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
         parentBlock: head,
         proposerIndex,
         proposerPubKey,
-        defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
-        feeRecipientCached: false,
         commonBlockBodyPromise,
-        safeBlockHash: parentHashHex,
-        finalizedBlockHash: parentHashHex,
-        timestamp: computeTimeAtSlot(chain.config, slot + 1, state.genesisTime),
-        prevRandao: state.getRandaoMix(state.epoch),
-        parentBlockHash,
-        parentGasLimit: state.latestExecutionPayloadHeader.gasLimit,
-        isBuildingOnFull: false,
-        parentExecutionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
-        payloadAttestations: [],
-        withdrawals: state.getExpectedWithdrawals().expectedWithdrawals,
       });
     },
   });

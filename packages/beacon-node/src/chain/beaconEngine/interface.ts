@@ -15,14 +15,12 @@ import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@
 import {
   Attestation,
   AttesterSlashing,
-  BLSPubkey,
   BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
   Bytes32,
   CommitteeIndex,
   Epoch,
-  Gwei,
   IndexedAttestation,
   Root,
   RootHex,
@@ -58,7 +56,7 @@ import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
-import {BlockAttributes, PayloadAttributesWithdrawals} from "../produceBlock/produceBlockBody.js";
+import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "../produceBlock/produceBlockBody.js";
 import {RegenRequest} from "../regen/index.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
@@ -124,44 +122,27 @@ export type ImportBlockResult = {
   };
 };
 
-/**
- * Shared head of block production, computed once by `produceBlockBase` and reused across the
- * self-build and builder-bid paths. Holds no `BeaconState` — only scalar fields the downstream flow
- * needs plus the (still-pending) common block body.
- */
-export type ProduceBlockBaseResult = {
+/** Transitional shared context for the facade race until Step 5. */
+// TODO (zig_engine_el_plan.md Step 5): delete this context type when parent/bid selection and packing move into the race.
+export type PrepareBlockProductionResult = {
   parentBlock: ProtoBlock;
-  proposerIndex: ValidatorIndex;
-  proposerPubKey: BLSPubkey;
-  /** Proposer fee recipient resolved from the engine cache (cached-or-default); API-requested overrides it */
-  defaultFeeRecipient: string;
-  /** Whether the proposer had a registered fee recipient (vs the configured default) — for logging */
-  feeRecipientCached: boolean;
-  safeBlockHash: RootHex;
-  finalizedBlockHash: RootHex;
-  /** EL payload-attribute timestamp (computeTimeAtSlot) */
-  timestamp: number;
-  prevRandao: Bytes32;
-  /** self-build parent execution block hash (gloas: from the bid; bellatrix: from the header) */
-  parentBlockHash: Bytes32;
-  /** parent execution gas limit (gloas: from the bid; bellatrix: from the header) */
-  parentGasLimit: number;
-  /** gloas: forkChoice.shouldBuildOnFull(parentBlock, slot); false pre-gloas */
-  isBuildingOnFull: boolean;
-  /** gloas: best bid from the (engine-owned) executionPayloadBidPool; null otherwise */
   builderBid: gloas.SignedExecutionPayloadBid | null;
-  /** gloas: parent execution requests applied to produce the common body (default = empty / build-on-empty) */
-  parentExecutionRequests: gloas.ExecutionRequests;
-  /** gloas: payload attestations for the parent block's payload (slot - 1); empty pre-gloas */
-  payloadAttestations: gloas.PayloadAttestation[];
-  /** payload-attribute withdrawals resolved from the parent-payload-applied state (post-capella) */
-  withdrawals?: PayloadAttributesWithdrawals;
-  /** gloas: proposer target gas limit, resolved engine-side so the facade self-build EL call passes it
-   * as plain data; undefined pre-gloas */
-  targetGasLimit?: number;
-  /** common body produced from the parent-payload-applied state — its voluntaryExits are already valid */
   commonBlockBodyPromise: Promise<CommonBlockBody>;
 };
+
+// TODO (zig_engine_el_plan.md Step 5): replace this full/blinded response with selected V3/V4 results and typed error payloads.
+export type ProduceBlockResponse<T extends BlockType> =
+  | {
+      ok: true;
+      data: {
+        block: AssembledBlockType<T>;
+        executionPayloadValue: bigint;
+        consensusBlockValue: bigint;
+        shouldOverrideBuilder?: boolean;
+        produceResult: ProduceResult;
+      };
+    }
+  | {ok: false; code: BeaconEngineErrorCode; payload: {message: string}};
 
 /** The DA prune parent returned after engine-owned slot preparation. */
 export type PrepareNextSlotResult = {daPruneParent: ProtoBlock};
@@ -230,8 +211,8 @@ export interface IBeaconEngine {
   readonly config: BeaconConfig;
 
   // Block production. `produceCommonBlockBody` builds the fork-agnostic body part (reused across the
-  // self-build / builder-bid paths). `produceBlockBase` computes the shared head once (proposer head,
-  // builder-bid lookup, forkChoice exec hashes, base-state scalars) so they are not recomputed per path.
+  // self-build / builder-bid paths). `prepareBlockProduction` retains only parent/bid/common body
+  // until Step 5 moves the race into the engine.
   // More of the production flow migrates here in later steps.
   getProposerHead(slot: Slot): ProtoBlock;
 
@@ -311,14 +292,18 @@ export interface IBeaconEngine {
   ): Promise<void>;
   getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null>;
 
+  // TODO (zig_engine_el_plan.md Step 5): remove both preparatory calls from this interface; keep their work internal.
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlockBase(attrs: {slot: Slot; randaoReveal: BLSSignature; graffiti: Bytes32}): Promise<ProduceBlockBaseResult>;
-  // Compute the post-state root + proposer reward for a produced block.
-  computeNewStateRoot(
-    block: BeaconBlock | BlindedBeaconBlock,
-    blockBytes: Uint8Array,
-    blinded: boolean
-  ): Promise<{newStateRoot: Root; proposerReward: Gwei}>;
+  prepareBlockProduction(attrs: {
+    slot: Slot;
+    randaoReveal: BLSSignature;
+    graffiti: Bytes32;
+  }): Promise<PrepareBlockProductionResult>;
+  // TODO (zig_engine_el_plan.md Step 5): replace this entry with produceBlock and produceBlockV4; accept no promises.
+  produceBlockForProposal<T extends BlockType>(
+    blockType: T,
+    attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
+  ): Promise<ProduceBlockResponse<T>>;
 
   // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
   // proposer-boost-reorg, precompute the epoch transition, prepare the EL/builder and emit SSE.

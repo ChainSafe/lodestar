@@ -14,7 +14,6 @@ import {IBeaconStateView, PubkeyCache, isStatePostGloas} from "@lodestar/state-t
 import {
   BeaconBlock,
   BlindedBeaconBlock,
-  BlindedBeaconBlockBody,
   DataColumnSidecar,
   Epoch,
   Root,
@@ -24,7 +23,6 @@ import {
   Status,
   UintNum64,
   ValidatorIndex,
-  Wei,
   deneb,
   gloas,
   isBlindedBeaconBlock,
@@ -32,7 +30,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
@@ -63,8 +61,8 @@ import {CommonBlockBody, IBeaconChain, ProposerPreparationData} from "./interfac
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
-import {BlockAttributes, PreparedBlockScalars, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlockType, ProduceResult} from "./produceBlock/index.js";
+import {BlockAttributes} from "./produceBlock/produceBlockBody.js";
 import {ReprocessController} from "./reprocess.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
@@ -745,138 +743,35 @@ export class BeaconChain implements IBeaconChain {
     return sidecarsFinalized;
   }
 
-  produceBlock(
-    blockAttributes: BlockAttributes & {
-      commonBlockBodyPromise: Promise<CommonBlockBody>;
-    } & PreparedBlockScalars
-  ): Promise<{
-    block: BeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }> {
-    return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+  // TODO (zig_engine_el_plan.md Step 5): remove these production delegates when the API calls the engine race directly.
+  produceBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
+    return this.produceBlockForProposal(BlockType.Full, attrs);
   }
 
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes & {
-      commonBlockBodyPromise: Promise<CommonBlockBody>;
-    } & PreparedBlockScalars
-  ): Promise<{
-    block: BlindedBeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-  }> {
-    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+  produceBlindedBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
+    return this.produceBlockForProposal(BlockType.Blinded, attrs);
   }
 
-  async produceBlockWrapper<T extends BlockType>(
+  // TODO (zig_engine_el_plan.md Step 5): delete this temporary name/helper; move result/error mapping and DA caching to the API.
+  private async produceBlockForProposal<T extends BlockType>(
     blockType: T,
-    {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      commonBlockBodyPromise,
-      parentBlock,
-      builderBid,
-      // All scalars are precomputed once by produceBlockBase (both V3 and V4) and threaded through, so
-      // produceBlockBody no longer needs a BeaconState here.
-      proposerIndex,
-      proposerPubKey,
-      defaultFeeRecipient,
-      feeRecipientCached,
-      safeBlockHash,
-      finalizedBlockHash,
-      timestamp,
-      prevRandao,
-      parentBlockHash,
-      parentGasLimit,
-      isBuildingOnFull,
-      parentExecutionRequests,
-      payloadAttestations,
-      withdrawals,
-    }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>} & PreparedBlockScalars
-  ): Promise<{
-    block: AssembledBlockType<T>;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }> {
-    const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
-      this,
-      blockType,
-      {
-        randaoReveal,
-        graffiti,
-        slot,
-        feeRecipient,
-        parentBlock,
-        proposerIndex,
-        safeBlockHash,
-        finalizedBlockHash,
-        timestamp,
-        prevRandao,
-        parentBlockHash,
-        parentGasLimit,
-        isBuildingOnFull,
-        parentExecutionRequests,
-        payloadAttestations,
-        withdrawals,
-        proposerPubKey,
-        defaultFeeRecipient,
-        feeRecipientCached,
-        commonBlockBodyPromise,
-        builderBid,
-      }
-    );
-
-    // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
-    const bodyRoot =
-      produceResult.type === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config
-            .getPostBellatrixForkTypes(slot)
-            .BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
-    this.logger.debug("Computing block post state from the produced body", {
-      slot,
-      bodyRoot: toRootHex(bodyRoot),
-      blockType,
-    });
-
-    const block = {
-      slot,
-      proposerIndex,
-      parentRoot: fromHex(parentBlock.blockRoot),
-      stateRoot: ZERO_HASH,
-      body,
-    } as AssembledBlockType<T>;
-
-    // Serialize the (zero-stateRoot) block for the bytes-first seam. The JS engine uses the POJO; the
-    // serialized bytes + `blinded` flag are for the future native engine.
-    const blinded = produceResult.type === BlockType.Blinded;
-    const blockBytes = blinded
-      ? this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.serialize(block as BlindedBeaconBlock)
-      : this.config.getForkTypes(slot).BeaconBlock.serialize(block as BeaconBlock);
-    const {newStateRoot, proposerReward} = await this.beaconEngine.computeNewStateRoot(block, blockBytes, blinded);
-    block.stateRoot = newStateRoot;
+    attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
+  ) {
+    // [beacon-engine] deviation: thin facade delegates remain until the API race moves in Step 5.
+    const result = await this.beaconEngine.produceBlockForProposal(blockType, attrs);
+    if (!result.ok) {
+      throw Error(result.payload.message);
+    }
+    const {produceResult, ...produced} = result.data;
     const blockRoot =
       produceResult.type === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
-    const blockRootHex = toRootHex(blockRoot);
-
-    const fork = this.config.getForkName(slot);
-    // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
-    if (isForkPostGloas(fork) && produceResult.type !== BlockType.Full) {
-      throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
-    }
-
-    // Track the produced block for consensus broadcast validations, later validation, etc.
-    this.blockProductionCache.set(blockRootHex, produceResult);
+        ? this.config.getForkTypes(attrs.slot).BeaconBlock.hashTreeRoot(produced.block as BeaconBlock)
+        : this.config
+            .getPostBellatrixForkTypes(attrs.slot)
+            .BlindedBeaconBlock.hashTreeRoot(produced.block as BlindedBeaconBlock);
+    this.blockProductionCache.set(toRootHex(blockRoot), produceResult);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-
-    return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
+    return produced;
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
