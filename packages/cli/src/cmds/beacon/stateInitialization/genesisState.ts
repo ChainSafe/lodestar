@@ -49,6 +49,9 @@ export async function prepareGenesisInitialization(
     stateBytes,
     config,
     isFinalized: true,
+    validateBeforeLoad() {
+      // Genesis states are never rejected for staleness.
+    },
     validate(state) {
       const stateRoot = toRootHex(state.hashTreeRoot());
       if (expectedRoot !== null && stateRoot !== expectedRoot) {

@@ -116,6 +116,7 @@ async function executeStateInitialization(
   stateInit: StateInitialization,
   useNative: boolean
 ): Promise<InitBeaconStateResult> {
+  stateInit.validateBeforeLoad();
   const {config, stateBytes} = stateInit;
   const validatorCount = getValidatorCountFromStateBytes(config, stateBytes);
   if (validatorCount === null) {

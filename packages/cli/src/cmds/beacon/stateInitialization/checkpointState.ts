@@ -192,9 +192,7 @@ function prepareCheckpointInitialization(
     stateBytes,
     config,
     isFinalized,
-    validate(state) {
-      // A supplied checkpoint must match even when the period check is ignored.
-      if (expectedCheckpoint !== null) assertStateMatchesCheckpoint(state, expectedCheckpoint);
+    validateBeforeLoad() {
       const passedValidation =
         archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
       if (!passedValidation && !ignoreWeakSubjectivityCheck) {
@@ -204,6 +202,12 @@ function prepareCheckpointInitialization(
           `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
         );
       }
+    },
+    validate(state) {
+      // A supplied checkpoint must match even when the period check is ignored.
+      if (expectedCheckpoint !== null) assertStateMatchesCheckpoint(state, expectedCheckpoint);
+      const passedValidation =
+        archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
       if (isFinalized) {
         assertAnchorStateForkMatchesConfig(config, state);
         const source = useArchived ? "db" : "checkpoint";
