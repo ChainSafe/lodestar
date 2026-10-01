@@ -96,9 +96,15 @@ export async function waitForHead(
     if (!options.silent) {
       console.log(`\nWaiting for head=${options.head} slot=${options.slot} on node=${node.id}.`);
     }
+    let firstHeadEventSlot: number;
+
     const cb = (event: {block: string; slot: Slot}): void => {
+      if (!firstHeadEventSlot) {
+        firstHeadEventSlot = event.slot;
+      }
+
       // The syncing happens quickly and we already crossed the head slot
-      if (event.slot >= options.slot) {
+      if (firstHeadEventSlot >= options.slot) {
         env.tracker.off(node, SimulationTrackerEvent.Head, cb);
         resolve();
         return;
