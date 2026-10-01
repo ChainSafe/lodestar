@@ -178,7 +178,7 @@ function prepareCheckpointInitialization(
   if (weakSubjectivity === null) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
-      `Cannot extract weak subjectivity summary from ${candidate.source}`
+      `Cannot extract weak subjectivity summary from ${candidate.source}, expected ${chainForkConfig.getForkName(metadata.slot)} state at slot ${metadata.slot}, possible fork or network mismatch`
     );
   }
   const expectedCheckpoint = useArchived ? null : candidate.expectedCheckpoint;
@@ -208,8 +208,8 @@ function prepareCheckpointInitialization(
       if (expectedCheckpoint !== null) assertStateMatchesCheckpoint(state, expectedCheckpoint);
       const passedValidation =
         archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
+      assertAnchorStateForkMatchesConfig(config, state);
       if (isFinalized) {
-        assertAnchorStateForkMatchesConfig(config, state);
         const source = useArchived ? "db" : "checkpoint";
         const logData = {
           slot: state.slot,
