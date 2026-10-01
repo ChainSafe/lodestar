@@ -1,13 +1,10 @@
 import {DbCPStateDatastore, FileCPStateDatastore, persistAnchorState} from "@lodestar/beacon-node";
 import {createBeaconConfig} from "@lodestar/config";
 import {
-  BeaconStateAllForks,
-  computeAnchorCheckpoint,
-  computeCheckpointEpochAtStateSlot,
+  IBeaconStateView,
   computeEpochAtSlot,
   computeWeakSubjectivitySummaryFromStateBytes,
   getCurrentSlot,
-  getLatestBlockRoot,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
 } from "@lodestar/state-transition";
@@ -227,7 +224,7 @@ function prepareCheckpointInitialization(
     },
     persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
     log(state) {
-      const {checkpoint} = computeAnchorCheckpoint(config, state);
+      const {checkpoint} = state.computeAnchorCheckpoint();
       logger.info("Initialized checkpoint state", {
         source,
         slot: state.slot,
@@ -242,9 +239,8 @@ function prepareCheckpointInitialization(
   };
 }
 
-function assertStateMatchesCheckpoint(state: BeaconStateAllForks, checkpoint: Checkpoint): void {
-  const stateEpoch = computeCheckpointEpochAtStateSlot(state.slot);
-  const blockRoot = getLatestBlockRoot(state);
+function assertStateMatchesCheckpoint(state: IBeaconStateView, checkpoint: Checkpoint): void {
+  const {root: blockRoot, epoch: stateEpoch} = state.computeAnchorCheckpoint().checkpoint;
   if (!ssz.Root.equals(blockRoot, checkpoint.root)) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.CHECKPOINT_ROOT_MISMATCH},

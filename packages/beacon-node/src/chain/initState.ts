@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostGloas, ForkSeq, ZERO_HASH} from "@lodestar/params";
-import {BeaconStateAllForks, BeaconStateGloas, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {BeaconStateAllForks, IBeaconStateView, computeEpochAtSlot, isStatePostGloas} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
@@ -11,7 +11,7 @@ import {getStateTypeFromBytes} from "../util/multifork.js";
 export async function persistAnchorState(
   config: ChainForkConfig,
   db: IBeaconDb,
-  anchorState: BeaconStateAllForks,
+  anchorState: IBeaconStateView,
   anchorStateBytes: Uint8Array
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
@@ -43,16 +43,15 @@ export async function persistAnchorState(
   }
 }
 
-export function createGenesisBlock(config: ChainForkConfig, genesisState: BeaconStateAllForks): SignedBeaconBlock {
+export function createGenesisBlock(config: ChainForkConfig, genesisState: IBeaconStateView): SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
   genesisBlock.message.stateRoot = stateRoot;
 
-  if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.gloas) {
+  if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.gloas && isStatePostGloas(genesisState)) {
     const gloasBlock = genesisBlock as SignedBeaconBlock<ForkPostGloas>;
-    const gloasState = genesisState as BeaconStateGloas;
-    gloasBlock.message.body.signedExecutionPayloadBid.message = gloasState.latestExecutionPayloadBid.toValue();
+    gloasBlock.message.body.signedExecutionPayloadBid.message = genesisState.latestExecutionPayloadBid;
   }
 
   return genesisBlock;
