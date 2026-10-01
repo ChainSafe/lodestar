@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -70,19 +70,6 @@ export async function importBlock(
   // Refresh the facade head cache and emit forkChoiceJustified/forkChoiceFinalized from the new head.
   // The engine no longer emits these (FFI-honest); they are derived facade-side from the head ProtoBlock.
   this.updateHeadAndEmitCheckpointEvents(r.newHead);
-
-  // 6. Fire notifyForkchoiceUpdate on the EL. The engine computed the override decision + all hashes
-  // internally (fork choice + proposer cache are engine-owned) and returned them as `r.fcuUpdate`;
-  // the facade only fires the EL call (executionEngine is facade-owned) or skips. `disableImportExecutionFcU`
-  // stays a facade-side gate.
-  if (!this.opts.disableImportExecutionFcU && r.fcuUpdate !== null) {
-    const {fork, headBlockHash, safeBlockHash, finalizedBlockHash} = r.fcuUpdate;
-    this.executionEngine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
-      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-      }
-    });
-  }
 
   const blockRootHex = r.blockMeta.blockRootHex;
   const blockSummary = r.blockSummary;

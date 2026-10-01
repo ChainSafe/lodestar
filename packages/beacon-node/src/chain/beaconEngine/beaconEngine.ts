@@ -98,15 +98,17 @@ import {
   rewards,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
+import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
@@ -222,7 +224,6 @@ import {
   ApiStateResult,
   ApiStateResultWithFork,
   BeaconEngineModules,
-  FcuUpdate,
   FinalizedProtoSummary,
   IBeaconEngine,
   ImportBlockResult,
@@ -239,6 +240,14 @@ type VerifiedBlockBundle = {
   proposerBalanceDelta: number;
   parentBlockSlot: number;
   seenTimestampSec: number;
+};
+
+/** Internal import FCU arguments; never exposed through IBeaconEngine. */
+type FcuUpdate = {
+  fork: ForkName;
+  headBlockHash: RootHex;
+  safeBlockHash: RootHex;
+  finalizedBlockHash: RootHex;
 };
 
 /* We don't want to do more epoch transition than this in prepareForNextSlot */
@@ -313,6 +322,9 @@ export class BeaconEngine implements IBeaconEngine {
   // Genesis block root is invariant; computed lazily from state for the genesis-shuffling duty fallback.
   private cachedGenesisBlockRoot: Root | null = null;
 
+  readonly executionEngine: IExecutionEngine;
+  readonly executionBuilder?: IExecutionBuilder;
+
   constructor(modules: BeaconEngineModules, anchorState: IBeaconStateView) {
     const {
       opts,
@@ -329,6 +341,8 @@ export class BeaconEngine implements IBeaconEngine {
       seenBlockInputCache,
       isAnchorStateFinalized,
     } = modules;
+    this.executionEngine = modules.executionEngine;
+    this.executionBuilder = modules.executionBuilder;
     this.config = config;
     this.opts = opts;
     this.logger = logger;
@@ -2518,9 +2532,11 @@ export class BeaconEngine implements IBeaconEngine {
 
   /**
    * Import a verified execution payload envelope into fork choice (transitions the block's PENDING
-   * variant to FULL) and compute the post-import FCU decision. The facade fires the EL calls
-   * (`notifyNewPayload` before this, `notifyForkchoiceUpdate` from the returned `fcuUpdate`) and emits
-   * events. `execStatus` is the EL result mapped facade-side; `blockRoot` is bytes-first (native FFI).
+   * variant to FULL) and queue the post-import FCU. The facade awaits `notifyNewPayload` before
+   * this call and emits events afterward. `execStatus` is the EL result mapped facade-side;
+   * `blockRoot` is bytes-first (native FFI).
+   * Runs inside BeaconEngine. FCU dispatch moved from unstable@551b8b0a3d
+   * chain/blocks/importExecutionPayload.ts#importExecutionPayload; fork choice import uses the branch's bytes-first contract.
    */
   importExecutionPayload(
     blockRoot: Root,
@@ -2529,7 +2545,7 @@ export class BeaconEngine implements IBeaconEngine {
     payloadGasLimit: number,
     execStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
-  ): {fcuUpdate: FcuUpdate | null; executionOptimistic: boolean} {
+  ): {executionOptimistic: boolean} {
     const blockRootHex = toRootHex(blockRoot);
 
     this.forkChoice.onExecutionPayload(
@@ -2543,19 +2559,24 @@ export class BeaconEngine implements IBeaconEngine {
 
     // Fire the FCU only when this payload's block is the canonical head.
     const head = this.forkChoice.getHead();
-    let fcuUpdate: FcuUpdate | null = null;
-    if (blockRootHex === head.blockRoot) {
-      fcuUpdate = {
-        fork: this.config.getForkName(head.slot),
-        headBlockHash: blockHashHex,
-        safeBlockHash: getSafeExecutionBlockHash(this.forkChoice),
-        finalizedBlockHash: this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX,
-      };
+    if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+      const fork = this.config.getForkName(head.slot);
+      const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+      const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+      this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+        }
+      });
     }
 
-    return {fcuUpdate, executionOptimistic: execStatus === ExecutionStatus.Syncing};
+    return {executionOptimistic: execStatus === ExecutionStatus.Syncing};
   }
 
+  /**
+   * Runs inside BeaconEngine. FCU dispatch moved verbatim from unstable@551b8b0a3d
+   * chain/blocks/importBlock.ts#importBlock; the branch's verified-block handoff and return data remain.
+   */
   private async _importBlock(
     v: VerifiedBlockBundle,
     executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
@@ -2907,8 +2928,7 @@ export class BeaconEngine implements IBeaconEngine {
       }
     }
 
-    // 6. Compute the FCU-override decision + notifyForkchoiceUpdate args engine-side; the facade fires
-    // the EL call (executionEngine is facade-owned) or skips based on `fcuUpdate`.
+    // 6. Compute the FCU-override decision and queue the EL update internally.
     const fcuUpdate = this.computeImportFcuUpdate({
       isExecutionState,
       blockSlot,
@@ -2922,6 +2942,15 @@ export class BeaconEngine implements IBeaconEngine {
       prevFinalizedEpoch,
     });
 
+    if (!this.opts.disableImportExecutionFcU && fcuUpdate !== null) {
+      const {fork, headBlockHash, safeBlockHash, finalizedBlockHash} = fcuUpdate;
+      this.executionEngine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+        }
+      });
+    }
+
     return {
       headChanged,
       head: headResult,
@@ -2933,7 +2962,6 @@ export class BeaconEngine implements IBeaconEngine {
       currFinalizedEpoch,
       oldHeadBlockRoot,
       newHeadBlockRoot: newHead.blockRoot,
-      fcuUpdate,
       newHead,
       blockMeta: {
         slot: blockSlot,
@@ -2947,10 +2975,8 @@ export class BeaconEngine implements IBeaconEngine {
 
   /**
    * Decide whether to fire a forkchoice-update on the EL after importing a block, and if so return the
-   * notifyForkchoiceUpdate args. All fork-choice + proposer-cache reads are engine-internal; the facade
-   * only fires the EL call (or skips) from the returned data. Also emits the `notOverrideFcuReason`
-   * metric + weak/strong-block logs (engine owns metrics/logger). `disableImportExecutionFcU` stays a
-   * facade-side gate applied to the returned value.
+   * notifyForkchoiceUpdate args. Fork-choice + proposer-cache reads, metrics, logging, and EL dispatch
+   * are engine-internal. The import entry point applies `disableImportExecutionFcU` before dispatch.
    *
    * Returns `null` when there is nothing to fire: non-execution state, weak block (`shouldOverrideFcu`),
    * no head/finalized change, or the head execution block hash is ZERO.

@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -43,7 +43,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 2. Verify the envelope (engine: fork choice + regen state + fields + BLS) in parallel with the EL
  * 3. Handle the EL response
  * 4. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
- * 5. Import to fork choice + FCU decision (engine); fire notifyForkchoiceUpdate (facade)
+ * 5. Import to fork choice and queue notifyForkchoiceUpdate (engine)
  * 6. Record metrics for payload envelope and column sources
  * 7. Emit `execution_payload` event
  */
@@ -92,7 +92,7 @@ export async function importExecutionPayload(
     }),
   ]);
 
-  // 3. Handle EL response (the EL is facade-owned; the engine only consumes the mapped status below).
+  // 3. Handle the facade-owned newPayload response; the engine consumes the mapped status below.
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -131,11 +131,9 @@ export async function importExecutionPayload(
     }
   });
 
-  // 5. Import to fork choice (engine transitions the block's PENDING variant to FULL) and get the FCU
-  // decision. The facade fires notifyForkchoiceUpdate on the EL from the returned data; the engine
-  // never touches the EL. `disableImportExecutionFcU` stays a facade-side gate.
+  // 5. Import to fork choice. The engine transitions PENDING to FULL and queues the FCU.
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
-  const {fcuUpdate, executionOptimistic} = this.beaconEngine.importExecutionPayload(
+  const {executionOptimistic} = this.beaconEngine.importExecutionPayload(
     fromHex(blockRootHex),
     blockHashHex,
     envelope.payload.blockNumber,
@@ -143,21 +141,6 @@ export async function importExecutionPayload(
     execStatus,
     dataAvailabilityStatus
   );
-
-  if (!this.opts.disableImportExecutionFcU && fcuUpdate !== null) {
-    this.executionEngine
-      .notifyForkchoiceUpdate(
-        fcuUpdate.fork,
-        fcuUpdate.headBlockHash,
-        fcuUpdate.safeBlockHash,
-        fcuUpdate.finalizedBlockHash
-      )
-      .catch((e) => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex}, e);
-        }
-      });
-  }
 
   // 6. Record metrics for payload envelope and column sources
   const delaySec = this.clock.secFromSlot(slot);

@@ -48,11 +48,6 @@ export type BlockProcessOpts = {
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
   disablePrepareNextSlot?: boolean;
-  /**
-   * Used to connect beacon in follow mode to an EL,
-   * will still issue fcU for block proposal
-   */
-  disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
 
   /**

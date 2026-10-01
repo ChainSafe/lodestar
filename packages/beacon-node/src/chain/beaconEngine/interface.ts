@@ -45,6 +45,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
+import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {BlockRootSlot} from "../../util/sszBytes.js";
@@ -73,6 +74,8 @@ import {GossipValidationResult} from "./gossipValidationResult.js";
 import {IBeaconEngineOptions} from "./options.js";
 
 export type BeaconEngineModules = {
+  executionEngine: IExecutionEngine;
+  executionBuilder?: IExecutionBuilder;
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
   logger: Logger;
@@ -90,18 +93,6 @@ export type BeaconEngineModules = {
   seenBlockInputCache: SeenBlockInput;
   isAnchorStateFinalized: boolean;
   lightClientServer?: LightClientServer;
-};
-
-/**
- * FCU side-effect for the facade to fire after `importBlock` / `importExecutionPayload`. The engine
- * computes the override decision + all hashes internally (reads its own fork choice + proposer cache);
- * the facade only fires `executionEngine.notifyForkchoiceUpdate` (EL is facade-owned).
- */
-export type FcuUpdate = {
-  fork: ForkName;
-  headBlockHash: RootHex;
-  safeBlockHash: RootHex;
-  finalizedBlockHash: RootHex;
 };
 
 export type ImportBlockResult = {
@@ -129,8 +120,6 @@ export type ImportBlockResult = {
   currFinalizedEpoch: number;
   oldHeadBlockRoot: string;
   newHeadBlockRoot: string;
-  /** Post-import FCU decision computed engine-side; facade fires `notifyForkchoiceUpdate` from it (or skips). */
-  fcuUpdate: FcuUpdate | null;
   blockMeta: {
     slot: number;
     blockRootHex: string;
@@ -689,8 +678,9 @@ export interface IBeaconEngine {
 
   // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
   // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs
-  // facade-parallel to the EL `notifyNewPayload`; `importExecutionPayload` does the fork-choice write +
-  // FCU decision. The facade fires the EL calls + emits events. Bytes-first (native FFI): `envelopeBytes`
+  // facade-parallel to the EL `notifyNewPayload`; `importExecutionPayload` does the fork-choice write
+  // and FCU dispatch. The facade awaits newPayload before import and emits events afterward.
+  // Bytes-first (native FFI): `envelopeBytes`
   // is the SSZ envelope (JS engine ignores it, uses the pojo); `blockRoot` is the SSZ root as raw bytes.
   verifyExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
@@ -705,7 +695,7 @@ export interface IBeaconEngine {
     payloadGasLimit: number,
     execStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
-  ): {fcuUpdate: FcuUpdate | null; executionOptimistic: boolean};
+  ): {executionOptimistic: boolean};
 
   // --- DB ownership (blocks + states) ---
 

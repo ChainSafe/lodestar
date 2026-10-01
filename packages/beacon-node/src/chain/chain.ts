@@ -269,6 +269,8 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconEngine = new BeaconEngine(
       {
+        executionEngine,
+        executionBuilder,
         opts,
         config,
         logger,

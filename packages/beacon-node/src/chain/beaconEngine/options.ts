@@ -31,6 +31,11 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
   ForkChoiceOpts &
   StatesArchiveOpts &
   BlsMultiThreadWorkerPoolOptions & {
+    /**
+     * Used to connect beacon in follow mode to an EL,
+     * will still issue fcU for block proposal
+     */
+    disableImportExecutionFcU?: boolean;
     blsVerifyAllMainThread?: boolean;
     /** Serve historical (below-finalized) states via the engine-owned worker thread */
     serveHistoricalState?: boolean;
