@@ -8,6 +8,7 @@ import {
   DEPOSIT_REQUEST_TYPE,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
+  ForkPostGloas,
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
@@ -74,6 +75,12 @@ export type EngineApiRpcParamTypes = {
   engine_forkchoiceUpdatedV4: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
+    custodyColumns?: DATA | null,
+  ];
+  engine_forkchoiceUpdatedV5: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes: PayloadAttributesRpc | null,
+    custodyColumns: DATA | null,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -110,6 +117,7 @@ export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
+  inclusionListSatisfied?: boolean | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -135,6 +143,10 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV5: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
@@ -271,6 +283,7 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
+  inclusionListTransactions?: DATA[];
 };
 
 export type ClientVersionRpc = {
@@ -342,6 +355,26 @@ export function hasPayloadValue(
   return (response as ExecutionPayloadRpcWithValue).blockValue !== undefined;
 }
 
+export function parseExecutionPayload(
+  fork: ForkPostGloas,
+  response: EngineApiRpcReturnTypes["engine_getPayloadV6"]
+): {
+  executionPayload: ExecutionPayload<ForkPostGloas>;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle<ForkPostGloas>;
+  executionRequests?: ExecutionRequests<ForkPostGloas>;
+  shouldOverrideBuilder?: boolean;
+};
+export function parseExecutionPayload(
+  fork: ForkName,
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
+): {
+  executionPayload: ExecutionPayload;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle;
+  executionRequests?: ExecutionRequests;
+  shouldOverrideBuilder?: boolean;
+};
 export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse | ExecutionPayloadRpc
@@ -452,6 +485,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions?.map(bytesToData),
   };
 }
 
@@ -470,6 +504,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions?.map((transaction) => dataToBytes(transaction, null)),
   };
 }
 

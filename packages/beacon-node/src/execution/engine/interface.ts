@@ -9,7 +9,16 @@ import {
   ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+  capella,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
@@ -99,6 +108,7 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
   targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  inclusionListTransactions?: bellatrix.Transactions;
 };
 
 export type VersionedHashes = Uint8Array[];

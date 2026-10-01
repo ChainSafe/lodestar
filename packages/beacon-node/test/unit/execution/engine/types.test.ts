@@ -9,9 +9,35 @@ import {
 } from "@lodestar/params";
 import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
-import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
+import {
+  deserializeExecutionRequests,
+  deserializePayloadAttributes,
+  serializeExecutionRequests,
+  serializePayloadAttributes,
+} from "../../../../src/execution/engine/types.js";
 
 describe("execution / engine / types", () => {
+  describe("payload attributes", () => {
+    it.each([
+      {name: "empty", inclusionListTransactions: [], expected: []},
+      {
+        name: "non-empty",
+        inclusionListTransactions: [new Uint8Array([1, 255]), new Uint8Array([2])],
+        expected: ["0x01ff", "0x02"],
+      },
+    ])("round-trips $name Heze inclusion-list transactions", ({inclusionListTransactions, expected}) => {
+      const attributes = {...ssz.heze.PayloadAttributes.defaultValue(), inclusionListTransactions};
+      const wire = serializePayloadAttributes(attributes);
+      expect(wire.inclusionListTransactions).toEqual(expected);
+      expect(deserializePayloadAttributes(wire)).toEqual(attributes);
+    });
+
+    it("omits inclusion-list transactions before Heze", () => {
+      const wire = serializePayloadAttributes(ssz.gloas.PayloadAttributes.defaultValue());
+      expect(JSON.parse(JSON.stringify(wire))).not.toHaveProperty("inclusionListTransactions");
+    });
+  });
+
   describe("serializeExecutionRequests", () => {
     it("should serialize execution requests according to EIP-7685", () => {
       const executionRequests: ExecutionRequests = {

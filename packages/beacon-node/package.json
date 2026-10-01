@@ -44,6 +44,11 @@
       "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
+    "./execution/engine": {
+      "typescript": "./src/execution/engine/rpc.ts",
+      "types": "./lib/execution/engine/rpc.d.ts",
+      "import": "./lib/execution/engine/rpc.js"
+    },
     "./monitoring": {
       "typescript": "./src/monitoring/index.ts",
       "types": "./lib/monitoring/index.d.ts",

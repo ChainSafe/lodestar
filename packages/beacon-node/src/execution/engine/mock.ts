@@ -12,7 +12,7 @@ import {
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -142,6 +142,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV4: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV5: () => {
+        throw new LodestarError({code: "ENGINE_MOCK_UNSUPPORTED_FORK", fork: ForkName.heze});
+      },
       engine_getPayloadV1: this.getPayloadV1.bind(this),
       engine_getPayloadV2: this.getPayloadV5.bind(this),
       engine_getPayloadV3: this.getPayloadV5.bind(this),
