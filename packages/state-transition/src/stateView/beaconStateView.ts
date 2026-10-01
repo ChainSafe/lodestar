@@ -33,7 +33,6 @@ import {applyParentExecutionPayload} from "../block/processParentExecutionPayloa
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -105,6 +104,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private _builderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private _builderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -413,6 +414,30 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       ).payloadExpectedWithdrawals.toValue();
     }
     return this._payloadExpectedWithdrawals;
+  }
+
+  get builderPendingPayments(): gloas.BuilderPendingPayments {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder payments are not supported before Gloas");
+    }
+
+    if (this._builderPendingPayments === null) {
+      this._builderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+    }
+    return this._builderPendingPayments;
+  }
+
+  get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder withdrawals are not supported before Gloas");
+    }
+
+    if (this._builderPendingWithdrawals === null) {
+      this._builderPendingWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).builderPendingWithdrawals.toValue();
+    }
+    return this._builderPendingWithdrawals;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {
@@ -851,7 +876,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     const postState = new BeaconStateView(
       stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
     );
-    return getComputeNewStateRootResult(postState, modules);
+    return getComputeNewStateRootResult(postState);
   }
 
   stateTransition(
@@ -863,12 +888,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return new BeaconStateView(newState);
   }
 
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView {
-    const newState = processSlots(this.cachedState, slot, epochTransitionCacheOpts, modules);
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
+    const newState = processSlots(this.cachedState, slot, opts, modules);
     return new BeaconStateView(newState);
   }
 

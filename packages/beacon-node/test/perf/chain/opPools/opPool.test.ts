@@ -14,6 +14,10 @@ import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test
 import {ssz} from "@lodestar/types";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
+import {
+  getAttesterSlashingSignatureDomains,
+  getProposerSlashingSignatureDomain,
+} from "../../../../src/chain/opPools/utils.js";
 import {generateBlsToExecutionChanges} from "../../../fixtures/capella.js";
 import {
   generateIndexedAttestations,
@@ -21,9 +25,10 @@ import {
   generateVoluntaryExits,
 } from "../../../fixtures/phase0.js";
 
+const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
+
 describe("opPool", () => {
   let originalState: BeaconStateView;
-  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
   beforeAll(
     () => {
@@ -72,10 +77,15 @@ describe("opPool", () => {
 
 function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const attestation of generateIndexedAttestations(state, count)) {
-    pool.insertAttesterSlashing(ForkName.phase0, {
+    const slashing = {
       attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
       attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(ssz.phase0.IndexedAttestation.toJson(attestation)),
-    });
+    };
+    pool.insertAttesterSlashing(
+      ForkName.phase0,
+      slashing,
+      getAttesterSlashingSignatureDomains(config, state.slot, slashing)
+    );
   }
 
   return pool;
@@ -83,14 +93,15 @@ function fillAttesterSlashing(pool: OpPool, state: CachedBeaconStateAltair, coun
 
 function fillProposerSlashing(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const blockHeader of generateSignedBeaconBlockHeader(state, count)) {
-    pool.insertProposerSlashing({
+    const slashing = {
       signedHeader1: ssz.phase0.SignedBeaconBlockHeaderBigint.fromJson(
         ssz.phase0.SignedBeaconBlockHeader.toJson(blockHeader)
       ),
       signedHeader2: ssz.phase0.SignedBeaconBlockHeaderBigint.fromJson(
         ssz.phase0.SignedBeaconBlockHeader.toJson(blockHeader)
       ),
-    });
+    };
+    pool.insertProposerSlashing(slashing, getProposerSlashingSignatureDomain(config, state.slot, slashing));
   }
 
   return pool;

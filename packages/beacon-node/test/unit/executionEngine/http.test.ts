@@ -1,12 +1,15 @@
 import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
-import {ForkName} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
+import {toHex} from "@lodestar/utils";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
+  BLOB_AND_PROOF_V2_RPC_BYTES,
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
+  serializeExecutionPayloadBodyV2,
 } from "../../../src/execution/engine/types.js";
 import {RpcPayload, numToQuantity} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
@@ -224,6 +227,47 @@ describe("ExecutionEngine / http", () => {
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
   });
 
+  it("getPayloadBodiesByHashV2", async () => {
+    const hash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [hash, hash],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+          blockAccessList: "0xc0",
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [hash],
+          withdrawals: [],
+          blockAccessList: null, // pruned by the EL (EIP-7928 retention) or pre-Amsterdam block
+        },
+      ],
+    };
+    const reqBlockHashes = [hash, `${hash.slice(0, -3)}111`, `${hash.slice(0, -3)}000`];
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByHashV2(reqBlockHashes);
+
+    expect(reqJsonRpcPayload).toEqual({
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByHashV2",
+      params: [reqBlockHashes],
+    });
+    expect(res.map(serializeExecutionPayloadBodyV2)).toEqual(response.result);
+    expect(res[2]?.blockAccessList).toBeNull();
+  });
+
   it("getPayloadBodiesByRange", async () => {
     /**
      *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByRangeV1","params":[ QUANTITY, QUANTITY],"id":67}' http://localhost:8545
@@ -271,6 +315,28 @@ describe("ExecutionEngine / http", () => {
 
     expect(reqJsonRpcPayload).toEqual(request);
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+  });
+
+  it("getBlobsV2 with more preallocated buffers than versioned hashes", async () => {
+    const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+    blob[0] = 0x11;
+    const proofs = Array.from({length: CELLS_PER_EXT_BLOB}, () => `0x${"cc".repeat(48)}`);
+    const versionedHash = `0x${"01".repeat(32)}`;
+    returnValue = {jsonrpc: "2.0", id: 67, result: [{blob: toHex(blob), proofs}]};
+    // GetBlobsTracker preallocates one buffer per max blobs of the epoch, not per requested hash
+    const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
+
+    const res = await executionEngine.getBlobs(
+      ForkName.fulu,
+      [Uint8Array.from(Buffer.from(versionedHash.slice(2), "hex"))],
+      buffers
+    );
+
+    expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getBlobsV2", params: [[versionedHash]]});
+    expect(res?.length).toBe(1);
+    expect(res?.[0].blob.buffer).toBe(buffers[0].buffer);
+    expect(res?.[0].blob[0]).toBe(0x11);
+    expect(res?.[0].proofs.length).toBe(CELLS_PER_EXT_BLOB);
   });
 
   it("error - unknown payload", async () => {
