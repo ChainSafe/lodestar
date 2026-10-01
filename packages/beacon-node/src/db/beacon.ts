@@ -11,7 +11,6 @@ import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -61,8 +60,6 @@ export class BeaconDb implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
-
   readonly dataColumns: IDataColumnStore;
   lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
@@ -97,8 +94,6 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommittee = new SyncCommitteeRepository(config, db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
-    this.backfilledRanges = new BackfilledRanges(config, db);
-
     this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);
     this.dataColumns = new LegacyDataColumnStore(
       this.flatFileStore,
@@ -127,6 +122,8 @@ export class BeaconDb implements IBeaconDb {
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    // New columns are persisted in flat files, so this bucket only contains legacy hot data.
+    await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());
