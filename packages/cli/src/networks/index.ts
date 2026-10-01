@@ -182,10 +182,19 @@ export async function fetchWeakSubjectivityStateBytes(
       GET_STATE_LOG_INTERVAL
     );
     const wsStateBytes = response.ssz();
+    const {version} = response.meta();
 
     const wsSlot = getStateSlotFromBytes(wsStateBytes);
     const logData = {stateId, size: formatBytes(wsStateBytes.length)};
     logger.info("Download completed", typeof stateId === "number" ? logData : {...logData, slot: wsSlot});
+
+    const expectedFork = config.getForkName(wsSlot);
+    if (version !== expectedFork) {
+      throw new LodestarError(
+        {code: "CHECKPOINT_FORK_MISMATCH"},
+        `Checkpoint sync server returned ${version} state at slot ${wsSlot} but local config expects ${expectedFork}, verify --network or the chain config`
+      );
+    }
 
     return {
       stateBytes: new Uint8Array(wsStateBytes.buffer, wsStateBytes.byteOffset, wsStateBytes.byteLength),
