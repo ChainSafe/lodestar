@@ -286,8 +286,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       id: "downloaded parent is before finalized slot",
       event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
-      // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
-      // Test verifies blocks are cleaned up from pendingBlocks instead
       reportPeer: true,
     },
     {
@@ -547,7 +545,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         await sendBeaconBlocksByRootPromise;
         await sleep(200);
         // Downloaded block is before finalized slot, so blocks should be cleaned up
-        // (peer reporting is currently disabled in removeAndDownScoreAllDescendants)
         expect(processBlockSpy).not.toHaveBeenCalled();
       } else if (maxPendingBlocks !== undefined) {
         // With maxPendingBlocks=1 and unknownParent event, the scheduler can re-queue one pruned
