@@ -2,7 +2,11 @@ import {afterEach, assert, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, forkAll} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {readBeaconStateBytesMetadata, scanActiveValidatorsFromStateBytes} from "../../../src/util/sszBytes.js";
+import {
+  getValidatorCountFromStateBytes,
+  readBeaconStateBytesMetadata,
+  scanActiveValidatorsFromStateBytes,
+} from "../../../src/util/sszBytes.js";
 import {
   computeWeakSubjectivityPeriod,
   computeWeakSubjectivitySummaryFromStateBytes,
@@ -227,7 +231,14 @@ describe("state bytes weak subjectivity", () => {
     const metadata = readBeaconStateBytesMetadata(bytes);
     assert(metadata !== null);
     expect(scanActiveValidatorsFromStateBytes(bytes, ssz.phase0.BeaconState, 0)).toBeNull();
+    expect(getValidatorCountFromStateBytes(createChainForkConfig({}), bytes)).toBeNull();
     expect(computeWeakSubjectivitySummaryFromStateBytes(createChainForkConfig({}), bytes, metadata)).toBeNull();
+  });
+
+  it("reads the validator count", () => {
+    const state = ssz.phase0.BeaconState.defaultViewDU();
+    for (let i = 0; i < 3; i++) state.validators.push(ssz.phase0.Validator.defaultViewDU());
+    expect(getValidatorCountFromStateBytes(createChainForkConfig({}), state.serialize())).toBe(3);
   });
 
   it("returns null for a partial validator record", () => {
@@ -245,6 +256,7 @@ describe("state bytes weak subjectivity", () => {
     const metadata = readBeaconStateBytesMetadata(bytes);
     assert(metadata !== null);
     expect(scanActiveValidatorsFromStateBytes(bytes, type, 0)).toBeNull();
+    expect(getValidatorCountFromStateBytes(createChainForkConfig({}), bytes)).toBeNull();
     expect(computeWeakSubjectivitySummaryFromStateBytes(createChainForkConfig({}), bytes, metadata)).toBeNull();
   });
 

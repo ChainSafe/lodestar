@@ -1,8 +1,12 @@
-import {IBeaconDb, getStateTypeFromBytes} from "@lodestar/beacon-node";
-import {ChainForkConfig} from "@lodestar/config";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {IBeaconDb} from "@lodestar/beacon-node";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {MAX_PENDING_DEPOSITS_PER_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  BeaconStateAllForks,
+  IBeaconStateView,
   computeWeakSubjectivitySummaryFromStateBytes,
+  createBeaconStateView,
+  getValidatorCountFromStateBytes,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
 } from "@lodestar/state-transition";
@@ -21,15 +25,21 @@ import {
   StatePreparationContext,
 } from "./stateInitialization/types.js";
 
-/** Select serialized anchor bytes before constructing the state used for validation, persistence, and return. */
+type InitBeaconStateResult = {anchorState: IBeaconStateView; config: BeaconConfig; isFinalized: boolean};
+
+/**
+ * Select serialized anchor bytes before constructing the state used for validation, persistence, and return.
+ * Populates the global `pubkeyCache` with the anchor state's validators.
+ */
 export async function initBeaconState(
   args: BeaconArgs & GlobalArgs,
   dataDir: string,
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
-): Promise<{anchorState: BeaconStateAllForks; stateBytes: Uint8Array; isFinalized: boolean}> {
+): Promise<InitBeaconStateResult> {
   const options: StateInitializationOptions = args;
+  const useNative = options["chain.nativeStateView"] ?? false;
   if (
     options.forceCheckpointSync &&
     !(options.checkpointState || options.checkpointSyncUrl || options.unsafeCheckpointState)
@@ -55,11 +65,11 @@ export async function initBeaconState(
         options.lastPersistedCheckpointState
     );
     if (!options.forceCheckpointSync && (!hasCheckpointSource || archived.isWithinWeakSubjectivityPeriod)) {
-      return executeStateInitialization(prepareArchivedStateInitialization(archived, context));
+      return executeStateInitialization(prepareArchivedStateInitialization(archived, context), useNative);
     }
   }
   const stateInit = await prepareCheckpointOrGenesisInitialization(options, archived, context);
-  return executeStateInitialization(stateInit);
+  return executeStateInitialization(stateInit, useNative);
 }
 
 /**
@@ -103,12 +113,26 @@ async function readLatestArchivedStateBytes({
  * Validate before persistence, and log success only after any required writes succeed.
  */
 async function executeStateInitialization(
-  stateInit: StateInitialization
-): Promise<{anchorState: BeaconStateAllForks; stateBytes: Uint8Array; isFinalized: boolean}> {
-  const stateType = getStateTypeFromBytes(stateInit.config, stateInit.stateBytes);
-  const anchorState = stateType.deserializeToViewDU(stateInit.stateBytes);
+  stateInit: StateInitialization,
+  useNative: boolean
+): Promise<InitBeaconStateResult> {
+  const {config, stateBytes} = stateInit;
+  const validatorCount = getValidatorCountFromStateBytes(config, stateBytes);
+  if (validatorCount === null) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
+      "Cannot read validator count from selected state bytes"
+    );
+  }
+  // Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH per epoch),
+  // over a year at organic rates, to avoid routine cache reallocations. Cache growth is protected
+  // by its native lock; if this headroom is exceeded, it grows by the same fixed step.
+  // The view syncs pubkeys during construction, so capacity must be reserved first.
+  const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
+  pubkeyCache.ensureCapacity(validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs));
+  const anchorState = createBeaconStateView({useNative, config, stateBytes});
   stateInit.validate(anchorState);
-  await stateInit.persist?.(anchorState, stateInit.stateBytes);
+  await stateInit.persist?.(anchorState, stateBytes);
   stateInit.log(anchorState);
-  return {anchorState, stateBytes: stateInit.stateBytes, isFinalized: stateInit.isFinalized};
+  return {anchorState, config, isFinalized: stateInit.isFinalized};
 }

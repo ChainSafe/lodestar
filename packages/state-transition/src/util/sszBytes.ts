@@ -77,25 +77,15 @@ export function scanActiveValidatorsFromStateBytes(
   stateType: SSZTypesFor<ForkAll, "BeaconState">,
   epoch: Epoch
 ): {activeValidatorCount: number; totalActiveBalanceIncrements: number} | null {
+  const range = getValidatorsRangeFromStateBytes(stateBytes, stateType);
+  if (range === null) {
+    return null;
+  }
+
   const data = {
     uint8Array: stateBytes,
     dataView: new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength),
   };
-  let range: {start: number; end: number};
-  try {
-    const containerType = stateType as (typeof ssz)[ForkAll]["BeaconState"];
-    const ranges = containerType.getFieldRanges(data.dataView, 0, stateBytes.length);
-    range = ranges[Object.keys(containerType.fields).indexOf("validators")];
-  } catch {
-    return null;
-  }
-  if (!range || range.start < 0 || range.end > stateBytes.length || range.end < range.start) {
-    return null;
-  }
-  if ((range.end - range.start) % VALIDATOR_BYTES_SIZE !== 0) {
-    return null;
-  }
-
   let activeValidatorCount = 0;
   let totalActiveBalanceIncrements = 0;
   for (let offset = range.start; offset < range.end; offset += VALIDATOR_BYTES_SIZE) {
@@ -120,4 +110,32 @@ export function scanActiveValidatorsFromStateBytes(
     }
   }
   return {activeValidatorCount, totalActiveBalanceIncrements: Math.max(1, totalActiveBalanceIncrements)};
+}
+
+export function getValidatorCountFromStateBytes(config: ChainForkConfig, stateBytes: Uint8Array): number | null {
+  const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
+  // A non-null range always holds a whole number of validator records, so the division is exact
+  return range === null ? null : (range.end - range.start) / VALIDATOR_BYTES_SIZE;
+}
+
+function getValidatorsRangeFromStateBytes(
+  stateBytes: Uint8Array,
+  stateType: SSZTypesFor<ForkAll, "BeaconState">
+): {start: number; end: number} | null {
+  let range: {start: number; end: number};
+  try {
+    const containerType = stateType as (typeof ssz)[ForkAll]["BeaconState"];
+    const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+    const ranges = containerType.getFieldRanges(dataView, 0, stateBytes.length);
+    range = ranges[Object.keys(containerType.fields).indexOf("validators")];
+  } catch {
+    return null;
+  }
+  if (!range || range.start < 0 || range.end > stateBytes.length || range.end < range.start) {
+    return null;
+  }
+  if ((range.end - range.start) % VALIDATOR_BYTES_SIZE !== 0) {
+    return null;
+  }
+  return range;
 }
