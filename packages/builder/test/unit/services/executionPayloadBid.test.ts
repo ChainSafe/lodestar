@@ -52,6 +52,7 @@ describe("createExecutionPayloadBid", () => {
 
   it("requires and preserves Heze inclusion-list bits", () => {
     const payload = createBuiltPayload(ForkName.heze);
+    payload.blobsBundle.commitments.push(Buffer.alloc(48, 6));
     const inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
     inclusionListBits.set(3, true);
 
@@ -66,8 +67,21 @@ describe("createExecutionPayloadBid", () => {
       inclusionListBits,
     });
 
-    expect(bid.inclusionListBits).toBe(inclusionListBits);
-    expect(bid.executionRequestsRoot).toEqual(ssz.heze.ExecutionRequests.hashTreeRoot(payload.executionRequests));
+    expect(bid).toEqual({
+      parentBlockHash: payload.executionPayload.parentHash,
+      parentBlockRoot,
+      blockHash: payload.executionPayload.blockHash,
+      prevRandao: payload.executionPayload.prevRandao,
+      feeRecipient,
+      gasLimit: 0n,
+      builderIndex,
+      slot,
+      value: 456,
+      executionPayment: 0n,
+      blobKzgCommitments: payload.blobsBundle.commitments,
+      executionRequestsRoot: ssz.heze.ExecutionRequests.hashTreeRoot(payload.executionRequests),
+      inclusionListBits,
+    });
   });
 
   it.each([1, INCLUSION_LIST_COMMITTEE_SIZE - 1, INCLUSION_LIST_COMMITTEE_SIZE + 1, 24])(
