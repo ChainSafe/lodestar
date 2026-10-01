@@ -18,10 +18,11 @@ describe("createExecutionPayloadBid", () => {
   const builderIndex = 7;
   const prevRandao = Buffer.alloc(32, 5);
 
-  it("constructs a Gloas bid from exact payload material", () => {
+  it("constructs a Gloas bid from a built payload", () => {
     const payload = createBuiltPayload(ForkName.gloas);
     payload.executionPayload.gasLimit = 30_000_000;
     payload.executionRequests.deposits.push(ssz.gloas.DepositRequest.defaultValue());
+    payload.blobsBundle.commitments.push(Buffer.alloc(48, 6));
 
     const bid = createExecutionPayloadBid({
       slot,

@@ -21,6 +21,7 @@ type CommonBidInput<F extends ForkPostGloas> = {
   prevRandao: Bytes32;
   builderIndex: BuilderIndex;
   feeRecipient: ExecutionAddress;
+  /** Bid value in gwei */
   value: number;
   payload: BuiltPayload & {fork: F};
 };
