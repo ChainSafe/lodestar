@@ -28,6 +28,11 @@ export * from "./signatureSets.js";
 export * from "./signingRoot.js";
 export * from "./slot.js";
 export * from "./ssz.js";
+export {
+  type StateBytesMetadata,
+  getValidatorCountFromStateBytes,
+  readBeaconStateBytesMetadata,
+} from "./sszBytes.js";
 export * from "./syncCommittee.js";
 export * from "./validator.js";
 export * from "./weakSubjectivity.js";

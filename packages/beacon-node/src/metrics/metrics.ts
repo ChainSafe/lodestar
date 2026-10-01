@@ -24,6 +24,7 @@ export type CreateMetricsOptions = {
    * can grab metrics from the native implementation instead.
    * */
   includeStateTransitionMetrics?: boolean;
+  collectNodeMetrics?: boolean;
 };
 
 export function createMetrics(
@@ -43,7 +44,7 @@ export function createMetrics(
   };
   process.on("unhandledRejection", onUnhandledRejection);
 
-  const nodeJsMetricsClose = collectNodeJSMetrics(register);
+  const nodeJsMetricsClose = createOpts.collectNodeMetrics === false ? (): void => {} : collectNodeJSMetrics(register);
   const close = (): void => {
     process.removeListener("unhandledRejection", onUnhandledRejection);
     nodeJsMetricsClose();

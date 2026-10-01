@@ -23,7 +23,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
     const serializedCache = new SerializedCache();
 
     const blockInput = new MockBlockInput({forkName: ForkName.deneb, slot: 1, blockRootHex});
-    blockInput._block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    blockInput.block = ssz.deneb.SignedBeaconBlock.defaultValue();
 
     const err = await verifyBlocksStateTransitionOnly(
       preState,

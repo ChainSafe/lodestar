@@ -1065,12 +1065,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
-      await validateGossipAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+          chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
           chain.forkChoice.onAttesterSlashing(attesterSlashing);
           chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
         } catch (e) {
@@ -1089,12 +1089,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
       const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
-      await validateGossipProposerSlashing(chain, proposerSlashing);
+      const verifiedDomain = await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.opPool.insertProposerSlashing(proposerSlashing);
+          chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
           chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         } catch (e) {
           logger.debug(

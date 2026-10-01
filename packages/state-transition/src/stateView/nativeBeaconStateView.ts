@@ -896,6 +896,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     throw new Error("NativeBeaconStateView does not support Gloas");
   }
 
+  get builderPendingPayments(): gloas.BuilderPendingPayments {
+    throw new Error("NativeBeaconStateView does not support Gloas");
+  }
+
+  get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
+    throw new Error("NativeBeaconStateView does not support Gloas");
+  }
+
   getBuilder(_index: BuilderIndex): gloas.Builder {
     throw new Error("NativeBeaconStateView does not support Gloas");
   }
