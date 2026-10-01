@@ -97,7 +97,7 @@ async function readLatestArchivedStateBytes({
   if (weakSubjectivity === null) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
-      "Cannot extract weak subjectivity summary from archived state bytes"
+      `Cannot extract weak subjectivity summary from archived state bytes, expected ${chainForkConfig.getForkName(metadata.slot)} state at slot ${metadata.slot}, possible fork or network mismatch`
     );
   }
   return {
