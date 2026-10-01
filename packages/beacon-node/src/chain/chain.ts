@@ -57,12 +57,11 @@ import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
-import {CommonBlockBody, IBeaconChain, ProposerPreparationData} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {BlockType, ProduceResult} from "./produceBlock/index.js";
-import {BlockAttributes} from "./produceBlock/produceBlockBody.js";
+import {ProduceResult} from "./produceBlock/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
@@ -743,36 +742,9 @@ export class BeaconChain implements IBeaconChain {
     return sidecarsFinalized;
   }
 
-  // TODO (zig_engine_el_plan.md Step 5): remove these production delegates when the API calls the engine race directly.
-  produceBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
-    return this.produceBlockForProposal(BlockType.Full, attrs);
-  }
-
-  produceBlindedBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
-    return this.produceBlockForProposal(BlockType.Blinded, attrs);
-  }
-
-  // TODO (zig_engine_el_plan.md Step 5): delete this temporary name/helper; move result/error mapping and DA caching to the API.
-  private async produceBlockForProposal<T extends BlockType>(
-    blockType: T,
-    attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
-  ) {
-    // [beacon-engine] deviation: thin facade delegates remain until the API race moves in Step 5.
-    const result = await this.beaconEngine.produceBlockForProposal(blockType, attrs);
-    if (!result.ok) {
-      throw Error(result.payload.message);
-    }
-    const {produceResult, ...produced} = result.data;
-    const blockRoot =
-      produceResult.type === BlockType.Full
-        ? this.config.getForkTypes(attrs.slot).BeaconBlock.hashTreeRoot(produced.block as BeaconBlock)
-        : this.config
-            .getPostBellatrixForkTypes(attrs.slot)
-            .BlindedBeaconBlock.hashTreeRoot(produced.block as BlindedBeaconBlock);
-    this.blockProductionCache.set(toRootHex(blockRoot), produceResult);
-    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-    return produced;
-  }
+  // [beacon-engine] moved: produceCommonBlockBody, produceBlock, produceBlindedBlock, and
+  // produceBlockWrapper now live in packages/beacon-node/src/chain/beaconEngine/produceBlock.ts.
+  // On unstable merges, apply changes to those methods there; the API calls the engine directly.
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], null, opts);

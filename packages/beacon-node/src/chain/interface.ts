@@ -13,7 +13,6 @@ import {
   Status,
   UintNum64,
   ValidatorIndex,
-  Wei,
   altair,
   capella,
   deneb,
@@ -38,7 +37,7 @@ import {ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
-import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
@@ -167,18 +166,6 @@ export interface IBeaconChain {
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
   getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
-
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
-    block: BeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
-    block: BlindedBeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-  }>;
 
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;

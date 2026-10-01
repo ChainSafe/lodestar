@@ -90,7 +90,7 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = chain.beaconEngine.produceCommonBlockBody({
+      const commonBlockBodyPromise = (chain.beaconEngine as BeaconEngine).produceCommonBlockBody({
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),

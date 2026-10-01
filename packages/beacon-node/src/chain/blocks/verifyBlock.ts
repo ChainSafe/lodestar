@@ -132,6 +132,9 @@ export async function verifyBlocksInEpoch(
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
+      // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature verification now lives in
+      // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
+      // On unstable merges, sync that logic there; retain DA and pre-gloas EL verification here.
       this.beaconEngine.verifyBlocks(blockBytes, parentBlock, blockInputs, opts, abortController.signal),
     ]);
 

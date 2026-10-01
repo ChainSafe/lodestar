@@ -66,6 +66,9 @@ export class PrepareNextSlotScheduler {
       // or precompute epoch transition
       await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
+      // [beacon-engine] moved: consensus/EL preparation and computeStateHashTreeRoot now live in
+      // packages/beacon-node/src/chain/beaconEngine/prepareNextSlot.ts under the same names.
+      // On unstable merges, sync that logic there; retain scheduling, error logging, and DA pruning here.
       const result = await this.chain.beaconEngine.prepareForNextSlot(clockSlot);
       if (!result.ok) {
         if (result.code !== BeaconEngineErrorCode.ABORTED) {

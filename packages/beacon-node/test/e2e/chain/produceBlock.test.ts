@@ -3,6 +3,7 @@ import {tmpdir} from "node:os";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -16,8 +17,10 @@ import {
   createPubkeyCache,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
-import {electra} from "@lodestar/types";
+import {BlindedBeaconBlock, electra} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {getValidatorApi} from "../../../src/api/impl/validator/index.js";
+import {defaultApiOptions} from "../../../src/api/options.js";
 import {ArchiveMode} from "../../../src/chain/archiveStore/interface.js";
 import {BeaconEngineErrorCode} from "../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../src/chain/chain.js";
@@ -28,6 +31,7 @@ import {IExecutionBuilder} from "../../../src/execution/builder/interface.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {initDevState} from "../../../src/node/utils/state.js";
+import {getApiTestModules} from "../../utils/api.js";
 
 describe("engine block production", () => {
   for (const fork of [ForkName.electra, ForkName.fulu]) {
@@ -100,9 +104,14 @@ describe("engine block production", () => {
           }
         );
         const attrs = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: Buffer.alloc(32)};
-        // TODO (zig_engine_el_plan.md Step 5): exercise the final V3/V4 entries; remove transitional preparation/delegate calls.
-        const {parentBlock, commonBlockBodyPromise} = await chain.beaconEngine.prepareBlockProduction(attrs);
-        const {block} = await chain.produceBlock({...attrs, parentBlock, commonBlockBodyPromise});
+        const modules = getApiTestModules({config: beaconConfig});
+        const api = getValidatorApi(defaultApiOptions, {...modules, chain, config: beaconConfig});
+        const full = await api.produceBlockV3({
+          ...attrs,
+          graffiti: "",
+          builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+        });
+        const block = (full.data as {block: electra.BeaconBlock}).block;
         const expected = state.processSlots(1).stateTransition(
           {message: block, signature: Buffer.alloc(96)},
           {
@@ -128,20 +137,24 @@ describe("engine block production", () => {
           blobKzgCommitments: body.blobKzgCommitments,
           executionRequests: body.executionRequests,
         });
-        const {block: blinded} = await chain.produceBlindedBlock({...attrs, parentBlock, commonBlockBodyPromise});
-        expect(blinded.stateRoot).toEqual(block.stateRoot);
+        const {data: blinded} = await api.produceBlockV3({
+          ...attrs,
+          graffiti: "",
+          builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+        });
+        expect((blinded as BlindedBeaconBlock).stateRoot).toEqual(block.stateRoot);
         expect(chain.blockProductionCache.get(root)?.type).toBe(BlockType.Blinded);
         expect(chain.blockProductionCache.size).toBe(1);
         vi.mocked(builder.getHeader).mockRejectedValue(new Error("builder unavailable"));
-        const failed = await chain.beaconEngine.produceBlockForProposal(BlockType.Blinded, {
+        const failed = await chain.beaconEngine.produceBlock({
           ...attrs,
-          parentBlock,
-          commonBlockBodyPromise,
+          builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+          builderBoostFactor: 100n,
         });
         expect(failed).toEqual({
           ok: false,
           code: BeaconEngineErrorCode.INTERNAL,
-          payload: {message: "builder unavailable"},
+          payload: {message: "Builder failed to produce the block"},
         });
         expect(chain.blockProductionCache.size).toBe(1);
       } finally {

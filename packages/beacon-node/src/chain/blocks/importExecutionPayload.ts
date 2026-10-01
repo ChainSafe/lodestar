@@ -133,6 +133,9 @@ export async function importExecutionPayload(
 
   // 5. Import to fork choice. The engine transitions PENDING to FULL and queues the FCU.
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
+  // [beacon-engine] moved: consensus envelope verification/import and import FCU now live in
+  // packages/beacon-node/src/chain/beaconEngine/importExecutionPayload.ts.
+  // On unstable merges, sync that logic there; retain DA-driven newPayload and facade side effects here.
   const {executionOptimistic} = this.beaconEngine.importExecutionPayload(
     fromHex(blockRootHex),
     blockHashHex,

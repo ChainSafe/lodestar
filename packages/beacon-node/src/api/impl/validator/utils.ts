@@ -3,7 +3,11 @@ import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {CommitteeIndex, ProducedBlockSource, Slot, SubnetID} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
-import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
+import {
+  BlockSelectionResult,
+  BuilderBlockSelectionReason,
+  EngineBlockSelectionReason,
+} from "../../../chain/beaconEngine/produceEngineOrBuilderBlock.js";
 
 // Pubkey precompute lives with the duty flows in the engine now; re-exported here for existing callers/tests.
 export {getPubkeysForIndices} from "../../../chain/beaconEngine/duties.js";
@@ -18,6 +22,9 @@ export function computeSubnetForCommitteesAtSlot(
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }
 
+/**
+ * Runs inside BeaconEngine. Unchanged from unstable@551b8b0a3d.
+ */
 export function selectBlockProductionSource({
   builderSelection,
   engineExecutionPayloadValue,

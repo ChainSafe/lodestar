@@ -1,5 +1,6 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
+import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BlockExecutionStatus,
@@ -10,7 +11,7 @@ import {
   ProtoBlock,
   ProtoNode,
 } from "@lodestar/fork-choice";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@lodestar/state-transition";
 import {
   Attestation,
@@ -22,6 +23,7 @@ import {
   CommitteeIndex,
   Epoch,
   IndexedAttestation,
+  ProducedBlockSource,
   Root,
   RootHex,
   SignedAggregateAndProof,
@@ -52,11 +54,10 @@ import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
-import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
-import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "../produceBlock/produceBlockBody.js";
+import {ProduceResult} from "../produceBlock/produceBlockBody.js";
 import {RegenRequest} from "../regen/index.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
@@ -65,6 +66,7 @@ import {GossipBlockValidationResult} from "../validation/block.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {IBeaconEngineOptions} from "./options.js";
+import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
 export type BeaconEngineModules = {
   executionEngine: IExecutionEngine;
@@ -122,27 +124,34 @@ export type ImportBlockResult = {
   };
 };
 
-/** Transitional shared context for the facade race until Step 5. */
-// TODO (zig_engine_el_plan.md Step 5): delete this context type when parent/bid selection and packing move into the race.
-export type PrepareBlockProductionResult = {
-  parentBlock: ProtoBlock;
-  builderBid: gloas.SignedExecutionPayloadBid | null;
-  commonBlockBodyPromise: Promise<CommonBlockBody>;
+export type ProduceBlockRequest = {
+  slot: Slot;
+  randaoReveal: BLSSignature;
+  graffiti: Bytes32;
+  feeRecipient?: string;
+  strictFeeRecipientCheck?: boolean;
+  builderSelection: routes.validator.BuilderSelection;
+  builderBoostFactor: bigint;
 };
-
-// TODO (zig_engine_el_plan.md Step 5): replace this full/blinded response with selected V3/V4 results and typed error payloads.
-export type ProduceBlockResponse<T extends BlockType> =
+export type ProduceBlockV4Request = Pick<ProduceBlockRequest, "slot" | "randaoReveal" | "graffiti" | "feeRecipient">;
+export type ProduceBlockV4Result = {
+  data: gloas.BeaconBlock;
+  version: ForkPostGloas;
+  executionPayloadValue: bigint;
+  consensusBlockValue: bigint;
+  executionPayloadSource: ProducedBlockSource;
+  produceResult: ProduceResult;
+};
+export type ProductionError =
+  | {ok: false; code: BeaconEngineErrorCode.API_ERROR; payload: {status: ApiError["statusCode"]; message: string}}
   | {
-      ok: true;
-      data: {
-        block: AssembledBlockType<T>;
-        executionPayloadValue: bigint;
-        consensusBlockValue: bigint;
-        shouldOverrideBuilder?: boolean;
-        produceResult: ProduceResult;
-      };
-    }
-  | {ok: false; code: BeaconEngineErrorCode; payload: {message: string}};
+      ok: false;
+      code: BeaconEngineErrorCode.NODE_SYNCING | BeaconEngineErrorCode.ABORTED | BeaconEngineErrorCode.INTERNAL;
+      payload: {message: string};
+    };
+export type ProductionResponse<T> = {ok: true; data: T} | ProductionError;
+export type ProduceBlockResponse = ProductionResponse<ProduceBlindedBlockOrBlockContentsRes>;
+export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result>;
 
 /** The DA prune parent returned after engine-owned slot preparation. */
 export type PrepareNextSlotResult = {daPruneParent: ProtoBlock};
@@ -150,6 +159,8 @@ export type PrepareNextSlotResult = {daPruneParent: ProtoBlock};
 export enum BeaconEngineErrorCode {
   ABORTED = "ABORTED",
   INTERNAL = "INTERNAL",
+  API_ERROR = "API_ERROR",
+  NODE_SYNCING = "NODE_SYNCING",
 }
 
 export type PrepareNextSlotResponse =
@@ -210,10 +221,7 @@ export type ApiStateResultWithFork<T> =
 export interface IBeaconEngine {
   readonly config: BeaconConfig;
 
-  // Block production. `produceCommonBlockBody` builds the fork-agnostic body part (reused across the
-  // self-build / builder-bid paths). `prepareBlockProduction` retains only parent/bid/common body
-  // until Step 5 moves the race into the engine.
-  // More of the production flow migrates here in later steps.
+  // Parent selection and block production races are engine-owned.
   getProposerHead(slot: Slot): ProtoBlock;
 
   // --- TODO - beacon engine: temp forkChoice read pass-throughs (curate when regen removed — BLK-3). ---
@@ -292,18 +300,8 @@ export interface IBeaconEngine {
   ): Promise<void>;
   getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null>;
 
-  // TODO (zig_engine_el_plan.md Step 5): remove both preparatory calls from this interface; keep their work internal.
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  prepareBlockProduction(attrs: {
-    slot: Slot;
-    randaoReveal: BLSSignature;
-    graffiti: Bytes32;
-  }): Promise<PrepareBlockProductionResult>;
-  // TODO (zig_engine_el_plan.md Step 5): replace this entry with produceBlock and produceBlockV4; accept no promises.
-  produceBlockForProposal<T extends BlockType>(
-    blockType: T,
-    attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
-  ): Promise<ProduceBlockResponse<T>>;
+  produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
+  produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
 
   // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
   // proposer-boost-reorg, precompute the epoch transition, prepare the EL/builder and emit SSE.

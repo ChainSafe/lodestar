@@ -50,7 +50,6 @@ import {
   Attestation,
   AttesterSlashing,
   BLSPubkey,
-  BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
   Bytes32,
@@ -78,6 +77,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
@@ -192,13 +192,16 @@ import {
   IBeaconEngine,
   ImportBlockResult,
   MigrateFinalizedResult,
-  PrepareBlockProductionResult,
   PrepareNextSlotResponse,
+  ProduceBlockRequest,
   ProduceBlockResponse,
+  ProduceBlockV4Request,
+  ProduceBlockV4Response,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {prepareForNextSlot} from "./prepareNextSlot.js";
-import {produceBlindedBlock, produceBlock, produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
+import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
+import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {verifyBlocks} from "./verifyBlock.js";
 
 /**
@@ -817,42 +820,8 @@ export class BeaconEngine implements IBeaconEngine {
     return envelope.message.executionRequests;
   }
 
-  /** Transitional shared context until Step 5 moves the API race into the engine. */
-  // TODO (zig_engine_el_plan.md Step 5): remove this method; select parent/bid and defer packing inside the engine race.
-  async prepareBlockProduction(attrs: {
-    slot: Slot;
-    randaoReveal: BLSSignature;
-    graffiti: Bytes32;
-  }): Promise<PrepareBlockProductionResult> {
-    // [beacon-engine] deviation: retain shared parent/bid/common body for the facade race until Step 5.
-    const parentBlock = this.getProposerHead(attrs.slot);
-    let builderBid: gloas.SignedExecutionPayloadBid | null = null;
-    if (isForkPostGloas(this.config.getForkName(attrs.slot))) {
-      const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, attrs.slot);
-      const parentHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      builderBid = this.executionPayloadBidPool.getBestBid(attrs.slot, parentHash, parentBlock.blockRoot);
-    }
-    const commonBlockBodyPromise = new Promise<CommonBlockBody>((resolve, reject) => {
-      callInNextEventLoop(() => {
-        this.produceCommonBlockBody({...attrs, parentBlock}).then(resolve, reject);
-      });
-    });
-    return {parentBlock, builderBid, commonBlockBodyPromise};
-  }
-
-  // TODO (zig_engine_el_plan.md Step 5): make this internal; common-body promises must stay inside the engine race.
   produceCommonBlockBody(attrs: BlockAttributes): Promise<CommonBlockBody> {
     return produceCommonBlockBody.call(this, attrs);
-  }
-
-  // TODO (zig_engine_el_plan.md Step 5): use produceBlock for the public V3 entry; alias the copied self-build function.
-  produceBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
-    return produceBlock.call(this, attrs);
-  }
-
-  // TODO (zig_engine_el_plan.md Step 5): call the copied blinded flow internally from the engine-owned race.
-  produceBlindedBlock(attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}) {
-    return produceBlindedBlock.call(this, attrs);
   }
 
   produceBlockWrapper<T extends BlockType>(
@@ -862,16 +831,45 @@ export class BeaconEngine implements IBeaconEngine {
     return (produceBlockWrapper<T>).call(this, blockType, attrs);
   }
 
-  /** Transitional production entry; Step 5 replaces it with the engine-owned race. */
-  // TODO (zig_engine_el_plan.md Step 5): remove produceBlockForProposal; expose produceBlock (V3) and produceBlockV4.
-  // TODO (zig_engine_el_plan.md Step 5): map API_ERROR/NODE_SYNCING/ABORTED/INTERNAL once around the complete race.
-  async produceBlockForProposal<T extends BlockType>(
-    blockType: T,
-    attrs: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
-  ): Promise<ProduceBlockResponse<T>> {
+  /** Runs inside BeaconEngine. Single V3 production entry and plain-data error boundary. */
+  async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
     try {
-      return {ok: true, data: await this.produceBlockWrapper(blockType, attrs)};
+      const {slot, randaoReveal, graffiti, builderBoostFactor, ...opts} = request;
+      return {
+        ok: true,
+        data: await produceEngineOrBuilderBlock.call(this, slot, randaoReveal, graffiti, builderBoostFactor, opts),
+      };
     } catch (e) {
+      if (e instanceof NodeIsSyncing)
+        return {
+          ok: false,
+          code: BeaconEngineErrorCode.NODE_SYNCING,
+          payload: {message: e.message.replace(/^Node is syncing - /, "")},
+        };
+      if (e instanceof ApiError)
+        return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
+      return {
+        ok: false,
+        code:
+          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
+        payload: {message: e instanceof Error ? e.message : String(e)},
+      };
+    }
+  }
+
+  /** Runs inside BeaconEngine. Single Gloas V4 production entry and plain-data error boundary. */
+  async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
+    try {
+      return {ok: true, data: await produceBlockV4.call(this, request)};
+    } catch (e) {
+      if (e instanceof NodeIsSyncing)
+        return {
+          ok: false,
+          code: BeaconEngineErrorCode.NODE_SYNCING,
+          payload: {message: e.message.replace(/^Node is syncing - /, "")},
+        };
+      if (e instanceof ApiError)
+        return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
       return {
         ok: false,
         code:

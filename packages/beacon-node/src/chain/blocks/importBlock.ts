@@ -45,6 +45,9 @@ export async function importBlock(
 
   // 2-5. Delegate to engine: state transition, fork choice, head computation.
   // Engine takes the root as bytes (native-engine bytes-first contract).
+  // [beacon-engine] moved: consensus import, addAttestationPreElectra/addAttestationPostElectra,
+  // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
+  // On unstable merges, sync that logic there; retain facade side effects here.
   const r = await this.beaconEngine.importBlock(
     fromHex(blockInput.blockRootHex),
     executionStatus,

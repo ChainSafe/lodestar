@@ -3,7 +3,7 @@ import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView, createPubkeyCache} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
@@ -11,6 +11,7 @@ import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
+import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
@@ -39,9 +40,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngine` phantom validators
   // and reach engine internals (regen/bls/getHeadState) through it. Keep the concrete type here.
   beaconEngine: BeaconEngine;
+  produceBlockWrapper: Mock<BeaconEngine["produceBlockWrapper"]>;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
-  // real `prepareForNextSlot` / `prepareBlockProduction` bound onto it call `this.recomputeForkChoiceHead`
+  // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHead`
   // etc.). No longer on the facade — stubbed here so tests can control head selection.
   recomputeForkChoiceHead: Mock<(caller: ForkchoiceCaller) => ProtoBlock>;
   updateBuilderStatus: Mock<(slot: Slot) => void>;
@@ -175,6 +177,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
     return {
       config,
       opts: {},
+      blockProductionCache: new Map(),
+      getStatus: vi.fn().mockReturnValue({...ssz.phase0.Status.defaultValue(), earliestAvailableSlot: 0}),
+      executionPayloadBidPool: new ExecutionPayloadBidPool(),
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
@@ -214,11 +219,10 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       shufflingCache: new ShufflingCache(),
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
-      // TODO (zig_engine_el_plan.md Step 5): replace transitional preparation mocks with the final V3/V4 race entries.
-      prepareBlockProduction: vi.fn(),
+      produceBlockV4: vi.fn(),
+      produceBlockWrapper: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
-      produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       getBlockByRoot: vi.fn(),
       getSerializedBlockByRoot: vi.fn(),

@@ -45,6 +45,8 @@ export function produceBlock(
   this: BeaconEngine,
   blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
 ): Promise<{
+  // [beacon-engine] deviation: return DA artifacts alongside the assembled block.
+  produceResult: ProduceResult;
   block: BeaconBlock;
   executionPayloadValue: Wei;
   consensusBlockValue: Wei;
@@ -61,6 +63,8 @@ export function produceBlindedBlock(
   this: BeaconEngine,
   blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
 ): Promise<{
+  // [beacon-engine] deviation: return DA artifacts alongside the assembled block.
+  produceResult: ProduceResult;
   block: BlindedBeaconBlock;
   executionPayloadValue: Wei;
   consensusBlockValue: Wei;

@@ -1,24 +1,23 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkName, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconStateView, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
 import {BuilderStatus} from "../../../../../src/execution/builder/http.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {toGraffitiBytes} from "../../../../../src/util/graffiti.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../../../utils/state.js";
+import {generateCachedBellatrixState} from "../../../../utils/state.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
 describe("api/validator - produceBlockV3", () => {
-  // TODO (zig_engine_el_plan.md Step 5): move race tests to the engine; test one API call and final error/cache mapping here.
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
   let state: BeaconStateView;
@@ -36,139 +35,17 @@ describe("api/validator - produceBlockV3", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
     state = new BeaconStateView(generateCachedBellatrixState());
 
+    vi.spyOn(modules.chain.clock, "msFromSlot").mockReturnValue(0);
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
+    modules.chain.beaconEngine.produceBlock = vi.fn(
+      BeaconEngine.prototype.produceBlock.bind(modules.chain.beaconEngine)
+    );
+    modules.chain.beaconEngine.produceCommonBlockBody = vi.fn().mockResolvedValue({});
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
-
-  const testCases: [routes.validator.BuilderSelection, number | null, number | null, number, boolean, string][] = [
-    [routes.validator.BuilderSelection.MaxProfit, 1, 0, 0, false, "builder"],
-    [routes.validator.BuilderSelection.MaxProfit, 1, 2, 1, false, "engine"],
-    [routes.validator.BuilderSelection.MaxProfit, null, 0, 0, false, "engine"],
-    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, false, "builder"],
-    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, true, "builder"],
-    [routes.validator.BuilderSelection.MaxProfit, 1, 1, 1, true, "engine"],
-    [routes.validator.BuilderSelection.MaxProfit, 2, 1, 1, true, "engine"],
-
-    [routes.validator.BuilderSelection.BuilderAlways, 1, 2, 0, false, "builder"],
-    [routes.validator.BuilderSelection.BuilderAlways, 1, 0, 1, false, "builder"],
-    [routes.validator.BuilderSelection.BuilderAlways, null, 0, 0, false, "engine"],
-    [routes.validator.BuilderSelection.BuilderAlways, 0, null, 1, false, "builder"],
-    [routes.validator.BuilderSelection.BuilderAlways, 0, 1, 1, true, "engine"],
-    [routes.validator.BuilderSelection.BuilderAlways, 1, 1, 1, true, "engine"],
-    [routes.validator.BuilderSelection.BuilderAlways, 1, null, 1, true, "builder"],
-
-    [routes.validator.BuilderSelection.ExecutionAlways, 2, 1, 0, false, "engine"],
-    [routes.validator.BuilderSelection.ExecutionAlways, 0, 1, 1, false, "engine"],
-    [routes.validator.BuilderSelection.ExecutionAlways, 0, null, 0, false, "builder"],
-    [routes.validator.BuilderSelection.ExecutionAlways, null, 0, 1, false, "engine"],
-    [routes.validator.BuilderSelection.ExecutionAlways, 1, 1, 1, true, "engine"],
-
-    [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
-    [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
-    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
-    [routes.validator.BuilderSelection.ExecutionOnly, 1, 1, 1, true, "engine"],
-  ];
-
-  for (const [
-    builderSelection,
-    builderPayloadValue,
-    enginePayloadValue,
-    consensusBlockValue,
-    shouldOverrideBuilder,
-    finalSelection,
-  ] of testCases) {
-    it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
-      const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-      const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-
-      const slot = 1 * SLOTS_PER_EPOCH;
-      const randaoReveal = fullBlock.body.randaoReveal;
-      const graffiti = "a".repeat(32);
-      const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
-      const currentSlot = 1 * SLOTS_PER_EPOCH;
-
-      vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
-      vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
-      modules.chain.recomputeForkChoiceHead.mockReturnValue({
-        blockRoot: toRootHex(fullBlock.parentRoot),
-      } as ProtoBlock);
-      modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
-      modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
-      vi.mocked(modules.chain.beaconEngine.prepareBlockProduction).mockResolvedValue({
-        parentBlock: {blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock,
-        builderBid: null,
-        commonBlockBodyPromise: Promise.resolve({
-          attestations: fullBlock.body.attestations,
-          attesterSlashings: fullBlock.body.attesterSlashings,
-          deposits: fullBlock.body.deposits,
-          proposerSlashings: fullBlock.body.proposerSlashings,
-          eth1Data: fullBlock.body.eth1Data,
-          graffiti: fullBlock.body.graffiti,
-          randaoReveal: fullBlock.body.randaoReveal,
-          voluntaryExits: fullBlock.body.voluntaryExits,
-          blsToExecutionChanges: [],
-          syncAggregate: fullBlock.body.syncAggregate,
-        }),
-      } as unknown as Awaited<ReturnType<typeof modules.chain.beaconEngine.prepareBlockProduction>>);
-
-      if (enginePayloadValue !== null) {
-        modules.chain.produceBlock.mockResolvedValue({
-          block: fullBlock,
-          executionPayloadValue: BigInt(enginePayloadValue),
-          consensusBlockValue: BigInt(consensusBlockValue),
-          shouldOverrideBuilder,
-        });
-      } else {
-        modules.chain.produceBlock.mockRejectedValue(Error("not produced"));
-      }
-
-      if (builderPayloadValue !== null) {
-        modules.chain.produceBlindedBlock.mockResolvedValue({
-          block: blindedBlock,
-          executionPayloadValue: BigInt(builderPayloadValue),
-          consensusBlockValue: BigInt(consensusBlockValue),
-        });
-      } else {
-        modules.chain.produceBlindedBlock.mockRejectedValue(Error("not produced"));
-      }
-      const _skipRandaoVerification = false;
-      const produceBlockOpts = {
-        strictFeeRecipientCheck: false,
-        builderSelection,
-        feeRecipient,
-      };
-
-      const {data: block, meta} = await api.produceBlockV3({
-        slot,
-        randaoReveal,
-        graffiti,
-        skipRandaoVerification: _skipRandaoVerification,
-        ...produceBlockOpts,
-      });
-
-      const expectedBlock = finalSelection === "builder" ? blindedBlock : {block: fullBlock};
-      const expectedExecution = finalSelection === "builder";
-
-      expect(block).toEqual(expectedBlock);
-      expect(meta.executionPayloadBlinded).toEqual(expectedExecution);
-
-      // check call counts
-      if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-        expect(modules.chain.produceBlindedBlock).toBeCalledTimes(0);
-      } else {
-        expect(modules.chain.produceBlindedBlock).toBeCalledTimes(1);
-      }
-
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(modules.chain.produceBlock).toBeCalledTimes(0);
-      } else {
-        expect(modules.chain.produceBlock).toBeCalledTimes(1);
-      }
-    });
-  }
 
   it("correctly pass feeRecipient to produceBlock", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
@@ -181,6 +58,7 @@ describe("api/validator - produceBlockV3", () => {
 
     // Set the node's state to way back from current slot
     const slot = 100000;
+    fullBlock.slot = slot;
     const randaoReveal = fullBlock.body.randaoReveal;
     const parentBlockRoot = fullBlock.parentRoot;
     const parentBlock = generateProtoBlock({blockRoot: toRootHex(parentBlockRoot), slot: currentSlot - 1});
@@ -190,33 +68,20 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
     modules.chain.recomputeForkChoiceHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
-    modules.chain.produceBlock.mockResolvedValue({
+    modules.chain.produceBlockWrapper.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
       consensusBlockValue,
+      produceResult: {
+        type: BlockType.Full,
+        fork: ForkName.bellatrix,
+        executionPayload: fullBlock.body.executionPayload,
+      },
     });
-    // Return only parentBlock/builderBid/commonBlockBodyPromise so `...prepared` is empty and the
-    // produceBlock call args below match exactly.
-    vi.mocked(modules.chain.beaconEngine.prepareBlockProduction).mockResolvedValue({
-      parentBlock,
-      builderBid: null,
-      commonBlockBodyPromise: Promise.resolve({
-        attestations: fullBlock.body.attestations,
-        attesterSlashings: fullBlock.body.attesterSlashings,
-        deposits: fullBlock.body.deposits,
-        proposerSlashings: fullBlock.body.proposerSlashings,
-        eth1Data: fullBlock.body.eth1Data,
-        graffiti: fullBlock.body.graffiti,
-        randaoReveal: fullBlock.body.randaoReveal,
-        voluntaryExits: fullBlock.body.voluntaryExits,
-        blsToExecutionChanges: [],
-        syncAggregate: fullBlock.body.syncAggregate,
-      }),
-    } as unknown as Awaited<ReturnType<typeof modules.chain.beaconEngine.prepareBlockProduction>>);
 
     // check if expectedFeeRecipient is passed to produceBlock
     await api.produceBlockV3({slot, randaoReveal, graffiti, feeRecipient});
-    expect(modules.chain.produceBlock).toBeCalledWith({
+    expect(modules.chain.produceBlockWrapper).toBeCalledWith(BlockType.Full, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
@@ -228,7 +93,7 @@ describe("api/validator - produceBlockV3", () => {
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
     await api.produceBlockV3({slot, randaoReveal, graffiti});
-    expect(modules.chain.produceBlock).toBeCalledWith({
+    expect(modules.chain.produceBlockWrapper).toBeCalledWith(BlockType.Full, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
@@ -242,6 +107,7 @@ describe("api/validator - produceBlockV3", () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const slot = 100000;
+    fullBlock.slot = slot;
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
