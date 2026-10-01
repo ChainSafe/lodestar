@@ -2,20 +2,22 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BlockExecutionStatus,
   ExecutionStatus,
+  IForkChoice,
   LVHInvalidResponse,
   LVHValidResponse,
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {isExecutionBlockBodyType} from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
+import {bellatrix, deneb, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
+import {isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -24,6 +26,7 @@ export type VerifyBlockExecutionPayloadModules = {
   clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
+  forkChoice: IForkChoice;
   config: ChainForkConfig;
 };
 
@@ -50,11 +53,14 @@ type VerifyBlockExecutionResponse =
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
  *
  * Since the EL client must be aware of each parent, all payloads must be submitted in sequence.
+ *
+ * Runs inside BeaconEngine. Copied from unstable@551b8b0a3d; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
@@ -92,7 +98,7 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput);
+    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
@@ -133,10 +139,13 @@ export async function verifyBlocksExecutionPayload(
 
 /**
  * Verifies a single block execution payload by sending it to the EL client (via HTTP).
+ *
+ * Runs inside BeaconEngine. Copied from unstable@551b8b0a3d; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  blockInput: IBlockInput
+  blockInput: IBlockInput,
+  preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
@@ -146,18 +155,14 @@ export async function verifyBlockExecutionPayload(
     return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
   }
 
-  // TODO - beacon engine: this caused failed spec tests?
-  // the BeaconEngine cannot provide a BeaconState
-  // const executionPayloadEnabled =
-  //   isStatePostBellatrix(preState0) &&
-  //   preState0.isExecutionStateType &&
-  //   isExecutionBlockBodyType(block.message.body) &&
-  //   preState0.isExecutionEnabled(block.message)
-  //     ? block.message.body.executionPayload
-  //     : null;
-  const executionPayloadEnabled = isExecutionBlockBodyType(block.message.body)
-    ? block.message.body.executionPayload
-    : null;
+  /** Not null if execution is enabled */
+  const executionPayloadEnabled =
+    isStatePostBellatrix(preState0) &&
+    preState0.isExecutionStateType &&
+    isExecutionBlockBodyType(block.message.body) &&
+    preState0.isExecutionEnabled(block.message)
+      ? block.message.body.executionPayload
+      : null;
 
   if (!executionPayloadEnabled) {
     // Pre-merge block, no execution payload to verify
@@ -166,8 +171,11 @@ export async function verifyBlockExecutionPayload(
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
   const fork = blockInput.forkName;
+  // [beacon-engine] deviation: derive hashes from consensus commitments without reading facade DA data.
   const versionedHashes =
-    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
+    ForkSeq[fork] >= ForkSeq.deneb
+      ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
+      : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
@@ -244,6 +252,9 @@ export async function verifyBlockExecutionPayload(
   }
 }
 
+/**
+ * Runs inside BeaconEngine. Copied from unstable@551b8b0a3d; differences are tagged `[beacon-engine] deviation`.
+ */
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,

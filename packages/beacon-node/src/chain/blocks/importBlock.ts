@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -22,7 +21,6 @@ const EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS = 64;
 export async function importBlock(
   this: BeaconChain,
   blockInput: IBlockInput,
-  executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportBlockOpts
 ): Promise<void> {
@@ -48,12 +46,7 @@ export async function importBlock(
   // [beacon-engine] moved: consensus import, addAttestationPreElectra/addAttestationPostElectra,
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.
-  const r = await this.beaconEngine.importBlock(
-    fromHex(blockInput.blockRootHex),
-    executionStatus,
-    dataAvailabilityStatus,
-    opts
-  );
+  const r = await this.beaconEngine.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
 
   // Emit head event (engine already pruned pools, registered seen-attesters, and set head state)
   if (r.head !== null) {

@@ -304,7 +304,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
     "getIrrecoverableError",
-    "validateLatestHash",
     // Temp forkChoice read pass-throughs (forward to the mock's forkChoice) — BLK-1.
     "getHead",
     "getHeadRoot",

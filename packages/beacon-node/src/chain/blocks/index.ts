@@ -1,4 +1,3 @@
-import {BlockExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
@@ -105,25 +104,16 @@ export async function processBlocks(
     // (importBlock deletes each as it consumes it, so the sweep is a no-op cleanup of any remainder).
     const verifiedBlockRoots = relevantBlocks.map((b) => b.blockRootHex);
     try {
-      // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
-      // and we need to further propagate
+      // The engine propagates invalid ancestry before rejecting verification.
       if (segmentExecStatus.execAborted !== null) {
-        if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-          this.beaconEngine.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
-        }
         throw segmentExecStatus.execAborted.execError;
       }
 
-      const {executionStatuses} = segmentExecStatus;
-      const blockInputsBySlot = new Map<
-        Slot,
-        {blockInput: IBlockInput; executionStatus: BlockExecutionStatus; blockDAStatus: DataAvailabilityStatus}
-      >();
+      const blockInputsBySlot = new Map<Slot, {blockInput: IBlockInput; blockDAStatus: DataAvailabilityStatus}>();
       for (let i = 0; i < relevantBlocks.length; i++) {
         const block = relevantBlocks[i];
         blockInputsBySlot.set(block.getBlock().message.slot, {
           blockInput: block,
-          executionStatus: executionStatuses[i],
           blockDAStatus: blockDAStatuses[i],
         });
       }
@@ -136,7 +126,7 @@ export async function processBlocks(
       for (const slot of slots) {
         const entry = blockInputsBySlot.get(slot);
         if (entry !== undefined) {
-          await importBlock.call(this, entry.blockInput, entry.executionStatus, entry.blockDAStatus, opts);
+          await importBlock.call(this, entry.blockInput, entry.blockDAStatus, opts);
         }
 
         const payloadInput = payloadEnvelopes?.get(slot);

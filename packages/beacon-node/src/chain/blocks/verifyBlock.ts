@@ -13,7 +13,7 @@ import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
-import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
+import {SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 /**
@@ -68,15 +68,6 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    // Start execution payload verification first (async request to execution client)
-    const verifyExecutionPayloadsPromise =
-      opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, abortController.signal, opts)
-        : Promise.resolve({
-            execAborted: null,
-            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
-          } as SegmentExecStatus);
-
     // Pick the data-availability source by fork:
     // - Pre-Gloas: blob/Fulu-column data lives in IBlockInput → verifyBlocksDataAvailability.
     // - Post-Gloas: verifyPayloadsDataAvailability (payload-level DA, keyed by slot).
@@ -123,18 +114,15 @@ export async function verifyBlocksInEpoch(
 
     // batch all I/O operations to reduce overhead
     const [
-      segmentExecStatus,
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {verifyStateTime, verifySignaturesTime},
+      {segmentExecStatus, verifyStateTime, verifySignaturesTime},
     ] = await Promise.all([
-      verifyExecutionPayloadsPromise,
-
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
-      // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature verification now lives in
+      // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature/EL verification now lives in
       // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
-      // On unstable merges, sync that logic there; retain DA and pre-gloas EL verification here.
+      // On unstable merges, sync that logic there; retain DA verification here.
       this.beaconEngine.verifyBlocks(blockBytes, parentBlock, blockInputs, opts, abortController.signal),
     ]);
 

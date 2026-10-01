@@ -58,6 +58,7 @@ import {BeaconEngine} from "./beaconEngine.js";
 import {ImportBlockResult} from "./interface.js";
 
 export type VerifiedBlockBundle = {
+  executionStatus: BlockExecutionStatus;
   postState: IBeaconStateView;
   blockInput: IBlockInput;
   indexedAttestations: IndexedAttestation[];
@@ -72,14 +73,13 @@ export type VerifiedBlockBundle = {
  */
 export async function importBlock(
   this: BeaconEngine,
-  // [beacon-engine] deviation: consume the engine-owned verification bundle and facade DA/EL statuses.
+  // [beacon-engine] deviation: consume the engine-owned verification bundle and facade DA status.
   v: VerifiedBlockBundle,
-  executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportBlockOpts
 ): Promise<ImportBlockResult> {
   const {blockInput, postState, parentBlockSlot, indexedAttestations, proposerBalanceDelta, seenTimestampSec} = v;
-  let execStatus = executionStatus;
+  let execStatus: BlockExecutionStatus | PayloadExecutionStatus = v.executionStatus;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;

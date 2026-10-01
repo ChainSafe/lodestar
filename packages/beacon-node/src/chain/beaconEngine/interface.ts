@@ -2,15 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  BlockExecutionStatus,
-  CheckpointWithHex,
-  LVHExecResponse,
-  PayloadExecutionStatus,
-  PayloadStatus,
-  ProtoBlock,
-  ProtoNode,
-} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadExecutionStatus, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
 import {ForkName, ForkPostGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@lodestar/state-transition";
 import {
@@ -52,6 +44,7 @@ import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
+import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -618,12 +611,11 @@ export interface IBeaconEngine {
     blockInputs: IBlockInput[],
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
-  ): Promise<{verifyStateTime: number; verifySignaturesTime: number}>;
+  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
   // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
   // the native engine FFI. The JS engine keys its internal cache by hex (converted here).
   importBlock(
     blockRoot: Root,
-    executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult>;
@@ -632,7 +624,6 @@ export interface IBeaconEngine {
   // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
   updateTime(currentSlot: Slot): void;
   getIrrecoverableError(): Error | undefined;
-  validateLatestHash(execResponse: LVHExecResponse): void;
 
   // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
   // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs

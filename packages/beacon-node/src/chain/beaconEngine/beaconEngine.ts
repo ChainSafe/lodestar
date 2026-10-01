@@ -2,11 +2,9 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  BlockExecutionStatus,
   CheckpointWithHex,
   ForkChoiceStateGetter,
   IForkChoice,
-  LVHExecResponse,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -102,6 +100,7 @@ import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCac
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
+import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
@@ -1824,13 +1823,12 @@ export class BeaconEngine implements IBeaconEngine {
     blockInputs: IBlockInput[],
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
-  ): Promise<{verifyStateTime: number; verifySignaturesTime: number}> {
+  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
     return verifyBlocks.call(this, _blockBytes, parentBlock, blockInputs, opts, signal);
   }
 
   async importBlock(
     blockRoot: Root,
-    executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
@@ -1840,7 +1838,7 @@ export class BeaconEngine implements IBeaconEngine {
     if (!v) throw Error(`No verified block found for root ${blockRootHex}`);
 
     try {
-      return await importBlock.call(this, v, executionStatus, dataAvailabilityStatus, opts);
+      return await importBlock.call(this, v, dataAvailabilityStatus, opts);
     } finally {
       this.verifiedBlocks.delete(blockRootHex);
     }
@@ -1905,10 +1903,6 @@ export class BeaconEngine implements IBeaconEngine {
 
   getIrrecoverableError(): Error | undefined {
     return this.forkChoice.irrecoverableError;
-  }
-
-  validateLatestHash(execResponse: LVHExecResponse): void {
-    this.forkChoice.validateLatestHash(execResponse);
   }
 
   // --- DB ownership (blocks + states) ---
