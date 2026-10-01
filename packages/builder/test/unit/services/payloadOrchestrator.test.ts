@@ -130,16 +130,13 @@ describe("PayloadOrchestrator", () => {
     expect(orchestrator.activeJobCount).toBe(0);
   });
 
-  it("rejects a preparation delay that overflows after the clock moves backwards", async () => {
+  it("checks the preparation delay against the current clock", async () => {
     const source = new StubPayloadSource();
     const pendingPrepare = defer<BuildHandle>();
     source.prepareImpl = () => pendingPrepare.promise;
     const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
     const getPayloadAt = NOW + 2 ** 31 - 1;
-    const now = vi
-      .spyOn(Date, "now")
-      .mockReturnValueOnce(NOW)
-      .mockReturnValue(NOW - 1);
+    const now = vi.spyOn(Date, "now").mockReturnValue(NOW - 1);
 
     try {
       const rejected = expect(
@@ -437,6 +434,99 @@ describe("PayloadOrchestrator", () => {
     const controller = new AbortController();
 
     await expect(orchestrator.run(buildJob(), controller.signal)).rejects.toBe(sourceError);
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
+  it("retries missing payload IDs until preparation succeeds", async () => {
+    const source = new StubPayloadSource();
+    source.prepareImpl = async (request) => {
+      if (source.prepareCalls.length < 3) {
+        throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+      }
+      return {sourceId: source.id, fork: request.fork, payloadId: "0x01"};
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const result = orchestrator.run(buildJob("retry", NOW + 350), new AbortController().signal);
+
+    await vi.advanceTimersByTimeAsync(199);
+    expect(source.prepareCalls).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(source.prepareCalls).toHaveLength(3);
+    expect(source.getPayloadCalls).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(150);
+    await expect(result).resolves.toEqual(builtPayload());
+    expect(source.getPayloadCalls).toHaveLength(1);
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
+  it("does not extend the preparation deadline while retrying", async () => {
+    const source = new StubPayloadSource();
+    source.prepareImpl = async () => {
+      throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const result = orchestrator.run(buildJob("deadline", NOW + 250), new AbortController().signal);
+    const assertion = expect(result).rejects.toMatchObject({
+      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "deadline"},
+    });
+
+    await vi.advanceTimersByTimeAsync(250);
+    await assertion;
+    expect(source.prepareCalls).toHaveLength(3);
+    expect(source.getPayloadCalls).toHaveLength(0);
+    expect(orchestrator.activeJobCount).toBe(0);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(source.prepareCalls).toHaveLength(3);
+  });
+
+  it("cancels preparation backoff without sending another request", async () => {
+    const source = new StubPayloadSource();
+    source.prepareImpl = async () => {
+      throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const controller = new AbortController();
+    const result = orchestrator.run(buildJob("cancel", NOW + 350), controller.signal);
+    const assertion = expect(result).rejects.toBeInstanceOf(ErrorAborted);
+    await vi.advanceTimersByTimeAsync(50);
+    controller.abort();
+    await assertion;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(source.prepareCalls).toHaveLength(1);
+    expect(source.getPayloadCalls).toHaveLength(0);
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
+  it("does not retry a permanent source error after a missing payload ID", async () => {
+    const source = new StubPayloadSource();
+    const sourceError = new Error("invalid forkchoice");
+    source.prepareImpl = async () => {
+      if (source.prepareCalls.length === 1) {
+        throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+      }
+      throw sourceError;
+    };
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const result = orchestrator.run(buildJob("invalid", NOW + 350), new AbortController().signal);
+    const assertion = expect(result).rejects.toBe(sourceError);
+    await vi.advanceTimersByTimeAsync(350);
+    await assertion;
+    expect(source.prepareCalls).toHaveLength(2);
+    expect(source.getPayloadCalls).toHaveLength(0);
+    expect(orchestrator.activeJobCount).toBe(0);
+  });
+
+  it("preserves a synchronous source retrieval timeout", async () => {
+    const source = new StubPayloadSource();
+    const sourceError = new TimeoutError("engine_getPayloadV6");
+    vi.spyOn(source, "getPayload").mockImplementation(() => {
+      throw sourceError;
+    });
+    const orchestrator = new PayloadOrchestrator(source, {maxActiveJobs: 1, getPayloadTimeout: 50});
+    const result = orchestrator.run(buildJob(), new AbortController().signal);
+    const assertion = expect(result).rejects.toBe(sourceError);
+    await vi.advanceTimersByTimeAsync(100);
+    await assertion;
     expect(orchestrator.activeJobCount).toBe(0);
   });
 
