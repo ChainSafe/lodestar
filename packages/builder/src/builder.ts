@@ -162,7 +162,7 @@ export class Builder {
         if (!signal.aborted && !isErrorAborted(error)) {
           this.logger.error(
             "Failed to subscribe to builder events",
-            {topics: topics.join(","), code: "BUILDER_EVENT_SUBSCRIPTION_FAILED"},
+            {topics: topics.join(",")},
             error instanceof Error ? error : Error(String(error))
           );
         }
