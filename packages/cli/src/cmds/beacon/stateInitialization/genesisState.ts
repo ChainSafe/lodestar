@@ -15,11 +15,11 @@ import {StateInitialization, StateInitializationOptions, StatePreparationContext
 import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
 export async function prepareGenesisInitialization(
-  options: Pick<StateInitializationOptions, "genesisStateFile" | "network" | "forceGenesis">,
+  options: Pick<StateInitializationOptions, "genesisStateFile" | "network">,
   {chainForkConfig, db, logger}: StatePreparationContext
 ): Promise<StateInitialization> {
   const source = options.genesisStateFile || getGenesisFileUrl(options.network || defaultNetwork);
-  if (!source || options.forceGenesis) {
+  if (!source) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.MISSING_INITIALIZATION_SOURCE},
       "Failed to initialize beacon state, please provide a genesis state file or use checkpoint sync"

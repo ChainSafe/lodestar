@@ -16,7 +16,6 @@ export type StateInitializationOptions = Pick<
   | "wssCheckpoint"
   | "forceCheckpointSync"
   | "ignoreWeakSubjectivityCheck"
-  | "forceGenesis"
   | "network"
   | "chain.nHistoricalStatesFileDataStore"
   | "chain.nativeStateView"
