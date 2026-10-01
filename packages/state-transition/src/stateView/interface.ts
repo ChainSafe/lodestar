@@ -335,6 +335,8 @@ export type IBeaconStateViewLatestFork = Omit<
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
+  | "builderPendingPayments"
+  | "builderPendingWithdrawals"
   | "computeBlockRewards"
   | "computeNewStateRoot"
   | "eth1Data"
