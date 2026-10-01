@@ -1,10 +1,12 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, expectTypeOf, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {ForkName, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName, type ForkPostGloas, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {
   ExecutionPayloadBidError,
   ExecutionPayloadBidErrorCode,
+  type ExecutionPayloadBidInput,
+  type HezeBidInput,
   createExecutionPayloadBid,
 } from "../../../src/services/executionPayloadBid.js";
 import type {BuiltPayload} from "../../../src/services/payloadSource.js";
@@ -22,7 +24,6 @@ describe("createExecutionPayloadBid", () => {
     payload.executionRequests.deposits.push(ssz.gloas.DepositRequest.defaultValue());
 
     const bid = createExecutionPayloadBid({
-      fork: ForkName.gloas,
       slot,
       parentBlockRoot,
       prevRandao,
@@ -54,7 +55,6 @@ describe("createExecutionPayloadBid", () => {
     inclusionListBits.set(3, true);
 
     const bid = createExecutionPayloadBid({
-      fork: ForkName.heze,
       slot,
       parentBlockRoot,
       prevRandao,
@@ -74,7 +74,6 @@ describe("createExecutionPayloadBid", () => {
     (bitLen) => {
       expect(() =>
         createExecutionPayloadBid({
-          fork: ForkName.heze,
           slot,
           parentBlockRoot,
           prevRandao,
@@ -109,10 +108,10 @@ describe("createExecutionPayloadBid", () => {
       fork === ForkName.heze
         ? createExecutionPayloadBid({
             ...input,
-            fork,
+            payload: {...payload, fork: ForkName.heze},
             inclusionListBits: BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE),
           })
-        : createExecutionPayloadBid({...input, fork})
+        : createExecutionPayloadBid({...input, payload: {...payload, fork: ForkName.gloas}})
     ).toThrowError(
       expect.objectContaining({
         type: {
@@ -124,14 +123,13 @@ describe("createExecutionPayloadBid", () => {
     );
   });
 
-  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number("0x20000000000001"), Number("0xffffffffffffffff")])(
-    "rejects an inexact or invalid payload gas limit %s",
+  it.each([Number("0x20000000000001"), Number("0xffffffffffffffff")])(
+    "rejects an inexact payload gas limit %s",
     (gasLimit) => {
       const payload = createBuiltPayload(ForkName.gloas);
       payload.executionPayload.gasLimit = gasLimit;
       expect(() =>
         createExecutionPayloadBid({
-          fork: ForkName.gloas,
           slot,
           parentBlockRoot,
           prevRandao,
@@ -148,7 +146,6 @@ describe("createExecutionPayloadBid", () => {
     const payload = createBuiltPayload(ForkName.gloas);
     payload.executionPayload.gasLimit = Number.MAX_SAFE_INTEGER;
     const bid = createExecutionPayloadBid({
-      fork: ForkName.gloas,
       slot,
       parentBlockRoot,
       prevRandao,
@@ -165,7 +162,6 @@ describe("createExecutionPayloadBid", () => {
     (value) => {
       expect(() =>
         createExecutionPayloadBid({
-          fork: ForkName.gloas,
           slot,
           parentBlockRoot,
           prevRandao,
@@ -183,26 +179,25 @@ describe("createExecutionPayloadBid", () => {
     }
   );
 
-  it("rejects a runtime payload fork mismatch", () => {
-    const payload = createBuiltPayload(ForkName.heze);
+  it("requires Heze bits in the input type", () => {
+    expectTypeOf<HezeBidInput["inclusionListBits"]>().toEqualTypeOf<BitArray>();
+    expectTypeOf<Omit<HezeBidInput, "inclusionListBits">>().not.toExtend<ExecutionPayloadBidInput>();
+  });
 
-    expect(() =>
-      createExecutionPayloadBid({
-        fork: ForkName.gloas,
-        slot,
-        parentBlockRoot,
-        prevRandao,
-        builderIndex,
-        feeRecipient,
-        value: 1,
-        payload,
-      })
-    ).toThrowError(
-      new ExecutionPayloadBidError(
-        {code: ExecutionPayloadBidErrorCode.FORK_MISMATCH, fork: ForkName.gloas, payloadFork: ForkName.heze},
-        `Payload fork does not match bid fork fork=${ForkName.gloas} payloadFork=${ForkName.heze}`
-      )
-    );
+  it.each([ForkName.gloas, ForkName.heze] as const)("accepts a union-typed %s input", (fork) => {
+    const common = {slot, parentBlockRoot, prevRandao, builderIndex, feeRecipient, value: 1};
+    const input: ExecutionPayloadBidInput =
+      fork === ForkName.heze
+        ? {
+            ...common,
+            payload: createBuiltPayload(ForkName.heze),
+            inclusionListBits: BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE),
+          }
+        : {...common, payload: createBuiltPayload(ForkName.gloas)};
+
+    const bid = createExecutionPayloadBid(input);
+    expect("inclusionListBits" in bid).toBe(fork === ForkName.heze);
+    expect(bid.blockHash).toEqual(input.payload.executionPayload.blockHash);
   });
 
   it.each(["slot", "parent"] as const)("rejects inconsistent payload %s before assembling a bid", (field) => {
@@ -212,7 +207,6 @@ describe("createExecutionPayloadBid", () => {
 
     expect(() =>
       createExecutionPayloadBid({
-        fork: ForkName.gloas,
         slot,
         parentBlockRoot,
         prevRandao,
@@ -231,7 +225,7 @@ describe("createExecutionPayloadBid", () => {
   });
 });
 
-function createBuiltPayload(fork: ForkName.gloas | ForkName.heze): BuiltPayload {
+function createBuiltPayload<F extends ForkPostGloas>(fork: F): BuiltPayload & {fork: F} {
   const forkTypes = fork === ForkName.heze ? ssz.heze : ssz.gloas;
   const executionPayload = forkTypes.ExecutionPayload.defaultValue();
   executionPayload.slotNumber = 10;

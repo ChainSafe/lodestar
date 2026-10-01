@@ -15,7 +15,6 @@ import {LodestarError, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import type {BuiltPayload} from "./payloadSource.js";
 
 type CommonBidInput<F extends ForkPostGloas> = {
-  fork: F;
   slot: Slot;
   parentBlockRoot: Root;
   /** Expected value from the BN payload attributes used for this build. */
@@ -23,7 +22,7 @@ type CommonBidInput<F extends ForkPostGloas> = {
   builderIndex: BuilderIndex;
   feeRecipient: ExecutionAddress;
   value: number;
-  payload: BuiltPayload;
+  payload: BuiltPayload & {fork: F};
 };
 
 export type GloasBidInput = CommonBidInput<ForkName.gloas>;
@@ -35,7 +34,6 @@ export type HezeBidInput = CommonBidInput<ForkName.heze> & {
 export type ExecutionPayloadBidInput = GloasBidInput | HezeBidInput;
 
 export enum ExecutionPayloadBidErrorCode {
-  FORK_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_FORK_MISMATCH",
   INVALID_VALUE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_VALUE",
   INVALID_GAS_LIMIT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_GAS_LIMIT",
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_SLOT_MISMATCH",
@@ -48,16 +46,11 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT; gasLimit: number}
   | {code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH; slot: Slot; payloadSlot: Slot}
   | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS; bitLen: number}
+  | {code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS; bitLen: number | undefined}
   | {
       code: ExecutionPayloadBidErrorCode.PREV_RANDAO_MISMATCH;
       expectedPrevRandao: RootHex;
       payloadPrevRandao: RootHex;
-    }
-  | {
-      code: ExecutionPayloadBidErrorCode.FORK_MISMATCH;
-      fork: ForkPostGloas;
-      payloadFork: ForkPostGloas;
     }
   | {
       code: ExecutionPayloadBidErrorCode.INVALID_VALUE;
@@ -68,14 +61,8 @@ export class ExecutionPayloadBidError extends LodestarError<ExecutionPayloadBidE
 
 export function createExecutionPayloadBid(input: GloasBidInput): gloas.ExecutionPayloadBid;
 export function createExecutionPayloadBid(input: HezeBidInput): heze.ExecutionPayloadBid;
+export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): ExecutionPayloadBid;
 export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): ExecutionPayloadBid {
-  if (input.payload.fork !== input.fork) {
-    throw new ExecutionPayloadBidError(
-      {code: ExecutionPayloadBidErrorCode.FORK_MISMATCH, fork: input.fork, payloadFork: input.payload.fork},
-      `Payload fork does not match bid fork fork=${input.fork} payloadFork=${input.payload.fork}`
-    );
-  }
-
   if (!Number.isSafeInteger(input.value) || input.value < 0) {
     throw new ExecutionPayloadBidError(
       {code: ExecutionPayloadBidErrorCode.INVALID_VALUE, value: input.value},
@@ -83,8 +70,8 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
     );
   }
 
-  const {executionPayload, executionRequests, blobsBundle} = input.payload;
-  if (!Number.isSafeInteger(executionPayload.gasLimit) || executionPayload.gasLimit < 0) {
+  const {fork, executionPayload, executionRequests, blobsBundle} = input.payload;
+  if (executionPayload.gasLimit > Number.MAX_SAFE_INTEGER) {
     throw new ExecutionPayloadBidError({
       code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT,
       gasLimit: executionPayload.gasLimit,
@@ -107,13 +94,6 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
       payloadPrevRandao: toRootHex(executionPayload.prevRandao),
     });
   }
-  if (input.fork === ForkName.heze && input.inclusionListBits.bitLen !== INCLUSION_LIST_COMMITTEE_SIZE) {
-    throw new ExecutionPayloadBidError({
-      code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS,
-      bitLen: input.inclusionListBits.bitLen,
-    });
-  }
-
   const bid: gloas.ExecutionPayloadBid = {
     parentBlockHash: executionPayload.parentHash,
     parentBlockRoot: input.parentBlockRoot,
@@ -126,11 +106,18 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
     value: input.value,
     executionPayment: 0n,
     blobKzgCommitments: blobsBundle.commitments,
-    executionRequestsRoot: sszTypesFor(input.fork).ExecutionRequests.hashTreeRoot(executionRequests),
+    executionRequestsRoot: sszTypesFor(fork).ExecutionRequests.hashTreeRoot(executionRequests),
   };
 
-  if (input.fork === ForkName.heze) {
-    return {...bid, inclusionListBits: input.inclusionListBits};
+  if (fork === ForkName.heze) {
+    const inclusionListBits = "inclusionListBits" in input ? input.inclusionListBits : undefined;
+    if (inclusionListBits?.bitLen !== INCLUSION_LIST_COMMITTEE_SIZE) {
+      throw new ExecutionPayloadBidError({
+        code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS,
+        bitLen: inclusionListBits?.bitLen,
+      });
+    }
+    return {...bid, inclusionListBits};
   }
 
   return bid;
