@@ -6,7 +6,6 @@ import {
   prepareCheckpointFileInitialization,
   prepareUnfinalizedCheckpointInitialization,
 } from "./checkpointState.js";
-import {prepareGenesisInitialization} from "./genesisState.js";
 import {ArchivedStateBytes, StateInitialization, StateInitializationOptions, StatePreparationContext} from "./types.js";
 import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
@@ -47,11 +46,11 @@ export function prepareArchivedStateInitialization(
   };
 }
 
-export async function prepareCheckpointOrGenesisInitialization(
+export async function prepareCheckpointSourceInitialization(
   options: StateInitializationOptions,
   archived: ArchivedStateBytes | null,
   context: StatePreparationContext
-): Promise<StateInitialization> {
+): Promise<StateInitialization | null> {
   if (options.checkpointState) {
     return prepareCheckpointFileInitialization(options.checkpointState, options, archived, context);
   }
@@ -59,10 +58,7 @@ export async function prepareCheckpointOrGenesisInitialization(
     return prepareCheckpointApiInitialization(options.checkpointSyncUrl, options, archived, context);
   }
   if (options.lastPersistedCheckpointState || options.unsafeCheckpointState) {
-    const stateInit = await prepareUnfinalizedCheckpointInitialization(options, archived, context);
-    if (stateInit !== null) return stateInit;
+    return prepareUnfinalizedCheckpointInitialization(options, archived, context);
   }
-  // Without a usable checkpoint state, resume from the db as if no checkpoint source was set instead of genesis
-  if (archived !== null) return prepareArchivedStateInitialization(archived, context);
-  return prepareGenesisInitialization(options, context);
+  return null;
 }
