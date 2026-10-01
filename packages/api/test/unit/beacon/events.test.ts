@@ -45,12 +45,6 @@ describe("beacon / events / block codec", () => {
       expect((json as {builder_index: string}).builder_index).toBe("18446744073709551615");
       expect(blockType.fromJson(json)).toEqual(event);
     });
-
-    it("throws when builder fields are missing", () => {
-      expect(() => blockType.toJson({slot: 10, block: blockRoot, executionOptimistic: false})).toThrow(
-        "Missing block hash or builder index"
-      );
-    });
   });
 
   describe("pre-gloas", () => {

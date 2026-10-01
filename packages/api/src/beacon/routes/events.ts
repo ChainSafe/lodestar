@@ -1,6 +1,6 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -69,7 +69,7 @@ const headV2 = new ContainerType(
   },
   {typeName: "HeadV2", jsonCase: "eth2"}
 );
-const blockBase = new ContainerType(
+const phase0Block = new ContainerType(
   {
     slot: ssz.Slot,
     block: stringType,
@@ -77,7 +77,7 @@ const blockBase = new ContainerType(
   },
   {typeName: "Block", jsonCase: "eth2"}
 );
-const blockGloas = new ContainerType(
+const gloasBlock = new ContainerType(
   {
     slot: ssz.Slot,
     block: stringType,
@@ -91,6 +91,9 @@ type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
 type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 type HeadV2 = ValueOf<typeof headV2>;
+type Phase0BlockSSE = ValueOf<typeof phase0Block>;
+type GloasBlockSSE = ValueOf<typeof gloasBlock>;
+type BlockSSE = Phase0BlockSSE | GloasBlockSSE;
 
 export enum EventType {
   /**
@@ -200,13 +203,7 @@ export type EventData = {
     version: ForkName;
     data: HeadV2;
   };
-  [EventType.block]: {
-    slot: Slot;
-    block: RootHex;
-    blockHash?: RootHex;
-    builderIndex?: BuilderIndex;
-    executionOptimistic: boolean;
-  };
+  [EventType.block]: BlockSSE;
   [EventType.blockGossip]: {
     slot: Slot;
     block: RootHex;
@@ -351,17 +348,19 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.headV2]: WithVersion(() => headV2),
 
     [EventType.block]: {
-      toJson: (val) => {
-        if (config.getForkSeq(val.slot) < ForkSeq.gloas) return blockBase.toJson(val);
-        const {blockHash, builderIndex} = val;
-        if (blockHash === undefined || builderIndex === undefined) {
-          throw Error(`Missing block hash or builder index for block at ${val.slot}`);
+      toJson: (data) => {
+        const fork = config.getForkName(data.slot);
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.toJson(data as GloasBlockSSE);
         }
-        return blockGloas.toJson({...val, blockHash, builderIndex});
+        return phase0Block.toJson(data);
       },
-      fromJson: (json) => {
-        const slot = ssz.Slot.fromJson((json as {slot: unknown}).slot);
-        return (config.getForkSeq(slot) >= ForkSeq.gloas ? blockGloas : blockBase).fromJson(json);
+      fromJson: (data) => {
+        const fork = config.getForkName(Number((data as BlockSSE).slot));
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.fromJson(data);
+        }
+        return phase0Block.fromJson(data);
       },
     },
     [EventType.blockGossip]: new ContainerType(
