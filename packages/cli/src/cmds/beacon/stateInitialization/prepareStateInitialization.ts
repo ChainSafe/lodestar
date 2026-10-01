@@ -62,5 +62,7 @@ export async function prepareCheckpointOrGenesisInitialization(
     const stateInit = await prepareUnfinalizedCheckpointInitialization(options, archived, context);
     if (stateInit !== null) return stateInit;
   }
+  // Without a usable checkpoint state, resume from the db as if no checkpoint source was set instead of genesis
+  if (archived !== null) return prepareArchivedStateInitialization(archived, context);
   return prepareGenesisInitialization(options, context);
 }
