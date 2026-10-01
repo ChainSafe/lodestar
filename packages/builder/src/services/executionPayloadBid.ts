@@ -1,4 +1,4 @@
-import {ForkName, type ForkPostGloas, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName, type ForkPostGloas, INCLUSION_LIST_COMMITTEE_SIZE, isForkPostHeze} from "@lodestar/params";
 import type {
   BuilderIndex,
   Bytes32,
@@ -110,7 +110,7 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
     executionRequestsRoot: sszTypesFor(fork).ExecutionRequests.hashTreeRoot(executionRequests),
   };
 
-  if (fork === ForkName.heze) {
+  if (isForkPostHeze(fork)) {
     const inclusionListBits = "inclusionListBits" in input ? input.inclusionListBits : undefined;
     if (inclusionListBits?.bitLen !== INCLUSION_LIST_COMMITTEE_SIZE) {
       throw new ExecutionPayloadBidError({
