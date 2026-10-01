@@ -298,10 +298,10 @@ describe("block archiver task", () => {
 
     // Block-level: delete only the orphan as non-canonical
     expect(dbStub.block.batchDelete).toBeCalledWith([fromHexString(root(3))]);
-    for (const [roots] of vi.mocked(dbStub.block.batchDelete).mock.calls) {
+    for (const [i, [roots]] of vi.mocked(dbStub.block.batchDelete).mock.calls.entries()) {
       const hexes = roots.map((r) => toHexString(r));
       if (hexes.includes(root(3))) {
-        expect(hexes).toEqual([root(3)]);
+        expect(hexes, `block.batchDelete call ${i} deletes more than the orphan`).toEqual([root(3)]);
       }
     }
 
