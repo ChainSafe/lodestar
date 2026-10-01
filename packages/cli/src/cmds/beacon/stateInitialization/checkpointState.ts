@@ -204,8 +204,8 @@ function prepareCheckpointInitialization(
           `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
         );
       }
+      assertAnchorStateForkMatchesConfig(config, state);
       if (isFinalized) {
-        assertAnchorStateForkMatchesConfig(config, state);
         const source = useArchived ? "db" : "checkpoint";
         const logData = {
           slot: state.slot,
