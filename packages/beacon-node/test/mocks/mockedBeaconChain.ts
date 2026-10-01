@@ -3,13 +3,16 @@ import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView, createPubkeyCache} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
+import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {
   SeenAggregators,
@@ -40,7 +43,8 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
   // real `prepareForNextSlot` / `produceBlockBase` bound onto it call `this.recomputeForkChoiceHead`
   // etc.). No longer on the facade — stubbed here so tests can control head selection.
-  recomputeForkChoiceHead: Mock<() => ProtoBlock>;
+  recomputeForkChoiceHead: Mock<(caller: ForkchoiceCaller) => ProtoBlock>;
+  updateBuilderStatus: Mock<(slot: Slot) => void>;
   predictProposerHead: Mock<() => ProtoBlock>;
   getProposerHead: Mock<() => ProtoBlock>;
   executionEngine: Mocked<ExecutionEngineHttp>;
@@ -85,6 +89,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getFinalizedBlock: vi.fn(),
       getHead: vi.fn(),
       getHeadRoot: vi.fn(),
+      getSlotsPresent: vi.fn(),
       getDependentRoot: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
@@ -179,6 +184,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
+      proposerPreferencesPool: new ProposerPreferencesPool(),
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
@@ -278,9 +284,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "waitForCheckpointState",
     "genesisBlockRoot",
     "prepareForNextSlot",
-    "computeStateHashTreeRoot",
-    "resolvePayloadAttributesInput",
-    "getPayloadAttributesForSSE",
     "getProposerTargetGasLimit",
     // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
     "getProposerFeeRecipient",
@@ -323,7 +326,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getBlockSummariesByParentRoot",
     "getAllAncestorBlocks",
     "getAllNodes",
-    "getSlotsPresent",
     "hasBlock",
     "hasBlockHex",
     "hasBlockHexUnsafe",

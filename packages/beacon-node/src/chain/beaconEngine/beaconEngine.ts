@@ -18,13 +18,11 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
-  ForkPostBellatrix,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostBellatrix,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -32,10 +30,8 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
-  IBeaconStateViewBellatrix,
   IBeaconStateViewGloas,
   PubkeyCache,
-  StateHashTreeRootSource,
   calculateCommitteeAssignments,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
@@ -66,7 +62,6 @@ import {
   IndexedAttestation,
   Root,
   RootHex,
-  SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
@@ -85,9 +80,10 @@ import {
   rewards,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
+import {BuilderStatus} from "../../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
@@ -95,6 +91,7 @@ import {ClockEvent, IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
@@ -130,9 +127,7 @@ import {
   BlockAttributes,
   BlockProductionStep,
   BlockType,
-  PayloadAttributesInput,
   PayloadAttributesWithdrawals,
-  preparePayloadAttributes,
 } from "../produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../regen/index.js";
 import {
@@ -201,19 +196,18 @@ import {importExecutionPayload, verifyExecutionPayloadEnvelope} from "./importEx
 import {
   ApiStateResult,
   ApiStateResultWithFork,
+  BeaconEngineErrorCode,
   BeaconEngineModules,
   FinalizedProtoSummary,
   IBeaconEngine,
   ImportBlockResult,
   MigrateFinalizedResult,
-  PrepareNextSlotResult,
+  PrepareNextSlotResponse,
   ProduceBlockBaseResult,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
+import {prepareForNextSlot} from "./prepareNextSlot.js";
 import {verifyBlocks} from "./verifyBlock.js";
-
-/* We don't want to do more epoch transition than this in prepareForNextSlot */
-const PREPARE_EPOCH_LIMIT = 1;
 
 /**
  * JS implementation of the consensus engine. Transitional in Phase 0: constructed inside
@@ -227,6 +221,7 @@ export class BeaconEngine implements IBeaconEngine {
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly clock: IClock;
+  readonly genesisTime: number;
   readonly pubkeyCache: PubkeyCache;
   // NodeJS-specific memory pool for state serialization; engine-internal (not on IBeaconEngine).
   readonly bufferPool: BufferPool;
@@ -280,6 +275,7 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly signal: AbortSignal;
   lightClientServer: LightClientServer | undefined;
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  // TODO - beacon engine: this is not part of BeaconEngine but BeaconChain, remove it, create BeaconEngine own emitter if needed
   readonly emitter: ChainEventEmitter;
   // Genesis block root is invariant; computed lazily from state for the genesis-shuffling duty fallback.
   private cachedGenesisBlockRoot: Root | null = null;
@@ -313,6 +309,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.signal = signal;
     this.metrics = metrics;
     this.clock = clock;
+    this.genesisTime = anchorState.genesisTime;
     this.pubkeyCache = pubkeyCache;
     // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
@@ -611,9 +608,6 @@ export class BeaconEngine implements IBeaconEngine {
   }
   getAllNodes(): ProtoNode[] {
     return this.forkChoice.getAllNodes();
-  }
-  getSlotsPresent(windowStart: number): number {
-    return this.forkChoice.getSlotsPresent(windowStart);
   }
   // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
   hasBlock(blockRoot: Root): boolean {
@@ -1006,204 +1000,55 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   /**
-   * Advance preparation for the next slot. Does all consensus work internally (recompute head, regen the
-   * prepare-state, predict a proposer-boost-reorg, precompute the epoch transition, cache `hashTreeRoot`)
-   * and returns the side-effects the facade must perform (EL advance-prep + builder, DA prune, SSE emit).
-   * The sleep timing and try/catch error reporting stay in the facade scheduler. Returns `null` when
-   * there is nothing for the facade to do.
+   * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#updateBuilderStatus.
+   * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
    */
-  async prepareForNextSlot(clockSlot: Slot): Promise<PrepareNextSlotResult | null> {
-    const prepareSlot = clockSlot + 1;
-    const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
-    const isEpochTransition = computeEpochAtSlot(prepareSlot) === nextEpoch;
-    const fork = this.config.getForkName(prepareSlot);
+  updateBuilderStatus(clockSlot: Slot): void {
+    const executionBuilder = this.executionBuilder;
+    if (executionBuilder) {
+      const {faultInspectionWindow, allowedFaults} = executionBuilder;
+      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
+      const previousStatus = executionBuilder.status;
+      const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
-    // calling updateHead() here before we produce a block to reduce reorg possibility
-    const headBlock = this.recomputeForkChoiceHead();
-    const {slot: headSlot, blockRoot: headRoot} = headBlock;
-    // may be updated below if we predict a proposer-boost-reorg
-    let updatedHead = headBlock;
-
-    // PS: previously this was comparing slots, but that gave no leway on the skipped
-    // slots on epoch bounday. Making it more fluid.
-    if (prepareSlot - headSlot > PREPARE_EPOCH_LIMIT * SLOTS_PER_EPOCH) {
-      this.metrics?.precomputeNextEpochTransition.count.inc({result: "skip"}, 1);
-      this.logger.debug("Skipping PrepareNextSlotScheduler - head slot is too behind current slot", {
-        nextEpoch,
-        headSlot,
-        clockSlot,
-      });
-      return null;
-    }
-
-    this.logger.verbose("Running prepareForNextSlot", {nextEpoch, prepareSlot, headSlot, headRoot, isEpochTransition});
-    const precomputeEpochTransitionTimer = isEpochTransition
-      ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
-      : null;
-    const start = Date.now();
-    // No need to wait for this or the clock drift
-    // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
-    // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
-    const prepareState = await this.regen.getBlockSlotState(
-      headBlock,
-      prepareSlot,
-      // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
-      // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
-      // for other slots dontTransferCached=true because we don't run state transition on this state
-      {dontTransferCache: !isEpochTransition},
-      RegenCaller.precomputeEpoch
-    );
-
-    let elPrep: PrepareNextSlotResult["elPrep"] = null;
-    let daPruneParent: ProtoBlock | null = null;
-    let sse: PrepareNextSlotResult["sse"] = null;
-
-    if (isForkPostBellatrix(fork)) {
-      const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
-      // set iff WE propose next slot — gates builder status / EL prep, exactly as before
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-      let updatedPrepareState = prepareState;
-
-      if (feeRecipient) {
-        // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-        const proposerHead = this.predictProposerHead(clockSlot);
-        const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
-
-        // If we predict we can reorg, update prepareState with proposer head block
-        if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-          this.logger.verbose("Weak head detected. May build on parent block instead", {
-            proposerHeadSlot,
-            proposerHeadRoot,
-            headSlot,
-            headRoot,
-          });
-          this.metrics?.weakHeadDetected.inc();
-          updatedPrepareState = await this.regen.getBlockSlotState(
-            proposerHead,
-            prepareSlot,
-            // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
-            {dontTransferCache: !isEpochTransition},
-            RegenCaller.predictProposerHead
-          );
-          updatedHead = proposerHead;
-        }
-      }
-
-      if (!isStatePostBellatrix(updatedPrepareState)) {
-        throw new Error("Expected Bellatrix state for payload attributes");
-      }
-
-      let parentBlockHash: Bytes32;
-      // Apply parent payload once here as it's reused by EL prep and SSE emit below
-      let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
-      if (isStatePostGloas(updatedPrepareState)) {
-        // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
-        if (this.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
-          parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
-          // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
-          if (feeRecipient !== undefined || this.opts.emitPayloadAttributes === true) {
-            const parentExecutionRequests = await this.getParentExecutionRequests(
-              updatedHead.slot,
-              updatedHead.blockRoot
-            );
-            stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
-          }
-        } else {
-          parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
-        }
+      executionBuilder.updateStatus(shouldEnable ? BuilderStatus.enabled : BuilderStatus.circuitBreaker);
+      // The status changed we should log
+      const status = executionBuilder.status;
+      const builderLog = {
+        status,
+        slotsPresent,
+        faultInspectionWindow,
+        allowedFaults,
+      };
+      if (status !== previousStatus) {
+        this.logger.info("External builder status updated", builderLog);
       } else {
-        parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
+        this.logger.verbose("External builder status", builderLog);
       }
-
-      // EL advance-prep inputs — ONLY when WE propose next slot. Facade does builder status + EL.
-      if (feeRecipient) {
-        const parentBlockRoot = fromHex(updatedHead.blockRoot);
-        const preparationTime =
-          computeTimeAtSlot(this.config, prepareSlot, prepareState.genesisTime) - Date.now() / 1000;
-        this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-        elPrep = {
-          fork: fork as ForkPostBellatrix,
-          proposerIndex,
-          feeRecipient,
-          parentBlockRoot,
-          parentBlockHash,
-          safeBlockHash: getSafeExecutionBlockHash(this.forkChoice),
-          finalizedBlockHash: this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX,
-          prepareSlot,
-          payloadAttributesInput: this.resolvePayloadAttributesInput(
-            fork as ForkPostBellatrix,
-            stateAfterParentPayload,
-            parentBlockHash
-          ),
-          // the only engine-owned value the facade EL path needs (gloas); resolved here so the facade
-          // `prepareExecutionPayload` stays off fork choice / the proposer-preferences pool
-          targetGasLimit:
-            ForkSeq[fork] >= ForkSeq.gloas
-              ? this.getProposerTargetGasLimit(prepareSlot, parentBlockRoot, parentBlockHash)
-              : undefined,
-        };
-      }
-
-      if (ForkSeq[fork] >= ForkSeq.gloas) {
-        // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
-        // Steady state: cache holds just 2 entries — head (parent for next-slot production)
-        // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
-        daPruneParent = this.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot) ?? null;
-      }
-
-      this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
-
-      // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-      // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-      if (
-        (feeRecipient || this.opts.emitPayloadAttributes === true) &&
-        this.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-      ) {
-        const data = this.getPayloadAttributesForSSE(fork as ForkPostBellatrix, {
-          prepareSlot,
-          parentBlockRoot: fromHex(updatedHead.blockRoot),
-          parentBlockHash,
-          feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
-          proposerIndex: stateAfterParentPayload.getBeaconProposer(prepareSlot),
-          parentBlockNumberPreGloas:
-            ForkSeq[fork] >= ForkSeq.gloas ? undefined : stateAfterParentPayload.payloadBlockNumber,
-          ...this.resolvePayloadAttributesInput(fork as ForkPostBellatrix, stateAfterParentPayload, parentBlockHash),
-        });
-        sse = {data, version: fork};
-      }
-    } else {
-      this.computeStateHashTreeRoot(prepareState, isEpochTransition);
     }
-
-    // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
-    //  + when gossip block comes, we need to validate and run state transition
-    //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
-    if (isEpochTransition) {
-      this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-      const previousHits = this.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
-      if (previousHits === 0) {
-        this.metrics?.precomputeNextEpochTransition.waste.inc();
-      }
-      this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
-
-      this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
-        nextEpoch,
-        headSlot,
-        prepareSlot,
-        previousHits,
-        durationMs: Date.now() - start,
-      });
-
-      precomputeEpochTransitionTimer?.();
-    }
-
-    return elPrep || daPruneParent || sse ? {elPrep, daPruneParent, sse} : null;
   }
 
-  /** Canonical head recompute used before block production (mirrors chain.ts facade method). */
-  private recomputeForkChoiceHead(): ProtoBlock {
+  /** Prepare consensus state, builder status, EL payload and SSE events for the next slot. */
+  async prepareForNextSlot(clockSlot: Slot): Promise<PrepareNextSlotResponse> {
+    try {
+      return {ok: true, data: await prepareForNextSlot.call(this, clockSlot)};
+    } catch (e) {
+      return {
+        ok: false,
+        code:
+          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
+        payload: {message: e instanceof Error ? e.message : String(e)},
+      };
+    }
+  }
+
+  /**
+   * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#recomputeForkChoiceHead.
+   * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
+   */
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: ForkchoiceCaller.prepareNextSlot});
+    const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
     try {
       return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
     } catch (e) {
@@ -1214,8 +1059,11 @@ export class BeaconEngine implements IBeaconEngine {
     }
   }
 
-  /** Predicted proposer head for proposer-boost-reorg (mirrors chain.ts facade method). */
-  private predictProposerHead(slot: Slot): ProtoBlock {
+  /**
+   * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#predictProposerHead.
+   * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
+   */
+  predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
     const secFromSlot = this.clock.secFromSlot(slot);
@@ -1227,130 +1075,6 @@ export class BeaconEngine implements IBeaconEngine {
     } finally {
       timer?.();
     }
-  }
-
-  /**
-   * Cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to
-   * produce a block at slot 0 of epoch. See https://github.com/ChainSafe/lodestar/issues/6194
-   */
-  private computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
-    const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
-      source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
-    });
-    state.hashTreeRoot();
-    hashTreeRootTimer?.();
-  }
-
-  /**
-   * The single place that reads `BeaconState` for execution payload attributes. Everything downstream
-   * consumes the returned plain fields and never touches the state.
-   *
-   * Post-gloas, when extending a full parent, callers must apply parent execution payload first
-   * (see `withParentPayloadApplied`) before calling this.
-   */
-  private resolvePayloadAttributesInput(
-    fork: ForkPostBellatrix,
-    state: IBeaconStateViewBellatrix,
-    parentBlockHash: Bytes32
-  ): PayloadAttributesInput {
-    const timestamp = computeTimeAtSlot(this.config, state.slot, state.genesisTime);
-    const prevRandao = state.getRandaoMix(state.epoch);
-
-    let withdrawals: PayloadAttributesWithdrawals | undefined;
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      if (!isStatePostCapella(state)) {
-        throw new Error("Expected Capella state for withdrawals");
-      }
-
-      if (isStatePostGloas(state)) {
-        const isExtendingPayload = byteArrayEquals(parentBlockHash, state.latestExecutionPayloadBid.blockHash);
-        if (isExtendingPayload) {
-          // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
-          // here means the caller did not apply parent payload to state
-          if (!byteArrayEquals(state.latestBlockHash, state.latestExecutionPayloadBid.blockHash)) {
-            throw new Error("Expected state with parent execution payload applied for withdrawals");
-          }
-          withdrawals = state.getExpectedWithdrawals().expectedWithdrawals;
-        } else {
-          // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
-          // already deducted from CL balances but never credited on the EL (the envelope
-          // was not delivered). The next payload must carry those same withdrawals to
-          // restore CL/EL consistency, otherwise validators permanently lose that balance.
-          withdrawals = state.payloadExpectedWithdrawals;
-        }
-      } else {
-        // withdrawals logic is now fork aware as it changes on electra fork post capella
-        withdrawals = state.getExpectedWithdrawals().expectedWithdrawals;
-      }
-    }
-
-    return {timestamp, prevRandao, withdrawals};
-  }
-
-  /**
-   * Build the SSE `payloadAttributes` event payload for the prepare slot. Reads engine-owned fork choice
-   * (parent block number) and resolves the gloas `targetGasLimit` internally.
-   */
-  private getPayloadAttributesForSSE(
-    fork: ForkPostBellatrix,
-    {
-      prepareSlot,
-      parentBlockRoot,
-      parentBlockHash,
-      feeRecipient,
-      timestamp,
-      prevRandao,
-      withdrawals,
-      proposerIndex,
-      parentBlockNumberPreGloas,
-    }: {
-      prepareSlot: Slot;
-      parentBlockRoot: Root;
-      parentBlockHash: Bytes32;
-      feeRecipient: string;
-      /** proposer at the prepare slot (SSE event) */
-      proposerIndex: ValidatorIndex;
-      /** pre-gloas only: `state.payloadBlockNumber` for the SSE parentBlockNumber */
-      parentBlockNumberPreGloas?: number;
-    } & PayloadAttributesInput
-  ): SSEPayloadAttributes {
-    const targetGasLimit = isForkPostGloas(fork)
-      ? this.getProposerTargetGasLimit(prepareSlot, parentBlockRoot, parentBlockHash)
-      : undefined;
-    const payloadAttributes = preparePayloadAttributes(fork, targetGasLimit, {
-      prepareSlot,
-      parentBlockRoot,
-      feeRecipient,
-      timestamp,
-      prevRandao,
-      withdrawals,
-    });
-
-    let parentBlockNumber: number;
-    if (isForkPostGloas(fork)) {
-      const parentBlock = this.forkChoice.getBlockHexAndBlockHash(
-        toRootHex(parentBlockRoot),
-        toRootHex(parentBlockHash)
-      );
-      if (parentBlock?.executionPayloadBlockHash == null) {
-        throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
-      }
-      parentBlockNumber = parentBlock.executionPayloadNumber;
-    } else {
-      if (parentBlockNumberPreGloas === undefined) {
-        throw Error("Expected parentBlockNumberPreGloas for pre-gloas SSE payload attributes");
-      }
-      parentBlockNumber = parentBlockNumberPreGloas;
-    }
-
-    return {
-      proposerIndex,
-      proposalSlot: prepareSlot,
-      parentBlockNumber,
-      parentBlockRoot,
-      parentBlockHash,
-      payloadAttributes,
-    };
   }
 
   /**
@@ -1367,6 +1091,7 @@ export class BeaconEngine implements IBeaconEngine {
    * (FULL.executionPayloadGasLimit = delivered payload's gas_limit) and EMPTY parents
    * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
    */
+  // TODO (zig_engine_el_plan.md Step 3): remove this duplicate when produceBlockBase is removed; use the upstream free function.
   private getProposerTargetGasLimit(prepareSlot: Slot, parentBlockRoot: Root, parentBlockHash: Bytes32): number {
     const parentBlockRootHex = toRootHex(parentBlockRoot);
     const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);

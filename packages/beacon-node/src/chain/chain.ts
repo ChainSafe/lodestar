@@ -37,7 +37,6 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
-import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
@@ -1112,31 +1111,6 @@ export class BeaconChain implements IBeaconChain {
         targetCustodyGroupCount,
       });
       this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
-    }
-  }
-
-  updateBuilderStatus(clockSlot: Slot): void {
-    const executionBuilder = this.executionBuilder;
-    if (executionBuilder) {
-      const {faultInspectionWindow, allowedFaults} = executionBuilder;
-      const slotsPresent = this.beaconEngine.getSlotsPresent(clockSlot - faultInspectionWindow);
-      const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
-
-      executionBuilder.updateStatus(shouldEnable ? BuilderStatus.enabled : BuilderStatus.circuitBreaker);
-      // The status changed we should log
-      const status = executionBuilder.status;
-      const builderLog = {
-        status,
-        slotsPresent,
-        faultInspectionWindow,
-        allowedFaults,
-      };
-      if (status !== previousStatus) {
-        this.logger.info("External builder status updated", builderLog);
-      } else {
-        this.logger.verbose("External builder status", builderLog);
-      }
     }
   }
 }

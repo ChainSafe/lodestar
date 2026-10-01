@@ -201,7 +201,6 @@ export interface IBeaconChain {
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
-  updateBuilderStatus(clockSlot: Slot): void;
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
