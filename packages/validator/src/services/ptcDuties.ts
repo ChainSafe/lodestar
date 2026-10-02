@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
-import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -15,13 +15,10 @@ import {ValidatorStore} from "./validatorStore.js";
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
 type PtcDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<ValidatorIndex, routes.validator.PtcDuty>};
-type DutiesPolled = {promise: Promise<void>; resolve: () => void};
 
 export class PtcDutiesService {
   /** Maps a validator index to its PTC duty for each epoch. */
   private readonly dutiesByIndexByEpoch = new Map<Epoch, PtcDutiesAtEpoch>();
-  /** Resolved once duties were polled at the start of an epoch */
-  private readonly dutiesPolledByEpoch = new Map<Epoch, DutiesPolled>();
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -97,27 +94,9 @@ export class PtcDutiesService {
     return duties;
   }
 
-  /** Resolves once duties of `epoch` were polled at the start of that epoch */
-  waitForDutiesPolled(epoch: Epoch): Promise<void> {
-    return this.getDutiesPolled(epoch).promise;
-  }
-
-  private getDutiesPolled(epoch: Epoch): DutiesPolled {
-    let dutiesPolled = this.dutiesPolledByEpoch.get(epoch);
-    if (dutiesPolled === undefined) {
-      let resolve!: () => void;
-      const promise = new Promise<void>((r) => {
-        resolve = r;
-      });
-      dutiesPolled = {promise, resolve};
-      this.dutiesPolledByEpoch.set(epoch, dutiesPolled);
-    }
-    return dutiesPolled;
-  }
-
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
     // PTC duties of the first Gloas epoch only exist after the fork upgrade, they can't be polled one epoch ahead
-    if (!isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(epoch)))) {
+    if (!isForkPostGloas(this.config.getForkName(epoch * SLOTS_PER_EPOCH))) {
       return;
     }
 
@@ -134,7 +113,6 @@ export class PtcDutiesService {
         }),
     ]);
 
-    this.getDutiesPolled(epoch).resolve();
     this.pruneOldDuties(epoch);
   };
 
@@ -260,11 +238,6 @@ export class PtcDutiesService {
     for (const epoch of this.dutiesByIndexByEpoch.keys()) {
       if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
         this.dutiesByIndexByEpoch.delete(epoch);
-      }
-    }
-    for (const epoch of this.dutiesPolledByEpoch.keys()) {
-      if (epoch < currentEpoch) {
-        this.dutiesPolledByEpoch.delete(epoch);
       }
     }
   }

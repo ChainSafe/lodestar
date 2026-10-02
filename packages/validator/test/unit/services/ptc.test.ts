@@ -90,7 +90,6 @@ describe("PtcService", () => {
     };
 
     vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
-    vi.spyOn(ptcService["dutiesService"], "waitForDutiesPolled").mockResolvedValue();
     ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
     api.validator.producePayloadAttestationData.mockResolvedValue(
       mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
@@ -135,7 +134,6 @@ describe("PtcService", () => {
     };
 
     vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
-    vi.spyOn(ptcService["dutiesService"], "waitForDutiesPolled").mockResolvedValue();
     ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
     // No canonical block at slot
     api.validator.producePayloadAttestationData.mockResolvedValue(
@@ -260,7 +258,7 @@ describe("PtcService", () => {
     expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 2, indices: [0]});
   });
 
-  it("Should wait for duties of the first Gloas epoch before checking them", async () => {
+  it("Should perform duties of the first Gloas slot polled after the slot started", async () => {
     const clock = new ClockMock();
     const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 1});
     const slot = SLOTS_PER_EPOCH;
@@ -294,7 +292,12 @@ describe("PtcService", () => {
         meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
       })
     );
-    ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
+    let onPayloadAvailable!: () => void;
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        onPayloadAvailable = resolve;
+      })
+    );
     api.validator.producePayloadAttestationData.mockResolvedValue(
       mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
     );
@@ -304,6 +307,7 @@ describe("PtcService", () => {
     // Slot task starts before duties of the epoch are polled
     const slotTask = clock.tickSlotFns(slot, controller.signal);
     await clock.tickEpochFns(1, controller.signal);
+    onPayloadAvailable();
     await slotTask;
 
     expect(api.beacon.submitPayloadAttestationMessages).toHaveBeenCalledWith({
