@@ -10,6 +10,7 @@ export enum GossipErrorCode {
   PAST_SLOT = "GOSSIP_ERROR_PAST_SLOT",
   FUTURE_SLOT = "GOSSIP_ERROR_FUTURE_SLOT",
   FATAL_PEER = "GOSSIP_ERROR_FATAL_PEER",
+  INVALID_SLOT = "GOSSIP_ERROR_INVALID_SLOT",
 }
 
 export class GossipActionError<T extends {code: string}> extends LodestarError<T> {

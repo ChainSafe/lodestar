@@ -4,6 +4,7 @@ import {SLOTS_PER_EPOCH, forkAll} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {
   getValidatorCountFromStateBytes,
+  getValidatorPubkeyFromStateBytes,
   readBeaconStateBytesMetadata,
   scanActiveValidatorsFromStateBytes,
 } from "../../../src/util/sszBytes.js";
@@ -239,6 +240,25 @@ describe("state bytes weak subjectivity", () => {
     const state = ssz.phase0.BeaconState.defaultViewDU();
     for (let i = 0; i < 3; i++) state.validators.push(ssz.phase0.Validator.defaultViewDU());
     expect(getValidatorCountFromStateBytes(createChainForkConfig({}), state.serialize())).toBe(3);
+  });
+
+  it("reads validator pubkeys", () => {
+    const config = createChainForkConfig({});
+    const state = ssz.phase0.BeaconState.defaultViewDU();
+    for (let i = 0; i < 3; i++) {
+      state.validators.push(
+        ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), pubkey: new Uint8Array(48).fill(i + 1)})
+      );
+    }
+    const bytes = state.serialize();
+    for (let i = 0; i < 3; i++) {
+      expect(getValidatorPubkeyFromStateBytes(config, bytes, i), `wrong pubkey at index ${i}`).toEqual(
+        new Uint8Array(48).fill(i + 1)
+      );
+    }
+    expect(getValidatorPubkeyFromStateBytes(config, bytes, 3)).toBeNull();
+    expect(getValidatorPubkeyFromStateBytes(config, bytes, -1)).toBeNull();
+    expect(getValidatorPubkeyFromStateBytes(config, new Uint8Array(48), 0)).toBeNull();
   });
 
   it("returns null for a partial validator record", () => {

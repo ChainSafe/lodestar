@@ -22,6 +22,7 @@ import {
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.js";
+import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -34,7 +35,12 @@ import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
-import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {
+  ValidatorFnModules,
+  getGossipValidatorBatchFn,
+  getGossipValidatorFn,
+  rejectPeerAction,
+} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
 
 export * from "./types.js";
@@ -238,6 +244,7 @@ type SearchUnknownRootTarget =
  */
 export class NetworkProcessor {
   private readonly chain: IBeaconChain;
+  private readonly core: INetworkCore;
   private readonly events: NetworkEventBus;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
@@ -269,8 +276,9 @@ export class NetworkProcessor {
     modules: NetworkProcessorModules,
     private readonly opts: NetworkProcessorOpts
   ) {
-    const {chain, events, logger, metrics} = modules;
+    const {chain, core, events, logger, metrics} = modules;
     this.chain = chain;
+    this.core = core;
     this.events = events;
     this.metrics = metrics;
     this.logger = logger;
@@ -432,16 +440,34 @@ export class NetworkProcessor {
     }
 
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
+    if (extractBlockSlotRootFn === undefined) {
+      // some messages don't have slot and root
+      this.pushPendingGossipsubMessageToQueue(message);
+      return;
+    }
 
     // 1st extract round: make sure slot is in range and if block root is not available
     // proactively search for it + queue the message
-    const slotRoot = extractBlockSlotRootFn
-      ? extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork)
-      : null;
+    const slotRoot = extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork);
     if (slotRoot === null) {
-      // some messages don't have slot and root
-      // if the msg.data is invalid, message will be rejected when deserializing data in later phase (gossipValidatorFn)
-      this.pushPendingGossipsubMessageToQueue(message);
+      // DOS protection: null means malformed bytes or slot >= 2^32, neither is forwarded by honest peers.
+      const {propagationSource, clientAgent, clientVersion} = message;
+      const code = GossipErrorCode.INVALID_SLOT;
+      const peerAction = rejectPeerAction(topicType, code);
+      this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
+      this.core.reportPeer(propagationSource, peerAction, code);
+      this.logger.debug(`Gossip validation ${topicType} rejected due to null slot`, {
+        peer: propagationSource,
+        clientAgent,
+        clientVersion,
+        peerAction,
+        code,
+      });
+      this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+        msgId: message.msgId,
+        propagationSource,
+        acceptance: TopicValidatorResult.Reject,
+      });
       return;
     }
 
