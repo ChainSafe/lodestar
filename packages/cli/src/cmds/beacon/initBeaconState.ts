@@ -14,9 +14,10 @@ import {Logger, formatBytes} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/globalOptions.js";
 import {BeaconArgs} from "./options.js";
 import {StateInitializationError, StateInitializationErrorCode} from "./stateInitialization/errors.js";
+import {prepareGenesisInitialization} from "./stateInitialization/genesisState.js";
 import {
   prepareArchivedStateInitialization,
-  prepareCheckpointOrGenesisInitialization,
+  prepareCheckpointSourceInitialization,
 } from "./stateInitialization/prepareStateInitialization.js";
 import {
   ArchivedStateBytes,
@@ -68,7 +69,14 @@ export async function initBeaconState(
       return executeStateInitialization(prepareArchivedStateInitialization(archived, context), useNative);
     }
   }
-  const stateInit = await prepareCheckpointOrGenesisInitialization(options, archived, context);
+  let stateInit = await prepareCheckpointSourceInitialization(options, archived, context);
+  if (stateInit === null) {
+    // Without a usable checkpoint state, resume from the db as if no checkpoint source was set instead of genesis
+    stateInit =
+      archived !== null
+        ? prepareArchivedStateInitialization(archived, context)
+        : await prepareGenesisInitialization(options, context);
+  }
   return executeStateInitialization(stateInit, useNative);
 }
 
@@ -97,7 +105,7 @@ async function readLatestArchivedStateBytes({
   if (weakSubjectivity === null) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
-      "Cannot extract weak subjectivity summary from archived state bytes"
+      `Cannot extract weak subjectivity summary from archived state bytes, expected ${chainForkConfig.getForkName(metadata.slot)} state at slot ${metadata.slot}, possible fork or network mismatch`
     );
   }
   return {
