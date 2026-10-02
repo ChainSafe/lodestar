@@ -1691,7 +1691,11 @@ export function getValidatorApi(
       }
 
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      let state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      if (!isStatePostGloas(state)) {
+        // Dial a clone across the fork, regen would cache it as the head state one epoch ahead of the clock
+        state = state.processSlots(startSlot, {dontTransferCache: true});
+      }
       if (!isStatePostGloas(state)) {
         throw new ApiError(400, `PTC duties are not available before Gloas fork=${state.forkName}`);
       }
