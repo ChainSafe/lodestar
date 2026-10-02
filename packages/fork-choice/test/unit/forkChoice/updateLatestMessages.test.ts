@@ -34,7 +34,7 @@ function toAttestation(slot: Slot, blockRoot: RootHex): IndexedAttestation {
 }
 
 /** Two competing blocks on genesis, the same validator votes for each of them in the same epoch */
-function headAfterSameEpochVotes(config: ChainForkConfig, isGloas: boolean): RootHex {
+function headAfterSameEpochVotes(config: ChainForkConfig, isGloas: boolean, reverse = false): RootHex {
   const genesisRoot = getBlockRoot(genesisSlot);
   const protoArray = ProtoArray.initialize(toProtoBlock(genesisSlot, genesisRoot, false), genesisSlot);
   protoArray.onBlock(toProtoBlock(earlierSlot, genesisRoot, isGloas), earlierSlot, null);
@@ -45,8 +45,13 @@ function headAfterSameEpochVotes(config: ChainForkConfig, isGloas: boolean): Roo
   );
 
   const forkChoice = new ForkChoice(config, makeStore(), protoArray, VALIDATOR_COUNT, null);
-  forkChoice.onAttestation(toAttestation(earlierSlot, getBlockRoot(earlierSlot)), "0xearlier");
-  forkChoice.onAttestation(toAttestation(laterSlot, getBlockRoot(laterSlot)), "0xlater");
+  if (reverse) {
+    forkChoice.onAttestation(toAttestation(laterSlot, getBlockRoot(laterSlot)), "0xlater");
+    forkChoice.onAttestation(toAttestation(earlierSlot, getBlockRoot(earlierSlot)), "0xearlier");
+  } else {
+    forkChoice.onAttestation(toAttestation(earlierSlot, getBlockRoot(earlierSlot)), "0xearlier");
+    forkChoice.onAttestation(toAttestation(laterSlot, getBlockRoot(laterSlot)), "0xlater");
+  }
 
   return forkChoice.updateHead().blockRoot;
 }
@@ -58,5 +63,13 @@ describe("Forkchoice / update_latest_messages", () => {
 
   it("gloas replaces the vote with one from a later slot of the same epoch", () => {
     expect(headAfterSameEpochVotes(gloasConfig, true)).toBe(getBlockRoot(laterSlot));
+  });
+
+  it("pre-gloas keeps the first vote of an epoch when attestations arrive in reverse order", () => {
+    expect(headAfterSameEpochVotes(defaultConfig, false, true)).toBe(getBlockRoot(laterSlot));
+  });
+
+  it("gloas keeps the vote from a later slot when attestations arrive in reverse order", () => {
+    expect(headAfterSameEpochVotes(gloasConfig, true, true)).toBe(getBlockRoot(laterSlot));
   });
 });
