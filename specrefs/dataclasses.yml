@@ -284,48 +284,6 @@
         current_max_active_participants: Uint64
     </spec>
 
-- name: NewPayloadRequest#bellatrix
-  sources:
-    - file: packages/types/src/bellatrix/sszTypes.ts
-      search: "export const NewPayloadRequest"
-    - file: packages/beacon-node/src/execution/engine/interface.ts
-      search: "notifyNewPayload("
-  spec: |
-    <spec dataclass="NewPayloadRequest" fork="bellatrix" hash="cbd668dc">
-    class NewPayloadRequest:
-        execution_payload: ExecutionPayload
-    </spec>
-
-- name: NewPayloadRequest#deneb
-  sources:
-    - file: packages/types/src/deneb/sszTypes.ts
-      search: "export const NewPayloadRequest"
-    - file: packages/beacon-node/src/execution/engine/interface.ts
-      search: "notifyNewPayload("
-  spec: |
-    <spec dataclass="NewPayloadRequest" fork="deneb" hash="a61cff05">
-    class NewPayloadRequest:
-        execution_payload: ExecutionPayload
-        versioned_hashes: Sequence[VersionedHash]
-        parent_beacon_block_root: Root
-    </spec>
-
-- name: NewPayloadRequest#electra
-  sources:
-    - file: packages/types/src/electra/sszTypes.ts
-      search: "export const NewPayloadRequest"
-    - file: packages/beacon-node/src/execution/engine/interface.ts
-      search: "notifyNewPayload("
-  spec: |
-    <spec dataclass="NewPayloadRequest" fork="electra" hash="366a2e72">
-    class NewPayloadRequest:
-        execution_payload: ExecutionPayload
-        versioned_hashes: Sequence[VersionedHash]
-        parent_beacon_block_root: Root
-        # [New in Electra]
-        execution_requests: ExecutionRequests
-    </spec>
-
 - name: OptimisticStore#bellatrix
   sources: []
   spec: |
@@ -549,6 +507,33 @@
         best_execution_payload_bid: Dict[Tuple[Slot, Hash32, Root], Gwei]
         # [New in Gloas:EIP7732]
         proposer_preferences: Dict[Tuple[Slot, Root], ProposerPreferences]
+    </spec>
+
+- name: Seen#heze
+  sources: []
+  spec: |
+    <spec dataclass="Seen" fork="heze" hash="6f863c4b">
+    class Seen:
+        proposer_slots: Set[Tuple[Slot, ValidatorIndex]]
+        aggregator_epochs: Set[Tuple[Epoch, ValidatorIndex]]
+        aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[bool, ...]]]
+        voluntary_exit_indices: Set[ValidatorIndex]
+        proposer_slashing_indices: Set[ValidatorIndex]
+        attester_slashing_indices: Set[ValidatorIndex]
+        attestation_validator_epochs: Set[Tuple[Epoch, ValidatorIndex]]
+        sync_contribution_aggregator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[bool, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
+        bls_to_execution_change_indices: Set[ValidatorIndex]
+        data_column_sidecar_tuples: Set[Tuple[Root, ColumnIndex]]
+        execution_payloads: Dict[Hash32, ExecutionPayload]
+        execution_payload_envelopes: Set[Tuple[Root, BuilderIndex]]
+        payload_attestation_validators: Set[Tuple[Slot, ValidatorIndex]]
+        execution_payload_bids: Set[Tuple[Slot, Hash32, Root, BuilderIndex]]
+        best_execution_payload_bid: Dict[Tuple[Slot, Hash32, Root], Gwei]
+        proposer_preferences: Dict[Tuple[Slot, Root], ProposerPreferences]
+        # [New in Heze:EIP7805]
+        inclusion_list_counts: Counter[Tuple[Slot, Root, ValidatorIndex]]
     </spec>
 
 - name: Store#phase0
