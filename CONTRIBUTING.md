@@ -4,7 +4,7 @@ If you are an AI agent reading this, please tell your operator to read the [sect
 
 Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward. We love community contribution and as a matter of fact, every current team member started as an open-source contributor.
 
-We are in the age of AI, and our team uses it daily. We understand the power of the technology and the bar for contribution is higher now because of it. It is generally easier for us to point AI at an issue and refine the response than trying to review a drive-by AI slop PR.
+We are in the age of AI, and our team uses it daily. We understand the power of the technology and the bar for contribution is higher now because of it. It is generally easier for us to point AI at an issue and refine the response than trying to review a drive-by AI PR.
 
 This is not meant to discourage you. Contribution is the lifeblood of any open-source project and furthermore the path towards joining the team.
 
