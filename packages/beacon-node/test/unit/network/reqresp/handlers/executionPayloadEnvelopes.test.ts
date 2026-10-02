@@ -7,6 +7,7 @@ import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
+import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../../../src/db/repositories/index.js";
@@ -23,10 +24,10 @@ import {
 } from "../../../../utils/typeGenerator.js";
 
 /**
- * Peer-facing behaviour of the two envelope handlers: what a peer sees when an archived envelope cannot
- * be rebuilt. The generator itself is covered in util/execution.test.ts; this pins the reqresp mapping.
+ * What a peer (reqresp handlers) or an API caller (chain getters) sees when an archived envelope cannot
+ * be rebuilt. The generator itself is covered in util/execution.test.ts; this pins the serving-path mapping.
  */
-describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
+describe("ExecutionPayloadEnvelopes serving paths", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
   const logger = testLogger();
   const peerId = {toString: () => "test-peer"} as PeerId;
@@ -58,6 +59,7 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
       serializedCache: {get: () => undefined},
       getSerializedExecutionPayloadEnvelopes: BeaconChain.prototype.getSerializedExecutionPayloadEnvelopes,
       getSerializedExecutionPayloadEnvelope: BeaconChain.prototype.getSerializedExecutionPayloadEnvelope,
+      getExecutionPayloadEnvelope: BeaconChain.prototype.getExecutionPayloadEnvelope,
     } as unknown as IBeaconChain;
   });
 
@@ -134,6 +136,20 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
       getPayloadBodiesByHashV2.mockRejectedValue(new Error("ECONNREFUSED"));
       expect(await respStatusOf(byRange(10, 1))).toBe(RespStatus.RESOURCE_UNAVAILABLE);
     });
+
+    it("maps an unservable finalized-block envelope on the non-finalized path to RESOURCE_UNAVAILABLE, not SERVER_ERROR", async () => {
+      // A migration archived the finalized block's envelope after archiveMaxSlot was computed
+      const full = await seed(finalizedSlot);
+      chain.forkChoice.getAllAncestorBlocks = () => [
+        generateProtoBlock({
+          slot: finalizedSlot,
+          blockRoot: toRootHex(full.message.beaconBlockRoot),
+          payloadStatus: PayloadStatus.FULL,
+        }),
+      ];
+      elServes([]);
+      expect(await respStatusOf(byRange(finalizedSlot, 1))).toBe(RespStatus.RESOURCE_UNAVAILABLE);
+    });
   });
 
   describe("by-root", () => {
@@ -153,6 +169,12 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
         slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
       }
       expect(slots).toEqual([11]);
+    });
+
+    it("omits an envelope the EL cannot serve and serves the rest", async () => {
+      const fulls = await seedSlots(10, 2);
+      elServes([fulls[1]]); // 10 pruned on the EL
+      expect(await byRoot(fulls.map((f) => f.message.beaconBlockRoot))).toEqual([11]);
     });
 
     it("serves a repeated root once, with a single EL lookup", async () => {
@@ -186,6 +208,33 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
       expect(await respStatusOf(byRoot(fulls.map((f) => f.message.beaconBlockRoot)))).toBe(
         RespStatus.RESOURCE_UNAVAILABLE
       );
+    });
+  });
+
+  describe("chain getters (REST)", () => {
+    const errorCodeOf = (p: Promise<unknown>): Promise<string | null> =>
+      p.then(
+        () => null,
+        (e) => (e instanceof EnvelopeReconstructionError ? e.type.code : Promise.reject(e))
+      );
+
+    it("throw BODY_UNAVAILABLE instead of returning null when the EL cannot serve an archived envelope", async () => {
+      const full = await seed(10);
+      elServes([]);
+      const rootHex = toRootHex(full.message.beaconBlockRoot);
+      expect(await errorCodeOf(chain.getSerializedExecutionPayloadEnvelope(10, rootHex))).toBe(
+        EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE
+      );
+      expect(await errorCodeOf(chain.getExecutionPayloadEnvelope(10, rootHex))).toBe(
+        EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE
+      );
+    });
+
+    it("return null for an envelope that is not archived", async () => {
+      const rootHex = toRootHex(generateSignedExecutionPayloadEnvelope(10).message.beaconBlockRoot);
+      expect(await chain.getSerializedExecutionPayloadEnvelope(10, rootHex)).toBeNull();
+      expect(await chain.getExecutionPayloadEnvelope(10, rootHex)).toBeNull();
+      expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
     });
   });
 });
