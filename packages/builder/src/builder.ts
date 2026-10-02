@@ -2,16 +2,29 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, isErrorAborted, toHex, toRootHex, withTimeout} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
-import {BlockObserver} from "./services/blockObserver.js";
+import {BidLedger} from "./services/bidLedger.js";
+import type {BidPolicy} from "./services/bidPolicy.js";
+import {BidPublisher} from "./services/bidPublisher.js";
+import {BidSelector} from "./services/bidSelector.js";
+import {BlockObserver, type ObservedBlock} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
+import {EnvelopePublisher} from "./services/envelopePublisher.js";
+import {createExecutionPayloadEnvelopeContents} from "./services/executionPayloadEnvelope.js";
+import {
+  PayloadAttributesConsumer,
+  type PayloadAttributesConsumerOptions,
+} from "./services/payloadAttributesConsumer.js";
+import {PayloadOrchestrator, type PayloadOrchestratorOptions} from "./services/payloadOrchestrator.js";
+import type {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
+import {SlotBidder} from "./services/slotBidder.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -22,6 +35,23 @@ export type BuilderModules = {
   clock: IClock;
   index: BuilderIndex;
   payloadStore: PayloadStore;
+  payloadAttributesConsumer?: PayloadAttributesConsumer;
+  bidLedger?: BidLedger;
+};
+
+/** Opt-in runtime using the source BN's Gloas payload-attributes events. */
+export type BuilderBidOptions = {
+  source: PayloadSource;
+  policy: BidPolicy;
+  orchestration: PayloadOrchestratorOptions;
+  inputs: Omit<PayloadAttributesConsumerOptions, "executionFeeRecipient">;
+  minOperatingBalanceGwei: number;
+  reveal?: {
+    /** Publication cutoff within the selected block's slot, not the earlier build slot. */
+    cutoffBps: number;
+    /** Optional policy override; otherwise reveal promptly after a matching import. */
+    shouldReveal?: (block: ObservedBlock, signal: AbortSignal) => Promise<boolean>;
+  };
 };
 
 export type BuilderOptions = {
@@ -33,6 +63,7 @@ export type BuilderOptions = {
   clock?: ClockOptions;
   executionFeeRecipient: ExecutionAddress;
   metrics: Metrics | null;
+  bidRuntime?: BuilderBidOptions;
 };
 
 /**
@@ -49,6 +80,8 @@ export class Builder {
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
   private readonly payloadStore: PayloadStore;
+  private readonly payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
+  private readonly bidLedger: BidLedger | undefined;
 
   constructor({
     opts,
@@ -59,6 +92,8 @@ export class Builder {
     clock,
     index,
     payloadStore,
+    payloadAttributesConsumer,
+    bidLedger,
   }: BuilderModules) {
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
@@ -69,6 +104,8 @@ export class Builder {
     this.logger = opts.logger;
     this.index = index;
     this.payloadStore = payloadStore;
+    this.payloadAttributesConsumer = payloadAttributesConsumer;
+    this.bidLedger = bidLedger;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
@@ -116,6 +153,99 @@ export class Builder {
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();
+    let bidLedger: BidLedger | undefined;
+    let payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
+    if (opts.bidRuntime) {
+      const {source, policy, orchestration, inputs, minOperatingBalanceGwei} = opts.bidRuntime;
+      bidLedger = new BidLedger();
+      const publisher = new BidPublisher({
+        api,
+        config,
+        signer: builderSigner,
+        ledger: bidLedger,
+        builderIndex: index,
+        hasPayload: (identity) => {
+          const stored = payloadStore.get(identity.blockHash);
+          return (
+            stored !== null &&
+            stored.slot === identity.slot &&
+            toRootHex(stored.parentBlockRoot) === identity.parentBlockRoot &&
+            toRootHex(stored.payload.executionPayload.parentHash) === identity.parentBlockHash &&
+            toRootHex(stored.payload.executionPayload.blockHash) === identity.blockHash
+          );
+        },
+      });
+      const bidder = new SlotBidder(
+        {
+          buildPayload: (job, signal) => new PayloadOrchestrator(source, orchestration, signal).run(job),
+          store: payloadStore,
+          policy,
+          ledger: bidLedger,
+          publisher,
+          builderIndex: index,
+          getBuilderStatus: () => builderStatusTracker.getStatus(),
+        },
+        {minOperatingBalanceGwei}
+      );
+      payloadAttributesConsumer = new PayloadAttributesConsumer(
+        {config, clock, preferences: proposerPreferencesTracker, bidder},
+        {...inputs, executionFeeRecipient: opts.executionFeeRecipient}
+      );
+      const {reveal} = opts.bidRuntime;
+      if (reveal && (!Number.isSafeInteger(reveal.cutoffBps) || reveal.cutoffBps <= 0 || reveal.cutoffBps >= 10_000)) {
+        throw new LodestarError({code: "BUILDER_REVEAL_INVALID_CUTOFF"});
+      }
+      const ledger = bidLedger;
+      const selector = new BidSelector({
+        config,
+        ledger,
+        builderIndex: index,
+      });
+      const envelopePublisher = new EnvelopePublisher({
+        api,
+        signer: builderSigner,
+        ledger,
+        builderIndex: index,
+      });
+      blockObserver.runOnBlock(async (observed) => {
+        const signal = opts.abortController.signal;
+        signal.throwIfAborted();
+        const selected = selector.match(observed);
+        if (selected.status !== "selected" || !reveal) return;
+        const cutoff = config.getSlotComponentDurationMs(reveal.cutoffBps);
+        const remaining = cutoff - clock.msFromSlot(observed.slot);
+        if (remaining <= 0 || clock.getCurrentSlot() < observed.slot) return;
+        await withTimeout(
+          async (timeoutSignal) => {
+            const publicationSignal = timeoutSignal ?? signal;
+            if (reveal.shouldReveal && !(await reveal.shouldReveal(observed, publicationSignal))) return;
+            publicationSignal.throwIfAborted();
+            if (clock.msFromSlot(observed.slot) >= cutoff) return;
+            const storedPayload = payloadStore.get(selected.bid.blockHash);
+            if (storedPayload === null) {
+              logger.warn("Selected payload expired before reveal", {
+                code: "BUILDER_REVEAL_PAYLOAD_EXPIRED",
+                slot: observed.slot,
+                blockRoot: observed.blockRoot,
+              });
+              return;
+            }
+            await envelopePublisher.publish(
+              createExecutionPayloadEnvelopeContents({
+                blockRoot: selected.blockRoot,
+                builderIndex: index,
+                selectedBid: observed.block.message.body.signedExecutionPayloadBid.message,
+                storedPayload,
+              }),
+              publicationSignal
+            );
+          },
+          remaining,
+          signal
+        );
+      });
+    }
+    opts.abortController.signal.throwIfAborted();
 
     return new Builder({
       opts,
@@ -126,10 +256,14 @@ export class Builder {
       clock,
       index,
       payloadStore,
+      bidLedger,
+      payloadAttributesConsumer,
     });
   }
 
   private async onSlot(slot: number): Promise<void> {
+    this.payloadAttributesConsumer?.onSlot(slot);
+    this.bidLedger?.prune(slot);
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
   }
@@ -139,6 +273,9 @@ export class Builder {
     if (signal.aborted) return;
 
     const topics = [routes.events.EventType.block, routes.events.EventType.proposerPreferences];
+    if (this.payloadAttributesConsumer) {
+      topics.push(routes.events.EventType.headV2, routes.events.EventType.payloadAttributes);
+    }
     this.logger.verbose("Subscribing to builder events", {topics: topics.join(",")});
     api.events
       .eventstream({
@@ -180,6 +317,11 @@ export class Builder {
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
+          await this.payloadAttributesConsumer?.onEvent(event, signal);
+          break;
+        case routes.events.EventType.headV2:
+        case routes.events.EventType.payloadAttributes:
+          await this.payloadAttributesConsumer?.onEvent(event, signal);
           break;
       }
     } catch (error) {
@@ -195,5 +337,6 @@ export class Builder {
 
   async close(): Promise<void> {
     this.controller.abort();
+    this.payloadAttributesConsumer?.close();
   }
 }
