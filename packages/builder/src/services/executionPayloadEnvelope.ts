@@ -1,19 +1,19 @@
-import type {BuilderIndex, RootHex, Slot, gloas} from "@lodestar/types";
+import type {BuilderIndex, RootHex, Slot, deneb, gloas} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
-import type {BuiltPayload, StoredPayload} from "./payloadStore.js";
+import type {StoredPayload} from "./payloadStore.js";
 
 export type ExecutionPayloadEnvelopeInput = {
   blockRoot: RootHex;
   builderIndex: BuilderIndex;
   selectedBid: gloas.ExecutionPayloadBid;
-  storedPayload: Pick<StoredPayload, "parentBlockRoot" | "payload">;
+  storedPayload: StoredPayload;
 };
 
-export type ExecutionPayloadEnvelopeMaterial = {
+export type ExecutionPayloadEnvelopeContents = {
   envelope: gloas.ExecutionPayloadEnvelope;
-  kzgProofs: BuiltPayload["blobsBundle"]["proofs"];
-  blobs: BuiltPayload["blobsBundle"]["blobs"];
+  kzgProofs: deneb.KZGProofs;
+  blobs: deneb.Blobs;
 };
 
 export enum ExecutionPayloadEnvelopeErrorCode {
@@ -61,13 +61,13 @@ export type ExecutionPayloadEnvelopeErrorType =
 
 export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloadEnvelopeErrorType> {}
 
-/** The caller must match the complete signed bid to its local record before assembling retained material. */
-export function createExecutionPayloadEnvelopeMaterial({
+/** The caller must have matched the selected bid to its local ledger record. */
+export function createExecutionPayloadEnvelopeContents({
   blockRoot,
   builderIndex,
   selectedBid,
   storedPayload,
-}: ExecutionPayloadEnvelopeInput): ExecutionPayloadEnvelopeMaterial {
+}: ExecutionPayloadEnvelopeInput): ExecutionPayloadEnvelopeContents {
   if (builderIndex !== selectedBid.builderIndex) {
     throw new ExecutionPayloadEnvelopeError({
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
