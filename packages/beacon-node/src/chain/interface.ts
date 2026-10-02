@@ -158,14 +158,14 @@ export interface IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
-  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null>;
-  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
+  // [beacon-engine] moved to BeaconEngine.getParentExecutionRequests; sync future unstable changes there.
+  // getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;

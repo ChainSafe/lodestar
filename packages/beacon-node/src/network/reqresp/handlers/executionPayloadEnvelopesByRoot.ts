@@ -3,12 +3,15 @@ import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRoot(
   requestBody: ExecutionPayloadEnvelopesByRootRequest,
   chain: IBeaconChain,
+  // [beacon-engine] unused: kept for unstable signature parity
+  _db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -17,6 +20,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
 
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
+    // [beacon-engine] deviation: fork choice and block archive reads remain engine-owned.
     const block = chain.beaconEngine.getBlockHexDefaultStatus(rootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await chain.getFinalizedBlockSlotByRoot(root);
@@ -33,7 +37,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, root);
+    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,

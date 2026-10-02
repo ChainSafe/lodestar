@@ -67,16 +67,16 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconChainDb; chain: IBea
     },
     [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
       const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
-      return onDataColumnSidecarsByRoot(body, chain, peerId, peerClient);
+      return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
     },
 
     [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req, peerId, peerClient) => {
       const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
-      return onExecutionPayloadEnvelopesByRoot(body, chain, peerId, peerClient);
+      return onExecutionPayloadEnvelopesByRoot(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (req, peerId, peerClient) => {
       const body = ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data);
-      return onExecutionPayloadEnvelopesByRange(body, chain, peerId, peerClient);
+      return onExecutionPayloadEnvelopesByRange(body, chain, db, peerId, peerClient);
     },
 
     [ReqRespMethod.LightClientBootstrap]: (req) => {

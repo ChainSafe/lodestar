@@ -87,6 +87,7 @@ export async function* onDataColumnSidecarsByRange(
       if (unavailableColumnIndices.length) {
         await handleColumnSidecarUnavailability({
           chain,
+          db,
           metrics: chain.metrics,
           unavailableColumnIndices,
           slot,
@@ -147,6 +148,7 @@ export async function* onDataColumnSidecarsByRange(
         if (unavailableColumnIndices.length) {
           await handleColumnSidecarUnavailability({
             chain,
+            db,
             metrics: chain.metrics,
             unavailableColumnIndices,
             blockRoot: fromHex(block.blockRoot),

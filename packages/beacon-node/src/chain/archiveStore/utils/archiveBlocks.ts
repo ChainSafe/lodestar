@@ -107,13 +107,28 @@ export async function migrateFinalizedBlocks(
 }
 
 /**
- * Engine-owned migration of finalized execution payload envelopes (gloas): canonical blocks hot→cold and
- * non-canonical delete. Envelopes are consensus data owned by BeaconEngine (not DA like blobs/columns),
- * so this runs inside `engine.migrateFinalized`, driven by the same `snapshot` as `migrateFinalizedBlocks`.
+ * [beacon-engine] addition: delete hot execution requests of finalized-snapshot blocks. Keep the
+ * finalized block's (canonical[0]) since it stays in fork choice and may still be a production parent.
+ */
+export async function pruneFinalizedExecutionRequests(
+  db: IBeaconEngineDb,
+  snapshot: FinalizedBlockSnapshot
+): Promise<void> {
+  const finalizedRoot = snapshot.canonical[0]?.blockRoot;
+  const rootsToDelete = new Set<string>();
+  for (const block of [...snapshot.canonical, ...snapshot.nonCanonical]) {
+    if (block.blockRoot !== finalizedRoot) rootsToDelete.add(block.blockRoot);
+  }
+  if (rootsToDelete.size > 0) await db.executionRequests.batchDelete(Array.from(rootsToDelete, fromHex));
+}
+
+/**
+ * Facade-owned envelope migration, using the finalized snapshot returned by BeaconEngine.
+ * On unstable merges, keep envelope migration here; blocks and execution requests stay engine-owned.
  */
 export async function migrateFinalizedExecutionPayloadEnvelopes(
   config: ChainForkConfig,
-  db: IBeaconEngineDb,
+  db: IBeaconChainDb,
   logger: Logger,
   snapshot: FinalizedBlockSnapshot,
   finalizedEpoch: Epoch,
@@ -153,8 +168,8 @@ export async function migrateFinalizedExecutionPayloadEnvelopes(
 /**
  * Facade-owned DA + light-client cleanup for a finalized checkpoint. Everything it needs comes from the
  * engine's returned `snapshot` (canonical/non-canonical block summaries) — it never reads fork choice,
- * which the engine already pruned against. Blocks + states + payload envelopes are engine-owned (see
- * `migrateFinalizedBlocks` / `migrateFinalizedExecutionPayloadEnvelopes`); here we migrate/prune the
+ * which the engine already pruned against. Blocks + states are engine-owned; envelopes are migrated facade-side by
+ * `migrateFinalizedExecutionPayloadEnvelopes`. Here we migrate/prune the
  * blob + data-column sidecars and prune light-client data.
  */
 export async function migrateFinalizedDA(
@@ -500,7 +515,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  */
 async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
-  db: IBeaconEngineDb,
+  db: IBeaconChainDb,
   logger: Logger,
   canonicalBlocks: FinalizedProtoSummary[]
 ): Promise<Slot[]> {

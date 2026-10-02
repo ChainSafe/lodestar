@@ -1,4 +1,3 @@
-import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../chain.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {writeDataColumnsToDb} from "./writeBlockInputToDb.js";
@@ -17,13 +16,10 @@ export async function writePayloadEnvelopeInputToDb(
   const envelope = payloadInput.getPayloadEnvelope();
   const blockRootHex = payloadInput.blockRootHex;
 
-  // Envelope DB is engine-owned; write through the engine (bytes-first). Serialize on a cache miss.
-  const envelopeBytes =
-    this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-  const envelopePromise = this.beaconEngine.persistExecutionPayloadEnvelope(
-    envelope.message.beaconBlockRoot,
-    envelopeBytes
-  );
+  const envelopeBytes = this.serializedCache.get(envelope);
+  const envelopePromise = envelopeBytes
+    ? this.db.executionPayloadEnvelope.putBinary(this.db.executionPayloadEnvelope.getId(envelope), envelopeBytes)
+    : this.db.executionPayloadEnvelope.add(envelope);
 
   // Write envelope and data columns in parallel (reuses shared column writing logic)
   await Promise.all([envelopePromise, writeDataColumnsToDb.call(this, payloadInput)]);

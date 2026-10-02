@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
@@ -15,9 +16,13 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
   const blockHashHex = toRootHex(Buffer.alloc(32, 2));
   const finalizedBlockHash = toRootHex(Buffer.alloc(32, 3));
   let chain: MockedBeaconChain;
+  const executionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+  const putRequests = vi.fn<BeaconEngine["db"]["executionRequests"]["put"]>();
 
   beforeEach(() => {
     chain = getMockedBeaconChain();
+    putRequests.mockReset().mockResolvedValue(undefined);
+    Object.defineProperty(chain, "db", {value: {executionRequests: {put: putRequests}}});
     chain.forkChoice.onExecutionPayload = vi.fn();
     chain.forkChoice.getHead.mockReturnValue({...zeroProtoBlock, blockRoot: blockRootHex});
     chain.forkChoice.getFinalizedBlock.mockReturnValue({
@@ -40,13 +45,14 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
       blockHashHex,
       123,
       30_000_000,
+      executionRequests,
       execStatus,
       DataAvailabilityStatus.Available
     );
   }
 
-  it("imports the payload before sending FCU with the head, safe, and finalized hashes", () => {
-    expect(importPayload()).toEqual({executionOptimistic: false});
+  it("imports the payload before sending FCU with the head, safe, and finalized hashes", async () => {
+    expect(await importPayload()).toEqual({executionOptimistic: false});
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledWith(
       blockRootHex,
       blockHashHex,
@@ -66,28 +72,52 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     );
   });
 
-  it("imports without FCU when import updates are disabled", () => {
+  it("does not expose FULL or send FCU until requests are persisted", async () => {
+    let finishWrite: (() => void) | undefined;
+    putRequests.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishWrite = resolve;
+      })
+    );
+    const importing = importPayload();
+    expect(putRequests).toHaveBeenCalledExactlyOnceWith(blockRoot, executionRequests);
+    expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+    expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+    finishWrite?.();
+    await importing;
+    expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a failed requests write without exposing FULL or sending FCU", async () => {
+    const error = new Error("DB write failed");
+    putRequests.mockRejectedValue(error);
+    await expect(importPayload()).rejects.toBe(error);
+    expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+    expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+  });
+
+  it("imports without FCU when import updates are disabled", async () => {
     chain.opts.disableImportExecutionFcU = true;
-    expect(importPayload(ExecutionStatus.Syncing)).toEqual({executionOptimistic: true});
+    expect(await importPayload(ExecutionStatus.Syncing)).toEqual({executionOptimistic: true});
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 
-  it("does not send FCU for a non-head payload", () => {
+  it("does not send FCU for a non-head payload", async () => {
     chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
-    importPayload();
+    await importPayload();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 
-  it("does not wait for the EL response", () => {
+  it("does not wait for the EL response", async () => {
     chain.executionEngine.notifyForkchoiceUpdate.mockReturnValue(new Promise(() => {}));
-    expect(importPayload()).toEqual({executionOptimistic: false});
+    expect(await importPayload()).toEqual({executionOptimistic: false});
   });
 
   it("logs an EL failure without rejecting import", async () => {
     const error = new Error("EL unavailable");
     chain.executionEngine.notifyForkchoiceUpdate.mockRejectedValue(error);
-    expect(importPayload()).toEqual({executionOptimistic: false});
+    expect(await importPayload()).toEqual({executionOptimistic: false});
     await Promise.resolve();
     expect(chain.logger.error).toHaveBeenCalledWith(
       "Error pushing notifyForkchoiceUpdate()",
@@ -100,7 +130,7 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     "suppresses shutdown errors: %s",
     async (error) => {
       chain.executionEngine.notifyForkchoiceUpdate.mockRejectedValue(error);
-      importPayload();
+      await importPayload();
       await Promise.resolve();
       expect(chain.logger.error).not.toHaveBeenCalled();
     }

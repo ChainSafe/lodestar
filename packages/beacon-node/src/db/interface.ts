@@ -14,6 +14,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ExecutionRequestsRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -27,8 +28,8 @@ import {
  * but instead expose relevant beacon chain objects.
  *
  * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
- * engine owns (blocks, states, checkpoint states, payload envelopes, op-pool persistence); `IBeaconChainDb`
- * holds the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
+ * engine owns (blocks, states, checkpoint states, execution requests, op-pool persistence); `IBeaconChainDb`
+ * holds the envelope + DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
  * only by the bootstrap (CLI / `BeaconNode`).
  */
 export interface IBeaconEngineDb {
@@ -42,8 +43,7 @@ export interface IBeaconEngineDb {
   // checkpoint states
   checkpointState: CheckpointStateRepository;
 
-  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
-  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+  executionRequests: ExecutionRequestsRepository;
 
   // op pool persistence (the OpPool is engine-owned)
   voluntaryExit: VoluntaryExitRepository;
@@ -53,6 +53,9 @@ export interface IBeaconEngineDb {
 }
 
 export interface IBeaconChainDb {
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;

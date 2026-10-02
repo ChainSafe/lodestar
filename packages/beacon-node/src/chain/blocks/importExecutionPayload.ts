@@ -136,11 +136,12 @@ export async function importExecutionPayload(
   // [beacon-engine] moved: consensus envelope verification/import and import FCU now live in
   // packages/beacon-node/src/chain/beaconEngine/importExecutionPayload.ts.
   // On unstable merges, sync that logic there; retain DA-driven newPayload and facade side effects here.
-  const {executionOptimistic} = this.beaconEngine.importExecutionPayload(
+  const {executionOptimistic} = await this.beaconEngine.importExecutionPayload(
     fromHex(blockRootHex),
     blockHashHex,
     envelope.payload.blockNumber,
     envelope.payload.gasLimit,
+    envelope.executionRequests,
     execStatus,
     dataAvailabilityStatus
   );

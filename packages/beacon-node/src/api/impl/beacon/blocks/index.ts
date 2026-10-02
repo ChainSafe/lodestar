@@ -903,7 +903,7 @@ export function getBeaconBlockApi({
       const blockRootHex = toRootHex(blockRoot);
 
       const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRoot)
+        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
         : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
 
       if (!data) {

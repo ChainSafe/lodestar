@@ -9,7 +9,7 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
 import {ArchiveStoreOpts, ArchiveStoreTask} from "./interface.js";
-import {migrateFinalizedDA} from "./utils/archiveBlocks.js";
+import {migrateFinalizedDA, migrateFinalizedExecutionPayloadEnvelopes} from "./utils/archiveBlocks.js";
 import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
@@ -116,7 +116,7 @@ export class ArchiveStore {
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
       // Engine-owned persistence, consolidated into one method: canonical blocks hot→cold, finalized
-      // state archive, fork-choice prune. Returns the snapshot the facade uses for DA/light-client cleanup.
+      // state archive, fork-choice prune. Returns the snapshot the facade uses for envelope/DA/light-client cleanup.
       const {snapshot, prunedBlocks} = await this.chain.beaconEngine.migrateFinalized(finalized);
 
       if (this.opts.pruneHistory) {
@@ -126,8 +126,17 @@ export class ArchiveStore {
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
-      // Facade cleans the DA / light-client artifacts it still owns, driven by the snapshot.
+      // [beacon-engine] moved: envelope migration runs here with the facade DB, next to DA cleanup.
+      // On unstable merges, retain envelope archival here; block/request lifecycle stays in the engine.
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+      await migrateFinalizedExecutionPayloadEnvelopes(
+        this.chain.config,
+        this.db,
+        this.logger,
+        snapshot,
+        finalizedEpoch,
+        this.chain.clock.currentEpoch
+      );
       await migrateFinalizedDA(
         this.chain.config,
         this.db,

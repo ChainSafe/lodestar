@@ -258,14 +258,6 @@ export interface IBeaconEngine {
   // Projected thin ref (no ProtoBlock crosses) — DA-cache prune anchored at (blockRoot, payloadStatus).
   getAllAncestorBlockRootSlots(blockRoot: RootHex, payloadStatus: PayloadStatus): BlockRootSlot[];
 
-  // Execution payload envelope DB (engine-owned). Roots cross as raw bytes (FFI-honest).
-  getExecutionPayloadEnvelope(
-    blockSlot: Slot,
-    blockRoot: Uint8Array
-  ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null>;
-  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null>;
-  persistExecutionPayloadEnvelope(blockRoot: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
   // Thin serving refs for ExecutionPayloadEnvelopesByRange — fork choice read engine-side, no ProtoBlock crosses.
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
 
@@ -628,7 +620,7 @@ export interface IBeaconEngine {
   // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
   // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs
   // facade-parallel to the EL `notifyNewPayload`; `importExecutionPayload` does the fork-choice write
-  // and FCU dispatch. The facade awaits newPayload before import and emits events afterward.
+  // and FCU dispatch, persisting execution requests before FULL. The facade awaits import before events.
   // Bytes-first (native FFI): `envelopeBytes`
   // is the SSZ envelope (JS engine ignores it, uses the pojo); `blockRoot` is the SSZ root as raw bytes.
   verifyExecutionPayloadEnvelope(
@@ -642,16 +634,17 @@ export interface IBeaconEngine {
     blockHashHex: RootHex,
     payloadBlockNumber: number,
     payloadGasLimit: number,
+    executionRequests: gloas.ExecutionRequests,
     execStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
-  ): {executionOptimistic: boolean};
+  ): Promise<{executionOptimistic: boolean}>;
 
-  // --- DB ownership (blocks + states) ---
+  // --- DB ownership (blocks + states + execution requests) ---
 
   /**
    * Process a newly finalized checkpoint: migrate canonical blocks hot→cold, archive the finalized
-   * state, prune fork choice — all engine-owned persistence, consolidated into one method. Returns the
-   * canonical/non-canonical block snapshot the facade uses to clean the DA + light-client artifacts it
+   * state, prune execution requests, prune fork choice — all engine-owned persistence. Returns the
+   * canonical/non-canonical block snapshot the facade uses to clean the envelopes + DA + light-client artifacts it
    * owns. State bytes never cross; archival is internal.
    */
   migrateFinalized(finalized: CheckpointWithHex): Promise<MigrateFinalizedResult>;

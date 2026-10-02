@@ -90,10 +90,7 @@ import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../../util/
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
-import {
-  migrateFinalizedBlocks,
-  migrateFinalizedExecutionPayloadEnvelopes,
-} from "../archiveStore/utils/archiveBlocks.js";
+import {migrateFinalizedBlocks, pruneFinalizedExecutionRequests} from "../archiveStore/utils/archiveBlocks.js";
 import {pruneHistory} from "../archiveStore/utils/pruneHistory.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
@@ -257,8 +254,7 @@ export class BeaconEngine implements IBeaconEngine {
   // TODO - beacon engine: how to remove this?
   readonly seenBlockInputCache: SeenBlockInput;
   readonly validatorMonitor: ValidatorMonitor | null;
-  // Engine reads execution payload envelopes for block production (getParentExecutionRequests). Writes
-  // / archival / network handlers still use the shared `db` directly until the DB-ownership phase.
+  // Engine owns execution requests; envelope persistence and serving remain facade-owned.
   readonly db: IBeaconEngineDb;
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
@@ -630,37 +626,6 @@ export class BeaconEngine implements IBeaconEngine {
       .map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
   }
 
-  /** DB read of an execution payload envelope. Callers that hold the DA cache check it first. */
-  async getExecutionPayloadEnvelope(
-    blockSlot: Slot,
-    blockRoot: Uint8Array
-  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
-    return (
-      (await this.db.executionPayloadEnvelope.get(blockRoot)) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
-  }
-
-  /** Serialized DB read of an execution payload envelope (byte sibling of getExecutionPayloadEnvelope). */
-  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null> {
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(blockRoot)) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
-  }
-
-  /** Serialized read of a finalized (cold-archive, keyed by slot) execution payload envelope. */
-  async getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null> {
-    return (await this.db.executionPayloadEnvelopeArchive.getBinary(slot)) ?? null;
-  }
-
-  /** Persist a hot execution payload envelope, bytes-first (key = beaconBlockRoot). */
-  async persistExecutionPayloadEnvelope(blockRoot: Uint8Array, serializedBytes: Uint8Array): Promise<void> {
-    await this.db.executionPayloadEnvelope.putBinary(blockRoot, serializedBytes);
-  }
-
   /**
    * Thin serving refs for ExecutionPayloadEnvelopesByRange: fork-choice reads + FULL filter stay inside
    * the engine; only slot + raw root cross. Returns the archive boundary (`finalizedSlot`) and the
@@ -794,15 +759,9 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   /**
-   * Parent execution requests for block production. DB-only: the facade-owned DA cache is not visible
-   * here, so callers that need cache-only (DB-write-pending) envelopes check the cache first
-   * (`chain.getParentExecutionRequests`).
-   * TODO - beacon engine: here BeaconEngine owns the payloadEnvelope db because we need state transition for block production
-   * and PrepareNextSlot. It means we always have to reach db instead of cache. See if we have any down sides with this
-   * The facade queues the write before import marks the parent FULL; a backed-up queue can leave the
-   * envelope unavailable here.
-   * TODO (zig_engine_el_plan.md Follow-up 5, after Step 6): add an engine-owned executionRequests cache
-   * before marking a parent FULL so production does not depend on the facade write queue draining.
+   * Moved from unstable@551b8b0a3d chain/chain.ts#getParentExecutionRequests.
+   * [beacon-engine] deviation: read engine-owned requests (kept until the parent is finalized away)
+   * instead of the facade envelope.
    */
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
@@ -812,11 +771,11 @@ export class BeaconEngine implements IBeaconEngine {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, fromHex(parentBlockRootHex));
-    if (envelope === null) {
-      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+    const requests = await this.db.executionRequests.get(fromHex(parentBlockRootHex));
+    if (requests === null) {
+      throw Error(`Parent execution requests not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return envelope.message.executionRequests;
+    return requests;
   }
 
   produceCommonBlockBody(attrs: BlockAttributes): Promise<CommonBlockBody> {
@@ -1870,20 +1829,22 @@ export class BeaconEngine implements IBeaconEngine {
    * Runs inside BeaconEngine. FCU dispatch moved from unstable@551b8b0a3d
    * chain/blocks/importExecutionPayload.ts#importExecutionPayload; fork choice import uses the branch's bytes-first contract.
    */
-  importExecutionPayload(
+  async importExecutionPayload(
     blockRoot: Root,
     blockHashHex: RootHex,
     payloadBlockNumber: number,
     payloadGasLimit: number,
+    executionRequests: gloas.ExecutionRequests,
     execStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
-  ): {executionOptimistic: boolean} {
+  ): Promise<{executionOptimistic: boolean}> {
     return importExecutionPayload.call(
       this,
       blockRoot,
       blockHashHex,
       payloadBlockNumber,
       payloadGasLimit,
+      executionRequests,
       execStatus,
       dataAvailabilityStatus
     );
@@ -1905,7 +1866,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.forkChoice.irrecoverableError;
   }
 
-  // --- DB ownership (blocks + states) ---
+  // --- DB ownership (blocks + states + execution requests) ---
 
   async migrateFinalized(finalized: CheckpointWithHex): Promise<MigrateFinalizedResult> {
     // Snapshot from the engine's own fork choice: canonical ancestors (newest→oldest, last = previous
@@ -1930,16 +1891,8 @@ export class BeaconEngine implements IBeaconEngine {
       this.opts.persistOrphanedBlocks,
       this.opts.persistOrphanedBlocksDir
     );
-    // Migrate canonical payload envelopes hot→cold + delete non-canonical (envelopes are engine-owned,
-    // consensus data — not DA). Tied to canonical blocks, so run right after block migration.
-    await migrateFinalizedExecutionPayloadEnvelopes(
-      this.config,
-      this.db,
-      this.logger,
-      snapshot,
-      finalized.epoch,
-      this.clock.currentEpoch
-    );
+    // [beacon-engine] addition: drop requests of blocks leaving fork choice; the finalized block keeps its own.
+    await pruneFinalizedExecutionRequests(this.db, snapshot);
     timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
     // 2. Archive the finalized state (states are engine-owned). MUST run after block migration so a

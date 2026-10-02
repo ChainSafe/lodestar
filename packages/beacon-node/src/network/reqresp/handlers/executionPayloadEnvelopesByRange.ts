@@ -4,12 +4,15 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(
   request: gloas.ExecutionPayloadEnvelopesByRangeRequest,
   chain: IBeaconChain,
+  db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -32,18 +35,20 @@ export async function* onExecutionPayloadEnvelopesByRange(
     );
   }
 
-  // Fork choice is read inside the engine; only thin refs cross (slot + raw root), no ProtoBlock.
-  // The finalized block's envelope stays in hot db until the next finalization run, so the archive
-  // tops out at finalizedSlot - 1.
+  const finalized = db.executionPayloadEnvelopeArchive;
+  // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
+  // [beacon-engine] deviation: canonical FULL refs and finalized boundary come from the engine.
   const {finalizedSlot, nonFinalized} = chain.getFullBlockRootSlotsByRange(startSlot, endSlot);
+  // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range: point-read the cold archive per slot; skipped slots have no envelope.
+  // Finalized range of envelopes
   if (startSlot <= archiveMaxSlot) {
-    const lt = Math.min(endSlot, archiveMaxSlot + 1);
-    for (let slot = startSlot; slot < lt; slot++) {
-      const envelopeBytes = await chain.getSerializedFinalizedExecutionPayloadEnvelope(slot);
-      if (!envelopeBytes) continue;
+    for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
+      gte: startSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
+    })) {
+      const slot = finalized.decodeKey(key);
       yield {
         data: envelopeBytes,
         boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
@@ -51,19 +56,22 @@ export async function* onExecutionPayloadEnvelopesByRange(
     }
   }
 
-  // Non-finalized range: point-read each canonical FULL block's envelope by (slot, root).
-  for (const {slot, root} of nonFinalized) {
-    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, root);
-    if (!envelopeBytes) {
-      throw new ResponseError(
-        RespStatus.SERVER_ERROR,
-        `No envelope for slot ${slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
-      );
+  // Non-finalized range of envelopes
+  if (endSlot > archiveMaxSlot) {
+    for (const {slot, root} of nonFinalized) {
+      const rootHex = toRootHex(root);
+      const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
+      if (!envelopeBytes) {
+        throw new ResponseError(
+          RespStatus.SERVER_ERROR,
+          `No envelope for root ${rootHex} slot ${slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+        );
+      }
+      yield {
+        data: envelopeBytes,
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+      };
     }
-    yield {
-      data: envelopeBytes,
-      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-    };
   }
 }
 

@@ -3,11 +3,13 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function handleColumnSidecarUnavailability({
   chain,
+  db,
   metrics,
   unavailableColumnIndices,
   requestedColumns,
@@ -16,6 +18,7 @@ export async function handleColumnSidecarUnavailability({
   blockRoot,
 }: {
   chain: IBeaconChain;
+  db: IBeaconChainDb;
   metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;
@@ -38,8 +41,7 @@ export async function handleColumnSidecarUnavailability({
   // Post-gloas, columns exist only for FULL blocks; a finalized block is FULL if its envelope was
   // archived. Bid blobsCount is unreliable here since an EMPTY block's bid may still commit to blobs
   if (blockRoot === undefined && chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
-    // Envelope DB is engine-owned; read the finalized (cold-archive) envelope via the engine.
-    const envelopeBytes = await chain.getSerializedFinalizedExecutionPayloadEnvelope(slot);
+    const envelopeBytes = await db.executionPayloadEnvelopeArchive.getBinary(slot);
     if (!envelopeBytes) return;
   }
 

@@ -615,19 +615,22 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null> {
-    // Facade owns the DA cache (keyed by hex); check it before the engine's DB read.
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(toRootHex(blockRoot));
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       const envelope = payloadInput.getPayloadEnvelope();
-      return this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      const serialized = this.serializedCache.get(envelope);
+      if (serialized) {
+        return serialized;
+      }
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
-    return this.beaconEngine.getSerializedExecutionPayloadEnvelope(blockSlot, blockRoot);
-  }
 
-  /** Engine passthrough: serialized finalized (cold-archive) envelope by slot. */
-  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null> {
-    return this.beaconEngine.getSerializedFinalizedExecutionPayloadEnvelope(slot);
+    return (
+      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
+      null
+    );
   }
 
   /** Engine passthrough: thin ByRange serving refs (fork choice read engine-side). */
@@ -639,28 +642,35 @@ export class BeaconChain implements IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
-    // Facade owns the DA cache; check it before the engine's DB read.
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
     }
-    return this.beaconEngine.getExecutionPayloadEnvelope(blockSlot, fromHex(blockRootHex));
+
+    return (
+      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
+      null
+    );
   }
 
-  async getParentExecutionRequests(
-    parentBlockSlot: Slot,
-    parentBlockRootHex: RootHex
-  ): Promise<gloas.ExecutionRequests> {
-    // at the fork boundary, parent is pre-gloas
-    if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
-      return ssz.gloas.ExecutionRequests.defaultValue();
-    }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
-      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
-    }
-    return envelope.message.executionRequests;
-  }
+  // [beacon-engine] moved: parent requests are read by BeaconEngine.getParentExecutionRequests.
+  // On unstable merges, sync production request lookup there; retain envelope getters here.
+  // async getParentExecutionRequests(
+  //   parentBlockSlot: Slot,
+  //   parentBlockRootHex: RootHex
+  // ): Promise<gloas.ExecutionRequests> {
+  //   // at the fork boundary, parent is pre-gloas
+  //   if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
+  //     return ssz.gloas.ExecutionRequests.defaultValue();
+  //   }
+  //   const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
+  //   if (envelope === null) {
+  //     throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+  //   }
+  //   return envelope.message.executionRequests;
+  // }
+  //
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);

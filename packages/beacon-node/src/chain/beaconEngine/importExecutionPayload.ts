@@ -85,18 +85,22 @@ export async function verifyExecutionPayloadEnvelope(
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
-export function importExecutionPayload(
+export async function importExecutionPayload(
   this: BeaconEngine,
   // [beacon-engine] deviation: receive the verified payload fields and mapped EL/DA statuses.
   blockRoot: Root,
   blockHashHex: RootHex,
   payloadBlockNumber: number,
   payloadGasLimit: number,
+  executionRequests: gloas.ExecutionRequests,
   execStatus: PayloadExecutionStatus,
   dataAvailabilityStatus: DataAvailabilityStatus
-): {executionOptimistic: boolean} {
-  // [beacon-engine] deviation: only fork-choice import and FCU run here; facade owns the envelope pipeline.
+): Promise<{executionOptimistic: boolean}> {
+  // [beacon-engine] deviation: persist requests before exposing FULL; facade owns the envelope pipeline.
   const blockRootHex = toRootHex(blockRoot);
+
+  // If finalization prunes this block during the write, the entry is orphaned (harmless, never read).
+  await this.db.executionRequests.put(blockRoot, executionRequests);
 
   this.forkChoice.onExecutionPayload(
     blockRootHex,
