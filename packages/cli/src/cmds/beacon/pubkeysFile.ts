@@ -1,5 +1,6 @@
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ChainForkConfig} from "@lodestar/config";
+import {getValidatorPubkeyFromStateBytes} from "@lodestar/state-transition";
 import {Logger, byteArrayEquals} from "@lodestar/utils";
 
 /**
@@ -9,8 +10,10 @@ import {Logger, byteArrayEquals} from "@lodestar/utils";
 export function loadPubkeysFile(
   pubkeyCache: PubkeyCache,
   filepath: string,
-  anchorState: BeaconStateAllForks,
   maxCapacity: number,
+  config: ChainForkConfig,
+  anchorStateBytes: Uint8Array,
+  anchorValidatorCount: number,
   logger: Logger
 ): void {
   const start = Date.now();
@@ -23,9 +26,10 @@ export function loadPubkeysFile(
 
   // load() only checks framing and checksum, so reject a file from another chain. Checking the endpoints
   // suffices since the registry is append-only.
-  const overlap = Math.min(pubkeyCache.size, anchorState.validators.length);
+  const overlap = Math.min(pubkeyCache.size, anchorValidatorCount);
   for (const index of overlap > 0 ? [0, overlap - 1] : []) {
-    if (!byteArrayEquals(pubkeyCache.getPubkeyBytesOrThrow(index), anchorState.validators.getReadonly(index).pubkey)) {
+    const anchorPubkey = getValidatorPubkeyFromStateBytes(config, anchorStateBytes, index);
+    if (anchorPubkey === null || !byteArrayEquals(pubkeyCache.getPubkeyBytesOrThrow(index), anchorPubkey)) {
       pubkeyCache.reset();
       logger.debug("Discarded pubkeys file not matching anchor state", {filepath, index});
       return;

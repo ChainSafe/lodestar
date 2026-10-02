@@ -4,11 +4,10 @@ import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
-import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import {ACTIVE_PRESET, MAX_PENDING_DEPOSITS_PER_EPOCH, PresetName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {createBeaconStateView} from "@lodestar/state-transition";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -28,7 +27,7 @@ import {initBeaconState} from "./initBeaconState.js";
 import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
-import {loadPubkeysFile, savePubkeysFile} from "./pubkeysFile.js";
+import {savePubkeysFile} from "./pubkeysFile.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -78,24 +77,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   try {
     const {
       anchorState,
-      stateBytes: anchorStateBytes,
+      config: beaconConfig,
       isFinalized,
-    } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
-    const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-    // Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH per epoch),
-    // over a year at organic rates, to avoid routine cache reallocations. Cache growth is protected
-    // by its native lock; if this headroom is exceeded, it grows by the same fixed step.
-    const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
-    const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
-    const pubkeyCacheCapacity = anchorState.validators.length + pubkeyCacheHeadroom;
-    loadPubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, anchorState, pubkeyCacheCapacity, logger);
-    pubkeyCache.ensureCapacity(pubkeyCacheCapacity);
-    if (pubkeyCache.size < anchorState.validators.length) {
-      pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
-    }
-    const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
-      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+    } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
       opts: options,
@@ -108,7 +92,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       dataDir: beaconPaths.dataDir,
       dataColumnDir: beaconPaths.dataColumnDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState: anchorStateView,
+      anchorState,
       isAnchorStateFinalized: isFinalized,
     });
 

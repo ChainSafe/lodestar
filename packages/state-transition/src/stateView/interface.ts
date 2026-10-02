@@ -67,6 +67,7 @@ export type ComputeNewStateRootResult = {
   newStateRoot: Root;
   proposerReward: Gwei;
   postState: IBeaconStateView;
+  hashTreeRootTime: number;
 };
 
 /**
@@ -276,6 +277,8 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
+  builderPendingPayments: gloas.BuilderPendingPayments;
+  builderPendingWithdrawals: gloas.BuilderPendingWithdrawals;
   getBuilder(index: BuilderIndex): gloas.Builder;
   getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;

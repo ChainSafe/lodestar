@@ -6,7 +6,6 @@ import {
   ProcessOperationsStep,
   ProposerRewardType,
   StateCloneSource,
-  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/index.js";
@@ -92,12 +91,6 @@ export function createHistoricalStateTransitionMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
-      name: "lodestar_historical_state_stfn_hash_tree_root_seconds",
-      help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-      labelNames: ["source"],
-    }),
     numEffectiveBalanceUpdates: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
       help: "Count of effective balance updates in epoch transition",
@@ -163,9 +156,10 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
     }),
-    progressiveBalancesMismatches: metricsRegister.counter({
+    progressiveBalancesMismatches: metricsRegister.counter<{target: "current" | "previous"}>({
       name: "lodestar_historical_state_stfn_progressive_balances_mismatches_total",
-      help: "Total count of progressive balance cache mismatches",
+      help: "Total count of progressive balance cache mismatches by target balance",
+      labelNames: ["target"],
     }),
     proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
       name: "lodestar_historical_state_stfn_proposer_rewards_total",

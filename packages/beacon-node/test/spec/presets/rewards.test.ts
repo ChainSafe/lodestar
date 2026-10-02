@@ -9,6 +9,7 @@ import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createSpecTestMetrics, expectNoProgressiveBalancesMismatches} from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
@@ -16,10 +17,11 @@ const deltasType = new VectorCompositeType(ssz.phase0.Balances, 2);
 
 const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
   return {
-    testFunction: (testcase) => {
+    testFunction: async (testcase, _directoryName, testCaseName) => {
       const config = getConfig(fork);
       const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
-      const epochTransitionCache = beforeProcessEpoch(wrappedState);
+      const {metrics, register} = createSpecTestMetrics();
+      const epochTransitionCache = beforeProcessEpoch(wrappedState, metrics);
 
       // To debug this test and get granular results you can tweak inputs to get more granular results
       //
@@ -33,7 +35,9 @@ const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
       //   + set all inactivityScores to zero
       // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
       //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-      return getRewardsAndPenalties(wrappedState, epochTransitionCache);
+      const rewardsAndPenalties = getRewardsAndPenalties(wrappedState, epochTransitionCache);
+      await expectNoProgressiveBalancesMismatches(register, testCaseName);
+      return rewardsAndPenalties;
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,
