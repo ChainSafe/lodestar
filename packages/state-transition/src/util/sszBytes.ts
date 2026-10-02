@@ -19,7 +19,8 @@ const ROOT_SIZE = 32;
  *   withdrawable_epoch: Epoch [fixed - 8 bytes]
  * ```
  */
-const VALIDATOR_EFFECTIVE_BALANCE_OFFSET = 48 + ROOT_SIZE;
+const PUBKEY_SIZE = 48;
+const VALIDATOR_EFFECTIVE_BALANCE_OFFSET = PUBKEY_SIZE + ROOT_SIZE;
 const VALIDATOR_ACTIVATION_EPOCH_OFFSET = VALIDATOR_EFFECTIVE_BALANCE_OFFSET + UINT64_SIZE + 1 + UINT64_SIZE;
 const VALIDATOR_EXIT_EPOCH_OFFSET = VALIDATOR_ACTIVATION_EPOCH_OFFSET + UINT64_SIZE;
 export const VALIDATOR_BYTES_SIZE = VALIDATOR_EXIT_EPOCH_OFFSET + UINT64_SIZE + UINT64_SIZE;
@@ -116,6 +117,23 @@ export function getValidatorCountFromStateBytes(config: ChainForkConfig, stateBy
   const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
   // A non-null range always holds a whole number of validator records, so the division is exact
   return range === null ? null : (range.end - range.start) / VALIDATOR_BYTES_SIZE;
+}
+
+/** Returns a view into `stateBytes`, or null if the index is not in the registry. */
+export function getValidatorPubkeyFromStateBytes(
+  config: ChainForkConfig,
+  stateBytes: Uint8Array,
+  index: number
+): Uint8Array | null {
+  const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
+  if (range === null) {
+    return null;
+  }
+  const start = range.start + index * VALIDATOR_BYTES_SIZE;
+  if (index < 0 || start >= range.end) {
+    return null;
+  }
+  return stateBytes.subarray(start, start + PUBKEY_SIZE);
 }
 
 function getValidatorsRangeFromStateBytes(

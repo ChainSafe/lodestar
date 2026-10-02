@@ -123,6 +123,7 @@ describe("initBeaconState", () => {
     const {anchorState, isFinalized} = await initBeaconState(
       {network: "dev", ...args} as BeaconArgs & GlobalArgs,
       fixturesDir,
+      path.join(fixturesDir, "pubkeys"),
       config,
       db,
       getMockedLogger()

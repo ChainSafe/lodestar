@@ -13,6 +13,7 @@ import {
 import {Logger, formatBytes} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/globalOptions.js";
 import {BeaconArgs} from "./options.js";
+import {loadPubkeysFile} from "./pubkeysFile.js";
 import {StateInitializationError, StateInitializationErrorCode} from "./stateInitialization/errors.js";
 import {prepareGenesisInitialization} from "./stateInitialization/genesisState.js";
 import {
@@ -30,11 +31,12 @@ type InitBeaconStateResult = {anchorState: IBeaconStateView; config: BeaconConfi
 
 /**
  * Select serialized anchor bytes before constructing the state used for validation, persistence, and return.
- * Populates the global `pubkeyCache` with the anchor state's validators.
+ * Populates the global `pubkeyCache` with the anchor state's validators, reusing `pubkeysFile` if it matches.
  */
 export async function initBeaconState(
   args: BeaconArgs & GlobalArgs,
   dataDir: string,
+  pubkeysFile: string,
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
@@ -66,7 +68,12 @@ export async function initBeaconState(
         options.lastPersistedCheckpointState
     );
     if (!options.forceCheckpointSync && (!hasCheckpointSource || archived.isWithinWeakSubjectivityPeriod)) {
-      return executeStateInitialization(prepareArchivedStateInitialization(archived, context), useNative);
+      return executeStateInitialization(
+        prepareArchivedStateInitialization(archived, context),
+        useNative,
+        pubkeysFile,
+        logger
+      );
     }
   }
   let stateInit = await prepareCheckpointSourceInitialization(options, archived, context);
@@ -77,7 +84,7 @@ export async function initBeaconState(
         ? prepareArchivedStateInitialization(archived, context)
         : await prepareGenesisInitialization(options, context);
   }
-  return executeStateInitialization(stateInit, useNative);
+  return executeStateInitialization(stateInit, useNative, pubkeysFile, logger);
 }
 
 /**
@@ -122,7 +129,9 @@ async function readLatestArchivedStateBytes({
  */
 async function executeStateInitialization(
   stateInit: StateInitialization,
-  useNative: boolean
+  useNative: boolean,
+  pubkeysFile: string,
+  logger: Logger
 ): Promise<InitBeaconStateResult> {
   const {config, stateBytes} = stateInit;
   const validatorCount = getValidatorCountFromStateBytes(config, stateBytes);
@@ -137,7 +146,10 @@ async function executeStateInitialization(
   // by its native lock; if this headroom is exceeded, it grows by the same fixed step.
   // The view syncs pubkeys during construction, so capacity must be reserved first.
   const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
-  pubkeyCache.ensureCapacity(validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs));
+  const pubkeyCacheCapacity = validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
+  loadPubkeysFile(pubkeyCache, pubkeysFile, pubkeyCacheCapacity, config, stateBytes, validatorCount, logger);
+  // unilaterally expand capacity after best-effort pubkey file loading
+  pubkeyCache.ensureCapacity(pubkeyCacheCapacity);
   const anchorState = createBeaconStateView({useNative, config, stateBytes});
   stateInit.validate(anchorState);
   await stateInit.persist?.(anchorState, stateBytes);
