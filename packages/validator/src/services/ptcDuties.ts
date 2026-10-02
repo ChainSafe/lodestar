@@ -95,8 +95,8 @@ export class PtcDutiesService {
   }
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    const nextEpoch = epoch + 1;
-    if (!isForkPostGloas(this.config.getForkName(nextEpoch * SLOTS_PER_EPOCH))) {
+    // PTC duties of the first Gloas epoch only exist after the fork upgrade, they can't be polled one epoch ahead
+    if (!isForkPostGloas(this.config.getForkName(epoch * SLOTS_PER_EPOCH))) {
       return;
     }
 
