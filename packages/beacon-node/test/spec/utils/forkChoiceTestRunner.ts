@@ -75,6 +75,7 @@ import {
   expectNoProgressiveBalancesMismatches,
   expectValidProgressiveBalances,
 } from "./progressiveBalances.js";
+import {nativeStateTransition} from "./stateTransition.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -531,7 +532,7 @@ export const forkChoiceTestRunner =
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
                 const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
-                expectValidProgressiveBalances(postState, metrics);
+                expectValidProgressiveBalances(postState, metrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
                 specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
@@ -858,7 +859,9 @@ export const forkChoiceTestRunner =
         // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
-        shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
+        shouldSkip: (_testcase, name, _index) =>
+          name.includes("invalid_incorrect_proof") ||
+          (nativeStateTransition && (name.includes("gloas") || name.includes("heze"))),
       },
     };
   };

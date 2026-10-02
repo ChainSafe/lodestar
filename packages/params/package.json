@@ -70,5 +70,8 @@
     "@types/js-yaml": "^4.0.5",
     "axios": "^1.13.2",
     "js-yaml": "^4.1.0"
+  },
+  "dependencies": {
+    "@chainsafe/lodestar-z": "catalog:"
   }
 }

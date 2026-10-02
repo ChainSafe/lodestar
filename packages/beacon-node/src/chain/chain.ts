@@ -248,15 +248,15 @@ export class BeaconChain implements IBeaconChain {
   private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
-  private _earliestAvailableSlot: Slot;
+  private earliestAvailableSlotValue: Slot;
 
   get earliestAvailableSlot(): Slot {
-    return this._earliestAvailableSlot;
+    return this.earliestAvailableSlotValue;
   }
 
   set earliestAvailableSlot(slot: Slot) {
-    if (this._earliestAvailableSlot !== slot) {
-      this._earliestAvailableSlot = slot;
+    if (this.earliestAvailableSlotValue !== slot) {
+      this.earliestAvailableSlotValue = slot;
       this.emitter.emit(ChainEvent.updateStatus);
     }
   }
@@ -362,7 +362,7 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
-    this._earliestAvailableSlot = anchorState.slot;
+    this.earliestAvailableSlotValue = anchorState.slot;
 
     this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
@@ -432,6 +432,7 @@ export class BeaconChain implements IBeaconChain {
       blockStateCache,
       checkpointStateCache,
       seenBlockInputCache: this.seenBlockInputCache,
+      serializedCache: this.serializedCache,
       db,
       metrics,
       validatorMonitor,
@@ -1366,7 +1367,7 @@ export class BeaconChain implements IBeaconChain {
       // TODO: PERFORMANCE: Memoize to prevent re-computing every time
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
-      earliestAvailableSlot: this._earliestAvailableSlot,
+      earliestAvailableSlot: this.earliestAvailableSlotValue,
     };
   }
 

@@ -1,3 +1,4 @@
+import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {IBeaconDb} from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -40,7 +41,7 @@ export async function initBeaconState(
   logger: Logger
 ): Promise<InitBeaconStateResult> {
   const options: StateInitializationOptions = args;
-  const useNative = options["chain.nativeStateView"] ?? false;
+  const nativeStateTransition = options["chain.nativeStateTransition"] ?? false;
   if (
     options.forceCheckpointSync &&
     !(options.checkpointState || options.checkpointSyncUrl || options.unsafeCheckpointState)
@@ -66,7 +67,7 @@ export async function initBeaconState(
         options.lastPersistedCheckpointState
     );
     if (!options.forceCheckpointSync && (!hasCheckpointSource || archived.isWithinWeakSubjectivityPeriod)) {
-      return executeStateInitialization(prepareArchivedStateInitialization(archived, context), useNative);
+      return executeStateInitialization(prepareArchivedStateInitialization(archived, context), nativeStateTransition);
     }
   }
   let stateInit = await prepareCheckpointSourceInitialization(options, archived, context);
@@ -77,7 +78,7 @@ export async function initBeaconState(
         ? prepareArchivedStateInitialization(archived, context)
         : await prepareGenesisInitialization(options, context);
   }
-  return executeStateInitialization(stateInit, useNative);
+  return executeStateInitialization(stateInit, nativeStateTransition);
 }
 
 /**
@@ -122,7 +123,7 @@ async function readLatestArchivedStateBytes({
  */
 async function executeStateInitialization(
   stateInit: StateInitialization,
-  useNative: boolean
+  nativeStateTransition: boolean
 ): Promise<InitBeaconStateResult> {
   const {config, stateBytes} = stateInit;
   const validatorCount = getValidatorCountFromStateBytes(config, stateBytes);
@@ -138,7 +139,10 @@ async function executeStateInitialization(
   // The view syncs pubkeys during construction, so capacity must be reserved first.
   const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
   pubkeyCache.ensureCapacity(validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs));
-  const anchorState = createBeaconStateView({useNative, config, stateBytes});
+  if (nativeStateTransition) {
+    bindings.config.set(config, config.genesisValidatorsRoot);
+  }
+  const anchorState = createBeaconStateView({nativeStateTransition, config, stateBytes});
   stateInit.validate(anchorState);
   await stateInit.persist?.(anchorState, stateBytes);
   stateInit.log(anchorState);
