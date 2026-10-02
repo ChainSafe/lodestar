@@ -102,6 +102,12 @@ type SearchedRootEntry = {
  */
 const DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
 
+/**
+ * The network worker bans a Fatal peer only on its next PeerManager heartbeat (30s). Until then the main thread
+ * would keep validating that peer's messages, so drop them here. 3 slots (36s) outlasts one heartbeat.
+ */
+export const FATAL_PEER_EXPIRY_SLOTS = 3;
+
 type WorkOpts = {
   bypassQueue?: boolean;
 };
@@ -256,6 +262,8 @@ export class NetworkProcessor {
     () => new MapDef<RootHex, SearchedRootEntry>(() => ({}))
   );
   private bufferedRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  /** peer -> clock slot when it was Fatal'ed */
+  private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
   constructor(
     modules: NetworkProcessorModules,
@@ -269,10 +277,15 @@ export class NetworkProcessor {
     this.events = events;
     this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
-    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
+    this.gossipValidatorFn = getGossipValidatorFn(
+      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules,
+      this.onFatalPeer
+    );
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
       modules.gossipHandlers ?? getGossipHandlers(modules, opts),
-      modules
+      modules,
+      this.onFatalPeer
     );
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
@@ -406,8 +419,18 @@ export class NetworkProcessor {
     }
   }
 
+  private onFatalPeer = (peer: PeerIdStr): void => {
+    this.fatalPeers.set(peer, this.chain.clock.currentSlot);
+  };
+
   private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
     const topicType = message.topic.type;
+    if (this.fatalPeers.has(message.propagationSource)) {
+      this.metrics?.networkProcessor.gossipValidationError.inc({topic: topicType, error: GossipErrorCode.FATAL_PEER});
+      // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
+      return;
+    }
+
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
 
     // 1st extract round: make sure slot is in range and if block root is not available
@@ -872,6 +895,10 @@ export class NetworkProcessor {
     for (const slot of this.bufferedRootsBySlot.keys()) {
       if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
     }
+
+    for (const [peer, slot] of this.fatalPeers) {
+      if (clockSlot - slot > FATAL_PEER_EXPIRY_SLOTS) this.fatalPeers.delete(peer);
+    }
   };
 
   private executeWork(): void {
@@ -927,6 +954,32 @@ export class NetworkProcessor {
   private async processPendingGossipsubMessage(
     messageOrArray: PendingGossipsubMessage | PendingGossipsubMessage[]
   ): Promise<void> {
+    // drop messages from peers Fatal'ed after these were queued or started awaiting a block/envelope
+    // No need to report the dropped jobs to gossip. They will be eventually pruned from the mcache
+    if (this.fatalPeers.size > 0) {
+      if (Array.isArray(messageOrArray)) {
+        const allowed: PendingGossipsubMessage[] = [];
+        for (const msg of messageOrArray) {
+          if (this.fatalPeers.has(msg.propagationSource)) {
+            this.metrics?.networkProcessor.gossipValidationError.inc({
+              topic: msg.topic.type,
+              error: GossipErrorCode.FATAL_PEER,
+            });
+          } else {
+            allowed.push(msg);
+          }
+        }
+        if (allowed.length === 0) return;
+        messageOrArray = allowed;
+      } else if (this.fatalPeers.has(messageOrArray.propagationSource)) {
+        this.metrics?.networkProcessor.gossipValidationError.inc({
+          topic: messageOrArray.topic.type,
+          error: GossipErrorCode.FATAL_PEER,
+        });
+        return;
+      }
+    }
+
     const nowSec = Date.now() / 1000;
     if (Array.isArray(messageOrArray)) {
       for (const msg of messageOrArray) {
