@@ -69,10 +69,31 @@ const headV2 = new ContainerType(
   },
   {typeName: "HeadV2", jsonCase: "eth2"}
 );
+const phase0Block = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "Block", jsonCase: "eth2"}
+);
+const gloasBlock = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    blockHash: stringType,
+    builderIndex: ssz.BuilderIndex,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "BlockGloas", jsonCase: "eth2"}
+);
 type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
 type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 type HeadV2 = ValueOf<typeof headV2>;
+type Phase0BlockSSE = ValueOf<typeof phase0Block>;
+type GloasBlockSSE = ValueOf<typeof gloasBlock>;
+type BlockSSE = Phase0BlockSSE | GloasBlockSSE;
 
 export enum EventType {
   /**
@@ -182,11 +203,7 @@ export type EventData = {
     version: ForkName;
     data: HeadV2;
   };
-  [EventType.block]: {
-    slot: Slot;
-    block: RootHex;
-    executionOptimistic: boolean;
-  };
+  [EventType.block]: BlockSSE;
   [EventType.blockGossip]: {
     slot: Slot;
     block: RootHex;
@@ -330,14 +347,22 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.headV2]: WithVersion(() => headV2),
 
-    [EventType.block]: new ContainerType(
-      {
-        slot: ssz.Slot,
-        block: stringType,
-        executionOptimistic: ssz.Boolean,
+    [EventType.block]: {
+      toJson: (data) => {
+        const fork = config.getForkName(data.slot);
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.toJson(data as GloasBlockSSE);
+        }
+        return phase0Block.toJson(data);
       },
-      {jsonCase: "eth2"}
-    ),
+      fromJson: (data) => {
+        const fork = config.getForkName(Number((data as BlockSSE).slot));
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.fromJson(data);
+        }
+        return phase0Block.fromJson(data);
+      },
+    },
     [EventType.blockGossip]: new ContainerType(
       {
         slot: ssz.Slot,
