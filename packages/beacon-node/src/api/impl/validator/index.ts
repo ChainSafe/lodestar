@@ -1691,7 +1691,13 @@ export function getValidatorApi(
       }
 
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      // One epoch before the Gloas fork the head state at the current epoch is still pre-Gloas, so
+      // regen the state at the requested (post-Gloas) epoch to serve the first PTC duties across the
+      // fork boundary instead of rejecting them.
+      let state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      if (!isStatePostGloas(state)) {
+        state = await chain.getHeadStateAtEpoch(epoch, RegenCaller.getDuties);
+      }
       if (!isStatePostGloas(state)) {
         throw new ApiError(400, `PTC duties are not available before Gloas fork=${state.forkName}`);
       }
