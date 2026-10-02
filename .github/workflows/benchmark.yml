@@ -46,8 +46,6 @@ jobs:
       - name: Run benchmarks
         run: pnpm benchmark
         env:
-          # To download content for tests
-          INFURA_ETH2_CREDENTIALS: ${{ secrets.INFURA_ETH2_CREDENTIALS }}
           # To write to PRs and commits
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # benchmark options

@@ -39,7 +39,7 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations = [...chain.aggregatedAttestationPool.getAll(slot), ...chain.attestationPool.getAll(slot)];
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -48,7 +48,11 @@ export function getBeaconPoolApi({
       );
 
       if (committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+        attestations = attestations.filter((attestation) =>
+          isElectraAttestation(attestation)
+            ? attestation.committeeBits.get(committeeIndex)
+            : committeeIndex === attestation.data.index
+        );
       }
 
       return {data: attestations, meta: {version: fork}};
@@ -166,15 +170,15 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-      chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
-      await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing);
+      const verifiedDomain = await validateApiProposerSlashing(chain, proposerSlashing);
+      chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
