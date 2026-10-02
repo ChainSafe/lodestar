@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
+import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconDb, DbCPStateDatastore, nodeUtils} from "@lodestar/beacon-node";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
@@ -96,6 +97,7 @@ describe("initBeaconState", () => {
   const dbs: {db: BeaconDb; dir: string}[] = [];
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     for (const {db, dir} of dbs.splice(0)) {
       await db.close();
       fs.rmSync(dir, {recursive: true, force: true});
@@ -177,12 +179,15 @@ describe("initBeaconState", () => {
 
   it("rejects checkpoint state outside weak subjectivity period unless ignoreWeakSubjectivityCheck is set", async () => {
     const db = await createDb();
+    const ensureCapacitySpy = vi.spyOn(pubkeyCache, "ensureCapacity");
     await expect(init(db, {checkpointState: checkpointStale.file})).rejects.toMatchObject({
       type: {code: StateInitializationErrorCode.STALE_CHECKPOINT},
     });
+    expect(ensureCapacitySpy).not.toHaveBeenCalled();
     expect(await db.stateArchive.keys()).toEqual([]);
 
     const result = await init(db, {checkpointState: checkpointStale.file, ignoreWeakSubjectivityCheck: true});
+    expect(ensureCapacitySpy).toHaveBeenCalled();
     expect(result).toEqual(anchorOf(checkpointStale, true));
     expect(await db.stateArchive.keys()).toEqual([checkpointStale.state.slot]);
   });
