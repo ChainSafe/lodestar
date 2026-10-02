@@ -2,6 +2,12 @@
 
 Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
+With that said, and with the deepest form of love and respect there is something that we need to get out of the way before going any further. We are in the age of AI, and our team uses it daily. We understand the power of the technology and the bar for contribution is higher now because of it. It is generally easier for us to point AI at an issue and refine the response than trying to review a drive-by slop PR. But the honest truth is that we are better AI middleware than people whom are not deeply familiar with the codebase. Its much easier for us to drive the AI to a solution than try to chew through a PR review done by someone that is not.
+
+This is not meant to discourage you. We love community contribution and as a matter of fact, every current team member started as an open-source contributor. This is the path towards joining the team. The very best way to help us, and for us to help you, is to [join our discord](https://discord.gg/aWVDejnMEG) and come talk with us. We can point you at issues that we need help with and can guide you along the way. We think of ourselves as super inclusive and kind people. And we love to talk about all things, code, ethereum, life and otherwise.
+
+Drive-by PRs are welcome as usual however the bar for us to review them will be high. We know what good code and what AI slop looks like. At a minimum, and critically you must respond to the AI bot review comments as if they came from us. Internally we follow this same thing and all use the AI review as a triage step before we ask another team member to actually review the code personally.
+
 ## New Contributor?
 
 Unsure where to begin contributing to Lodestar? Here are some ideas!
