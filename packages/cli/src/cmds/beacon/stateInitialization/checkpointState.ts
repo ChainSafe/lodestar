@@ -186,28 +186,25 @@ function prepareCheckpointInitialization(
   const {isFinalized, ignoreWeakSubjectivityCheck} = policy;
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   const archivedWithinWeakSubjectivityPeriod = useArchived ? archived.isWithinWeakSubjectivityPeriod : null;
+  const passedValidation =
+    archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
+  // Fast-fail stale checkpoints before deserializing the state or reserving pubkey-cache capacity.
+  if (!passedValidation && !ignoreWeakSubjectivityCheck) {
+    const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, weakSubjectivity.genesisTime));
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.STALE_CHECKPOINT},
+      `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
+    );
+  }
   // DB-selected anchors need no persistence, including at slot zero.
   const shouldPersist = isFinalized && !useArchived;
   return {
     stateBytes,
     config,
     isFinalized,
-    validateBeforeLoad() {
-      const passedValidation =
-        archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
-      if (!passedValidation && !ignoreWeakSubjectivityCheck) {
-        const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, weakSubjectivity.genesisTime));
-        throw new StateInitializationError(
-          {code: StateInitializationErrorCode.STALE_CHECKPOINT},
-          `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
-        );
-      }
-    },
     validate(state) {
       // A supplied checkpoint must match even when the period check is ignored.
       if (expectedCheckpoint !== null) assertStateMatchesCheckpoint(state, expectedCheckpoint);
-      const passedValidation =
-        archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
       assertAnchorStateForkMatchesConfig(config, state);
       if (isFinalized) {
         const source = useArchived ? "db" : "checkpoint";

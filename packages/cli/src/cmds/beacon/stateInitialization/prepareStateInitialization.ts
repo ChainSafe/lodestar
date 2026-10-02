@@ -18,9 +18,6 @@ export function prepareArchivedStateInitialization(
     stateBytes,
     config,
     isFinalized: true,
-    validateBeforeLoad() {
-      // Db staleness only warns, so it does not gate state loading.
-    },
     validate(state) {
       assertAnchorStateForkMatchesConfig(config, state);
       const logData = {

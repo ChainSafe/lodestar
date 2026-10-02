@@ -52,7 +52,6 @@ export type StateInitialization = {
   stateBytes: Uint8Array;
   config: BeaconConfig;
   isFinalized: boolean;
-  validateBeforeLoad: () => void;
   validate: (state: IBeaconStateView) => void;
   persist: ((state: IBeaconStateView, stateBytes: Uint8Array) => Promise<void>) | null;
   log: (state: IBeaconStateView) => void;

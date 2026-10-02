@@ -79,32 +79,25 @@ describe("checkpoint state pre-load validation", () => {
   });
 
   it("rejects a stale checkpoint without a deserialized state", async () => {
-    const stateInit = await prepareCheckpointFileInitialization("checkpoint.ssz", {}, null, context);
-
-    expect(() => stateInit.validateBeforeLoad()).toThrow(StateInitializationError);
-    expect(() => stateInit.validateBeforeLoad()).toThrow(
-      expect.objectContaining({type: {code: StateInitializationErrorCode.STALE_CHECKPOINT}})
+    await expect(prepareCheckpointFileInitialization("checkpoint.ssz", {}, null, context)).rejects.toThrow(
+      StateInitializationError
     );
+    await expect(prepareCheckpointFileInitialization("checkpoint.ssz", {}, null, context)).rejects.toMatchObject({
+      type: {code: StateInitializationErrorCode.STALE_CHECKPOINT},
+    });
     expect(createBeaconStateView).not.toHaveBeenCalled();
   });
 
   it("allows a stale checkpoint when the weak subjectivity check is ignored", async () => {
-    const stateInit = await prepareCheckpointFileInitialization(
-      "checkpoint.ssz",
-      {ignoreWeakSubjectivityCheck: true},
-      null,
-      context
-    );
-
-    expect(() => stateInit.validateBeforeLoad()).not.toThrow();
+    await expect(
+      prepareCheckpointFileInitialization("checkpoint.ssz", {ignoreWeakSubjectivityCheck: true}, null, context)
+    ).resolves.toBeDefined();
     expect(createBeaconStateView).not.toHaveBeenCalled();
   });
 
   it("allows a checkpoint within the weak subjectivity period", async () => {
     vi.mocked(Date.now).mockReturnValue(genesisTime * 1000 + SLOTS_PER_EPOCH * chainForkConfig.SLOT_DURATION_MS);
-    const stateInit = await prepareCheckpointFileInitialization("checkpoint.ssz", {}, null, context);
-
-    expect(() => stateInit.validateBeforeLoad()).not.toThrow();
+    await expect(prepareCheckpointFileInitialization("checkpoint.ssz", {}, null, context)).resolves.toBeDefined();
   });
 
   it("rejects a stale checkpoint before reading validators, reserving capacity, or loading the state", async () => {
