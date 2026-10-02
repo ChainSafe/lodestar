@@ -14,7 +14,7 @@ describe("chain / opPools / ProposerPreferencesPool", () => {
       proposalSlot,
       validatorIndex,
       feeRecipient: Buffer.alloc(20, 0xab),
-      targetGasLimit: 30_000_000,
+      targetGasLimit: 30_000_000n,
     },
     signature: Buffer.alloc(96, 0),
   });

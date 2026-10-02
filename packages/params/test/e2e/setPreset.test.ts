@@ -16,18 +16,18 @@ const exec = util.promisify(child.exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("setPreset", () => {
-  // Allow time for ts-node to compile Typescript source
+  // Allow time for tsx to compile Typescript source
   vi.setConfig({testTimeout: 30_000});
 
   it("Should correctly set preset", async () => {
     // `LODESTAR_PRESET` must not be set to properly test setting preset
     if (process.env.LODESTAR_PRESET) delete process.env.LODESTAR_PRESET;
 
-    await exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.ok)}`);
+    await exec(`node --import tsx ${path.join(__dirname, scriptNames.ok)}`);
   });
 
   it("Should throw trying to set preset in the wrong order", async () => {
-    await expect(exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.error)}`)).rejects.toThrow(
+    await expect(exec(`node --import tsx ${path.join(__dirname, scriptNames.error)}`)).rejects.toThrow(
       "Lodestar preset is already frozen"
     );
   });

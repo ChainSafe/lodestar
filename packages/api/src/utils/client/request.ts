@@ -47,7 +47,7 @@ export function createApiRequest<E extends Endpoint>(
   definition: RouteDefinitionExtra<E>,
   args: E["args"],
   init: ApiRequestInitRequired
-): Request {
+): {url: URL; requestInit: RequestInit} {
   const headers = new Headers();
 
   let req: E["request"];
@@ -104,10 +104,15 @@ export function createApiRequest<E extends Endpoint>(
     }
   }
 
-  return new Request(url, {
-    ...init,
-    method: definition.method,
-    headers: mergeHeaders(headers, req.headers, init.headers),
-    body: req.body as BodyInit,
-  });
+  // Keep the serialized body intact so fetch can determine its length. Passing a `Request`
+  // as `RequestInit` exposes its body as a stream, which Node.js sends with chunked encoding.
+  return {
+    url,
+    requestInit: {
+      ...init,
+      method: definition.method,
+      headers: mergeHeaders(headers, req.headers, init.headers),
+      body: req.body as BodyInit,
+    },
+  };
 }

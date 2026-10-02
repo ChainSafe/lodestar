@@ -8,7 +8,7 @@ import {ApiModules} from "../types.js";
 
 export function getProofApi(
   opts: ApiOptions,
-  {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
+  {chain, config, sync}: Pick<ApiModules, "chain" | "config" | "db" | "sync">
 ): ApplicationMethods<routes.proof.Endpoints> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
@@ -21,7 +21,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const res = await getStateResponseWithRegen(chain, stateId);
+      const res = await getStateResponseWithRegen(chain, sync, stateId);
 
       const state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
 

@@ -9,6 +9,8 @@ import {
   ForkPostElectra,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPostHeze,
+  ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -16,6 +18,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -23,9 +26,11 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  Gwei,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -43,12 +48,27 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+
+/** Inputs for computing the state root of a locally produced block. */
+export type ComputeNewStateRootInput = {
+  block: SignedBeaconBlock | SignedBlindedBeaconBlock;
+  /** Pre-serialized block bytes for native implementations. */
+  ssz?: Uint8Array;
+};
+
+/** State root computation result. Includes data derived from the post-state. */
+export type ComputeNewStateRootResult = {
+  newStateRoot: Root;
+  proposerReward: Gwei;
+  postState: IBeaconStateView;
+  hashTreeRootTime: number;
+};
 
 /**
  * A read-only view of the BeaconState.
@@ -58,6 +78,7 @@ export interface IBeaconStateView {
 
   // phase0
   forkName: ForkName;
+  forkSeq: ForkSeq;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -75,6 +96,8 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
   currentDecisionRoot: RootHex;
@@ -89,7 +112,6 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -156,16 +178,13 @@ export interface IBeaconStateView {
   hashTreeRoot(): Uint8Array;
 
   // State transition
+  computeNewStateRoot(input: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult;
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView;
 }
 
 /** Altair+ state fields — use isStatePostAltair() guard */
@@ -238,6 +257,13 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
 export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
   forkName: ForkPostFulu;
   proposerLookahead: fulu.ProposerLookahead;
+  /**
+   * Pre-verify a slice of builder-prefix pending deposits and cache the results on the underlying
+   * `BuilderDepositSignatureCache` (Fulu is the fork immediately before Gloas).
+   */
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult;
+  /** Drop the pre-Gloas builder-deposit signature cache (called once the Gloas fork is finalized). */
+  clearPreGloasBuilderDepositCache(): void;
 }
 
 /** Gloas+ state fields — use isStatePostGloas() guard */
@@ -251,9 +277,13 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
+  builderPendingPayments: gloas.BuilderPendingPayments;
+  builderPendingWithdrawals: gloas.BuilderPendingWithdrawals;
   getBuilder(index: BuilderIndex): gloas.Builder;
+  getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
   /**
    * Clone the state and apply parent execution payload effects.
@@ -261,17 +291,22 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
+}
+
+/** Heze+ state fields — use isStatePostHeze() guard */
+export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
+  forkName: ForkPostHeze;
 }
 
 /**
  * Type constraint for the concrete BeaconStateView class.
- * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * Requires all fields from the latest fork interface (IBeaconStateViewHeze) but keeps
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
 export type IBeaconStateViewLatestFork = Omit<
-  IBeaconStateViewGloas,
+  IBeaconStateViewHeze,
   "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
@@ -290,13 +325,20 @@ export type IBeaconStateViewLatestFork = Omit<
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
  *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
  *   via `Parameters<...>` to avoid duplicating signatures.
+ * - `computeNewStateRoot` is implemented by the wrapper because its inputs differ
+ *   between the TypeScript and Zig implementations.
  *
  * The TS-side `BeaconStateView` also structurally satisfies this contract since
  * `BitArray` exposes `uint8Array` and `bitLen`.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+  | "computeNewStateRoot"
+  | "executionPayloadAvailability"
+  | "loadOtherState"
+  | "stateTransition"
+  | "processSlots"
+  | "withParentPayloadApplied"
 > & {
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
@@ -333,4 +375,8 @@ export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateV
 
 export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
   return isForkPostGloas(state.forkName);
+}
+
+export function isStatePostHeze(state: IBeaconStateView): state is IBeaconStateViewHeze {
+  return isForkPostHeze(state.forkName);
 }

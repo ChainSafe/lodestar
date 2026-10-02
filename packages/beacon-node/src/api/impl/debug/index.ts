@@ -39,7 +39,8 @@ function toPayloadStatusName(status: PayloadStatus): "pending" | "empty" | "full
 export function getDebugApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "db" | "sync">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
@@ -132,7 +133,7 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
       let slot: number, data: Uint8Array | BeaconState;
       if (state instanceof Uint8Array) {
         slot = getStateSlotFromBytes(state);

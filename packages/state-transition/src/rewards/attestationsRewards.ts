@@ -1,8 +1,11 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
+  ForkSeq,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   MAX_EFFECTIVE_BALANCE,
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   PARTICIPATION_FLAG_WEIGHTS,
@@ -15,7 +18,6 @@ import {
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
@@ -122,9 +124,8 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
     ) {
       const baseReward = effectiveBalanceByIncrement * baseRewardPerIncrement;
       const rewardNumerator = baseReward * weight * unslashedStakeByIncrement;
-      // Both idealReward and penalty are rounded to nearest integer. Loss of precision is minimal as unit is gwei
-      const idealReward = Math.round(rewardNumerator / activeBalanceByIncrement / WEIGHT_DENOMINATOR);
-      const penalty = Math.round((baseReward * weight) / WEIGHT_DENOMINATOR); // Positive number indicates penalty
+      const idealReward = Math.floor(rewardNumerator / (activeBalanceByIncrement * WEIGHT_DENOMINATOR));
+      const penalty = Math.floor((baseReward * weight) / WEIGHT_DENOMINATOR); // Positive number indicates penalty
 
       const idealAttestationsReward = idealRewards[effectiveBalanceByIncrement];
       idealAttestationsReward[flagName] = isInInactivityLeak(state) ? 0 : idealReward; // No attestations rewards during inactivity leak
@@ -156,7 +157,11 @@ function computeTotalAttestationsRewardsAltair(
     .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
-  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+  const inactivityPenaltyQuotient =
+    config.getForkSeq(state.slot) === ForkSeq.altair
+      ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR
+      : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
+  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
 
   for (let i = 0; i < flags.length; i++) {
     if (validatorIndices.length && !validatorIndices.includes(i)) {

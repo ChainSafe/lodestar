@@ -10,6 +10,7 @@ export type {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./cache/stateCache.js";
 export type {
@@ -22,6 +23,7 @@ export type {
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
   BeaconStatePhase0,
   ShufflingGetter,
 } from "./cache/types.js";

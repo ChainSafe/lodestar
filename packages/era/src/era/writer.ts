@@ -5,12 +5,7 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {E2STORE_HEADER_SIZE, EntryType, SlotIndex, serializeSlotIndex, writeEntry} from "../e2s.js";
 import {snappyCompress} from "../util.js";
-import {
-  computeStartBlockSlotFromEraNumber,
-  getShortHistoricalRoot,
-  isSlotInRange,
-  isValidEraStateSlot,
-} from "./util.js";
+import {computeStartBlockSlotFromEraNumber, getShortEraRoot, isSlotInRange, isValidEraStateSlot} from "./util.js";
 
 enum WriterStateType {
   InitGroup,
@@ -35,7 +30,7 @@ type WriterState =
       type: WriterStateType.FinishedGroup;
       eraNumber: number;
       currentOffset: number;
-      shortHistoricalRoot: string;
+      shortEraRoot: string;
     };
 
 /**
@@ -76,7 +71,7 @@ export class EraWriter {
     const pathParts = parse(this.path);
     const newPath = format({
       ...pathParts,
-      base: `${this.config.CONFIG_NAME}-${String(this.eraNumber).padStart(5, "0")}-${this.state.shortHistoricalRoot}.era`,
+      base: `${this.config.CONFIG_NAME}-${String(this.eraNumber).padStart(5, "0")}-${this.state.shortEraRoot}.era`,
     });
     await rename(this.path, newPath);
 
@@ -105,7 +100,7 @@ export class EraWriter {
     };
   }
 
-  async writeCompressedState(slot: Slot, shortHistoricalRoot: string, data: Uint8Array): Promise<void> {
+  async writeCompressedState(slot: Slot, shortEraRoot: string, data: Uint8Array): Promise<void> {
     if (this.state.type === WriterStateType.InitGroup) {
       await this.writeVersion();
     }
@@ -148,21 +143,21 @@ export class EraWriter {
       type: WriterStateType.FinishedGroup,
       eraNumber: this.state.eraNumber,
       currentOffset: this.state.currentOffset,
-      shortHistoricalRoot,
+      shortEraRoot,
     };
   }
 
-  async writeSerializedState(slot: Slot, shortHistoricalRoot: string, data: Uint8Array): Promise<void> {
+  async writeSerializedState(slot: Slot, shortEraRoot: string, data: Uint8Array): Promise<void> {
     const compressed = await snappyCompress(data);
-    await this.writeCompressedState(slot, shortHistoricalRoot, compressed);
+    await this.writeCompressedState(slot, shortEraRoot, compressed);
   }
 
   async writeState(state: BeaconState): Promise<void> {
     const slot = state.slot;
-    const shortHistoricalRoot = getShortHistoricalRoot(this.config, state);
+    const shortEraRoot = getShortEraRoot(this.config, state);
     const ssz = this.config.getForkTypes(slot).BeaconState.serialize(state);
 
-    await this.writeSerializedState(slot, shortHistoricalRoot, ssz);
+    await this.writeSerializedState(slot, shortEraRoot, ssz);
   }
 
   async writeCompressedBlock(slot: Slot, data: Uint8Array): Promise<void> {

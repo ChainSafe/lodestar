@@ -22,9 +22,19 @@ describe("forkchoice updateHead", () => {
     runUpdateHeadBenchmark({initialValidatorCount: 600_000, initialBlockCount: 64, initialEquivocatedCount});
   }
 
+  // A boosted gloas block splits applyScoreChanges in two passes (attestation deltas, then the
+  // should_apply_proposer_boost decision, then boost deltas); measure that overhead against the
+  // single-pass `vc 600000 bc 64 eq 0` row above
+  runUpdateHeadBenchmark({
+    initialValidatorCount: 600_000,
+    initialBlockCount: 64,
+    initialEquivocatedCount: 0,
+    gloasBoosted: true,
+  });
+
   function runUpdateHeadBenchmark(opts: Opts): void {
     bench({
-      id: `forkChoice updateHead vc ${opts.initialValidatorCount} bc ${opts.initialBlockCount} eq ${opts.initialEquivocatedCount}`,
+      id: `forkChoice updateHead vc ${opts.initialValidatorCount} bc ${opts.initialBlockCount} eq ${opts.initialEquivocatedCount}${opts.gloasBoosted ? " gloas boosted" : ""}`,
       before: () => {
         const forkChoice = initializeForkChoice(opts);
 
@@ -43,7 +53,7 @@ describe("forkchoice updateHead", () => {
       },
       beforeEach: (data) => {
         // Flip all votes every run
-        everyoneVotes(data.currentVoteIs1 ? data.vote2 : data.vote1, data.forkChoice);
+        everyoneVotes(data.currentVoteIs1 ? data.vote2 : data.vote1, data.forkChoice, opts);
         data.currentVoteIs1 = !data.currentVoteIs1;
         return data;
       },
@@ -54,9 +64,11 @@ describe("forkchoice updateHead", () => {
   }
 });
 
-function everyoneVotes(vote: ProtoBlock, forkChoice: ForkChoice): void {
+function everyoneVotes(vote: ProtoBlock, forkChoice: ForkChoice, opts: Opts): void {
   const nextRoot = vote.blockRoot;
+  // gloas blocks only carry PENDING/EMPTY variants until the envelope is revealed
+  const payloadStatus = opts.gloasBoosted ? PayloadStatus.PENDING : PayloadStatus.FULL;
   for (let i = 0; i < forkChoice["balances"].length; i++) {
-    forkChoice["addLatestMessage"](i, vote.slot, nextRoot, PayloadStatus.FULL);
+    forkChoice["addLatestMessage"](i, vote.slot, nextRoot, payloadStatus);
   }
 }

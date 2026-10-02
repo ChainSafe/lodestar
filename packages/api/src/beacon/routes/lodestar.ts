@@ -15,6 +15,7 @@ import {
 import {
   EmptyArgs,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -135,6 +136,26 @@ export type CustodyInfo = {
   /** List of column indices the node is custodying */
   custodyColumns: number[];
 };
+
+const BlockInfoType = new ContainerType({root: ssz.Root, slot: ssz.Slot});
+
+export const FastConfirmationInfoType = new ContainerType(
+  {
+    confirmed: BlockInfoType,
+    head: BlockInfoType,
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
+    previousEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    currentEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    previousEpochGreatestUnrealizedCheckpoint: ssz.phase0.Checkpoint,
+    previousSlotHead: ssz.Root,
+    currentSlotHead: ssz.Root,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type FastConfirmationInfo = ValueOf<typeof FastConfirmationInfoType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -397,6 +418,8 @@ export type Endpoints = {
     EmptyMeta
   >;
 
+  getFastConfirmationInfo: Endpoint<"GET", EmptyArgs, EmptyRequest, FastConfirmationInfo, EmptyMeta>;
+
   /** Craft attester slashings from the attestations in the provided blocks */
   getAttesterSlashingsFromBlocks: Endpoint<
     "POST",
@@ -579,8 +602,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
-    // TODO GLOAS: this endpoint needs to be updated because post-gloas there could be two variants of the persisted checkpoint state (empty or full).
-    // Either add a an additional parameter `payloadPresent`, or return one or both variants of state.
     getPersistedCheckpointState: {
       url: "/eth/v1/lodestar/persisted_checkpoint_state",
       method: "GET",
@@ -633,6 +654,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
+    },
+    getFastConfirmationInfo: {
+      url: "/eth/v1/lodestar/fast_confirmation",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: FastConfirmationInfoType,
+        meta: EmptyMetaCodec,
+      },
     },
     getAttesterSlashingsFromBlocks: {
       url: "/eth/v1/lodestar/blocks/attester_slashings",

@@ -31,6 +31,9 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -60,6 +63,9 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -90,6 +96,9 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,

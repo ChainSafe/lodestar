@@ -19,9 +19,12 @@ describe("reconstructBlobs", () => {
 
   const testCases = [
     {blobCount: 6, name: "6 blobs"},
-    {blobCount: 10, name: "10 blobs"},
-    {blobCount: 20, name: "20 blobs"},
-    // Disabled as those take too long to run
+    // Higher blob counts are disabled on CI: KZG cell reconstruction is CPU-heavy and has high
+    // run-to-run variance on the shared benchmark runner, which trips the 3x regression gate with
+    // false positives (the larger counts also take long to run). Kept enabled only for the
+    // smallest count; uncomment locally for fuller coverage.
+    // {blobCount: 10, name: "10 blobs"},
+    // {blobCount: 20, name: "20 blobs"},
     // {blobCount: 48, name: "48 blobs"},
     // {blobCount: 72, name: "72 blobs"},
   ];
@@ -44,8 +47,13 @@ describe("reconstructBlobs", () => {
       ];
 
       for (const {sidecars, name} of scenarios) {
+        // KZG cell reconstruction is CPU-heavy: normal run-to-run variance is small, but on the shared
+        // benchmark runner it occasionally spikes to a rare extreme outlier (a single ~250x-slower run)
+        // that no finite threshold can catch. Gate it report-only via noThreshold so it is still measured
+        // and posted to the comparison comment, but never fails CI.
         bench({
           id: `${name} - reconstruct all ${blobCount} blobs`,
+          noThreshold: true,
           fn: async () => {
             await reconstructBlobs(sidecars);
           },
@@ -53,6 +61,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct half of the blobs out of ${blobCount}`,
+          noThreshold: true,
           fn: async () => {
             const indices = Array.from({length: blobCount / 2}, (_, i) => i);
             await reconstructBlobs(sidecars, indices);
@@ -61,6 +70,7 @@ describe("reconstructBlobs", () => {
 
         bench({
           id: `${name} - reconstruct single blob out of ${blobCount}`,
+          noThreshold: true,
           fn: async () => {
             await reconstructBlobs(sidecars, [0]);
           },

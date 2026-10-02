@@ -1,4 +1,6 @@
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   CELLS_PER_EXT_BLOB,
@@ -87,6 +89,7 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
@@ -146,6 +149,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -173,6 +177,15 @@ export type ExecutionPayloadBodyRpc = {
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
+};
+
+/** engine_getPayloadBodiesByHashV2 (Amsterdam): adds the RLP-encoded block access list, or null if the EL has pruned it */
+export type ExecutionPayloadBodyV2Rpc = ExecutionPayloadBodyRpc & {
+  blockAccessList?: DATA | null;
+};
+
+export type ExecutionPayloadBodyV2 = ExecutionPayloadBody & {
+  blockAccessList: Uint8Array | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -205,16 +218,27 @@ export type WithdrawalRpc = {
 };
 
 /**
- * ExecutionRequestsRpc only holds at most 3 elements and no repeated type:
- * - ssz'ed DepositRequests
- * - ssz'ed WithdrawalRequests
- * - ssz'ed ConsolidationRequests
+ * ExecutionRequestsRpc holds at most 5 elements and no repeated type, ordered by
+ * the single-byte request type prefix:
+ * - ssz'ed DepositRequests          (0x00)
+ * - ssz'ed WithdrawalRequests       (0x01)
+ * - ssz'ed ConsolidationRequests    (0x02)
+ * - ssz'ed BuilderDepositRequests   (0x03)
+ * - ssz'ed BuilderExitRequests      (0x04)
  */
-export type ExecutionRequestsRpc = (DepositRequestsRpc | WithdrawalRequestsRpc | ConsolidationRequestsRpc)[];
+export type ExecutionRequestsRpc = (
+  | DepositRequestsRpc
+  | WithdrawalRequestsRpc
+  | ConsolidationRequestsRpc
+  | BuilderDepositRequestsRpc
+  | BuilderExitRequestsRpc
+)[];
 
 export type DepositRequestsRpc = DATA;
 export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
+export type BuilderDepositRequestsRpc = DATA;
+export type BuilderExitRequestsRpc = DATA;
 
 export type BlobAndProofRpc = {
   blob: DATA;
@@ -339,7 +363,7 @@ export function parseExecutionPayload(
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
     executionRequests = response.executionRequests
-      ? deserializeExecutionRequests(response.executionRequests)
+      ? deserializeExecutionRequests(fork, response.executionRequests)
       : undefined;
     shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
@@ -445,7 +469,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
-    targetGasLimit: data.targetGasLimit !== undefined ? quantityToNum(data.targetGasLimit) : undefined,
+    targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
   };
 }
 
@@ -526,13 +550,36 @@ function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc):
   return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized, null));
 }
 
+function serializeBuilderDepositRequests(
+  builderDepositRequests: gloas.BuilderDepositRequests
+): BuilderDepositRequestsRpc {
+  const requestsBytes = ssz.gloas.BuilderDepositRequests.serialize(builderDepositRequests);
+  return bytesToData(prefixRequests(requestsBytes, BUILDER_DEPOSIT_REQUEST_TYPE));
+}
+
+function deserializeBuilderDepositRequests(serialized: BuilderDepositRequestsRpc): gloas.BuilderDepositRequests {
+  return ssz.gloas.BuilderDepositRequests.deserialize(dataToBytes(serialized, null));
+}
+
+function serializeBuilderExitRequests(builderExitRequests: gloas.BuilderExitRequests): BuilderExitRequestsRpc {
+  const requestsBytes = ssz.gloas.BuilderExitRequests.serialize(builderExitRequests);
+  return bytesToData(prefixRequests(requestsBytes, BUILDER_EXIT_REQUEST_TYPE));
+}
+
+function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): gloas.BuilderExitRequests {
+  return ssz.gloas.BuilderExitRequests.deserialize(dataToBytes(serialized, null));
+}
+
 /**
  * This is identical to get_execution_requests_list in
  * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list
+ *
+ * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#modified-get_execution_requests_list
  */
-export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
-  const result = [];
+  const result: ExecutionRequestsRpc = [];
 
   if (deposits.length !== 0) {
     result.push(serializeDepositRequests(deposits));
@@ -546,15 +593,26 @@ export function serializeExecutionRequests(executionRequests: ExecutionRequests)
     result.push(serializeConsolidationRequests(consolidations));
   }
 
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {builderDeposits, builderExits} = executionRequests as gloas.ExecutionRequests;
+
+    if (builderDeposits.length !== 0) {
+      result.push(serializeBuilderDepositRequests(builderDeposits));
+    }
+
+    if (builderExits.length !== 0) {
+      result.push(serializeBuilderExitRequests(builderExits));
+    }
+  }
+
   return result;
 }
 
-export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): ExecutionRequests {
-  const result: ExecutionRequests = {
-    deposits: [],
-    withdrawals: [],
-    consolidations: [],
-  };
+export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
+  const result: ExecutionRequests =
+    ForkSeq[fork] >= ForkSeq.gloas
+      ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
+      : {deposits: [], withdrawals: [], consolidations: []};
 
   if (serialized.length === 0) {
     return result;
@@ -601,6 +659,20 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
         result.consolidations = deserializeConsolidationRequests(requests);
         break;
       }
+      case BUILDER_DEPOSIT_REQUEST_TYPE: {
+        if (ForkSeq[fork] < ForkSeq.gloas) {
+          throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
+        }
+        (result as gloas.ExecutionRequests).builderDeposits = deserializeBuilderDepositRequests(requests);
+        break;
+      }
+      case BUILDER_EXIT_REQUEST_TYPE: {
+        if (ForkSeq[fork] < ForkSeq.gloas) {
+          throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
+        }
+        (result as gloas.ExecutionRequests).builderExits = deserializeBuilderExitRequests(requests);
+        break;
+      }
     }
     prevRequestType = currentRequestType;
   }
@@ -615,6 +687,20 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
+}
+
+export function deserializeExecutionPayloadBodyV2(
+  data: ExecutionPayloadBodyV2Rpc | null
+): ExecutionPayloadBodyV2 | null {
+  const body = deserializeExecutionPayloadBody(data);
+  return body
+    ? {...body, blockAccessList: data?.blockAccessList ? dataToBytes(data.blockAccessList, null) : null}
+    : null;
+}
+
+export function serializeExecutionPayloadBodyV2(data: ExecutionPayloadBodyV2 | null): ExecutionPayloadBodyV2Rpc | null {
+  const body = serializeExecutionPayloadBody(data);
+  return body ? {...body, blockAccessList: data?.blockAccessList ? bytesToData(data.blockAccessList) : null} : null;
 }
 
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {

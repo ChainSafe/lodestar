@@ -1,13 +1,13 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
-import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createBeaconStateView, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -27,6 +27,7 @@ import {initBeaconState} from "./initBeaconState.js";
 import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
+import {savePubkeysFile} from "./pubkeysFile.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -66,23 +67,19 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
+  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}), {
+    dataColumnDir: beaconPaths.dataColumnDir,
+    logger,
+  });
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
   try {
     const {
       anchorState,
-      stateBytes: anchorStateBytes,
+      config: beaconConfig,
       isFinalized,
-      wsCheckpoint,
-    } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
-    const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-    const pubkeyCache = createPubkeyCache();
-    syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
-    const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
-      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+    } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
       opts: options,
@@ -93,10 +90,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       processShutdownCallback,
       privateKey,
       dataDir: beaconPaths.dataDir,
+      dataColumnDir: beaconPaths.dataColumnDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState: anchorStateView,
+      anchorState,
       isAnchorStateFinalized: isFinalized,
-      wsCheckpoint,
     });
 
     // dev debug option to have access to the BN instance
@@ -143,21 +140,21 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     abortController.signal.addEventListener(
       "abort",
       async () => {
+        let exitCode = 0;
         try {
           await node.close();
           logger.debug("Beacon node closed");
-          // Explicitly exit until active handles issue is resolved
-          // See https://github.com/ChainSafe/lodestar/issues/5642
-          process.exit(0);
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
           logger.warn("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
           await db.close();
-          // Must explicitly exit process due to potential active handles
-          process.exit(1);
+          exitCode = 1;
         }
+        savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
+        // Explicitly exit process due to potential active handles
+        process.exit(exitCode);
       },
       {once: true}
     );

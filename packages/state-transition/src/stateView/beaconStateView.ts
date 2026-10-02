@@ -8,6 +8,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -32,7 +33,6 @@ import {applyParentExecutionPayload} from "../block/processParentExecutionPayloa
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -66,9 +66,18 @@ import {
 } from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
+import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
+import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
+import {
+  ComputeNewStateRootInput,
+  ComputeNewStateRootResult,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  IBeaconStateViewLatestFork,
+  isStatePostGloas,
+} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -95,6 +104,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private _builderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private _builderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -104,6 +115,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get forkName(): ForkName {
     return this.config.getForkName(this.cachedState.slot);
+  }
+
+  get forkSeq(): ForkSeq {
+    return this.config.getForkSeq(this.cachedState.slot);
   }
 
   get slot(): number {
@@ -340,6 +355,18 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return preVerifyBuilderDepositsPreGloas(
+      this.cachedState as CachedBeaconStateFulu,
+      maxBuilderDeposits,
+      maxDurationMs
+    );
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.cachedState.epochCtx.builderDepositSignatureCache.clear();
+  }
+
   // gloas
 
   get latestBlockHash(): Bytes32 {
@@ -389,12 +416,44 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._payloadExpectedWithdrawals;
   }
 
+  get builderPendingPayments(): gloas.BuilderPendingPayments {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder payments are not supported before Gloas");
+    }
+
+    if (this._builderPendingPayments === null) {
+      this._builderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+    }
+    return this._builderPendingPayments;
+  }
+
+  get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder withdrawals are not supported before Gloas");
+    }
+
+    if (this._builderPendingWithdrawals === null) {
+      this._builderPendingWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).builderPendingWithdrawals.toValue();
+    }
+    return this._builderPendingWithdrawals;
+  }
+
   getBuilder(index: BuilderIndex): gloas.Builder {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("Builders are not supported before Gloas");
     }
 
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
+  }
+
+  getBuildersLength(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
   }
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
@@ -422,6 +481,18 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
     throw new Error(`PTC committees are not available for epoch=${epoch}`);
   }
+
+  /**
+   * Return the PTC for a slot in the previous, current or next epoch
+   */
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
+  }
+
   /**
    * Return all positions of the validator in the PTC committee for the given slot.
    *
@@ -450,6 +521,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
+  }
+
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.cachedState.epochCtx.getBeaconCommittee(slot, index);
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.cachedState.epochCtx.getCommitteeCountPerSlot(epoch);
   }
 
   get previousDecisionRoot(): RootHex {
@@ -496,14 +575,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    try {
-      return this.cachedState.epochCtx.getBeaconProposer(slot);
-    } catch {
-      return null;
-    }
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
@@ -801,6 +872,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
+  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+    const postState = new BeaconStateView(
+      stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
+    );
+    return getComputeNewStateRootResult(postState);
+  }
+
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
@@ -810,19 +888,15 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return new BeaconStateView(newState);
   }
 
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView {
-    const newState = processSlots(this.cachedState, slot, epochTransitionCacheOpts, modules);
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {
+    const newState = processSlots(this.cachedState, slot, opts, modules);
     return new BeaconStateView(newState);
   }
 
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("withParentPayloadApplied is not available before Gloas");
     }

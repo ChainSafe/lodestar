@@ -1,5 +1,7 @@
 import {routes} from "@lodestar/api";
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
@@ -12,7 +14,7 @@ import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {LodestarError} from "@lodestar/utils";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
-import {ExecutionPayloadBody} from "./types.js";
+import {ExecutionPayloadBody, ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
@@ -52,10 +54,18 @@ export enum ExecutionEngineState {
 export type ExecutionRequestType =
   | typeof DEPOSIT_REQUEST_TYPE
   | typeof WITHDRAWAL_REQUEST_TYPE
-  | typeof CONSOLIDATION_REQUEST_TYPE;
+  | typeof CONSOLIDATION_REQUEST_TYPE
+  | typeof BUILDER_DEPOSIT_REQUEST_TYPE
+  | typeof BUILDER_EXIT_REQUEST_TYPE;
 
 export function isExecutionRequestType(type: number): type is ExecutionRequestType {
-  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
+  return (
+    type === DEPOSIT_REQUEST_TYPE ||
+    type === WITHDRAWAL_REQUEST_TYPE ||
+    type === CONSOLIDATION_REQUEST_TYPE ||
+    type === BUILDER_DEPOSIT_REQUEST_TYPE ||
+    type === BUILDER_EXIT_REQUEST_TYPE
+  );
 }
 
 export type ExecutePayloadResponse =
@@ -112,7 +122,7 @@ export type PayloadAttributes = {
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
-  targetGasLimit?: number; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
 };
 
 export type VersionedHashes = Uint8Array[];
@@ -185,6 +195,9 @@ export interface IExecutionEngine {
   }>;
 
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
+
+  /** Amsterdam: like V1 but also returns the block access list (null if the EL no longer has it) */
+  getPayloadBodiesByHashV2(blockHash: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 

@@ -1,7 +1,9 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStateGetter,
   ForkChoiceStore,
   JustifiedBalancesGetter,
   PayloadStatus,
@@ -46,6 +48,7 @@ export function initializeForkChoice(
   isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -57,6 +60,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       )
@@ -67,6 +71,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       );
@@ -82,6 +87,7 @@ export function initializeForkChoiceFromFinalizedState(
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -113,9 +119,12 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
+      stateGetter,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+        onFastConfirmation: ({block, slot, currentSlot}) =>
+          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
       }
     ),
 
@@ -126,6 +135,9 @@ export function initializeForkChoiceFromFinalizedState(
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
+        ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+        importedTimely: true, // Optimistically assume is timely
+        proposerIndex: blockHeader.proposerIndex,
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),
@@ -173,6 +185,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -204,9 +217,12 @@ export function initializeForkChoiceFromUnfinalizedState(
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
+    stateGetter,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onFastConfirmation: ({block, slot, currentSlot}) =>
+        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
     }
   );
 
@@ -218,6 +234,9 @@ export function initializeForkChoiceFromUnfinalizedState(
     blockRoot: headRoot,
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
+    ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+    importedTimely: true, // Optimistically assume is timely
+    proposerIndex: blockHeader.proposerIndex,
 
     justifiedEpoch: justifiedCheckpoint.epoch,
     justifiedRoot: toRootHex(justifiedCheckpoint.root),

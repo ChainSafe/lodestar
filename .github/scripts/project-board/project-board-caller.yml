@@ -1,0 +1,36 @@
+# Copy this file to .github/workflows/project-board.yml in every repo managed by
+# the Lodestar Team Coordination board. Requires the PROJECT_BOARD_TOKEN secret
+# (org-level, or per-repo until the org secret exists).
+# Project #75 must also have an enabled auto-add workflow for this repository
+# whose filter matches every PR.
+# PROJECT_BOARD_DRY_RUN is optional and defaults to true. Set the Actions
+# repository variable to false only when this caller is ready to write.
+# Spec: ChainSafe/lodestar/.github/scripts/project-board/README.md
+name: Project board
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - ready_for_review
+      - converted_to_draft
+      - review_requested
+      - review_request_removed
+      - reopened
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+permissions: {}
+
+# Do not remove: the reusable workflow's own concurrency does not apply to callers.
+concurrency:
+  group: project-board-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  project-board:
+    uses: ChainSafe/lodestar/.github/workflows/project-board.yml@unstable
+    secrets:
+      PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}

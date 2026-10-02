@@ -13,6 +13,8 @@ import {loadConfigYaml} from "../yaml.js";
  */
 const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
+const ignoredRemotePresetFields: string[] = [];
+
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
@@ -38,15 +40,25 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
       {} as Partial<BeaconPreset>
     );
 
+  const filteredRemotePreset: Partial<BeaconPreset> = Object.keys(remotePreset)
+    .filter((key) => !ignoredRemotePresetFields.includes(key))
+    .reduce(
+      (acc, key) => {
+        acc[key as keyof BeaconPreset] = remotePreset[key as keyof BeaconPreset];
+        return acc;
+      },
+      {} as Partial<BeaconPreset>
+    );
+
   // Check each key for better debuggability
-  for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
+  for (const key of Object.keys(filteredRemotePreset) as (keyof BeaconPreset)[]) {
     const localValue = filteredLocalPreset[key];
-    const remoteValue = remotePreset[key];
+    const remoteValue = filteredRemotePreset[key];
 
     expect(localValue).toBeWithMessage(remoteValue, `${key} does not match ${localValue} != ${remoteValue}`);
   }
 
-  expect(filteredLocalPreset).toEqual(remotePreset);
+  expect(filteredLocalPreset).toEqual(filteredRemotePreset);
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {

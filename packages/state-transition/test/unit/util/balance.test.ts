@@ -80,9 +80,9 @@ describe("getEffectiveBalanceIncrementsZeroInactive", () => {
         // not active
         ...generateValidators(3, {activation: Infinity, exit: Infinity, balance: 32e9}),
         // active
-        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}),
+        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}, 3),
         // not active
-        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
+        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}, 7),
       ],
     });
     const justifiedEpoch = justifiedState.epochCtx.currentShuffling.epoch;

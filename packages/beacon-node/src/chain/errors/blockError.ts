@@ -8,8 +8,10 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */
   PRESTATE_MISSING = "BLOCK_ERROR_PRESTATE_MISSING",
-  /** The parent block was unknown. */
-  PARENT_UNKNOWN = "BLOCK_ERROR_PARENT_UNKNOWN",
+  /**
+   * The first block of a chain segment references a parentRoot unknown to fork-choice.
+   */
+  PARENT_BLOCK_UNKNOWN = "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN",
   /** The block slot is greater than the present slot. */
   FUTURE_SLOT = "BLOCK_ERROR_FUTURE_SLOT",
   /** The block state_root does not match the generated state. */
@@ -38,7 +40,10 @@ export enum BlockErrorCode {
   NOT_FINALIZED_DESCENDANT = "BLOCK_ERROR_NOT_FINALIZED_DESCENDANT",
   /** The provided block is from an later slot than its parent. */
   NOT_LATER_THAN_PARENT = "BLOCK_ERROR_NOT_LATER_THAN_PARENT",
-  /** At least one block in the chain segment did not have it's parent root set to the root of the prior block. */
+  /**
+   * A block in the middle of a chain segment does not set its parentRoot to the previous block's root
+   * (broken parent-root link inside the segment).
+   */
   NON_LINEAR_PARENT_ROOTS = "BLOCK_ERROR_NON_LINEAR_PARENT_ROOTS",
   /** The slots of the blocks in the chain segment were not strictly increasing. */
   NON_LINEAR_SLOTS = "BLOCK_ERROR_NON_LINEAR_SLOTS",
@@ -61,9 +66,12 @@ export enum BlockErrorCode {
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
   /** Execution engine is unavailable, syncing, or api call errored. Peers must not be downscored on this code */
   EXECUTION_ENGINE_ERROR = "BLOCK_ERROR_EXECUTION_ERROR",
-  /** The attestation head block is too far behind the attestation slot, causing many skip slots.
-  This is deemed a DoS risk */
-  TOO_MANY_SKIPPED_SLOTS = "TOO_MANY_SKIPPED_SLOTS",
+  /**
+   * Execution engine returned a definitive INVALID verdict on the payload. Unlike
+   * EXECUTION_ENGINE_ERROR this is evidence about the data itself, not a local malfunction, so
+   * whoever served the block MAY be downscored. Mirrors PayloadErrorCode.EXECUTION_ENGINE_INVALID.
+   */
+  EXECUTION_ENGINE_INVALID = "BLOCK_ERROR_EXECUTION_INVALID",
   /** The blobs are unavailable */
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
   /** Block contains too many kzg commitments */
@@ -72,8 +80,16 @@ export enum BlockErrorCode {
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
   /** The parent block's execution payload has been verified as invalid */
   PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
-  /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
+  /**
+   * [gloas] The first block of a chain segment references a parent execution payload
+   * (bid.parent_block_hash) unknown to fork-choice (segment boundary).
+   */
   PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
+  /**
+   * [gloas] A block in the middle of a chain segment has a bid.parent_block_hash that does not chain onto the
+   * previous block's execution payload (broken payload link inside the segment).
+   */
+  NON_LINEAR_PAYLOAD_ROOTS = "BLOCK_ERROR_NON_LINEAR_PAYLOAD_ROOTS",
   /** An execution payload envelope in the chain segment references a block root that does not match its slot's block */
   ENVELOPE_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BLOCK_ROOT_MISMATCH",
 }
@@ -83,20 +99,28 @@ type ExecutionErrorStatus = Exclude<
   ExecutionPayloadStatus.VALID | ExecutionPayloadStatus.ACCEPTED | ExecutionPayloadStatus.SYNCING
 >;
 
+/**
+ * Statuses where the execution engine could NOT render a verdict on the payload: it is unreachable
+ * (UNAVAILABLE), errored (ELERROR), or returned a malformed/client-specific response
+ * (INVALID_BLOCK_HASH, dropped from engine_newPayloadV2+). None of these are evidence about the
+ * data, so peers must not be downscored on them. A definitive INVALID carries
+ * BlockErrorCode.EXECUTION_ENGINE_INVALID instead.
+ */
+type ExecutionEngineErrorStatus = Exclude<ExecutionErrorStatus, ExecutionPayloadStatus.INVALID>;
+
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
-  | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
   | {code: BlockErrorCode.GENESIS_BLOCK}
-  | {code: BlockErrorCode.TOO_MANY_SKIPPED_SLOTS; parentSlot: Slot; blockSlot: Slot}
   | {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {code: BlockErrorCode.ALREADY_KNOWN; root: RootHex}
-  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex; root: RootHex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
-  | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
-  | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.INCORRECT_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; slot: Slot; root: RootHex}
+  | {code: BlockErrorCode.UNKNOWN_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
@@ -106,24 +130,42 @@ export type BlockErrorType =
       postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
-  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
+  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root: RootHex; parentSlot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
-  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
+  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; blockRoot: RootHex; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.BLACKLISTED_BLOCK}
-  | {code: BlockErrorCode.INCORRECT_TIMESTAMP; timestamp: number; expectedTimestamp: number}
+  | {code: BlockErrorCode.INCORRECT_TIMESTAMP; slot: Slot; root: RootHex; timestamp: number; expectedTimestamp: number}
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionEngineErrorStatus; errorMessage: string}
+  | {
+      code: BlockErrorCode.EXECUTION_ENGINE_INVALID;
+      execStatus: ExecutionPayloadStatus.INVALID;
+      errorMessage: string;
+    }
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
-  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
-  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
+  | {
+      code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS;
+      slot: Slot;
+      root: RootHex;
+      blobKzgCommitmentsLen: number;
+      commitmentLimit: number;
+    }
+  | {
+      code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      bidParentRoot: RootHex;
+      blockParentRoot: RootHex;
+    }
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
-  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex};
+  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
+  | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
@@ -151,10 +193,16 @@ export function isBlockErrorAborted(e: unknown): e is BlockError {
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
   switch (type.code) {
     case BlockErrorCode.PRESTATE_MISSING:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BEACON_CHAIN_ERROR:
       return {
         code: type.code,
+        error: type.error.message,
+      };
+
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+      return {
+        code: type.code,
+        blockRoot: type.blockRoot,
         error: type.error.message,
       };
 

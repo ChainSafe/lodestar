@@ -141,6 +141,22 @@ export class PeerDiscovery {
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
+    // Transport tags vary by library: @libp2p/tcp uses '@libp2p/tcp', @chainsafe/libp2p-quic uses 'quic'
+    // Normalize to simple 'tcp' / 'quic' strings for matching.
+    // Must be initialized before the discovery listeners are registered and the bootENRs are processed
+    // below, since handleDiscoveredPeer() reads this.transports. Previously this was assigned at the end
+    // of the constructor, so when network.connectToDiscv5Bootnodes is enabled every bootENR was processed
+    // while this.transports was still undefined, throwing "Cannot read properties of undefined (reading
+    // 'includes')" and preventing the node from dialing its bootnodes on startup.
+    this.transports = libp2p.services.components.transportManager
+      .getTransports()
+      .map((t) => t[Symbol.toStringTag])
+      .map((tag) => {
+        if (tag?.includes("tcp")) return "tcp";
+        if (tag?.includes("quic")) return "quic";
+        return tag;
+      });
+
     this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
 
@@ -183,17 +199,6 @@ export class PeerDiscovery {
         }
       });
     }
-
-    // Transport tags vary by library: @libp2p/tcp uses '@libp2p/tcp', @chainsafe/libp2p-quic uses 'quic'
-    // Normalize to simple 'tcp' / 'quic' strings for matching
-    this.transports = libp2p.services.components.transportManager
-      .getTransports()
-      .map((t) => t[Symbol.toStringTag])
-      .map((tag) => {
-        if (tag?.includes("tcp")) return "tcp";
-        if (tag?.includes("quic")) return "quic";
-        return tag;
-      });
   }
 
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {

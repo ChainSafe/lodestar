@@ -34,11 +34,13 @@ import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBody,
+  ExecutionPayloadBodyV2,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBody,
+  deserializeExecutionPayloadBodyV2,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
@@ -246,7 +248,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         if (executionRequests === undefined) {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
         }
-        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+        const serializedExecutionRequests = serializeExecutionRequests(fork, executionRequests);
         engineRequest = {
           method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
@@ -489,6 +491,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
+  async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
+    const method = "engine_getPayloadBodiesByHashV2";
+    assertReqSizeLimit(blockHashes.length, 32);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
+    return response.map(deserializeExecutionPayloadBodyV2);
+  }
+
   async getPayloadBodiesByRange(
     _fork: ForkName,
     startBlockNumber: number,
@@ -517,12 +529,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
-    versionedHashes: VersionedHashes
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex);
+      return await this.getBlobsV2(versionedHashesHex, buffers);
     }
     return await this.getBlobsV1(versionedHashesHex);
   }
@@ -552,8 +565,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
     if (buffers) {
-      if (buffers.length !== versionedHashesHex.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
+      if (buffers.length < versionedHashesHex.length) {
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
       }
 
       for (const [i, buffer] of buffers.entries()) {

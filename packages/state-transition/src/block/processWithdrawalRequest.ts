@@ -8,7 +8,11 @@ import {
 import {electra, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
+import {
+  hasCompoundingWithdrawalCredential,
+  hasExecutionWithdrawalCredential,
+  isValidatorKnown,
+} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
@@ -32,7 +36,7 @@ export function processWithdrawalRequest(
   // bail out if validator is not in beacon state
   // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
   const validatorIndex = pubkeyCache.getIndex(withdrawalRequest.validatorPubkey);
-  if (validatorIndex === null) {
+  if (!isValidatorKnown(state, validatorIndex)) {
     return;
   }
 
