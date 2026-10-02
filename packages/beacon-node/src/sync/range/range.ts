@@ -208,25 +208,23 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       blsVerifyOnMainThread: false,
     };
 
-    if (this.opts?.disableProcessAsChainSegment) {
-      // Should only be used for debugging or testing
-      for (const block of blocks) {
-        await this.chain.processBlock(block, flags);
-        const payloadEnvelope = payloadEnvelopes?.get(block.slot);
-        if (payloadEnvelope?.hasPayloadEnvelope()) {
-          await this.chain.processExecutionPayload(payloadEnvelope);
+    try {
+      if (this.opts?.disableProcessAsChainSegment) {
+        // Should only be used for debugging or testing
+        for (const block of blocks) {
+          await this.chain.processBlock(block, flags);
+          const payloadEnvelope = payloadEnvelopes?.get(block.slot);
+          if (payloadEnvelope?.hasPayloadEnvelope()) {
+            await this.chain.processExecutionPayload(payloadEnvelope);
+          }
         }
-      }
-    } else {
-      const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags).catch((e) => {
-        if (
-          e instanceof PayloadError &&
-          (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
-            e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
-            e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
-        ) {
-          const {payloadInput} = e;
-          const {peerIdStr, source} = payloadInput.getPayloadEnvelopeSource();
+      } else {
+        const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+        // We log orphaned payloads to work with different clients
+        // in the future, consider applying penalties in certain conditions
+        // make sure the payload source was from range sync in that case
+        for (const {slot, payloadEnvelopeInput} of orphaned) {
+          const {peerIdStr, source} = payloadEnvelopeInput.getPayloadEnvelopeSource();
           let client = "unknown";
           if (peerIdStr !== undefined) {
             try {
@@ -235,24 +233,25 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
               // peer disconnected since serving the envelope, keep "unknown"
             }
           }
-          this.logger.debug("Removing invalid payload envelope in range sync batch", {
-            slot: payloadInput.slot,
-            root: payloadInput.blockRootHex,
+          this.logger.debug("Orphaned payload envelope in range sync batch", {
+            slot,
+            root: payloadEnvelopeInput.blockRootHex,
             peer: peerIdStr ?? "unknown",
             source,
             client,
-            code: e.type.code,
+            skipped,
           });
-          // The batch is downloaded again, it would otherwise reuse the cached envelope and fail the same way
-          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
         }
-        throw e;
-      });
-      // We log orphaned payloads to work with different clients
-      // in the future, consider applying penalties in certain conditions
-      // make sure the payload source was from range sync in that case
-      for (const {slot, payloadEnvelopeInput} of orphaned) {
-        const {peerIdStr, source} = payloadEnvelopeInput.getPayloadEnvelopeSource();
+      }
+    } catch (e) {
+      if (
+        e instanceof PayloadError &&
+        (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
+          e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
+          e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
+      ) {
+        const {payloadInput} = e;
+        const {peerIdStr, source} = payloadInput.getPayloadEnvelopeSource();
         let client = "unknown";
         if (peerIdStr !== undefined) {
           try {
@@ -261,15 +260,18 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
             // peer disconnected since serving the envelope, keep "unknown"
           }
         }
-        this.logger.debug("Orphaned payload envelope in range sync batch", {
-          slot,
-          root: payloadEnvelopeInput.blockRootHex,
+        this.logger.debug("Removing invalid payload envelope in range sync batch", {
+          slot: payloadInput.slot,
+          root: payloadInput.blockRootHex,
           peer: peerIdStr ?? "unknown",
           source,
           client,
-          skipped,
+          code: e.type.code,
         });
+        // The batch is downloaded again, it would otherwise reuse the cached envelope and fail the same way
+        this.chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
       }
+      throw e;
     }
   };
 
