@@ -264,6 +264,17 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
+  /**
+   * Removes a PayloadEnvelopeInput whose envelope failed import with a definitive invalid verdict. The envelope
+   * cannot be replaced in place, sync recreates the entry via `getOrReload()` or `add()` to fetch another one.
+   * No-op if the cached entry is a different object, it may already be the recreated one.
+   */
+  removeInvalid(payloadInput: PayloadEnvelopeInput): void {
+    if (this.payloadInputs.get(payloadInput.blockRootHex) === payloadInput) {
+      this.evictPayloadInput(payloadInput, "invalid");
+    }
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
       // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may

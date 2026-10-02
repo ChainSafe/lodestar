@@ -12,7 +12,7 @@ import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
@@ -2354,7 +2354,15 @@ describe("UnknownBlockSync", () => {
       expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
-    it("removes pending descendants after invalid parent payload", async () => {
+    it.each<PayloadErrorType>([
+      {code: PayloadErrorCode.INVALID_SIGNATURE},
+      {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+      {
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "invalid payload",
+      },
+    ])("removes pending descendants and evicts the envelope after invalid parent payload $code", async (errorType) => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
@@ -2383,13 +2391,10 @@ describe("UnknownBlockSync", () => {
       });
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const processExecutionPayload = vi.fn().mockRejectedValue(
-        new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
-          code: PayloadErrorCode.INVALID_SIGNATURE,
-        })
-      );
+      const processExecutionPayload = vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType));
       const processBlock = vi.fn().mockResolvedValue(undefined);
       const seenPayloadPrune = vi.fn();
+      const seenPayloadRemoveInvalid = vi.fn();
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processExecutionPayload,
@@ -2401,6 +2406,7 @@ describe("UnknownBlockSync", () => {
               .fn()
               .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: seenPayloadPrune,
+            removeInvalid: seenPayloadRemoveInvalid,
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2428,6 +2434,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
       expect(seenPayloadPrune).not.toHaveBeenCalled();
+      expect(seenPayloadRemoveInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
 
       emitter.emit(routes.events.EventType.executionPayload, {
         slot: 99,

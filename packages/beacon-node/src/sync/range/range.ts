@@ -5,6 +5,7 @@ import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
 import {BlockError} from "../../chain/errors/index.js";
@@ -217,7 +218,36 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         }
       }
     } else {
-      const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+      const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags).catch((e) => {
+        if (
+          e instanceof PayloadError &&
+          (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
+            e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
+            e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
+        ) {
+          const {payloadInput} = e;
+          const {peerIdStr, source} = payloadInput.getPayloadEnvelopeSource();
+          let client = "unknown";
+          if (peerIdStr !== undefined) {
+            try {
+              client = this.getConnectedPeerSyncMeta(peerIdStr).client;
+            } catch {
+              // peer disconnected since serving the envelope, keep "unknown"
+            }
+          }
+          this.logger.debug("Removing invalid payload envelope in range sync batch", {
+            slot: payloadInput.slot,
+            root: payloadInput.blockRootHex,
+            peer: peerIdStr ?? "unknown",
+            source,
+            client,
+            code: e.type.code,
+          });
+          // The batch is downloaded again, it would otherwise reuse the cached envelope and fail the same way
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
+        }
+        throw e;
+      });
       // We log orphaned payloads to work with different clients
       // in the future, consider applying penalties in certain conditions
       // make sure the payload source was from range sync in that case
