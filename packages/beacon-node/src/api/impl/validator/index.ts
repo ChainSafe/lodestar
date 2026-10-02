@@ -481,8 +481,8 @@ export function getValidatorApi(
       metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: toRootHex(config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block)),
       });
 
@@ -540,8 +540,8 @@ export function getValidatorApi(
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced execution block", {
         slot,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
@@ -1057,6 +1057,8 @@ export function getValidatorApi(
             rank: index + 1,
             source: candidate.url !== undefined ? toPrintableUrl(candidate.url) : "p2p",
             builder: candidate.signedBid.message.builderIndex,
+            value: prettyGweiToEth(candidate.signedBid.message.value),
+            executionPayment: prettyGweiToEth(candidate.signedBid.message.executionPayment),
             total: prettyGweiToEth(candidate.totalGwei),
             boost: candidate.boostFactor,
             boosted: prettyGweiToEth(getBoostedTotalScaled(candidate) / 100n),
@@ -1247,8 +1249,8 @@ export function getValidatorApi(
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced block", {
         ...logCtx,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+        consensusBlockValue: prettyWeiToEth(consensusBlockValue),
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
@@ -2104,7 +2106,7 @@ export function getValidatorApi(
               auth: entry.auth,
             });
           } catch (e) {
-            failures.push({index: i, message: (e as Error).message});
+            failures.push({index: i, message: `${builder}: ${(e as Error).message}`});
             logger.verbose(
               `Error on submitBuilderPreferences [${i}]`,
               {slot: entry.auth.message.slot, builder},

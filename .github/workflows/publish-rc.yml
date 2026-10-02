@@ -11,6 +11,8 @@ permissions:
   contents: write # Required for OIDC
   id-token: write # Required to create a Github release
   pull-requests: write # Required to add tags to pull requests
+  attestations: write # Required by docker.yml reusable workflow
+  artifact-metadata: write # Required by docker.yml reusable workflow
 
 jobs:
   tag:

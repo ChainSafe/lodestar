@@ -48,7 +48,6 @@ import {
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -68,6 +67,7 @@ export type ComputeNewStateRootResult = {
   newStateRoot: Root;
   proposerReward: Gwei;
   postState: IBeaconStateView;
+  hashTreeRootTime: number;
 };
 
 /**
@@ -184,11 +184,7 @@ export interface IBeaconStateView {
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
-  processSlots(
-    slot: Slot,
-    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
-  ): IBeaconStateView;
+  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView;
 }
 
 /** Altair+ state fields — use isStatePostAltair() guard */
@@ -281,6 +277,8 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
+  builderPendingPayments: gloas.BuilderPendingPayments;
+  builderPendingWithdrawals: gloas.BuilderPendingWithdrawals;
   getBuilder(index: BuilderIndex): gloas.Builder;
   getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;

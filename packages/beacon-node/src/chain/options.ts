@@ -29,6 +29,8 @@ export type IChainOptions = BlockProcessOpts &
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
+    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
+    dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     persistOrphanedBlocks?: boolean;
@@ -63,10 +65,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -109,12 +107,12 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: true,
+  dedupePayloads: true,
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,

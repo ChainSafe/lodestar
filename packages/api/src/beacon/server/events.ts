@@ -2,6 +2,13 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
 import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 
+/**
+ * A stream with no events otherwise exceeds the idle timeout of a reverse proxy or consumer, commonly 60 seconds,
+ * and events are not replayed. https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
+ */
+export const SSE_KEEP_ALIVE_INTERVAL_MS = 15_000;
+const SSE_KEEP_ALIVE_COMMENT = ":\n\n";
+
 export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
   const eventSerdes = getEventSerdes(config);
   const serverRoutes = createFastifyRoutes(getDefinitions(config), methods);
@@ -19,6 +26,7 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
         }
 
         const controller = new AbortController();
+        let keepAliveTimer: NodeJS.Timeout | undefined;
 
         try {
           // Add injected headers from other plugins. This is required for fastify-cors for example
@@ -36,6 +44,13 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
           // infinitely buffering it. http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering
           // Source: https://stackoverflow.com/questions/13672743/eventsource-server-sent-events-through-nginx
           res.raw.setHeader("X-Accel-Buffering", "no");
+
+          keepAliveTimer = setInterval(() => {
+            if (!res.raw.writableEnded && !res.raw.destroyed) res.raw.write(SSE_KEEP_ALIVE_COMMENT);
+          }, SSE_KEEP_ALIVE_INTERVAL_MS);
+
+          // Headers are otherwise only sent with the first event, a reverse proxy times out waiting for them
+          res.raw.flushHeaders();
 
           await new Promise<void>((resolve, reject) => {
             void methods.eventstream({
@@ -64,6 +79,7 @@ export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<E
             req.socket.once("end", () => resolve());
           });
         } finally {
+          clearInterval(keepAliveTimer);
           controller.abort();
           // Always end the response. If an error is thrown after the headers were sent, fastify can
           // no longer write a status code and would leave the socket open, the client then waits
