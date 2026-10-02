@@ -112,7 +112,7 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.light_client_optimistic_update]: {default: PeerAction.HighToleranceError},
 };
 
-function rejectPeerAction(type: GossipType, code: string): PeerAction {
+export function rejectPeerAction(type: GossipType, code: string): PeerAction {
   const rule = gossipRejectPeerAction[type];
   return rule.byCode?.[code] ?? rule.default;
 }

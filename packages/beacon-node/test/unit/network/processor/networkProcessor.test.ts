@@ -1,13 +1,16 @@
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {IBeaconDb} from "../../../../src/db/interface.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
+import {PeerAction} from "../../../../src/network/peers/score/interface.js";
 import {
   MAX_AWAITING_MESSAGES_PER_ROOT,
   MAX_BUFFERED_ROOTS_PER_SLOT,
@@ -37,12 +40,14 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let unknownBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
+  let reportPeerSpy: Mock<(peer: PeerIdStr, action: PeerAction, actionName: string) => void>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
     unknownBlockRootSpy = vi.fn();
     unknownEnvelopeBlockRootSpy = vi.fn();
     unknownEnvelopeBlockRootSlotSpy = vi.fn();
+    reportPeerSpy = vi.fn();
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
     emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
@@ -63,6 +68,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
 
     const modules = {
       chain,
+      core: {reportPeer: reportPeerSpy},
       db: null as unknown as IBeaconDb,
       events: new NetworkEventBus(),
       config,
@@ -288,6 +294,45 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       // the payload slot is emitted only once per root
       processPayloadAttestationMessage(0xef);
       expect(unknownEnvelopeBlockRootSlotSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("messages whose slot does not fit in 32 bits", () => {
+    let validationResultSpy: Mock<(data: unknown) => void>;
+
+    beforeEach(() => {
+      validationResultSpy = vi.fn();
+      (processor as unknown as {events: NetworkEventBus}).events.on(
+        NetworkEvent.gossipMessageValidationResult,
+        (data) => validationResultSpy(data)
+      );
+    });
+
+    it("rejects a block before any processing", () => {
+      const data = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
+      // slot is at byte 100 (4-byte message offset + 96-byte signature), set one of its high 4 bytes
+      data[100 + 4] = 1;
+      emit(GossipType.beacon_block, ForkName.phase0, data);
+      expect(validationResultSpy).toHaveBeenCalledWith(
+        expect.objectContaining({propagationSource: peerIdStr, acceptance: TopicValidatorResult.Reject})
+      );
+      expect(reportPeerSpy).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, GossipErrorCode.INVALID_SLOT);
+    });
+
+    it("rejects an aggregate without looking up its unknown block", () => {
+      const signedAggregateAndProof = ssz.phase0.SignedAggregateAndProof.defaultValue();
+      signedAggregateAndProof.message.aggregate.data.slot = 2 ** 32;
+      signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = Buffer.alloc(32, 0xab);
+      emit(
+        GossipType.beacon_aggregate_and_proof,
+        ForkName.phase0,
+        ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof)
+      );
+      expect(validationResultSpy).toHaveBeenCalledWith(
+        expect.objectContaining({acceptance: TopicValidatorResult.Reject})
+      );
+      expect(unknownBlockRootSpy).not.toHaveBeenCalled();
+      expect(bufferedBlockCount()).toBe(0);
     });
   });
 
