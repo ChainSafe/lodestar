@@ -97,7 +97,100 @@ describe("getGossipHandlers", () => {
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
   });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL block whose parent is unknown", async () => {
+    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(removeBlockInput).toHaveBeenCalledOnce();
+    expect(pruneBlockInput).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("leaves the peer penalty for a rejected block to the gossip validator", async () => {
+    const {core} = await runBeaconBlockValidationReject(denebConfig, BlockErrorCode.PROPOSAL_SIGNATURE_INVALID);
+
+    expect(core.reportPeer).not.toHaveBeenCalled();
+  });
 });
+
+async function runBeaconBlockValidationReject(
+  config: BeaconConfig,
+  code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+): Promise<{core: Pick<INetworkCore, "reportPeer">}> {
+  const logger = testLogger();
+  const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+  const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+  signedBlock.message.slot = 1;
+  const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
+  const blockInput = BlockInputBlobs.createFromBlock({
+    block: signedBlock,
+    blockRootHex,
+    forkName: ForkName.deneb,
+    daOutOfRange: false,
+    source: BlockInputSource.gossip,
+    seenTimestampSec: 0,
+    peerIdStr,
+  });
+
+  vi.mocked(validateGossipBlock).mockRejectedValue(
+    new BlockGossipError(GossipAction.REJECT, {
+      code,
+      slot: signedBlock.message.slot,
+      root: blockRootHex,
+    })
+  );
+
+  const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
+  const chain = {
+    clock: new ClockStopped(1),
+    custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+    emitter: new ChainEventEmitter(),
+    logger,
+    persistInvalidSszValue: vi.fn(),
+    processProposerEquivocation: vi.fn(),
+    seenBlockProposers: new SeenBlockProposers(),
+    seenBlockInputCache: {
+      getByBlock: vi.fn().mockReturnValue(blockInput),
+      remove: vi.fn(),
+    } as unknown as SeenBlockInput,
+    seenPayloadEnvelopeInputCache: {
+      add: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+  } as unknown as IBeaconChain;
+
+  const handlers = getGossipHandlers(
+    {
+      aggregatorTracker: {} as AggregatorTracker,
+      chain,
+      config,
+      core: core as INetworkCore,
+      events: new NetworkEventBus(),
+      logger,
+      metrics: null,
+    },
+    {}
+  );
+  const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+  await expect(
+    beaconBlockHandler({
+      gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+      peerIdStr,
+      seenTimestampSec: 0,
+      topic: {
+        boundary: {fork: ForkName.deneb, epoch: 0},
+        type: GossipType.beacon_block,
+      },
+    })
+  ).rejects.toThrow();
+
+  return {core};
+}
 
 async function runBeaconBlockProcessingError(
   config: BeaconConfig,
@@ -179,7 +272,7 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded, reject = false}: {recorded: boolean; reject?: boolean}
+  {recorded, reject = false, parentKnown = true}: {recorded: boolean; reject?: boolean; parentKnown?: boolean}
 ): Promise<{
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
@@ -238,6 +331,7 @@ async function runBeaconBlockRepeatProposal(
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null)},
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     persistInvalidSszValue: vi.fn(),

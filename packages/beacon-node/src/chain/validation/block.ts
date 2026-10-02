@@ -90,6 +90,22 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
+  // Authenticate the block before the parent lookup so that only blocks signed by a validator are retained for
+  // unknown parent sync, a peer without a validator key is penalized for every block it sends
+  // [REJECT] The proposer index is a valid validator index
+  if (proposerIndex >= chain.pubkeyCache.size) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.UNKNOWN_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
+  }
+
+  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
@@ -105,6 +121,8 @@ export async function validateGossipBlock(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    // The block is retained for unknown parent sync, count it as this proposer's proposal for the slot
+    chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
@@ -122,6 +140,7 @@ export async function validateGossipBlock(
   if (isGloasBeaconBlock(block)) {
     const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
     if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+      chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
       throw new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
         parentRoot,
@@ -256,20 +275,6 @@ export async function validateGossipBlock(
       }
     }
   }
-
-  // [REJECT] The proposer index is a valid validator index
-  if (proposerIndex >= state.validatorCount) {
-    throw new BlockGossipError(GossipAction.REJECT, {
-      code: BlockErrorCode.UNKNOWN_PROPOSER,
-      slot: blockSlot,
-      root: blockRoot,
-      proposerIndex,
-    });
-  }
-
-  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
