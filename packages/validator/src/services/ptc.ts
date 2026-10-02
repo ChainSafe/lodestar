@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
-import {IClock} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, gloas} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -54,12 +54,21 @@ export class PtcService {
       return;
     }
 
+    const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+    const epoch = computeEpochAtSlot(slot);
+    if (epoch === this.config.GLOAS_FORK_EPOCH) {
+      // Duties of the first Gloas epoch are only polled at the start of the epoch, wait for them
+      await Promise.race([
+        this.dutiesService.waitForDutiesPolled(epoch),
+        sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal),
+      ]);
+    }
+
     const duties = this.dutiesService.getDutiesAtSlot(slot);
     if (duties.length === 0) {
       return;
     }
 
-    const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
     // Submit as soon as the canonical head block's payload is available, or at the deadline
     const payloadAvailable = new AbortController();
     try {
