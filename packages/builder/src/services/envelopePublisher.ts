@@ -3,6 +3,7 @@ import {type BuilderIndex, type RootHex, type Slot, type gloas, ssz} from "@lode
 import {LodestarError, defer, toRootHex} from "@lodestar/utils";
 import type {BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
+import type {ExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope.js";
 
 export type EnvelopeSelectionIdentity = {
   slot: Slot;
@@ -10,12 +11,6 @@ export type EnvelopeSelectionIdentity = {
   parentBlockRoot: RootHex;
   blockHash: RootHex;
   blockRoot: RootHex;
-};
-
-export type EnvelopePublicationMaterial = {
-  envelope: gloas.ExecutionPayloadEnvelope;
-  kzgProofs: gloas.SignedExecutionPayloadEnvelopeContents["kzgProofs"];
-  blobs: gloas.SignedExecutionPayloadEnvelopeContents["blobs"];
 };
 
 export type EnvelopePublisherModules = {
@@ -51,17 +46,17 @@ type ActivePublication = {
   waiters: number;
 };
 
-/** Signs and submits stateless envelope material for an exact recorded local selection. */
+/** Signs and submits an envelope for a recorded local selection. */
 export class EnvelopePublisher {
   private readonly activePublications = new Map<RootHex, ActivePublication>();
 
   constructor(private readonly modules: EnvelopePublisherModules) {}
 
-  async publish(material: EnvelopePublicationMaterial, signal: AbortSignal): Promise<EnvelopePublicationResult> {
+  async publish(contents: ExecutionPayloadEnvelopeContents, signal: AbortSignal): Promise<EnvelopePublicationResult> {
     signal.throwIfAborted();
 
     const {api, builderIndex, hasSelection, ledger, signer} = this.modules;
-    const {envelope} = material;
+    const {envelope} = contents;
     if (envelope.builderIndex !== builderIndex) {
       throw new EnvelopePublisherError(
         {
@@ -69,7 +64,7 @@ export class EnvelopePublisher {
           builderIndex,
           envelopeBuilderIndex: envelope.builderIndex,
         },
-        `Envelope Builder index does not match local Builder index builderIndex=${builderIndex} envelopeBuilderIndex=${envelope.builderIndex}`
+        `Envelope builder index does not match local builder index builderIndex=${builderIndex} envelopeBuilderIndex=${envelope.builderIndex}`
       );
     }
 
@@ -99,7 +94,7 @@ export class EnvelopePublisher {
       publication = {
         controller,
         waiters: 0,
-        promise: this.publishEnvelope(material, identity, envelopeRoot, api, ledger, signer, controller.signal).finally(
+        promise: this.publishEnvelope(contents, identity, envelopeRoot, api, ledger, signer, controller.signal).finally(
           () => {
             if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
               this.activePublications.delete(identity.blockRoot);
@@ -138,7 +133,7 @@ export class EnvelopePublisher {
   }
 
   private async publishEnvelope(
-    material: EnvelopePublicationMaterial,
+    contents: ExecutionPayloadEnvelopeContents,
     identity: EnvelopeSelectionIdentity,
     envelopeRoot: RootHex,
     api: ApiClient,
@@ -146,21 +141,20 @@ export class EnvelopePublisher {
     signer: BuilderSigner,
     signal: AbortSignal
   ): Promise<EnvelopePublicationResult> {
-    const signedEnvelope = signer.signExecutionPayloadEnvelope(material.envelope);
+    const signedEnvelope = signer.signExecutionPayloadEnvelope(contents.envelope);
 
     const response = await api.beacon.publishExecutionPayloadEnvelope(
       {
         signedEnvelopeOrContents: {
           signedExecutionPayloadEnvelope: signedEnvelope,
-          kzgProofs: material.kzgProofs,
-          blobs: material.blobs,
+          kzgProofs: contents.kzgProofs,
+          blobs: contents.blobs,
         },
-        broadcastValidation: routes.beacon.BroadcastValidation.consensusAndEquivocation,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       },
       {signal}
     );
     response.assertOk();
-    signal.throwIfAborted();
     ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
     return {status: "published", signedEnvelope};
   }
