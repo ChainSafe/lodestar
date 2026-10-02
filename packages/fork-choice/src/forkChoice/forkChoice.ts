@@ -840,7 +840,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.computeUnrealized) {
       if (
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
-        parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
+        parentBlock.unrealizedFinalizedEpoch + 1 === blockEpoch
       ) {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
         unrealizedJustifiedCheckpoint = {
