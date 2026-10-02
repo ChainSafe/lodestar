@@ -153,8 +153,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           exitCode = 1;
         }
         savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
-        // Explicitly exit until active handles issue is resolved
-        // See https://github.com/ChainSafe/lodestar/issues/5642
+        // Explicitly exit process due to potential active handles
         process.exit(exitCode);
       },
       {once: true}
