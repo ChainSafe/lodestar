@@ -5,14 +5,13 @@ import {BUILDER_INDEX_SELF_BUILD, ForkName, type ForkPostGloas} from "@lodestar/
 import type {RootHex, SignedBeaconBlock} from "@lodestar/types";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BidLedger} from "../../../src/services/bidLedger.js";
+import {type BidIdentity, BidLedger} from "../../../src/services/bidLedger.js";
 import {
   BidSelectionIgnoreReason,
   BidSelector,
   BidSelectorError,
   BidSelectorErrorCode,
   type ObservedPostGloasBlock,
-  type RetainedPayloadIdentity,
 } from "../../../src/services/bidSelector.js";
 
 const builderIndex = 7;
@@ -28,6 +27,7 @@ describe("BidSelector", () => {
         bid: {...identity, valueGwei: 5, signedBidRoot, wonBlockRoots: [observed.blockRoot]},
       });
       expect(ledger.getBidsForSlot(identity.slot)[0].wonBlockRoots).toEqual([observed.blockRoot]);
+      expect(ledger.getUnsettledValueGwei(0)).toBe(5);
     });
     it.each(["value", "feeRecipient", "gasLimit", "signature"] as const)(
       `rejects a ${fork} selection whose %s differs from the local bid`,
@@ -72,18 +72,15 @@ describe("BidSelector", () => {
     expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
   });
 
-  it.each([builderIndex + 1, BUILDER_INDEX_SELF_BUILD])(
-    "ignores Builder %s before consulting retained payloads",
-    (index) => {
-      const getRetainedPayloadIdentity = vi.fn();
-      const {observed, selector} = setup(ForkName.gloas, {getRetainedPayloadIdentity});
-      observed.block.message.body.signedExecutionPayloadBid.message.builderIndex = index;
-      observed.blockRoot = blockRoot(observed);
+  it.each([builderIndex + 1, BUILDER_INDEX_SELF_BUILD])("ignores Builder %s before consulting the ledger", (index) => {
+    const {ledger, observed, selector} = setup(ForkName.gloas);
+    const recordWin = vi.spyOn(ledger, "recordWin");
+    observed.block.message.body.signedExecutionPayloadBid.message.builderIndex = index;
+    observed.blockRoot = blockRoot(observed);
 
-      expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.FOREIGN_BUILDER});
-      expect(getRetainedPayloadIdentity).not.toHaveBeenCalled();
-    }
-  );
+    expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.FOREIGN_BUILDER});
+    expect(recordWin).not.toHaveBeenCalled();
+  });
 
   it("rejects a selected bid that was not signed locally", () => {
     const {identity, ledger, observed, selector, signedBidRoot} = setup(ForkName.gloas, {recordBid: false});
@@ -94,28 +91,6 @@ describe("BidSelector", () => {
       signedBidRoot,
     });
     expect(ledger.getBidsForSlot(identity.slot)).toEqual([]);
-  });
-
-  it("ignores a selection whose reveal material is absent", () => {
-    const {ledger, observed, selector} = setup(ForkName.gloas, {getRetainedPayloadIdentity: vi.fn(() => null)});
-
-    expect(selector.match(observed)).toEqual({
-      status: "ignored",
-      reason: BidSelectionIgnoreReason.PAYLOAD_NOT_RETAINED,
-    });
-    expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
-  });
-
-  it("ignores retained material for a different parent identity", () => {
-    const {identity, ledger, observed, selector} = setup(ForkName.gloas, {
-      getRetainedPayloadIdentity: vi.fn((blockHash) => ({...identityFor(blockHash), parentBlockRoot: root(9)})),
-    });
-
-    expect(selector.match(observed)).toEqual({
-      status: "ignored",
-      reason: BidSelectionIgnoreReason.PAYLOAD_IDENTITY_MISMATCH,
-    });
-    expect(ledger.getBidsForSlot(identity.slot)[0].wonBlockRoots).toEqual([]);
   });
 
   it("records duplicate observations idempotently", () => {
@@ -174,13 +149,7 @@ describe("BidSelector", () => {
   });
 });
 
-function setup(
-  fork: ForkPostGloas,
-  {
-    getRetainedPayloadIdentity,
-    recordBid = true,
-  }: {getRetainedPayloadIdentity?: (blockHash: RootHex) => RetainedPayloadIdentity | null; recordBid?: boolean} = {}
-) {
+function setup(fork: ForkPostGloas, {recordBid = true}: {recordBid?: boolean} = {}) {
   const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32, 1));
   const block = createBlock(fork);
   const observed: ObservedPostGloasBlock = {
@@ -197,12 +166,7 @@ function setup(
   if (recordBid) {
     ledger.recordBid({...identity, valueGwei: 5, signedBidRoot});
   }
-  const selector = new BidSelector({
-    config,
-    ledger,
-    builderIndex,
-    getRetainedPayloadIdentity: getRetainedPayloadIdentity ?? vi.fn(() => identity),
-  });
+  const selector = new BidSelector({config, ledger, builderIndex});
   return {identity, ledger, observed, selector, signedBidRoot};
 }
 
@@ -227,7 +191,7 @@ function blockRoot(observed: ObservedPostGloasBlock): RootHex {
   );
 }
 
-function identityFor(blockHash: RootHex): RetainedPayloadIdentity {
+function identityFor(blockHash: RootHex): BidIdentity {
   return {
     slot: 10,
     parentBlockHash: root(2),

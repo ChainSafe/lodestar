@@ -3,7 +3,7 @@ import type {ForkPostGloas} from "@lodestar/params";
 import type {BuilderIndex, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sszTypesFor} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import type {BidLedger, BidLedgerRecord} from "./bidLedger.js";
+import type {BidIdentity, BidLedger, BidLedgerRecord} from "./bidLedger.js";
 
 export type ObservedPostGloasBlock = {
   blockRoot: RootHex;
@@ -12,24 +12,14 @@ export type ObservedPostGloasBlock = {
   block: SignedBeaconBlock<ForkPostGloas>;
 };
 
-export type RetainedPayloadIdentity = {
-  slot: Slot;
-  parentBlockHash: RootHex;
-  parentBlockRoot: RootHex;
-  blockHash: RootHex;
-};
-
 export type BidSelectorModules = {
   config: ChainForkConfig;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
-  getRetainedPayloadIdentity: (blockHash: RootHex) => RetainedPayloadIdentity | null;
 };
 
 export enum BidSelectionIgnoreReason {
   FOREIGN_BUILDER = "foreign_builder",
-  PAYLOAD_NOT_RETAINED = "payload_not_retained",
-  PAYLOAD_IDENTITY_MISMATCH = "payload_identity_mismatch",
 }
 
 export type BidSelectionResult =
@@ -83,13 +73,13 @@ export type BidSelectorErrorType =
 
 export class BidSelectorError extends LodestarError<BidSelectorErrorType> {}
 
-/** Matches an imported post-Gloas block to exact local bid and retained-payload identities. */
+/** Matches an imported post-Gloas block to an exact local bid and records the win. */
 export class BidSelector {
   constructor(private readonly modules: BidSelectorModules) {}
 
   match(observed: ObservedPostGloasBlock): BidSelectionResult {
     const {block, blockRoot, slot, version} = observed;
-    const {builderIndex, config, getRetainedPayloadIdentity, ledger} = this.modules;
+    const {builderIndex, config, ledger} = this.modules;
     const blockSlot = block.message.slot;
 
     if (blockSlot !== slot) {
@@ -126,20 +116,12 @@ export class BidSelector {
       return {status: "ignored", reason: BidSelectionIgnoreReason.FOREIGN_BUILDER};
     }
 
-    const identity: RetainedPayloadIdentity = {
+    const identity: BidIdentity = {
       slot,
       parentBlockHash: toRootHex(bid.parentBlockHash),
       parentBlockRoot: toRootHex(bid.parentBlockRoot),
       blockHash: toRootHex(bid.blockHash),
     };
-    const retained = getRetainedPayloadIdentity(identity.blockHash);
-    if (retained === null) {
-      return {status: "ignored", reason: BidSelectionIgnoreReason.PAYLOAD_NOT_RETAINED};
-    }
-    if (!sameIdentity(retained, identity)) {
-      return {status: "ignored", reason: BidSelectionIgnoreReason.PAYLOAD_IDENTITY_MISMATCH};
-    }
-
     const signedBidRoot = toRootHex(
       sszTypesFor(version, "SignedExecutionPayloadBid").hashTreeRoot(block.message.body.signedExecutionPayloadBid)
     );
@@ -153,13 +135,4 @@ export class BidSelector {
 
     return {status: "selected", blockRoot, bid: localBid};
   }
-}
-
-function sameIdentity(a: RetainedPayloadIdentity, b: RetainedPayloadIdentity): boolean {
-  return (
-    a.slot === b.slot &&
-    a.parentBlockHash === b.parentBlockHash &&
-    a.parentBlockRoot === b.parentBlockRoot &&
-    a.blockHash === b.blockHash
-  );
 }
