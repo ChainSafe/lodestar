@@ -1,12 +1,15 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
+import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -15,7 +18,12 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
+import {
+  BATCH_BUFFER_SIZE,
+  EPOCHS_PER_BATCH,
+  MAX_BATCH_PROCESSING_ATTEMPTS,
+  MAX_LOOK_AHEAD_EPOCHS,
+} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {getRateLimitedUntilMs} from "../utils/rateLimit.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
@@ -354,6 +362,26 @@ export class SyncChain {
 
       this.status = SyncChainStatus.Error;
       this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
+      if (
+        e instanceof BatchError &&
+        (e.type.code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS ||
+          e.type.code === BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS)
+      ) {
+        // The batch will be downloaded and processed again by the next sync chain. Surface it, until now a node
+        // stuck here (e.g. the execution client rejecting a canonical payload) only logged at debug and verbose
+        const {lastAttempt} = e.type;
+        this.logger.warn("Batch processing failed after max attempts, sync is not progressing", {
+          id: this.logId,
+          startSlot: computeStartSlotAtEpoch(e.type.startEpoch),
+          attempts: MAX_BATCH_PROCESSING_ATTEMPTS + 1,
+          code: lastAttempt.code ?? "UNKNOWN",
+          error: lastAttempt.message,
+          ...(lastAttempt.code === BlockErrorCode.EXECUTION_ENGINE_INVALID ||
+          lastAttempt.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID
+            ? {hint: "the execution client rejects the payload, check it"}
+            : {}),
+        });
+      }
 
       // If a batch exceeds it's retry limit, maybe downscore peers.
       // shouldDownscoreOnBatchError() functions enforces that all BatchErrorCode values are covered
@@ -718,6 +746,9 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
+      this.metrics?.syncRange.batchProcessError.inc({
+        code: res.err instanceof BlockError || res.err instanceof PayloadError ? res.err.type.code : "UNKNOWN",
+      });
 
       const invalidatePreviousBatches = (): number => {
         let invalidatedCount = 0;

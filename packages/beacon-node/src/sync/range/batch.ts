@@ -55,6 +55,9 @@ export type FailedAttempt = Attempt & {
    * True when the failure is evidence the peers served bad data, so they may be downscored..
    */
   peerAttributable: boolean;
+  /** Block or payload error code of the failure, null for unexpected errors */
+  code: BlockErrorCode | PayloadErrorCode | null;
+  message: string;
 };
 
 type TrackedRequest = {
@@ -745,7 +748,20 @@ export class Batch {
 
   private routeProcessingFailure(err: Error, attempt: Attempt): void {
     const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
-    const failedAttempt: FailedAttempt = {...attempt, peerAttributable: isPeerAttributableFailure(code)};
+    // LodestarError messages are just the code, the detail lives in the type: the EL verdict in `errorMessage`, the
+    // wrapped error of internal and state transition failures in `error`, envelope verification failures in `message`
+    const detail =
+      err instanceof BlockError || err instanceof PayloadError
+        ? ((err.type as {errorMessage?: string; error?: Error; message?: string}).errorMessage ??
+          (err.type as {error?: Error}).error?.message ??
+          (err.type as {message?: string}).message)
+        : undefined;
+    const failedAttempt: FailedAttempt = {
+      ...attempt,
+      peerAttributable: isPeerAttributableFailure(code),
+      code,
+      message: detail ? `${err.message}: ${detail}` : err.message,
+    };
 
     if (isExecutionEngineFailure(code)) {
       this.onExecutionEngineError(failedAttempt);
@@ -767,7 +783,9 @@ export class Batch {
   private onExecutionEngineError(attempt: FailedAttempt): void {
     this.executionErrorAttempts.push(attempt);
     if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
-      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
+      throw new BatchError(
+        this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS, lastAttempt: attempt})
+      );
     }
 
     // remove any downloaded blocks and re-attempt
@@ -778,7 +796,7 @@ export class Batch {
   private onProcessingError(attempt: FailedAttempt): void {
     this.failedProcessingAttempts.push(attempt);
     if (this.failedProcessingAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
-      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS, lastAttempt: attempt}));
     }
 
     // remove any downloaded blocks and re-attempt
@@ -808,8 +826,8 @@ type BatchErrorType =
   | {code: BatchErrorCode.WRONG_STATUS; expectedStatus: BatchStatus}
   | {code: BatchErrorCode.INVALID_COUNT; count: number; expected: number}
   | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
-  | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}
-  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS};
+  | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS; lastAttempt: FailedAttempt}
+  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS; lastAttempt: FailedAttempt};
 
 type BatchErrorMetadata = {
   startEpoch: number;

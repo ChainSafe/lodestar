@@ -668,6 +668,38 @@ describe("sync / range / batch", async () => {
       blockError({code: BlockErrorCode.EXECUTION_ENGINE_ERROR, execStatus, errorMessage: "el is down"});
 
     describe("processingError", () => {
+      it.each([
+        {
+          name: "wrapped error",
+          err: blockError({code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("regen boom")}),
+          message: "BLOCK_ERROR_BEACON_CHAIN_ERROR: regen boom",
+        },
+        {
+          name: "execution client verdict",
+          err: blockError({
+            code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+            execStatus: ExecutionPayloadStatus.INVALID,
+            errorMessage: "bal is empty",
+          }),
+          message: "BLOCK_ERROR_EXECUTION_INVALID: bal is empty",
+        },
+        {
+          name: "envelope verification",
+          err: new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
+            code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+            message: "wrong parent",
+          }),
+          message: "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR: wrong parent",
+        },
+      ])("records the error detail of the failed attempt: $name", ({err, message}) => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(err);
+
+        const [attempt] = [...batch.failedProcessingAttempts, ...batch.executionErrorAttempts];
+        expect(attempt.message).toBe(message);
+      });
+
       const executionEngineErrorStatuses: ExecutionEngineErrorStatus[] = [
         ExecutionPayloadStatus.ELERROR,
         ExecutionPayloadStatus.UNAVAILABLE,
@@ -840,14 +872,27 @@ describe("sync / range / batch", async () => {
         }
         expect(batch.executionErrorAttempts.length).toBe(3);
 
-        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS
+        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS, the error carries the last attempt for the log
         batch.startProcessing();
-        expectThrowsLodestarError(
-          () => batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR)),
-          new BatchError({
+        const err = (() => {
+          try {
+            batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+          } catch (e) {
+            return e;
+          }
+          return null;
+        })();
+        expect(err).toBeInstanceOf(BatchError);
+        expect((err as BatchError).type).toEqual(
+          expect.objectContaining({
             code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS,
             startEpoch,
             status: BatchStatus.Processing,
+            lastAttempt: expect.objectContaining({
+              code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+              peerAttributable: false,
+              message: expect.any(String),
+            }),
           })
         );
       });
