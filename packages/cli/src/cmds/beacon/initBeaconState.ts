@@ -148,6 +148,7 @@ async function executeStateInitialization(
   const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
   const pubkeyCacheCapacity = validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
   loadPubkeysFile(pubkeyCache, pubkeysFile, pubkeyCacheCapacity, config, stateBytes, validatorCount, logger);
+  // unilaterally expand capacity after best-effort pubkey file loading
   pubkeyCache.ensureCapacity(pubkeyCacheCapacity);
   const anchorState = createBeaconStateView({useNative, config, stateBytes});
   stateInit.validate(anchorState);
