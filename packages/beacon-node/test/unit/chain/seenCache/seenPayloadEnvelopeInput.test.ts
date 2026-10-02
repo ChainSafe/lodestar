@@ -202,6 +202,40 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.size()).toBe(1);
   });
 
+  it("removeInvalid removes the given entry and leaves others", () => {
+    const rootHex1 = addPayloadInput(1);
+    const rootHex2 = addPayloadInput(2);
+    const input1 = cache.get(rootHex1);
+    if (input1 === undefined) throw Error("payload input not added");
+
+    cache.removeInvalid(input1);
+
+    expect(cache.get(rootHex1)).toBeUndefined();
+    expect(cache.get(rootHex2)).toBeDefined();
+    expect(cache.size()).toBe(1);
+  });
+
+  it("removeInvalid keeps an entry that was recreated for the same root", () => {
+    const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: 1});
+    const props = {
+      blockRootHex: rootHex,
+      block,
+      forkName: ForkName.gloas,
+      sampledColumns: [],
+      custodyColumns: [],
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.gossip,
+    };
+    const invalid = cache.add(props);
+    cache.removeInvalid(invalid);
+    const recreated = cache.add(props);
+    expect(recreated).not.toBe(invalid);
+
+    cache.removeInvalid(invalid);
+
+    expect(cache.get(rootHex)).toBe(recreated);
+  });
+
   describe("getOrReload", () => {
     it("returns the in-memory entry without touching fork choice or db", async () => {
       const rootHex = addPayloadInput(1);

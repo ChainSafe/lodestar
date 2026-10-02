@@ -1426,20 +1426,23 @@ export class BlockInputSync {
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
           break;
 
+        // The invalid envelope is evicted from the seen cache in the cases below, otherwise the next
+        // attempt would reuse it instead of fetching another envelope from peers
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.elInvalid);
           break;
 
         case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidEnvelope);
           break;
 
         case PayloadErrorCode.INVALID_SIGNATURE:
-          // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
-          // reintroducing envelope replacement / recreation flows.
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidSignature);
           break;
 
@@ -1879,8 +1882,6 @@ export class BlockInputSync {
 
   // Once a parent payload is invalid, every descendant waiting on that payload lineage becomes unrecoverable too.
   private removePendingPayloadAndDescendants(rootHex: RootHex, headReason: DroppedItemReason): void {
-    // Keep PayloadEnvelopeInput resident in the seen cache. importBlock() owns that object and
-    // later validation/finalization logic decides when it can leave memory.
     if (this.pendingPayloads.delete(rootHex)) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: headReason}, 1);
     }
