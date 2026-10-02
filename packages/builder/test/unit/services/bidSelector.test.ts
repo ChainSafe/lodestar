@@ -30,7 +30,7 @@ describe("BidSelector", () => {
       expect(ledger.getBidsForSlot(identity.slot)[0].wonBlockRoots).toEqual([observed.blockRoot]);
     });
     it.each(["value", "feeRecipient", "gasLimit", "signature"] as const)(
-      `ignores a ${fork} selection with different %s despite matching payload identity`,
+      `rejects a ${fork} selection whose %s differs from the local bid`,
       (field) => {
         const {ledger, observed, selector} = setup(fork);
         const signedBid = observed.block.message.body.signedExecutionPayloadBid;
@@ -50,7 +50,9 @@ describe("BidSelector", () => {
         }
         observed.blockRoot = blockRoot(observed);
 
-        expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID});
+        expect(() => selector.match(observed)).toThrowError(
+          expect.objectContaining({type: expect.objectContaining({code: BidSelectorErrorCode.UNKNOWN_BID})})
+        );
         expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
         expect(ledger.getUnsettledValueGwei(0)).toBe(0);
       }
@@ -64,7 +66,9 @@ describe("BidSelector", () => {
     bid.inclusionListBits.set(1, true);
     observed.blockRoot = blockRoot(observed);
 
-    expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID});
+    expect(() => selector.match(observed)).toThrowError(
+      expect.objectContaining({type: expect.objectContaining({code: BidSelectorErrorCode.UNKNOWN_BID})})
+    );
     expect(ledger.getBidsForSlot(observed.slot)[0].wonBlockRoots).toEqual([]);
   });
 
@@ -81,10 +85,14 @@ describe("BidSelector", () => {
     }
   );
 
-  it("ignores a selected bid that was not signed locally", () => {
-    const {identity, ledger, observed, selector} = setup(ForkName.gloas, {recordBid: false});
+  it("rejects a selected bid that was not signed locally", () => {
+    const {identity, ledger, observed, selector, signedBidRoot} = setup(ForkName.gloas, {recordBid: false});
 
-    expect(selector.match(observed)).toEqual({status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID});
+    expectSelectorError(() => selector.match(observed), {
+      code: BidSelectorErrorCode.UNKNOWN_BID,
+      ...identity,
+      signedBidRoot,
+    });
     expect(ledger.getBidsForSlot(identity.slot)).toEqual([]);
   });
 

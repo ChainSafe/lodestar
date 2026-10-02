@@ -28,7 +28,6 @@ export type BidSelectorModules = {
 
 export enum BidSelectionIgnoreReason {
   FOREIGN_BUILDER = "foreign_builder",
-  UNKNOWN_BID = "unknown_bid",
   PAYLOAD_NOT_RETAINED = "payload_not_retained",
   PAYLOAD_IDENTITY_MISMATCH = "payload_identity_mismatch",
 }
@@ -49,6 +48,7 @@ export enum BidSelectorErrorCode {
   BLOCK_SLOT_MISMATCH = "BID_SELECTOR_ERROR_BLOCK_SLOT_MISMATCH",
   BLOCK_FORK_MISMATCH = "BID_SELECTOR_ERROR_BLOCK_FORK_MISMATCH",
   BID_SLOT_MISMATCH = "BID_SELECTOR_ERROR_BID_SLOT_MISMATCH",
+  UNKNOWN_BID = "BID_SELECTOR_ERROR_UNKNOWN_BID",
 }
 
 export type BidSelectorErrorType =
@@ -71,6 +71,14 @@ export type BidSelectorErrorType =
       code: BidSelectorErrorCode.BID_SLOT_MISMATCH;
       slot: Slot;
       bidSlot: Slot;
+    }
+  | {
+      code: BidSelectorErrorCode.UNKNOWN_BID;
+      slot: Slot;
+      parentBlockHash: RootHex;
+      parentBlockRoot: RootHex;
+      blockHash: RootHex;
+      signedBidRoot: RootHex;
     };
 
 export class BidSelectorError extends LodestarError<BidSelectorErrorType> {}
@@ -137,7 +145,10 @@ export class BidSelector {
     );
     const localBid = ledger.recordWin({...identity, signedBidRoot}, blockRoot);
     if (localBid === null) {
-      return {status: "ignored", reason: BidSelectionIgnoreReason.UNKNOWN_BID};
+      throw new BidSelectorError(
+        {code: BidSelectorErrorCode.UNKNOWN_BID, ...identity, signedBidRoot},
+        `Selected bid is not in the local ledger slot=${slot} blockHash=${identity.blockHash} signedBidRoot=${signedBidRoot}`
+      );
     }
 
     return {status: "selected", blockRoot, bid: localBid};
