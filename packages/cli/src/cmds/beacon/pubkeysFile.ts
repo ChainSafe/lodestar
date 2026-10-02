@@ -4,8 +4,8 @@ import {getValidatorPubkeyFromStateBytes} from "@lodestar/state-transition";
 import {Logger, byteArrayEquals} from "@lodestar/utils";
 
 /**
- * Best effort load of a pubkey cache saved by a previous run, to skip decompressing every validator pubkey on boot.
- * Must be called before any worker uses the cache.
+ * Best effort load of a trusted pubkey cache saved by a previous run, to skip decompressing every validator
+ * pubkey on boot. Must be called before any worker uses the cache.
  */
 export function loadPubkeysFile(
   pubkeyCache: PubkeyCache,
