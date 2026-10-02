@@ -173,8 +173,7 @@ export class AttestationService {
     const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
     // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
-      1000 *
-      this.clock.secondsPerSlot *
+      this.clock.getSlotDurationMs(slot) *
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
