@@ -204,6 +204,7 @@ mbps
 mdns
 merkle
 merkleization
+middleware
 misconfiguration
 mmeshsub
 monorepo
