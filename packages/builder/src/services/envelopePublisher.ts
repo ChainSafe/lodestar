@@ -1,24 +1,17 @@
 import {type ApiClient, routes} from "@lodestar/api";
-import {type BuilderIndex, type RootHex, type Slot, type gloas, ssz} from "@lodestar/types";
+import {type BuilderIndex, type RootHex, type gloas, ssz} from "@lodestar/types";
 import {LodestarError, defer, toRootHex} from "@lodestar/utils";
-import type {BidLedger} from "./bidLedger.js";
+import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
 import type {ExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope.js";
 
-export type EnvelopeSelectionIdentity = {
-  slot: Slot;
-  parentBlockHash: RootHex;
-  parentBlockRoot: RootHex;
-  blockHash: RootHex;
-  blockRoot: RootHex;
-};
+export type EnvelopeSelectionIdentity = BidIdentity & {blockRoot: RootHex};
 
 export type EnvelopePublisherModules = {
   api: ApiClient;
   signer: BuilderSigner;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
-  hasSelection: (identity: EnvelopeSelectionIdentity) => boolean;
 };
 
 export enum EnvelopePublisherErrorCode {
@@ -55,7 +48,7 @@ export class EnvelopePublisher {
   async publish(contents: ExecutionPayloadEnvelopeContents, signal: AbortSignal): Promise<EnvelopePublicationResult> {
     signal.throwIfAborted();
 
-    const {api, builderIndex, hasSelection, ledger, signer} = this.modules;
+    const {api, builderIndex, ledger, signer} = this.modules;
     const {envelope} = contents;
     if (envelope.builderIndex !== builderIndex) {
       throw new EnvelopePublisherError(
@@ -75,7 +68,7 @@ export class EnvelopePublisher {
       blockHash: toRootHex(envelope.payload.blockHash),
       blockRoot: toRootHex(envelope.beaconBlockRoot),
     };
-    if (!hasSelection(identity)) {
+    if (!ledger.hasWon(identity, identity.blockRoot)) {
       throw new EnvelopePublisherError(
         {code: EnvelopePublisherErrorCode.SELECTION_NOT_RECORDED, ...identity},
         `Envelope selection is not recorded slot=${identity.slot} blockRoot=${identity.blockRoot} blockHash=${identity.blockHash}`

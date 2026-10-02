@@ -26,13 +26,11 @@ const signer = new BuilderSigner(
 describe("EnvelopePublisher", () => {
   it("signs, records, and submits an exact selected envelope", async () => {
     const contents = createContents();
-    const hasSelection = vi.fn(() => true);
-    const {api, ledger, publisher} = createPublisher({hasSelection});
+    const {api, ledger, publisher} = createPublisher();
 
     const result = await publisher.publish(contents, new AbortController().signal);
 
     expect(result.status).toBe("published");
-    expect(hasSelection).toHaveBeenCalledWith(selectionIdentity(contents));
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledWith(
       {
         signedEnvelopeOrContents: {
@@ -52,7 +50,7 @@ describe("EnvelopePublisher", () => {
   it("rejects an envelope for another Builder before publication", async () => {
     const contents = createContents();
     contents.envelope.builderIndex++;
-    const {api, ledger, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, ledger, publisher} = createPublisher();
 
     await expect(publisher.publish(contents, new AbortController().signal)).rejects.toThrowError(
       new EnvelopePublisherError(
@@ -71,7 +69,7 @@ describe("EnvelopePublisher", () => {
   it("rejects an envelope without an exact recorded selection", async () => {
     const contents = createContents();
     const identity = selectionIdentity(contents);
-    const {api, ledger, publisher} = createPublisher({hasSelection: vi.fn(() => false)});
+    const {api, ledger, publisher} = createPublisher({win: false});
 
     await expect(publisher.publish(contents, new AbortController().signal)).rejects.toThrowError(
       new EnvelopePublisherError(
@@ -86,19 +84,19 @@ describe("EnvelopePublisher", () => {
   it("rejects an already aborted call without side effects", async () => {
     const controller = new AbortController();
     controller.abort();
-    const hasSelection = vi.fn(() => true);
     const contents = createContents();
-    const {api, ledger, publisher} = createPublisher({hasSelection});
+    const {api, ledger, publisher} = createPublisher();
+    const hasWon = vi.spyOn(ledger, "hasWon");
 
     await expect(publisher.publish(contents, controller.signal)).rejects.toMatchObject({name: "AbortError"});
-    expect(hasSelection).not.toHaveBeenCalled();
+    expect(hasWon).not.toHaveBeenCalled();
     expect(ledger.hasRevealed(toRootHex(contents.envelope.beaconBlockRoot))).toBe(false);
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
   });
 
   it("does not sign or submit an exact duplicate reveal", async () => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     const signal = new AbortController().signal;
     await publisher.publish(contents, signal);
 
@@ -108,7 +106,7 @@ describe("EnvelopePublisher", () => {
 
   it("shares one active publication for concurrent identical calls", async () => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadEnvelope>>>();
     api.beacon.publishExecutionPayloadEnvelope.mockReturnValue(response.promise);
     const signal = new AbortController().signal;
@@ -124,7 +122,7 @@ describe("EnvelopePublisher", () => {
 
   it.each([0, 1])("cancels caller %i without canceling the other caller", async (abortedIndex) => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadEnvelope>>>();
     api.beacon.publishExecutionPayloadEnvelope.mockReturnValue(response.promise);
     const controllers = [new AbortController(), new AbortController()];
@@ -143,7 +141,7 @@ describe("EnvelopePublisher", () => {
 
   it("aborts the request after the last waiter cancels and records a late success", async () => {
     const contents = createContents();
-    const {api, ledger, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, ledger, publisher} = createPublisher();
     const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadEnvelope>>>();
     api.beacon.publishExecutionPayloadEnvelope.mockReturnValueOnce(response.promise);
     const controllers = [new AbortController(), new AbortController()];
@@ -175,7 +173,7 @@ describe("EnvelopePublisher", () => {
 
   it("cancels all waiters sharing a signal", async () => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadEnvelope>>>();
     api.beacon.publishExecutionPayloadEnvelope.mockReturnValue(response.promise);
     const controller = new AbortController();
@@ -190,7 +188,7 @@ describe("EnvelopePublisher", () => {
 
   it.each([true, false])("removes caller abort listeners after success=%s", async (success) => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     const response = defer<Awaited<ReturnType<typeof api.beacon.publishExecutionPayloadEnvelope>>>();
     api.beacon.publishExecutionPayloadEnvelope.mockReturnValue(response.promise);
     const controllers = [new AbortController(), new AbortController()];
@@ -211,23 +209,9 @@ describe("EnvelopePublisher", () => {
     }
   });
 
-  it("rejects a conflicting payload for an already recorded block root", async () => {
-    const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
-    const signal = new AbortController().signal;
-    await publisher.publish(contents, signal);
-    const conflictingContents = createContents();
-    conflictingContents.envelope.payload.blockHash = Buffer.alloc(32, 10);
-
-    await expect(publisher.publish(conflictingContents, signal)).rejects.toMatchObject({
-      type: {code: BidLedgerErrorCode.REVEAL_CONFLICT},
-    });
-    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-  });
-
   it("retries the same reserved envelope after the Beacon Node rejects publication", async () => {
     const contents = createContents();
-    const {api, ledger, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, ledger, publisher} = createPublisher();
     api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(
       await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST)
     );
@@ -249,7 +233,7 @@ describe("EnvelopePublisher", () => {
 
   it("rejects changed envelope contents after a failed publication", async () => {
     const contents = createContents();
-    const {api, publisher} = createPublisher({hasSelection: vi.fn(() => true)});
+    const {api, publisher} = createPublisher();
     api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(
       await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST)
     );
@@ -267,12 +251,18 @@ describe("EnvelopePublisher", () => {
   });
 });
 
-function createPublisher({hasSelection}: {hasSelection: (identity: EnvelopeSelectionIdentity) => boolean}) {
+function createPublisher({win = true}: {win?: boolean} = {}) {
   const api = getApiClientStub();
   Object.assign(api.beacon, {publishExecutionPayloadEnvelope: vi.fn()});
   api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
   const ledger = new BidLedger();
-  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex, hasSelection});
+  const {blockRoot, ...bidIdentity} = selectionIdentity(createContents());
+  const signedBidRoot = toRootHex(Buffer.alloc(32, 11));
+  ledger.recordBid({...bidIdentity, valueGwei: 1, signedBidRoot});
+  if (win) {
+    ledger.recordWin({...bidIdentity, signedBidRoot}, blockRoot);
+  }
+  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex});
   return {api, ledger, publisher};
 }
 

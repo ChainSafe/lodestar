@@ -128,6 +128,11 @@ export class BidLedger {
     return toRecord(record);
   }
 
+  hasWon(identity: BidIdentity, blockRoot: RootHex): boolean {
+    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
+    return record !== null && record.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
+  }
+
   /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
