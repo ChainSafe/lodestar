@@ -106,3 +106,57 @@ describe("ProtoArray.getViableHeads", () => {
     expect(variantsOfRoot2.map((h) => h.payloadStatus).sort()).toEqual([PayloadStatus.EMPTY, PayloadStatus.FULL]);
   });
 });
+
+describe("ProtoArray.isDescendant", () => {
+  it("compares gloas payload-status variants of the same root", () => {
+    const fc = initProtoArray();
+    fc.onBlock(
+      {
+        ...blockFields({slot: 1, blockRoot: "2", parentRoot: "1", payloadStatus: PayloadStatus.PENDING}),
+        ...{
+          executionPayloadBlockHash: "0xeb",
+          executionPayloadNumber: 1,
+          executionPayloadGasLimit: 30_000_000,
+          executionStatus: ExecutionStatus.Valid,
+        },
+        parentBlockHash: "0xea",
+      },
+      1,
+      null
+    );
+
+    const {PENDING, EMPTY, FULL} = PayloadStatus;
+    // ancestor status, descendant status, isDescendant
+    const assertions: [PayloadStatus, PayloadStatus, boolean][] = [
+      [PENDING, PENDING, true],
+      [PENDING, EMPTY, true],
+      [EMPTY, EMPTY, true],
+      [EMPTY, PENDING, false],
+      // The FULL variant does not exist before the payload is revealed
+      [PENDING, FULL, false],
+      [FULL, FULL, false],
+    ];
+    for (const [ancestorStatus, descendantStatus, isDescendant] of assertions) {
+      expect(fc.isDescendant("2", ancestorStatus, "2", descendantStatus)).toBeWithMessage(
+        isDescendant,
+        `ancestor=${ancestorStatus} descendant=${descendantStatus} before payload`
+      );
+    }
+
+    fc.onExecutionPayload("2", 1, "0xeb", 1, 30_000_000, null, ExecutionStatus.Valid, DataAvailabilityStatus.Available);
+
+    const assertionsWithPayload: [PayloadStatus, PayloadStatus, boolean][] = [
+      [PENDING, FULL, true],
+      [FULL, FULL, true],
+      [FULL, PENDING, false],
+      [EMPTY, FULL, false],
+      [FULL, EMPTY, false],
+    ];
+    for (const [ancestorStatus, descendantStatus, isDescendant] of assertionsWithPayload) {
+      expect(fc.isDescendant("2", ancestorStatus, "2", descendantStatus)).toBeWithMessage(
+        isDescendant,
+        `ancestor=${ancestorStatus} descendant=${descendantStatus} after payload`
+      );
+    }
+  });
+});

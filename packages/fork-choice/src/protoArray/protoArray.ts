@@ -1617,13 +1617,9 @@ export class ProtoArray {
         continue;
       }
       if (this.justifiedEpoch !== GENESIS_EPOCH) {
-        // Same-root short-circuit: every payload-status variant of the justified block itself is
-        // in the filtered tree, but `isDescendant` from the default (PENDING) variant does not
-        // reach the sibling EMPTY/FULL variants of the same root.
         const descendsFromJustified =
-          node.blockRoot === this.justifiedRoot ||
-          (justifiedVariant !== undefined &&
-            this.isDescendant(this.justifiedRoot, justifiedVariant, node.blockRoot, node.payloadStatus));
+          justifiedVariant !== undefined &&
+          this.isDescendant(this.justifiedRoot, justifiedVariant, node.blockRoot, node.payloadStatus);
         if (!descendsFromJustified) {
           continue;
         }
@@ -2102,8 +2098,12 @@ export class ProtoArray {
       return false;
     }
 
-    if (ancestorRoot === descendantRoot && ancestorPayloadStatus === descendantPayloadStatus) {
-      return true;
+    if (ancestorRoot === descendantRoot) {
+      // The ancestor walk below starts at the parent block, so variants of the same block are compared here
+      return (
+        this.getNode(descendantRoot, descendantPayloadStatus) !== undefined &&
+        (ancestorPayloadStatus === descendantPayloadStatus || ancestorPayloadStatus === PayloadStatus.PENDING)
+      );
     }
 
     for (const node of this.iterateAncestorNodes(descendantRoot, descendantPayloadStatus)) {
