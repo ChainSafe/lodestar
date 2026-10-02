@@ -258,6 +258,29 @@ describe("PtcService", () => {
     expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 2, indices: [0]});
   });
 
+  it("Should not wait for the payload at a slot without duties", async () => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+    const waitForCanonicalPayload = vi.fn().mockResolvedValue(undefined);
+    ptcService["waitForCanonicalPayload"] = waitForCanonicalPayload;
+
+    await clock.tickSlotFns(1, controller.signal);
+
+    expect(waitForCanonicalPayload).not.toHaveBeenCalled();
+    expect(api.validator.producePayloadAttestationData).not.toHaveBeenCalled();
+  });
+
   it("Should perform duties of the first Gloas slot polled after the slot started", async () => {
     const clock = new ClockMock();
     const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 1});
