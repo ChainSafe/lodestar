@@ -22,77 +22,87 @@ describe("Builder JSON-RPC Engine connection", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  for (const fork of [ForkName.gloas, ForkName.heze] as const) {
-    it(`sends ${fork}'s attributes, explicit null custody and the supplied finality hashes`, async () => {
-      const attributes = ssz[fork].PayloadAttributes.defaultValue();
-      attributes.timestamp = 42;
-      attributes.slotNumber = 3;
-      attributes.targetGasLimit = 30_000_000n;
-      attributes.prevRandao.fill(4);
-      attributes.suggestedFeeRecipient = toHex(new Uint8Array(20).fill(5));
-      attributes.parentBeaconBlockRoot.fill(6);
-      if ("inclusionListTransactions" in attributes) {
-        attributes.inclusionListTransactions = [new Uint8Array([0x01, 0xff])];
-      }
-      const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: validResult}));
-      vi.stubGlobal("fetch", fetch);
-      const source = new EnginePayloadSource("local", makeEngine());
+  it.each(["prepare", "getPayload"] as const)("rejects Heze %s before sending a request", async (operation) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(Response.json({result: operation === "prepare" ? validResult : payloadResponse()}));
+    vi.stubGlobal("fetch", fetch);
+    const source = new EnginePayloadSource("local", makeEngine());
+    const result =
+      operation === "prepare"
+        ? prepare(makeEngine(), ForkName.heze)
+        : source.getPayload({sourceId: "local", fork: ForkName.heze, payloadId}, new AbortController().signal);
 
-      await expect(
-        source.prepare({fork, forkchoiceState, payloadAttributes: attributes}, new AbortController().signal)
-      ).resolves.toEqual({sourceId: "local", fork, payloadId});
+    await expect(result).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.UNSUPPORTED_FORK}});
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-      const body = JSON.parse(String(fetch.mock.calls[0][1]?.body));
-      expect(body).toEqual({
-        jsonrpc: "2.0",
-        id: 1,
-        method: fork === ForkName.heze ? "engine_forkchoiceUpdatedV5" : "engine_forkchoiceUpdatedV4",
-        params: [
-          forkchoiceState,
-          {
-            timestamp: "0x2a",
-            slotNumber: "0x3",
-            targetGasLimit: "0x1c9c380",
-            prevRandao: toHex(attributes.prevRandao),
-            suggestedFeeRecipient: attributes.suggestedFeeRecipient,
-            parentBeaconBlockRoot: toHex(attributes.parentBeaconBlockRoot),
-            withdrawals: [],
-            ...(fork === ForkName.heze ? {inclusionListTransactions: ["0x01ff"]} : {}),
-          },
-          null,
-        ],
-      });
+  it("sends Gloas attributes, explicit null custody and the supplied finality hashes", async () => {
+    const fork = ForkName.gloas;
+    const attributes = ssz[fork].PayloadAttributes.defaultValue();
+    attributes.timestamp = 42;
+    attributes.slotNumber = 3;
+    attributes.targetGasLimit = 30_000_000n;
+    attributes.prevRandao.fill(4);
+    attributes.suggestedFeeRecipient = toHex(new Uint8Array(20).fill(5));
+    attributes.parentBeaconBlockRoot.fill(6);
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: validResult}));
+    vi.stubGlobal("fetch", fetch);
+    const source = new EnginePayloadSource("local", makeEngine());
+
+    await expect(
+      source.prepare({fork, forkchoiceState, payloadAttributes: attributes}, new AbortController().signal)
+    ).resolves.toEqual({sourceId: "local", fork, payloadId});
+
+    const body = JSON.parse(String(fetch.mock.calls[0][1]?.body));
+    expect(body).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "engine_forkchoiceUpdatedV4",
+      params: [
+        forkchoiceState,
+        {
+          timestamp: "0x2a",
+          slotNumber: "0x3",
+          targetGasLimit: "0x1c9c380",
+          prevRandao: toHex(attributes.prevRandao),
+          suggestedFeeRecipient: attributes.suggestedFeeRecipient,
+          parentBeaconBlockRoot: toHex(attributes.parentBeaconBlockRoot),
+          withdrawals: [],
+        },
+        null,
+      ],
     });
+  });
 
-    it(`retrieves ${fork} payloads with getPayloadV6`, async () => {
-      const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: payloadResponse()}));
-      vi.stubGlobal("fetch", fetch);
-      const source = new EnginePayloadSource("local", makeEngine());
+  it("retrieves Gloas payloads with getPayloadV6", async () => {
+    const fork = ForkName.gloas;
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: payloadResponse()}));
+    vi.stubGlobal("fetch", fetch);
+    const source = new EnginePayloadSource("local", makeEngine());
 
-      const result = await source.getPayload({sourceId: "local", fork, payloadId}, new AbortController().signal);
+    const result = await source.getPayload({sourceId: "local", fork, payloadId}, new AbortController().signal);
 
-      expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toMatchObject({
-        method: "engine_getPayloadV6",
-        params: [payloadId],
-      });
-      expect(result.executionPayload).toEqual(ssz[fork].ExecutionPayload.defaultValue());
-      expect(result.executionPayloadValue).toBe(123n);
-      expect(result.executionRequests).toEqual(ssz[fork].ExecutionRequests.defaultValue());
-      expect(result.blobsBundle).toEqual({blobs: [], commitments: [], proofs: []});
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toMatchObject({
+      method: "engine_getPayloadV6",
+      params: [payloadId],
     });
-  }
+    expect(result.executionPayload).toEqual(ssz[fork].ExecutionPayload.defaultValue());
+    expect(result.executionPayloadValue).toBe(123n);
+    expect(result.executionRequests).toEqual(ssz[fork].ExecutionRequests.defaultValue());
+    expect(result.blobsBundle).toEqual({blobs: [], commitments: [], proofs: []});
+  });
 
   it.each([
-    [ForkName.heze, ssz.gloas.PayloadAttributes.defaultValue()],
-    [ForkName.gloas, ssz.heze.PayloadAttributes.defaultValue()],
-    [ForkName.heze, {...ssz.heze.PayloadAttributes.defaultValue(), inclusionListTransactions: undefined}],
-  ] as const)("rejects attributes incompatible with %s before sending", async (fork, attributes) => {
+    ssz.heze.PayloadAttributes.defaultValue(),
+    {...ssz.heze.PayloadAttributes.defaultValue(), inclusionListTransactions: undefined},
+  ])("rejects inclusion-list attributes on the Gloas connection before sending", async (attributes) => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
 
     await expect(
       makeEngine().notifyForkchoiceUpdate(
-        fork,
+        ForkName.gloas,
         headBlockHash,
         safeBlockHash,
         finalizedBlockHash,
@@ -102,13 +112,6 @@ describe("Builder JSON-RPC Engine connection", () => {
       )
     ).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.INVALID_ATTRIBUTES}});
     expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("keeps an empty Heze inclusion list on the wire", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: validResult}));
-    vi.stubGlobal("fetch", fetch);
-    await prepare(makeEngine(), ForkName.heze);
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).params[1].inclusionListTransactions).toEqual([]);
   });
 
   it.each(["INVALID", "ACCEPTED"])("rejects %s even if a payload ID is supplied", async (status) => {
@@ -149,10 +152,10 @@ describe("Builder JSON-RPC Engine connection", () => {
     await expect(prepare(makeEngine())).rejects.toMatchObject({type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"}});
   });
 
-  it("preserves an unsupported Heze method error without downgrading or retrying", async () => {
+  it("preserves an unsupported Engine method error without downgrading or retrying", async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({error: {code: -32601, message: "Method not found"}}));
     vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine(), ForkName.heze)).rejects.toMatchObject({
+    await expect(prepare(makeEngine())).rejects.toMatchObject({
       response: {error: {code: -32601}},
     });
     expect(fetch).toHaveBeenCalledTimes(1);

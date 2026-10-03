@@ -8,7 +8,6 @@ import {
   DEPOSIT_REQUEST_TYPE,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
-  ForkPostGloas,
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
@@ -77,11 +76,6 @@ export type EngineApiRpcParamTypes = {
     payloadAttributes?: PayloadAttributesRpc,
     custodyColumns?: DATA | null,
   ];
-  engine_forkchoiceUpdatedV5: [
-    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes: PayloadAttributesRpc | null,
-    custodyColumns: DATA | null,
-  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -117,7 +111,6 @@ export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
-  inclusionListSatisfied?: boolean | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -143,10 +136,6 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV4: {
-    payloadStatus: PayloadStatus;
-    payloadId: QUANTITY | null;
-  };
-  engine_forkchoiceUpdatedV5: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
@@ -283,7 +272,6 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
-  inclusionListTransactions?: DATA[];
 };
 
 export type ClientVersionRpc = {
@@ -356,13 +344,13 @@ export function hasPayloadValue(
 }
 
 export function parseExecutionPayload(
-  fork: ForkPostGloas,
+  fork: ForkName.gloas,
   response: EngineApiRpcReturnTypes["engine_getPayloadV6"]
 ): {
-  executionPayload: ExecutionPayload<ForkPostGloas>;
+  executionPayload: ExecutionPayload<ForkName.gloas>;
   executionPayloadValue: Wei;
-  blobsBundle?: BlobsBundle<ForkPostGloas>;
-  executionRequests?: ExecutionRequests<ForkPostGloas>;
+  blobsBundle?: BlobsBundle<ForkName.gloas>;
+  executionRequests?: ExecutionRequests<ForkName.gloas>;
   shouldOverrideBuilder?: boolean;
 };
 export function parseExecutionPayload(
@@ -485,7 +473,6 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions?.map(bytesToData),
   };
 }
 
@@ -504,7 +491,6 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions?.map((transaction) => dataToBytes(transaction, null)),
   };
 }
 

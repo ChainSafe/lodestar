@@ -8,16 +8,18 @@ import {
   serializePayloadAttributes,
 } from "@lodestar/beacon-node/execution/engine";
 import {PayloadSourceEngine} from "@lodestar/builder";
-import {NUMBER_OF_COLUMNS, isForkPostHeze} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {LodestarError, toHex} from "@lodestar/utils";
 
 export enum BuilderEngineErrorCode {
+  UNSUPPORTED_FORK = "BUILDER_ENGINE_UNSUPPORTED_FORK",
   INVALID_ATTRIBUTES = "BUILDER_ENGINE_INVALID_ATTRIBUTES",
   INVALID_CUSTODY_COLUMN = "BUILDER_ENGINE_INVALID_CUSTODY_COLUMN",
   PAYLOAD_NOT_VALID = "BUILDER_ENGINE_PAYLOAD_NOT_VALID",
 }
 
 type BuilderEngineErrorType =
+  | {code: BuilderEngineErrorCode.UNSUPPORTED_FORK; fork: string}
   | {code: BuilderEngineErrorCode.INVALID_ATTRIBUTES; fork: string}
   | {code: BuilderEngineErrorCode.INVALID_CUSTODY_COLUMN; column: number}
   | {code: BuilderEngineErrorCode.PAYLOAD_NOT_VALID; status: string; validationError: string | null};
@@ -36,9 +38,10 @@ export function createPayloadSourceEngine({url, ...options}: BuilderEngineOption
   const client = new JsonRpcHttpClient([url], options);
   return {
     async notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, attributes, columns, signal) {
-      const hasInclusionLists =
-        "inclusionListTransactions" in attributes && Array.isArray(attributes.inclusionListTransactions);
-      if (isForkPostHeze(fork) !== hasInclusionLists) {
+      if (fork !== ForkName.gloas) {
+        throw new BuilderEngineError({code: BuilderEngineErrorCode.UNSUPPORTED_FORK, fork});
+      }
+      if ("inclusionListTransactions" in attributes) {
         throw new BuilderEngineError({code: BuilderEngineErrorCode.INVALID_ATTRIBUTES, fork});
       }
 
@@ -54,7 +57,7 @@ export function createPayloadSourceEngine({url, ...options}: BuilderEngineOption
         custodyColumns = toHex(bits.uint8Array);
       }
 
-      const method = isForkPostHeze(fork) ? "engine_forkchoiceUpdatedV5" : "engine_forkchoiceUpdatedV4";
+      const method = "engine_forkchoiceUpdatedV4";
       const params: EngineApiRpcParamTypes[typeof method] = [
         {headBlockHash, safeBlockHash, finalizedBlockHash},
         serializePayloadAttributes(attributes),
@@ -79,6 +82,9 @@ export function createPayloadSourceEngine({url, ...options}: BuilderEngineOption
     },
 
     async getPayload(fork, payloadId, signal) {
+      if (fork !== ForkName.gloas) {
+        throw new BuilderEngineError({code: BuilderEngineErrorCode.UNSUPPORTED_FORK, fork});
+      }
       const method = "engine_getPayloadV6";
       const response = await client.fetch<EngineApiRpcReturnTypes[typeof method]>(
         {method, params: [payloadId]},

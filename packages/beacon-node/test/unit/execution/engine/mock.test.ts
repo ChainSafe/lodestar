@@ -7,17 +7,6 @@ import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.
 import {serializeExecutionPayload} from "../../../../src/execution/engine/types.js";
 
 describe("execution engine mock payload bodies", () => {
-  it("rejects Heze forkchoice calls until the mock implements inclusion lists", () => {
-    const {handlers} = new ExecutionEngineMockBackend({});
-    expect(() =>
-      handlers.engine_forkchoiceUpdatedV5(
-        {headBlockHash: ZERO_HASH_HEX, safeBlockHash: ZERO_HASH_HEX, finalizedBlockHash: ZERO_HASH_HEX},
-        null,
-        null
-      )
-    ).toThrowError(expect.objectContaining({type: {code: "ENGINE_MOCK_UNSUPPORTED_FORK", fork: ForkName.heze}}));
-  });
-
   function makePayload(id: number): ReturnType<typeof serializeExecutionPayload> {
     const payload = ssz.gloas.ExecutionPayload.defaultValue();
     payload.blockNumber = 2;
