@@ -1,5 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {isForkPostGloas} from "@lodestar/params";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
 import {getBeaconPoolApi} from "./pool/index.js";
@@ -30,6 +32,15 @@ export function getBeaconApi(
           genesisValidatorsRoot: chain.genesisValidatorsRoot,
         },
       };
+    },
+
+    async getProposerPreferences({slot}) {
+      const fork = config.getForkName(slot ?? chain.clock.currentSlot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `Proposer preferences are not supported before Gloas fork=${fork}`);
+      }
+
+      return {data: chain.proposerPreferencesPool.getAll(slot), meta: {version: fork}};
     },
   };
 }
