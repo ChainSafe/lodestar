@@ -5,6 +5,11 @@ import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, Fo
 import {toHex} from "@lodestar/utils";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
+  ForkchoiceUpdateError,
+  ForkchoiceUpdateErrorCode,
+  isForkchoiceUpdateInvalidError,
+} from "../../../src/execution/engine/interface.js";
+import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   parseExecutionPayload,
   serializeExecutionPayload,
@@ -167,6 +172,62 @@ describe("ExecutionEngine / http", () => {
     );
 
     expect(reqJsonRpcPayload).toEqual(request);
+  });
+
+  it("notifyForkchoiceUpdate INVALID throws ForkchoiceUpdateError carrying latestValidHash", async () => {
+    const headBlockHash = "0x19dc0a000000000000000000000000000000000000000000000000000000000a";
+    const parentBlockHash = "0x05a771b000000000000000000000000000000000000000000000000000000a05";
+    const validationError = "HeaderGasUsedMismatch";
+
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {
+        payloadStatus: {status: "INVALID", latestValidHash: parentBlockHash, validationError},
+        payloadId: null,
+      },
+    };
+
+    let caught: unknown;
+    try {
+      await executionEngine.notifyForkchoiceUpdate(ForkName.bellatrix, headBlockHash, headBlockHash, headBlockHash);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ForkchoiceUpdateError);
+    expect(isForkchoiceUpdateInvalidError(caught)).toBe(true);
+    if (!(caught instanceof ForkchoiceUpdateError)) throw caught;
+    expect(caught.type.code).toBe(ForkchoiceUpdateErrorCode.INVALID);
+    expect(caught.type.headBlockHash).toBe(headBlockHash);
+    expect(caught.type.latestValidHash).toBe(parentBlockHash);
+    expect(caught.type.validationError).toBe(validationError);
+  });
+
+  it("notifyForkchoiceUpdate INVALID with null latestValidHash surfaces null in error", async () => {
+    const headBlockHash = "0x19dc0a000000000000000000000000000000000000000000000000000000000b";
+
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {
+        payloadStatus: {status: "INVALID", latestValidHash: null, validationError: null},
+        payloadId: null,
+      },
+    };
+
+    let caught: unknown;
+    try {
+      await executionEngine.notifyForkchoiceUpdate(ForkName.bellatrix, headBlockHash, headBlockHash, headBlockHash);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(isForkchoiceUpdateInvalidError(caught)).toBe(true);
+    if (!(caught instanceof ForkchoiceUpdateError)) throw caught;
+    expect(caught.type.headBlockHash).toBe(headBlockHash);
+    expect(caught.type.latestValidHash).toBeNull();
+    expect(caught.type.validationError).toBeNull();
   });
 
   it("getPayloadBodiesByHash", async () => {
