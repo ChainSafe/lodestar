@@ -224,6 +224,7 @@ export class Batch {
     return {
       blockRoot: parentBlockRoot,
       blockRootHex: toRootHex(parentBlockRoot),
+      blockHash: this.latestBid.blockHash,
       kzgCommitments: this.latestBid.blobKzgCommitments,
     };
   }
