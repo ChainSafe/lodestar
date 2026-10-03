@@ -73,7 +73,11 @@ type AdvancePendingBlockResult =
   | "removed";
 
 class UnknownBlockRateLimitedError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /** Earliest backoff expiry of the rate-limited peers the download is waiting for */
+    readonly retryAt: number
+  ) {
     super(message);
     this.name = "UnknownBlockRateLimitedError";
   }
@@ -1085,8 +1089,9 @@ export class BlockInputSync {
           pendingBlock.status = PendingBlockInputStatus.pending;
         }
         this.logger.debug("Deferring unknown block download due to peer rate limit", logCtx, res.err);
-        if (!this.scheduleRateLimitBackoffRetry()) {
-          // The backoff expired in the meantime, there is no timer left to retry this download
+        if (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now()) {
+          // The backoff this download waited for expired in the meantime, a timer is only armed if another
+          // peer is still in backoff and would retry it later than needed
           this.triggerUnknownBlockSearch();
         }
         return;
@@ -1371,8 +1376,12 @@ export class BlockInputSync {
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
     }
-    if (res.err instanceof UnknownBlockRateLimitedError && !this.scheduleRateLimitBackoffRetry()) {
-      // The backoff expired in the meantime, there is no timer left to retry this download
+    if (
+      res.err instanceof UnknownBlockRateLimitedError &&
+      (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now())
+    ) {
+      // The backoff this download waited for expired in the meantime, a timer is only armed if another
+      // peer is still in backoff and would retry it later than needed
       this.triggerUnknownBlockSearch();
     }
   }
@@ -1509,9 +1518,11 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now) !== null) {
+        const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
+        if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
-            `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
+            `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`,
+            retryAt
           );
         }
 
@@ -1650,9 +1661,11 @@ export class BlockInputSync {
     );
     this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
 
-    if (deferredByRateLimit && this.peerBalancer.getNextRateLimitRetryAt() !== null) {
+    const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
+    if (retryAt !== null) {
       throw new UnknownBlockRateLimitedError(
-        `Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts: peers are rate-limited`
+        `Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts: peers are rate-limited`,
+        retryAt
       );
     }
     throw Error(`Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts.`);
@@ -1754,9 +1767,11 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now) !== null) {
+        const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
+        if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
-            `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
+            `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`,
+            retryAt
           );
         }
 
@@ -1862,8 +1877,9 @@ export class BlockInputSync {
 
     const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
 
-    if (deferredByRateLimit && this.peerBalancer.getNextRateLimitRetryAt() !== null) {
-      throw new UnknownBlockRateLimitedError(`${message} Peers are rate-limited.`);
+    const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
+    if (retryAt !== null) {
+      throw new UnknownBlockRateLimitedError(`${message} Peers are rate-limited.`, retryAt);
     }
 
     if (!isPendingBlockInput(cacheItem)) {
