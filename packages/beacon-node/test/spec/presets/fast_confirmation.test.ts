@@ -706,7 +706,13 @@ const fastConfirmationTest =
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
           // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
+          // consensus-specs#5672 fixed the gloas empty slot support discount to count only the
+          // parent node a block extends. The pinned v1.7.0-beta.2 vectors predate that fix and
+          // still assert the pre-fix confirmed root, so post-gloas they disagree with the spec.
+          // Unskip together with the spec-tests pin bump to the first release carrying #5672.
+          (ForkSeq[fork] >= ForkSeq.gloas &&
+            name.includes("is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_1")),
       },
     };
   };

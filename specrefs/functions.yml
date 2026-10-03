@@ -3151,7 +3151,7 @@
 - name: get_block_support_between_slots#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
-      search: export function getBlockSupportBetweenSlots(
+      search: export function getNodeSupportBetweenSlots(
   spec: |
     <spec fn="get_block_support_between_slots" fork="phase0" hash="a9987209">
     def get_block_support_between_slots(
