@@ -170,11 +170,16 @@ export interface IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }>;
 
+  /**
+   * REST returns null for blocks outside the execution fork's active era, even if the EL has them.
+   * Callers must group cross-fork requests by fork; JSON-RPC does not apply this era filter.
+   */
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
-  /** Amsterdam: like V1 but also returns the block access list (null if the EL no longer has it) */
+  /** Amsterdam: includes the block access list; REST returns null for bodies outside the Amsterdam era. */
   getPayloadBodiesByHashV2(blockHash: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
+  /** REST uses the same fork-era filter as by-hash requests and omits entries beyond the EL's head. */
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   getBlobs(
