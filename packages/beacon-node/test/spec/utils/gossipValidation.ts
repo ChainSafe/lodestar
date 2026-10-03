@@ -9,7 +9,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -33,6 +33,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -141,6 +142,8 @@ interface MetaYaml {
   current_time_ms?: bigint;
   messages: {
     offset_ms?: bigint;
+    /** Absolute receive time. TODO: temporary, not in the documented format, see messageTimeMs below */
+    current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
@@ -158,6 +161,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_inclusion_list: GossipType.inclusion_list,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -252,16 +256,7 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
 }
 
 function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatus {
-  switch (fork) {
-    case ForkName.deneb:
-    case ForkName.electra:
-    case ForkName.fulu:
-    case ForkName.gloas:
-      return DataAvailabilityStatus.Available;
-
-    default:
-      return DataAvailabilityStatus.PreData;
-  }
+  return isForkPostDeneb(fork) ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData;
 }
 
 function computePostState(
@@ -517,7 +512,15 @@ export async function runGossipValidationTest(
 
     const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
+      // TODO: the format only documents `offset_ms`
+      // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.2/tests/formats/networking/gossip_validation.md?plain=1#L58),
+      // but since consensus-specs#5294 the gloas and later generators also write an absolute per-message
+      // `current_time_ms`. Accepting both is temporary until upstream clarifies. If `current_time_ms` stays,
+      // upstream this to unstable; if the generators revert to `offset_ms`, drop the per-message branch.
+      const messageTimeMs =
+        message.current_time_ms !== undefined
+          ? Number(message.current_time_ms)
+          : baseCurrentTimeMs + Number(message.offset_ms ?? 0);
       clock.setCurrentTimeMs(messageTimeMs);
 
       let result: "valid" | "ignore" | "reject";
@@ -692,6 +695,14 @@ async function validateMessageForTopic(
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.inclusion_list: {
+      const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
+      const {committeeIndex} = await validateGossipInclusionList(chain, signedInclusionList);
+      // Mirror gossip handler: insert into the store so the first-or-second message rule works
+      chain.inclusionListStore.process(signedInclusionList, committeeIndex, true);
       break;
     }
 

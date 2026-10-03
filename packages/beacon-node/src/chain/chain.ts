@@ -100,6 +100,7 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
@@ -198,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
+  readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
@@ -332,6 +334,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
+    this.inclusionListStore = new InclusionListStore(config);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -1747,6 +1750,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
+    this.inclusionListStore.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

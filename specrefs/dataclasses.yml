@@ -125,7 +125,11 @@
     </spec>
 
 - name: GetInclusionListResponse#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/execution/engine/types.ts
+      search: export function deserializeInclusionList(
+    - file: packages/beacon-node/src/execution/engine/interface.ts
+      search: "getInclusionList(): Promise<bellatrix.Transactions>;"
   spec: |
     <spec dataclass="GetInclusionListResponse" fork="heze" hash="2d1de077">
     class GetInclusionListResponse:
@@ -205,7 +209,9 @@
     </spec>
 
 - name: InclusionListEntry#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: type InclusionListEntry = {
   spec: |
     <spec dataclass="InclusionListEntry" fork="heze" hash="a9d09dc2">
     @dataclass(eq=True, frozen=True)
@@ -215,7 +221,9 @@
     </spec>
 
 - name: InclusionListStore#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: export class InclusionListStore {
   spec: |
     <spec dataclass="InclusionListStore" fork="heze" hash="325155c8">
     class InclusionListStore:
@@ -594,7 +602,15 @@
     </spec>
 
 - name: Store#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/store.ts
+      search: export interface IForkChoiceStore
+    - file: packages/fork-choice/src/forkChoice/store.ts
+      search: "payloadInclusionListSatisfaction: Map<RootHex, boolean>;"
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadTimelinessVotes =
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadDataAvailabilityVotes =
   spec: |
     <spec dataclass="Store" fork="heze" hash="41f5c656">
     class Store:

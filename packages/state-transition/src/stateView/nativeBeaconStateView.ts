@@ -33,8 +33,10 @@ import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
+import {computeEpochAtSlot} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+import {getInclusionListCommittee} from "../util/shuffling.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
   ComputeNewStateRootInput,
@@ -337,6 +339,12 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBeaconCommitteeCountPerSlot.set(epoch, cached);
     }
     return cached;
+  }
+
+  // Derived here rather than delegated to the binding, which exposes no inclusion list committee
+  // accessor. getShufflingAtEpoch() is already cached per epoch, so this costs one array walk.
+  getInclusionListCommittee(slot: Slot): Uint32Array {
+    return getInclusionListCommittee(this.getShufflingAtEpoch(computeEpochAtSlot(slot)), slot);
   }
 
   get previousDecisionRoot(): RootHex {

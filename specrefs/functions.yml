@@ -4441,7 +4441,11 @@
     </spec>
 
 - name: get_forkchoice_store#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/forkChoice/index.ts
+      search: export function initializeForkChoiceFromFinalizedState(
+    - file: packages/fork-choice/src/forkChoice/store.ts
+      search: payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
   spec: |
     <spec fn="get_forkchoice_store" fork="heze" hash="84daaf9a">
     def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
@@ -4671,7 +4675,9 @@
     </spec>
 
 - name: get_inclusion_list_bits#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "getInclusionListBits(slot: Slot, dependentRoot: RootHex, onlyTimely = true): BitArray {"
   spec: |
     <spec fn="get_inclusion_list_bits" fork="heze" hash="feec924c">
     def get_inclusion_list_bits(
@@ -4703,7 +4709,11 @@
     </spec>
 
 - name: get_inclusion_list_committee#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/shuffling.ts
+      search: export function getInclusionListCommittee(
+    - file: packages/state-transition/src/util/shuffling.ts
+      search: export function computeInclusionListCommittee(
   spec: |
     <spec fn="get_inclusion_list_committee" fork="heze" hash="012e9fad">
     def get_inclusion_list_committee(state: BeaconState, slot: Slot) -> InclusionListCommittee:
@@ -4723,7 +4733,9 @@
     </spec>
 
 - name: get_inclusion_list_committee_assignment#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/api/impl/validator/index.ts
+      search: async getInclusionListCommitteeDuties({epoch, indices}) {
   spec: |
     <spec fn="get_inclusion_list_committee_assignment" fork="heze" hash="6273abaf">
     def get_inclusion_list_committee_assignment(
@@ -4745,7 +4757,9 @@
     </spec>
 
 - name: get_inclusion_list_due_ms#heze
-  sources: []
+  sources:
+    - file: packages/config/src/forkConfig/index.ts
+      search: "getInclusionListDueMs(): number {"
   spec: |
     <spec fn="get_inclusion_list_due_ms" fork="heze" hash="48bbb794">
     def get_inclusion_list_due_ms() -> Uint64:
@@ -4753,7 +4767,9 @@
     </spec>
 
 - name: get_inclusion_list_signature#heze
-  sources: []
+  sources:
+    - file: packages/validator/src/services/validatorStore.ts
+      search: async signInclusionList(
   spec: |
     <spec fn="get_inclusion_list_signature" fork="heze" hash="42bcbc85">
     def get_inclusion_list_signature(
@@ -4767,7 +4783,9 @@
     </spec>
 
 - name: get_inclusion_list_store#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/chain.ts
+      search: this.inclusionListStore = new InclusionListStore(config);
   spec: |
     <spec fn="get_inclusion_list_store" fork="heze" hash="73075f19">
     def get_inclusion_list_store() -> InclusionListStore:
@@ -4780,7 +4798,9 @@
     </spec>
 
 - name: get_inclusion_list_transactions#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "getInclusionListTransactions(slot: Slot, dependentRoot: RootHex, onlyTimely = true): bellatrix.Transactions {"
   spec: |
     <spec fn="get_inclusion_list_transactions" fork="heze" hash="18378c2a">
     def get_inclusion_list_transactions(
@@ -5879,7 +5899,9 @@
     </spec>
 
 - name: get_signed_inclusion_list#heze
-  sources: []
+  sources:
+    - file: packages/validator/src/services/inclusionList.ts
+      search: private async signAndPublishInclusionList(
   spec: |
     <spec fn="get_signed_inclusion_list" fork="heze" hash="138553a7">
     def get_signed_inclusion_list(
@@ -7605,7 +7627,9 @@
     </spec>
 
 - name: is_inclusion_list_bits_inclusive#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {"
   spec: |
     <spec fn="is_inclusion_list_bits_inclusive" fork="heze" hash="ea1a888b">
     def is_inclusion_list_bits_inclusive(
@@ -7826,7 +7850,9 @@
     </spec>
 
 - name: is_payload_inclusion_list_satisfied#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {"
   spec: |
     <spec fn="is_payload_inclusion_list_satisfied" fork="heze" hash="2f119ca9">
     def is_payload_inclusion_list_satisfied(store: Store, root: Root) -> bool:
@@ -8094,7 +8120,9 @@
     </spec>
 
 - name: is_valid_inclusion_list_signature#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/signatureSets/inclusionList.ts
+      search: export function getInclusionListSignatureSet(
   spec: |
     <spec fn="is_valid_inclusion_list_signature" fork="heze" hash="3c56208b">
     def is_valid_inclusion_list_signature(
@@ -9048,7 +9076,12 @@
     </spec>
 
 - name: on_execution_payload_envelope#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: '^\s+onExecutionPayload\('
+      regex: true
+    - file: packages/beacon-node/src/chain/blocks/importExecutionPayload.ts
+      search: this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
   spec: |
     <spec fn="on_execution_payload_envelope" fork="heze" hash="afd9bdaf">
     def on_execution_payload_envelope(
@@ -9093,7 +9126,11 @@
     </spec>
 
 - name: on_inclusion_list#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/validation/inclusionList.ts
+      search: async function validateInclusionList(
+    - file: packages/beacon-node/src/network/processor/gossipHandlers.ts
+      search: "[GossipType.inclusion_list]: async ({"
   spec: |
     <spec fn="on_inclusion_list" fork="heze" hash="8343efc5">
     def on_inclusion_list(store: Store, signed_inclusion_list: SignedInclusionList) -> None:
@@ -9537,7 +9574,9 @@
     </spec>
 
 - name: prepare_execution_payload#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts
+      search: export async function prepareExecutionPayload(
   spec: |
     <spec fn="prepare_execution_payload" fork="heze" hash="abb13bf4">
     def prepare_execution_payload(
@@ -10959,7 +10998,10 @@
     </spec>
 
 - name: process_inclusion_list#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: '^\s+process\($'
+      regex: true
   spec: |
     <spec fn="process_inclusion_list" fork="heze" hash="a441f361">
     def process_inclusion_list(
@@ -12473,7 +12515,9 @@
     </spec>
 
 - name: record_payload_inclusion_list_satisfaction#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {"
   spec: |
     <spec fn="record_payload_inclusion_list_satisfaction" fork="heze" hash="c05f1180">
     def record_payload_inclusion_list_satisfaction(
@@ -12681,7 +12725,9 @@
     </spec>
 
 - name: should_extend_payload#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {"
   spec: |
     <spec fn="should_extend_payload" fork="heze" hash="323b3263">
     def should_extend_payload(store: Store, root: Root) -> bool:
@@ -16542,7 +16588,9 @@
     </spec>
 
 - name: validate_execution_payload_bid_gossip#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/validation/executionPayloadBid.ts
+      search: "export async function validateGossipExecutionPayloadBid("
   spec: |
     <spec fn="validate_execution_payload_bid_gossip" fork="heze" hash="ee7d1f84">
     def validate_execution_payload_bid_gossip(
@@ -16765,7 +16813,9 @@
     </spec>
 
 - name: validate_inclusion_list_gossip#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/validation/inclusionList.ts
+      search: export async function validateGossipInclusionList(
   spec: |
     <spec fn="validate_inclusion_list_gossip" fork="heze" hash="fd58a724">
     def validate_inclusion_list_gossip(

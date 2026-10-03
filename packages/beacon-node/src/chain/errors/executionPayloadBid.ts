@@ -21,6 +21,7 @@ export enum ExecutionPayloadBidErrorCode {
   NO_MATCHING_PROPOSER_PREFERENCES = "EXECUTION_PAYLOAD_BID_ERROR_NO_MATCHING_PROPOSER_PREFERENCES",
   PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH",
   PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH",
+  INCLUSION_LIST_BITS_NOT_INCLUSIVE = "EXECUTION_PAYLOAD_BID_ERROR_INCLUSION_LIST_BITS_NOT_INCLUSIVE",
 }
 
 export type ExecutionPayloadBidErrorType =
@@ -85,6 +86,11 @@ export type ExecutionPayloadBidErrorType =
       builderIndex: BuilderIndex;
       bidFeeRecipient: string;
       expectedFeeRecipient: string;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
     }
   | {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;
