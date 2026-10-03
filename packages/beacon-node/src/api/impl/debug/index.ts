@@ -3,7 +3,14 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
+import {
+  BeaconState,
+  DataColumnSidecar,
+  DataColumnSidecars,
+  type SignedBeaconBlock,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -74,46 +81,57 @@ export function getDebugApi({
 
     async getDebugForkChoiceV2() {
       const {forkChoice} = chain;
+      const nodes = forkChoice.getAllNodes();
       return {
         data: {
           justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
           finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
-          forkChoiceNodes: forkChoice.getAllNodes().map((node) => {
-            // Payload-specific fields apply only to a revealed Gloas payload = the FULL variant of a
-            // Gloas block
-            const ptc = node.payloadStatus === PayloadStatus.FULL ? forkChoice.getPTCVoteCounts(node.blockRoot) : null;
+          forkChoiceNodes: nodes.map((node) => {
+            const parent = node.parent === undefined ? undefined : nodes[node.parent];
+            const ptc = forkChoice.getPTCVoteCounts(node.blockRoot);
             return {
-              payloadStatus: toPayloadStatusName(node.payloadStatus),
               slot: node.slot,
               blockRoot: node.blockRoot,
-              parentRoot: node.parentRoot,
+              payloadStatus: toPayloadStatusName(node.payloadStatus),
+              parentRoot:
+                node.parentBlockHash !== null && node.payloadStatus !== PayloadStatus.PENDING
+                  ? node.blockRoot
+                  : node.parentRoot,
+              parentPayloadStatus: parent === undefined ? null : toPayloadStatusName(parent.payloadStatus),
+              justifiedEpoch: node.justifiedEpoch,
+              finalizedEpoch: node.finalizedEpoch,
               weight: node.weight,
-              validity: toForkChoiceValidity(node.executionStatus),
+              validity:
+                node.executionStatus === ExecutionStatus.PreMerge
+                  ? "valid"
+                  : toForkChoiceValidity(node.executionStatus),
               executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+              payloadAttesterCount: ptc?.attesterCount ?? 0,
+              payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,
+              payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? 0,
               extraData: {
-                executionOptimistic: isOptimisticBlock(node),
-                timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
+                execution_optimistic: isOptimisticBlock(node),
+                timestamp: String(computeTimeAtSlot(config, node.slot, chain.genesisTime)),
                 target: node.targetRoot,
-                justifiedEpoch: node.justifiedEpoch,
-                finalizedEpoch: node.finalizedEpoch,
-                unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
-                unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
-                payloadAttesterCount: ptc?.attesterCount ?? null,
-                payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? null,
-                payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? null,
-                gasLimit:
+                unrealized_justified_epoch: String(node.unrealizedJustifiedEpoch),
+                unrealized_finalized_epoch: String(node.unrealizedFinalizedEpoch),
+                gas_limit:
                   node.payloadStatus === PayloadStatus.FULL && "executionPayloadGasLimit" in node
-                    ? node.executionPayloadGasLimit
+                    ? String(node.executionPayloadGasLimit)
                     : null,
               },
             };
           }),
           extraData: {
-            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
-            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
-            proposerBoostRoot: forkChoice.getProposerBoostRoot(),
-            previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
-            headRoot: forkChoice.getHeadRoot(),
+            unrealized_justified_checkpoint: ssz.phase0.Checkpoint.toJson(
+              forkChoice.getUnrealizedJustifiedCheckpoint()
+            ),
+            unrealized_finalized_checkpoint: ssz.phase0.Checkpoint.toJson(
+              forkChoice.getUnrealizedFinalizedCheckpoint()
+            ),
+            proposer_boost_root: forkChoice.getProposerBoostRoot(),
+            previous_proposer_boost_root: forkChoice.getPreviousProposerBoostRoot(),
+            head_root: forkChoice.getHeadRoot(),
           },
         },
       };
