@@ -63,6 +63,8 @@ const ignoredOperations = [
   "produceBlockV4",
   // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
   "submitBuilderPreferences",
+  // TODO: remove once the endpoint is part of the pinned beacon-APIs spec version
+  "getProposerPreferences",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {

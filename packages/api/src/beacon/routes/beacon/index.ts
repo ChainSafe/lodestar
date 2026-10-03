@@ -1,6 +1,9 @@
+import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, ssz} from "@lodestar/types";
+import {ArrayOf, Slot, phase0, ssz} from "@lodestar/types";
 import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
+import {VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import {Schema} from "../../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
@@ -29,6 +32,10 @@ export type {
   ValidatorStatus,
 } from "./state.js";
 
+const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);
+
+type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
+
 export type Endpoints = block.Endpoints &
   pool.Endpoints &
   state.Endpoints &
@@ -41,6 +48,18 @@ export type Endpoints = block.Endpoints &
       phase0.Genesis,
       EmptyMeta
     >;
+
+    /**
+     * Get proposer preferences
+     * Retrieves the signed proposer preferences known by the node for upcoming proposal slots.
+     */
+    getProposerPreferences: Endpoint<
+      "GET",
+      {slot?: Slot},
+      {query: {slot?: number}},
+      SignedProposerPreferencesList,
+      VersionMeta
+    >;
   };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -52,6 +71,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.Genesis,
         meta: EmptyMetaCodec,
+      },
+    },
+    getProposerPreferences: {
+      url: "/eth/v1/beacon/proposer_preferences",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {query: {slot: Schema.Uint}},
+      },
+      resp: {
+        data: SignedProposerPreferencesListType,
+        meta: VersionCodec,
       },
     },
     ...block.getDefinitions(config),
