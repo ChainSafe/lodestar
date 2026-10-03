@@ -341,6 +341,69 @@ describe("sync / range / chain", () => {
     });
   });
 
+  it("Should retry a rate-limited peer if the chain is stopped and started during the backoff", async () => {
+    vi.useFakeTimers();
+    let downloads = 0;
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
+      downloads++;
+      if (downloads === 1) {
+        throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + 1000});
+      }
+
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: 0,
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(2), root: ZERO_HASH};
+    const controller = new AbortController();
+    const clock = new Clock({config, genesisTime: 0, signal: controller.signal});
+    const initialSync = new SyncChain(
+      0,
+      target,
+      RangeSyncType.Finalized,
+      logSyncChainFns(logger, {
+        processChainSegment: async () => {},
+        downloadByRange,
+        getConnectedPeerSyncMeta,
+        reportPeer,
+        pruneBlockInputs,
+        onEnd: () => {},
+      }),
+      {config, logger, clock, custodyConfig, metrics: null},
+      undefined
+    );
+
+    try {
+      initialSync.addPeer(peer, target);
+      initialSync.startSyncing(0);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(downloads).toBe(1);
+
+      initialSync.stopSyncing();
+      initialSync.startSyncing(0);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(downloads).toBeGreaterThanOrEqual(2);
+    } finally {
+      initialSync.remove();
+      controller.abort();
+      vi.useRealTimers();
+    }
+  });
+
   it("Should handle rate-limited peer without counting as a failed download attempt", async () => {
     const startEpoch = 0;
     const targetEpoch = 4;

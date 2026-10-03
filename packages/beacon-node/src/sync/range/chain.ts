@@ -225,6 +225,9 @@ export class SyncChain {
       Math.floor((localFinalizedEpoch - this.lastEpochWithProcessBlocks) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
     this.advanceChain(lastEpochWithProcessBlocksAligned);
 
+    // stopSyncing() cleared the retry timer, but peers can still be in rate limit backoff
+    this.scheduleRateLimitBackoffRetry();
+
     // Potentially download new batches and process pending
     this.triggerBatchDownloader();
     this.triggerBatchProcessor();
