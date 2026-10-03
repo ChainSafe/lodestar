@@ -849,17 +849,20 @@ export class BlockInputSync {
     }
   };
 
-  private scheduleRateLimitBackoffRetry(): void {
+  /**
+   * Returns false if there is no backoff left to wait for, in which case no retry is scheduled.
+   */
+  private scheduleRateLimitBackoffRetry(): boolean {
     this.clearRateLimitBackoffTimer();
 
     if (!this.subscribedToNetworkEvents || (this.pendingBlocks.size === 0 && this.pendingPayloads.size === 0)) {
-      return;
+      return false;
     }
 
     const now = Date.now();
     const retryAt = this.peerBalancer.getNextRateLimitRetryAt();
     if (retryAt === null) {
-      return;
+      return false;
     }
 
     this.rateLimitBackoffTimeout = setTimeout(
@@ -870,6 +873,7 @@ export class BlockInputSync {
       },
       Math.max(0, retryAt - now)
     );
+    return true;
   }
 
   private clearRateLimitBackoffTimer(): void {
@@ -1081,7 +1085,10 @@ export class BlockInputSync {
           pendingBlock.status = PendingBlockInputStatus.pending;
         }
         this.logger.debug("Deferring unknown block download due to peer rate limit", logCtx, res.err);
-        this.scheduleRateLimitBackoffRetry();
+        if (!this.scheduleRateLimitBackoffRetry()) {
+          // The backoff expired in the meantime, there is no timer left to retry this download
+          this.triggerUnknownBlockSearch();
+        }
         return;
       }
 
@@ -1364,6 +1371,10 @@ export class BlockInputSync {
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
     }
+    if (res.err instanceof UnknownBlockRateLimitedError && !this.scheduleRateLimitBackoffRetry()) {
+      // The backoff expired in the meantime, there is no timer left to retry this download
+      this.triggerUnknownBlockSearch();
+    }
   }
 
   private async processPayload(pendingPayload: PendingPayloadInput): Promise<void> {
@@ -1488,14 +1499,17 @@ export class BlockInputSync {
       const pendingColumns = payloadInput?.hasAllData()
         ? new Set<number>()
         : new Set(payloadInput?.getMissingSampledColumnMeta().missing ?? []);
+      // Same `now` for both calls, a backoff expiring in between would be reported as no peer available
+      const now = Date.now();
       // prefer peers that gossiped this payload root to us (#9923)
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
         pendingColumns,
         excludedPeers,
-        cacheItem.peerIdStrings
+        cacheItem.peerIdStrings,
+        now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
+        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now) !== null) {
           throw new UnknownBlockRateLimitedError(
             `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
           );
@@ -1730,14 +1744,17 @@ export class BlockInputSync {
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
+      // Same `now` for both calls, a backoff expiring in between would be reported as no peer available
+      const now = Date.now();
       // prefer peers that gossiped this block root to us (#9923)
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
         pendingColumns,
         excludedPeers,
-        cacheItem.peerIdStrings
+        cacheItem.peerIdStrings,
+        now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
+        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now) !== null) {
           throw new UnknownBlockRateLimitedError(
             `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
           );
@@ -2037,8 +2054,11 @@ export class UnknownBlockPeerBalancer {
     this.rateLimitedUntilByPeer.set(peerId, rateLimitedUntilMs);
   }
 
-  getNextRateLimitRetryAt(pendingColumns?: Set<number>, excludedPeers?: Set<PeerIdStr>): number | null {
-    const now = Date.now();
+  getNextRateLimitRetryAt(
+    pendingColumns?: Set<number>,
+    excludedPeers?: Set<PeerIdStr>,
+    now = Date.now()
+  ): number | null {
     let retryAt: number | null = null;
 
     for (const [peerId, rateLimitedUntil] of this.rateLimitedUntilByPeer.entries()) {
@@ -2077,9 +2097,10 @@ export class UnknownBlockPeerBalancer {
   bestPeerForPendingColumns(
     pendingColumns: Set<number>,
     excludedPeers: Set<PeerIdStr>,
-    preferredPeers?: Set<PeerIdStr>
+    preferredPeers?: Set<PeerIdStr>,
+    now = Date.now()
   ): PeerSyncMeta | null {
-    const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers);
+    const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers, now);
     if (eligiblePeers.length === 0) {
       return null;
     }
@@ -2120,8 +2141,7 @@ export class UnknownBlockPeerBalancer {
     return totalActiveRequests;
   }
 
-  private filterPeers(pendingDataColumns: Set<number>, excludedPeers: Set<PeerIdStr>): PeerIdStr[] {
-    const now = Date.now();
+  private filterPeers(pendingDataColumns: Set<number>, excludedPeers: Set<PeerIdStr>, now: number): PeerIdStr[] {
     let maxColumnCount = 0;
     const considerPeers: {peerId: PeerIdStr; columnCount: number}[] = [];
     for (const [peerId, syncMeta] of this.peersMeta.entries()) {

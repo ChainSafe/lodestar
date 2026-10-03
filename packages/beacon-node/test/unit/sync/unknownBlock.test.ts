@@ -907,6 +907,55 @@ describe("UnknownBlockSync", () => {
 
       svc.close();
     });
+
+    it("retries a rate-limited download when the backoff expires around the retry timer", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xaa);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired
+      for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+        vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+        let retryTimerDue = false;
+        let reads = 0;
+        const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+          if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+          return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+        });
+        const sendBeaconBlocksByRoot = vi
+          .fn()
+          .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+          .mockRejectedValue(new Error("no block"));
+        const {service: svc, chainEmitter} = setupBlockSyncTest({
+          processBlock: vi.fn(),
+          sendBeaconBlocksByRoot,
+          peer: peerA,
+        });
+
+        try {
+          chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+            rootHex: blockRootHex,
+            peer: peerA,
+            source: BlockInputSource.gossip,
+          });
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+          retryTimerDue = true;
+          await vi.advanceTimersByTimeAsync(1100);
+
+          expect(sendBeaconBlocksByRoot.mock.calls.length, `readsBeforeExpiry=${readsBeforeExpiry}`).toBeGreaterThan(1);
+        } finally {
+          svc.close();
+          dateNowSpy.mockRestore();
+          vi.useRealTimers();
+        }
+      }
+    });
   });
 
   describe("payload sync flows", () => {
@@ -1070,6 +1119,50 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
+    });
+
+    it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {
+      const peer = await getRandPeerIdStr();
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired
+      for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+        vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+        let retryTimerDue = false;
+        let reads = 0;
+        const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+          if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+          return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+        });
+        const {payloadInput} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+          .mockRejectedValue(new Error("no envelope"));
+        const {emitter} = setupPayloadSyncTest({
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+          peers: [{peerId: peer}],
+        });
+
+        try {
+          emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+          await vi.advanceTimersByTimeAsync(0);
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+
+          retryTimerDue = true;
+          await vi.advanceTimersByTimeAsync(1100);
+
+          expect(
+            sendExecutionPayloadEnvelopesByRoot.mock.calls.length,
+            `readsBeforeExpiry=${readsBeforeExpiry}`
+          ).toBeGreaterThan(1);
+        } finally {
+          service.close();
+          dateNowSpy.mockRestore();
+          vi.useRealTimers();
+        }
+      }
     });
 
     it("fetches immediately for a slot-less envelope search", async () => {
