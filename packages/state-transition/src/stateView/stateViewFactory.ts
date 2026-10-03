@@ -1,40 +1,33 @@
-import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
 import {IBeaconStateView} from "./interface.js";
 
 // ---- createBeaconStateView (startup path) ----
 
-type NodeJSOpts = {
-  useNative: false;
-  anchorState: BeaconStateAllForks;
+type CreateBeaconStateViewOpts = {
+  useNative: boolean;
   config: BeaconConfig;
-  pubkeyCache: PubkeyCache;
-};
-
-type NativeOpts = {
-  useNative: true;
   stateBytes: Uint8Array;
 };
 
 /**
- * Create a BeaconStateView from a pre-deserialized state. Used at node startup.
+ * Create a BeaconStateView from raw SSZ bytes. Used at node startup.
  *
- * The caller is responsible for creating and populating `pubkeyCache` (it is also
- * passed separately to BeaconNode.init, so it must live outside this factory).
+ * Caller must reserve pubkey capacity before calling this function.
  *
  * Set `useNative: true` to use the native (Zig) implementation once available.
  */
-export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
+export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconStateView {
   if (opts.useNative) {
     throw new Error("Native (Zig) BeaconStateView not yet implemented");
     // TODO: return a new instance of NativeBeaconStateView
   }
-  const {anchorState, config, pubkeyCache} = opts;
-  const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
+  const {config, stateBytes} = opts;
+  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
+  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: false});
   return new BeaconStateView(cachedState);
 }
 

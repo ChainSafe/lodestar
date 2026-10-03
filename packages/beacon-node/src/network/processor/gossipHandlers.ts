@@ -1368,6 +1368,7 @@ function getSequentialHandlers(
                   case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                   case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
                     core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                    chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
                     // Misbehaving peer, but could highlight an issue in another client
                     logLevel = LogLevel.warn;
                     break;

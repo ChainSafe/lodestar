@@ -516,12 +516,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
-    versionedHashes: VersionedHashes
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex);
+      return await this.getBlobsV2(versionedHashesHex, buffers);
     }
     return await this.getBlobsV1(versionedHashesHex);
   }
@@ -551,8 +552,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
     if (buffers) {
-      if (buffers.length !== versionedHashesHex.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
+      if (buffers.length < versionedHashesHex.length) {
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
       }
 
       for (const [i, buffer] of buffers.entries()) {

@@ -222,6 +222,54 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
+  describe("isDescendant", () => {
+    it("matches a FULL ancestor only on branches that extend its FULL variant", () => {
+      const currentSlot = gloasForkSlot + 2;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // 0x03 extends the FULL variant of 0x02, 0x04 extends its EMPTY variant
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02ff"), currentSlot, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x04", "0x02", "0x02"), currentSlot, null);
+
+      expect(protoArray.isDescendant("0x02", PayloadStatus.FULL, "0x03", PayloadStatus.PENDING)).toBe(true);
+      expect(protoArray.isDescendant("0x02", PayloadStatus.FULL, "0x04", PayloadStatus.PENDING)).toBe(false);
+      expect(protoArray.isDescendant("0x02", PayloadStatus.EMPTY, "0x04", PayloadStatus.PENDING)).toBe(true);
+      expect(protoArray.isDescendant("0x02", PayloadStatus.PENDING, "0x04", PayloadStatus.PENDING)).toBe(true);
+
+      // 0x05 extends 0x04 before its payload is revealed, there is no FULL variant to match
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 2, "0x05", "0x04", "0x04"), currentSlot, null);
+      expect(protoArray.isDescendant("0x04", PayloadStatus.FULL, "0x05", PayloadStatus.PENDING)).toBe(false);
+
+      // The late payload creates the FULL variant but 0x05 still extends EMPTY
+      protoArray.onExecutionPayload(
+        "0x04",
+        currentSlot,
+        "0x04ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+      expect(protoArray.isDescendant("0x04", PayloadStatus.FULL, "0x05", PayloadStatus.PENDING)).toBe(false);
+    });
+  });
+
   describe("Pre-Gloas (Fulu) behavior", () => {
     let protoArray: ProtoArray;
 

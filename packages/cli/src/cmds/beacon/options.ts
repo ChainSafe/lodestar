@@ -4,7 +4,6 @@ import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {BeaconPaths, defaultBeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
-  forceGenesis?: boolean;
   genesisStateFile?: string;
   configFile?: string;
   bootnodesFile?: string;
@@ -22,6 +21,7 @@ type BeaconExtraArgs = {
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
+  pubkeysFile?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
   validatorMonitorLogs?: boolean;
@@ -30,12 +30,6 @@ type BeaconExtraArgs = {
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
-  forceGenesis: {
-    description: "Force beacon to create genesis without file",
-    type: "boolean",
-    hidden: true,
-  },
-
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
@@ -145,6 +139,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
+    type: "string",
+  },
+
+  pubkeysFile: {
+    hidden: true,
+    description: "Pubkey cache file, loaded on startup and saved on graceful shutdown",
+    defaultDescription: defaultBeaconPaths.pubkeysFile,
     type: "string",
   },
 

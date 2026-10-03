@@ -51,6 +51,7 @@ export interface IChainView {
   getCanonicalBlockByRoot(root: Root): ChainViewBlock | null;
   getBlockSummariesAtSlot(slot: Slot): ChainViewBlock[];
   getBlockSummariesByParentRoot(root: RootHex): ChainViewBlock[];
+  isDescendant(root: RootHex, status: PayloadStatus, descendantRoot: RootHex, descendantStatus: PayloadStatus): boolean;
   getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[];
   getCanonicalBlockRootSlotsByRange(
     startSlot: Slot,

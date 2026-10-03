@@ -115,7 +115,7 @@ describe("Sync Committee Signature validation", () => {
     const headState = new BeaconStateView(generateCachedAltairState({slot: currentSlot}, altairForkEpoch));
 
     chain.getHeadState.mockReturnValue(headState);
-    chain.bls.verifySignatureSets.mockReturnValue(false);
+    chain.bls.verifySignatureSets.mockResolvedValue(false);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE

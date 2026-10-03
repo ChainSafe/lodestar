@@ -8,7 +8,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
-import {PayloadError, PayloadErrorCode} from "./payloadError.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "./payloadError.js";
 import {ImportPayloadOpts} from "./types.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
@@ -25,6 +25,16 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
       return ExecutionStatus.Syncing;
     default:
       throw new Error(`Unexpected execution payload status for fork choice: ${status}`);
+  }
+}
+
+export class PayloadImportError extends PayloadError {
+  constructor(
+    readonly payloadInput: PayloadEnvelopeInput,
+    type: PayloadErrorType,
+    message?: string
+  ) {
+    super(type, message);
   }
 }
 
@@ -51,6 +61,20 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 7. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
+  this: BeaconChain,
+  payloadInput: PayloadEnvelopeInput,
+  dataAvailabilityStatus: DataAvailabilityStatus,
+  opts: ImportPayloadOpts = {}
+): Promise<void> {
+  try {
+    await importExecutionPayloadInner.call(this, payloadInput, dataAvailabilityStatus, opts);
+  } catch (e) {
+    if (e instanceof PayloadError) throw new PayloadImportError(payloadInput, e.type, e.message);
+    throw e;
+  }
+}
+
+async function importExecutionPayloadInner(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
   dataAvailabilityStatus: DataAvailabilityStatus,

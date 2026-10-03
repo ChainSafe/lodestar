@@ -286,6 +286,8 @@ export class BeaconEngine implements IBeaconEngine {
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
   private readonly stateArchiveStrategy: StateArchiveStrategy;
+  // Finalized writes are monotonic; restart from zero to include the newly persisted anchor.
+  private statePruneFromSlot: Slot = 0;
   // Historical (below-finalized) state serving via a worker thread; built lazily on --serveHistoricalState.
   private historicalStateRegen?: HistoricalStateRegen;
   private readonly dbName: string;
@@ -1552,18 +1554,18 @@ export class BeaconEngine implements IBeaconEngine {
     if (res.status === GossipValidationStatus.Accept) {
       // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
       try {
-        this.opPool.insertAttesterSlashing(fork, attesterSlashing);
+        this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.value);
         this.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
     }
-    return res;
+    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
   }
 
   async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
-    await validateApiAttesterSlashing.call(this, attesterSlashing);
-    this.opPool.insertAttesterSlashing(fork, attesterSlashing);
+    const verifiedDomains = await validateApiAttesterSlashing.call(this, attesterSlashing);
+    this.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
   }
 
   async validateGossipProposerSlashing(
@@ -1572,17 +1574,17 @@ export class BeaconEngine implements IBeaconEngine {
     const res = await runGossipValidation(() => validateGossipProposerSlashing.call(this, proposerSlashing));
     if (res.status === GossipValidationStatus.Accept) {
       try {
-        this.opPool.insertProposerSlashing(proposerSlashing);
+        this.opPool.insertProposerSlashing(proposerSlashing, res.value);
       } catch (e) {
         this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
       }
     }
-    return res;
+    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
   }
 
   async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    await validateApiProposerSlashing.call(this, proposerSlashing);
-    this.opPool.insertProposerSlashing(proposerSlashing);
+    const verifiedDomain = await validateApiProposerSlashing.call(this, proposerSlashing);
+    this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
   }
 
   async validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>> {
@@ -2008,12 +2010,22 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Prune finalized blocks + states below the retention window (engine-owned block/state DB). */
   async pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot> {
-    return pruneHistory(this.config, this.db, this.logger, this.metrics, finalizedEpoch, currentEpoch);
+    const {blockCutoffSlot, stateCutoffSlot} = await pruneHistory(
+      this.config,
+      this.db,
+      this.logger,
+      this.metrics,
+      finalizedEpoch,
+      currentEpoch,
+      this.statePruneFromSlot
+    );
+    this.statePruneFromSlot = stateCutoffSlot;
+    return blockCutoffSlot;
   }
 
   /** Populate the (engine-owned) op pool from its persisted DB repos. Call once on startup. */
   async loadOpPoolFromDisk(): Promise<void> {
-    await this.opPool.fromPersisted(this.db);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
   }
 
   /** Persist the (engine-owned) op pool to its DB repos. Call before stopping. */
@@ -3002,13 +3014,13 @@ export class BeaconEngine implements IBeaconEngine {
       };
 
       try {
-        await validateApiProposerSlashing.call(this, proposerSlashing);
+        const verifiedDomain = await validateApiProposerSlashing.call(this, proposerSlashing);
+        this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       } catch (e) {
         this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
         return;
       }
 
-      this.opPool.insertProposerSlashing(proposerSlashing);
       this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();

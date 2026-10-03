@@ -160,6 +160,23 @@ export class ChainView implements IChainView {
     return this.getBlocks().filter((block) => block.parentRoot === root);
   }
 
+  isDescendant(
+    root: RootHex,
+    status: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantStatus: PayloadStatus
+  ): boolean {
+    const ancestor = this.blocks.get(root)?.[status];
+    if (!ancestor) return false;
+    for (const block of this.iterateAncestorBlocks(descendantRoot, descendantStatus)) {
+      if (block.blockRoot === root) {
+        return block.payloadStatus === status || status === PayloadStatus.PENDING;
+      }
+      if (block.slot <= ancestor.slot) return false;
+    }
+    return false;
+  }
+
   getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[] {
     return Array.from(this.iterateAncestorBlocks(root, status))
       .filter((block) => block.payloadStatus !== PayloadStatus.PENDING)

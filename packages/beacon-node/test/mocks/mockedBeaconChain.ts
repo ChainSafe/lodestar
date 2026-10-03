@@ -80,7 +80,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   getHeadState: Mock<() => IBeaconStateView>;
   getHeadStateAtCurrentEpoch: Mock<() => Promise<IBeaconStateView>>;
   bls: {
-    verifySignatureSets: Mock<() => boolean>;
+    verifySignatureSets: Mock<BeaconEngine["bls"]["verifySignatureSets"]>;
     verifySignatureSetsSameMessage: Mock<() => boolean>;
     close: Mock;
     canAcceptWork: Mock<() => boolean>;
@@ -244,6 +244,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         get: vi.fn(),
         getOrReload: vi.fn(),
         remove: vi.fn(),
+        removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
       shufflingCache: new ShufflingCache(),

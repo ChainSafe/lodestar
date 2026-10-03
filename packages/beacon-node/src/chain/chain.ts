@@ -46,7 +46,7 @@ import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
-import {ReconstructMismatchPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
+import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -509,6 +509,15 @@ export class BeaconChain implements IBeaconChain {
     return this.chainView.getBlockSummariesByParentRoot(root);
   }
 
+  isDescendant(
+    root: RootHex,
+    status: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantStatus: PayloadStatus
+  ): boolean {
+    return this.chainView.isDescendant(root, status, descendantRoot, descendantStatus);
+  }
+
   getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[] {
     return this.chainView.getAllAncestorBlocks(root, status);
   }
@@ -733,12 +742,13 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Batch variant: archived header envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
-   * A body root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
-   * returns null for that entry, for peer-facing paths where the spec allows omission.
+   * An archived envelope that cannot be rebuilt (EL-unavailable body or body root mismatch) is not the
+   * same as an unknown one: `"throw"` surfaces it, `"omit"` returns null for that entry, for
+   * peer-facing paths where the spec allows omission.
    */
   async getSerializedExecutionPayloadEnvelopes(
     requests: {blockSlot: Slot; blockRootHex: RootHex}[],
-    onMismatch: ReconstructMismatchPolicy = "throw"
+    onMiss: ReconstructMissPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
     const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
@@ -777,14 +787,14 @@ export class BeaconChain implements IBeaconChain {
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
-          if (result.reason === "mismatch") {
-            if (onMismatch === "throw") throw result.error;
-            this.logger.debug(
-              "Archived envelope failed body root check against EL bodies",
-              {slot: result.slot},
-              result.error
-            );
-          }
+          if (onMiss === "throw") throw result.error;
+          this.logger.debug(
+            result.reason === "mismatch"
+              ? "Archived envelope failed body root check against EL bodies"
+              : "EL cannot serve bodies for archived envelope, omitting",
+            {slot: result.slot},
+            result.error
+          );
           continue;
         }
         out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
@@ -820,10 +830,7 @@ export class BeaconChain implements IBeaconChain {
     const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
       archived.headerEnvelope,
     ]);
-    if (isRebuildMiss(result)) {
-      if (result.reason === "mismatch") throw result.error;
-      return null;
-    }
+    if (isRebuildMiss(result)) throw result.error;
     return result;
   }
 
@@ -971,8 +978,6 @@ export class BeaconChain implements IBeaconChain {
   processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void {
     this.beaconEngine.processProposerEquivocation(slot, proposerIndex);
   }
-
-  /** Produce a proposer slashing from two conflicting signed block headers observed for the same slot and proposer */
 
   getStatus(): Status {
     // Read the cached head instead of the engine — its finalized* fields ARE the head state's

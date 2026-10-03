@@ -15,7 +15,7 @@ import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blo
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/payloadError.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/payloadError.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
@@ -287,8 +287,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       id: "downloaded parent is before finalized slot",
       event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
-      // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
-      // Test verifies blocks are cleaned up from pendingBlocks instead
       reportPeer: true,
     },
     {
@@ -550,7 +548,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         await sendBeaconBlocksByRootPromise;
         await sleep(200);
         // Downloaded block is before finalized slot, so blocks should be cleaned up
-        // (peer reporting is currently disabled in removeAndDownScoreAllDescendants)
         expect(processBlockSpy).not.toHaveBeenCalled();
       } else if (maxPendingBlocks !== undefined) {
         // With maxPendingBlocks=1 and unknownParent event, the scheduler can re-queue one pruned
@@ -2355,7 +2352,15 @@ describe("UnknownBlockSync", () => {
       expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
-    it("removes pending descendants after invalid parent payload", async () => {
+    it.each<PayloadErrorType>([
+      {code: PayloadErrorCode.INVALID_SIGNATURE},
+      {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+      {
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "invalid payload",
+      },
+    ])("removes pending descendants and evicts the envelope after invalid parent payload $code", async (errorType) => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
@@ -2384,13 +2389,10 @@ describe("UnknownBlockSync", () => {
       });
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const processExecutionPayload = vi.fn().mockRejectedValue(
-        new PayloadError({
-          code: PayloadErrorCode.INVALID_SIGNATURE,
-        })
-      );
+      const processExecutionPayload = vi.fn().mockRejectedValue(new PayloadError(errorType));
       const processBlock = vi.fn().mockResolvedValue(undefined);
       const seenPayloadPrune = vi.fn();
+      const seenPayloadRemoveInvalid = vi.fn();
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processExecutionPayload,
@@ -2402,6 +2404,7 @@ describe("UnknownBlockSync", () => {
               .fn()
               .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: seenPayloadPrune,
+            removeInvalid: seenPayloadRemoveInvalid,
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
 
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2428,6 +2431,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
       expect(seenPayloadPrune).not.toHaveBeenCalled();
+      expect(seenPayloadRemoveInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
 
       emitter.emit(routes.events.EventType.executionPayload, {
         slot: 99,

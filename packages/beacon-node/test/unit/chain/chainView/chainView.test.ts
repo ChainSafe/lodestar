@@ -87,6 +87,10 @@ describe("ChainView", () => {
       PayloadStatus.FULL,
     ]);
     expect(view.getFullBlockRootSlotsByRange(1, 3).nonFinalized).toEqual([]);
+    expect(view.isDescendant(root(2), PayloadStatus.FULL, child.blockRoot, child.payloadStatus)).toBe(false);
+    expect(view.isDescendant(root(2), PayloadStatus.EMPTY, child.blockRoot, child.payloadStatus)).toBe(true);
+    expect(view.isDescendant(root(2), PayloadStatus.PENDING, child.blockRoot, child.payloadStatus)).toBe(true);
+    expect(view.isDescendant(root(99), PayloadStatus.FULL, child.blockRoot, child.payloadStatus)).toBe(false);
     const otherChild = block(4, 3, 2, {
       payloadStatus: PayloadStatus.EMPTY,
       parentBlockHash: root(20),
@@ -94,6 +98,8 @@ describe("ChainView", () => {
     });
     view.applyUpdate(update(initial, {blocks: [otherChild], head: otherChild}));
     expect(view.getCanonicalProtoBlockAtSlot(1)?.payloadStatus).toBe(PayloadStatus.FULL);
+    expect(view.isDescendant(root(2), PayloadStatus.FULL, otherChild.blockRoot, otherChild.payloadStatus)).toBe(true);
+    expect(view.isDescendant(root(2), PayloadStatus.EMPTY, otherChild.blockRoot, otherChild.payloadStatus)).toBe(false);
     expect(view.getFullBlockRootSlotsByRange(1, 4).nonFinalized.map((b) => b.slot)).toEqual([1]);
     expect(view.getAllAncestorBlocks(pending.blockRoot, PayloadStatus.PENDING).map((b) => b.blockRoot)).toEqual([
       a.blockRoot,

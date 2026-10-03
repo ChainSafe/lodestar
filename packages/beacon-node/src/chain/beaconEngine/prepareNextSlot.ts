@@ -172,6 +172,9 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
       parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
     }
 
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
+
     let payloadAttributes: PayloadAttributes | undefined;
     // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
     // every slot. Without the flag, only emit the event if we are proposing in the next slot.
@@ -184,6 +187,8 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
         prepareSlot,
         parentBlockRoot: fromHex(updatedHead.blockRoot),
         parentBlockHash,
+        safeBlockHash,
+        finalizedBlockHash,
         feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
       });
       this.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
@@ -193,9 +198,6 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
     if (feeRecipient) {
       const preparationTime = computeTimeAtSlot(this.config, prepareSlot, this.genesisTime) - Date.now() / 1000;
       this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-
-      const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-      const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
 
       // awaiting here instead of throwing an async call because there is no other task
       // left for scheduler and this gives nice semantics to catch and log errors in the

@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {capella} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {capella, isGloasBeaconBlock} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -67,6 +67,10 @@ export async function importBlock(
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...(isGloasBeaconBlock(block.message) && {
+            blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+            builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+          }),
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {

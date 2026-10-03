@@ -26,7 +26,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
-import {ReconstructMismatchPolicy} from "../util/execution.js";
+import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
@@ -168,7 +168,7 @@ export interface IBeaconChain extends IChainView {
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getSerializedExecutionPayloadEnvelopes(
     requests: {blockSlot: Slot; blockRootHex: RootHex}[],
-    onMismatch?: ReconstructMismatchPolicy
+    onMiss?: ReconstructMissPolicy
   ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,

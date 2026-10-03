@@ -1,8 +1,36 @@
 import {Signature} from "@chainsafe/lodestar-z/blst";
-import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
-import {Slot, capella} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
+import {BLS_WITHDRAWAL_PREFIX, DOMAIN_BEACON_ATTESTER, DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {AttesterSlashing, Domain, Slot, capella, phase0} from "@lodestar/types";
 import {AggregateFast, AggregateFastElectra} from "./attestationPool.js";
+
+export function getProposerSlashingSignatureDomain(
+  config: BeaconConfig,
+  stateSlot: Slot,
+  slashing: phase0.ProposerSlashing
+): Domain {
+  return config.getDomain(stateSlot, DOMAIN_BEACON_PROPOSER, Number(slashing.signedHeader1.message.slot));
+}
+
+export function getAttesterSlashingSignatureDomains(
+  config: BeaconConfig,
+  stateSlot: Slot,
+  slashing: AttesterSlashing
+): [Domain, Domain] {
+  return [
+    config.getDomain(
+      stateSlot,
+      DOMAIN_BEACON_ATTESTER,
+      computeStartSlotAtEpoch(Number(slashing.attestation1.data.target.epoch))
+    ),
+    config.getDomain(
+      stateSlot,
+      DOMAIN_BEACON_ATTESTER,
+      computeStartSlotAtEpoch(Number(slashing.attestation2.data.target.epoch))
+    ),
+  ];
+}
 
 /**
  * Prune a Map indexed by slot to keep the most recent slots, up to `slotsRetained`

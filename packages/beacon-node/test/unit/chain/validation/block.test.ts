@@ -19,7 +19,7 @@ describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
-  let verifySignature: Mock<() => boolean>;
+  let verifySignature: Mock<MockedBeaconChain["beaconEngine"]["bls"]["verifySignatureSets"]>;
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;

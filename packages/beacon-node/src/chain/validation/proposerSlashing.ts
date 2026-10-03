@@ -1,12 +1,13 @@
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {Domain, phase0} from "@lodestar/types";
 import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
+import {getProposerSlashingSignatureDomain} from "../opPools/utils.js";
 
 export async function validateApiProposerSlashing(
   this: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing
-): Promise<void> {
+): Promise<Domain> {
   const prioritizeBls = true;
   return validateProposerSlashing.call(this, proposerSlashing, prioritizeBls);
 }
@@ -14,7 +15,7 @@ export async function validateApiProposerSlashing(
 export async function validateGossipProposerSlashing(
   this: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing
-): Promise<void> {
+): Promise<Domain> {
   return validateProposerSlashing.call(this, proposerSlashing);
 }
 
@@ -22,7 +23,7 @@ async function validateProposerSlashing(
   this: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing,
   prioritizeBls = false
-): Promise<void> {
+): Promise<Domain> {
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
   if (this.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
@@ -46,9 +47,11 @@ async function validateProposerSlashing(
   }
 
   const signatureSets = getProposerSlashingSignatureSets(this.config, state.slot, proposerSlashing);
+  const verifiedDomain = getProposerSlashingSignatureDomain(this.config, state.slot, proposerSlashing);
   if (!(await this.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
     });
   }
+  return verifiedDomain;
 }
