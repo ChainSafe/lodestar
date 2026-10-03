@@ -90,14 +90,14 @@ async function validateAggregateAndProof(
       });
     }
 
-    // [REJECT] If `aggregate.data.index == 1` (payload present for a past
-    //   block), the execution payload for `block` passes validation.
+    // [REJECT] If `aggregate.data.index == 1` (payload present for a past block)
+    //   the corresponding execution payload for `block` passes validation.
     // [IGNORE] When `aggregate.data.index == 1` (payload present for a past block),
-    // the corresponding execution payload for `block` has been seen (a client MAY queue
-    // attestations for processing once the payload is retrieved and SHOULD request the
-    // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-    // TODO - beacon engine: unstable uses this.seenPayloadEnvelope() which also checks the facade-owned
-    // seenPayloadEnvelopeInputCache; the engine has only the forkChoice branch.
+    //   the corresponding execution payload for `block` has been fully imported, including its
+    //   data -- i.e. `is_payload_verified(store, aggregate.data.beacon_block_root)` returns `True`
+    //   (a client MAY queue attestations for processing until the payload is imported and SHOULD
+    //   request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
+    //   `aggregate.data.beacon_block_root`).
     if (
       block !== null &&
       attData.index === 1 &&
@@ -196,6 +196,7 @@ async function validateAggregateAndProof(
   // -- i.e. `get_checkpoint_block(store, aggregate.data.beacon_block_root, aggregate.data.target.epoch) == aggregate.data.target.root`
   const attHeadBlock = verifyHeadBlockAndTargetRoot.call(
     this,
+
     attData.beaconBlockRoot,
     attTarget.root,
     attSlot,
@@ -210,6 +211,7 @@ async function validateAggregateAndProof(
 
   const shuffling = await getShufflingForAttestationVerification.call(
     this,
+
     attEpoch,
     attHeadBlock,
     RegenCaller.validateGossipAttestation

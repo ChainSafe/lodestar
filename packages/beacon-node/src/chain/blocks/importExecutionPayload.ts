@@ -7,9 +7,12 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
 import {PayloadError, PayloadErrorCode} from "./payloadError.js";
 import {ImportPayloadOpts} from "./types.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
+
+export {PayloadError, PayloadErrorCode} from "./payloadError.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -79,6 +82,10 @@ export async function importExecutionPayload(
   // 2. Verify the envelope (engine: fork choice lookup + regen state + fields + BLS signature) in
   // parallel with the EL `notifyNewPayload` (facade-owned). Mirrors the block pipeline's state/sig ∥ EL
   // split — the EL result is needed to map the fork-choice execution status below.
+  // TODO - beacon engine: split field verification from BLS to retain upstream fail-fast ordering before newPayload.
+  const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
+  this.logger.debug("Call engine api newPayload", logCtx);
+  const verifyStartSec = Date.now() / 1000;
   const [execResult] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
@@ -91,6 +98,8 @@ export async function importExecutionPayload(
       validSignature: opts.validSignature === true,
     }),
   ]);
+  this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+  this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
   // 3. Handle the facade-owned newPayload response; the engine consumes the mapped status below.
   switch (execResult.status) {
@@ -118,7 +127,15 @@ export async function importExecutionPayload(
       });
   }
 
-  // 4. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
+  const {source, seenTimestampSec} = payloadInput.getPayloadEnvelopeSource();
+  if (execResult.status === ExecutionPayloadStatus.VALID && source === PayloadEnvelopeInputSource.gossip) {
+    const nowSec = Date.now() / 1000;
+    this.metrics?.gossipExecutionPayloadEnvelope.executionPayload.recvToValidation.observe(nowSec - seenTimestampSec);
+    // same metric as pre-gloas, it tracks EL verification time regardless of fork
+    this.metrics?.gossipBlock.executionPayload.validationTime.observe(nowSec - verifyStartSec);
+  }
+
+  // 5. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
   // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {

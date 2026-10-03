@@ -40,7 +40,8 @@ function toPayloadStatusName(status: PayloadStatus): "pending" | "empty" | "full
 export function getDebugApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "db" | "sync">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
       const heads = chain.beaconEngine.getHeads();
@@ -134,7 +135,7 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const res = await chain.beaconEngine.getSerializedState(id);
       if (!res) {
         throw new ApiError(404, `State not found for id '${stateId}'`);

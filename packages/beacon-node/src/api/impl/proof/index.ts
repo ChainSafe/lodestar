@@ -9,7 +9,7 @@ import {ApiModules} from "../types.js";
 
 export function getProofApi(
   opts: ApiOptions,
-  {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
+  {chain, config, sync}: Pick<ApiModules, "chain" | "config" | "db" | "sync">
 ): ApplicationMethods<routes.proof.Endpoints> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
@@ -22,7 +22,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const res = await chain.beaconEngine.getStateProof(id, descriptor);
       if (!res) {
         throw new ApiError(404, `State not found for id '${stateId}'`);

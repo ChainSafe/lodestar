@@ -13,9 +13,17 @@ export enum ENRRelevance {
 }
 
 export function enrRelevance(enr: ENR, config: BeaconConfig, clock: IClock): ENRRelevance {
-  // We are not interested in peers that don't advertise at least one transport (tcp or quic)
-  const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-  const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+  // We are not interested in peers that don't advertise at least one transport (tcp or quic).
+  let multiaddrTCP: ReturnType<ENR["getLocationMultiaddr"]>;
+  let multiaddrQUIC: ReturnType<ENR["getLocationMultiaddr"]>;
+  // Malformed ENR endpoint fields can make multiaddr conversion throw.
+  // Treat endpoints that cannot be converted as unusable.
+  try {
+    multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
+    multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+  } catch {
+    return ENRRelevance.no_transport;
+  }
   if (!multiaddrTCP && !multiaddrQUIC) {
     return ENRRelevance.no_transport;
   }

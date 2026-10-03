@@ -1,20 +1,20 @@
+// Engine preparation runs through the flat engine-backed chain mock. Upstream event-order assertions are retained.
+
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
-import {toHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/beaconEngine.js";
-import {BeaconEngineErrorCode} from "../../../src/chain/beaconEngine/interface.js";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
-import {BuilderStatus} from "../../../src/execution/builder/http.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
-import {numToQuantity} from "../../../src/execution/engine/utils.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
+import {generateCachedBellatrixState, generateState, zeroProtoBlock} from "../../utils/state.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const abortController = new AbortController();
@@ -121,17 +121,31 @@ describe("PrepareNextSlot scheduler", () => {
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
-  it("bellatrix - should prepare payload and then emit SSE inside the engine", async () => {
+  it("fulu - should prepare payload and emit payload attributes", async () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
-    getForkStub.mockReturnValue(ForkName.bellatrix);
+    getForkStub.mockReturnValue(ForkName.fulu);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
-    const state = generateCachedBellatrixState();
-    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
+    forkChoiceStub.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
+    const fuluConfig = createBeaconConfig(getConfig(ForkName.fulu), new Uint8Array(32));
+    const makeState = (slot: number) =>
+      new BeaconStateView(
+        createCachedBeaconState(generateState({slot}, fuluConfig, true), {config: fuluConfig, pubkeyCache})
+      );
+    const headState = makeState(SLOTS_PER_EPOCH - 3);
+    vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
+    chainStub.getHeadState.mockReturnValue(headState);
+    const preparedState = makeState(SLOTS_PER_EPOCH - 1);
+    const computeStateHashTreeRoot = vi.spyOn(preparedState, "hashTreeRoot");
+    regenStub.getBlockSlotState.mockResolvedValue(preparedState);
     beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
@@ -143,101 +157,95 @@ describe("PrepareNextSlot scheduler", () => {
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
-    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.fulu,
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
+    );
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]).toBeLessThan(
-      spy.mock.invocationCallOrder[0]
+    // payload_attributes must not wait on the EL round trip or the state root warm-up
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(
+      executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
     );
-  });
-
-  function prepareBellatrixProposer(): BeaconStateView {
-    getForkStub.mockReturnValue(ForkName.bellatrix);
-    const head = {...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3};
-    chainStub.recomputeForkChoiceHead.mockReturnValue(head);
-    chainStub.predictProposerHead.mockReturnValue(head);
-    forkChoiceStub.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
-    const cachedState = generateCachedBellatrixState();
-    vi.spyOn(cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-    const state = new BeaconStateView(cachedState);
-    regenStub.getBlockSlotState.mockResolvedValue(state);
-    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
-    executionEngineStub.payloadIdCache = new PayloadIdCache();
-    return state;
-  }
-
-  it("returns a plain engine error and does not emit SSE after an EL failure", async () => {
-    prepareBellatrixProposer();
-    const spy = vi.fn();
-    chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
-    executionEngineStub.notifyForkchoiceUpdate.mockRejectedValue(new Error("EL preparation failed"));
-    const result = await chainStub.beaconEngine.prepareForNextSlot(SLOTS_PER_EPOCH - 2);
-    expect(result).toEqual({
-      ok: false,
-      code: BeaconEngineErrorCode.INTERNAL,
-      payload: {message: "EL preparation failed"},
-    });
-    expect(spy).not.toHaveBeenCalled();
-    expect(updateBuilderStatus).toHaveBeenCalledOnce();
-  });
-
-  it("reuses the shared payload ID cache while still emitting SSE", async () => {
-    const state = prepareBellatrixProposer();
-    const spy = vi.fn();
-    chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
-    executionEngineStub.payloadIdCache.add(
-      {
-        headBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
-        finalizedBlockHash: zeroProtoBlock.executionPayloadBlockHash ?? "0x" + "00".repeat(32),
-        timestamp: numToQuantity(computeTimeAtSlot(config, state.slot, state.genesisTime)),
-        prevRandao: toHex(state.getRandaoMix(state.epoch)),
-        suggestedFeeRecipient: "0x fee recipient address",
-      },
-      "0x1234"
+    expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
+    // attributes computed for the event are reused for the EL payload preparation
+    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][4]).toBe(
+      spy.mock.calls[0][0].data.payloadAttributes
     );
-    expect(await chainStub.beaconEngine.prepareForNextSlot(SLOTS_PER_EPOCH - 2)).toEqual({ok: true, data: null});
-    expect(executionEngineStub.notifyForkchoiceUpdate).not.toHaveBeenCalled();
-    expect(spy).toHaveBeenCalledOnce();
-  });
-
-  it("updates the engine-owned builder circuit breaker before checking builder status", async () => {
-    prepareBellatrixProposer();
-    Object.assign(chainStub.executionBuilder, {
-      faultInspectionWindow: 8,
-      allowedFaults: 1,
-      status: BuilderStatus.circuitBreaker,
-      updateStatus: vi.fn((status: BuilderStatus) => {
-        chainStub.executionBuilder.status = status;
-      }),
-      checkStatus: vi.fn().mockResolvedValue(undefined),
-    });
-    updateBuilderStatus.mockImplementation((slot) =>
-      BeaconEngine.prototype.updateBuilderStatus.call(chainStub.beaconEngine, slot)
-    );
-    forkChoiceStub.getSlotsPresent.mockReturnValue(8);
-    await chainStub.beaconEngine.prepareForNextSlot(SLOTS_PER_EPOCH - 2);
-    expect(chainStub.executionBuilder.status).toBe(BuilderStatus.enabled);
-    expect(chainStub.executionBuilder.checkStatus).toHaveBeenCalledOnce();
-    forkChoiceStub.getSlotsPresent.mockReturnValue(0);
-    chainStub.executionBuilder.checkStatus.mockClear();
-    await chainStub.beaconEngine.prepareForNextSlot(SLOTS_PER_EPOCH - 2);
-    expect(chainStub.executionBuilder.status).toBe(BuilderStatus.circuitBreaker);
-    expect(chainStub.executionBuilder.checkStatus).not.toHaveBeenCalled();
-  });
-
-  it("prunes DA only after a successful engine response", async () => {
-    getForkStub.mockReturnValue(ForkName.gloas);
-    const prune = vi.fn();
-    Object.assign(chainStub.seenPayloadEnvelopeInputCache, {pruneBelowParent: prune});
-    const prepare = vi
-      .spyOn(chainStub.beaconEngine, "prepareForNextSlot")
-      .mockResolvedValue({ok: true, data: {daPruneParent: zeroProtoBlock}});
-    await Promise.all([scheduler.prepareForNextSlot(1), vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS)]);
-    expect(prune).toHaveBeenCalledWith(zeroProtoBlock);
-    prune.mockClear();
-    prepare.mockResolvedValue({ok: false, code: BeaconEngineErrorCode.ABORTED, payload: {message: "aborted"}});
-    await Promise.all([scheduler.prepareForNextSlot(2), vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS)]);
-    expect(prune).not.toHaveBeenCalled();
     expect(loggerStub.error).not.toHaveBeenCalled();
+  });
+
+  it("post-fulu - should read proposer from head state and dial only the proposer head on reorg", async () => {
+    getForkStub.mockReturnValue(ForkName.fulu);
+    const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
+    // predicted proposer-boost-reorg: build on the parent block instead of the canonical head
+    const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
+    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    chainStub.predictProposerHead.mockReturnValue(proposerHead);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    updateBuilderStatus.mockReturnValue(void 0);
+
+    const headState = generateCachedBellatrixState();
+    vi.spyOn(headState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    chainStub.getHeadState.mockReturnValue(new BeaconStateView(headState));
+    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(generateCachedBellatrixState()));
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    // proposer comes from the head state, so no dial is needed just to learn it
+    expect(chainStub.getHeadState).toHaveBeenCalled();
+    // a single dial, on the proposer head (reorg parent) - not two dials
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledWith(
+      proposerHead,
+      SLOTS_PER_EPOCH - 1,
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("gloas - should update builder circuit breaker and check builder api status ahead of the slot", async () => {
+    // Anchor the fake clock to the start of clockSlot, else msFromSlot resolves against wall time
+    // and the scheduled check collapses to a zero delay
+    vi.setSystemTime((SLOTS_PER_EPOCH - 2) * config.SLOT_DURATION_MS);
+    getForkStub.mockReturnValue(ForkName.gloas);
+    const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
+    const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
+    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    chainStub.predictProposerHead.mockReturnValue(proposerHead);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    const state = generateCachedBellatrixState();
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    // post-fulu (gloas): proposer is read from the head state, not from a dialed prepare state
+    chainStub.getHeadState.mockReturnValue(new BeaconStateView(state));
+    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
+    // The legacy pre-gloas builder status path stays untouched
+    expect(updateBuilderStatus).not.toHaveBeenCalled();
+
+    // Past PREPARE_NEXT_SLOT_BPS but before the check is due, an undelayed check would have run
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 12);
+    expect(chainStub.builderApiClient.checkStatus).not.toHaveBeenCalled();
+
+    // Past BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS, connections are warmed before bids are requested
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 4);
+    expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
   });
 });

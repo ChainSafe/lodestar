@@ -1,22 +1,21 @@
+// TODO - beacon engine: transport engine-emitted events through the worker boundary.
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
   BlockExecutionStatus,
-  EpochDifference,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
-  PayloadExecutionStatus,
-  ProtoBlock,
-  UpdateHeadOpt,
+  getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
+  GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
@@ -26,15 +25,14 @@ import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {
   Attestation,
   BeaconBlock,
+  Epoch,
   IndexedAttestation,
   altair,
   electra,
@@ -68,7 +66,7 @@ export type VerifiedBlockBundle = {
 };
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importBlock(
@@ -78,23 +76,44 @@ export async function importBlock(
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportBlockOpts
 ): Promise<ImportBlockResult> {
-  const {blockInput, postState, parentBlockSlot, indexedAttestations, proposerBalanceDelta, seenTimestampSec} = v;
-  let execStatus: BlockExecutionStatus | PayloadExecutionStatus = v.executionStatus;
+  const fullyVerifiedBlock = {...v, dataAvailabilityStatus};
+  const {blockInput, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
+
+  let {executionStatus} = fullyVerifiedBlock;
+
   const block = blockInput.getBlock();
+
   const source = blockInput.getBlockSource();
+
   const {slot: blockSlot} = block.message;
-  // [beacon-engine] deviation: reuse the input root instead of rehashing the block.
-  const blockRootHex = blockInput.blockRootHex;
+
+  const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
+
+  const blockRootHex = toRootHex(blockRoot);
+
   const currentSlot = this.forkChoice.getTime();
+
   const currentEpoch = computeEpochAtSlot(currentSlot);
+
   const blockEpoch = computeEpochAtSlot(blockSlot);
+
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec = seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+
+  const receiveDelaySec =
+    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+
   const fork = this.config.getForkSeq(blockSlot);
-  const isExecutionState = isStatePostBellatrix(postState) && postState.isExecutionStateType;
+
+  // this is just a type assertion since blockinput with dataPromise type will not end up here
+  if (!blockInput.hasAllData) {
+    throw Error("Unavailable block can not be imported in forkchoice");
+  }
 
   // 2. Import block to fork choice
+
+  // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
+
   if (fork >= ForkSeq.gloas) {
     const parentRootHex = toRootHex(block.message.parentRoot);
     const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
@@ -104,53 +123,62 @@ export async function importBlock(
     if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
       throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
     }
-    execStatus = parentBlock.executionStatus;
+    executionStatus = parentBlock.executionStatus;
   }
 
-  // getBeaconProposerOrNull returns null if the head state is more than one epoch away from the
-  // block slot; we skip the proposer-boost canonical check as we cannot determine the proposer.
-  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
+  const importDelaySec = this.clock.secFromSlot(blockSlot);
 
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
-    blockDelaySec,
+    receiveDelaySec,
+    importDelaySec,
     currentSlot,
-    execStatus,
-    dataAvailabilityStatus,
-    expectedProposerIndex
+    executionStatus,
+    dataAvailabilityStatus
   );
 
-  // [beacon-engine] deviation: regen owns post-state insertion; facade owns block persistence.
+  // This adds the state necessary to process the next block
+  // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
+
   this.metrics?.importBlock.bySource.inc({source: source.source});
+
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // 3. Import attestations to fork choice
-  // [beacon-engine] deviation: keep the branch-local attestation epoch limit rather than the upstream file constant.
-  const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
-
-  if (
-    opts.importAttestations === AttestationImportOpt.Force ||
-    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
-  ) {
+  //
+  // - For each attestation
+  //   - Get indexed attestation
+  //   - Register attestation with fork-choice
+  //   - Register attestation with validator monitor (only after sync)
+  // Only process attestations of blocks with relevant attestations for the fork-choice:
+  // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
+  // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
+  if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
-    // [beacon-engine] deviation: bind the free attestation helpers to this engine.
-    const addAttestation =
-      fork >= ForkSeq.electra ? addAttestationPostElectra.bind(this) : addAttestationPreElectra.bind(this);
+    const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
 
     for (let i = 0; i < attestations.length; i++) {
       const attestation = attestations[i];
       try {
         const indexedAttestation = indexedAttestations[i];
         const {target, beaconBlockRoot} = attestation.data;
+
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-
-        addAttestation(postState, target, attDataRoot, attestation as Attestation<ForkPostElectra>, indexedAttestation);
-
+        addAttestation.call(
+          this,
+          postState,
+          target,
+          attDataRoot,
+          attestation as Attestation<ForkPostElectra>,
+          indexedAttestation
+        );
+        // Duplicated logic from fork-choice onAttestation validation logic.
+        // Attestations outside of this range will be dropped as Errors, so no need to import
         if (
           opts.importAttestations === AttestationImportOpt.Force ||
           (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
@@ -162,9 +190,8 @@ export async function importBlock(
           );
         }
 
-        // [beacon-engine] deviation: copy attesting indices before inserting them into the liveness cache.
-        // Register attesters seen in this block for the liveness cache (engine-owned).
-        this.seenBlockAttesters.addIndices(blockEpoch, Array.from(indexedAttestation.attestingIndices));
+        // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
+        this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
         const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
         const missedSlotVote =
@@ -182,6 +209,7 @@ export async function importBlock(
           blockSlot
         );
       } catch (e) {
+        // a block has a lot of attestations and it may has same error, we don't want to log all of them
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
           let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
           if (errWithCount === undefined) {
@@ -191,6 +219,7 @@ export async function importBlock(
             errWithCount.count++;
           }
         } else {
+          // always log other errors
           this.logger.warn("Error processing attestation from block", {slot: blockSlot}, e as Error);
         }
       }
@@ -205,7 +234,11 @@ export async function importBlock(
     }
   }
 
-  // 4. Import attester slashings
+  // 4. Import attester slashings to fork choice
+  //
+  // FORK_CHOICE_ATT_EPOCH_LIMIT is for attestation to become valid
+  // but AttesterSlashing could be found before that time and still able to submit valid attestations
+  // until slashed validator become inactive, see computeActivationExitEpoch() function
   if (
     opts.importAttestations === AttestationImportOpt.Force ||
     (opts.importAttestations !== AttestationImportOpt.Skip &&
@@ -213,6 +246,7 @@ export async function importBlock(
   ) {
     for (const slashing of block.message.body.attesterSlashings) {
       try {
+        // all AttesterSlashings are valid before reaching this
         this.forkChoice.onAttesterSlashing(slashing);
       } catch (e) {
         this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
@@ -220,16 +254,19 @@ export async function importBlock(
     }
   }
 
-  // 4.5. Import payload attestations (Gloas)
+  // 4.5. Import payload attestations to fork choice (Gloas)
+  //
   if (isGloasBeaconBlock(block.message)) {
     for (const payloadAttestation of block.message.body.payloadAttestations) {
       try {
+        // Extract PTC indices from aggregation bits
         const ptcIndices: number[] = [];
         for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
           if (payloadAttestation.aggregationBits.get(i)) {
             ptcIndices.push(i);
           }
         }
+
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
@@ -245,53 +282,29 @@ export async function importBlock(
     }
   }
 
-  // 5. Compute head
-  const oldHead = this.forkChoice.getHead();
-  const oldHeadBlockRoot = oldHead.blockRoot;
+  // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
-  this.metrics?.forkChoice.requests.inc();
-  const newHeadTimer = this.metrics?.forkChoice.findHead.startTimer({caller: ForkchoiceCaller.importBlock});
-  let newHead: ProtoBlock;
-  try {
-    newHead = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-  } catch (e) {
-    this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
-    throw e;
-  } finally {
-    newHeadTimer?.();
-  }
+  const oldHead = this.forkChoice.getHead();
+
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
-  // [beacon-engine] deviation: return head/reorg data for facade emission and head-cache refresh.
-  let headChanged = false;
-  let headResult: ImportBlockResult["head"] = null;
-  let reorg: ReorgEventData | null = null;
-
   if (newHead.blockRoot !== oldHead.blockRoot) {
-    headChanged = true;
-
+    // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    try {
-      headResult = {
-        block: newHead.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-        slot: newHead.slot,
-        state: newHead.stateRoot,
-        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-        executionOptimistic: isOptimisticBlock(newHead),
-      };
-    } catch (e) {
-      this.logger.debug("Error building head event data", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
-    }
-
     const delaySec = this.clock.secFromSlot(newHead.slot);
-    this.logger.verbose("New chain head", {slot: newHead.slot, root: newHead.blockRoot, delaySec});
+    this.logger.verbose("New chain head", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      delaySec,
+    });
 
     if (this.metrics) {
       this.metrics.headSlot.set(newHead.slot);
+      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+      // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
         const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
@@ -301,7 +314,6 @@ export async function importBlock(
       }
     }
 
-    // [beacon-engine] deviation: prune consensus pools here; facade emits checkpoint/head events.
     this.syncContributionAndProofPool.prune(newHead.slot);
     this.seenContributionAndProof.prune(newHead.slot);
 
@@ -309,7 +321,9 @@ export async function importBlock(
 
     const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
     if (ancestorResult.code === AncestorStatus.CommonAncestor) {
-      reorg = {
+      // CommonAncestor = chain reorg, old head and new head not direct descendants
+
+      const forkChoiceReorgEventData: ReorgEventData = {
         depth: ancestorResult.depth,
         epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
@@ -319,11 +333,19 @@ export async function importBlock(
         oldHeadState: oldHead.stateRoot,
         executionOptimistic: isOptimisticBlock(newHead),
       };
+
+      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
+      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
+
       this.metrics?.forkChoice.reorg.inc();
       this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
+    // Lightclient server support (only after altair)
+    // - Persist state witness
+    // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+      // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
           if (isStatePostAltair(postState)) {
@@ -340,126 +362,44 @@ export async function importBlock(
     }
   }
 
-  // [beacon-engine] deviation: retain branch ordering of shuffling/checkpoint processing before FCU.
-  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
-  if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
-  }
+  // 6. Queue notifyForkchoiceUpdate to engine api
+  //
+  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
+  // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
+  // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
+  // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
 
-  if (blockSlot % SLOTS_PER_EPOCH === 0) {
-    const checkpointState = postState;
-    const cp = getCheckpointFromState(checkpointState);
-    this.regen.addCheckpointState(cp, checkpointState);
-    this.emitter.emit(ChainEvent.checkpoint, cp);
-    this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
-
-    const activeValidatorsCount = checkpointState.activeValidatorCount;
-    this.metrics?.currentActiveValidators.set(activeValidatorsCount);
-    this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
-
-    const parentBlockSummary = isGloasBeaconBlock(block.message)
-      ? this.forkChoice.getBlockHexAndBlockHash(
-          toRootHex(checkpointState.latestBlockHeader.parentRoot),
-          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
-        )
-      : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
-
-    if (parentBlockSummary) {
-      const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;
-      const justifiedEpoch = justifiedCheckpoint.epoch;
-      const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
-      if (justifiedEpoch > preJustifiedEpoch) {
-        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
-        this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
-        this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
-      }
-      const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
-      const finalizedEpoch = finalizedCheckpoint.epoch;
-      const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
-      if (finalizedEpoch > preFinalizedEpoch) {
-        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: toRootHex(finalizedCheckpoint.root),
-          epoch: finalizedCheckpoint.epoch,
-          state: toRootHex(checkpointState.hashTreeRoot()),
-          executionOptimistic: false,
-        });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
-        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
-      }
-    }
-  }
-
-  // [beacon-engine] deviation: retain the nullable proposer handoff and epoch-boundary fallback.
-  let proposerIndexNextSlot: number | null = null;
-  if (blockSlot >= currentSlot && isExecutionState) {
-    try {
-      proposerIndexNextSlot = postState.getBeaconProposer(blockSlot + 1);
-    } catch {
-      // epoch boundary, proposer shuffle not yet stable
-    }
-  }
-
-  if (!postState.isStateValidatorsNodesPopulated()) {
-    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
-  }
-
-  this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
-  this.metrics?.proposerBalanceDeltaAny.observe(proposerBalanceDelta);
-  this.validatorMonitor?.registerImportedBlock(block.message, {proposerBalanceDelta});
-  if (isStatePostAltair(postState)) {
-    this.validatorMonitor?.registerSyncAggregateInBlock(
-      blockEpoch,
-      (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      postState.currentSyncCommitteeIndexed.validatorIndices
-    );
-  }
-
-  if (isBlockInputColumns(blockInput)) {
-    for (const {source} of blockInput.getSampledColumnsWithSource()) {
-      this.metrics?.dataColumns.bySource.inc({source});
-    }
-  } else if (isBlockInputBlobs(blockInput)) {
-    for (const {source} of blockInput.getAllBlobsWithSource()) {
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
-    }
-  }
-
-  // 6. Queue notifyForkchoiceUpdate to engine api.
+  // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
+  // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  // [beacon-engine] deviation: use the precomputed execution-state flag and nullable proposer.
-  if (isExecutionState && blockSlot >= currentSlot) {
+  if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
-      if (proposerIndexNextSlot !== null) {
-        // [beacon-engine] deviation: proposer fee-recipient lookup uses the engine accessor.
-        const feeRecipient = this.getProposerFeeRecipient(proposerIndexNextSlot);
-        if (feeRecipient && blockSummary !== null) {
-          const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
-            blockSummary,
-            this.clock.secFromSlot(currentSlot),
-            currentSlot
-          );
-          shouldOverrideFcu = result.shouldOverrideFcu;
-          if (!result.shouldOverrideFcu) {
-            notOverrideFcuReason = result.reason;
-          }
-        } else {
-          notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
+      const proposerIndex = postState.getBeaconProposer(proposalSlot);
+      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+
+      if (feeRecipient) {
+        // We would set this to true if
+        //  1) This is a gossip block
+        //  2) We are proposer of next slot
+        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
+          blockSummary,
+          this.clock.secFromSlot(currentSlot),
+          currentSlot
+        );
+        shouldOverrideFcu = result.shouldOverrideFcu;
+        if (!result.shouldOverrideFcu) {
+          notOverrideFcuReason = result.reason;
         }
       } else {
-        if (isStartSlotOfEpoch(proposalSlot)) {
-          notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-        }
+        notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
+      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
     }
 
     if (shouldOverrideFcu) {
@@ -495,8 +435,8 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
@@ -513,31 +453,108 @@ export async function importBlock(
     }
   }
 
-  // [beacon-engine] deviation: facade consumes import metadata instead of consensus state references.
+  if (!postState.isStateValidatorsNodesPopulated()) {
+    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+  }
+
+  // Cache shufflings when crossing an epoch boundary
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
+
+  if (parentEpoch < blockEpoch) {
+    const previousEpoch = blockEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : blockEpoch - 1;
+    if (
+      !this.shufflingCache.has(previousEpoch, postState.previousDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch, postState.currentDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch + 1, postState.nextDecisionRoot)
+    ) {
+      this.shufflingCache.processState(postState);
+      this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    }
+  }
+
+  if (blockSlot % SLOTS_PER_EPOCH === 0) {
+    // Cache state to preserve epoch transition work
+    const checkpointState = postState;
+    const cp = getCheckpointFromState(checkpointState);
+    this.regen.addCheckpointState(cp, checkpointState);
+    // consumers should not mutate state ever
+    this.emitter.emit(ChainEvent.checkpoint, cp);
+
+    // Note: in-lined code from previos handler of ChainEvent.checkpoint
+    this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
+
+    const activeValidatorsCount = checkpointState.activeValidatorCount;
+    this.metrics?.currentActiveValidators.set(activeValidatorsCount);
+    this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
+
+    const parentBlockSummary = isGloasBeaconBlock(block.message)
+      ? this.forkChoice.getBlockHexAndBlockHash(
+          toRootHex(checkpointState.latestBlockHeader.parentRoot),
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        )
+      : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
+
+    if (parentBlockSummary) {
+      const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;
+      const justifiedEpoch = justifiedCheckpoint.epoch;
+      const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
+      if (justifiedEpoch > preJustifiedEpoch) {
+        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
+        this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
+        this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
+      }
+    }
+  }
+
+  // Register stat metrics about the block after importing it
+  this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
+
+  this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
+
+  this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
+
+  if (isStatePostAltair(fullyVerifiedBlock.postState)) {
+    this.validatorMonitor?.registerSyncAggregateInBlock(
+      blockEpoch,
+      (block as altair.SignedBeaconBlock).message.body.syncAggregate,
+      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
+    );
+  }
+
+  if (isBlockInputColumns(blockInput)) {
+    for (const {source} of blockInput.getSampledColumnsWithSource()) {
+      this.metrics?.dataColumns.bySource.inc({source});
+    }
+  } else if (isBlockInputBlobs(blockInput)) {
+    for (const {source} of blockInput.getAllBlobsWithSource()) {
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
+    }
+  }
+  // [beacon-engine] deviation: return plain metadata; events and state remain engine-local.
   return {
-    headChanged,
-    head: headResult,
-    reorg,
+    headChanged: newHead.blockRoot !== oldHead.blockRoot,
+    head: null,
+    reorg: null,
     blockSummary,
-    proposerIndexNextSlot,
-    isExecutionState,
+    proposerIndexNextSlot: null,
+    isExecutionState: isStatePostBellatrix(postState) && postState.isExecutionStateType,
     prevFinalizedEpoch,
     currFinalizedEpoch,
-    oldHeadBlockRoot,
+    oldHeadBlockRoot: oldHead.blockRoot,
     newHeadBlockRoot: newHead.blockRoot,
     newHead,
     blockMeta: {
       slot: blockSlot,
       blockRootHex,
-      proposerBalanceDelta,
+      proposerBalanceDelta: v.proposerBalanceDelta,
       parentBlockSlot,
-      seenTimestampSec,
+      seenTimestampSec: v.seenTimestampSec,
     },
   };
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPreElectra(
@@ -559,7 +576,7 @@ export function addAttestationPreElectra(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPostElectra(
@@ -600,4 +617,12 @@ export function addAttestationPostElectra(
       );
     }
   }
+}
+
+const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+export function importsBlockAttestations(opts: ImportBlockOpts, blockEpoch: Epoch, currentEpoch: Epoch): boolean {
+  return (
+    opts.importAttestations === AttestationImportOpt.Force ||
+    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+  );
 }

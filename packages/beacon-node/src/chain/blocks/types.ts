@@ -2,6 +2,7 @@ import type {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import type {Slot, fulu} from "@lodestar/types";
+import {OrphanedPayloadEnvelope} from "./utils/chainSegment.js";
 
 export enum GossipedInputType {
   block = "block",
@@ -85,4 +86,11 @@ export type ImportBlockOpts = {
   validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
+};
+/**
+ * Result of processing a chain segment.
+ */
+export type ProcessBlocksResult = {
+  orphaned: OrphanedPayloadEnvelope[];
+  skipped: boolean;
 };

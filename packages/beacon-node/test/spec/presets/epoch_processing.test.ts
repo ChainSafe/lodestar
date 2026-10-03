@@ -14,9 +14,9 @@ import {
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createSpecTestMetrics, expectNoProgressiveBalancesMismatches} from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
@@ -84,11 +84,12 @@ const epochProcessing =
     }
 
     return {
-      testFunction: (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const stateTB = testcase.pre.clone();
         const state = createCachedBeaconStateTest(stateTB, config);
+        const {metrics, register} = createSpecTestMetrics();
 
-        const epochTransitionCache = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
+        const epochTransitionCache = beforeProcessEpoch(state, metrics);
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
@@ -97,6 +98,8 @@ const epochProcessing =
         } else {
           epochTransitionFn(state, epochTransitionCache);
         }
+
+        await expectNoProgressiveBalancesMismatches(register, testCaseName);
 
         state.commit();
 

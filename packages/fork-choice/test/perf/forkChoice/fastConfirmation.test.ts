@@ -1,6 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {
   buildFastConfirmationSnapshot,
   createFastConfirmationCache,
@@ -16,17 +17,22 @@ describe("forkchoice fast confirmation", () => {
     runFCRRulesBenchmark({initialValidatorCount, initialBlockCount, initialEquivocatedCount: 0});
   }
 
-  for (const initialBlockCount of [10 * SLOTS_PER_EPOCH, (4 * 60 * 60) / 12]) {
-    runFCRRulesBenchmark({initialValidatorCount: 600_000, initialBlockCount, initialEquivocatedCount: 0});
-  }
+  // Larger confirmed chain (more blocks) at a fixed validator count. initialBlockCount must be a
+  // multiple of SLOTS_PER_EPOCH so currentSlot lands on an epoch boundary and isConfirmedChainSafe() runs.
+  runFCRRulesBenchmark({
+    initialValidatorCount: 600_000,
+    initialBlockCount: 10 * SLOTS_PER_EPOCH,
+    initialEquivocatedCount: 0,
+  });
 
-  for (const initialEquivocatedCount of [1_000, 10_000, 300_000]) {
-    runFCRRulesBenchmark({
-      initialValidatorCount: 600_000,
-      initialBlockCount: 3 * SLOTS_PER_EPOCH,
-      initialEquivocatedCount,
-    });
-  }
+  // One equivocation case to keep the equivocation-scoring path covered. Kept at a smaller validator
+  // count because the test stub treats every slot's committee as the full validator set, which makes
+  // the equivocation path much heavier than mainnet — so this is path coverage, not a realistic figure.
+  runFCRRulesBenchmark({
+    initialValidatorCount: 100_000,
+    initialBlockCount: 3 * SLOTS_PER_EPOCH,
+    initialEquivocatedCount: 1_000,
+  });
 });
 
 /**
@@ -44,13 +50,21 @@ function runFCRRulesBenchmark(opts: Opts): void {
       // Vote everyone for head so the FCR vote-map paths see a populated voteNextIndices.
       everyoneVotes(head, forkChoice);
 
-      // Advance to second slot of epoch 2 (not epoch boundary)
-      const currentSlot = (opts.initialBlockCount + 1) as Slot;
-      forkChoice.updateTime(currentSlot);
+      // Measure the epoch-boundary path that walks the previous epoch's confirmed chain.
+      // Avoid calling updateTime() here: it would run FCR in setup instead of inside the benchmarked fn.
+      const currentSlot = opts.initialBlockCount as Slot;
+      const confirmedRoot = rootFromSlot(computeStartSlotAtEpoch((computeEpochAtSlot(currentSlot) - 1) as Epoch));
+      forkChoice["fcStore"].currentSlot = currentSlot;
+      forkChoice["fcStore"].confirmedRoot = confirmedRoot;
 
       // Set previousSlotHead/currentSlotHead for loop conditions
       forkChoice["fcStore"].previousSlotHead = head.blockRoot;
       forkChoice["fcStore"].currentSlotHead = head.blockRoot;
+
+      const confirmedBlock = forkChoice["getBlockHexDefaultStatus"](confirmedRoot);
+      if (!confirmedBlock || computeEpochAtSlot(confirmedBlock.slot) + 1 !== computeEpochAtSlot(currentSlot)) {
+        throw Error("fast confirmation benchmark must start at an epoch boundary with a previous-epoch confirmed root");
+      }
 
       // Extract private FCR context and store for direct calls
       const ctx = forkChoice["fastConfirmationContext"] as FastConfirmationContext;
@@ -73,6 +87,10 @@ function runFCRRulesBenchmark(opts: Opts): void {
       runFastConfirmationRules(snapshot, ctx, store, cache);
     },
   });
+}
+
+function rootFromSlot(slot: Slot): RootHex {
+  return `0x${String(slot).padStart(64, "0")}`;
 }
 
 function everyoneVotes(vote: ProtoBlock, forkChoice: ForkChoice): void {

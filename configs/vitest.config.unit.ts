@@ -5,6 +5,7 @@ const setupFiles = [
   path.join(import.meta.dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
   path.join(import.meta.dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
   path.join(import.meta.dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
+  path.join(import.meta.dirname, "../scripts/vitest/setupFiles/pubkeyCache.ts"),
 ];
 
 export const unitTestMinimalProject = defineProject({

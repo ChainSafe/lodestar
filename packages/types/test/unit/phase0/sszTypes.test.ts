@@ -29,3 +29,15 @@ describe("Validator ssz types", () => {
     }
   });
 });
+
+describe("Eth1Data ssz type", () => {
+  it("preserves depositCount values above Number.MAX_SAFE_INTEGER", () => {
+    const bytes = ssz.phase0.Eth1Data.serialize(ssz.phase0.Eth1Data.defaultValue());
+    bytes.set([0x01, 0, 0, 0, 0, 0, 0x20, 0], 32);
+
+    const eth1Data = ssz.phase0.Eth1Data.deserialize(bytes);
+
+    expect(eth1Data.depositCount).toBe(9007199254740993n);
+    expect(ssz.phase0.Eth1Data.serialize(eth1Data)).toEqual(bytes);
+  });
+});

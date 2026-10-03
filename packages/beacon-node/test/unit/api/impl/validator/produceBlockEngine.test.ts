@@ -55,7 +55,7 @@ describe("validator production engine boundary", () => {
     const response = await api.produceBlockV3({...request, blindedLocal: true, feeRecipient: "0x1234"});
     expect(modules.chain.beaconEngine.produceBlock).toHaveBeenCalledExactlyOnceWith({
       ...request,
-      graffiti: toGraffitiBytes(request.graffiti),
+      graffiti: toGraffitiBytes(`${request.graffiti} LS`),
       feeRecipient: "0x1234",
       strictFeeRecipientCheck: undefined,
       builderSelection: routes.validator.BuilderSelection.MaxProfit,
@@ -103,21 +103,38 @@ describe("validator production engine boundary", () => {
       ok: true,
       data: {
         data: block,
-        version: ForkName.gloas,
-        executionPayloadValue: 1n,
-        consensusBlockValue: 2n,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: 1n,
+          consensusBlockValue: 2n,
+          executionPayloadIncluded: false,
+        },
         executionPayloadSource: ProducedBlockSource.builder,
         produceResult,
       },
     });
-    expect(await api.produceBlockV4(request)).toEqual({
+    expect(
+      await api.produceBlockV4({
+        ...request,
+        includePayload: false,
+        builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: []},
+      })
+    ).toEqual({
       data: block,
-      meta: {version: ForkName.gloas, consensusBlockValue: 2n},
+      meta: {
+        version: ForkName.gloas,
+        executionPayloadValue: 1n,
+        consensusBlockValue: 2n,
+        executionPayloadIncluded: false,
+      },
     });
     expect(modules.chain.beaconEngine.produceBlockV4).toHaveBeenCalledExactlyOnceWith({
       ...request,
-      graffiti: toGraffitiBytes(request.graffiti),
+      graffiti: toGraffitiBytes(`${request.graffiti} LS`),
       feeRecipient: undefined,
+      strictFeeRecipientCheck: undefined,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: []},
     });
     expect([...modules.chain.blockProductionCache.values()]).toEqual([produceResult]);
     expect(modules.chain.beaconEngine.produceBlock).not.toHaveBeenCalled();
@@ -152,15 +169,14 @@ describe("validator production engine boundary", () => {
     expect(modules.chain.beaconEngine.produceBlock).not.toHaveBeenCalled();
   });
 
-  it("uses the facade cached head for syncing checks", async () => {
+  it("uses the engine head for syncing checks", async () => {
     const slot = 3 * SLOTS_PER_EPOCH;
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.SyncingHead);
-    modules.chain.getStatus = vi.fn().mockReturnValue({headSlot: 0});
+    modules.chain.forkChoice.getHead.mockReturnValue({...modules.chain.forkChoice.getHead(), slot: 0});
     const api = getValidatorApi(defaultApiOptions, modules);
     await expect(api.produceBlockV3({...request, slot})).rejects.toBeInstanceOf(NodeIsSyncing);
-    expect(modules.chain.getStatus).toHaveBeenCalledOnce();
     expect(modules.chain.beaconEngine.produceBlock).not.toHaveBeenCalled();
-    expect(modules.chain.beaconEngine.getHead).not.toHaveBeenCalled();
+    expect(modules.chain.beaconEngine.getHead).toHaveBeenCalledOnce();
   });
 });

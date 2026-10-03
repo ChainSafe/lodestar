@@ -113,7 +113,7 @@ export function modifyStateSameValidator(seedState: BeaconStateCapella): BeaconS
   state.blockRoots.set(0, crypto.randomBytes(32));
   state.stateRoots.set(0, crypto.randomBytes(32));
   state.historicalRoots.push(crypto.randomBytes(32));
-  state.eth1Data.depositCount = 1000;
+  state.eth1Data.depositCount = 1000n;
   state.eth1DataVotes.push(ssz.phase0.Eth1Data.toViewDU(ssz.phase0.Eth1Data.defaultValue()));
   state.eth1DepositIndex = 1000;
   state.balances.set(0, 30);

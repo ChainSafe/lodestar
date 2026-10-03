@@ -1,4 +1,5 @@
 import {routes} from "@lodestar/api";
+import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -48,21 +49,13 @@ export async function importBlock(
   // On unstable merges, sync that logic there; retain facade side effects here.
   const r = await this.beaconEngine.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
 
-  // Emit head event (engine already pruned pools, registered seen-attesters, and set head state)
-  if (r.head !== null) {
-    try {
-      this.emitter.emit(routes.events.EventType.head, r.head);
-    } catch (e) {
-      this.logger.debug("Error emitting head event", {slot: r.head.slot, root: r.head.block}, e as Error);
-    }
+  // [beacon-engine] moved: head/reorg events are emitted by engine fork-choice transitions.
+  if (this.config.getForkSeq(blockSlot) >= ForkSeq.gloas) {
+    callInNextEventLoop(() => {
+      const parent = this.beaconEngine.getBlockHexDefaultStatus(r.newHead.parentRoot);
+      if (parent) this.seenPayloadEnvelopeInputCache.pruneBelowParent(parent);
+    });
   }
-
-  // Emit chain reorg event
-  if (r.reorg !== null) {
-    this.emitter.emit(routes.events.EventType.chainReorg, r.reorg);
-    this.logger.verbose("Chain reorg", r.reorg);
-  }
-
   // Refresh the facade head cache and emit forkChoiceJustified/forkChoiceFinalized from the new head.
   // The engine no longer emits these (FFI-honest); they are derived facade-side from the head ProtoBlock.
   this.updateHeadAndEmitCheckpointEvents(r.newHead);
@@ -128,3 +121,6 @@ export async function importBlock(
     delaySec: this.clock.secFromSlot(blockSlot),
   });
 }
+
+// Upstream policy helper is shared by the facade segment filter and engine import.
+export {importsBlockAttestations} from "../beaconEngine/importBlock.js";

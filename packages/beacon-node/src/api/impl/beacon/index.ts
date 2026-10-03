@@ -7,7 +7,7 @@ import {getBeaconRewardsApi} from "./rewards/index.js";
 import {getBeaconStateApi} from "./state/index.js";
 
 export function getBeaconApi(
-  modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">
+  modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db" | "sync">
 ): ApplicationMethods<routes.beacon.Endpoints> {
   const block = getBeaconBlockApi(modules);
   const pool = getBeaconPoolApi(modules);

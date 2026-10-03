@@ -106,6 +106,8 @@ async function validateExecutionPayloadEnvelope(
   if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
@@ -115,6 +117,8 @@ async function validateExecutionPayloadEnvelope(
   if (envelope.builderIndex !== bidBuilderIndex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex,
     });
@@ -124,6 +128,8 @@ async function validateExecutionPayloadEnvelope(
   if (toRootHex(payload.blockHash) !== bidBlockHashHex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
       bidBlockHash: bidBlockHashHex,
     });
@@ -134,6 +140,8 @@ async function validateExecutionPayloadEnvelope(
   if (!byteArrayEquals(requestsRoot, bidExecutionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(bidExecutionRequestsRoot),
     });
@@ -155,7 +163,6 @@ async function validateExecutionPayloadEnvelope(
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     this.config,
-    this.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     proposerIndex
@@ -164,6 +171,8 @@ async function validateExecutionPayloadEnvelope(
   if (!(await this.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot: payload.slotNumber,
+      root: blockRootHex,
     });
   }
 }

@@ -3,6 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
+  ForkName,
   ForkPostBellatrix,
   ForkPreGloas,
   ForkSeq,
@@ -34,24 +35,29 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {ErrorAborted, fromHex, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, byteArrayEquals, fromHex, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {GossipValidationStatus} from "../../../chain/beaconEngine/gossipValidationResult.js";
 import {BeaconEngineErrorCode, ProductionResponse} from "../../../chain/beaconEngine/interface.js";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
-import {AttestationErrorCode, SyncCommitteeErrorCode} from "../../../chain/errors/index.js";
+import {
+  AttestationErrorCode,
+  ProposerPreferencesErrorCode,
+  SyncCommitteeErrorCode,
+} from "../../../chain/errors/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullGloas, ProduceResult} from "../../../chain/produceBlock/index.js";
+import {decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
+import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {getFixedListElementBytes, getVariableListElementBytes} from "../../../util/sszBytes.js";
 import {ApiOptions} from "../../options.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {notWhileSyncing} from "../utils.js";
 import {computeSubnetForCommitteesAtSlot} from "./utils.js";
 
 /**
@@ -145,37 +151,6 @@ export function getValidatorApi(
   }
 
   /**
-   * Reject any request while the node is syncing
-   */
-  function notWhileSyncing(): void {
-    // Consider node synced before or close to genesis
-    if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
-      return;
-    }
-
-    const syncState = sync.state;
-    switch (syncState) {
-      case SyncState.SyncingFinalized:
-      case SyncState.SyncingHead: {
-        const currentSlot = chain.clock.currentSlot;
-        // [beacon-engine] deviation: production sync gating reads the facade cached head.
-        const headSlot = chain.getStatus().headSlot;
-        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
-        }
-
-        return;
-      }
-
-      case SyncState.Synced:
-        return;
-
-      case SyncState.Stalled:
-        throw new NodeIsSyncing("waiting for peers");
-    }
-  }
-
-  /**
    * Post merge, the CL and EL could be out of step in the sync, and could result in
    * Syncing status of the chain head. To be precise:
    * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
@@ -187,12 +162,13 @@ export function getValidatorApi(
    * Following activities should be skipped on an Optimistic head (with Syncing status):
    * 1. Attestation if targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
-   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
-   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
-   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
-   *
-   * TODO/PENDING: SyncCommitteeSignatures should also be aborted, the best way to address this
-   *   is still in flux and will be updated as and when other CL's figure this out.
+   * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
+   *    explicitly as only local payload production consults the EL, blinded blocks from an
+   *    external builder or bid based blocks (gloas) can be produced without a synced EL.
+   * 4. SyncCommitteeSignature (base sync committee message) is aborted in the validator client
+   *    (see SyncCommitteeService) when the head root it would sign is optimistic, since it is
+   *    produced from the head root without a beacon-node produce endpoint to gate here. Spec:
+   *    https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
    */
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
@@ -267,7 +243,7 @@ export function getValidatorApi(
       builderBoostFactor,
       ...productionOpts
     }) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
       if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
@@ -276,7 +252,10 @@ export function getValidatorApi(
         slot,
         randaoReveal,
         graffiti: toGraffitiBytes(
-          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+          getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+            private: opts.private,
+            graffitiAppend: chain.opts.graffitiAppend,
+          })
         ),
         feeRecipient: productionOpts.feeRecipient,
         strictFeeRecipientCheck: productionOpts.strictFeeRecipientCheck,
@@ -307,21 +286,34 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    // [beacon-engine] moved: parent/bid selection and block production now live in
-    // packages/beacon-node/src/chain/beaconEngine/produceEngineOrBuilderBlock.ts#produceBlockV4.
-    // On unstable merges, sync production changes there and API wrapper changes here.
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+    async produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      includePayload,
+      builderConfig,
+    }) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      const builderBoostFactor = builderConfig.builderBoostFactor;
+      if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+        throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+      }
+
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+          private: opts.private,
+          graffitiAppend: chain.opts.graffitiAppend,
+        })
       );
 
       const result = await chain.beaconEngine.produceBlockV4({
@@ -329,14 +321,17 @@ export function getValidatorApi(
         randaoReveal,
         graffiti: graffitiBytes,
         feeRecipient,
+        strictFeeRecipientCheck,
+        includePayload,
+        builderConfig,
       });
-      const {data, version, consensusBlockValue, produceResult} = unwrapProductionResult(result);
-      cacheProducedBlock(data, produceResult, ProducedBlockSource.engine);
-      return {data, meta: {version, consensusBlockValue}};
+      const {data, meta, produceResult, executionPayloadSource} = unwrapProductionResult(result);
+      cacheProducedBlock("block" in data ? data.block : data, produceResult, executionPayloadSource);
+      return {data, meta};
     },
 
     async produceAttestationData({committeeIndex, slot}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -422,13 +417,13 @@ export function getValidatorApi(
         throw new ApiError(400, `producePayloadAttestationData is not supported before Gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const block = chain.beaconEngine.getCanonicalProtoBlockAtSlot(slot);
       if (!block) {
-        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        // No canonical block is seen at slot. Return 204 so vc can skip casting payload attestation.
+        return {data: undefined, meta: {version: fork}, status: 204};
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
@@ -507,7 +502,7 @@ export function getValidatorApi(
     },
 
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
@@ -556,7 +551,7 @@ export function getValidatorApi(
     },
 
     async getAttesterDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -587,7 +582,7 @@ export function getValidatorApi(
     },
 
     async getPtcDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get PTC duties");
@@ -634,7 +629,7 @@ export function getValidatorApi(
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
     async getSyncCommitteeDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -658,7 +653,7 @@ export function getValidatorApi(
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -681,7 +676,7 @@ export function getValidatorApi(
     },
 
     async publishAggregateAndProofsV2({signedAggregateAndProofs}, context) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
@@ -744,7 +739,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
     async publishContributionAndProofs({contributionAndProofs}, context) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const failures: FailureList = [];
 
@@ -793,7 +788,7 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
@@ -826,7 +821,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/136
      */
     async prepareSyncCommitteeSubnets({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
@@ -917,6 +912,91 @@ export function getValidatorApi(
       });
     },
 
+    async submitProposerPreferences({signedProposerPreferences}, context) {
+      const failures: FailureList = [];
+
+      // SSZ request: slice each entry out of the (fixed-size element) list body. JSON request
+      // (no sszBytes): serialize once.
+      const preferencesBytes = context?.sszBytes
+        ? getFixedListElementBytes(context.sszBytes, ssz.gloas.SignedProposerPreferences.fixedSize)
+        : signedProposerPreferences.map((s) => ssz.gloas.SignedProposerPreferences.serialize(s));
+
+      await Promise.all(
+        signedProposerPreferences.map(async (signed, i) => {
+          const logCtx = {
+            slot: signed.message.proposalSlot,
+            validatorIndex: signed.message.validatorIndex,
+            dependentRoot: toRootHex(signed.message.dependentRoot),
+          };
+          try {
+            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i], signed);
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+                logger.debug("Ignoring known signed proposer preferences", logCtx);
+                return;
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+              }
+              return;
+            }
+
+            // Engine inserted into its (internal) proposerPreferencesPool on Accept above.
+            await network.publishProposerPreferences(signed);
+            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+              version: ForkName.gloas,
+              data: signed,
+            });
+          } catch (e) {
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, e as Error);
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing signed proposer preferences", failures);
+      }
+    },
+
+    async submitBuilderPreferences({builderPreferences}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        builderPreferences.map(async (entry, i) => {
+          let builder = Buffer.from(entry.url).toString("utf8");
+          try {
+            const url = decodeBuilderUrl(entry.url);
+            builder = toPrintableUrl(url);
+            const expectedProposerPubkey = chain.beaconEngine.getHeadProposerPubkey(entry.auth.message.slot);
+            if (!byteArrayEquals(entry.proposerPubkey, expectedProposerPubkey)) {
+              throw new ApiError(
+                400,
+                `Invalid proposer pubkey for builder preferences slot=${entry.auth.message.slot}`
+              );
+            }
+            await chain.builderApiClient.submitBuilderPreferences(url, entry.proposerPubkey, {
+              preferences: {maxExecutionPayment: entry.maxExecutionPayment},
+              auth: entry.auth,
+            });
+          } catch (e) {
+            failures.push({index: i, message: `${builder}: ${(e as Error).message}`});
+            logger.verbose(
+              `Error on submitBuilderPreferences [${i}]`,
+              {slot: entry.auth.message.slot, builder},
+              e as Error
+            );
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error submitting builder preferences", failures);
+      }
+    },
+
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
       const fork = config.getForkName(slot);
 
@@ -924,7 +1004,7 @@ export function getValidatorApi(
         throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const blockRootHex = toRootHex(beaconBlockRoot);
@@ -941,6 +1021,18 @@ export function getValidatorApi(
       }
 
       const {executionPayload, executionRequests, parentBlockRoot} = produceResult as ProduceFullGloas;
+
+      if (executionPayload === undefined) {
+        // Blocks committing to a builder bid are cached as full but without payload data
+        throw new ApiError(404, `No local execution payload cached for block root ${blockRootHex}`);
+      }
+
+      if (executionPayload.slotNumber !== slot) {
+        throw new ApiError(
+          404,
+          `Cached execution payload is for slot=${executionPayload.slotNumber}, requested slot=${slot}`
+        );
+      }
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,

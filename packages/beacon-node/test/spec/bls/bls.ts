@@ -7,7 +7,7 @@ import {
   aggregateVerify,
   fastAggregateVerify,
   verifyMultipleAggregateSignatures,
-} from "@chainsafe/blst";
+} from "@chainsafe/lodestar-z/blst";
 import {fromHexString} from "@chainsafe/ssz";
 
 export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {

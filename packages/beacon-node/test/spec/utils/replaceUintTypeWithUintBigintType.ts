@@ -2,6 +2,9 @@ import {
   ContainerType,
   ListBasicType,
   ListCompositeType,
+  ProgressiveContainerType,
+  ProgressiveListBasicType,
+  ProgressiveListCompositeType,
   Type,
   UintBigintType,
   UintNumberType,
@@ -28,6 +31,14 @@ export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T):
     return new ContainerType(fields, type.opts) as unknown as T;
   }
 
+  if (type instanceof ProgressiveContainerType) {
+    const fields = {...type.fields};
+    for (const key of Object.keys(fields) as (keyof typeof fields)[]) {
+      fields[key] = replaceUintTypeWithUintBigintType(fields[key]);
+    }
+    return new ProgressiveContainerType(fields, type.activeFields, type.opts) as unknown as T;
+  }
+
   // For List or vectors replace the subType
   if (type instanceof ListBasicType) {
     return new ListBasicType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown as T;
@@ -37,6 +48,16 @@ export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T):
   }
   if (type instanceof ListCompositeType) {
     return new ListCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown as T;
+  }
+  if (type instanceof ProgressiveListBasicType) {
+    return new ProgressiveListBasicType(replaceUintTypeWithUintBigintType(type.elementType), {
+      typeName: type.typeName,
+    }) as unknown as T;
+  }
+  if (type instanceof ProgressiveListCompositeType) {
+    return new ProgressiveListCompositeType(replaceUintTypeWithUintBigintType(type.elementType), {
+      typeName: type.typeName,
+    }) as unknown as T;
   }
   if (type instanceof VectorCompositeType) {
     return new VectorCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.length) as unknown as T;

@@ -240,7 +240,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
 
     const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
-    lightClientOptimisticUpdate.signatureSlot = START_SLOT;
+    lightClientOptimisticUpdate.attestedHeader.beacon.slot = START_SLOT;
+    lightClientOptimisticUpdate.signatureSlot = START_SLOT + 1;
     await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
@@ -280,7 +281,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
 
     const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.signatureSlot = START_SLOT;
+    lightClientFinalityUpdate.attestedHeader.beacon.slot = START_SLOT;
+    lightClientFinalityUpdate.signatureSlot = START_SLOT + 1;
     await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;

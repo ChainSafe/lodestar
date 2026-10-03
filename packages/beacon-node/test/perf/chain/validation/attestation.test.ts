@@ -1,6 +1,9 @@
 import assert from "node:assert";
-import {bench, describe} from "@chainsafe/benchmark";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {
+  ensureInteropPubkeyCache,
+  generateTestCachedBeaconStateOnlyValidators,
+} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
@@ -26,6 +29,10 @@ describe("validate gossip attestation", () => {
 
   const attSlot = attestation0.data.slot;
   const fork = chain.config.getForkName(stateSlot);
+
+  beforeAll(() => {
+    ensureInteropPubkeyCache(vc);
+  });
 
   for (const chunkSize of [32, 64, 128, 256]) {
     const attestations = [attestation0];

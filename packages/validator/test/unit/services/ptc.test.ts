@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
-import {HttpStatusCode, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {gloas, ssz} from "@lodestar/types";
@@ -11,7 +11,7 @@ import {PtcService} from "../../../src/services/ptc.js";
 import {PtcDutiesService} from "../../../src/services/ptcDuties.js";
 import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
@@ -46,7 +46,6 @@ describe("PtcService", () => {
     vi.spyOn(validatorStore, "isDoppelgangerSafe");
     vi.spyOn(validatorStore, "hasSomeValidators");
     vi.spyOn(validatorStore, "signPayloadAttestation");
-    vi.spyOn(emitter, "waitForExecutionPayloadAvailableSlot");
 
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.getAllLocalIndices.mockReturnValue([0]);
@@ -54,7 +53,6 @@ describe("PtcService", () => {
     validatorStore.hasVotingPubkey.mockReturnValue(true);
     validatorStore.isDoppelgangerSafe.mockReturnValue(true);
     validatorStore.hasSomeValidators.mockReturnValue(true);
-    emitter.waitForExecutionPayloadAvailableSlot.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -91,6 +89,7 @@ describe("PtcService", () => {
     };
 
     vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
     api.validator.producePayloadAttestationData.mockResolvedValue(
       mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
     );
@@ -99,7 +98,6 @@ describe("PtcService", () => {
 
     await clock.tickSlotFns(slot, controller.signal);
 
-    expect(emitter.waitForExecutionPayloadAvailableSlot).toHaveBeenCalledWith(slot);
     expect(api.validator.producePayloadAttestationData).toHaveBeenCalledWith({slot});
     expect(validatorStore.signPayloadAttestation).toHaveBeenCalledWith(
       duty,
@@ -135,7 +133,11 @@ describe("PtcService", () => {
     };
 
     vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
-    api.validator.producePayloadAttestationData.mockResolvedValue(mockApiErrorResponse(HttpStatusCode.NOT_FOUND));
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockResolvedValue(undefined);
+    // No canonical block at slot
+    api.validator.producePayloadAttestationData.mockResolvedValue(
+      mockApiResponse({data: undefined, meta: {version: config.getForkName(slot)}})
+    );
 
     await clock.tickSlotFns(slot, controller.signal);
 

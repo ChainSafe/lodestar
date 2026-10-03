@@ -12,7 +12,8 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ReqResp, ResponseOutgoing} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
@@ -25,10 +26,12 @@ import {
 import {MetadataController} from "../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../src/network/networkConfig.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
-import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
+import {DataColumnSidecarsByRange, DataColumnSidecarsByRoot} from "../../../src/network/reqresp/protocols.js";
+import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {computeNodeId} from "../../../src/network/subnets/index.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
+import {DataColumnSidecarsByRootRequestType} from "../../../src/util/types.js";
 
 describe("reqresp encoder", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -202,4 +205,96 @@ describe("reqresp encoder", () => {
       ],
     });
   });
+
+  for (const createProtocol of [DataColumnSidecarsByRange, DataColumnSidecarsByRoot]) {
+    for (const {name, schedule, epochs} of [
+      {name: "mixed Fulu and Gloas responses", schedule: [], epochs: [6, 7]},
+      {
+        name: "a future blob-limit increase followed by a decrease",
+        schedule: [
+          {EPOCH: 8, MAX_BLOBS_PER_BLOCK: 32},
+          {EPOCH: 9, MAX_BLOBS_PER_BLOCK: 12},
+        ],
+        epochs: [8, 9],
+      },
+    ]) {
+      const beaconConfig = createBeaconConfig(
+        {
+          ...config,
+          ALTAIR_FORK_EPOCH: 1,
+          BELLATRIX_FORK_EPOCH: 2,
+          CAPELLA_FORK_EPOCH: 3,
+          DENEB_FORK_EPOCH: 4,
+          ELECTRA_FORK_EPOCH: 5,
+          FULU_FORK_EPOCH: 6,
+          GLOAS_FORK_EPOCH: 7,
+          HEZE_FORK_EPOCH: 10,
+          BLOB_SCHEDULE: schedule,
+        },
+        ZERO_HASH
+      );
+      const protocol = createProtocol(ForkName.gloas, beaconConfig);
+
+      it(`decodes ${name} for ${protocol.method}`, async () => {
+        const responses: ResponseOutgoing[] = epochs.map((epoch) => {
+          const boundary = beaconConfig.getForkBoundaryAtEpoch(epoch);
+          const blobCount = beaconConfig.getMaxBlobsPerBlock(epoch);
+          const column = Array.from({length: blobCount}, () => ssz.fulu.Cell.defaultValue());
+          const kzgProofs = Array.from({length: blobCount}, () => ssz.deneb.KZGProof.defaultValue());
+          let data: Uint8Array;
+          if (boundary.fork === ForkName.fulu) {
+            const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+            sidecar.column = column;
+            sidecar.kzgProofs = kzgProofs;
+            sidecar.kzgCommitments = Array.from({length: blobCount}, () => ssz.deneb.KZGCommitment.defaultValue());
+            sidecar.signedBlockHeader.message.slot = epoch * SLOTS_PER_EPOCH;
+            data = ssz.fulu.DataColumnSidecar.serialize(sidecar);
+            expect(data.length).toBeGreaterThan(protocol.responseSizes(ForkName.gloas).maxSize);
+          } else {
+            const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+            sidecar.column = column;
+            sidecar.kzgProofs = kzgProofs;
+            sidecar.slot = epoch * SLOTS_PER_EPOCH;
+            data = ssz.gloas.DataColumnSidecar.serialize(sidecar);
+          }
+          return {data, boundary};
+        });
+        const request =
+          protocol.method === ReqRespMethod.DataColumnSidecarsByRange
+            ? ssz.fulu.DataColumnSidecarsByRangeRequest.serialize({
+                startSlot: epochs[0] * SLOTS_PER_EPOCH,
+                count: (epochs[1] - epochs[0]) * SLOTS_PER_EPOCH + 1,
+                columns: [0],
+              })
+            : DataColumnSidecarsByRootRequestType(beaconConfig).serialize(
+                epochs.map((epoch) => ({blockRoot: new Uint8Array(32).fill(epoch), columns: [0]}))
+              );
+        const {libp2p: server, multiaddr} = await getLibp2p();
+        const {libp2p: client} = await getLibp2p();
+        const responder = new ReqResp({libp2p: server, logger: testLogger(), metricsRegister: null});
+        const requester = new ReqResp({libp2p: client, logger: testLogger(), metricsRegister: null});
+        afterEachCallbacks.push(
+          () => responder.stop(),
+          () => requester.stop()
+        );
+        await responder.registerProtocol({
+          ...protocol,
+          handler: async function* (req) {
+            expect(toHex(req.data)).toBe(toHex(request));
+            yield* responses;
+          },
+        });
+        const {inboundRateLimits: _inboundRateLimits, ...dialProtocol} = protocol;
+        requester.registerDialOnlyProtocol(dialProtocol);
+        await client.dial(multiaddr);
+
+        const decoded = await Array.fromAsync(
+          requester.sendRequest(server.peerId, protocol.method, [protocol.version], protocol.encoding, request)
+        );
+        expect(decoded.map((response) => ({...response, data: new Uint8Array(response.data)}))).toEqual(
+          responses.map(({data, boundary}) => ({data, fork: boundary.fork, protocolVersion: protocol.version}))
+        );
+      });
+    }
+  }
 });

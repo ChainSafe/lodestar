@@ -7,7 +7,7 @@ import {
   verify as _verify,
   aggregateSerializedPublicKeys,
   aggregateSignatures,
-} from "@chainsafe/blst";
+} from "@chainsafe/lodestar-z/blst";
 import {fromHexString} from "@chainsafe/ssz";
 import {InputType} from "@lodestar/spec-test-util";
 import {TestRunnerFn} from "../utils/types.js";

@@ -1,15 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ForkName, ForkPostElectra, ForkPreElectra, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {ForkPostElectra, ForkPreElectra, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValidationResult.js";
-import {
-  AttestationErrorCode,
-  PayloadAttestationErrorCode,
-  ProposerPreferencesErrorCode,
-} from "../../../../chain/errors/index.js";
+import {AttestationErrorCode, PayloadAttestationErrorCode} from "../../../../chain/errors/index.js";
 import {toElectraSingleAttestation} from "../../../../chain/validation/index.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {getFixedListElementBytes} from "../../../../util/sszBytes.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
@@ -33,7 +30,11 @@ export function getBeaconPoolApi({
       );
 
       if (committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+        attestations = attestations.filter((attestation) =>
+          isElectraAttestation(attestation)
+            ? attestation.committeeBits.get(committeeIndex)
+            : committeeIndex === attestation.data.index
+        );
       }
 
       return {data: attestations, meta: {version: fork}};
@@ -46,64 +47,6 @@ export function getBeaconPoolApi({
       }
 
       return {data: chain.beaconEngine.getPoolPayloadAttestations(slot), meta: {version: fork}};
-    },
-
-    async getPoolProposerPreferences({slot}) {
-      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
-      if (!isForkPostGloas(fork)) {
-        throw new ApiError(400, `Proposer preferences pool is not supported before Gloas fork=${fork}`);
-      }
-
-      return {data: chain.beaconEngine.getPoolProposerPreferences(slot), meta: {version: fork}};
-    },
-
-    async submitSignedProposerPreferences({signedProposerPreferences}, context) {
-      const failures: FailureList = [];
-
-      // SSZ request: slice each entry out of the (fixed-size element) list body. JSON request
-      // (no sszBytes): serialize once.
-      const preferencesBytes = context?.sszBytes
-        ? getFixedListElementBytes(context.sszBytes, ssz.gloas.SignedProposerPreferences.fixedSize)
-        : signedProposerPreferences.map((s) => ssz.gloas.SignedProposerPreferences.serialize(s));
-
-      await Promise.all(
-        signedProposerPreferences.map(async (signed, i) => {
-          const logCtx = {
-            slot: signed.message.proposalSlot,
-            validatorIndex: signed.message.validatorIndex,
-            dependentRoot: toRootHex(signed.message.dependentRoot),
-          };
-          try {
-            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i], signed);
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
-                logger.debug("Ignoring known signed proposer preferences", logCtx);
-                return;
-              }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on submitSignedProposerPreferences [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
-                chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
-              }
-              return;
-            }
-
-            // Engine inserted into its (internal) proposerPreferencesPool on Accept above.
-            await network.publishProposerPreferences(signed);
-            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-              version: ForkName.gloas,
-              data: signed,
-            });
-          } catch (e) {
-            failures.push({index: i, message: (e as Error).message});
-            logger.verbose(`Error on submitSignedProposerPreferences [${i}]`, logCtx, e as Error);
-          }
-        })
-      );
-
-      if (failures.length > 0) {
-        throw new IndexedError("Error processing signed proposer preferences", failures);
-      }
     },
 
     async getPoolAttesterSlashingsV2() {
@@ -160,7 +103,9 @@ export function getBeaconPoolApi({
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               res.value;
 
-            if (network.shouldAggregate(subnet, slot)) {
+            try {
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.beaconEngine.addAttestationToPool(
                 committeeIndex,
                 attestation,
@@ -170,6 +115,10 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              // The pool is a local optimization, failing to insert must not stop us from publishing a
+              // validated attestation, which the route requires us to do. Same handling as the gossip path
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {
@@ -221,7 +170,20 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      await chain.beaconEngine.validateApiVoluntaryExit(signedVoluntaryExit);
+      const result = await chain.beaconEngine.validateApiVoluntaryExit(signedVoluntaryExit);
+
+      if (result.status === "deferred") {
+        const inserted = result.inserted;
+        if (!inserted) {
+          throw new ApiError(400, "Deferred voluntary exit pool is full or already contains this validator");
+        }
+        logger.info("Voluntary exit deferred until transient conditions are met", {
+          validatorIndex: signedVoluntaryExit.message.validatorIndex,
+          reason: result.validity,
+        });
+        return;
+      }
+
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);
     },
@@ -258,6 +220,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPayloadAttestationMessages({payloadAttestationMessages}, context) {
+      const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
 
       // SSZ request: slice each message out of the (fixed-size element) list body. JSON request
@@ -295,6 +258,10 @@ export function getBeaconPoolApi({
               return;
             }
 
+            metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe(
+              {source: OpSource.api},
+              chain.clock.secFromSlot(slot, seenTimestampSec)
+            );
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);
           } catch (e) {
             failures.push({index: i, message: (e as Error).message});

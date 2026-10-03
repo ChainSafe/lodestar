@@ -1,3 +1,4 @@
+// Consensus verification stays engine-owned; the facade observes verified blocks only after its DA join.
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {IndexedAttestation} from "@lodestar/types";
@@ -12,7 +13,7 @@ import {RegenCaller} from "../regen/index.js";
 import {BeaconEngine} from "./beaconEngine.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocks(
@@ -86,7 +87,7 @@ export async function verifyBlocks(
         signal,
         stfOpts
       ),
-      opts.skipVerifyBlockSignatures !== true
+      opts.validSignatures !== true
         ? verifyBlocksSignatures(
             this.config,
             this.bls,

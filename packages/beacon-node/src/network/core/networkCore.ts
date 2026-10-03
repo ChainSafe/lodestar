@@ -70,6 +70,15 @@ export type BaseNetworkInit = {
   initialCustodyGroupCount: number;
 };
 
+/** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
+function formatActiveResources(): string {
+  const counts = new Map<string, number>();
+  for (const resource of process.getActiveResourcesInfo()) {
+    counts.set(resource, (counts.get(resource) ?? 0) + 1);
+  }
+  return Array.from(counts, ([name, count]) => `${name}=${count}`).join(",");
+}
+
 /**
  * This class is meant to work both:
  * - In a libp2p worker
@@ -289,7 +298,10 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService.close();
     this.syncnetsService.close();
     await this.libp2p.stop();
-    this.logger.debug("network lib2p closed");
+    // Diagnostic for the shutdown hang, this thread can spin in `Environment::CleanupHandles()` on
+    // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
+    // between a clean and a stuck shutdown should narrow down which handle it is
+    this.logger.debug("network lib2p closed", {activeResources: formatActiveResources()});
 
     this.closed = true;
   }

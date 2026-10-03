@@ -17,3 +17,14 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
 
   return arrArr;
 }
+
+/**
+ * Splits an array into chunks that do not exceed a maximum size.
+ */
+export function chunkifyMaxChunkSize<T>(arr: T[], maxPerChunk: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += maxPerChunk) {
+    chunks.push(arr.slice(i, i + maxPerChunk));
+  }
+  return chunks;
+}

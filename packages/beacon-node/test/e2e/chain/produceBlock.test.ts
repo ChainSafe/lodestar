@@ -3,6 +3,7 @@ import {tmpdir} from "node:os";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
@@ -14,15 +15,13 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   createCachedBeaconState,
-  createPubkeyCache,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
-import {BlindedBeaconBlock, electra} from "@lodestar/types";
+import {BlindedBeaconBlock, ProducedBlockSource, electra} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../src/api/options.js";
 import {ArchiveMode} from "../../../src/chain/archiveStore/interface.js";
-import {BeaconEngineErrorCode} from "../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../src/chain/chain.js";
 import {BlockType} from "../../../src/chain/produceBlock/index.js";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -50,7 +49,7 @@ describe("engine block production", () => {
       });
       const genesis = initDevState(config, 8, {genesisTime: 1644000000});
       const beaconConfig = createBeaconConfig(config, genesis.genesisValidatorsRoot);
-      const pubkeyCache = createPubkeyCache();
+
       const state = new BeaconStateView(createCachedBeaconState(genesis, {config: beaconConfig, pubkeyCache}));
       const controller = new AbortController();
       const executionEngine = getExecutionEngineFromBackend(
@@ -61,7 +60,10 @@ describe("engine block production", () => {
         }),
         {signal: controller.signal, logger}
       );
-      const db = new BeaconDb(config, await LevelDbController.create({name: path.join(directory, "db")}, {logger}));
+      const db = new BeaconDb(config, await LevelDbController.create({name: path.join(directory, "db")}, {logger}), {
+        dataColumnDir: path.join(directory, "data_columns"),
+        logger,
+      });
       const builder: IExecutionBuilder = {
         status: BuilderStatus.enabled,
         faultInspectionWindow: 8,
@@ -105,7 +107,7 @@ describe("engine block production", () => {
         );
         const attrs = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: Buffer.alloc(32)};
         const modules = getApiTestModules({config: beaconConfig});
-        const api = getValidatorApi(defaultApiOptions, {...modules, chain, config: beaconConfig});
+        const api = getValidatorApi({...defaultApiOptions, private: true}, {...modules, chain, config: beaconConfig});
         const full = await api.produceBlockV3({
           ...attrs,
           graffiti: "",
@@ -146,15 +148,15 @@ describe("engine block production", () => {
         expect(chain.blockProductionCache.get(root)?.type).toBe(BlockType.Blinded);
         expect(chain.blockProductionCache.size).toBe(1);
         vi.mocked(builder.getHeader).mockRejectedValue(new Error("builder unavailable"));
-        const failed = await chain.beaconEngine.produceBlock({
+        const fallback = await chain.beaconEngine.produceBlock({
           ...attrs,
           builderSelection: routes.validator.BuilderSelection.BuilderOnly,
           builderBoostFactor: 100n,
         });
-        expect(failed).toEqual({
-          ok: false,
-          code: BeaconEngineErrorCode.INTERNAL,
-          payload: {message: "Builder failed to produce the block"},
+        // Upstream normalizes BuilderOnly to BuilderAlways, retaining local production as fallback.
+        expect(fallback).toMatchObject({
+          ok: true,
+          data: {executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine},
         });
         expect(chain.blockProductionCache.size).toBe(1);
       } finally {

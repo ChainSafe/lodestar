@@ -8,7 +8,9 @@ services:
       - logs:/logs
     env_file: .env
     ports:
-      - "9000:9000" # P2P port
+      - "9000:9000" # P2P TCP transport
+      - "9000:9000/udp" # discv5 peer discovery
+      - "9001:9001/udp" # P2P QUIC transport
     #  - "9596:9596" # REST API port
     command: beacon --dataDir /data --rest --rest.address 0.0.0.0 --metrics --logFile /logs/beacon.log --logFileLevel debug --logFileDailyRotate 5
     # NodeJS applications have a default memory limit of 4GB on most machines.

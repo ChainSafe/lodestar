@@ -145,6 +145,13 @@ describe("fromHex and fromHexInto", () => {
       expect(toHex(buffer)).toBe(toHex(output));
     });
   }
+
+  it.each(["0xzzzz", "0x0011zz2233", "0xgg", "0x00-1", "zzzz"])(
+    "should reject hex string %s with invalid characters",
+    (input) => {
+      expect(() => fromHex(input)).toThrow();
+    }
+  );
 });
 
 describe("toHexString", () => {

@@ -1,4 +1,4 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";

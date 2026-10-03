@@ -4,6 +4,10 @@ import {SlashingProtectionBlock} from "../types.js";
 
 export enum InvalidBlockErrorCode {
   /**
+   * The block slot does not match the slot of the proposal duty
+   */
+  SLOT_MISMATCH = "ERR_INVALID_BLOCK_SLOT_MISMATCH",
+  /**
    * The block has the same slot as a block from the DB
    */
   DOUBLE_BLOCK_PROPOSAL = "ERR_INVALID_BLOCK_DOUBLE_BLOCK_PROPOSAL",
@@ -14,6 +18,11 @@ export enum InvalidBlockErrorCode {
 }
 
 type InvalidBlockErrorType =
+  | {
+      code: InvalidBlockErrorCode.SLOT_MISMATCH;
+      slot: Slot;
+      dutySlot: Slot;
+    }
   | {
       code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL;
       block: SlashingProtectionBlock;

@@ -1,7 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
+import {DOMAIN_AGGREGATE_AND_PROOF} from "@lodestar/params";
 import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, SignedAggregateAndProof, ValidatorIndex, ssz} from "@lodestar/types";
+import {Epoch, SignedAggregateAndProof, ValidatorIndex} from "@lodestar/types";
 
 export function getAggregateAndProofSigningRoot(
   config: BeaconConfig,
@@ -14,7 +14,7 @@ export function getAggregateAndProofSigningRoot(
   const slot = computeStartSlotAtEpoch(epoch);
   const fork = config.getForkName(slot);
   const aggregatorDomain = config.getDomainAtFork(fork, DOMAIN_AGGREGATE_AND_PROOF);
-  const sszType = ForkSeq[fork] >= ForkSeq.electra ? ssz.electra.AggregateAndProof : ssz.phase0.AggregateAndProof;
+  const sszType = config.getForkTypes(slot).AggregateAndProof;
   return computeSigningRoot(sszType, aggregateAndProof.message, aggregatorDomain);
 }
 

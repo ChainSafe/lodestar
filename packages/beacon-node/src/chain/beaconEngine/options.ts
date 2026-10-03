@@ -36,6 +36,9 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
      * will still issue fcU for block proposal
      */
     disableImportExecutionFcU?: boolean;
+    disableProposerSlashings?: boolean;
+    faultInspectionWindow?: number;
+    allowedFaults?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     blsVerifyAllMainThread?: boolean;

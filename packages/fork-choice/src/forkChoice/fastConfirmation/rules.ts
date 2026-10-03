@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-import {equalCheckpointWithHex} from "../store.ts";
+import {equalCheckpointWithHex} from "../store.js";
 import {
   FastConfirmationCache,
   FastConfirmationContext,
@@ -10,8 +10,9 @@ import {
   FastConfirmationRunResult,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
-} from "./types.ts";
-import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.ts";
+  isResetReason,
+} from "./types.js";
+import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.js";
 
 export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
@@ -118,13 +119,15 @@ export function runFastConfirmationRules(
     reason: FastConfirmationDecisionReason.Unchanged,
   };
 
-  // Track every reason a rule decided on, the final `decision.reason` is overwritten by
-  // later rules (eg. a restart is followed by advancing to the latest confirmed descendant)
-  const reasons = new Set<FastConfirmationDecisionReason>();
+  const reasonTrail: FastConfirmationDecisionReason[] = [];
   for (const rule of FAST_CONFIRMATION_RULES) {
+    const previousDecision = decision;
     decision = rule(snapshot, ctx, store, cache, decision, logger);
-    reasons.add(decision.reason);
+    if (decision !== previousDecision && decision.reason !== FastConfirmationDecisionReason.Unchanged) {
+      reasonTrail.push(decision.reason);
+    }
   }
+  logger?.debug("Fast confirmation rule outcomes", {reasonTrail: reasonTrail.join(",")});
 
   // Detect a reorg directly from ancestry instead of the reset reason: when the confirmed block is
   // both epoch-behind and not an ancestor of head, `resetIfBehindOrNotAncestorOrUnsafe` records
@@ -137,10 +140,12 @@ export function runFastConfirmationRules(
     confirmedRoot: decision.confirmedRoot,
     didReset: decision.didReset,
     reason: decision.reason,
+    // Reset cause: the first reset-classified reason in the trail (only when an actual reset occurred).
+    resetReason: decision.didReset ? reasonTrail.find(isResetReason) : undefined,
     didReorg,
     // A fallback is a revert to finality: a reset whose final confirmed root is the finalized
     // checkpoint. A later rule may advance the confirmed root forward, which is not a fallback.
     didFallback: decision.didReset && decision.confirmedRoot === snapshot.finalizedRoot,
-    didRestart: reasons.has(FastConfirmationDecisionReason.ObservedJustified),
+    didRestart: reasonTrail.includes(FastConfirmationDecisionReason.ObservedJustified),
   };
 }

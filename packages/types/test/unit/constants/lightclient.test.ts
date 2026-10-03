@@ -7,21 +7,30 @@ import {ssz} from "../../../src/index.js";
 // guarantee that these constants are correct.
 
 describe(`${constants.ACTIVE_PRESET}/ Lightclient pre-computed constants`, () => {
-  const FINALIZED_ROOT_GINDEX = bnToNum(ssz.altair.BeaconState.getPathInfo(["finalizedCheckpoint", "root"]).gindex);
-  const FINALIZED_ROOT_DEPTH = floorlog2(FINALIZED_ROOT_GINDEX);
-  const FINALIZED_ROOT_INDEX = FINALIZED_ROOT_GINDEX % 2 ** FINALIZED_ROOT_DEPTH;
-
-  const NEXT_SYNC_COMMITTEE_GINDEX = bnToNum(ssz.altair.BeaconState.getPathInfo(["nextSyncCommittee"]).gindex);
-  const NEXT_SYNC_COMMITTEE_DEPTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX);
-  const NEXT_SYNC_COMMITTEE_INDEX = NEXT_SYNC_COMMITTEE_GINDEX % 2 ** NEXT_SYNC_COMMITTEE_DEPTH;
-
   const correctConstants = {
-    FINALIZED_ROOT_GINDEX,
-    FINALIZED_ROOT_DEPTH,
-    FINALIZED_ROOT_INDEX,
-    NEXT_SYNC_COMMITTEE_GINDEX,
-    NEXT_SYNC_COMMITTEE_DEPTH,
-    NEXT_SYNC_COMMITTEE_INDEX,
+    ...stateConstants("altair", ""),
+    ...stateConstants("electra", "_ELECTRA"),
+    ...stateConstants("gloas", "_GLOAS"),
+    ...gindexConstants(
+      "BLOCK_BODY_EXECUTION_PAYLOAD",
+      bnToNum(ssz.capella.BeaconBlockBody.getPathInfo(["executionPayload"]).gindex)
+    ),
+    ...gindexConstants(
+      "EXECUTION_BLOCK_HASH",
+      bnToNum(ssz.capella.BeaconBlockBody.getPathInfo(["executionPayload", "blockHash"]).gindex)
+    ),
+    ...gindexConstants(
+      "EXECUTION_BLOCK_HASH",
+      bnToNum(ssz.deneb.BeaconBlockBody.getPathInfo(["executionPayload", "blockHash"]).gindex),
+      "_DENEB"
+    ),
+    ...gindexConstants(
+      "EXECUTION_BLOCK_HASH",
+      bnToNum(
+        ssz.gloas.BeaconBlockBody.getPathInfo(["signedExecutionPayloadBid", "message", "parentBlockHash"]).gindex
+      ),
+      "_GLOAS"
+    ),
   };
 
   for (const [key, expectedValue] of Object.entries(correctConstants)) {
@@ -31,11 +40,44 @@ describe(`${constants.ACTIVE_PRESET}/ Lightclient pre-computed constants`, () =>
   }
 });
 
+function stateConstants(
+  fork: "altair" | "electra" | "gloas",
+  suffix: "" | "_ELECTRA" | "_GLOAS"
+): Record<string, number> {
+  return {
+    ...gindexConstants(
+      "FINALIZED_ROOT",
+      bnToNum(ssz[fork].BeaconState.getPathInfo(["finalizedCheckpoint", "root"]).gindex),
+      suffix
+    ),
+    ...gindexConstants(
+      "CURRENT_SYNC_COMMITTEE",
+      bnToNum(ssz[fork].BeaconState.getPathInfo(["currentSyncCommittee"]).gindex),
+      suffix
+    ),
+    ...gindexConstants(
+      "NEXT_SYNC_COMMITTEE",
+      bnToNum(ssz[fork].BeaconState.getPathInfo(["nextSyncCommittee"]).gindex),
+      suffix
+    ),
+  };
+}
+
+function gindexConstants(name: string, gindex: number, suffix = ""): Record<string, number> {
+  const depth = floorlog2(gindex);
+
+  return {
+    [`${name}_GINDEX${suffix}`]: gindex,
+    [`${name}_DEPTH${suffix}`]: depth,
+    [`${name}_INDEX${suffix}`]: gindex % 2 ** depth,
+  };
+}
+
 function floorlog2(num: number): number {
   return Math.floor(Math.log2(num));
 }
 
-/** Type safe wrapper for Number constructor that takes 'any' */
+/** Type safe wrapper for Number constructor that takes a bigint */
 function bnToNum(bn: bigint): number {
   return Number(bn);
 }

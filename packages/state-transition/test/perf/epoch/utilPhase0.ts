@@ -1,5 +1,5 @@
 import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
-import {CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochTransitionCache} from "../../../src/types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/types.js";
 
 /**
  * Generate an incomplete EpochTransitionCache to simulate any network condition relevant to getAttestationDeltas
@@ -7,7 +7,7 @@ import {CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochTransitionCache} 
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
 export function generateBalanceDeltasEpochTransitionCache(
-  state: CachedBeaconStatePhase0 | CachedBeaconStateAltair,
+  state: CachedBeaconStateAllForks,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
 ): EpochTransitionCache {

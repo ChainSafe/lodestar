@@ -1,16 +1,22 @@
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
-import {RootHex, Slot} from "@lodestar/types";
 import {ApiStateResult, ApiStateResultWithFork, IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
+import type {ApiStateId} from "../../../../chain/beaconEngine/interface.js";
+import type {IBeaconChain} from "../../../../chain/interface.js";
+import type {IBeaconSync} from "../../../../sync/interface.js";
 import {ApiError, ValidationError} from "../../errors.js";
+import {notWhileSyncing} from "../../utils.js";
 
 export function resolveStateId(
   beaconEngine: IBeaconEngine,
-  stateId: routes.beacon.StateId
-): RootHex | Slot | CheckpointWithHex {
+  stateId: routes.beacon.StateId,
+  chain?: IBeaconChain,
+  sync?: IBeaconSync
+): ApiStateId {
+  if (chain && sync && !["head", "finalized", "justified", "genesis"].includes(String(stateId)))
+    notWhileSyncing(chain, sync.state);
   if (stateId === "head") {
-    return beaconEngine.getHead().stateRoot;
+    return {head: true};
   }
 
   if (stateId === "genesis") {

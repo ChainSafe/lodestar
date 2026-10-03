@@ -1,6 +1,6 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -20,17 +20,19 @@ import {
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
+import {ReconstructMismatchPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -43,8 +45,7 @@ import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
-export {type ProposerPreparationData};
+export {BlockType, type AssembledBlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
@@ -64,9 +65,11 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly earliestAvailableSlot: Slot;
+  earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -160,6 +163,10 @@ export interface IBeaconChain {
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
+  getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMismatch?: ReconstructMismatchPolicy
+  ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
@@ -174,10 +181,12 @@ export interface IBeaconChain {
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void>;
+  ): Promise<ProcessBlocksResult>;
 
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
+
+  /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
 
   getStatus(): Status;
 
@@ -186,7 +195,7 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
 
   regenCanAcceptWork(): boolean;

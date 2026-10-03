@@ -1,5 +1,5 @@
 import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";

@@ -90,7 +90,7 @@ export async function verifyBlocksSignatures(
         logStr
       );
     }
-    throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE});
+    throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: preState0.slot});
   }
 
   const verifySignaturesTime = Date.now();

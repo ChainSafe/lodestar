@@ -21,6 +21,9 @@ export type IChainOptions = IBeaconEngineOptions &
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
     skipCreateStateCacheIfAvailable?: boolean;
+    /** Archive execution-valid envelopes as headers. */
+    dedupePayloads?: boolean;
+    graffitiAppend?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
@@ -30,6 +33,10 @@ export type IChainOptions = IBeaconEngineOptions &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;
+    /** Builder circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -38,10 +45,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -56,8 +59,6 @@ export type BlockProcessOpts = {
   verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
-  /** Used to specify to skip block signatures validation */
-  skipVerifyBlockSignatures?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -67,11 +68,12 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: true,
+  dedupePayloads: true,
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
@@ -79,6 +81,7 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  disableProposerSlashings: false,
   broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32

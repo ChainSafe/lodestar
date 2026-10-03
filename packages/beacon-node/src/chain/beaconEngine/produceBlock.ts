@@ -16,7 +16,7 @@ import {RegenCaller} from "../regen/index.js";
 import type {BeaconEngine} from "./beaconEngine.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#produceCommonBlockBody.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceCommonBlockBody.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceCommonBlockBody(
@@ -38,7 +38,7 @@ export async function produceCommonBlockBody(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#produceBlock.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlock.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function produceBlock(
@@ -56,7 +56,7 @@ export function produceBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#produceBlindedBlock.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlindedBlock.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function produceBlindedBlock(
@@ -73,7 +73,7 @@ export function produceBlindedBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#produceBlockWrapper.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlockWrapper.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockWrapper<T extends BlockType>(
@@ -84,6 +84,7 @@ export async function produceBlockWrapper<T extends BlockType>(
     graffiti,
     slot,
     feeRecipient,
+    strictFeeRecipientCheck,
     commonBlockBodyPromise,
     parentBlock,
     builderBid,
@@ -103,7 +104,7 @@ export async function produceBlockWrapper<T extends BlockType>(
     RegenCaller.produceBlock
   );
   const proposerIndex = state.getBeaconProposer(slot);
-  const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+  const proposerPubKey = this.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
   const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
     this,
@@ -114,6 +115,7 @@ export async function produceBlockWrapper<T extends BlockType>(
       graffiti,
       slot,
       feeRecipient,
+      strictFeeRecipientCheck,
       parentBlock,
       proposerIndex,
       proposerPubKey,

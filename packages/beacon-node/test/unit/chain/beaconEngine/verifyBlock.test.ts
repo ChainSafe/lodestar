@@ -3,7 +3,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {
   BlockInputBlobs,
@@ -120,7 +120,7 @@ describe("BeaconEngine block execution verification", () => {
       [],
       zeroProtoBlock,
       [input],
-      {skipVerifyBlockSignatures: true},
+      {validSignatures: true},
       new AbortController().signal
     );
     expect(result.segmentExecStatus).toMatchObject({executionStatuses: [expected]});
@@ -128,7 +128,7 @@ describe("BeaconEngine block execution verification", () => {
   });
 
   it("starts STF and signatures while the EL request is pending", async () => {
-    const response = Promise.withResolvers<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
+    const response = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
     chain.executionEngine.notifyNewPayload.mockReturnValue(response.promise);
     const signatures = vi
       .spyOn(signatureVerification, "verifyBlocksSignatures")
@@ -153,7 +153,7 @@ describe("BeaconEngine block execution verification", () => {
   });
 
   it("submits a segment sequentially and stops at the first invalid payload", async () => {
-    const response = Promise.withResolvers<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
+    const response = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
     chain.executionEngine.notifyNewPayload.mockReturnValueOnce(response.promise);
     const verification = verifyBlocksExecutionPayload(
       chain,
@@ -190,7 +190,7 @@ describe("BeaconEngine block execution verification", () => {
       [],
       zeroProtoBlock,
       [bellatrixInput()],
-      {skipVerifyBlockSignatures: true, skipVerifyExecutionPayload: true},
+      {validSignatures: true, skipVerifyExecutionPayload: true},
       new AbortController().signal
     );
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
@@ -216,10 +216,10 @@ describe("BeaconEngine block execution verification", () => {
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
         [input],
-        {skipVerifyBlockSignatures: true},
+        {validSignatures: true},
         new AbortController().signal
       )
-    ).rejects.toMatchObject({type: {code: BlockErrorCode.EXECUTION_ENGINE_ERROR}});
+    ).rejects.toMatchObject({type: {code: BlockErrorCode.EXECUTION_ENGINE_INVALID}});
     expect(chain.forkChoice.validateLatestHash).toHaveBeenCalledWith(
       expect.objectContaining({latestValidExecHash: latestValidHash})
     );
@@ -246,7 +246,7 @@ describe("BeaconEngine block execution verification", () => {
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
         [bellatrixInput(true)],
-        {skipVerifyBlockSignatures: true},
+        {validSignatures: true},
         new AbortController().signal
       )
     ).rejects.toBe(error);
@@ -269,9 +269,9 @@ describe("BeaconEngine block execution verification", () => {
     const error = new Error("EL disconnected");
     chain.executionEngine.notifyNewPayload.mockRejectedValue(error);
     const waitingForData = vi.spyOn(input, "waitForAllData");
-    await expect(
-      verifyBlocksInEpoch.call(chain, zeroProtoBlock, [input], null, {skipVerifyBlockSignatures: true})
-    ).rejects.toBe(error);
+    await expect(verifyBlocksInEpoch.call(chain, zeroProtoBlock, [input], null, {validSignatures: true})).rejects.toBe(
+      error
+    );
     expect(waitingForData).toHaveBeenCalledOnce();
     expect(waitingForData.mock.calls[0][1]?.aborted).toBe(true);
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);

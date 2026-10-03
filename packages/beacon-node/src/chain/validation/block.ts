@@ -1,5 +1,5 @@
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
+import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -7,8 +7,9 @@ import {
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
   isStatePostBellatrix,
+  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
@@ -59,7 +60,10 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  // A block's hash tree root is identical to its header's, so the root is derived from the header
+  // which is also used as potential equivocation evidence
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
   if (this.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
@@ -70,7 +74,19 @@ export async function validateGossipBlock(
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
   if (this.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    if (this.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      const hasBlockRoot = this.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
+      if (!hasBlockRoot && !this.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
+        await verifyBlockProposerSignature.call(this, signedBlock, blockRoot, {verifyOnMainThread: false});
+        this.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+      }
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
@@ -87,8 +103,8 @@ export async function validateGossipBlock(
     // 2. The parent is unknown to us, we probably want to download it since it might actually
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
-    // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
   // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
@@ -117,8 +133,9 @@ export async function validateGossipBlock(
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
       slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
     });
   }
 
@@ -133,6 +150,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -140,7 +159,8 @@ export async function validateGossipBlock(
   }
 
   if (isForkPostGloas(fork)) {
-    const bid = (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+    const body = (block as gloas.BeaconBlock).body;
+    const bid = body.signedExecutionPayloadBid.message;
 
     // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
     // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
@@ -149,6 +169,8 @@ export async function validateGossipBlock(
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        slot: blockSlot,
+        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -158,6 +180,8 @@ export async function validateGossipBlock(
     if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        slot: blockSlot,
+        root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
       });
@@ -167,30 +191,63 @@ export async function validateGossipBlock(
     // This requires execution engine integration to verify the parent block hash
   }
 
-  // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
+  // For gossip forwarding we only need the state to check the block's proposer index.
+  // If the state cannot be regenerated we throw an IGNORE (whereas the spec says we should REJECT for the
+  // finalized-ancestor scenario, which is already guarded by the parentBlock lookup above).
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  const blockState = await this.regen
-    .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
-    .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  const canUseParentState = blockEpoch - computeEpochAtSlot(parentBlock.slot) <= MIN_SEED_LOOKAHEAD;
+
+  const getValidationState = async () => {
+    const getPreState = () => this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock);
+    if (canUseParentState) {
+      try {
+        const parentState = await this.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipBlock);
+        this.metrics?.gossipBlock.preStateSource.inc({source: "parentState"});
+        return parentState;
+      } catch {
+        // if parent state is not in memory, we fall back to disk reload / dial-forward
+        this.metrics?.gossipBlock.preStateSource.inc({source: "fallbackPreState"});
+        this.logger.debug("Parent state not in memory, falling back to getPreState for gossip block validation", {
+          slot: blockSlot,
+          root: blockRoot,
+          parentSlot: parentBlock.slot,
+          parentRoot,
+        });
+        return getPreState();
+      }
+    }
+    // parent is >1 epoch behind (deep skip) → beyond proposer-lookahead range, must dial forward
+    this.metrics?.gossipBlock.preStateSource.inc({source: "preState"});
+    this.logger.debug("Cannot use parent state for gossip block validation, dialing forward via getPreState", {
+      slot: blockSlot,
+      root: blockRoot,
+      parentSlot: parentBlock.slot,
+      parentRoot,
     });
+    return getPreState();
+  };
+
+  const state = await getValidationState().catch(() => {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
-  this.shufflingCache.processState(blockState);
+  this.shufflingCache.processState(state);
 
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
-      const expectedTimestamp = computeTimeAtSlot(config, blockSlot, this.clock.genesisTime);
-      if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, this.clock.genesisTime)) {
+    if (isStatePostBellatrix(state) && state.isExecutionStateType && state.isExecutionEnabled(block)) {
+      const expectedTimestamp = computeTimeAtSlot(config, blockSlot, this.genesisTime);
+      if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, this.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_TIMESTAMP,
+          slot: blockSlot,
+          root: blockRoot,
           timestamp: executionPayload.timestamp,
           expectedTimestamp,
         });
@@ -199,47 +256,78 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer index is a valid validator index
-  if (proposerIndex >= blockState.validatorCount) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+  if (proposerIndex >= state.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.UNKNOWN_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  if (!this.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(this.config, signedBlock);
-    // Don't batch so verification is not delayed
-    if (!(await this.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-        blockSlot,
-      });
-    }
-
-    this.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
-  }
+  await verifyBlockProposerSignature.call(this, signedBlock, blockRoot);
+  this.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
-  }
-
-  // Check again in case there two blocks are processed concurrently
-  if (this.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+  if (state.getBeaconProposer(blockSlot) !== proposerIndex) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.INCORRECT_PROPOSER,
+      slot: blockSlot,
+      root: blockRoot,
+      proposerIndex,
+    });
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
   // gossip validation promise without any extra infrastructure.
   // Do the sleep at the end, since regen and signature validation can already take longer than `msToBlockSlot`.
-  const msToBlockSlot = computeTimeAtSlot(config, blockSlot, this.clock.genesisTime) * 1000 - Date.now();
+  const msToBlockSlot = computeTimeAtSlot(config, blockSlot, this.genesisTime) * 1000 - Date.now();
   if (msToBlockSlot <= config.MAXIMUM_GOSSIP_CLOCK_DISPARITY && msToBlockSlot > 0) {
     // If block is between 0 and 500 ms early, hold it in a promise. Equivalent to a pending queue.
     await sleep(msToBlockSlot);
   }
 
-  this.seenBlockProposers.add(blockSlot, proposerIndex);
+  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
+  if (this.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    if (this.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+  }
+
+  this.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
 
   return {skippedSlots};
+}
+
+export async function verifyBlockProposerSignature(
+  this: BeaconEngine,
+  signedBlock: SignedBeaconBlock,
+  blockRoot: RootHex,
+  opts: {verifyOnMainThread?: boolean} = {}
+): Promise<void> {
+  const blockSlot = signedBlock.message.slot;
+  if (this.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
+    return;
+  }
+
+  const signatureSet = getBlockProposerSignatureSet(this.config, signedBlock);
+  // Don't batch so verification is not delayed
+  if (!(await this.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      slot: blockSlot,
+      root: blockRoot,
+    });
+  }
+
+  this.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
 }

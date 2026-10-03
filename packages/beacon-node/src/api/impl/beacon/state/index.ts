@@ -6,10 +6,11 @@ import {resolveStateId, unwrapStateResult, unwrapStateResultWithFork} from "./ut
 
 export function getBeaconStateApi({
   chain,
-}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "sync">): ApplicationMethods<routes.beacon.state.Endpoints> {
   return {
     async getStateRoot({stateId}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateRoot(id),
         stateId
@@ -18,7 +19,7 @@ export function getBeaconStateApi({
     },
 
     async getStateFork({stateId}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateFork(id),
         stateId
@@ -27,7 +28,7 @@ export function getBeaconStateApi({
     },
 
     async getStateRandao({stateId, epoch}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateRandao(id, epoch),
         stateId
@@ -36,7 +37,7 @@ export function getBeaconStateApi({
     },
 
     async getStateFinalityCheckpoints({stateId}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateFinalityCheckpoints(id),
         stateId
@@ -51,7 +52,7 @@ export function getBeaconStateApi({
       if (statuses.length) {
         assertUniqueItems(statuses, "Duplicate statuses provided");
       }
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateValidators(id, validatorIds, statuses),
         stateId
@@ -63,11 +64,23 @@ export function getBeaconStateApi({
       return this.getStateValidators(args, context);
     },
 
+    async getStateBuilders({stateId, builderIds = [], statuses = []}) {
+      if (builderIds.length) assertUniqueItems(builderIds, "Duplicate builder IDs provided");
+      // Upstream checks duplicate statuses only for an unfiltered registry request.
+      if (!builderIds.length && statuses.length) assertUniqueItems(statuses, "Duplicate statuses provided");
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
+      const {data, executionOptimistic, finalized} = unwrapStateResult(
+        await chain.beaconEngine.getStateBuilders(id, builderIds, statuses),
+        stateId
+      );
+      return {data, meta: {executionOptimistic, finalized}};
+    },
+
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
       if (validatorIds.length) {
         assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
       }
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateValidatorIdentities(id, validatorIds),
         stateId
@@ -76,7 +89,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidator({stateId, validatorId}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateValidator(id, validatorId),
         stateId
@@ -88,7 +101,7 @@ export function getBeaconStateApi({
       if (validatorIds.length) {
         assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
       }
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getStateValidatorBalances(id, validatorIds),
         stateId
@@ -101,7 +114,7 @@ export function getBeaconStateApi({
     },
 
     async getEpochCommittees({stateId, ...filters}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getEpochCommittees(id, filters),
         stateId
@@ -110,7 +123,7 @@ export function getBeaconStateApi({
     },
 
     async getEpochSyncCommittees({stateId, epoch}) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized} = unwrapStateResult(
         await chain.beaconEngine.getEpochSyncCommittees(id, epoch),
         stateId
@@ -119,7 +132,7 @@ export function getBeaconStateApi({
     },
 
     async getPendingDeposits({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
         await chain.beaconEngine.getStatePendingDeposits(id, Boolean(context?.returnBytes)),
         stateId
@@ -128,7 +141,7 @@ export function getBeaconStateApi({
     },
 
     async getPendingPartialWithdrawals({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
         await chain.beaconEngine.getStatePendingPartialWithdrawals(id, Boolean(context?.returnBytes)),
         stateId
@@ -137,7 +150,7 @@ export function getBeaconStateApi({
     },
 
     async getPendingConsolidations({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
         await chain.beaconEngine.getStatePendingConsolidations(id, Boolean(context?.returnBytes)),
         stateId
@@ -146,9 +159,27 @@ export function getBeaconStateApi({
     },
 
     async getProposerLookahead({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId);
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
       const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
         await chain.beaconEngine.getStateProposerLookahead(id, Boolean(context?.returnBytes)),
+        stateId
+      );
+      return {data, meta: {executionOptimistic, finalized, version: fork}};
+    },
+
+    async getBuilderPendingPayments({stateId}, context) {
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
+      const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
+        await chain.beaconEngine.getBuilderPendingPayments(id, Boolean(context?.returnBytes)),
+        stateId
+      );
+      return {data, meta: {executionOptimistic, finalized, version: fork}};
+    },
+
+    async getBuilderPendingWithdrawals({stateId}, context) {
+      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
+      const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(
+        await chain.beaconEngine.getBuilderPendingWithdrawals(id, Boolean(context?.returnBytes)),
         stateId
       );
       return {data, meta: {executionOptimistic, finalized, version: fork}};

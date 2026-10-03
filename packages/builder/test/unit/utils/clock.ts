@@ -1,0 +1,32 @@
+import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Epoch, Slot} from "@lodestar/types";
+
+type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
+
+export class ClockMock implements IClock {
+  currentSlot = 0;
+  get currentEpoch(): number {
+    return computeEpochAtSlot(this.currentSlot);
+  }
+  readonly genesisTime: number = 0;
+  readonly secondsPerSlot: number = 12;
+
+  private readonly everySlot: RunEveryFn[] = [];
+  private readonly everyEpoch: RunEveryFn[] = [];
+
+  start = (): void => {};
+  runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
+  runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
+  msToSlot = (slot: number): number => (slot - this.currentSlot) * this.secondsPerSlot * 1000;
+  msFromSlot = (): number => 0;
+  secFromSlot = (): number => 0;
+  getCurrentSlot = (): number => this.currentSlot;
+  getCurrentEpoch = (): number => this.currentEpoch;
+
+  async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
+    for (const fn of this.everySlot) await fn(slot, signal);
+  }
+  async tickEpochFns(epoch: Epoch, signal: AbortSignal): Promise<void> {
+    for (const fn of this.everyEpoch) await fn(epoch, signal);
+  }
+}

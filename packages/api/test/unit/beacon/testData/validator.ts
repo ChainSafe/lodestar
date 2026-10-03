@@ -85,16 +85,31 @@ export const testData: GenericServerTestCases<Endpoints> = {
       randaoReveal,
       graffiti,
       skipRandaoVerification: true,
-      builderBoostFactor: 0n,
       feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: new TextEncoder().encode("https://builder.example.com"),
+            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
     },
     res: {
-      data: ssz.gloas.BeaconBlock.defaultValue(),
+      data: ssz.gloas.BlockContents.defaultValue(),
       meta: {
         version: ForkName.gloas,
         consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        executionPayloadIncluded: true,
       },
     },
   },
@@ -155,6 +170,23 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   registerValidator: {
     args: {registrations: [ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]},
+    res: undefined,
+  },
+  submitProposerPreferences: {
+    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
+    res: undefined,
+  },
+  submitBuilderPreferences: {
+    args: {
+      builderPreferences: [
+        {
+          proposerPubkey: new Uint8Array(48).fill(1),
+          url: new TextEncoder().encode("https://builder.example.com"),
+          auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+          maxExecutionPayment: 0n,
+        },
+      ],
+    },
     res: undefined,
   },
 };

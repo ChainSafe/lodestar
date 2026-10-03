@@ -104,7 +104,6 @@ export async function validateGossipAttestationsSameAttData(
   this: BeaconEngine,
   fork: ForkName,
   attestationOrBytesArr: GossipAttestation[],
-  // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
@@ -142,13 +141,7 @@ export async function validateGossipAttestationsSameAttData(
   const batchableBls = signatureSets.length >= this.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await this.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => {
-        const publicKey = this.pubkeyCache.getOrThrow(set.index);
-        return {publicKey, signature: set.signature};
-      }),
-      signatureSets[0].signingRoot
-    );
+    signatureValids = await this.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(
@@ -245,7 +238,6 @@ async function validateAttestationNoSignatureCheck(
   this: BeaconEngine,
   fork: ForkName,
   attestationOrBytes: AttestationOrBytes,
-  /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: SubnetID | null
 ): Promise<Step0Result> {
   // Do checks in this order:
@@ -316,14 +308,14 @@ async function validateAttestationNoSignatureCheck(
           });
         }
 
-        // [REJECT] If `attestation.data.index == 1` (payload present for a past
-        //   block), the execution payload for `block` passes validation.
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past block),
+        //   the execution payload for `block` passes validation.
         // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
-        // the corresponding execution payload for `block` has been seen (a client MAY queue
-        // attestations for processing once the payload is retrieved and SHOULD request the
-        // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-        // TODO - beacon engine: unstable uses this.seenPayloadEnvelope() which also checks the facade-owned
-        // seenPayloadEnvelopeInputCache; the engine has only the forkChoice branch.
+        //   the execution payload for `block` has been fully imported, including its data -- i.e.
+        //   `is_payload_verified(store, attestation.data.beacon_block_root)` returns `True`
+        //   (a client MAY queue attestations for processing until the payload is imported and
+        //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
+        //   `attestation.data.beacon_block_root`).
         if (
           block !== null &&
           attData.index === 1 &&
@@ -418,6 +410,7 @@ async function validateAttestationNoSignatureCheck(
     // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
     const attHeadBlock = verifyHeadBlockAndTargetRoot.call(
       this,
+
       attestationOrCache.attestation.data.beaconBlockRoot,
       attestationOrCache.attestation.data.target.root,
       attSlot,
@@ -427,7 +420,7 @@ async function validateAttestationNoSignatureCheck(
     );
 
     // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
-    // > Altready check in `verifyHeadBlockAndTargetRoot()`
+    // > Altready check in `verifyHeadBlockAndTargetRoot.call(this, )`
 
     // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
     // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
@@ -760,7 +753,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 }
 
 /**
- * Checks if the `attestation.data.beaconBlockRoot` is known to this this.
+ * Checks if the `attestation.data.beaconBlockRoot` is known to this chain.
  *
  * The block root may not be known for two reasons:
  *

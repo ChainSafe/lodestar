@@ -1,4 +1,4 @@
-export type {IBlsVerifier} from "./interface.js";
+export type {IBlsVerifier, SameMessageSignatureSet} from "./interface.js";
 export type {
   BlsMultiThreadWorkerPoolModules,
   BlsMultiThreadWorkerPoolOptions,

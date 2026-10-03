@@ -1,14 +1,5 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {
-  AttesterSlashing,
-  BeaconBlock,
-  Epoch,
-  IndexedAttestation,
-  Root,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -17,6 +8,7 @@ import {
   ProtoBlock,
   ProtoNode,
 } from "../protoArray/interface.js";
+import {IFastConfirmationSpecStore} from "./fastConfirmation/types.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
@@ -80,15 +72,8 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
-/**
- * Read-only facet of the fork choice. Consumers that only query the fork-choice DAG (head, blocks,
- * checkpoints, ancestry, PTC votes, …) depend on this; the mutating methods live on `IForkChoice`.
- * Part of the BeaconEngine seam — `chain.forkChoice` is typed as `IForkChoiceRead`; writes go
- * through the engine.
- * TODO - beacon engine: refine this. Cannot support iterate methods.
- */
-export interface IForkChoiceRead {
-  readonly irrecoverableError?: Error;
+export interface IForkChoice {
+  irrecoverableError?: Error;
 
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
@@ -97,7 +82,7 @@ export interface IForkChoiceRead {
    * ## Specification
    *
    * Modified for Gloas to return ProtoNode instead of just root:
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_ancestor
    *
    * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
    * Gloas: Returns (root, payloadStatus) based on actual node state
@@ -116,6 +101,17 @@ export interface IForkChoiceRead {
   getHead(): ProtoBlock;
   getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
+  /** Snapshot of the spec `FastConfirmationStore` fields, mirroring `get_fast_confirmation_store` */
+  getFastConfirmationStore(): IFastConfirmationSpecStore;
+  /** Resume the fast confirmation rule; restarts from the finalized root on the next slot tick */
+  resumeFastConfirmation(): void;
+  /** Pause the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
+  pauseFastConfirmation(): void;
+  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  };
   /**
    * This is called during block import when proposerBoostReorg is enabled
    * fcu call in `importBlock()` will be suppressed if this returns true. It is also
@@ -140,6 +136,98 @@ export interface IForkChoiceRead {
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
   getProposerBoostRoot(): RootHex;
   getPreviousProposerBoostRoot(): RootHex;
+  /**
+   * Add `block` to the fork choice DAG.
+   *
+   * ## Specification
+   *
+   * Approximates:
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_block
+   *
+   * It only approximates the specification since it does not run the `state_transition` check.
+   * That should have already been called upstream and it's too expensive to call again.
+   *
+   * ## Notes:
+   *
+   * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   */
+  onBlock(
+    block: BeaconBlock,
+    state: IBeaconStateView,
+    receiveDelaySec: number,
+    importDelaySec: number,
+    currentSlot: Slot,
+    executionStatus: BlockExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
+  ): ProtoBlock;
+  /**
+   * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
+   *
+   * ## Specification
+   *
+   * Approximates:
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
+   *
+   * It only approximates the specification since it does not perform
+   * `is_valid_indexed_attestation` since that should already have been called upstream and it's
+   * too expensive to call again.
+   *
+   * ## Notes:
+   *
+   * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
+   * will not be run here.
+   */
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
+  /**
+   * Register attester slashing in order not to consider their votes in `getHead`
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
+   */
+  onAttesterSlashing(slashing: AttesterSlashing): void;
+  /**
+   * Process PTC (Payload Timeliness Committee) messages from a block
+   * Updates the PTC votes for the attested beacon block
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#new-notify_ptc_messages
+   */
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    slot: Slot,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void;
+  /**
+   * Notify fork choice that an execution payload has arrived (Gloas fork)
+   * Creates the FULL variant of a Gloas block when the payload becomes available
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#new-on_execution_payload_envelope
+   *
+   * @param blockRoot - The beacon block root for which the payload arrived
+   * @param executionPayloadBlockHash - The block hash of the execution payload
+   * @param executionPayloadNumber - The block number of the execution payload
+   * @param executionPayloadGasLimit - The gas limit of the execution payload
+   */
+  onExecutionPayload(
+    blockRoot: RootHex,
+    executionPayloadBlockHash: RootHex,
+    executionPayloadNumber: number,
+    executionPayloadGasLimit: number,
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
+  ): void;
+  /**
+   * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
+   */
+  updateTime(currentSlot: Slot): void;
 
   /**
    * Returns current time slot.
@@ -162,6 +250,8 @@ export interface IForkChoiceRead {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  /** Count FULL and EMPTY blocks on the supplied head chain in the inclusive slot range. */
+  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot, head: ProtoBlock): {full: number; empty: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
   getPTCVoteCounts(blockRootHex: RootHex): {
@@ -181,7 +271,7 @@ export interface IForkChoiceRead {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
-  /** Spec: should_build_on_full(store, head) */
+  /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
@@ -198,6 +288,11 @@ export interface IForkChoiceRead {
     descendantRoot: RootHex,
     descendantPayloadStatus: PayloadStatus
   ): boolean;
+  /**
+   * Prune items up to a finalized root.
+   */
+  prune(finalizedRoot: RootHex): ProtoBlock[];
+  setPruneThreshold(threshold: number): void;
   /**
    * Iterates backwards through ancestor block summaries, starting from a block root
    */
@@ -248,122 +343,69 @@ export interface IForkChoiceRead {
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   */
+  validateLatestHash(execResponse: LVHExecResponse): void;
+
+  /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    */
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 }
 
-/**
- * Full fork choice contract — the read facet plus the mutating methods. Writes are internal to the
- * BeaconEngine; only the engine (and, transitionally, the flows not yet moved into it) hold this.
- */
-export interface IForkChoice extends IForkChoiceRead {
-  irrecoverableError?: Error;
-
-  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
-    head: ProtoBlock;
-    isHeadTimely?: boolean;
-    notReorgedReason?: NotReorgedReason;
-  };
-  /**
-   * Add `block` to the fork choice DAG.
-   *
-   * ## Specification
-   *
-   * Approximates:
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_block
-   *
-   * It only approximates the specification since it does not run the `state_transition` check.
-   * That should have already been called upstream and it's too expensive to call again.
-   *
-   * ## Notes:
-   *
-   * The supplied block **must** pass the `state_transition` function as it will not be run here.
-   */
-  onBlock(
-    block: BeaconBlock,
-    state: IBeaconStateView,
-    blockDelaySec: number,
-    currentSlot: Slot,
-    executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    expectedProposerIndex: ValidatorIndex | null
-  ): ProtoBlock;
-  /**
-   * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
-   *
-   * ## Specification
-   *
-   * Approximates:
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
-   *
-   * It only approximates the specification since it does not perform
-   * `is_valid_indexed_attestation` since that should already have been called upstream and it's
-   * too expensive to call again.
-   *
-   * ## Notes:
-   *
-   * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
-   * will not be run here.
-   */
-  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
-  /**
-   * Register attester slashing in order not to consider their votes in `getHead`
-   *
-   * ## Specification
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
-   */
-  onAttesterSlashing(slashing: AttesterSlashing): void;
-  /**
-   * Process PTC (Payload Timeliness Committee) messages from a block
-   * Updates the PTC votes for the attested beacon block
-   *
-   * ## Specification
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
-   */
-  notifyPtcMessages(
-    blockRoot: RootHex,
-    slot: Slot,
-    ptcIndices: number[],
-    payloadPresent: boolean,
-    blobDataAvailable: boolean
-  ): void;
-  /**
-   * Notify fork choice that an execution payload has arrived (Gloas fork)
-   * Creates the FULL variant of a Gloas block when the payload becomes available
-   *
-   * ## Specification
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
-   *
-   * @param blockRoot - The beacon block root for which the payload arrived
-   * @param executionPayloadBlockHash - The block hash of the execution payload
-   * @param executionPayloadNumber - The block number of the execution payload
-   * @param executionPayloadGasLimit - The gas limit of the execution payload
-   */
-  onExecutionPayload(
-    blockRoot: RootHex,
-    executionPayloadBlockHash: RootHex,
-    executionPayloadNumber: number,
-    executionPayloadGasLimit: number,
-    executionStatus: PayloadExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
-  ): void;
-  /**
-   * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
-   */
-  updateTime(currentSlot: Slot): void;
-  /**
-   * Prune items up to a finalized root.
-   */
-  prune(finalizedRoot: RootHex): ProtoBlock[];
-  setPruneThreshold(threshold: number): void;
-  /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
-   */
-  validateLatestHash(execResponse: LVHExecResponse): void;
-}
+/** Read-only methods used by engine-internal consensus helpers. */
+export type IForkChoiceRead = Pick<
+  IForkChoice,
+  | "getAncestor"
+  | "getHeadRoot"
+  | "getHead"
+  | "getConfirmedRoot"
+  | "getConfirmedBlock"
+  | "shouldOverrideForkChoiceUpdate"
+  | "getHeads"
+  | "getAllNodes"
+  | "getFinalizedCheckpoint"
+  | "getJustifiedCheckpoint"
+  | "getUnrealizedJustifiedCheckpoint"
+  | "getUnrealizedFinalizedCheckpoint"
+  | "getProposerBoostRoot"
+  | "getPreviousProposerBoostRoot"
+  | "getTime"
+  | "hasBlock"
+  | "hasBlockHex"
+  | "hasBlockUnsafe"
+  | "hasBlockHexUnsafe"
+  | "hasPayloadUnsafe"
+  | "hasPayloadHexUnsafe"
+  | "getSlotsPresent"
+  | "getPTCVotes"
+  | "getPTCVoteCounts"
+  | "getPayloadTimelinessVotes"
+  | "getPayloadDataAvailabilityVotes"
+  | "getBlock"
+  | "getBlockHex"
+  | "getBlockDefaultStatus"
+  | "getBlockHexDefaultStatus"
+  | "getBlockHexAndBlockHash"
+  | "shouldExtendPayload"
+  | "shouldBuildOnFull"
+  | "getFinalizedBlock"
+  | "getJustifiedBlock"
+  | "getFinalizedCheckpointSlot"
+  | "isDescendant"
+  | "iterateAncestorBlocks"
+  | "getAllAncestorBlocks"
+  | "getAllNonAncestorBlocks"
+  | "getAllAncestorAndNonAncestorBlocks"
+  | "getAllAncestorAndNonAncestorBlocksDefaultStatus"
+  | "getCanonicalBlockByRoot"
+  | "getCanonicalBlockAtSlot"
+  | "getCanonicalBlockClosestLteSlot"
+  | "forwarditerateAncestorBlocks"
+  | "forwardIterateDescendants"
+  | "forwardIterateDescendantsDefaultStatus"
+  | "getBlockSummariesByParentRoot"
+  | "getBlockSummariesAtSlot"
+  | "getCommonAncestorDepth"
+  | "getDependentRoot"
+>;

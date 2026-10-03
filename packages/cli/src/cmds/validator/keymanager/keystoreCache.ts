@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHex, toHex, toPubkeyHex} from "@lodestar/utils";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {writeFile600Perm} from "../../../util/file.js";

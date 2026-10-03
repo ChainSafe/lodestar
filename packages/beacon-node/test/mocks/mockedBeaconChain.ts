@@ -1,12 +1,14 @@
 import {Mock, Mocked, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {IBeaconStateView, createPubkeyCache} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
+import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
@@ -28,6 +30,7 @@ import {SeenAggregatedAttestations} from "../../src/chain/seenCache/seenAggregat
 import {SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
+import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
@@ -51,6 +54,9 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   getProposerHead: Mock<() => ProtoBlock>;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
+  builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
+  executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
+  builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
@@ -110,10 +116,15 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getFinalizedCheckpoint: vi.fn(),
       getConfirmedRoot: vi.fn(),
       getConfirmedBlock: vi.fn(),
+      resumeFastConfirmation: vi.fn(),
+      pauseFastConfirmation: vi.fn(),
+      isDescendant: vi.fn(),
       hasBlock: vi.fn(),
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),
       notifyPtcMessages: vi.fn(),
+      shouldBuildOnFull: vi.fn(),
+      getCanonicalPayloadCounts: vi.fn(),
     };
   });
 
@@ -179,10 +190,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opts: {},
       blockProductionCache: new Map(),
       getStatus: vi.fn().mockReturnValue({...ssz.phase0.Status.defaultValue(), earliestAvailableSlot: 0}),
-      executionPayloadBidPool: new ExecutionPayloadBidPool(),
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
+      serializedCache: new Map(),
+      verifiedBlocks: new Map(),
+      updateHeadAndEmitCheckpointEvents: vi.fn(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
@@ -190,6 +203,20 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       executionBuilder: {},
       proposerPreferencesPool: new ProposerPreferencesPool(),
+      builderCircuitBreaker: {
+        isActive: vi.fn(),
+        update: vi.fn(),
+      },
+      executionPayloadBidPool: {
+        add: vi.fn(),
+        getBestBid: vi.fn(),
+      },
+      builderApiClient: {
+        getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
+        submitBuilderPreferences: vi.fn(),
+        submitSignedBeaconBlock: vi.fn(),
+        checkStatus: vi.fn().mockResolvedValue(undefined),
+      },
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
@@ -214,10 +241,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenBlockInputCache: new SeenBlockInput(),
       seenPayloadEnvelopeInputCache: {
         get: vi.fn(),
+        getOrReload: vi.fn(),
+        remove: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
       shufflingCache: new ShufflingCache(),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
       produceCommonBlockBody: vi.fn(),
       produceBlockV4: vi.fn(),
       produceBlockWrapper: vi.fn(),
@@ -237,7 +266,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
       processBlock: vi.fn(),
+      processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
+      persistInvalidSszBytes: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,
@@ -281,6 +312,11 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // `prepareForNextSlot` is a real BeaconEngine method too; `recomputeForkChoiceHead` / `predictProposerHead`
   // stay as mock fns above so tests can control head selection.
   for (const name of [
+    "verifyBlocks",
+    "observeVerifiedBlocks",
+    "markBlockProposersSeen",
+    "discardVerifiedBlocks",
+    "isDescendant",
     "getProposerDuties",
     "getAttesterDuties",
     "getSyncCommitteeDuties",
@@ -351,5 +387,5 @@ export function getMockedForkChoice(): MockedForkChoice {
 }
 
 // To avoid loading the package in test while mocked, exporting frequently used types and constants
-export type {ProtoBlock};
 export {EpochDifference};
+export type {ProtoBlock};

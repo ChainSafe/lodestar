@@ -87,7 +87,7 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     ),
   },
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
-    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(
       fork,
       config,
@@ -126,7 +126,8 @@ function getRequestCountFn<T extends ReqRespMethod>(
   const type = requestSszTypeByMethod(fork, config)[method];
   return (reqData: Uint8Array) => {
     try {
-      return (type && fn(type.deserialize(reqData))) ?? 1;
+      // A schema-valid request can cost 0 tokens; floor to 1 so it stays charged and bannable, not free.
+      return Math.max(1, (type && fn(type.deserialize(reqData))) ?? 1);
     } catch (_e) {
       return 1;
     }

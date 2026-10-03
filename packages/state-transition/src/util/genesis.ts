@@ -139,7 +139,7 @@ export function applyDeposits(
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
 
   if (fullDepositDataRootArr) {
-    const depositCount = state.eth1Data.depositCount;
+    const depositCount = Number(state.eth1Data.depositCount);
     for (let index = 0; index < depositCount; index++) {
       depositDataRootList.push(fullDepositDataRootArr[index]);
     }
@@ -160,7 +160,7 @@ export function applyDeposits(
       );
     }
 
-    state.eth1Data.depositCount += 1;
+    state.eth1Data.depositCount += 1n;
 
     const fork = config.getForkSeq(GENESIS_SLOT);
     processDeposit(fork, state, deposit);
@@ -332,6 +332,12 @@ export function initializeBeaconStateFromEth1(
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
+  }
+
+  if (fork >= ForkSeq.heze) {
+    const stateHeze = state as CompositeViewDU<typeof ssz.heze.BeaconState>;
+    stateHeze.fork.previousVersion = config.HEZE_FORK_VERSION;
+    stateHeze.fork.currentVersion = config.HEZE_FORK_VERSION;
   }
 
   state.commit();

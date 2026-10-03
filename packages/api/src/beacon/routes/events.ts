@@ -56,9 +56,23 @@ const gloasDataColumnSidecarSSE = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
+const headV2 = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    state: stringType,
+    payloadStatus: new StringType<"empty" | "full">(),
+    epochTransition: ssz.Boolean,
+    currentEpochDependentRoot: stringType,
+    nextEpochDependentRoot: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "HeadV2", jsonCase: "eth2"}
+);
 type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
 type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
+type HeadV2 = ValueOf<typeof headV2>;
 
 export enum EventType {
   /**
@@ -68,6 +82,16 @@ export enum EventType {
    * Both dependent roots use the genesis block root in the case of underflow.
    */
   head = "head",
+  /**
+   * The node's fork choice has selected a new head consisting of a beacon block and its `payload_status`.
+   * The node should emit a second head event for the same beacon block and slot when there is an update
+   * in the `payload_status` from empty to full. Emission on other payload_status transitions (e.g. full to empty)
+   * is optional and implementation-defined. `slot` is the slot of the head block. `current_epoch_dependent_root`
+   * is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and `next_epoch_dependent_root`
+   * is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)`, where `epoch` is obtained by
+   * `compute_epoch_at_slot(slot)`. All dependent roots use the genesis block root in the case of underflow.
+   */
+  headV2 = "head_v2",
   /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
   /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
@@ -110,12 +134,15 @@ export enum EventType {
   executionPayloadBid = "execution_payload_bid",
   /** The node has received a `SignedProposerPreferences` (from P2P or API) that passes gossip validation on the `proposer_preferences` topic */
   proposerPreferences = "proposer_preferences",
+  /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
+  payloadAttestationMessage = "payload_attestation_message",
   /** The node has executed the Fast Confirmation Rule and produced a confirmed beacon block */
   fastConfirmation = "fast_confirmation",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
   [EventType.head]: EventType.head,
+  [EventType.headV2]: EventType.headV2,
   [EventType.block]: EventType.block,
   [EventType.blockGossip]: EventType.blockGossip,
   [EventType.attestation]: EventType.attestation,
@@ -137,6 +164,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
   [EventType.proposerPreferences]: EventType.proposerPreferences,
+  [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
   [EventType.fastConfirmation]: EventType.fastConfirmation,
 };
 
@@ -149,6 +177,10 @@ export type EventData = {
     previousDutyDependentRoot: RootHex;
     currentDutyDependentRoot: RootHex;
     executionOptimistic: boolean;
+  };
+  [EventType.headV2]: {
+    version: ForkName;
+    data: HeadV2;
   };
   [EventType.block]: {
     slot: Slot;
@@ -206,6 +238,7 @@ export type EventData = {
   };
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
   [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
+  [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
   [EventType.fastConfirmation]: {
     block: RootHex;
     slot: Slot;
@@ -295,6 +328,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.headV2]: WithVersion(() => headV2),
 
     [EventType.block]: new ContainerType(
       {
@@ -408,6 +442,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
     [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
+    [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
     [EventType.fastConfirmation]: new ContainerType(
       {
         block: stringType,

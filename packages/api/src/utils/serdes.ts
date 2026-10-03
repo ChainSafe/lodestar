@@ -75,6 +75,9 @@ export function fromValidatorIdsStr(ids?: string[]): (string | number)[] | undef
   return ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id)));
 }
 
+export const toBuilderIdsStr = toValidatorIdsStr;
+export const fromBuilderIdsStr = fromValidatorIdsStr;
+
 const GRAFFITI_HEX_LENGTH = 66;
 
 export function toGraffitiHex(utf8?: string): string | undefined {

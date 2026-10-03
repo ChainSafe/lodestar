@@ -11,6 +11,7 @@ import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {GLOAS_POLAR_BEAR_BANNER} from "./utils/polarBearBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
@@ -78,12 +79,15 @@ export async function verifyBlocksInEpoch(
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
-            // Validate DA for ALL payloads in the Map, not just those paired with blockInputs.
+            // Range sync creates a PayloadEnvelopeInput for every Gloas block, but an entry without
+            // an envelope represents a valid EMPTY slot and has no payload DA to verify.
             // A checkpoint-sync batch may include a payload for a slot whose block was filtered
             // out of relevantBlocks (e.g., the anchor at the finalized slot); that payload still
             // needs DA validation so it can be imported in processBlocks.
             const payloadInputsForDa: PayloadEnvelopeInput[] =
-              payloadEnvelopes !== null ? Array.from(payloadEnvelopes.values()) : [];
+              payloadEnvelopes !== null
+                ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
+                : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
               payloadInputsForDa,
               abortController.signal
@@ -126,6 +130,12 @@ export async function verifyBlocksInEpoch(
       this.beaconEngine.verifyBlocks(blockBytes, parentBlock, blockInputs, opts, abortController.signal),
     ]);
 
+    // Observation must follow both consensus verification and the facade DA wait.
+    this.beaconEngine.observeVerifiedBlocks(
+      blockInputs.map((input) => ({block: input.getBlock(), root: input.blockRootHex})),
+      opts.verifyOnly === true
+    );
+
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
       const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
@@ -151,6 +161,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
             this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            break;
+
+          case ForkName.gloas:
+            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:

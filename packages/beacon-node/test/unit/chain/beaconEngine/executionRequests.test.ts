@@ -2,17 +2,13 @@ import {mkdtemp, rm} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {
-  BeaconStateView,
-  DataAvailabilityStatus,
-  createCachedBeaconState,
-  createPubkeyCache,
-} from "@lodestar/state-transition";
+import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
@@ -59,12 +55,18 @@ describe("BeaconEngine execution requests persistence", () => {
   let chain: ReturnType<typeof getMockedBeaconChain>;
 
   async function openDb(): Promise<BeaconDb> {
-    return new BeaconDb(config, await LevelDbController.create({name: directory}, {logger: dbLogger}));
+    return new BeaconDb(config, await LevelDbController.create({name: directory}, {logger: dbLogger}), {
+      dataColumnDir: path.join(directory, "data_columns"),
+      logger: dbLogger,
+    });
   }
 
   function setupChain(): void {
     chain = getMockedBeaconChain({config});
     Object.defineProperty(chain, "db", {value: db, configurable: true});
+    chain.beaconEngine.getFinalizedBlockSnapshot = BeaconEngine.prototype.getFinalizedBlockSnapshot.bind(
+      chain.beaconEngine
+    );
     chain.beaconEngine.getParentExecutionRequests = BeaconEngine.prototype.getParentExecutionRequests.bind(
       chain.beaconEngine
     );
@@ -96,7 +98,7 @@ describe("BeaconEngine execution requests persistence", () => {
     const state = new BeaconStateView(
       createCachedBeaconState(generateState({slot: 1}, config), {
         config,
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache,
       })
     );
     chain.beaconEngine.payloadAttestationPool.getPayloadAttestationsForBlock = vi.fn().mockReturnValue([]);
@@ -122,10 +124,13 @@ describe("BeaconEngine execution requests persistence", () => {
     chain.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus.mockReturnValue({ancestors, nonAncestors});
     chain.forkChoice.prune = vi.fn().mockReturnValue([]);
     Object.defineProperty(chain.beaconEngine, "stateArchiveStrategy", {
-      value: {maybeArchiveState: vi.fn().mockResolvedValue(undefined)},
+      value: {
+        onFinalizedCheckpoint: vi.fn().mockResolvedValue(undefined),
+        maybeArchiveState: vi.fn().mockResolvedValue(undefined),
+      },
       configurable: true,
     });
-    await BeaconEngine.prototype.migrateFinalized.call(chain.beaconEngine, {
+    await BeaconEngine.prototype.completeFinalization.call(chain.beaconEngine, {
       epoch: 1,
       root: finalizedRoot,
       rootHex: toRootHex(finalizedRoot),
@@ -139,7 +144,8 @@ describe("BeaconEngine execution requests persistence", () => {
       forkName: ForkName.gloas,
       sampledColumns: [],
       custodyColumns: [],
-      timeCreatedSec: 0,
+      seenTimestampSec: 0,
+      source: PayloadEnvelopeInputSource.gossip,
       daOutOfRange: false,
     });
     const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();

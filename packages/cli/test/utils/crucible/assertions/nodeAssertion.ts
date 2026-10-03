@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api/beacon";
 import {toHex} from "@lodestar/utils";
 import {Assertion, AssertionResult, ValidatorClient, ValidatorClientKeys} from "../interfaces.js";

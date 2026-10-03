@@ -34,6 +34,7 @@ export enum Schema {
   ObjectArray,
   AnyArray,
   Boolean,
+  BooleanRequired,
 }
 
 /**
@@ -71,6 +72,7 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
       return {type: "array"};
 
     case Schema.Boolean:
+    case Schema.BooleanRequired:
       return {type: "boolean"};
   }
 }
@@ -81,6 +83,7 @@ function isRequired(schema: Schema): boolean {
     case Schema.StringRequired:
     case Schema.UintOrStringRequired:
     case Schema.StringArrayRequired:
+    case Schema.BooleanRequired:
       return true;
 
     default:

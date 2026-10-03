@@ -1,13 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostElectra} from "@lodestar/params";
 import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex} from "@lodestar/utils";
-import {isValidLightClientHeader, isValidMerkleBranch} from "./utils.js";
-
-const CURRENT_SYNC_COMMITTEE_INDEX = 22;
-const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
-const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
-const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+import {currentSyncCommitteeGindexAtFork, isValidLightClientHeader, isValidNormalizedMerkleBranch} from "./utils.js";
 
 export function validateLightClientBootstrap(
   config: ChainForkConfig,
@@ -26,11 +20,10 @@ export function validateLightClientBootstrap(
   }
 
   if (
-    !isValidMerkleBranch(
+    !isValidNormalizedMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(bootstrap.currentSyncCommittee),
       bootstrap.currentSyncCommitteeBranch,
-      isForkPostElectra(fork) ? CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA : CURRENT_SYNC_COMMITTEE_DEPTH,
-      isForkPostElectra(fork) ? CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA : CURRENT_SYNC_COMMITTEE_INDEX,
+      currentSyncCommitteeGindexAtFork(fork),
       bootstrap.header.beacon.stateRoot
     )
   ) {

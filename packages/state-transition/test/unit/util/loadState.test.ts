@@ -3,7 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/networks";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {BeaconStateAltair} from "../../../src/types.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "../../../src/types.js";
 import {loadState, loadStateAndValidators} from "../../../src/util/loadState/loadState.js";
 
 describe("loadStateAndValidators", () => {
@@ -104,5 +104,62 @@ describe("loadState does not poison seed state's cache", () => {
     expect(postState.validators.getReadonly(modifiedIndex).withdrawalCredentials).toEqual(originalWC);
     expect(postState.inactivityScores.get(modifiedIndex)).toEqual(modifiedIndex);
     expect(postState.hashTreeRoot()).toEqual(originalRoot);
+  });
+});
+
+describe("loadState across the gloas fork boundary", () => {
+  // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
+  // changing the merkle tree shape. loadState() must not reuse the seed state's list nodes when
+  // the seed state is on the other side of the gloas fork, else hashTreeRoot() is silently wrong.
+  const numValidator = 10;
+  const gloasForkEpoch = 10;
+  const config = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+    GLOAS_FORK_EPOCH: gloasForkEpoch,
+  });
+  const preGloasSlot = (gloasForkEpoch - 1) * SLOTS_PER_EPOCH;
+  const postGloasSlot = gloasForkEpoch * SLOTS_PER_EPOCH;
+
+  function buildState(slot: number, validatorCount: number): BeaconStateAllForks {
+    const state = config.getForkTypes(slot).BeaconState.defaultViewDU() as BeaconStateAltair;
+    state.slot = slot;
+    for (let i = 0; i < validatorCount; i++) {
+      const validator = ssz.phase0.Validator.defaultViewDU();
+      validator.pubkey = new Uint8Array(48).fill(i);
+      state.validators.push(validator);
+      state.balances.push(32 * 1e9);
+      state.inactivityScores.push(i);
+    }
+    state.commit();
+    return state;
+  }
+
+  it("loads a gloas state from a fulu seed state", () => {
+    const seedState = buildState(preGloasSlot, numValidator);
+    const targetState = buildState(postGloasSlot, numValidator + 2);
+    // simulate a diverged branch where an overlapping index holds a different validator
+    const validator = targetState.validators.get(1);
+    validator.pubkey = new Uint8Array(48).fill(0xaa);
+    targetState.validators.set(1, validator);
+    targetState.commit();
+
+    const {state: loadedState, modifiedValidators} = loadState(config, seedState, targetState.serialize());
+    expect(loadedState.hashTreeRoot()).toEqual(targetState.hashTreeRoot());
+    // modified and appended validators must be reported for the pubkey cache
+    expect(modifiedValidators).toEqual([1, numValidator, numValidator + 1]);
+  });
+
+  it("loads a fulu state from a gloas seed state", () => {
+    const seedState = buildState(postGloasSlot, numValidator);
+    const targetState = buildState(preGloasSlot, numValidator);
+
+    const {state: loadedState, modifiedValidators} = loadState(config, seedState, targetState.serialize());
+    expect(loadedState.hashTreeRoot()).toEqual(targetState.hashTreeRoot());
+    expect(modifiedValidators).toEqual([]);
   });
 });

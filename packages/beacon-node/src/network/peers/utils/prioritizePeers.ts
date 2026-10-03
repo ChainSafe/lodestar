@@ -7,6 +7,7 @@ import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
+import {SubnetType} from "../../metadata.js";
 import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
@@ -189,6 +190,18 @@ export function prioritizePeers(
 
   const connectedPeerCount = connectedPeers.length;
 
+  // Track the outbound peers invariant (we keep at least OUTBOUND_PEERS_RATIO outbound peers).
+  // Report 0 when there are no peers so the gauge doesn't go stale at its last value.
+  if (metrics) {
+    let outboundPeerCount = 0;
+    for (const peer of connectedPeers) {
+      if (peer.direction === "outbound") {
+        outboundPeerCount++;
+      }
+    }
+    metrics.peerManager.outboundPeersRatio.set(connectedPeerCount > 0 ? outboundPeerCount / connectedPeerCount : 0);
+  }
+
   if (connectedPeerCount < targetPeers) {
     // Need more peers.
     // Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
@@ -256,6 +269,7 @@ function requestSubnetPeers(
 
     for (const {subnet, toSlot} of activeAttnets) {
       const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.attnets}, peersInSubnet);
       if (peersInSubnet < targetSubnetPeers) {
         // We need more peers
         attnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
@@ -282,6 +296,7 @@ function requestSubnetPeers(
 
     for (const {subnet, toSlot} of activeSyncnets) {
       const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.syncnets}, peersInSubnet);
       if (peersInSubnet < targetSubnetPeers) {
         // We need more peers
         syncnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});

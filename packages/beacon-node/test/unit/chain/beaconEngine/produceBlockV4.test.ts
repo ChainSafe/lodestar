@@ -28,13 +28,22 @@ describe("BeaconEngine V4 production", () => {
     }),
     Buffer.alloc(32)
   );
-  const attrs: ProduceBlockV4Request = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: Buffer.alloc(32)};
+  const attrs: ProduceBlockV4Request = {
+    slot: 1,
+    randaoReveal: Buffer.alloc(96),
+    graffiti: Buffer.alloc(32),
+    includePayload: false,
+    builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: []},
+  };
   beforeEach(() => {
     modules = getApiTestModules({config});
     modules.chain.beaconEngine.produceBlockV4 = vi.fn(
       BeaconEngine.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
     );
-    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: 0}));
+    modules.chain.getProposerHead.mockReturnValue(
+      generateProtoBlock({slot: 0, executionPayloadBlockHash: "0x" + "00".repeat(32)})
+    );
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(1000);
     modules.chain.forkChoice.shouldBuildOnFull = vi.fn().mockReturnValue(true);
     modules.chain.beaconEngine.produceCommonBlockBody = vi.fn().mockResolvedValue({});
   });
@@ -47,7 +56,10 @@ describe("BeaconEngine V4 production", () => {
   ] as const) {
     it(`selects ${source}: bid=${hasBid}, engineFails=${engineFails}, bidFails=${bidFails}`, async () => {
       const bid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
-      vi.spyOn(modules.chain.beaconEngine.executionPayloadBidPool, "getBestBid").mockReturnValue(hasBid ? bid : null);
+      bid.message.value = 1;
+      vi.spyOn(modules.chain.beaconEngine.executionPayloadBidPool, "getBestBid").mockReturnValue(
+        hasBid ? {signedBid: bid, receivedMs: 0} : null
+      );
       const engineBlock = ssz.gloas.BeaconBlock.defaultValue();
       const bidBlock = ssz.gloas.BeaconBlock.defaultValue();
       bidBlock.proposerIndex = 1;
@@ -117,9 +129,10 @@ describe("BeaconEngine V4 production", () => {
   }
 
   it("returns INTERNAL when both production paths fail", async () => {
-    vi.spyOn(modules.chain.beaconEngine.executionPayloadBidPool, "getBestBid").mockReturnValue(
-      ssz.gloas.SignedExecutionPayloadBid.defaultValue()
-    );
+    vi.spyOn(modules.chain.beaconEngine.executionPayloadBidPool, "getBestBid").mockReturnValue({
+      signedBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+      receivedMs: 0,
+    });
     modules.chain.produceBlockWrapper.mockRejectedValue(Error("failed"));
     const result = await modules.chain.beaconEngine.produceBlockV4(attrs);
     expect(result.ok).toBe(false);

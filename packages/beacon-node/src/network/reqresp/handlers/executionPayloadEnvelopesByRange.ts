@@ -1,12 +1,14 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {EnvelopeReconstructionError} from "../../../chain/errors/index.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconChainDb} from "../../../db/index.js";
+import {reconstructExecutionPayloadEnvelopesByRange} from "../../../util/execution.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(
@@ -35,43 +37,74 @@ export async function* onExecutionPayloadEnvelopesByRange(
     );
   }
 
-  const finalized = db.executionPayloadEnvelopeArchive;
   // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
-  // [beacon-engine] deviation: canonical FULL refs and finalized boundary come from the engine.
-  const {finalizedSlot, nonFinalized} = chain.getFullBlockRootSlotsByRange(startSlot, endSlot);
+  const finalizedSlot = chain.beaconEngine.getFinalizedBlock().slot;
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
-  // Finalized range of envelopes
-  if (startSlot <= archiveMaxSlot) {
-    for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
-    })) {
-      const slot = finalized.decodeKey(key);
-      yield {
-        data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-      };
-    }
-  }
-
-  // Non-finalized range of envelopes
-  if (endSlot > archiveMaxSlot) {
-    for (const {slot, root} of nonFinalized) {
-      const rootHex = toRootHex(root);
-      const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
-      if (!envelopeBytes) {
-        throw new ResponseError(
-          RespStatus.SERVER_ERROR,
-          `No envelope for root ${rootHex} slot ${slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
-        );
+  let yielded = 0;
+  try {
+    if (startSlot <= archiveMaxSlot) {
+      for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
+        db,
+        chain.executionEngine,
+        chain.logger,
+        chain.metrics,
+        startSlot,
+        Math.min(endSlot, archiveMaxSlot + 1)
+      )) {
+        yielded++;
+        yield {
+          data: envelopeBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+        };
       }
-      yield {
-        data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-      };
     }
+
+    // Non-finalized range of envelopes. The finalized block's own envelope may be archived by a
+    // migration that ran since archiveMaxSlot was computed, so this read can reconstruct too.
+    if (endSlot > archiveMaxSlot) {
+      const headBlock = chain.beaconEngine.getHead();
+      const headRoot = headBlock.blockRoot;
+      const headChain = chain.beaconEngine.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+
+      // Iterate head chain with ascending block numbers
+      for (let i = headChain.length - 1; i >= 0; i--) {
+        const block = headChain[i];
+
+        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
+          // Skip EMPTY blocks
+          if (block.payloadStatus !== PayloadStatus.FULL) {
+            continue;
+          }
+
+          const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, block.blockRoot);
+          if (!envelopeBytes) {
+            throw new ResponseError(
+              RespStatus.SERVER_ERROR,
+              `No envelope for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+            );
+          }
+
+          yielded++;
+          yield {
+            data: envelopeBytes,
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+          };
+        } else if (block.slot >= endSlot) {
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    if (e instanceof EnvelopeReconstructionError) {
+      // An unservable entry or our own EL failing: after some envelopes, end short (spec-legal, the
+      // peer fetches the rest elsewhere); with nothing served, RESOURCE_UNAVAILABLE rather than
+      // SERVER_ERROR so peers don't downscore us for it
+      if (yielded > 0) return;
+      throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Failed to serve envelopes: ${e.message}`);
+    }
+    throw e;
   }
 }
 
@@ -92,8 +125,10 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
-  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
-    count = config.MAX_REQUEST_BLOCKS_DENEB;
+  // Spec: EnvelopesByRange response is bounded by MAX_REQUEST_PAYLOADS (consensus-specs #5383),
+  // distinct from the MAX_REQUEST_BLOCKS_DENEB cap used for block-by-range.
+  if (count > config.MAX_REQUEST_PAYLOADS) {
+    count = config.MAX_REQUEST_PAYLOADS;
   }
 
   return {startSlot, count};

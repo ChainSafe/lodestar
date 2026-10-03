@@ -1,3 +1,4 @@
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -11,7 +12,6 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateElectra,
   createCachedBeaconState,
-  createPubkeyCache,
 } from "../../src/index.js";
 import {generateValidator, generateValidators} from "./validator.js";
 
@@ -107,8 +107,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -120,8 +119,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -133,8 +131,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -146,6 +143,6 @@ export function generateCachedElectraState(opts?: TestBeaconState, electraForkEp
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }

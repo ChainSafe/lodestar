@@ -1,8 +1,12 @@
-import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {
+  ExecutionStatus,
+  PayloadExecutionStatus,
+  getFinalizedExecutionBlockHash,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
 import {Root, RootHex, ValidatorIndex, gloas} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {PayloadError, PayloadErrorCode} from "../blocks/payloadError.js";
 import {
@@ -13,7 +17,7 @@ import {RegenCaller} from "../regen/index.js";
 import {BeaconEngine} from "./beaconEngine.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyExecutionPayloadEnvelope(
@@ -70,7 +74,6 @@ export async function verifyExecutionPayloadEnvelope(
     const signatureValid = await verifyExecutionPayloadEnvelopeSignature(
       this.config,
       blockState,
-      this.pubkeyCache,
       signedEnvelope,
       proposerIndex,
       this.bls
@@ -82,7 +85,7 @@ export async function verifyExecutionPayloadEnvelope(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
+ * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importExecutionPayload(
@@ -116,8 +119,8 @@ export async function importExecutionPayload(
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     // [beacon-engine] deviation: derive the fork from the canonical head instead of payloadInput.
     const fork = this.config.getForkName(head.slot);
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);

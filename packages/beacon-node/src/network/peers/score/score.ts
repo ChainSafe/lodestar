@@ -1,4 +1,5 @@
 import {GoodByeReasonCode} from "../../../constants/network.js";
+import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {
   COOL_DOWN_BEFORE_DECAY_MS,
   DEFAULT_SCORE,
@@ -23,13 +24,15 @@ export class RealScore implements IPeerScore {
   /** The final score, computed from the above */
   private score: number;
   private lastUpdate: number;
+  private readonly metrics: NetworkCoreMetrics | null;
 
-  constructor() {
+  constructor(metrics: NetworkCoreMetrics | null = null) {
     this.lodestarScore = DEFAULT_SCORE;
     this.gossipScore = DEFAULT_SCORE;
     this.score = DEFAULT_SCORE;
     this.ignoreNegativeGossipScore = false;
     this.lastUpdate = Date.now();
+    this.metrics = metrics;
   }
 
   isCoolingDown(): boolean {
@@ -135,6 +138,10 @@ export class RealScore implements IPeerScore {
     const prevState = scoreToState(this.score);
     this.recomputeScore();
     const newState = scoreToState(this.score);
+
+    if (prevState !== newState) {
+      this.metrics?.peerManager.scoreStateTransitions.inc({from: prevState, to: newState});
+    }
 
     if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
       // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
