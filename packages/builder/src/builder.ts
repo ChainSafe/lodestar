@@ -46,7 +46,7 @@ export type BuilderBidOptions = {
   orchestration: PayloadOrchestratorOptions;
   inputs: Omit<PayloadAttributesConsumerOptions, "executionFeeRecipient">;
   minOperatingBalanceGwei: number;
-  reveal?: {
+  reveal: {
     /** Publication cutoff within the selected block's slot, not the earlier build slot. */
     cutoffBps: number;
     /** Optional policy override; otherwise reveal promptly after a matching import. */
@@ -122,6 +122,13 @@ export class Builder {
 
   static async init(opts: BuilderOptions): Promise<Builder> {
     const {api, logger} = opts;
+    if (opts.bidRuntime) {
+      const {reveal} = opts.bidRuntime;
+      if (!reveal) throw new LodestarError({code: "BUILDER_REVEAL_REQUIRED"});
+      if (!Number.isSafeInteger(reveal.cutoffBps) || reveal.cutoffBps <= 0 || reveal.cutoffBps >= 10_000) {
+        throw new LodestarError({code: "BUILDER_REVEAL_INVALID_CUTOFF"});
+      }
+    }
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node", {
       genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot),
@@ -183,7 +190,7 @@ export class Builder {
           ledger: bidLedger,
           publisher,
           builderIndex: index,
-          getBuilderStatus: () => builderStatusTracker.getStatus(),
+          builderStatusTracker,
         },
         {minOperatingBalanceGwei}
       );
@@ -192,9 +199,6 @@ export class Builder {
         {...inputs, executionFeeRecipient: opts.executionFeeRecipient}
       );
       const {reveal} = opts.bidRuntime;
-      if (reveal && (!Number.isSafeInteger(reveal.cutoffBps) || reveal.cutoffBps <= 0 || reveal.cutoffBps >= 10_000)) {
-        throw new LodestarError({code: "BUILDER_REVEAL_INVALID_CUTOFF"});
-      }
       const ledger = bidLedger;
       const selector = new BidSelector({
         config,
@@ -211,7 +215,7 @@ export class Builder {
         const signal = opts.abortController.signal;
         signal.throwIfAborted();
         const selected = selector.match(observed);
-        if (selected.status !== "selected" || !reveal) return;
+        if (selected.status !== "selected") return;
         const cutoff = config.getSlotComponentDurationMs(reveal.cutoffBps);
         const remaining = cutoff - clock.msFromSlot(observed.slot);
         if (remaining <= 0 || clock.getCurrentSlot() < observed.slot) return;

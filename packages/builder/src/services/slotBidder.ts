@@ -1,10 +1,11 @@
 import {ForkName, type ForkPostGloas, MIN_DEPOSIT_AMOUNT} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import type {BuilderIndex, BuilderStatus, ExecutionAddress, Root, RootHex, Slot, heze} from "@lodestar/types";
+import type {BuilderIndex, ExecutionAddress, Root, RootHex, Slot, heze} from "@lodestar/types";
 import {GWEI_TO_WEI, LodestarError, toRootHex} from "@lodestar/utils";
 import type {BidLedger} from "./bidLedger.js";
 import type {BidPolicy} from "./bidPolicy.js";
 import type {BidPublisher} from "./bidPublisher.js";
+import type {BuilderStatusTracker} from "./builderStatusTracker.js";
 import {createExecutionPayloadBid} from "./executionPayloadBid.js";
 import type {PayloadBuildJob} from "./payloadOrchestrator.js";
 import type {BuiltPayload} from "./payloadSource.js";
@@ -36,7 +37,7 @@ export type SlotBidderModules = {
   policy: BidPolicy;
   ledger: Pick<BidLedger, "getUnsettledValueGwei" | "hasSubmitted">;
   publisher: Pick<BidPublisher, "publish">;
-  getBuilderStatus: () => {status: BuilderStatus | undefined; balance: number | undefined};
+  builderStatusTracker: Pick<BuilderStatusTracker, "getStatus">;
   builderIndex: BuilderIndex;
 };
 
@@ -147,7 +148,7 @@ export class SlotBidder {
       return {status: "not_published", reason: "already_submitted"};
     }
 
-    const {status, balance} = this.modules.getBuilderStatus();
+    const {status, balance} = this.modules.builderStatusTracker.getStatus();
     if (status === undefined || balance === undefined) {
       return {status: "not_published", reason: "unknown_status"};
     }

@@ -478,7 +478,7 @@ describe("SlotBidder", () => {
 function setup(
   payload: BuiltPayload,
   opts: {
-    builderStatus?: ReturnType<SlotBidderModules["getBuilderStatus"]>;
+    builderStatus?: ReturnType<SlotBidderModules["builderStatusTracker"]["getStatus"]>;
     policyValue?: number | null;
     ledger?: BidLedger;
     minOperatingBalanceGwei?: number;
@@ -496,7 +496,7 @@ function setup(
 function setupModules(
   payload: BuiltPayload,
   opts: {
-    builderStatus?: ReturnType<SlotBidderModules["getBuilderStatus"]>;
+    builderStatus?: ReturnType<SlotBidderModules["builderStatusTracker"]["getStatus"]>;
     policyValue?: number | null;
     ledger?: BidLedger;
   } = {}
@@ -530,7 +530,9 @@ function setupModules(
     policy,
     ledger,
     publisher,
-    getBuilderStatus: () => opts.builderStatus ?? {status: "active", balance: MIN_DEPOSIT_AMOUNT + 100},
+    builderStatusTracker: {
+      getStatus: () => opts.builderStatus ?? {status: "active", balance: MIN_DEPOSIT_AMOUNT + 100},
+    },
     builderIndex: 9,
   };
   return {modules, publish, store};

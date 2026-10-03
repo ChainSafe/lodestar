@@ -89,7 +89,7 @@ describe("Gloas payload attributes consumer", () => {
         ledger,
         publisher,
         builderIndex: 9,
-        getBuilderStatus: () => ({status: "active", balance: MIN_DEPOSIT_AMOUNT + 100}),
+        builderStatusTracker: {getStatus: () => ({status: "active", balance: MIN_DEPOSIT_AMOUNT + 100})},
       },
       {minOperatingBalanceGwei: MIN_DEPOSIT_AMOUNT}
     );

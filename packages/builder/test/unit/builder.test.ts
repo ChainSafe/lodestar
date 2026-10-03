@@ -341,7 +341,7 @@ describe("Builder", () => {
         ledger,
         publisher,
         builderIndex: modules.index,
-        getBuilderStatus: () => ({status: "active", balance: MIN_DEPOSIT_AMOUNT + 100}),
+        builderStatusTracker: {getStatus: () => ({status: "active", balance: MIN_DEPOSIT_AMOUNT + 100})},
       },
       {minOperatingBalanceGwei: MIN_DEPOSIT_AMOUNT}
     );
@@ -441,9 +441,21 @@ describe("Builder", () => {
         orchestration: {getPayloadTimeout: 1000},
         inputs: {deadlineBps: 9000, maxInputsPerSlot: 2},
         minOperatingBalanceGwei: MIN_DEPOSIT_AMOUNT,
+        reveal: {cutoffBps: 5000},
       };
       return {events, source, payload, publish, options: modules.opts.bidRuntime};
     }
+
+    it("rejects live bidding without reveal configuration before contacting the beacon node", async () => {
+      const {options, source, publish} = prepareStartup();
+      Reflect.deleteProperty(options, "reveal");
+
+      await expect(Builder.init(modules.opts)).rejects.toMatchObject({type: {code: "BUILDER_REVEAL_REQUIRED"}});
+      expect(api.beacon.getGenesis).not.toHaveBeenCalled();
+      expect(api.events.eventstream).not.toHaveBeenCalled();
+      expect(source.prepare).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+    });
 
     it("constructs and runs the bid path through Builder.init", async () => {
       const {events, source, payload, publish} = prepareStartup();
@@ -482,12 +494,9 @@ describe("Builder", () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
-    async function prepareSelection(
-      shouldReveal?: NonNullable<BuilderBidOptions["reveal"]>["shouldReveal"],
-      enableReveal = true
-    ) {
+    async function prepareSelection(shouldReveal?: BuilderBidOptions["reveal"]["shouldReveal"]) {
       const {events, payload, publish, options} = prepareStartup();
-      options.reveal = enableReveal ? {cutoffBps: 5000, shouldReveal} : undefined;
+      options.reveal = {cutoffBps: 5000, shouldReveal};
       const reveal = vi.fn().mockResolvedValue(mockApiResponse({data: undefined, meta: undefined}));
       Object.assign(api.beacon, {publishExecutionPayloadEnvelope: reveal});
       const builder = await Builder.init(modules.opts);
@@ -562,12 +571,9 @@ describe("Builder", () => {
       await builder.close();
     });
 
-    it.each(["disabled", "declined"])("records a selection when revealing is %s", async (mode) => {
+    it("records a selection when reveal policy declines", async () => {
       const recordWin = vi.spyOn(BidLedger.prototype, "recordWin");
-      const {builder, reveal, emitBlock} = await prepareSelection(
-        mode === "disabled" ? undefined : async () => false,
-        mode !== "disabled"
-      );
+      const {builder, reveal, emitBlock} = await prepareSelection(async () => false);
       const blockRoot = emitBlock();
       await vi.advanceTimersByTimeAsync(0);
       expect(recordWin).toHaveBeenCalledOnce();
@@ -671,9 +677,7 @@ describe("Builder", () => {
 
     it("cancels a slow reveal decision at the cutoff and ignores its late result", async () => {
       const pending = defer<boolean>();
-      const shouldReveal = vi.fn<NonNullable<NonNullable<BuilderBidOptions["reveal"]>["shouldReveal"]>>(
-        () => pending.promise
-      );
+      const shouldReveal = vi.fn<NonNullable<BuilderBidOptions["reveal"]["shouldReveal"]>>(() => pending.promise);
       const {builder, reveal, emitBlock} = await prepareSelection(shouldReveal);
       emitBlock();
       await vi.advanceTimersByTimeAsync(0);
@@ -714,6 +718,7 @@ describe("Builder", () => {
       await expect(Builder.init(modules.opts)).rejects.toMatchObject({
         type: {code: "BUILDER_REVEAL_INVALID_CUTOFF"},
       });
+      expect(api.beacon.getGenesis).not.toHaveBeenCalled();
       expect(api.events.eventstream).not.toHaveBeenCalled();
       expect(vi.getTimerCount()).toBe(0);
     });
