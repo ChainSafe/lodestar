@@ -74,6 +74,7 @@ export type EngineApiRpcParamTypes = {
   engine_forkchoiceUpdatedV4: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
+    custodyColumns?: DATA | null,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -342,6 +343,26 @@ export function hasPayloadValue(
   return (response as ExecutionPayloadRpcWithValue).blockValue !== undefined;
 }
 
+export function parseExecutionPayload(
+  fork: ForkName.gloas,
+  response: EngineApiRpcReturnTypes["engine_getPayloadV6"]
+): {
+  executionPayload: ExecutionPayload<ForkName.gloas>;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle<ForkName.gloas>;
+  executionRequests?: ExecutionRequests<ForkName.gloas>;
+  shouldOverrideBuilder?: boolean;
+};
+export function parseExecutionPayload(
+  fork: ForkName,
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
+): {
+  executionPayload: ExecutionPayload;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle;
+  executionRequests?: ExecutionRequests;
+  shouldOverrideBuilder?: boolean;
+};
 export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse | ExecutionPayloadRpc
