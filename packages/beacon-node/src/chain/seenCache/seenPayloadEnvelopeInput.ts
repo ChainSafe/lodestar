@@ -283,8 +283,8 @@ export class SeenPayloadEnvelopeInput {
         // hasComputedAllData() before persisting. Such entries are pruned by a later call.
         input.hasComputedAllData() &&
         // Only evict once the payload is FULL (revealed/imported) on the parent's branch. On an EMPTY/PENDING
-        // branch we may still need to download the FULL envelope (see #9475), and evicting would make
-        // payload-by-root sync throw "Missing PayloadEnvelopeInput for known block".
+        // branch we may still need to download the FULL envelope (see #9475), and without the entry gossip
+        // for the block is ignored until by-root sync reloads it.
         this.forkChoice.isDescendant(
           input.blockRootHex,
           PayloadStatus.FULL,
