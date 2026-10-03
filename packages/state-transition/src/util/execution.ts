@@ -9,6 +9,7 @@ import {
   bellatrix,
   capella,
   deneb,
+  gloas,
   isBlindedBeaconBlockBody,
   isExecutionPayload,
   ssz,
@@ -127,7 +128,10 @@ export function isCapellaPayloadHeader(
 }
 
 export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: ExecutionPayload): ExecutionPayloadHeader {
-  const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
+  const transactionsRoot =
+    fork >= ForkSeq.gloas
+      ? ssz.gloas.Transactions.hashTreeRoot((payload as gloas.ExecutionPayload).transactions)
+      : ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
   const bellatrixPayloadFields: ExecutionPayloadHeader = {
     parentHash: payload.parentHash,
@@ -147,9 +151,10 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   };
 
   if (fork >= ForkSeq.capella) {
-    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
-      (payload as capella.ExecutionPayload).withdrawals
-    );
+    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot =
+      fork >= ForkSeq.gloas
+        ? ssz.gloas.Withdrawals.hashTreeRoot((payload as gloas.ExecutionPayload).withdrawals)
+        : ssz.capella.Withdrawals.hashTreeRoot((payload as capella.ExecutionPayload).withdrawals);
   }
 
   if (fork >= ForkSeq.deneb) {

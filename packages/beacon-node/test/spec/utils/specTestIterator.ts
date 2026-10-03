@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it} from "vitest";
+import {beforeEach, describe, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -34,6 +35,7 @@ const coveredTestRunners = [
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -60,33 +62,39 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  skippedForks: [],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
-    // TODO: capella
-    // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
-    // Skip them for now to enable subsequently
-    /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
+    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
+    /^.+\/networking\/gossip_beacon_block\/.*$/,
+    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
+    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
+    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
-    /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light client is implemented
-    /^gloas\/light_client\/.*/,
-    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
+    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
-  skippedTests: [
-    // TODO-GLOAS: re-enable after gloas light client is implemented
-    /\/gloas_fork$/,
+  skippedTests: [],
+  skippedRunners: [],
+  // Gossip handlers not implemented in the spec runner.
+  skippedHandlers: [
+    "gossip_blob_sidecar",
+    "gossip_data_column_sidecar",
+    "gossip_partial_data_column_sidecar",
+    "gossip_execution_payload_bid",
+    "gossip_execution_payload_envelope",
+    "gossip_payload_attestation_message",
+    "gossip_proposer_preferences",
+    "gossip_inclusion_list",
   ],
-  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["networking"],
 };
 
 /**
@@ -109,7 +117,6 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
@@ -167,6 +174,7 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
+                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -174,12 +182,26 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(
+                testId,
+                testSuiteDirpath,
+                (testCase, directoryName, testCaseName) => {
+                  pubkeyCache.reset();
+                  return testFunction(testCase, directoryName, testCaseName);
+                },
+                options
+              );
             }
           }
         }

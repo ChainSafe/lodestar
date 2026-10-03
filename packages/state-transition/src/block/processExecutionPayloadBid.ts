@@ -1,15 +1,26 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {gloas, ssz} from "@lodestar/types";
+import {
+  BUILDER_INDEX_SELF_BUILD,
+  ForkSeq,
+  GENESIS_SLOT,
+  PAYLOAD_BUILDER_VERSION,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {gloas, heze, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
-import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.js";
+import {
+  createSingleSignatureSetFromComponents,
+  getBlockRootAtSlot,
+  getCurrentEpoch,
+  getRandaoMix,
+  verifySignatureSet,
+} from "../util/index.js";
 
 export function processExecutionPayloadBid(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   signedBid: gloas.SignedExecutionPayloadBid
 ): void {
   const bid = signedBid.message;
@@ -41,7 +52,7 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the builder has funds to cover the bid
-    if (!canBuilderCoverBid(state, builderIndex, amount)) {
+    if (!canBuilderCoverBid(state as CachedBeaconStateGloas, builderIndex, amount)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
     }
 
@@ -63,6 +74,10 @@ export function processExecutionPayloadBid(
     throw Error(
       `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
     );
+  }
+
+  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
+    throw Error(`Block hash ${toRootHex(bid.blockHash)} of bid must not equal its parent block hash`);
   }
 
   const parentBlockRoot = getBlockRootAtSlot(state, state.slot - 1);
@@ -99,21 +114,22 @@ export function processExecutionPayloadBid(
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
   }
 
-  state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
+  if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
+    state.latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(bid as heze.ExecutionPayloadBid);
+  } else {
+    state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
+  }
 }
 
 function verifyExecutionPayloadBidSignature(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   pubkey: Uint8Array,
   signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {
-  const signingRoot = getExecutionPayloadBidSigningRoot(state.config, state.slot, signedBid.message);
+  const signingRoot = getExecutionPayloadBidSigningRoot(state.config, signedBid.message);
 
   try {
-    const publicKey = PublicKey.fromBytes(pubkey);
-    const signature = Signature.fromBytes(signedBid.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signedBid.signature));
   } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }

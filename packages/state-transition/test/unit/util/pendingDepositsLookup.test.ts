@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {electra, ssz} from "@lodestar/types";
+import {electra} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 
 const isValidDepositSignatureMock = vi.hoisted(() =>
@@ -24,11 +24,14 @@ vi.mock("../../../src/block/processDeposit.js", async (importOriginal) => {
   };
 });
 
-const {createCachedBeaconStateTest} = await import("../../../src/testUtils/state.js");
 const {PendingDepositsLookup} = await import("../../../src/util/pendingDepositsLookup.js");
+const {BuilderDepositSignatureCache} = await import("../../../src/cache/builderDepositSignatureCache.js");
 
 describe("PendingDepositsLookup", () => {
   const config = createBeaconConfig(chainConfig, Buffer.alloc(32));
+  // Read-only in these tests (hasPendingValidator never writes) and stays empty → always misses,
+  // so signature checks fall through to the (mocked) isValidDepositSignature as before.
+  const emptyCache = new BuilderDepositSignatureCache();
 
   beforeEach(() => {
     isValidDepositSignatureMock.mockClear();
@@ -48,7 +51,7 @@ describe("PendingDepositsLookup", () => {
     const lookup = PendingDepositsLookup.buildEmpty();
     const pubkeyHex = toPubkeyHex(createPendingDeposit(1, 0).pubkey);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).not.toHaveBeenCalled();
   });
 
@@ -58,13 +61,13 @@ describe("PendingDepositsLookup", () => {
     const deposit1 = createPendingDeposit(1, 0);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
   });
 
@@ -75,13 +78,13 @@ describe("PendingDepositsLookup", () => {
     const deposit2 = createPendingDeposit(1, 1);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    lookup.add(deposit2);
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
+    lookup.add(deposit2, pubkeyHex);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(3);
     expect(isValidDepositSignatureMock).toHaveBeenLastCalledWith(
       config,
@@ -99,13 +102,13 @@ describe("PendingDepositsLookup", () => {
     const deposit2 = createPendingDeposit(1, 0);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    lookup.add(deposit2);
-    expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
+    lookup.add(deposit2, pubkeyHex);
+    expect(lookup.hasPendingValidator(config, pubkeyHex, emptyCache)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
   });
 
@@ -116,31 +119,33 @@ describe("PendingDepositsLookup", () => {
     const pubkeyHexA = toPubkeyHex(depositA.pubkey);
     const pubkeyHexB = toPubkeyHex(depositB.pubkey);
 
-    lookup.add(depositA);
-    lookup.add(depositB);
+    lookup.add(depositA, pubkeyHexA);
+    lookup.add(depositB, pubkeyHexB);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHexA)).toBe(false);
+    expect(lookup.hasPendingValidator(config, pubkeyHexA, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(1);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHexB)).toBe(true);
+    expect(lookup.hasPendingValidator(config, pubkeyHexB, emptyCache)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    expect(lookup.hasPendingValidator(config, pubkeyHexA)).toBe(false);
+    expect(lookup.hasPendingValidator(config, pubkeyHexA, emptyCache)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
   });
 
-  it("builds from state.pendingDeposits without checking signatures", () => {
-    const state = createCachedBeaconStateTest(ssz.gloas.BeaconState.defaultViewDU(), chainConfig, {
-      skipSyncCommitteeCache: true,
-      skipSyncPubkeys: true,
-    });
-    const deposit = createPendingDeposit(1, 1);
-    state.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
+  it("uses the pre-verify cache instead of BLS when the deposits are already verified", () => {
+    // Scenario 5: many same-pubkey validator deposits pre-verified invalid in the cache. At the fork
+    // hasPendingValidator must read the cache and return false without a single BLS check.
+    const lookup = PendingDepositsLookup.buildEmpty();
+    const cache = new BuilderDepositSignatureCache();
+    const deposits = Array.from({length: 40}, () => createPendingDeposit(1, 0)); // all for pubkey 1, invalid
+    const pubkeyHex = toPubkeyHex(deposits[0].pubkey);
 
-    const lookup = PendingDepositsLookup.build(state);
+    for (const deposit of deposits) {
+      lookup.add(deposit, pubkeyHex);
+      cache.setSignatureValidity(deposit, false); // pre-verified invalid
+    }
 
+    expect(lookup.hasPendingValidator(config, pubkeyHex, cache)).toBe(false);
     expect(isValidDepositSignatureMock).not.toHaveBeenCalled();
-    expect(lookup.hasPendingValidator(state.config, toPubkeyHex(deposit.pubkey))).toBe(true);
-    expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(1);
   });
 });

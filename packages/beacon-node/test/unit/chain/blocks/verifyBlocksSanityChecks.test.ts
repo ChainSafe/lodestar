@@ -37,11 +37,11 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
   });
 
-  it("PARENT_UNKNOWN", () => {
+  it("PARENT_BLOCK_UNKNOWN", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], null, {}),
-      BlockErrorCode.PARENT_UNKNOWN
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 

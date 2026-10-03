@@ -1,6 +1,7 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
@@ -551,6 +552,23 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
   return "0x" + blockRootBuf.toString("hex");
 }
 
+// beaconBlockRoot is the last fixed field in the Gloas layout
+const DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE = BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE; // 56 bytes
+const KZG_PROOF_SIZE = 48; // Bytes48
+const DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE = BYTES_PER_CELL + KZG_PROOF_SIZE; // 2048 + 48 = 2096 bytes
+
+/**
+ * Gloas sidecar size bound uses the largest blob limit across the entire schedule, including future entries.
+ * https://github.com/ethereum/consensus-specs/pull/5613
+ */
+export function computeMaxGloasDataColumnSidecarSize(config: ChainForkConfig): number {
+  const maxBlobs = config.BLOB_SCHEDULE.reduce(
+    (max, entry) => Math.max(max, entry.MAX_BLOBS_PER_BLOCK),
+    config.MAX_BLOBS_PER_BLOCK_ELECTRA
+  );
+  return DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE + maxBlobs * DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE;
+}
+
 /**
  * SignedExecutionPayloadEnvelope SSZ Layout:
  * ├─ 4 bytes: message offset (points to byte 100)
@@ -706,7 +724,7 @@ export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8A
  *   blockHash: Bytes32            (32 bytes)
  *   prevRandao: Bytes32           (32 bytes)
  *   feeRecipient: ExecutionAddress(20 bytes)
- *   gasLimit: UintNum64           (8 bytes)
+ *   gasLimit: UintBn64            (8 bytes)
  *   builderIndex: BuilderIndex    (8 bytes)
  *   slot: Slot                    (8 bytes)  ← absolute offset 264
  */
@@ -754,7 +772,7 @@ export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: 
  *
  * If the high bytes are not zero, return null
  */
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+export function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
   return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
 }
 

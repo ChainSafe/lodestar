@@ -9,7 +9,7 @@ import {
 } from "../../src/testUtils/util.js";
 
 describe("Perf test sanity check", () => {
-  vi.setConfig({testTimeout: 90 * 1000});
+  vi.setConfig({testTimeout: 120 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);

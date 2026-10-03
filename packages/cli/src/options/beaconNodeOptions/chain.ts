@@ -1,6 +1,7 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
+import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -16,6 +17,7 @@ export type ChainArgs = {
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.persistOrphanedBlocks"?: boolean;
+  "chain.dedupePayloads"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
@@ -23,8 +25,8 @@ export type ChainArgs = {
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
-  "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
+  "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -41,7 +43,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -55,6 +57,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
     persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
+    dedupePayloads: args["chain.dedupePayloads"],
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
@@ -64,8 +67,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
-    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -80,6 +83,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
+    // Circuit breaker thresholds are shared with the pre-gloas builder flow
+    faultInspectionWindow: args["builder.faultInspectionWindow"],
+    allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
   };
 }
@@ -178,6 +184,14 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.dedupePayloads": {
+    type: "boolean",
+    description:
+      "Archive finalized Gloas execution payload envelopes in header form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list. Set to false to keep full envelopes on disk.",
+    defaultDescription: String(defaultOptions.chain.dedupePayloads),
+    group: "chain",
+  },
+
   "chain.proposerBoost": {
     alias: ["chain.proposerBoostEnabled"],
     hidden: true,
@@ -226,7 +240,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.fastConfirmation": {
     type: "boolean",
-    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    description: "Enable Fast Confirmation Rule for faster block confirmation",
     defaultDescription: String(defaultOptions.chain.fastConfirmation),
     group: "chain",
   },
@@ -238,10 +252,12 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.assertCorrectProgressiveBalances": {
+  "chain.disableProposerSlashings": {
     hidden: true,
-    description: "Enable asserting the progressive balances",
     type: "boolean",
+    description:
+      "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
+    defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
     group: "chain",
   },
 
@@ -328,7 +344,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
-    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    description:
+      "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",
@@ -336,7 +353,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
 This is useful to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",

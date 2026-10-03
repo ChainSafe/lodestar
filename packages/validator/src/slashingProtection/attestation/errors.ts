@@ -29,6 +29,11 @@ export enum InvalidAttestationErrorCode {
    * bound on target epochs for this validator.
    */
   TARGET_LESS_THAN_OR_EQ_LOWER_BOUND = "ERR_INVALID_ATTESTATION_TARGET_LESS_THAN_OR_EQ_LOWER_BOUND",
+  /**
+   * The attestation is invalid because its source epoch is below the min-max span lookback window of the
+   * latest attestation of this validator, where a surround vote could not be detected.
+   */
+  SOURCE_BELOW_MIN_SPAN_LOOKBACK = "ERR_INVALID_ATTESTATION_SOURCE_BELOW_MIN_SPAN_LOOKBACK",
 }
 
 type InvalidAttestationErrorType =
@@ -61,6 +66,11 @@ type InvalidAttestationErrorType =
       code: InvalidAttestationErrorCode.TARGET_LESS_THAN_OR_EQ_LOWER_BOUND;
       targetEpoch: Epoch;
       minTargetEpoch: Epoch;
+    }
+  | {
+      code: InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK;
+      sourceEpoch: Epoch;
+      minSourceEpoch: Epoch;
     };
 
 export class InvalidAttestationError extends LodestarError<InvalidAttestationErrorType> {}

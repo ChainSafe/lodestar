@@ -9,8 +9,8 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.ts";
-import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
+import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.js";
+import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
 import {
   type BalanceSourceKey,
   FastConfirmationBalanceSource,
@@ -19,7 +19,7 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
   type TotalActiveBalanceCacheKey,
-} from "./types.ts";
+} from "./types.js";
 
 // Spec: adjust_committee_weight_estimate_to_ensure_safety
 // https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#adjust_committee_weight_estimate_to_ensure_safety

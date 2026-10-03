@@ -67,6 +67,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
+          importedTimely: false,
+          ptcTimeliness: false,
+          proposerIndex: 0,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
@@ -95,6 +98,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
+            importedTimely: false,
+            ptcTimeliness: false,
+            proposerIndex: 0,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,

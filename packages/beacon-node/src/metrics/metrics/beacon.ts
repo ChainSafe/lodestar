@@ -138,6 +138,25 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of cached produced results",
     }),
 
+    builderCircuitBreaker: {
+      active: register.gauge({
+        name: "beacon_builder_circuit_breaker_active",
+        help: "Whether the builder circuit breaker is active (1) causing builder bids to be ignored",
+      }),
+      canonicalBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_canonical_blocks",
+        help: "Count of canonical FULL and EMPTY blocks in the fault inspection window",
+      }),
+      fullBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_full_blocks",
+        help: "Count of canonical FULL blocks in the fault inspection window",
+      }),
+      emptyBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_empty_blocks",
+        help: "Count of canonical EMPTY blocks in the fault inspection window",
+      }),
+    },
+
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
         name: "beacon_block_payload_prepare_time",
@@ -194,6 +213,22 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       getBlobsV1HitUseful: register.gauge({
         name: "beacon_get_blobs_v1_blob_useful_response_total",
         help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
+      }),
+    },
+    payloadEnvelopeReconstruction: {
+      envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
+        name: "beacon_payload_envelope_reconstruction_envelopes_total",
+        help: "Archived header envelopes rebuilt from EL bodies, by outcome",
+        labelNames: ["result"],
+      }),
+      mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({
+        name: "beacon_payload_envelope_reconstruction_mismatch_total",
+        help: "Body root mismatches, by which body differed from the stored root",
+        labelNames: ["field"],
+      }),
+      engineErrors: register.counter({
+        name: "beacon_payload_envelope_reconstruction_engine_errors_total",
+        help: "engine_getPayloadBodiesByHashV2 round-trips that failed while rebuilding envelopes",
       }),
     },
 

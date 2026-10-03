@@ -1,11 +1,12 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
+import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, gloas} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ExecutionPayloadAvailableEventData, ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 import {PtcDutiesService} from "./ptcDuties.js";
@@ -53,8 +54,10 @@ export class PtcService {
       return;
     }
 
-    const duties = this.dutiesService.getDutiesAtSlot(slot);
-    if (duties.length === 0) {
+    let duties = this.dutiesService.getDutiesAtSlot(slot);
+    // Duties of the first Gloas epoch can't be polled ahead of the fork, at its first slot they are still being polled
+    const isFirstGloasSlot = slot === computeStartSlotAtEpoch(this.config.GLOAS_FORK_EPOCH);
+    if (duties.length === 0 && !isFirstGloasSlot) {
       return;
     }
 
@@ -68,6 +71,13 @@ export class PtcService {
       ]);
     } finally {
       payloadAvailable.abort();
+    }
+
+    if (isFirstGloasSlot) {
+      duties = this.dutiesService.getDutiesAtSlot(slot);
+      if (duties.length === 0) {
+        return;
+      }
     }
 
     this.metrics?.ptcStepCallProducePayloadAttestation.observe(

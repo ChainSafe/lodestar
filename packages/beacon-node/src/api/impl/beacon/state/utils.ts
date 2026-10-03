@@ -1,7 +1,8 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, IBeaconStateViewGloas, PubkeyCache} from "@lodestar/state-transition";
+import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BuilderIndex,
@@ -14,7 +15,11 @@ import {
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
+import {GENESIS_EPOCH} from "../../../../constants/index.js";
+import {IBeaconSync} from "../../../../sync/index.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {ApiError, ValidationError} from "../../errors.js";
+import {notWhileSyncing} from "../../utils.js";
 
 export function resolveStateId(
   forkChoice: IForkChoice,
@@ -51,8 +56,30 @@ export function resolveStateId(
 
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
+  sync: IBeaconSync,
   inStateId: routes.beacon.StateId
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
+  // "head", "finalized" and "justified" resolve to already-available cached states, and "genesis" to a
+  // historical DB read - none trigger the forward regen that can walk back past the block-root window
+  // (SLOTS_PER_HISTORICAL_ROOT) and wedge a far-behind node. Keep serving those (node observability,
+  // dashboards, validator client checks) even while syncing; guard only the regen-capable lookups.
+  if (inStateId !== "head" && inStateId !== "finalized" && inStateId !== "justified" && inStateId !== "genesis") {
+    notWhileSyncing(chain, sync.state);
+  }
+
+  if (inStateId === "head") {
+    const head = chain.forkChoice.getHead();
+    // Head block's post-state is not cached after init from an anchor state at a skipped boundary slot,
+    // it does not exist anywhere and regen has no seed for it, serve the closest head state instead
+    const state = chain.regen.getStateSync(head.stateRoot) ?? chain.getHeadState();
+    const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+    return {
+      state,
+      executionOptimistic: isOptimisticBlock(head),
+      finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+    };
+  }
+
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =

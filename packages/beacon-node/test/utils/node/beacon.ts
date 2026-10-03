@@ -1,7 +1,9 @@
+import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -13,13 +15,10 @@ import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
-  computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
-  syncPubkeys,
 } from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 import {initStateFromDb} from "../../../src/chain/initState.js";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -38,7 +37,6 @@ export async function getDevBeaconNode(
     privateKey?: PrivateKey;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
-    wsCheckpoint?: phase0.Checkpoint;
     /**
      * When true, load anchor state from existing DB instead of creating fresh genesis.
      * Requires `options.db.name` to be set explicitly.
@@ -55,10 +53,12 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}));
+  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}), {
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
+    logger,
+  });
 
   let anchorState = opts.anchorState;
-  let wsCheckpoint = opts.wsCheckpoint;
 
   if (!anchorState) {
     if (opts.resumeFromDb) {
@@ -73,13 +73,6 @@ export async function getDevBeaconNode(
       // resuming from epoch 0 defeats the purpose of resuming
       if (resumedEpoch === 0) {
         logger.warn("Resumed state from epoch 0. Range Sync may trigger from genesis");
-      }
-
-      // derive wsCheckpoint if not provided
-      if (!wsCheckpoint) {
-        const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
-        wsCheckpoint = {root: checkpoint.root, epoch: checkpoint.epoch};
-        logger.debug("Derived wsCheckpoint", {epoch: checkpoint.epoch});
       }
     } else {
       anchorState = initDevState(config, validatorCount, opts);
@@ -133,8 +126,7 @@ export async function getDevBeaconNode(
   );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {
@@ -152,10 +144,10 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     privateKey,
-    dataDir: ".",
+    dataDir: tmpDir.name,
+    dataColumnDir: path.join(tmpDir.name, "data_columns"),
     peerStoreDir,
     anchorState: new BeaconStateView(cachedState),
-    wsCheckpoint,
     isAnchorStateFinalized: true,
   });
 }

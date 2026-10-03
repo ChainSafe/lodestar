@@ -12,12 +12,14 @@ export type SlashingProtectionInterchangeTest = {
       blocks: {
         pubkey: string;
         should_succeed: boolean;
+        should_succeed_complete: boolean;
         slot: string;
         signing_root?: string;
       }[];
       attestations: {
         pubkey: string;
         should_succeed: boolean;
+        should_succeed_complete: boolean;
         source_epoch: string;
         target_epoch: string;
         signing_root?: string;

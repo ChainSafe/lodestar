@@ -1,29 +1,19 @@
-import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
+import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  DOMAIN_SYNC_COMMITTEE,
-  FINALIZED_ROOT_DEPTH,
-  FINALIZED_ROOT_DEPTH_ELECTRA,
-  FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_INDEX_ELECTRA,
-  GENESIS_SLOT,
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
-  NEXT_SYNC_COMMITTEE_INDEX,
-  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
-} from "@lodestar/params";
-import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
+import {DOMAIN_SYNC_COMMITTEE, GENESIS_SLOT, MIN_SYNC_COMMITTEE_PARTICIPANTS} from "@lodestar/params";
+import {LightClientUpdate, Root, ssz} from "@lodestar/types";
 import type {ILightClientStore, SyncCommitteeFast} from "./store.js";
 import {
   ZERO_HASH,
+  finalizedRootGindexAtFork,
   getParticipantPubkeys,
   isFinalityUpdate,
   isSyncCommitteeUpdate,
   isValidLightClientHeader,
-  isValidMerkleBranch,
+  isValidNormalizedMerkleBranch,
   isZeroedHeader,
   isZeroedSyncCommittee,
+  nextSyncCommitteeGindexAtFork,
   sumBits,
 } from "./utils.js";
 
@@ -33,6 +23,8 @@ export function validateLightClientUpdate(
   update: LightClientUpdate,
   syncCommittee: SyncCommitteeFast
 ): void {
+  const attestedFork = config.getForkName(update.attestedHeader.beacon.slot);
+
   // Verify sync committee has sufficient participants
   if (sumBits(update.syncAggregate.syncCommitteeBits) < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
     throw Error("Sync committee has not sufficient participants");
@@ -78,11 +70,10 @@ export function validateLightClientUpdate(
     }
 
     if (
-      !isValidMerkleBranch(
+      !isValidNormalizedMerkleBranch(
         finalizedRoot,
         update.finalityBranch,
-        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH,
-        isElectraLightClientUpdate(update) ? FINALIZED_ROOT_INDEX_ELECTRA : FINALIZED_ROOT_INDEX,
+        finalizedRootGindexAtFork(attestedFork),
         update.attestedHeader.beacon.stateRoot
       )
     ) {
@@ -98,11 +89,10 @@ export function validateLightClientUpdate(
     }
   } else {
     if (
-      !isValidMerkleBranch(
+      !isValidNormalizedMerkleBranch(
         ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         update.nextSyncCommitteeBranch,
-        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
-        isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_INDEX,
+        nextSyncCommitteeGindexAtFork(attestedFork),
         update.attestedHeader.beacon.stateRoot
       )
     ) {

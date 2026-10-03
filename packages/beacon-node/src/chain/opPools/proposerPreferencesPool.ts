@@ -17,7 +17,7 @@ import {toRootHex} from "@lodestar/utils";
 export class ProposerPreferencesPool {
   private readonly bySlot = new Map<Slot, Map<RootHex, gloas.SignedProposerPreferences>>();
 
-  /** Lookup for bid validation: matches `(bid.slot, get_proposer_dependent_root(parent_state, ...))`. */
+  /** Lookup for bid validation: matches `(bid.slot, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))`. */
   get(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
     return this.bySlot.get(slot)?.get(dependentRootHex) ?? null;
   }

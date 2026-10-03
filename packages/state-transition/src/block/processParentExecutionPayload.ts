@@ -49,7 +49,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
 export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: gloas.ExecutionRequests): void {
   const fork = state.config.getForkSeq(state.slot);
   const parentBid = state.latestExecutionPayloadBid;
-  const parentSlot = parentBid.slot;
+  const parentSlot = state.latestBlockHeader.slot;
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
 

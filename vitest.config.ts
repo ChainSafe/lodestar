@@ -2,10 +2,9 @@ import path from "node:path";
 import {TestUserConfig, defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
-import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
+import {specProjectComptest, specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
-import {esmCjsInteropPlugin} from "./scripts/vite/plugins/esmCjsInteropPlugin.js";
 
 export function getReporters(): TestUserConfig["reporters"] {
   if (process.env.GITHUB_ACTIONS) return ["tree", "hanging-process", "github-actions"];
@@ -15,7 +14,6 @@ export function getReporters(): TestUserConfig["reporters"] {
 }
 
 export default defineConfig({
-  plugins: [esmCjsInteropPlugin()],
   test: {
     projects: [
       {
@@ -45,6 +43,10 @@ export default defineConfig({
       {
         extends: true,
         ...specProjectMainnet,
+      },
+      {
+        extends: true,
+        ...specProjectComptest,
       },
       {
         extends: true,

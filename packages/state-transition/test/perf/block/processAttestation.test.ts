@@ -76,6 +76,7 @@ describe("altair processAttestation", () => {
           state.config.getForkSeq(state.slot),
           state as CachedBeaconStateAltair,
           attestations,
+          null,
           false
         );
         state.commit();

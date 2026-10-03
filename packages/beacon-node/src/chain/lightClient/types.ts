@@ -26,8 +26,10 @@
  * ```
  */
 export type SyncCommitteeWitness = {
-  /** Vector[Bytes32, 4] or Vector[Bytes32, 5] depending on the fork */
+  /** Shared witness for pre-Gloas forks where current and next sync committees are siblings. */
   witness: Uint8Array[];
   currentSyncCommitteeRoot: Uint8Array;
   nextSyncCommitteeRoot: Uint8Array;
+  currentSyncCommitteeBranch?: Uint8Array[];
+  nextSyncCommitteeBranch?: Uint8Array[];
 };

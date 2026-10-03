@@ -1,4 +1,4 @@
-import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_COMMITTEES_PER_SLOT, MAX_PAYLOAD_ATTESTATIONS, PTC_SIZE} from "@lodestar/params";
@@ -178,8 +178,8 @@ function aggregateMessageInto(
   validatorCommitteeIndices: number[],
   aggregate: AggregateFast
 ): InsertOutcome {
-  // Gossip dedup via `seenPayloadAttesters` is keyed by (epoch, validatorIndex), so the same
-  // validator's message is never processed twice — all of its bits are set together or none.
+  // Gossip dedup via `seenPayloadAttesters` is keyed by (slot, validatorIndex), so the same
+  // validator's message is never processed twice for this aggregate's slot. All of its bits are set together or none.
   // Checking the first index is sufficient.
   if (aggregate.aggregationBits.get(validatorCommitteeIndices[0]) === true) {
     return InsertOutcome.AlreadyKnown;

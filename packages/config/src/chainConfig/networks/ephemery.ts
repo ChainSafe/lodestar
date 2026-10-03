@@ -2,13 +2,9 @@ import {fromHex as b} from "@lodestar/utils";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
-// Ephemery dynamic beacon chain config:
-// https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
-
-// Ephemery specification:
-// https://eips.ethereum.org/EIPS/eip-6916
-
-// iteration 0, "base"-genesis
+// Ephemery is a periodically-resetting testnet (EIP-6916). These values track the
+// current iteration in ephemery-genesis values.env, pinned to iteration 164:
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/a4b5a2ee5c1c40e378edc92f2ccd9938cf9207d0/values.env
 const baseChainConfig: ChainConfig = {
   ...mainnet,
 
@@ -17,10 +13,9 @@ const baseChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
-  // Thu Dec 02 2021 19:00:00 GMT+0000
-  MIN_GENESIS_TIME: 1638471600,
+  MIN_GENESIS_TIME: 1790276400,
   GENESIS_FORK_VERSION: b("0x1000101b"),
-  GENESIS_DELAY: 300,
+  GENESIS_DELAY: 600,
 
   // Forking
   // ---------------------------------------------------------------
@@ -49,8 +44,8 @@ const baseChainConfig: ChainConfig = {
 
   // Deposit contract
   // ---------------------------------------------------------------
-  DEPOSIT_CHAIN_ID: 39438000,
-  DEPOSIT_NETWORK_ID: 39438000,
+  DEPOSIT_CHAIN_ID: 39438164,
+  DEPOSIT_NETWORK_ID: 39438164,
 
   ETH1_FOLLOW_DISTANCE: 12,
 
@@ -68,15 +63,24 @@ const baseChainConfig: ChainConfig = {
   ],
 };
 
-// Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
-// https://github.com/ephemery-testnet/ephemery-genesis/blob/9a28fbef950c8547d78785f8a0ea49a95ce19a48/values.env#L5
-const RESET_INTERVAL_MS = 604800000;
-const iteration = Math.floor(Date.now() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS;
+// values.env GENESIS_INTERVAL
+const RESET_INTERVAL_SECONDS = 2419200;
 
-export const ephemeryChainConfig: ChainConfig = {
-  ...baseChainConfig,
+/**
+ * Resolve the ephemery config for the iteration active at `nowMs`, in whole seconds so
+ * every process within an iteration agrees (#10160). values.env publishes the next
+ * iteration ahead of activation, so `iterations` can be negative.
+ */
+export function getEphemeryChainConfig(nowMs: number = Date.now()): ChainConfig {
+  const nowSeconds = Math.floor(nowMs / 1000);
+  const iterations = Math.floor((nowSeconds - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_SECONDS);
 
-  MIN_GENESIS_TIME: RESET_INTERVAL_MS * iteration + baseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
-  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
-};
+  return {
+    ...baseChainConfig,
+    MIN_GENESIS_TIME: baseChainConfig.MIN_GENESIS_TIME + iterations * RESET_INTERVAL_SECONDS,
+    DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iterations,
+    DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iterations,
+  };
+}
+
+export const ephemeryChainConfig: ChainConfig = getEphemeryChainConfig();

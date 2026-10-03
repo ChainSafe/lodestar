@@ -2,11 +2,11 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
-  EpochDifference,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
@@ -21,13 +21,21 @@ import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  BeaconBlock,
+  Epoch,
+  altair,
+  capella,
+  electra,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -46,6 +54,15 @@ import {getCheckpointFromState} from "./utils/checkpoint.js";
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
  */
 const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+/**
+ * Whether the attestations of a block at `blockEpoch` are imported into fork choice
+ */
+export function importsBlockAttestations(opts: ImportBlockOpts, blockEpoch: Epoch, currentEpoch: Epoch): boolean {
+  return (
+    opts.importAttestations === AttestationImportOpt.Force ||
+    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+  );
+}
 /**
  * Emit eventstream events for block contents events only for blocks that are recent enough to clock
  */
@@ -87,7 +104,7 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec =
+  const receiveDelaySec =
     fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
@@ -124,18 +141,15 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
-  // getBeaconProposerOrNull will return null if head state is more than one epoch away
-  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
-  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
-
+  const importDelaySec = this.clock.secFromSlot(blockSlot);
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
-    blockDelaySec,
+    receiveDelaySec,
+    importDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus,
-    expectedProposerIndex
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -154,10 +168,7 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
-  if (
-    opts.importAttestations === AttestationImportOpt.Force ||
-    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
-  ) {
+  if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
@@ -306,21 +317,6 @@ export async function importBlock(
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    try {
-      this.emitter.emit(routes.events.EventType.head, {
-        block: newHead.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-        slot: newHead.slot,
-        state: newHead.stateRoot,
-        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-        executionOptimistic: isOptimisticBlock(newHead),
-      });
-    } catch (e) {
-      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
-    }
-
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
@@ -425,11 +421,7 @@ export async function importBlock(
         notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.AtEpochBoundary;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
+      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
     }
 
     if (shouldOverrideFcu) {
@@ -465,8 +457,8 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
@@ -532,19 +524,6 @@ export async function importBlock(
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
-      const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
-      const finalizedEpoch = finalizedCheckpoint.epoch;
-      const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
-      if (finalizedEpoch > preFinalizedEpoch) {
-        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: toRootHex(finalizedCheckpoint.root),
-          epoch: finalizedCheckpoint.epoch,
-          state: toRootHex(checkpointState.hashTreeRoot()),
-          executionOptimistic: false,
-        });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
-        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
-      }
     }
   }
 
@@ -559,6 +538,10 @@ export async function importBlock(
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...(isGloasBeaconBlock(block.message) && {
+            blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+            builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+          }),
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {

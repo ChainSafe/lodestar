@@ -112,6 +112,9 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
 
 export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockV2({blockId: "head"})).value();
+  const currentHeadRoot = toHex(
+    env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
+  );
   const currentSidecars = (
     await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
   ).value();
@@ -158,20 +161,17 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
         broadcastValidation: routes.beacon.BroadcastValidation.none,
       })
     ).assertOk();
-
-    env.tracker.record({
-      message: "Publishing unknown block should fail",
-      slot: env.clock.currentSlot,
-      assertionId: "unknownBlockParent",
-    });
   } catch (error) {
     const errorMessage = (error as Error).message;
-    // BLOCK_ERROR_PARENT_UNKNOWN is the expected response when the node hasn't seen this block yet.
+    // BLOCK_ERROR_PARENT_BLOCK_UNKNOWN is the expected response when the node hasn't seen this block yet.
     // BLOCK_ERROR_ALREADY_KNOWN can occur if the block propagates via gossip from connected peers
     // before the manual publish, which is a valid outcome — the node has the block either way.
-    if (!errorMessage.includes("BLOCK_ERROR_PARENT_UNKNOWN") && !errorMessage.includes("BLOCK_ERROR_ALREADY_KNOWN")) {
+    if (
+      !errorMessage.includes("BLOCK_ERROR_PARENT_BLOCK_UNKNOWN") &&
+      !errorMessage.includes("BLOCK_ERROR_ALREADY_KNOWN")
+    ) {
       env.tracker.record({
-        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" or "BLOCK_ERROR_ALREADY_KNOWN" got "${errorMessage}"`,
+        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN" or "BLOCK_ERROR_ALREADY_KNOWN" got "${errorMessage}"`,
         slot: env.clock.currentSlot,
         assertionId: "unknownBlockParent",
       });
@@ -179,9 +179,20 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   }
 
   await waitForHead(env, unknownBlockSync, {
-    head: toHex(env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)),
+    head: currentHeadRoot,
     slot: currentHead.message.slot,
   });
+
+  // A later head can satisfy waitForHead without proving that this exact block was imported.
+  try {
+    (await unknownBlockSync.beacon.api.beacon.getBlockHeader({blockId: currentHeadRoot})).assertOk();
+  } catch (error) {
+    env.tracker.record({
+      message: `Failed to retrieve synced block ${currentHeadRoot}: ${(error as Error).message}`,
+      slot: env.clock.currentSlot,
+      assertionId: "unknownBlockParent",
+    });
+  }
 
   await unknownBlockSync.beacon.job.stop();
   await unknownBlockSync.execution.job.stop();

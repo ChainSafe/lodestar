@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {

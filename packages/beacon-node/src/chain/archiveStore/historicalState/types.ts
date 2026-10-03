@@ -7,6 +7,7 @@ export type HistoricalStateRegenInitModules = {
   opts: {
     genesisTime: number;
     dbLocation: string;
+    dataColumnDir: string;
     nativeStateView: boolean;
   };
   config: BeaconConfig;
@@ -25,6 +26,7 @@ export type HistoricalStateWorkerData = {
   maxConcurrency: number;
   maxLength: number;
   dbLocation: string;
+  dataColumnDir: string;
   metricsEnabled: boolean;
   loggerOpts: LoggerNodeOpts;
   nativeStateView: boolean;

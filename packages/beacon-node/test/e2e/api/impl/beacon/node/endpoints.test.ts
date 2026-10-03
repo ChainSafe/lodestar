@@ -69,6 +69,10 @@ describe("beacon node api", () => {
           ...chainConfigDef,
           ALTAIR_FORK_EPOCH: 0,
           BELLATRIX_FORK_EPOCH: 0,
+          CAPELLA_FORK_EPOCH: 0,
+          DENEB_FORK_EPOCH: 0,
+          ELECTRA_FORK_EPOCH: 0,
+          FULU_FORK_EPOCH: 0,
         },
         options: {
           sync: {isSingleNode: true},
