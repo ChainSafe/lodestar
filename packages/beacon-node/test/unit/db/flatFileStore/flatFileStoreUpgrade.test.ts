@@ -94,9 +94,6 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       beaconEngine: {
         getRecentCanonicalRoots: () => new Map(),
         getFinalizedBlockRootBySlot: (slot: number) => db.blockArchive.getRootBySlot(slot),
-        getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
-        getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
-        getAllAncestorBlocks: () => [],
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
       earliestAvailableSlot: 0,
@@ -106,6 +103,10 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
       getSerializedDataColumnSidecars: (slot: number, root: string, indices: number[]) =>
         BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices),
+
+      getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
+      getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
+      getAllAncestorBlocks: () => [],
     } as unknown as IBeaconChain;
   }
 
@@ -168,10 +169,10 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     await db.init();
     const chain = makeChain();
     if (source === "fork choice") {
-      vi.spyOn(chain.beaconEngine, "getAllAncestorBlocks").mockReturnValue([
+      vi.spyOn(chain, "getAllAncestorBlocks").mockReturnValue([
         {slot: 11, blockRoot: "0x" + "11".repeat(32), payloadStatus: PayloadStatus.FULL},
         {slot: 9, blockRoot: "0x" + "09".repeat(32), payloadStatus: PayloadStatus.FULL},
-      ] as ReturnType<IBeaconChain["beaconEngine"]["getAllAncestorBlocks"]>);
+      ] as ReturnType<IBeaconChain["getAllAncestorBlocks"]>);
     } else {
       vi.spyOn(chain.beaconEngine, "getRecentCanonicalRoots").mockReturnValue(new Map([[10, null]]));
     }

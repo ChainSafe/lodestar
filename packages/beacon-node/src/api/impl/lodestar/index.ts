@@ -211,7 +211,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
+      const id = resolveStateId(chain, stateId, chain, sync);
       const res = await chain.beaconEngine.getHistoricalSummaries(id);
       if (!res) {
         throw new ApiError(404, `State not found for id '${stateId}'`);
@@ -268,10 +268,10 @@ export function getLodestarApi({
     async getFastConfirmationInfo() {
       const fcrStore = chain.beaconEngine.getFastConfirmationStore();
       const confirmedBlock = chain.beaconEngine.getConfirmedBlock();
-      const justifiedCheckpoint = chain.beaconEngine.getJustifiedCheckpoint();
-      const finalizedCheckpoint = chain.beaconEngine.getFinalizedCheckpoint();
-      const headRoot = chain.beaconEngine.getHeadRoot();
-      const head = chain.beaconEngine.getHead();
+      const justifiedCheckpoint = chain.getJustifiedCheckpoint();
+      const finalizedCheckpoint = chain.getFinalizedCheckpoint();
+      const headRoot = chain.getHeadRoot();
+      const head = chain.getHead();
 
       return {
         data: {

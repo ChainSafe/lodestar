@@ -7,7 +7,7 @@ import {resolveStateId} from "../../../../../../src/api/impl/beacon/state/utils.
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
 import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
 import {getStateValidatorIndex} from "../../../../../../src/chain/beaconEngine/index.js";
-import {IBeaconEngine} from "../../../../../../src/chain/beaconEngine/interface.js";
+import {IChainView} from "../../../../../../src/chain/chainView/interface.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
@@ -75,8 +75,8 @@ describe("beacon state api utils", () => {
       getHead: () => ({slot: 0}),
       getFinalizedCheckpoint: () => ({epoch: 0, rootHex: "0xbb"}),
       getJustifiedCheckpoint: () => ({epoch: 0, rootHex: "0xbb"}),
-    } as unknown as IBeaconEngine;
-    const chain = {beaconEngine, clock: {currentSlot: 10 * SLOTS_PER_EPOCH}} as unknown as IBeaconChain;
+    } as unknown as IChainView;
+    const chain = {...beaconEngine, clock: {currentSlot: 10 * SLOTS_PER_EPOCH}} as unknown as IBeaconChain;
     const sync = {state: SyncState.SyncingFinalized} as unknown as IBeaconSync;
     it("rejects a regen-triggering slot while behind and syncing", () => {
       expect(() => resolveStateId(beaconEngine, 5 * SLOTS_PER_EPOCH, chain, sync)).toThrow(NodeIsSyncing);
@@ -113,7 +113,7 @@ describe("beacon state api utils", () => {
 
     it("serves the head block's post-state from the block state cache", async () => {
       const {chain, getHeadState} = getChain(headPostState);
-      const res = await chain.beaconEngine.getSerializedState(resolveStateId(chain.beaconEngine, "head", chain, sync));
+      const res = await chain.beaconEngine.getSerializedState(resolveStateId(chain, "head", chain, sync));
       expect(res?.state).toBe(headBytes);
       expect(res?.finalized).toBe(true);
       expect(res?.executionOptimistic).toBe(false);
@@ -122,7 +122,7 @@ describe("beacon state api utils", () => {
 
     it("falls back to the closest head state if the head block's post-state is not cached (anchor at skipped boundary slot)", async () => {
       const {chain, getHeadState} = getChain(null);
-      const res = await chain.beaconEngine.getSerializedState(resolveStateId(chain.beaconEngine, "head", chain, sync));
+      const res = await chain.beaconEngine.getSerializedState(resolveStateId(chain, "head", chain, sync));
       expect(res?.state).toBe(anchorBytes);
       expect(res?.finalized).toBe(true);
       expect(getHeadState).toHaveBeenCalledOnce();

@@ -6,6 +6,7 @@ import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {ChainViewUpdate} from "./chainView/interface.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -16,6 +17,7 @@ import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelop
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
+  chainViewUpdated = "chainViewUpdated",
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint.
    *
@@ -107,6 +109,7 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
+  [ChainEvent.chainViewUpdated]: (update: ChainViewUpdate) => void;
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;

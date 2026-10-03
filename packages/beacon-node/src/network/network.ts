@@ -142,7 +142,7 @@ export class Network implements INetwork {
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
-    this.chain.emitter.on(routes.events.EventType.head, this.onHead);
+    this.chain.emitter.on(ChainEvent.chainViewUpdated, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
       this.onLightClientFinalityUpdate(data)
     );
@@ -244,7 +244,7 @@ export class Network implements INetwork {
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
-    this.chain.emitter.off(routes.events.EventType.head, this.onHead);
+    this.chain.emitter.off(ChainEvent.chainViewUpdated, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);

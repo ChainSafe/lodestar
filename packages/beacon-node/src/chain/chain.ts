@@ -4,7 +4,7 @@ import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -52,6 +52,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
+import {BeaconEngineEvent} from "./beaconEngine/events.js";
 import {BeaconEngine, IBeaconEngine} from "./beaconEngine/index.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -63,6 +64,8 @@ import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {ChainView} from "./chainView/chainView.js";
+import {ChainViewBlock, ChainViewUpdate} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -123,12 +126,7 @@ export class BeaconChain implements IBeaconChain {
   get bls(): IBlsVerifier {
     return this.beaconEngine.chainBls();
   }
-  // Cached head ProtoBlock, updated from importBlock's result. Lets the facade serve getStatus and
-  // detect finalized/justified transitions (it carries finalized*/justified* checkpoints) without the
-  // engine emitting into the JS emitter (FFI-honest). Not the source of truth for all head reads yet.
-  // TODO - beacon engine: last fork-choice-derived field on the facade — move into the engine (the head
-  // cache belongs in NativeBeaconEngine); the checkpoint-event emission that reads it moves too.
-  private headProtoBlock: ProtoBlock;
+  private readonly chainView: ChainView;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly lightClientServer?: LightClientServer;
@@ -304,8 +302,8 @@ export class BeaconChain implements IBeaconChain {
     this.beaconEngine = beaconEngine;
     // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.
     this.builderApiClient = beaconEngine.builderApiClient;
-    // Seed the facade head cache from the engine's initial head (one-time read); refreshed on each import.
-    this.headProtoBlock = this.beaconEngine.getHead();
+    this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
+    beaconEngine.events.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
@@ -325,6 +323,7 @@ export class BeaconChain implements IBeaconChain {
       config,
       clock,
       beaconEngine: this.beaconEngine,
+      chainView: this,
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
@@ -419,6 +418,7 @@ export class BeaconChain implements IBeaconChain {
   async close(): Promise<void> {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
+    this.beaconEngine.events.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
 
     // Since we don't persist unfinalized fork-choice,
     // we can abort any ongoing unfinalized block writes.
@@ -429,12 +429,96 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
   }
 
+  pruneChainView(finalized: CheckpointWithHex): void {
+    this.chainView.prune(finalized);
+  }
+
+  getHead(): ChainViewBlock {
+    return this.chainView.getHead();
+  }
+
+  getHeadRoot(): RootHex {
+    return this.chainView.getHeadRoot();
+  }
+
+  getFinalizedCheckpoint(): CheckpointWithHex {
+    return this.chainView.getFinalizedCheckpoint();
+  }
+
+  getJustifiedCheckpoint(): CheckpointWithHex {
+    return this.chainView.getJustifiedCheckpoint();
+  }
+
+  getFinalizedBlock(): ChainViewBlock {
+    return this.chainView.getFinalizedBlock();
+  }
+
+  getJustifiedBlock(): ChainViewBlock {
+    return this.chainView.getJustifiedBlock();
+  }
+
+  hasBlock(root: Root): boolean {
+    return this.chainView.hasBlock(root);
+  }
+
+  hasBlockHex(root: RootHex): boolean {
+    return this.chainView.hasBlockHex(root);
+  }
+
+  hasBlockHexUnsafe(root: RootHex): boolean {
+    return this.chainView.hasBlockHexUnsafe(root);
+  }
+
+  hasPayloadHexUnsafe(root: RootHex): boolean {
+    return this.chainView.hasPayloadHexUnsafe(root);
+  }
+
+  getBlockDefaultStatus(root: Root): ChainViewBlock | null {
+    return this.chainView.getBlockDefaultStatus(root);
+  }
+
+  getBlockHexDefaultStatus(root: RootHex): ChainViewBlock | null {
+    return this.chainView.getBlockHexDefaultStatus(root);
+  }
+
+  getBlockHex(root: RootHex, status: PayloadStatus): ChainViewBlock | null {
+    return this.chainView.getBlockHex(root, status);
+  }
+
+  getBlockHexAndBlockHash(root: RootHex, hash: RootHex): ChainViewBlock | null {
+    return this.chainView.getBlockHexAndBlockHash(root, hash);
+  }
+
+  getCanonicalProtoBlockAtSlot(slot: Slot): ChainViewBlock | null {
+    return this.chainView.getCanonicalProtoBlockAtSlot(slot);
+  }
+
+  getCanonicalBlockClosestLteSlot(slot: Slot): ChainViewBlock | null {
+    return this.chainView.getCanonicalBlockClosestLteSlot(slot);
+  }
+
+  getCanonicalBlockByRoot(root: Root): ChainViewBlock | null {
+    return this.chainView.getCanonicalBlockByRoot(root);
+  }
+
+  getBlockSummariesAtSlot(slot: Slot): ChainViewBlock[] {
+    return this.chainView.getBlockSummariesAtSlot(slot);
+  }
+
+  getBlockSummariesByParentRoot(root: RootHex): ChainViewBlock[] {
+    return this.chainView.getBlockSummariesByParentRoot(root);
+  }
+
+  getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[] {
+    return this.chainView.getAllAncestorBlocks(root, status);
+  }
+
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.hasBlock(blockRoot) || this.beaconEngine.hasBlockHexUnsafe(blockRoot);
+    return this.seenBlockInputCache.hasBlock(blockRoot) || this.hasBlockHexUnsafe(blockRoot);
   }
 
   seenPayloadEnvelope(blockRoot: RootHex): boolean {
-    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.beaconEngine.hasPayloadHexUnsafe(blockRoot);
+    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.hasPayloadHexUnsafe(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -485,10 +569,10 @@ export class BeaconChain implements IBeaconChain {
   async getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.beaconEngine.getFinalizedBlock();
+    const finalizedBlock = this.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
-      const block = this.beaconEngine.getCanonicalProtoBlockAtSlot(slot);
+      const block = this.getCanonicalProtoBlockAtSlot(slot);
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -523,7 +607,7 @@ export class BeaconChain implements IBeaconChain {
   async getBlockByRoot(
     root: string
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const protoBlock = this.beaconEngine.getBlockHexDefaultStatus(root);
+    const protoBlock = this.getBlockHexDefaultStatus(root);
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -549,7 +633,7 @@ export class BeaconChain implements IBeaconChain {
     root: Uint8Array
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
     // TODO - beacon engine: make a separate call, need to be lightweight
-    const protoBlock = this.beaconEngine.getBlockHexDefaultStatus(toRootHex(root));
+    const protoBlock = this.getBlockHexDefaultStatus(toRootHex(root));
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -589,7 +673,7 @@ export class BeaconChain implements IBeaconChain {
     startSlot: Slot,
     endSlot: Slot
   ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    return this.beaconEngine.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
+    return this.chainView.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
   }
 
   /** Engine passthrough: finalized block slot by root (cold archive index). */
@@ -712,7 +796,7 @@ export class BeaconChain implements IBeaconChain {
 
   /** Engine passthrough: thin ByRange serving refs (fork choice read engine-side). */
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    return this.beaconEngine.getFullBlockRootSlotsByRange(startSlot, endSlot);
+    return this.chainView.getFullBlockRootSlotsByRange(startSlot, endSlot);
   }
 
   async getExecutionPayloadEnvelope(
@@ -893,7 +977,7 @@ export class BeaconChain implements IBeaconChain {
   getStatus(): Status {
     // Read the cached head instead of the engine — its finalized* fields ARE the head state's
     // finalized checkpoint (exactly what Status wants), so no separate getFinalizedCheckpoint() call.
-    const head = this.headProtoBlock;
+    const head = this.getHead();
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
@@ -911,32 +995,18 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  /**
-   * Single choke point for refreshing the cached head: pass the new canonical head here from ANY flow
-   * that updates it (currently importBlock; head recompute / proposer-head selection are engine-internal).
-   * It emits fork-choice justified/finalized transitions facade-side — the engine no longer emits these
-   * (a native engine can't emit into the JS emitter); they are derived from the head ProtoBlock's
-   * justified and finalized checkpoints. Head-derived: a checkpoint that advances only via an
-   * epoch-boundary tick is emitted on the next head update.
-   */
-  updateHeadAndEmitCheckpointEvents(newHead: ProtoBlock): void {
-    const prevHead = this.headProtoBlock;
-    this.headProtoBlock = newHead;
-
-    // TODO - beacon engine: forward checkpoint callbacks directly; head-derived checkpoints may lag epoch ticks.
-    if (newHead.justifiedEpoch !== prevHead.justifiedEpoch || newHead.justifiedRoot !== prevHead.justifiedRoot) {
-      this.emitter.emit(
-        ChainEvent.forkChoiceJustified,
-        protoCheckpointToWithHex(newHead.justifiedEpoch, newHead.justifiedRoot)
-      );
+  private onChainViewUpdated = (update: ChainViewUpdate): void => {
+    const previousJustified = this.getJustifiedCheckpoint();
+    const previousFinalized = this.getFinalizedCheckpoint();
+    this.chainView.applyUpdate(update);
+    this.emitter.emit(ChainEvent.chainViewUpdated, update);
+    if (update.justified.epoch !== previousJustified.epoch || update.justified.rootHex !== previousJustified.rootHex) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, this.getJustifiedCheckpoint());
     }
-    if (newHead.finalizedEpoch !== prevHead.finalizedEpoch || newHead.finalizedRoot !== prevHead.finalizedRoot) {
-      this.emitter.emit(
-        ChainEvent.forkChoiceFinalized,
-        protoCheckpointToWithHex(newHead.finalizedEpoch, newHead.finalizedRoot)
-      );
+    if (update.finalized.epoch !== previousFinalized.epoch || update.finalized.rootHex !== previousFinalized.rootHex) {
+      this.emitter.emit(ChainEvent.forkChoiceFinalized, this.getFinalizedCheckpoint());
     }
-  }
+  };
 
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
@@ -1050,7 +1120,7 @@ export class BeaconChain implements IBeaconChain {
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.metrics?.finalizedEpoch.set(cp.epoch);
-    const finalizedBlock = this.beaconEngine.getBlockHexDefaultStatus(cp.rootHex);
+    const finalizedBlock = this.getBlockHexDefaultStatus(cp.rootHex);
     if (finalizedBlock) {
       // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
       callInNextEventLoop(() => {
@@ -1083,7 +1153,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (discoveredNewValidators) {
-      const finalizedCheckpoint = this.beaconEngine.getFinalizedCheckpoint();
+      const finalizedCheckpoint = this.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
   }
@@ -1142,9 +1212,4 @@ export class BeaconChain implements IBeaconChain {
       this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
     }
   }
-}
-
-/** Build a CheckpointWithHex from a ProtoBlock's `{epoch, rootHex}` checkpoint fields (no re-hashing). */
-function protoCheckpointToWithHex(epoch: Epoch, rootHex: RootHex): CheckpointWithHex {
-  return {epoch, root: fromHex(rootHex), rootHex};
 }

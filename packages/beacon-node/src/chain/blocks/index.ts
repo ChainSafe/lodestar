@@ -211,7 +211,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return {orphaned: [], skipped: false};
   }
 
-  const head = this.beaconEngine.getHead();
+  const head = this.getHead();
   const currentEpoch = this.clock.currentEpoch;
   const payloadInputs: PayloadEnvelopeInput[] = [];
   const orphaned: OrphanedPayloadEnvelope[] = [];
@@ -219,8 +219,8 @@ async function importPayloadEnvelopesOfKnownBlocks(
     const {blockRootHex, slot} = payloadInput;
     if (
       !payloadInput.hasPayloadEnvelope() ||
-      !this.beaconEngine.hasBlockHex(blockRootHex) ||
-      this.beaconEngine.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
+      !this.hasBlockHex(blockRootHex) ||
+      this.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
     ) {
       continue;
     }
@@ -253,7 +253,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
-  this.updateHeadAndEmitCheckpointEvents(this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock));
+  this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;
 }

@@ -5,6 +5,7 @@ import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {IBeaconEngine} from "../beaconEngine/index.js";
+import {IChainView} from "../chainView/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
@@ -24,7 +25,7 @@ import {ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {
+  chain: Pick<IChainView, "getFinalizedCheckpoint" | "hasBlockHex"> & {
     beaconEngine: IBeaconEngine;
     clock: IClock;
     config: ChainForkConfig;
@@ -77,7 +78,7 @@ export function verifyBlocksSanityChecks(
 
     // Not finalized slot
     // IGNORE if `partiallyVerifiedBlock.ignoreIfFinalized`
-    const finalizedSlot = computeStartSlotAtEpoch(chain.beaconEngine.getFinalizedCheckpoint().epoch);
+    const finalizedSlot = computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch);
     if (blockSlot <= finalizedSlot) {
       if (opts.ignoreIfFinalized) {
         continue;
@@ -131,7 +132,7 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    if (chain.beaconEngine.hasBlockHex(blockHash)) {
+    if (chain.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;
       }

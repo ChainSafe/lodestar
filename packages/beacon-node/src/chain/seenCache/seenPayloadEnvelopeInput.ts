@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkPostGloas, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock} from "@lodestar/types";
@@ -19,6 +19,7 @@ import {
   PayloadEnvelopeInputPruneReason,
   PayloadEnvelopeInputSource,
 } from "../blocks/payloadEnvelopeInput/index.js";
+import {ChainViewBlock, IChainView} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {SeenBlockInput} from "./seenGossipBlockInput.js";
 
@@ -32,6 +33,7 @@ export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
   clock: IClock;
   beaconEngine: IBeaconEngine;
+  chainView: IChainView;
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
@@ -55,6 +57,7 @@ export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly beaconEngine: IBeaconEngine;
+  private readonly chainView: IChainView;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
@@ -71,6 +74,7 @@ export class SeenPayloadEnvelopeInput {
     config,
     clock,
     beaconEngine,
+    chainView,
     chainEvents,
     signal,
     serializedCache,
@@ -82,6 +86,7 @@ export class SeenPayloadEnvelopeInput {
     this.config = config;
     this.clock = clock;
     this.beaconEngine = beaconEngine;
+    this.chainView = chainView;
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
@@ -205,7 +210,7 @@ export class SeenPayloadEnvelopeInput {
   private async reloadFromDb(blockRootHex: RootHex): Promise<PayloadEnvelopeInput | undefined> {
     // Only recover unfinalized, fork-choice-known blocks. Do not read the finalized archive. The gate
     // also filters out un-imported blocks that may sit in seenBlockInputCache before validation.
-    if (!this.beaconEngine.hasBlockHex(blockRootHex)) {
+    if (!this.chainView.hasBlockHex(blockRootHex)) {
       return undefined;
     }
 
@@ -270,8 +275,8 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
-  pruneBelowParent(parentBlock: ProtoBlock): void {
-    for (const block of this.beaconEngine.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
+  pruneBelowParent(parentBlock: ChainViewBlock): void {
+    for (const block of this.chainView.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
       // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may
       // still need to download the FULL envelope (see #9475), and evicting would make payload-by-root
       // sync throw "Missing PayloadEnvelopeInput for known block".

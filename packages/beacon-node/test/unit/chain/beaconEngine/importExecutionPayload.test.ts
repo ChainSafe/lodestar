@@ -24,9 +24,11 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     putRequests.mockReset().mockResolvedValue(undefined);
     Object.defineProperty(chain, "db", {value: {executionRequests: {put: putRequests}}});
     chain.forkChoice.onExecutionPayload = vi.fn();
+    chain.forkChoice.getConfirmedBlock.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.getHead.mockReturnValue({...zeroProtoBlock, blockRoot: blockRootHex});
     chain.forkChoice.getFinalizedBlock.mockReturnValue({
       ...zeroProtoBlock,
+      slot: 1,
       executionStatus: ExecutionStatus.Valid,
       executionPayloadBlockHash: finalizedBlockHash,
       executionPayloadNumber: 100,
@@ -68,6 +70,9 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
       finalizedBlockHash
     );
     expect(chain.forkChoice.onExecutionPayload.mock.invocationCallOrder[0]).toBeLessThan(
+      chain.publishChainView.mock.invocationCallOrder[0]
+    );
+    expect(chain.publishChainView.mock.invocationCallOrder[0]).toBeLessThan(
       chain.executionEngine.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
     );
   });
@@ -82,6 +87,7 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     const importing = importPayload();
     expect(putRequests).toHaveBeenCalledExactlyOnceWith(blockRoot, executionRequests);
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+    expect(chain.publishChainView).not.toHaveBeenCalled();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
     finishWrite?.();
     await importing;
@@ -93,6 +99,7 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     putRequests.mockRejectedValue(error);
     await expect(importPayload()).rejects.toBe(error);
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+    expect(chain.publishChainView).not.toHaveBeenCalled();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 

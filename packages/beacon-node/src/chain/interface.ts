@@ -1,6 +1,7 @@
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -35,6 +36,7 @@ import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {IChainView} from "./chainView/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
@@ -62,7 +64,8 @@ export enum FindHeadFnName {
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain {
+export interface IBeaconChain extends IChainView {
+  pruneChainView(finalized: CheckpointWithHex): void;
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;

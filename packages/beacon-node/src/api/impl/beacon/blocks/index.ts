@@ -208,7 +208,7 @@ export function getBeaconBlockApi({
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
-    if (chain.beaconEngine.hasBlockHex(blockRoot)) {
+    if (chain.hasBlockHex(blockRoot)) {
       // Block was already imported, e.g. published again by the validator client or received via gossip
       chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
       return;
@@ -570,12 +570,12 @@ export function getBeaconBlockApi({
         if (finalizedBlock) {
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
         }
-        const nonFinalizedBlocks = chain.beaconEngine.getBlockSummariesByParentRoot(parentRoot);
+        const nonFinalizedBlocks = chain.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
             const blockResult = await chain.getBlockByRoot(summary.blockRoot);
             if (blockResult) {
-              const canonical = chain.beaconEngine.getCanonicalProtoBlockAtSlot(blockResult.block.message.slot);
+              const canonical = chain.getCanonicalProtoBlockAtSlot(blockResult.block.message.slot);
               if (canonical) {
                 result.push(
                   toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
@@ -599,7 +599,7 @@ export function getBeaconBlockApi({
         };
       }
 
-      const headSlot = chain.beaconEngine.getHead().slot;
+      const headSlot = chain.getHead().slot;
       if (!parentRoot && slot === undefined) {
         slot = headSlot;
       }
@@ -626,7 +626,7 @@ export function getBeaconBlockApi({
         // fork blocks
         // TODO: What is this logic?
         await Promise.all(
-          chain.beaconEngine.getBlockSummariesAtSlot(slot).map(async (summary) => {
+          chain.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
@@ -698,7 +698,7 @@ export function getBeaconBlockApi({
       // Fast path: From head state already available in memory get historical blockRoot
       const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
       if (!Number.isNaN(slot)) {
-        const head = chain.beaconEngine.getHead();
+        const head = chain.getHead();
 
         if (slot === head.slot) {
           return {
@@ -708,19 +708,19 @@ export function getBeaconBlockApi({
         }
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
-          const canonical = chain.beaconEngine.getCanonicalBlockClosestLteSlot(slot);
+          const canonical = chain.getCanonicalBlockClosestLteSlot(slot);
           if (canonical) {
             return {
               data: {root: fromHex(canonical.blockRoot)},
               meta: {
                 executionOptimistic: isOptimisticBlock(head),
-                finalized: computeEpochAtSlot(slot) <= chain.beaconEngine.getFinalizedCheckpoint().epoch,
+                finalized: computeEpochAtSlot(slot) <= chain.getFinalizedCheckpoint().epoch,
               },
             };
           }
         }
       } else if (blockId === "head") {
-        const head = chain.beaconEngine.getHead();
+        const head = chain.getHead();
         return {
           data: {root: fromHex(head.blockRoot)},
           meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
@@ -764,7 +764,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      let block = chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
         // Only wait if the envelope is for the current slot
         if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
@@ -773,7 +773,7 @@ export function getBeaconBlockApi({
             slot,
           });
           await chain.waitForBlock(slot, blockRootHex);
-          block = chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+          block = chain.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         }
         if (block === null) {
           throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
@@ -842,7 +842,7 @@ export function getBeaconBlockApi({
             await chain.beaconEngine.verifyEnvelopeForPublish(
               ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope),
               signedExecutionPayloadEnvelope,
-              block
+              blockRootHex
             );
             chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
             break;

@@ -110,6 +110,7 @@ import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
+import {ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {CommonBlockBody, FindHeadFnName, StateGetOpts} from "../interface.js";
@@ -182,7 +183,9 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syn
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {validateApiVoluntaryExit, validateGossipVoluntaryExit} from "../validation/voluntaryExit.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
+import {ChainViewPublisher} from "./chainView.js";
 import {getPubkeysForIndices} from "./duties.js";
+import {BeaconEngineEvent, BeaconEngineEventBus} from "./events.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -235,7 +238,19 @@ export class BeaconEngine implements IBeaconEngine {
   readonly blockStateCache: BlockStateCache;
   readonly checkpointStateCache: CheckpointStateCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  // TODO - beacon engine: implement IForkchoiceRead interface
+  readonly events = new BeaconEngineEventBus();
+  private chainViewPublisher?: ChainViewPublisher;
+
+  getChainViewSnapshot(): ChainViewSnapshot {
+    this.chainViewPublisher ??= new ChainViewPublisher(this.forkChoice);
+    return this.chainViewPublisher.snapshot();
+  }
+
+  publishChainView(blocksChanged = true): void {
+    const update = this.chainViewPublisher?.update(blocksChanged);
+    if (update) this.events.emit(BeaconEngineEvent.chainViewUpdated, update);
+  }
+
   readonly forkChoice: IForkChoice;
   readonly regen: QueuedStateRegenerator;
 
@@ -557,6 +572,7 @@ export class BeaconEngine implements IBeaconEngine {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
       throw e;
     } finally {
+      this.publishChainView(false);
       timer?.();
     }
   }
@@ -564,9 +580,6 @@ export class BeaconEngine implements IBeaconEngine {
   // --- TODO - beacon engine: temp forkChoice read pass-throughs (curate when regen removed — BLK-3). ---
   getHead(): ProtoBlock {
     return this.forkChoice.getHead();
-  }
-  getHeadRoot(): RootHex {
-    return this.forkChoice.getHeadRoot();
   }
   getHeads(): ProtoBlock[] {
     return this.forkChoice.getHeads();
@@ -597,9 +610,6 @@ export class BeaconEngine implements IBeaconEngine {
   getFinalizedBlock(): ProtoBlock {
     return this.forkChoice.getFinalizedBlock();
   }
-  getJustifiedBlock(): ProtoBlock {
-    return this.forkChoice.getJustifiedBlock();
-  }
   getFastConfirmationStore(): ReturnType<IBeaconEngine["getFastConfirmationStore"]> {
     return this.forkChoice.getFastConfirmationStore();
   }
@@ -611,9 +621,6 @@ export class BeaconEngine implements IBeaconEngine {
     this.forkChoice.resumeFastConfirmation();
   }
 
-  getConfirmedRoot(): RootHex {
-    return this.forkChoice.getConfirmedRoot();
-  }
   getConfirmedBlock(): ProtoBlock | null {
     return this.forkChoice.getConfirmedBlock();
   }
@@ -623,85 +630,12 @@ export class BeaconEngine implements IBeaconEngine {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null {
     return this.forkChoice.getBlockHexDefaultStatus(blockRoot);
   }
-  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null {
-    return this.forkChoice.getBlockHex(blockRoot, payloadStatus);
-  }
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
     return this.forkChoice.getBlockHexAndBlockHash(blockRoot, blockHash);
-  }
-  getCanonicalProtoBlockAtSlot(slot: Slot): ProtoBlock | null {
-    return this.forkChoice.getCanonicalBlockAtSlot(slot);
-  }
-  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null {
-    return this.forkChoice.getCanonicalBlockByRoot(blockRoot);
-  }
-  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null {
-    return this.forkChoice.getCanonicalBlockClosestLteSlot(slot);
-  }
-  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[] {
-    return this.forkChoice.getBlockSummariesAtSlot(slot);
-  }
-  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[] {
-    return this.forkChoice.getBlockSummariesByParentRoot(parentRoot);
-  }
-  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
-    return this.forkChoice.getAllAncestorBlocks(blockRoot, payloadStatus);
   }
   getAllNodes(): ProtoNode[] {
     return this.forkChoice.getAllNodes();
   }
-  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
-  hasBlock(blockRoot: Root): boolean {
-    return this.forkChoice.hasBlock(blockRoot);
-  }
-  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
-  hasBlockHex(blockRoot: RootHex): boolean {
-    return this.forkChoice.hasBlockHex(blockRoot);
-  }
-  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
-  hasBlockHexUnsafe(blockRoot: RootHex): boolean {
-    return this.forkChoice.hasBlockHexUnsafe(blockRoot);
-  }
-  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
-  hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
-    return this.forkChoice.hasPayloadHexUnsafe(blockRoot);
-  }
-  /** Projected thin ref (no ProtoBlock crosses) for DA-cache prune, anchored at (blockRoot, payloadStatus). */
-  getAllAncestorBlockRootSlots(blockRoot: RootHex, payloadStatus: PayloadStatus): BlockRootSlot[] {
-    return this.forkChoice
-      .getAllAncestorBlocks(blockRoot, payloadStatus)
-      .map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
-  }
-
-  /**
-   * Thin serving refs for ExecutionPayloadEnvelopesByRange: fork-choice reads + FULL filter stay inside
-   * the engine; only slot + raw root cross. Returns the archive boundary (`finalizedSlot`) and the
-   * canonical FULL blocks in `(finalizedSlot - 1, endSlot)`.
-   */
-  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    // The finalized block's envelope stays in hot db until the next finalization run → archive tops out at finalizedSlot - 1
-    const finalizedSlot = this.forkChoice.getFinalizedBlock().slot;
-    const archiveMaxSlot = finalizedSlot - 1;
-    const nonFinalized: BlockRootSlot[] = [];
-    if (endSlot > archiveMaxSlot) {
-      const head = this.forkChoice.getHead();
-      // newest→oldest; iterate ascending
-      const headChain = this.forkChoice.getAllAncestorBlocks(head.blockRoot, head.payloadStatus);
-      for (let i = headChain.length - 1; i >= 0; i--) {
-        const block = headChain[i];
-        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
-          // Only FULL blocks have an envelope; skip EMPTY/PENDING
-          if (block.payloadStatus === PayloadStatus.FULL) {
-            nonFinalized.push({slot: block.slot, root: fromHex(block.blockRoot)});
-          }
-        } else if (block.slot >= endSlot) {
-          break;
-        }
-      }
-    }
-    return {finalizedSlot, nonFinalized};
-  }
-
   // --- Block DB (engine-owned). Bytes-only; no SignedBeaconBlock crosses the seam. ---
 
   /** Serialized block by root: hot then cold. `finalized` reflects a cold-db (archive) hit. */
@@ -741,34 +675,6 @@ export class BeaconEngine implements IBeaconEngine {
   async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
     const slot = await this.db.blockArchive.getSlotByParentRoot(parentRoot);
     return slot !== null ? ((await this.db.blockArchive.getBinary(slot)) ?? null) : null;
-  }
-
-  /**
-   * Thin serve refs for BeaconBlocksByRange: fork-choice reads stay inside the engine; only slot + raw
-   * root cross. Returns the archive boundary (`finalizedSlot`, inclusive — blocks incl. the finalized
-   * block migrate at finalization) and every canonical block in `(finalizedSlot, endSlot)` (no filter).
-   */
-  getCanonicalBlockRootSlotsByRange(
-    startSlot: Slot,
-    endSlot: Slot
-  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    const finalizedSlot = this.forkChoice.getFinalizedCheckpointSlot();
-    const archiveMaxSlot = finalizedSlot;
-    const nonFinalized: BlockRootSlot[] = [];
-    if (endSlot > archiveMaxSlot) {
-      const head = this.forkChoice.getHead();
-      // newest→oldest; iterate ascending
-      const headChain = this.forkChoice.getAllAncestorBlocks(head.blockRoot, head.payloadStatus);
-      for (let i = headChain.length - 1; i >= 0; i--) {
-        const block = headChain[i];
-        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
-          nonFinalized.push({slot: block.slot, root: fromHex(block.blockRoot)});
-        } else if (block.slot >= endSlot) {
-          break;
-        }
-      }
-    }
-    return {finalizedSlot, nonFinalized};
   }
 
   /** Persist a hot block, bytes-first (key = block root). */
@@ -973,6 +879,7 @@ export class BeaconEngine implements IBeaconEngine {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
     } finally {
+      this.publishChainView(false);
       timer?.();
     }
   }
@@ -1908,9 +1815,10 @@ export class BeaconEngine implements IBeaconEngine {
   async verifyEnvelopeForPublish(
     _bytes: Uint8Array,
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    block: ProtoBlock
+    blockRootHex: RootHex
   ): Promise<void> {
-    const blockRootHex = block.blockRoot;
+    const block = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+    if (block === null) throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
     const slot = signedEnvelope.message.payload.slotNumber;
     const state = await this.regen
       .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
@@ -1950,7 +1858,12 @@ export class BeaconEngine implements IBeaconEngine {
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    return verifyBlocks.call(this, _blockBytes, parentBlock, blockInputs, opts, signal);
+    try {
+      return await verifyBlocks.call(this, _blockBytes, parentBlock, blockInputs, opts, signal);
+    } catch (error) {
+      this.publishChainView();
+      throw error;
+    }
   }
 
   async importBlock(
@@ -1965,6 +1878,9 @@ export class BeaconEngine implements IBeaconEngine {
 
     try {
       return await importBlock.call(this, v, dataAvailabilityStatus, opts);
+    } catch (error) {
+      this.publishChainView();
+      throw error;
     } finally {
       this.verifiedBlocks.delete(blockRootHex);
     }
@@ -2028,7 +1944,7 @@ export class BeaconEngine implements IBeaconEngine {
   updateTime(currentSlot: Slot): void {
     const previous = this.forkChoice.getHead();
     this.forkChoice.updateTime(currentSlot);
-    this.emitHeadEvents(previous, this.forkChoice.getHead());
+    this.emitHeadEvents(previous, this.forkChoice.getHead(), false);
   }
 
   getIrrecoverableError(): Error | undefined {
@@ -2068,7 +1984,9 @@ export class BeaconEngine implements IBeaconEngine {
     await this.stateArchiveStrategy.onFinalizedCheckpoint(finalized, this.metrics);
     await this.stateArchiveStrategy.maybeArchiveState(finalized, this.metrics);
     await pruneFinalizedExecutionRequests(this.db, this.getFinalizedBlockSnapshot(finalized.rootHex));
-    return this.forkChoice.prune(finalized.rootHex).length;
+    const count = this.forkChoice.prune(finalized.rootHex).length;
+    this.publishChainView();
+    return count;
   }
   async getEarliestArchivedBlockSlot(): Promise<Slot | null> {
     return this.db.blockArchive.firstKey();
@@ -2783,7 +2701,7 @@ export class BeaconEngine implements IBeaconEngine {
     }
 
     if (opts?.allowRegen) {
-      const block = this.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
+      const block = this.forkChoice.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
       const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
       return {
         state,
@@ -2792,7 +2710,7 @@ export class BeaconEngine implements IBeaconEngine {
       };
     }
 
-    const block = this.getCanonicalProtoBlockAtSlot(slot);
+    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
     if (!block) {
       return null;
     }
@@ -2924,7 +2842,7 @@ export class BeaconEngine implements IBeaconEngine {
     const slot = computeEndSlotAtEpoch(epoch + 1);
     // No regen if state not in cache (mirrors former getStateBySlot({allowRegen: false})).
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
-    const block = slot < finalizedBlock.slot ? null : this.getCanonicalProtoBlockAtSlot(slot);
+    const block = slot < finalizedBlock.slot ? null : this.forkChoice.getCanonicalBlockAtSlot(slot);
     const cachedState = block && this.regen.getStateSync(block.stateRoot);
 
     if (!block || !cachedState) {
@@ -3183,7 +3101,8 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   // TODO - beacon engine: transport upstream head events through the worker event boundary.
-  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock, blocksChanged = true): void {
+    this.publishChainView(blocksChanged);
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
     if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {

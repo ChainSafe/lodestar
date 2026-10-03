@@ -1,14 +1,15 @@
 import {routes} from "@lodestar/api";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
-import {ApiStateResult, ApiStateResultWithFork, IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
+import {ApiStateResult, ApiStateResultWithFork} from "../../../../chain/beaconEngine/index.js";
 import type {ApiStateId} from "../../../../chain/beaconEngine/interface.js";
+import {IChainView} from "../../../../chain/chainView/interface.js";
 import type {IBeaconChain} from "../../../../chain/interface.js";
 import type {IBeaconSync} from "../../../../sync/interface.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {notWhileSyncing} from "../../utils.js";
 
 export function resolveStateId(
-  beaconEngine: IBeaconEngine,
+  chainView: IChainView,
   stateId: routes.beacon.StateId,
   chain?: IBeaconChain,
   sync?: IBeaconSync
@@ -24,11 +25,11 @@ export function resolveStateId(
   }
 
   if (stateId === "finalized") {
-    return beaconEngine.getFinalizedCheckpoint();
+    return chainView.getFinalizedCheckpoint();
   }
 
   if (stateId === "justified") {
-    return beaconEngine.getJustifiedCheckpoint();
+    return chainView.getJustifiedCheckpoint();
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {

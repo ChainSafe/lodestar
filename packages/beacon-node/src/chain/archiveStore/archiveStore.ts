@@ -143,7 +143,7 @@ export class ArchiveStore {
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
       // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
-      const isNodeSynced = this.chain.clock.currentSlot - this.chain.beaconEngine.getHead().slot <= SLOTS_PER_EPOCH;
+      const isNodeSynced = this.chain.clock.currentSlot - this.chain.getHead().slot <= SLOTS_PER_EPOCH;
 
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
@@ -177,6 +177,7 @@ export class ArchiveStore {
       }
 
       const prunedBlockCount = await this.chain.beaconEngine.completeFinalization(finalized);
+      this.chain.pruneChainView(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

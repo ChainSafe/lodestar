@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {Root, phase0} from "@lodestar/types";
-import {IBeaconEngine} from "../../../../src/chain/beaconEngine/index.js";
+import {IChainView} from "../../../../src/chain/chainView/interface.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
   PeerSyncType,
@@ -124,9 +124,9 @@ describe("network / peers / remoteSyncType", () => {
   });
 });
 
-function getMockBeaconEngine(blocks: Root[]): IBeaconEngine {
+function getMockBeaconEngine(blocks: Root[]): IChainView {
   const blockSet = new Set(blocks.map((blockRoot) => toHexString(blockRoot)));
   return {
     hasBlock: (blockRoot: Root) => blockSet.has(toHexString(blockRoot)),
-  } as IBeaconEngine;
+  } as IChainView;
 }

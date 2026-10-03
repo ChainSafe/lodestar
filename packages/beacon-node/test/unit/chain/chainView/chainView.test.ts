@@ -1,0 +1,171 @@
+import {describe, expect, it} from "vitest";
+import {CheckpointWithHex, ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
+import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
+import {ChainView, ChainViewErrorCode} from "../../../../src/chain/chainView/chainView.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate} from "../../../../src/chain/chainView/interface.js";
+import {zeroProtoBlock} from "../../../utils/state.js";
+
+const root = (n: number) => toRootHex(Buffer.alloc(32, n));
+const checkpoint = (n: number, epoch = 0): CheckpointWithHex => ({root: Buffer.alloc(32, n), rootHex: root(n), epoch});
+function block(n: number, slot: number, parent: number, extra: Partial<ChainViewBlock> = {}): ChainViewBlock {
+  return {...toChainViewBlock(zeroProtoBlock), blockRoot: root(n), slot, parentRoot: root(parent), ...extra};
+}
+function snapshot(blocks: ChainViewBlock[], head = blocks.at(-1)): ChainViewSnapshot {
+  if (!head) throw new Error("Snapshot requires a head");
+  return {revision: 0, blocks, head, justified: checkpoint(1), finalized: checkpoint(1)};
+}
+function update(initial: ChainViewSnapshot, changes: Partial<ChainViewUpdate>): ChainViewUpdate {
+  return {...initial, revision: 1, blocks: [], ...changes};
+}
+
+describe("ChainView", () => {
+  it("walks skipped slots and switches branches without a canonical slot index", () => {
+    const a = block(1, 0, 0);
+    const b = block(2, 2, 1);
+    const c = block(3, 4, 2);
+    const d = block(4, 3, 1);
+    const initial = snapshot([a, b, c, d], c);
+    const view = new ChainView(initial);
+    expect(view.getCanonicalProtoBlockAtSlot(3)).toBeNull();
+    expect(view.getCanonicalBlockClosestLteSlot(3)?.blockRoot).toBe(b.blockRoot);
+    const captured = view.getCanonicalBlockRootSlotsByRange(1, 5);
+    view.applyUpdate(update(initial, {head: d}));
+    expect(view.getCanonicalProtoBlockAtSlot(2)).toBeNull();
+    expect(view.getCanonicalBlockByRoot(Buffer.alloc(32, 4))?.slot).toBe(3);
+    expect(captured.nonFinalized.map((entry) => entry.slot)).toEqual([2, 4]);
+    expect(view.getCanonicalBlockRootSlotsByRange(1, 5).nonFinalized.map((entry) => entry.slot)).toEqual([3]);
+    expect(view.hasBlockHex(c.blockRoot)).toBe(true);
+  });
+
+  it("distinguishes finalized ancestry from retained membership until archive completion", () => {
+    const a = block(1, 0, 0);
+    const finalized = block(2, SLOTS_PER_EPOCH - 1, 1);
+    const canonical = block(3, SLOTS_PER_EPOCH + 2, 2);
+    const orphan = block(4, SLOTS_PER_EPOCH + 3, 1);
+    const initial = snapshot([a, finalized, canonical, orphan], canonical);
+    const view = new ChainView(initial);
+    expect(view.hasBlockHex(orphan.blockRoot)).toBe(true);
+    const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
+    view.applyUpdate(finalization);
+    expect(view.getFinalizedBlock().slot).toBe(SLOTS_PER_EPOCH - 1);
+    expect(view.hasBlockHex(orphan.blockRoot)).toBe(false);
+    expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(true);
+    expect(view.hasBlockHex(canonical.blockRoot)).toBe(true);
+    expect(view.hasBlockHex(finalized.blockRoot)).toBe(true);
+    view.prune(finalization.finalized);
+    view.applyUpdate({...finalization, revision: 2, blocks: [orphan, a]});
+    expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(false);
+    expect(view.getAllAncestorBlocks(canonical.blockRoot, PayloadStatus.FULL).map((b) => b.blockRoot)).toEqual([
+      canonical.blockRoot,
+      finalized.blockRoot,
+    ]);
+  });
+
+  it("selects EMPTY or FULL ancestors by execution hash, independently of payload availability", () => {
+    const a = block(1, 0, 0, {executionPayloadBlockHash: root(10)});
+    const pending = block(2, 1, 1, {
+      payloadStatus: PayloadStatus.PENDING,
+      parentBlockHash: root(10),
+      executionPayloadBlockHash: root(10),
+    });
+    const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
+    const full = {...pending, payloadStatus: PayloadStatus.FULL, executionPayloadBlockHash: root(20)};
+    const child = block(3, 2, 2, {
+      payloadStatus: PayloadStatus.EMPTY,
+      parentBlockHash: root(10),
+      executionPayloadBlockHash: root(10),
+    });
+    const initial = snapshot([a, pending, empty, full, child]);
+    const view = new ChainView(initial);
+    expect(view.hasPayloadHexUnsafe(pending.blockRoot)).toBe(true);
+    expect(view.getBlockHexDefaultStatus(pending.blockRoot)?.payloadStatus).toBe(PayloadStatus.PENDING);
+    expect(view.getAllAncestorBlocks(child.blockRoot, child.payloadStatus).map((b) => b.payloadStatus)).toEqual([
+      PayloadStatus.EMPTY,
+      PayloadStatus.EMPTY,
+      PayloadStatus.FULL,
+    ]);
+    expect(view.getFullBlockRootSlotsByRange(1, 3).nonFinalized).toEqual([]);
+    const otherChild = block(4, 3, 2, {
+      payloadStatus: PayloadStatus.EMPTY,
+      parentBlockHash: root(20),
+      executionPayloadBlockHash: root(20),
+    });
+    view.applyUpdate(update(initial, {blocks: [otherChild], head: otherChild}));
+    expect(view.getCanonicalProtoBlockAtSlot(1)?.payloadStatus).toBe(PayloadStatus.FULL);
+    expect(view.getFullBlockRootSlotsByRange(1, 4).nonFinalized.map((b) => b.slot)).toEqual([1]);
+    expect(view.getAllAncestorBlocks(pending.blockRoot, PayloadStatus.PENDING).map((b) => b.blockRoot)).toEqual([
+      a.blockRoot,
+    ]);
+  });
+
+  it("publishes same-root payload and execution changes without sharing mutable objects", () => {
+    const a = block(1, 0, 0);
+    const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING, executionStatus: ExecutionStatus.Syncing});
+    const initial = snapshot([a, pending]);
+    const view = new ChainView(initial);
+    initial.head.slot = 999;
+    const full = {...pending, slot: 1, payloadStatus: PayloadStatus.FULL, executionStatus: ExecutionStatus.Valid};
+    const next = update(initial, {blocks: [full], head: full});
+    view.applyUpdate(next);
+    next.head.slot = 888;
+    const head = view.getHead();
+    head.slot = 777;
+    expect(view.getHead().slot).toBe(1);
+    expect(view.getHead().payloadStatus).toBe(PayloadStatus.FULL);
+    expect(view.getHead().executionStatus).toBe(ExecutionStatus.Valid);
+    expect(view.hasPayloadHexUnsafe(full.blockRoot)).toBe(true);
+  });
+
+  it("keeps finalized Gloas variants and accepts descendants in an unordered late batch", () => {
+    const a = block(1, 0, 0);
+    const pending = block(2, SLOTS_PER_EPOCH - 2, 1, {payloadStatus: PayloadStatus.PENDING});
+    const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
+    const full = {...pending, payloadStatus: PayloadStatus.FULL};
+    const initial = snapshot([a, pending, empty, full], full);
+    const view = new ChainView(initial);
+    const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
+    view.applyUpdate(finalization);
+    view.prune(finalization.finalized);
+    for (const variant of [pending, empty, full]) {
+      expect(view.getBlockHex(variant.blockRoot, variant.payloadStatus), "retained boundary variant").toEqual(variant);
+    }
+    const child = block(3, SLOTS_PER_EPOCH + 1, 2);
+    const grandchild = block(4, SLOTS_PER_EPOCH + 2, 3);
+    const orphan = block(5, SLOTS_PER_EPOCH + 1, 1);
+    view.applyUpdate({...finalization, revision: 2, blocks: [grandchild, orphan, child, a], head: grandchild});
+    expect(view.hasBlockHexUnsafe(a.blockRoot)).toBe(false);
+    expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(false);
+    expect(view.hasBlockHex(grandchild.blockRoot)).toBe(true);
+  });
+
+  it("prunes to the completed archive checkpoint when fork choice has finalized further", () => {
+    const a = block(1, 0, 0);
+    const b = block(2, SLOTS_PER_EPOCH - 1, 1);
+    const c = block(3, 2 * SLOTS_PER_EPOCH - 1, 2);
+    const d = block(4, 2 * SLOTS_PER_EPOCH + 1, 3);
+    const initial = snapshot([a, b, c, d]);
+    const view = new ChainView(initial);
+    view.applyUpdate(update(initial, {finalized: checkpoint(3, 2), justified: checkpoint(3, 2)}));
+    view.prune(checkpoint(2, 1));
+    expect(view.hasBlockHexUnsafe(b.blockRoot)).toBe(true);
+    expect(view.hasBlockHexUnsafe(a.blockRoot)).toBe(false);
+    view.prune(checkpoint(3, 2));
+    view.prune(checkpoint(2, 1));
+    expect(view.hasBlockHexUnsafe(b.blockRoot)).toBe(false);
+    expect(view.getFinalizedBlock()).toEqual(c);
+    expect(view.getCanonicalProtoBlockAtSlot(d.slot)).toEqual(d);
+  });
+
+  it("rejects out-of-order updates before changing the view", () => {
+    const initial = snapshot([block(1, 0, 0)]);
+    const view = new ChainView(initial);
+    expect(() => view.applyUpdate(update(initial, {revision: 2, blocks: [block(2, 1, 1)]}))).toThrow(
+      ChainViewErrorCode.INVALID_REVISION
+    );
+    expect(view.hasBlockHex(root(1))).toBe(true);
+    view.applyUpdate(update(initial, {}));
+    expect(() => view.applyUpdate(update(initial, {}))).toThrow(ChainViewErrorCode.INVALID_REVISION);
+  });
+});

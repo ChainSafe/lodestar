@@ -186,14 +186,6 @@ describe("FlatFileStore reqresp handler integration", () => {
           getFinalizedBlockRootBySlot: blockArchive.getRootBySlot,
           getSerializedUnfinalizedBlockByRoot: db.block.getBinary,
           getFinalizedBlockSlotByRoot: blockArchive.getSlotByRoot,
-          getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
-          getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
-          getAllAncestorBlocks: () =>
-            (opts.headChain ?? []).map((block) => ({
-              ...block,
-              payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
-            })),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
@@ -214,6 +206,15 @@ describe("FlatFileStore reqresp handler integration", () => {
           opts.getSerializedDataColumnSidecars ??
           ((slot: number, root: string, indices: number[]) =>
             BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices)),
+
+        getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
+        getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+        getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
+        getAllAncestorBlocks: () =>
+          (opts.headChain ?? []).map((block) => ({
+            ...block,
+            payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
+          })),
       } as unknown as IBeaconChain;
 
       return {chain, db};

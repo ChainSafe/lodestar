@@ -378,7 +378,7 @@ function getSequentialHandlers(
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
 
     // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
-    if (chain.beaconEngine.hasBlockHex(blockRootHex)) {
+    if (chain.hasBlockHex(blockRootHex)) {
       metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
       logger.debug("Already processed block for column sidecar, skipping processing", {
         slot,
@@ -490,7 +490,7 @@ function getSequentialHandlers(
     const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
 
     // check to see if payload has already been processed and PayloadEnvelopeInput has been deleted (column received via reqresp or other means)
-    if (chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
+    if (chain.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
       metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
       logger.debug("Already processed payload for column sidecar, skipping processing", {
         slot,

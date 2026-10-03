@@ -6,6 +6,7 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {IBeaconEngine} from "../../../../src/chain/beaconEngine/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import {IChainView} from "../../../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
@@ -28,7 +29,7 @@ describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
-  let beaconEngine: IBeaconEngine;
+  let beaconEngine: IBeaconEngine & IChainView;
   let serializedCache: SerializedCache;
   let seenBlockInputCache: SeenBlockInput;
 
@@ -39,7 +40,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       getAllAncestorBlocks: vi.fn(),
       getSerializedUnfinalizedBlockByRoot: vi.fn(),
       hasBlockHex: vi.fn(),
-    } as unknown as IBeaconEngine;
+    } as unknown as IBeaconEngine & IChainView;
     serializedCache = new SerializedCache();
     // Default: cache miss so getOrReload exercises the db path; individual tests override get().
     seenBlockInputCache = {get: vi.fn().mockReturnValue(undefined)} as unknown as SeenBlockInput;
@@ -48,6 +49,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       config,
       clock: getMockedClock(),
       beaconEngine,
+      chainView: beaconEngine,
       chainEvents,
       signal: abortController.signal,
       serializedCache,
@@ -351,6 +353,7 @@ describe("SeenPayloadEnvelopeInput", () => {
         config,
         clock: getMockedClock(),
         beaconEngine,
+        chainView: beaconEngine,
         chainEvents,
         signal: abortController.signal,
         serializedCache: new SerializedCache(),

@@ -38,7 +38,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
-  const finalizedSlot = chain.beaconEngine.getFinalizedBlock().slot;
+  const finalizedSlot = chain.getFinalizedBlock().slot;
   // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
@@ -64,9 +64,9 @@ export async function* onExecutionPayloadEnvelopesByRange(
     // Non-finalized range of envelopes. The finalized block's own envelope may be archived by a
     // migration that ran since archiveMaxSlot was computed, so this read can reconstruct too.
     if (endSlot > archiveMaxSlot) {
-      const headBlock = chain.beaconEngine.getHead();
+      const headBlock = chain.getHead();
       const headRoot = headBlock.blockRoot;
-      const headChain = chain.beaconEngine.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+      const headChain = chain.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
       // Iterate head chain with ascending block numbers
       for (let i = headChain.length - 1; i >= 0; i--) {

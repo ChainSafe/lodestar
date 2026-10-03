@@ -50,13 +50,13 @@ export async function* onDataColumnSidecarsByRange(
     );
   }
 
-  const finalizedSlot = chain.beaconEngine.getFinalizedBlock().slot;
+  const finalizedSlot = chain.getFinalizedBlock().slot;
   // At Gloas, finalizing the beacon block does not finalize its payload. Keep the boundary block in the
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
-  const headBlock = chain.beaconEngine.getHead();
-  const headChain = chain.beaconEngine.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const headBlock = chain.getHead();
+  const headChain = chain.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
 
   for await (const block of resolveCanonicalDataColumnBlocks(
     chain,
@@ -111,7 +111,7 @@ type CanonicalDataColumnBlock = {
 async function* resolveCanonicalDataColumnBlocks(
   chain: IBeaconChain,
   db: IBeaconChainDb,
-  headChain: ReturnType<IBeaconChain["beaconEngine"]["getAllAncestorBlocks"]>,
+  headChain: ReturnType<IBeaconChain["getAllAncestorBlocks"]>,
   startSlot: number,
   endSlot: number,
   archiveMaxSlot: number,

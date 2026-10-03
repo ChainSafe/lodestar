@@ -25,7 +25,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
     // [beacon-engine] deviation: fork choice and block archive reads remain engine-owned.
-    const block = chain.beaconEngine.getBlockHexDefaultStatus(rootHex);
+    const block = chain.getBlockHexDefaultStatus(rootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await chain.getFinalizedBlockSlotByRoot(root);
 

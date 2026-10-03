@@ -52,13 +52,10 @@ export async function importBlock(
   // [beacon-engine] moved: head/reorg events are emitted by engine fork-choice transitions.
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.gloas) {
     callInNextEventLoop(() => {
-      const parent = this.beaconEngine.getBlockHexDefaultStatus(r.newHead.parentRoot);
+      const parent = this.getBlockHexDefaultStatus(r.newHead.parentRoot);
       if (parent) this.seenPayloadEnvelopeInputCache.pruneBelowParent(parent);
     });
   }
-  // Refresh the facade head cache and emit forkChoiceJustified/forkChoiceFinalized from the new head.
-  // The engine no longer emits these (FFI-honest); they are derived facade-side from the head ProtoBlock.
-  this.updateHeadAndEmitCheckpointEvents(r.newHead);
 
   const blockRootHex = r.blockMeta.blockRootHex;
   const blockSummary = r.blockSummary;

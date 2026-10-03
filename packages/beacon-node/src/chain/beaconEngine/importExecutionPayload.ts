@@ -114,6 +114,8 @@ export async function importExecutionPayload(
     dataAvailabilityStatus
   );
 
+  this.publishChainView();
+
   // Fire the FCU only when this payload's block is the canonical head.
   const head = this.forkChoice.getHead();
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {

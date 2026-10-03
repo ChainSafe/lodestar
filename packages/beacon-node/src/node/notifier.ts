@@ -1,9 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
+import {ChainViewBlock} from "../chain/chainView/interface.js";
 import {IBeaconChain} from "../chain/index.js";
 import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";
@@ -60,8 +61,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         }
       }
 
-      const headInfo = chain.beaconEngine.getHead();
-      const finalizedCheckpoint = chain.beaconEngine.getFinalizedCheckpoint();
+      const headInfo = chain.getHead();
+      const finalizedCheckpoint = chain.getFinalizedCheckpoint();
       const finalizedEpoch = finalizedCheckpoint.epoch;
       const finalizedRoot = finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
@@ -161,7 +162,7 @@ function getHeadExecutionInfo(
   config: BeaconConfig,
   clockEpoch: Epoch,
   execState: {isExecutionStateType: boolean; isMergeTransitionComplete: boolean},
-  headInfo: ProtoBlock
+  headInfo: ChainViewBlock
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
@@ -178,7 +179,7 @@ function getHeadExecutionInfo(
         headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
       return [
         `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-          executionPayloadHashInfo
+          executionPayloadHashInfo ?? "empty"
         )})`,
       ];
     }

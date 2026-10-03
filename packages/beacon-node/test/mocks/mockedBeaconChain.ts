@@ -38,6 +38,7 @@ import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
+  publishChainView: Mock<BeaconEngine["publishChainView"]>;
   logger: Mocked<Logger>;
   // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
   // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngine` phantom validators
@@ -195,7 +196,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       forkChoice: getMockedForkChoice(),
       serializedCache: new Map(),
       verifiedBlocks: new Map(),
-      updateHeadAndEmitCheckpointEvents: vi.fn(),
+      publishChainView: vi.fn(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
@@ -341,40 +342,45 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "updateTime",
     "getIrrecoverableError",
     // Temp forkChoice read pass-throughs (forward to the mock's forkChoice) — BLK-1.
-    "getHead",
-    "getHeadRoot",
     "getHeads",
-    "getFinalizedCheckpoint",
-    "getJustifiedCheckpoint",
     "getUnrealizedJustifiedCheckpoint",
     "getUnrealizedFinalizedCheckpoint",
     "getProposerBoostRoot",
     "getPreviousProposerBoostRoot",
     "getPTCVoteCounts",
-    "getFinalizedBlock",
-    "getJustifiedBlock",
-    "getConfirmedRoot",
     "getConfirmedBlock",
-    "getBlockDefaultStatus",
-    "getBlockHexDefaultStatus",
-    "getBlockHex",
-    "getBlockHexAndBlockHash",
-    "getCanonicalProtoBlockAtSlot",
-    "getCanonicalBlockByRoot",
-    "getCanonicalBlockClosestLteSlot",
-    "getBlockSummariesAtSlot",
-    "getBlockSummariesByParentRoot",
-    "getAllAncestorBlocks",
     "getAllNodes",
-    "hasBlock",
-    "hasBlockHex",
-    "hasBlockHexUnsafe",
-    "hasPayloadHexUnsafe",
-    "getAllAncestorBlockRootSlots",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>
     )[name];
+  }
+  for (const [name, forkChoiceName] of Object.entries({
+    getHead: "getHead",
+    getHeadRoot: "getHeadRoot",
+    getFinalizedCheckpoint: "getFinalizedCheckpoint",
+    getJustifiedCheckpoint: "getJustifiedCheckpoint",
+    getFinalizedBlock: "getFinalizedBlock",
+    getJustifiedBlock: "getJustifiedBlock",
+    hasBlock: "hasBlock",
+    hasBlockHex: "hasBlockHex",
+    hasBlockHexUnsafe: "hasBlockHexUnsafe",
+    hasPayloadHexUnsafe: "hasPayloadHexUnsafe",
+    getBlockDefaultStatus: "getBlockDefaultStatus",
+    getBlockHexDefaultStatus: "getBlockHexDefaultStatus",
+    getBlockHex: "getBlockHex",
+    getBlockHexAndBlockHash: "getBlockHexAndBlockHash",
+    getCanonicalProtoBlockAtSlot: "getCanonicalBlockAtSlot",
+    getCanonicalBlockClosestLteSlot: "getCanonicalBlockClosestLteSlot",
+    getCanonicalBlockByRoot: "getCanonicalBlockByRoot",
+    getBlockSummariesAtSlot: "getBlockSummariesAtSlot",
+    getBlockSummariesByParentRoot: "getBlockSummariesByParentRoot",
+    getAllAncestorBlocks: "getAllAncestorBlocks",
+  })) {
+    (chain as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
+      const fn = (chain.forkChoice as unknown as Record<string, (...args: unknown[]) => unknown>)[forkChoiceName];
+      return fn.apply(chain.forkChoice, args);
+    };
   }
   return chain;
 }

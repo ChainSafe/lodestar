@@ -49,6 +49,7 @@ import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {IBlsVerifier} from "../bls/index.js";
+import {ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -62,6 +63,7 @@ import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "..
 import {GossipBlockValidationResult} from "../validation/block.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
+import {IBeaconEngineEventBus} from "./events.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
@@ -103,11 +105,6 @@ export type ImportBlockResult = {
   } | null;
   reorg: ReorgEventData | null;
   blockSummary: ProtoBlock | null;
-  /**
-   * Head ProtoBlock after this import (result of updateAndGetHead). The facade caches it and derives
-   * the finalized/justified transition (its `finalized*`/`justified*` fields) + `getStatus` from it,
-   * instead of the engine emitting `forkChoiceFinalized`/`forkChoiceJustified` (FFI-honest).
-   */
   newHead: ProtoBlock;
   proposerIndexNextSlot: number | null;
   isExecutionState: boolean;
@@ -225,19 +222,12 @@ export type ApiStateResultWithFork<T> =
   | null;
 
 export interface IBeaconEngine {
+  readonly events: IBeaconEngineEventBus;
+  getChainViewSnapshot(): ChainViewSnapshot;
   readonly config: BeaconConfig;
 
-  // Parent selection and block production races are engine-owned.
-  getProposerHead(slot: Slot): ProtoBlock;
-
-  // --- TODO - beacon engine: temp forkChoice read pass-throughs (curate when regen removed — BLK-3). ---
-  // Thin forwards to `forkChoice`; return ProtoBlock/ProtoNode/CheckpointWithHex directly (not bytes-honest
-  // yet). Head is engine-owned; head/checkpoint reads route here (see BLK-1 plan §1).
-  getHead(): ProtoBlock;
-  getHeadRoot(): RootHex;
+  // Engine diagnostics and full parent metadata used by block verification.
   getHeads(): ProtoBlock[];
-  getFinalizedCheckpoint(): CheckpointWithHex;
-  getJustifiedCheckpoint(): CheckpointWithHex;
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
   getProposerBoostRoot(): RootHex;
@@ -247,35 +237,14 @@ export interface IBeaconEngine {
     payloadPresentCount: number;
     dataAvailableCount: number;
   } | null;
-  getFinalizedBlock(): ProtoBlock;
-  getJustifiedBlock(): ProtoBlock;
   getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]>;
   pauseFastConfirmation(): void;
   resumeFastConfirmation(): void;
-  getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
-  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
-  // Distinct name from the facade's DB-backed `getCanonicalBlockAtSlot` (async, returns a full block).
-  getCanonicalProtoBlockAtSlot(slot: Slot): ProtoBlock | null;
-  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
-  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
-  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
-  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
-  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   getAllNodes(): ProtoNode[];
-  // Hot path (per gossip message / sidecar) — NativeBeaconEngine caches these; JS engine forwards to forkChoice.
-  hasBlock(blockRoot: Root): boolean;
-  hasBlockHex(blockRoot: RootHex): boolean;
-  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
-  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
-  // Projected thin ref (no ProtoBlock crosses) — DA-cache prune anchored at (blockRoot, payloadStatus).
-  getAllAncestorBlockRootSlots(blockRoot: RootHex, payloadStatus: PayloadStatus): BlockRootSlot[];
-
-  // Thin serving refs for ExecutionPayloadEnvelopesByRange — fork choice read engine-side, no ProtoBlock crosses.
-  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
 
   // Block + state DB (engine-owned). Bytes-only — no `SignedBeaconBlock`/`BeaconState` crosses the seam.
   getSerializedUnfinalizedBlockByRoot(root: Uint8Array): Promise<Uint8Array | null>;
@@ -285,11 +254,6 @@ export interface IBeaconEngine {
   getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
   getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
   getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
-  // Thin serving refs for BeaconBlocksByRange (all canonical blocks; inclusive finalized boundary).
-  getCanonicalBlockRootSlotsByRange(
-    startSlot: Slot,
-    endSlot: Slot
-  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   persistBlock(root: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
   getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
   // Cold block-archive writes + reverse-lookup (backfill).
@@ -642,7 +606,7 @@ export interface IBeaconEngine {
   verifyEnvelopeForPublish(
     bytes: Uint8Array,
     envelope: gloas.SignedExecutionPayloadEnvelope,
-    block: ProtoBlock
+    blockRootHex: RootHex
   ): Promise<void>;
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean;
 

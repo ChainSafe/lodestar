@@ -48,16 +48,16 @@ describe("ExecutionPayloadEnvelopes reqresp handlers", () => {
       db,
       earliestAvailableSlot: 0,
       getFinalizedBlockSlotByRoot: (root: Uint8Array) => db.blockArchive.getSlotByRoot(root),
-      beaconEngine: {
-        getFinalizedBlock: () => generateProtoBlock({slot: finalizedSlot}),
-        getHead: () => generateProtoBlock({slot: finalizedSlot, payloadStatus: PayloadStatus.FULL}),
-        getAllAncestorBlocks: () => [],
-        getBlockHexDefaultStatus: () => null,
-      },
+      beaconEngine: {},
       seenPayloadEnvelopeInputCache: {get: () => undefined},
       serializedCache: {get: () => undefined},
       getSerializedExecutionPayloadEnvelopes: BeaconChain.prototype.getSerializedExecutionPayloadEnvelopes,
       getSerializedExecutionPayloadEnvelope: BeaconChain.prototype.getSerializedExecutionPayloadEnvelope,
+
+      getFinalizedBlock: () => generateProtoBlock({slot: finalizedSlot}),
+      getHead: () => generateProtoBlock({slot: finalizedSlot, payloadStatus: PayloadStatus.FULL}),
+      getAllAncestorBlocks: () => [],
+      getBlockHexDefaultStatus: () => null,
     } as unknown as IBeaconChain;
   });
 

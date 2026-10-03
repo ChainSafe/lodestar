@@ -57,8 +57,8 @@ export function getDebugApi({
     async getDebugForkChoice() {
       return {
         data: {
-          justifiedCheckpoint: chain.beaconEngine.getJustifiedCheckpoint(),
-          finalizedCheckpoint: chain.beaconEngine.getFinalizedCheckpoint(),
+          justifiedCheckpoint: chain.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.getFinalizedCheckpoint(),
           forkChoiceNodes: chain.beaconEngine.getAllNodes().map((node) => ({
             slot: node.slot,
             blockRoot: node.blockRoot,
@@ -77,8 +77,8 @@ export function getDebugApi({
       const {beaconEngine} = chain;
       return {
         data: {
-          justifiedCheckpoint: beaconEngine.getJustifiedCheckpoint(),
-          finalizedCheckpoint: beaconEngine.getFinalizedCheckpoint(),
+          justifiedCheckpoint: chain.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.getFinalizedCheckpoint(),
           forkChoiceNodes: beaconEngine.getAllNodes().map((node) => {
             // Payload-specific fields apply only to a revealed Gloas payload = the FULL variant of a
             // Gloas block
@@ -115,7 +115,7 @@ export function getDebugApi({
             unrealizedFinalizedCheckpoint: beaconEngine.getUnrealizedFinalizedCheckpoint(),
             proposerBoostRoot: beaconEngine.getProposerBoostRoot(),
             previousProposerBoostRoot: beaconEngine.getPreviousProposerBoostRoot(),
-            headRoot: beaconEngine.getHeadRoot(),
+            headRoot: chain.getHeadRoot(),
           },
         },
       };
@@ -135,7 +135,7 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const id = resolveStateId(chain.beaconEngine, stateId, chain, sync);
+      const id = resolveStateId(chain, stateId, chain, sync);
       const res = await chain.beaconEngine.getSerializedState(id);
       if (!res) {
         throw new ApiError(404, `State not found for id '${stateId}'`);
