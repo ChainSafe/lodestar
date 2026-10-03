@@ -53,6 +53,24 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
 
+  // Settle the builder payment before the requests so that a builder exit request
+  // is rejected while the payment is pending
+  if (parentEpoch === currentEpoch) {
+    settleBuilderPayment(state, SLOTS_PER_EPOCH + (parentSlot % SLOTS_PER_EPOCH));
+  } else if (parentEpoch === currentEpoch - 1) {
+    settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
+  } else if (parentBid.value > 0) {
+    // Parent is older than the previous epoch, its payment entry has been evicted from
+    // builder_pending_payments. Append the withdrawal directly.
+    state.builderPendingWithdrawals.push(
+      ssz.gloas.BuilderPendingWithdrawal.toViewDU({
+        feeRecipient: parentBid.feeRecipient,
+        amount: parentBid.value,
+        builderIndex: parentBid.builderIndex,
+      })
+    );
+  }
+
   // Process execution requests from parent's payload. The execution
   // requests are processed at state.slot (child's slot), not the parent's slot.
   for (const deposit of requests.deposits) {
@@ -73,23 +91,6 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
 
   for (const builderExit of requests.builderExits) {
     processBuilderExitRequest(state, builderExit);
-  }
-
-  // Settle the builder payment
-  if (parentEpoch === currentEpoch) {
-    settleBuilderPayment(state, SLOTS_PER_EPOCH + (parentSlot % SLOTS_PER_EPOCH));
-  } else if (parentEpoch === currentEpoch - 1) {
-    settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
-  } else if (parentBid.value > 0) {
-    // Parent is older than the previous epoch, its payment entry has been evicted from
-    // builder_pending_payments. Append the withdrawal directly.
-    state.builderPendingWithdrawals.push(
-      ssz.gloas.BuilderPendingWithdrawal.toViewDU({
-        feeRecipient: parentBid.feeRecipient,
-        amount: parentBid.value,
-        builderIndex: parentBid.builderIndex,
-      })
-    );
   }
 
   // Update parent payload availability and latest block hash
