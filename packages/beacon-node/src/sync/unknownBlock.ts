@@ -75,7 +75,7 @@ type AdvancePendingBlockResult =
 class UnknownBlockRateLimitedError extends Error {
   constructor(
     message: string,
-    /** Earliest backoff expiry of the rate-limited peers the download is waiting for */
+    /** Earliest backoff expiry seen when the download was deferred, it is retried once that has passed */
     readonly retryAt: number
   ) {
     super(message);
