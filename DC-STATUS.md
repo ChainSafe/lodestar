@@ -1,7 +1,7 @@
 # Decoupled Consensus prototype: status
 
-Branch `decoupled-consensus`, created from `origin/unstable` at `1bf214377e` (3 October 2026). Local only,
-nothing pushed. Spec commit implemented: mkalinin/consensus-specs `dc-feature` at `5c5d42ac4`.
+Branch `decoupled-consensus`, created from `origin/unstable` at `1bf214377e` (3 October 2026). Pushed to
+`ChainSafe/lodestar` on 4 October 2026. Spec commit implemented: mkalinin/consensus-specs `dc-feature` at `5c5d42ac4`.
 
 ## Commits
 
