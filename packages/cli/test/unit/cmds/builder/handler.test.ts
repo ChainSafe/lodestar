@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {Builder, type BuilderBidOptions} from "@lodestar/builder";
 import {chainConfig} from "@lodestar/config/default";
@@ -10,13 +10,25 @@ import * as runtime from "../../../../src/cmds/builder/runtime.js";
 import {GlobalArgs} from "../../../../src/options/index.js";
 import {testFilesDir} from "../../../utils.js";
 
-vi.mock("../../../../src/util/process.js", () => ({onGracefulShutdown: vi.fn()}));
-
 describe("cmds / builder / args handler", () => {
   const ZERO_ADDRESS = "0x" + "0".repeat(40);
   const VALID_FEE_RECIPIENT = "0x" + "1".repeat(40);
 
-  afterEach(() => vi.restoreAllMocks());
+  const signals = ["SIGINT", "SIGTERM"] as const;
+  const previousListeners = new Map<NodeJS.Signals, Set<ReturnType<typeof process.rawListeners>[number]>>();
+  beforeEach(() => {
+    for (const signal of signals) previousListeners.set(signal, new Set(process.rawListeners(signal)));
+  });
+  afterEach(() => {
+    for (const signal of signals) {
+      for (const listener of process.rawListeners(signal)) {
+        if (!previousListeners.get(signal)?.has(listener)) {
+          process.removeListener(signal, listener as NodeJS.SignalsListener);
+        }
+      }
+    }
+    vi.restoreAllMocks();
+  });
 
   async function runBuilderHandler(
     args: Partial<IBuilderCliArgs & GlobalArgs> & Record<string, unknown>
