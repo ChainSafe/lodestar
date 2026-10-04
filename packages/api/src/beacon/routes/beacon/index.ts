@@ -27,6 +27,7 @@ export type {
   ValidatorIdentities,
   ValidatorResponse,
   ValidatorStatus,
+  ValidatorStatusFilter,
 } from "./state.js";
 
 export type Endpoints = block.Endpoints &
