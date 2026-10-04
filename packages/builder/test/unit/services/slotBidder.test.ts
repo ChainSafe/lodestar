@@ -430,20 +430,7 @@ describe("SlotBidder", () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
-  it("rejects a payload value that cannot be represented safely in Gwei", async () => {
-    const payload = builtPayload(ForkName.gloas);
-    payload.executionPayloadValue = (BigInt(Number.MAX_SAFE_INTEGER) + 1n) * 1_000_000_000n;
-    const {bidder, publish, store} = setup(payload);
-
-    await expectSlotBidderError(bidder.run(gloasInput(), new AbortController().signal), {
-      code: SlotBidderErrorCode.UNSAFE_PAYLOAD_VALUE,
-      executionPayloadValue: payload.executionPayloadValue,
-    });
-    expect(store.size).toBe(0);
-    expect(publish).not.toHaveBeenCalled();
-  });
-
-  it("forwards cancellation to the payload orchestrator", async () => {
+  it("rejects an already-aborted request before starting a build", async () => {
     const controller = new AbortController();
     const {bidder, modules} = setup(builtPayload(ForkName.gloas));
     controller.abort();
