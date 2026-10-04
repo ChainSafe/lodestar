@@ -6,6 +6,138 @@ in Lodestar. Newest first. Cross-checked against Francesco's `consensus.pdf`
 (28 August 2026), Roberto Saltini's Lean 4 model (`lean/Spec/06_StateTransition.lean`)
 and Terence's Prysm branch `OffchainLabs/prysm:decoupled-consensus` (head `bfd242e`).
 
+## Activations stay gated on the frozen legacy `finalized_checkpoint`
+
+- Where: `process_registry_updates` (unmodified) / `packages/state-transition/src/epoch/processRegistryUpdates.ts`,
+  also `is_active_builder` in `process_execution_payload_bid`
+- Spec says: `process_epoch` keeps calling the Electra `process_registry_updates`, whose
+  `is_eligible_for_activation` compares against `state.finalized_checkpoint.epoch`. Nothing in the DC spec
+  writes `finalized_checkpoint` after the fork; only `finalized_pair` and `finalized_slot` move.
+- Observed: once the fork is active no validator can ever become eligible for activation, because the
+  checkpoint epoch never advances. `process_pending_deposits` was switched to `finalized_slot` but
+  `process_registry_updates` was not, and the Gloas builder activity check reads the same frozen epoch.
+  Lodestar implements the spec as written, so a decoupled chain cannot activate new validators.
+- Lean model / Prysm: the Lean model has no registry. Prysm's `ProcessRegistryUpdates` is not adapted either.
+- Question for the group: should `is_eligible_for_activation` and `is_active_builder` read
+  `compute_epoch_at_slot(state.finalized_slot)`, or should `finalized_checkpoint` be mirrored from the
+  finalized pair?
+- Status: open
+
+## `process_block` is marked modified but not defined
+
+- Where: `state_transition`, `process_operations(state, body, parent_slot)` /
+  `packages/state-transition/src/block/index.ts`
+- Spec says: `process_block(state, block)` carries a `[Modified in DC]` tag and `process_operations` takes a
+  new `parent_slot` argument, but the spec has no `process_block` body showing where `parent_slot` comes from.
+- Observed: Lodestar reuses the Gloas `process_block`, capturing `state.latest_block_header.slot` before
+  `process_block_header` and passing it down, which is what the Gloas `process_attestation` needs too.
+- Lean model / Prysm: Prysm threads `parentSlot` the same way.
+- Question for the group: can the spec add the `process_block` body so the `parent_slot` source is explicit?
+- Status: worked around (gloas parent slot)
+
+## Committee membership can change between an attestation's creation and inclusion
+
+- Where: `get_beacon_committee` / `packages/state-transition/src/util/decoupled.ts`
+- Spec says: the committee pool is every validator with `exit_epoch > compute_epoch_at_slot(state.finalized_slot)`
+  and committees are slices of that pool rotated by `round`.
+- Observed: both inputs move while a round is open. The pool grows whenever `process_pending_deposits`
+  appends validators at an epoch boundary (not yet active validators are counted, see the seat issue
+  below), and it shrinks whenever `finalized_slot` advances past exit epochs, which can happen in any
+  block. An attestation built against the old pool and included after the change decodes against a
+  different committee, so previous-round attestations in particular can become invalid or, worse, attribute
+  votes to the wrong validators. The design notes only discuss activation timing, not pool membership.
+- Lean model / Prysm: the Lean model has a fixed validator set. Prysm's committee code follows the paper
+  model and does not have this shape.
+- Question for the group: should the pool be snapshotted per round (for example at the round start
+  slot, or at the epoch of the round) so that `len(indices)` and the exit filter are stable for the whole
+  inclusion window?
+- Status: open
+
+## `process_attestation` no longer checks the aggregation bits length
+
+- Where: `process_attestation`, `is_valid_aggregation_bits` / `packages/state-transition/src/util/decoupled.ts`
+- Spec says: the Electra `process_attestation` asserted `len(attestation.aggregation_bits) == sum(committee
+lengths)`; the DC version only runs `is_valid_aggregation_bits`, which indexes into the bitlist.
+- Observed: a bitlist longer than the committees is accepted with the trailing bits ignored, and a shorter
+  one fails with an IndexError in the pyspec. Lodestar throws on a short bitlist and ignores extra bits to
+  match the pyspec behavior.
+- Lean model / Prysm: n/a
+- Question for the group: is dropping the length equality intended?
+- Status: open
+
+## `AggregationBits` limit is smaller than a round-wide committee span
+
+- Where: `Attestation.aggregation_bits` (`AggregationBits` unchanged from Gloas)
+- Spec says: `AggregationBits` keeps the Gloas limit `MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT`
+  (131072), while `committee_bits` can now select all `COMMITTEES_PER_ROUND` committees, whose combined
+  length is the whole eligible validator set.
+- Observed: an aggregate spanning more than about 12% of mainnet committees cannot be encoded even with few
+  bits set. `MAX_VALIDATORS_PER_AGGREGATE` bounds attesting indices but not the bitlist length.
+- Lean model / Prysm: n/a
+- Question for the group: should `AggregationBits` become a `ProgressiveBitlist` with limit
+  `VALIDATOR_REGISTRY_LIMIT`, or should aggregates be limited to a committee range?
+- Status: open
+
+## `available_chain_attestations` is unbounded in `process_operations`
+
+- Where: `process_operations`, `BeaconBlockBody.available_chain_attestations` /
+  `packages/types/src/decoupled/sszTypes.ts`
+- Spec says: every other operation list has a `MAX_*` assertion; `available_chain_attestations` is a
+  `ProgressiveList` with none.
+- Observed: a block may carry any number of available chain attestations, each with up to
+  `AVAILABLE_CHAIN_COMMITTEE_SIZE` indices and a signature to verify. Lodestar leaves the list unbounded.
+- Lean model / Prysm: n/a
+- Question for the group: what is the intended `MAX_AVAILABLE_CHAIN_ATTESTATIONS`?
+- Status: open
+
+## `is_valid_attestation_data` accepts mixed height pairs
+
+- Where: `is_valid_attestation_data`
+- Spec says: the target root must be one of `{Root(), target.root, justified.root}` and the target height one
+  of `{EMPTY_HEIGHT, target.height, justified.height}`, checked independently; same for finalize.
+- Observed: a pair such as `(justified.height, target.root)` passes validation, earns no participation flag
+  and consumes block space. Covered by a harness case. Harmless for safety, but it is a free no-op vote.
+- Lean model / Prysm: n/a
+- Question for the group: none unless the no-op is undesired.
+- Status: confirmed by code reading (note only)
+
+## Epoch participation now rotates every round
+
+- Where: `process_round`, `process_participation_flag_updates` [Modified in DC]
+- Spec says: `process_participation_flag_updates` rotates both the epoch and the round participation arrays
+  and is called from `process_round`; `process_epoch` no longer calls it.
+- Observed: `previous_epoch_participation` and `current_epoch_participation` are rotated at every round
+  boundary and nothing writes them any more. Lodestar implements this as written.
+- Lean model / Prysm: n/a
+- Question for the group: are the epoch participation arrays meant to be removed (the TODO says "Cleanup
+  BeaconState")?
+- Status: confirmed by code reading (note only)
+
+## Finality flag is set even when the justified pair is already finalized
+
+- Where: `get_height_participation_flag_indices`
+- Spec says: `FINALITY_FLAG_INDEX` is set whenever `data.finalize_pair == justified_pair`.
+- Observed: the Lean model only sets `finalize[i]` when `h_j > h_F`. In the spec the extra flags are dead
+  weight until the next justification resets them, and finalization itself still requires
+  `justified.height > finalized.height`, so no behavior differs. Noted as a divergence only.
+- Lean model / Prysm: Lean `processAttestation` guards on `σ.h_j > σ.h_F`.
+- Question for the group: none.
+- Status: confirmed by code reading (note only)
+
+## Genesis height pairs have no block root to point at
+
+- Where: `util/genesis.ts` initialization at the decoupled fork
+- Spec says: nothing, there is no genesis or fork transition in the spec.
+- Observed: the Lean initial state has `L = T_h = J = F = B_gen`. At genesis the block root is not known
+  until the first `process_slot`, so Lodestar defers the height-1 target root like `advance_height` does
+  and leaves the height-0 justified and finalized pairs with a zero root. A zero-root height-0 pair is
+  indistinguishable from an "empty" finalize vote at height 0, which is harmless because justified and
+  finalized coincide at genesis.
+- Lean model / Prysm: Prysm's upgrade hashes `latest_block_header` directly, which is valid at an epoch
+  boundary but not for a genesis state.
+- Question for the group: none until the fork transition is specified.
+- Status: worked around
+
 ## `Height` sentinel encoding
 
 - Where: `EMPTY_HEIGHT` / `packages/params/src/index.ts`, `packages/types/src/decoupled/sszTypes.ts`
@@ -69,13 +201,18 @@ and Terence's Prysm branch `OffchainLabs/prysm:decoupled-consensus` (head `bfd24
   `state.slot >= state.target_slot + TIMEOUT_DELAY_ROUNDS * SLOTS_PER_ROUND`. The harness carries the
   early-advance scenario with the guard on and off.
 - Lean model / Prysm: Prysm has `TimeoutDelayRounds` in config, applied in `ProcessHeightEvents`
-  before the progress quorum check.
-- Question for the group: none, awaiting spec update.
+  before the progress quorum check. The Lean model has no delay in its state transition at all:
+  `processHeightEvents` fires the progress event on any quorum, and the two-round wait lives on the
+  validator side (`08_FinalityVote.lean` only emits an empty-target vote when the healing layer offers no
+  fresh grade-2 quorum). So the three sources place the guard in three different spots: paper and Lean in
+  the voting rule, Prysm in the state transition, the spec nowhere.
+- Question for the group: should the delay be a state-transition rule (so faulty early timeouts cannot
+  advance the height) or only a validator rule as in the paper?
 - Status: fixed, pending spec update
 
 ## Deferred target root
 
-- Where: `advance_height` / `packages/state-transition/src/epoch/processHeightEvents.ts`,
+- Where: `advance_height` / `packages/state-transition/src/block/processHeightEvents.ts`,
   `packages/state-transition/src/slot/index.ts`
 - Spec says: `state.target_pair.root = hash_tree_root(state.latest_block_header)` inside
   `advance_height`, which `process_height_events` calls after `process_block`.
