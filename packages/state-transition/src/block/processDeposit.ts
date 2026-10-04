@@ -17,7 +17,12 @@ import {
 import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateDecoupled,
+  CachedBeaconStateElectra,
+} from "../types.js";
 import {
   computeDomain,
   computeSigningRoot,
@@ -145,6 +150,14 @@ export function addValidatorToRegistry(
     // add participation caches
     stateAltair.previousEpochParticipation.push(0);
     stateAltair.currentEpochParticipation.push(0);
+  }
+
+  // Spec: add_validator_to_registry [Modified in DC] (decoupled-consensus/beacon-chain.md)
+  if (fork >= ForkSeq.decoupled) {
+    const stateDecoupled = state as CachedBeaconStateDecoupled;
+    stateDecoupled.heightParticipation.push(0);
+    stateDecoupled.previousRoundParticipation.push(0);
+    stateDecoupled.currentRoundParticipation.push(0);
   }
 
   state.balances.push(amount);

@@ -10,12 +10,14 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
+  CachedBeaconStateDecoupled,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
+import {processBuilderPaymentParticipation} from "./processBuilderPaymentParticipation.js";
 import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -58,6 +60,7 @@ export {
   processProposerLookahead,
   processPtcWindow,
   processBuilderPendingPayments,
+  processBuilderPaymentParticipation,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -85,6 +88,7 @@ export enum EpochTransitionStep {
   processProposerLookahead = "processProposerLookahead",
   processPtcWindow = "processPtcWindow",
   processBuilderPendingPayments = "processBuilderPendingPayments",
+  processBuilderPaymentParticipation = "processBuilderPaymentParticipation",
 }
 
 export function processEpoch(
@@ -101,7 +105,11 @@ export function processEpoch(
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
 
-  {
+  // Spec: process_epoch [Modified in DC] drops justification, inactivity and rewards; the finality
+  // gadget replaces the first and the other two are TODO in the spec
+  const isDecoupled = fork >= ForkSeq.decoupled;
+
+  if (!isDecoupled) {
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processJustificationAndFinalization,
     });
@@ -109,7 +117,7 @@ export function processEpoch(
     timer?.();
   }
 
-  if (fork >= ForkSeq.altair) {
+  if (fork >= ForkSeq.altair && !isDecoupled) {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processInactivityUpdates});
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
     timer?.();
@@ -127,14 +135,15 @@ export function processEpoch(
   }
 
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
+  // Post-decoupled there is no processRewardsAndPenalties, so processSlashings applies them directly
   let slashingPenalties: number[];
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processSlashings});
-    slashingPenalties = processSlashings(state, cache, false);
+    slashingPenalties = processSlashings(state, cache, isDecoupled);
     timer?.();
   }
 
-  {
+  if (!isDecoupled) {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRewardsAndPenalties});
     processRewardsAndPenalties(state, cache, slashingPenalties);
     timer?.();
@@ -190,7 +199,8 @@ export function processEpoch(
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
-    {
+    // Post-decoupled participation flags rotate per round in processRound instead
+    if (!isDecoupled) {
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processParticipationFlagUpdates,
       });
@@ -218,6 +228,14 @@ export function processEpoch(
   if (fork >= ForkSeq.gloas) {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPtcWindow});
     processPtcWindow(state as CachedBeaconStateGloas, cache);
+    timer?.();
+  }
+
+  if (isDecoupled) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processBuilderPaymentParticipation,
+    });
+    processBuilderPaymentParticipation(state as CachedBeaconStateDecoupled);
     timer?.();
   }
 }

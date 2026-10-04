@@ -3,6 +3,7 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPreDecoupled,
   ForkPreGloas,
   ForkSeq,
   isForkPostBellatrix,
@@ -87,7 +88,7 @@ export function signedBlindedBlockToFull(
   fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null
-): SignedBeaconBlock {
+): SignedBeaconBlock<ForkPreDecoupled> {
   if (isForkPostBellatrix(fork) && executionPayload === null) {
     throw Error("Missing executionPayload to reconstruct post-bellatrix full block");
   }
@@ -102,7 +103,7 @@ export function signedBlindedBlockToFull(
         executionPayload: executionPayload ?? undefined,
       },
     },
-  } as SignedBeaconBlock;
+  } as SignedBeaconBlock<ForkPreDecoupled>;
 
   // state transition can't seem to handle executionPayloadHeader presense in merge block
   // so just delete the extra field we don't require
@@ -136,7 +137,7 @@ export function reconstructSignedBlockContents(
       throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
     return {
-      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreDecoupled>,
       kzgProofs: blobsBundle.proofs,
       blobs: blobsBundle.blobs,
     };

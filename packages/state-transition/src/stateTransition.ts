@@ -1,11 +1,13 @@
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_ROUND} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
+import {ProcessHeightEventsOpts, processHeightEvents} from "./block/processHeightEvents.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
+import {processRound} from "./epoch/processRound.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
 import {
@@ -13,6 +15,7 @@ import {
   upgradeStateToAltair,
   upgradeStateToBellatrix,
   upgradeStateToCapella,
+  upgradeStateToDecoupled,
   upgradeStateToDeneb,
   upgradeStateToElectra,
   upgradeStateToGloas,
@@ -24,10 +27,12 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDecoupled,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -36,7 +41,8 @@ import {computeEpochAtSlot} from "./util/index.js";
 
 // NOTE DENEB: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
-  ProcessBlockOpts & {
+  ProcessBlockOpts &
+  ProcessHeightEventsOpts & {
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;
@@ -123,6 +129,11 @@ export function stateTransition(
   const processBlockTimer = metrics?.processBlockTime.startTimer();
 
   processBlock(fork, postState, block, options, options, metrics);
+
+  // Spec: state_transition [Modified in DC] runs process_height_events after process_block
+  if (fork >= ForkSeq.decoupled) {
+    processHeightEvents(postState as CachedBeaconStateDecoupled, options);
+  }
 
   const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
   postState.commit();
@@ -218,6 +229,11 @@ function processSlotsWithTransientCache(
     const fork = postState.config.getForkSeq(postState.slot);
     processSlot(fork, postState);
 
+    // Spec: process_slots [Modified in DC] runs process_round on the last slot of a round, before process_epoch
+    if (fork >= ForkSeq.decoupled && (postState.slot + 1) % SLOTS_PER_ROUND === 0) {
+      processRound(postState as CachedBeaconStateDecoupled);
+    }
+
     // Process epoch on the first slot of the next epoch
     // We use `fork` because at fork boundary we don't want to process
     // "next fork" epoch before upgrading state
@@ -283,6 +299,9 @@ function processSlotsWithTransientCache(
       }
       if (stateEpoch === config.HEZE_FORK_EPOCH) {
         postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.DECOUPLED_FORK_EPOCH) {
+        postState = upgradeStateToDecoupled(postState as CachedBeaconStateHeze) as CachedBeaconStateAllForks;
       }
 
       {

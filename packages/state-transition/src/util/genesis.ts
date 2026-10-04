@@ -14,6 +14,7 @@ import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
 import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {increaseBalance} from "../index.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {newFilledArray} from "./array.js";
@@ -338,6 +339,21 @@ export function initializeBeaconStateFromEth1(
     const stateHeze = state as CompositeViewDU<typeof ssz.heze.BeaconState>;
     stateHeze.fork.previousVersion = config.HEZE_FORK_VERSION;
     stateHeze.fork.currentVersion = config.HEZE_FORK_VERSION;
+  }
+
+  if (fork >= ForkSeq.decoupled) {
+    const stateDecoupled = state as CompositeViewDU<typeof ssz.decoupled.BeaconState>;
+    stateDecoupled.fork.previousVersion = config.DECOUPLED_FORK_VERSION;
+    stateDecoupled.fork.currentVersion = config.DECOUPLED_FORK_VERSION;
+    // Lean model initial chain state: L = T_h = J = F = genesis, h = 1, h_j = h_F = 0. The genesis block
+    // root is not known until the first process_slot, so the target root is deferred like advance_height
+    // and the height-0 pairs keep a zero root (see DC-ISSUES.md "Genesis height pairs").
+    stateDecoupled.targetPair = ssz.decoupled.HeightPair.toViewDU({height: 1, root: ZERO_HASH});
+    stateDecoupled.targetSlot = GENESIS_SLOT;
+    stateDecoupled.justifiedPair = ssz.decoupled.HeightPair.toViewDU({height: 0, root: ZERO_HASH});
+    stateDecoupled.justifiedSlot = GENESIS_SLOT;
+    stateDecoupled.finalizedPair = ssz.decoupled.HeightPair.toViewDU({height: 0, root: ZERO_HASH});
+    stateDecoupled.finalizedSlot = GENESIS_SLOT;
   }
 
   state.commit();

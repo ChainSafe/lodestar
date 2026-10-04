@@ -8,6 +8,7 @@ export * from "./blockRoot.js";
 export * from "./capella.js";
 export * from "./clock.js";
 export * from "./computeAnchorCheckpoint.js";
+export * from "./decoupled.js";
 export * from "./deposit.js";
 export * from "./domain.js";
 export * from "./electra.js";

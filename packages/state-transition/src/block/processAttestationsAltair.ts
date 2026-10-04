@@ -1,6 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkPreDecoupled,
   ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
@@ -36,7 +37,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair | CachedBeaconStateGloas,
-  attestations: Attestation[],
+  attestations: Attestation<ForkPreDecoupled>[],
   parentSlot: Slot | null,
   verifySignature = true,
   metrics?: BeaconStateTransitionMetrics | null

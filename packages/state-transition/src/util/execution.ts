@@ -18,6 +18,7 @@ import {
   BeaconStateAllForks,
   BeaconStateBellatrix,
   BeaconStateCapella,
+  BeaconStateDecoupled,
   BeaconStateExecutions,
   BeaconStateGloas,
   CachedBeaconStateAllForks,
@@ -80,6 +81,10 @@ export function isCapellaStateType(state: BeaconStateAllForks): state is BeaconS
 /** Type guard for gloas.BeaconState */
 export function isGloasStateType(state: BeaconStateAllForks): state is BeaconStateGloas {
   return (state as BeaconStateGloas).latestBlockHash !== undefined;
+}
+
+export function isDecoupledStateType(state: BeaconStateAllForks): state is BeaconStateDecoupled {
+  return (state as BeaconStateDecoupled).targetPair !== undefined;
 }
 
 /** Type guard for bellatrix.CachedBeaconState */

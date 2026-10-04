@@ -5,6 +5,7 @@ import {
   ForkPostAltair,
   ForkPostBellatrix,
   ForkPostCapella,
+  ForkPostDecoupled,
   ForkPostDeneb,
   ForkPostElectra,
   ForkPostFulu,
@@ -14,6 +15,7 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
+  isForkPostDecoupled,
   isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
@@ -299,14 +301,19 @@ export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
   forkName: ForkPostHeze;
 }
 
+/** Decoupled+ state fields — use isStatePostDecoupled() guard */
+export interface IBeaconStateViewDecoupled extends IBeaconStateViewHeze {
+  forkName: ForkPostDecoupled;
+}
+
 /**
  * Type constraint for the concrete BeaconStateView class.
- * Requires all fields from the latest fork interface (IBeaconStateViewHeze) but keeps
+ * Requires all fields from the latest fork interface (IBeaconStateViewDecoupled) but keeps
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
 export type IBeaconStateViewLatestFork = Omit<
-  IBeaconStateViewHeze,
+  IBeaconStateViewDecoupled,
   "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
@@ -379,4 +386,8 @@ export function isStatePostGloas(state: IBeaconStateView): state is IBeaconState
 
 export function isStatePostHeze(state: IBeaconStateView): state is IBeaconStateViewHeze {
   return isForkPostHeze(state.forkName);
+}
+
+export function isStatePostDecoupled(state: IBeaconStateView): state is IBeaconStateViewDecoupled {
+  return isForkPostDecoupled(state.forkName);
 }

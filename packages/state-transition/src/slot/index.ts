@@ -1,11 +1,13 @@
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {byteArrayEquals} from "@lodestar/utils";
+import {fillHeightTargetRoot} from "../block/processHeightEvents.js";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateDecoupled, CachedBeaconStateGloas} from "../types.js";
 
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
+export {upgradeStateToDecoupled} from "./upgradeStateToDecoupled.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
 export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
@@ -37,5 +39,9 @@ export function processSlot(fork: ForkSeq, state: CachedBeaconStateAllForks): vo
       (state.slot + 1) % SLOTS_PER_HISTORICAL_ROOT,
       false
     );
+  }
+
+  if (fork >= ForkSeq.decoupled) {
+    fillHeightTargetRoot(state as CachedBeaconStateDecoupled, previousBlockRoot);
   }
 }

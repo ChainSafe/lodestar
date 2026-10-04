@@ -1,6 +1,12 @@
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas, EpochTransitionCache} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateDecoupled,
+  CachedBeaconStateGloas,
+  EpochTransitionCache,
+} from "../types.js";
+import {computePtcForEpochDecoupled} from "../util/decoupled.js";
 import {computeEpochShuffling} from "../util/epochShuffling.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "../util/seed.js";
 
@@ -14,17 +20,28 @@ import {computePayloadTimelinessCommitteesForEpoch} from "../util/seed.js";
  */
 export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTransitionCache): void {
   const nextEpoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
-  const nextEpochShuffling =
-    cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
-  cache.nextShuffling = nextEpochShuffling;
 
-  const newNextPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-    state,
-    nextEpoch,
-    nextEpochShuffling.committees,
-    nextEpochShuffling.shuffling,
-    state.epochCtx.effectiveBalanceIncrements
-  );
+  let newNextPayloadTimelinessCommittees: Uint32Array[];
+  if (state.config.getForkSeq(state.slot) >= ForkSeq.decoupled) {
+    // Spec: compute_ptc [Modified in DC] samples all active validators instead of the slot committees
+    newNextPayloadTimelinessCommittees = computePtcForEpochDecoupled(
+      state as CachedBeaconStateAllForks as CachedBeaconStateDecoupled,
+      nextEpoch,
+      cache.nextShufflingActiveIndices
+    );
+  } else {
+    const nextEpochShuffling =
+      cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
+    cache.nextShuffling = nextEpochShuffling;
+
+    newNextPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
+      state,
+      nextEpoch,
+      nextEpochShuffling.committees,
+      nextEpochShuffling.shuffling,
+      state.epochCtx.effectiveBalanceIncrements
+    );
+  }
 
   // Stash for finalProcessEpoch to shift into epoch cache
   cache.nextEpochPayloadTimelinessCommittees = newNextPayloadTimelinessCommittees;

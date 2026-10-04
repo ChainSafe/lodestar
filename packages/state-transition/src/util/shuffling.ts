@@ -1,4 +1,4 @@
-import {ForkName, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPreDecoupled, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {
   Attestation,
   CommitteeIndex,
@@ -141,7 +141,7 @@ export function calculateCommitteeAssignments(
 export function getIndexedAttestation(
   epochShuffling: EpochShuffling,
   fork: ForkSeq,
-  attestation: Attestation
+  attestation: Attestation<ForkPreDecoupled>
 ): IndexedAttestation {
   const {data} = attestation;
   const attestingIndices = getAttestingIndices(epochShuffling, fork, attestation);
@@ -158,7 +158,11 @@ export function getIndexedAttestation(
 /**
  * Return indices of validators who attestested in `attestation`
  */
-export function getAttestingIndices(epochShuffling: EpochShuffling, fork: ForkSeq, attestation: Attestation): number[] {
+export function getAttestingIndices(
+  epochShuffling: EpochShuffling,
+  fork: ForkSeq,
+  attestation: Attestation<ForkPreDecoupled>
+): number[] {
   if (fork < ForkSeq.electra) {
     const {aggregationBits, data} = attestation;
     const validatorIndices = getBeaconCommittee(epochShuffling, data.slot, data.index);

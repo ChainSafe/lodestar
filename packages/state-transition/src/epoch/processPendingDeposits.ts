@@ -1,7 +1,12 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
-import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateDecoupled,
+  CachedBeaconStateElectra,
+  EpochTransitionCache,
+} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
@@ -26,7 +31,11 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
   let isChurnLimitReached = false;
-  const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
+  // Spec: process_pending_deposits [Modified in DC] reads state.finalized_slot
+  const finalizedSlot =
+    fork >= ForkSeq.decoupled
+      ? (state as CachedBeaconStateAllForks as CachedBeaconStateDecoupled).finalizedSlot
+      : computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
 
   let startIndex = 0;
   // TODO: is this a good number?

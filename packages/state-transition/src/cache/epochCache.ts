@@ -6,6 +6,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkPreDecoupled,
   ForkSeq,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
@@ -870,7 +871,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
+  getIndexedAttestation(fork: ForkSeq, attestation: Attestation<ForkPreDecoupled>): IndexedAttestation {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }
@@ -878,7 +879,7 @@ export class EpochCache {
   /**
    * Return indices of validators who attestested in `attestation`
    */
-  getAttestingIndices(fork: ForkSeq, attestation: Attestation): number[] {
+  getAttestingIndices(fork: ForkSeq, attestation: Attestation<ForkPreDecoupled>): number[] {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getAttestingIndices(shuffling, fork, attestation);
   }

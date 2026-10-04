@@ -1,15 +1,18 @@
-import {ForkSeq} from "@lodestar/params";
-import {BeaconBlockBody, Slot, capella, electra, gloas} from "@lodestar/types";
+import {ForkSeq, MAX_ATTESTER_SLASHINGS_ELECTRA} from "@lodestar/params";
+import {BeaconBlockBody, Slot, capella, decoupled, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
+  CachedBeaconStateDecoupled,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
 } from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
+import {processAttesterSlashing2} from "./processAttesterSlashing2.js";
+import {processAvailableChainAttestation} from "./processAvailableChainAttestation.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDeposit} from "./processDeposit.js";
@@ -30,6 +33,8 @@ export {
   processBlsToExecutionChange,
   processDepositRequest,
   processConsolidationRequest,
+  processAvailableChainAttestation,
+  processAttesterSlashing2,
 };
 
 export function processOperations(
@@ -138,5 +143,37 @@ export function processOperations(
       processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation, opts.verifySignatures);
     }
     timer?.();
+  }
+
+  // Spec: process_operations [Modified in DC] (decoupled-consensus/beacon-chain.md)
+  if (fork >= ForkSeq.decoupled) {
+    const stateDecoupled = state as CachedBeaconStateDecoupled;
+    const bodyDecoupled = body as decoupled.BeaconBlockBody;
+    if (bodyDecoupled.attesterSlashings2.length > MAX_ATTESTER_SLASHINGS_ELECTRA) {
+      throw new Error(`Block contains too many attester slashings 2: ${bodyDecoupled.attesterSlashings2.length}`);
+    }
+    if (parentSlot === null) {
+      throw new Error("Must supply parentSlot post-decoupled");
+    }
+
+    {
+      const timer = metrics?.processOperationsStepTime.startTimer({
+        step: ProcessOperationsStep.processAvailableChainAttestation,
+      });
+      for (const attestation of bodyDecoupled.availableChainAttestations) {
+        processAvailableChainAttestation(stateDecoupled, attestation, parentSlot, opts.verifySignatures);
+      }
+      timer?.();
+    }
+
+    {
+      const timer = metrics?.processOperationsStepTime.startTimer({
+        step: ProcessOperationsStep.processAttesterSlashing2,
+      });
+      for (const attesterSlashing of bodyDecoupled.attesterSlashings2) {
+        processAttesterSlashing2(stateDecoupled, attesterSlashing, opts.verifySignatures);
+      }
+      timer?.();
+    }
   }
 }
