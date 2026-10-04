@@ -1,9 +1,10 @@
+import {AnchorSummary} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
-import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
 import {StateInitializationError, StateInitializationErrorCode} from "./errors.js";
 
-export function assertAnchorStateForkMatchesConfig(config: ChainForkConfig, anchorState: IBeaconStateView): void {
+export function assertAnchorStateForkMatchesConfig(config: ChainForkConfig, anchorState: AnchorSummary): void {
   const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
   const expectedForkVersion = toHex(expectedFork.version);
   const stateFork = toHex(anchorState.fork.currentVersion);

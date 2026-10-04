@@ -24,7 +24,7 @@ export function prepareArchivedStateInitialization(
         slot: state.slot,
         epoch: computeEpochAtSlot(state.slot),
         stateSize: formatBytes(stateBytes.length),
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         isWithinWeakSubjectivityPeriod,
       };
       if (isWithinWeakSubjectivityPeriod) {
@@ -34,12 +34,12 @@ export function prepareArchivedStateInitialization(
         logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
       }
     },
-    persist: null,
+    shouldPersist: false,
     log(state) {
       logger.info("Initialized state from db", {
         slot: state.slot,
         epoch: computeEpochAtSlot(state.slot),
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         isFinalized: true,
       });
     },

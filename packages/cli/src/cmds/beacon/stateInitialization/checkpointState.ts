@@ -1,7 +1,6 @@
-import {DbCPStateDatastore, FileCPStateDatastore, persistAnchorState} from "@lodestar/beacon-node";
+import {AnchorSummary, DbCPStateDatastore, FileCPStateDatastore} from "@lodestar/beacon-node";
 import {createBeaconConfig} from "@lodestar/config";
 import {
-  IBeaconStateView,
   computeEpochAtSlot,
   computeWeakSubjectivitySummaryFromStateBytes,
   getCurrentSlot,
@@ -138,7 +137,7 @@ function prepareCheckpointInitialization(
   candidate: CheckpointStateBytesCandidate,
   archived: ArchivedStateBytes | null,
   policy: CheckpointStartupPolicy,
-  {chainForkConfig, db, logger}: StatePreparationContext
+  {chainForkConfig, logger}: StatePreparationContext
 ): StateInitialization {
   const candidateMetadata = readBeaconStateBytesMetadata(candidate.stateBytes);
   if (candidateMetadata === null) {
@@ -212,7 +211,7 @@ function prepareCheckpointInitialization(
           slot: state.slot,
           epoch: computeEpochAtSlot(state.slot),
           stateSize: formatBytes(stateBytes.length),
-          stateRoot: toRootHex(state.hashTreeRoot()),
+          stateRoot: toRootHex(state.stateRoot),
           isWithinWeakSubjectivityPeriod: passedValidation,
         };
         if (passedValidation) {
@@ -223,25 +222,25 @@ function prepareCheckpointInitialization(
         }
       }
     },
-    persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
+    shouldPersist,
     log(state) {
-      const {checkpoint} = state.computeAnchorCheckpoint();
+      const {checkpoint} = state;
       logger.info("Initialized checkpoint state", {
         source,
         slot: state.slot,
         epoch: checkpoint.epoch,
         stateSize: formatBytes(stateBytes.length),
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         checkpointRoot: toRootHex(checkpoint.root),
         isFinalized,
-        ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockHeader.slot}),
+        ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockSlot}),
       });
     },
   };
 }
 
-function assertStateMatchesCheckpoint(state: IBeaconStateView, checkpoint: Checkpoint): void {
-  const {root: blockRoot, epoch: stateEpoch} = state.computeAnchorCheckpoint().checkpoint;
+function assertStateMatchesCheckpoint(state: AnchorSummary, checkpoint: Checkpoint): void {
+  const {root: blockRoot, epoch: stateEpoch} = state.checkpoint;
   if (!ssz.Root.equals(blockRoot, checkpoint.root)) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.CHECKPOINT_ROOT_MISMATCH},

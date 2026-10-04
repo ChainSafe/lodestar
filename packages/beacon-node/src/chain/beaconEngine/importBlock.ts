@@ -349,6 +349,8 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           if (isStatePostAltair(postState)) {
+            // TODO - beacon engine: move LightClientServer into the engine and expose data-only queries/events
+            // before introducing a worker; this shared service currently receives a live state view.
             this.lightClientServer?.onImportBlockHead(
               block.message as BeaconBlock<ForkPostAltair>,
               postState,
@@ -511,6 +513,8 @@ export async function importBlock(
 
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
 
+  // TODO - beacon engine: replace the verified-block handoff with derived monitoring data;
+  // fullyVerifiedBlock contains a live postState that cannot cross the worker boundary.
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
 
   if (isStatePostAltair(fullyVerifiedBlock.postState)) {

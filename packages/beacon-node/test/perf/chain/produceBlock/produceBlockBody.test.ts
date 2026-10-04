@@ -12,6 +12,7 @@ import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/pr
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
+import {createBeaconChain} from "../../../utils/chain.js";
 
 const logger = testLogger();
 
@@ -41,7 +42,7 @@ describe("produceBlockBody", () => {
       dataColumnDir: ".tmpdb-data-columns",
       logger,
     });
-    chain = new BeaconChain(
+    chain = await createBeaconChain(
       {
         proposerBoost: true,
         proposerBoostReorg: true,
@@ -64,7 +65,7 @@ describe("produceBlockBody", () => {
         processShutdownCallback: () => {},
         metrics: null,
         validatorMonitor: null,
-        anchorState: new BeaconStateView(state),
+        anchorStateBytes: state.serialize(),
         isAnchorStateFinalized: true,
         executionEngine,
       }

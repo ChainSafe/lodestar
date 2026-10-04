@@ -18,7 +18,6 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  BeaconStateView,
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   computeEpochAtSlot,
@@ -58,7 +57,7 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
@@ -71,6 +70,7 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "../../utils/chain.js";
 import {
   createSpecTestBeaconMetrics,
   expectNoProgressiveBalancesMismatches,
@@ -130,7 +130,7 @@ export const forkChoiceTestRunner =
           {skipSyncPubkeys: true}
         );
 
-        const chain = new BeaconChain(
+        const chain = await createBeaconChain(
           {
             ...defaultChainOptions,
             // Do not start workers
@@ -161,7 +161,7 @@ export const forkChoiceTestRunner =
             clock,
             metrics,
             validatorMonitor: null,
-            anchorState: new BeaconStateView(cachedState),
+            anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,
             executionBuilder: undefined,

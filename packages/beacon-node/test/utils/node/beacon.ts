@@ -12,12 +12,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  BeaconStateView,
-  computeEpochAtSlot,
-  createCachedBeaconState,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, computeEpochAtSlot, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 import {initStateFromDb} from "../../../src/chain/initState.js";
@@ -138,7 +133,6 @@ export async function getDevBeaconNode(
 
   return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
-    config: beaconConfig,
     pubkeyCache,
     db,
     logger,
@@ -147,8 +141,14 @@ export async function getDevBeaconNode(
     dataDir: tmpDir.name,
     dataColumnDir: path.join(tmpDir.name, "data_columns"),
     peerStoreDir,
-    anchorState: new BeaconStateView(cachedState),
-    isAnchorStateFinalized: true,
+    stateInitialization: {
+      stateBytes: cachedState.serialize(),
+      config: beaconConfig,
+      isFinalized: true,
+      shouldPersist: false,
+      validate: () => {},
+      log: () => {},
+    },
   });
 }
 

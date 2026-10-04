@@ -7,22 +7,36 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
+import {LodestarError, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {BeaconEngine} from "../chain/beaconEngine/index.js";
+import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
+import {IBeaconEngine} from "../chain/beaconEngine/interface.js";
+import {ChainEventEmitter} from "../chain/emitter.js";
+import {BeaconChain, IBeaconChain} from "../chain/index.js";
+import {initBeaconMetrics} from "../chain/initState.js";
+import {LightClientServer} from "../chain/lightClient/index.js";
+import {SeenBlockInput} from "../chain/seenCache/seenGossipBlockInput.js";
+import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
+import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
+import {StateInitialization} from "../chain/stateInitialization.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
+import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
+import {CustodyConfig} from "../util/dataColumns.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
+import {getAnchorExecutionBlockHash} from "./utils/anchorState.js";
 
 export * from "./options.js";
 
@@ -44,7 +58,6 @@ export type BeaconNodeModules = {
 
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
-  config: BeaconConfig;
   pubkeyCache: PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
@@ -53,8 +66,7 @@ export type BeaconNodeInitModules = {
   dataDir: string;
   dataColumnDir: string;
   peerStoreDir?: string;
-  anchorState: IBeaconStateView;
-  isAnchorStateFinalized: boolean;
+  stateInitialization: StateInitialization;
   metricsRegistries?: Registry[];
 };
 
@@ -142,7 +154,6 @@ export class BeaconNode {
    */
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
-    config,
     pubkeyCache,
     db,
     logger,
@@ -151,10 +162,12 @@ export class BeaconNode {
     dataDir,
     dataColumnDir,
     peerStoreDir,
-    anchorState,
-    isAnchorStateFinalized,
+    stateInitialization,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    const {config} = stateInitialization;
+    const metadata = readBeaconStateBytesMetadata(stateInitialization.stateBytes);
+    if (!metadata) throw new LodestarError({code: "ANCHOR_STATE_BYTES_INVALID"});
     if (hasher.name !== "hashtree") {
       logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
@@ -171,31 +184,131 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
-      initBeaconMetrics(metrics, anchorState);
+      metrics = createMetrics(opts.metrics, metadata.genesisTime, metricsRegistries);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
+    // TODO - beacon engine: keep state-dependent monitoring inside the engine or pass derived data
+    // to this shared monitor before introducing a worker.
     const validatorMonitor =
       opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
         ? createValidatorMonitor(
             metrics?.register ?? null,
             config,
-            anchorState.genesisTime,
+            metadata.genesisTime,
             logger.child({module: LoggerModule.vmon}),
             opts.validatorMonitor
           )
         : null;
 
-    const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
+    const clock = new Clock({config, genesisTime: metadata.genesisTime, signal});
 
     await db.init();
 
-    // Prune hot db repos
-    // TODO: Should this call be awaited?
+    const monitoring = opts.monitoring.endpoint
+      ? new MonitoringService(
+          "beacon",
+          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
+          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
+        )
+      : null;
+
+    let executionEngineOpts = opts.executionEngine;
+    if (opts.executionEngine.mode === "mock") {
+      const latestEth1BlockHash = getAnchorExecutionBlockHash(config, stateInitialization.stateBytes, metadata.slot);
+      executionEngineOpts = {
+        ...opts.executionEngine,
+        genesisBlockHash: ZERO_HASH_HEX,
+        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? latestEth1BlockHash,
+        genesisTime: metadata.genesisTime,
+        config,
+      };
+    }
+
+    const chainLogger = logger.child({module: LoggerModule.chain});
+    const chainController = new AbortController();
+    const emitter = new ChainEventEmitter();
+    const fileDataStore = opts.chain.nHistoricalStatesFileDataStore ?? true;
+    // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
+    const cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
+
+    const nodeId = computeNodeIdFromPrivateKey(privateKey);
+    const initialCustodyGroupCount = opts.chain.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
+    metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
+    // TODO: backfill not implemented yet
+    metrics?.peerDas.custodyGroupsBackfilled.set(0);
+    const custodyConfig = new CustodyConfig({
+      nodeId,
+      config,
+      initialCustodyGroupCount,
+    });
+
+    const serializedCache = new SerializedCache();
+    // TODO - beacon engine: keep this cache facade-owned and replace regen's shared reference with
+    // engine-owned pending blocks retained until persistence completes before introducing a worker.
+    const seenBlockInputCache = new SeenBlockInput({
+      config,
+      custodyConfig,
+      clock,
+      chainEvents: emitter,
+      signal: chainController.signal,
+      serializedCache,
+      metrics,
+      logger: chainLogger,
+    });
+
+    // TODO - beacon engine: move LightClientServer into the engine and expose data-only queries/events
+    // before introducing a worker; the facade currently shares this state-consuming service.
+    const lightClientServer = opts.chain.disableLightClientServer
+      ? undefined
+      : new LightClientServer(opts.chain, {
+          config,
+          clock,
+          db,
+          metrics,
+          emitter,
+          logger: chainLogger,
+          signal: chainController.signal,
+        });
+
+    const executionEngine = initializeExecutionEngine(executionEngineOpts, {
+      metrics,
+      signal,
+      logger: logger.child({module: LoggerModule.execution}),
+    });
+    const executionBuilder = opts.executionBuilder.enabled
+      ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
+      : undefined;
+    const beaconEngine = new BeaconEngine({
+      isAnchorStateFinalized: stateInitialization.isFinalized,
+      opts: opts.chain,
+      config,
+      pubkeyCache,
+      db,
+      dbName: opts.db.name,
+      dataColumnDir,
+      logger: chainLogger,
+      metrics,
+      validatorMonitor,
+      clock,
+      signal: chainController.signal,
+      emitter,
+      cpStateDatastore,
+      seenBlockInputCache,
+      lightClientServer,
+      executionEngine,
+      executionBuilder,
+      builderApiClientOpts: {
+        timeout: opts.executionBuilder.timeout,
+        userAgent: opts.executionBuilder.userAgent,
+      },
+    });
+    await executeStateInitialization(beaconEngine, stateInitialization);
     await db.pruneHotDb();
+    const anchor = await beaconEngine.initializeFromAnchor();
+    if (metrics) initBeaconMetrics(metrics, anchor);
 
     // Delete deprecated eth1 data to free up disk space for users
     logger.debug("Deleting deprecated eth1 data from database");
@@ -208,59 +321,30 @@ export class BeaconNode {
         logger.error("Failed to delete deprecated eth1 data", {}, e);
       });
 
-    const monitoring = opts.monitoring.endpoint
-      ? new MonitoringService(
-          "beacon",
-          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
-          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
-        )
-      : null;
-
-    let executionEngineOpts = opts.executionEngine;
-    if (opts.executionEngine.mode === "mock") {
-      const latestEth1BlockHash =
-        isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
-          ? isStatePostGloas(anchorState)
-            ? toRootHex(anchorState.latestBlockHash)
-            : toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
-          : undefined;
-      executionEngineOpts = {
-        ...opts.executionEngine,
-        genesisBlockHash: ZERO_HASH_HEX,
-        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? latestEth1BlockHash,
-        genesisTime: anchorState.genesisTime,
-        config,
-      };
-    }
-
     const chain = new BeaconChain(opts.chain, {
-      privateKey,
       config,
-      clock,
       pubkeyCache,
-      dataDir,
-      dataColumnDir,
       db,
       dbName: opts.db.name,
-      logger: logger.child({module: LoggerModule.chain}),
+      dataDir,
+      dataColumnDir,
+      logger: chainLogger,
       processShutdownCallback,
       metrics,
       validatorMonitor,
-      anchorState,
-      isAnchorStateFinalized,
-      executionEngine: initializeExecutionEngine(executionEngineOpts, {
-        metrics,
-        signal,
-        logger: logger.child({module: LoggerModule.execution}),
-      }),
-      executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
-        : undefined,
-      builderApiClientOpts: {
-        timeout: opts.executionBuilder.timeout,
-        // Sent with all builder api requests, unless the node runs in private mode
-        userAgent: opts.executionBuilder.userAgent,
-      },
+      executionEngine,
+      executionBuilder,
+      beaconEngine,
+      abortController: chainController,
+      clock,
+      emitter,
+      cpStateDatastore,
+      custodyConfig,
+      serializedCache,
+      seenBlockInputCache,
+      lightClientServer,
+      anchor,
+      builderApiClient: beaconEngine.builderApiClient,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -363,4 +447,15 @@ export class BeaconNode {
       this.status = BeaconNodeStatus.closed;
     }
   }
+}
+
+export async function executeStateInitialization(
+  beaconEngine: IBeaconEngine,
+  stateInitialization: StateInitialization
+): Promise<AnchorSummary> {
+  const anchor = await beaconEngine.prepareAnchorState(stateInitialization.stateBytes);
+  stateInitialization.validate(anchor);
+  if (stateInitialization.shouldPersist) await beaconEngine.persistAnchorState();
+  stateInitialization.log(anchor);
+  return anchor;
 }

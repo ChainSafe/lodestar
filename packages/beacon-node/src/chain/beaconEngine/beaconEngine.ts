@@ -34,6 +34,7 @@ import {
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  createBeaconStateView,
   getCurrentEpoch,
   getEffectiveBalancesFromStateBytes,
   getIndexedAttestation,
@@ -78,7 +79,7 @@ import {
   rewards,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
@@ -113,6 +114,7 @@ import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
+import {persistAnchorState} from "../initState.js";
 import {CommonBlockBody, FindHeadFnName, StateGetOpts} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {
@@ -194,6 +196,7 @@ import {
 } from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, verifyExecutionPayloadEnvelope} from "./importExecutionPayload.js";
+import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import type {ApiStateId} from "./interface.js";
 import {
   ApiStateResult,
@@ -216,28 +219,23 @@ import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {verifyBlocks} from "./verifyBlock.js";
 
-/**
- * JS implementation of the consensus engine. Transitional in Phase 0: constructed inside
- * `BeaconChain` from the `anchorState` object; construction moves to the CLI in Phase 6.
- *
- * Minimal by design — collaborators, state ownership and flows migrate here in later phases.
- */
+/** Owns consensus state. Anchor preparation precedes validation and runtime initialization. */
 export class BeaconEngine implements IBeaconEngine {
   readonly config: BeaconConfig;
   readonly opts: IBeaconEngineOptions;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly clock: IClock;
-  readonly genesisTime: number;
+  genesisTime!: number;
   readonly pubkeyCache: PubkeyCache;
   // NodeJS-specific memory pool for state serialization; engine-internal (not on IBeaconEngine).
-  readonly bufferPool: BufferPool;
-  readonly bls: IBlsVerifier;
-  readonly shufflingCache: ShufflingCache;
+  bufferPool!: BufferPool;
+  bls!: IBlsVerifier;
+  shufflingCache!: ShufflingCache;
 
-  readonly blockStateCache: BlockStateCache;
-  readonly checkpointStateCache: CheckpointStateCache;
-  readonly checkpointBalancesCache: CheckpointBalancesCache;
+  blockStateCache!: BlockStateCache;
+  checkpointStateCache!: CheckpointStateCache;
+  checkpointBalancesCache!: CheckpointBalancesCache;
   readonly events = new BeaconEngineEventBus();
   private chainViewPublisher?: ChainViewPublisher;
 
@@ -251,31 +249,31 @@ export class BeaconEngine implements IBeaconEngine {
     if (update) this.events.emit(BeaconEngineEvent.chainViewUpdated, update);
   }
 
-  readonly forkChoice: IForkChoice;
-  readonly regen: QueuedStateRegenerator;
+  forkChoice!: IForkChoice;
+  regen!: QueuedStateRegenerator;
 
   // Op pools
-  readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool: AggregatedAttestationPool;
-  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
-  readonly payloadAttestationPool: PayloadAttestationPool;
+  attestationPool!: AttestationPool;
+  aggregatedAttestationPool!: AggregatedAttestationPool;
+  syncCommitteeMessagePool!: SyncCommitteeMessagePool;
+  syncContributionAndProofPool!: SyncContributionAndProofPool;
+  payloadAttestationPool!: PayloadAttestationPool;
   readonly executionPayloadBidPool = new ExecutionPayloadBidPool();
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
-  readonly opPool: OpPool;
-  readonly beaconProposerCache: BeaconProposerCache;
+  opPool!: OpPool;
+  beaconProposerCache!: BeaconProposerCache;
 
   // Consensus gossip seen-caches
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof: SeenContributionAndProof;
-  readonly seenAttestationDatas: SeenAttestationDatas;
+  seenContributionAndProof!: SeenContributionAndProof;
+  seenAttestationDatas!: SeenAttestationDatas;
   readonly seenBlockProposers = new SeenBlockProposers();
   // Liveness cache: attesters seen through imported blocks (populated during block import).
   readonly seenBlockAttesters = new SeenBlockAttesters();
-  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenAggregatedAttestations!: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
 
   // TODO - beacon engine: how to remove this?
@@ -285,7 +283,7 @@ export class BeaconEngine implements IBeaconEngine {
   readonly db: IBeaconEngineDb;
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
-  private readonly stateArchiveStrategy: StateArchiveStrategy;
+  private stateArchiveStrategy!: StateArchiveStrategy;
   // Finalized writes are monotonic; restart from zero to include the newly persisted anchor.
   private statePruneFromSlot: Slot = 0;
   // Historical (below-finalized) state serving via a worker thread; built lazily on --serveHistoricalState.
@@ -302,28 +300,28 @@ export class BeaconEngine implements IBeaconEngine {
   private cachedGenesisBlockRoot: Root | null = null;
 
   readonly executionEngine: IExecutionEngine;
-  readonly builderApiClient: BuilderApiClient;
-  readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  builderApiClient!: BuilderApiClient;
+  builderCircuitBreaker!: BuilderCircuitBreaker;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
   private readonly producingProposerSlashing = new Set<ValidatorIndex>();
   readonly executionBuilder?: IExecutionBuilder;
 
-  constructor(modules: BeaconEngineModules, anchorState: IBeaconStateView) {
-    const {
-      opts,
-      config,
-      logger,
-      metrics,
-      clock,
-      pubkeyCache,
-      cpStateDatastore,
-      emitter,
-      signal,
-      db,
-      validatorMonitor,
-      seenBlockInputCache,
-      isAnchorStateFinalized,
-    } = modules;
+  private startupPhase:
+    | "created"
+    | "preparing"
+    | "prepared"
+    | "persisting"
+    | "initializing"
+    | "ready"
+    | "failed"
+    | "closed" = "created";
+  private closed = false;
+  private pendingPersistence?: Promise<void>;
+  private anchorState?: IBeaconStateView;
+  private anchorStateBytes?: Uint8Array;
+
+  constructor(private readonly modules: BeaconEngineModules) {
+    const {opts, config, logger, metrics, clock, pubkeyCache, signal, db} = modules;
     this.executionEngine = modules.executionEngine;
     this.executionBuilder = modules.executionBuilder;
     this.config = config;
@@ -335,18 +333,126 @@ export class BeaconEngine implements IBeaconEngine {
     this.signal = signal;
     this.metrics = metrics;
     this.clock = clock;
-    this.genesisTime = anchorState.genesisTime;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
+    this.seenBlockInputCache = modules.seenBlockInputCache;
+    this.validatorMonitor = modules.validatorMonitor;
+    this.emitter = modules.emitter;
+  }
+
+  async prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
+    this.assertStartupPhase("created");
+    this.startupPhase = "preparing";
+    try {
+      const state = createBeaconStateView({
+        config: this.config,
+        stateBytes,
+        useNative: this.opts.nativeStateView ?? false,
+      });
+      const anchor = {
+        slot: state.slot,
+        stateRoot: state.hashTreeRoot(),
+        fork: state.fork,
+        checkpoint: state.computeAnchorCheckpoint().checkpoint,
+        latestBlockSlot: state.latestBlockHeader.slot,
+      };
+      this.genesisTime = state.genesisTime;
+      this.anchorState = state;
+      this.anchorStateBytes = stateBytes;
+      this.startupPhase = "prepared";
+      return structuredClone(anchor);
+    } catch (e) {
+      this.startupPhase = "failed";
+      throw e;
+    }
+  }
+
+  async persistAnchorState(): Promise<void> {
+    this.assertStartupPhase("prepared");
+    const state = this.anchorState;
+    const bytes = this.anchorStateBytes;
+    if (!state || !bytes) throw new LodestarError({code: "ANCHOR_STATE_MISSING"});
+    this.startupPhase = "persisting";
+    try {
+      this.pendingPersistence = persistAnchorState(this.config, this.db, state, bytes);
+      await this.pendingPersistence;
+      this.startupPhase = "prepared";
+    } catch (e) {
+      this.startupPhase = "failed";
+      throw e;
+    }
+  }
+
+  async initializeFromAnchor(): Promise<EngineBootstrap> {
+    this.assertStartupPhase("prepared");
+    const anchorState = this.anchorState;
+    if (!anchorState) throw new LodestarError({code: "ANCHOR_STATE_MISSING"});
+    this.startupPhase = "initializing";
+    try {
+      this.initializeRuntime(anchorState);
+      const bootstrap: EngineBootstrap = {
+        slot: anchorState.slot,
+        stateRoot: anchorState.hashTreeRoot(),
+        fork: anchorState.fork,
+        checkpoint: anchorState.computeAnchorCheckpoint().checkpoint,
+        latestBlockSlot: anchorState.latestBlockHeader.slot,
+        genesisTime: anchorState.genesisTime,
+        genesisValidatorsRoot: anchorState.genesisValidatorsRoot,
+        previousJustifiedCheckpoint: ssz.phase0.Checkpoint.clone(anchorState.previousJustifiedCheckpoint),
+        currentJustifiedCheckpoint: ssz.phase0.Checkpoint.clone(anchorState.currentJustifiedCheckpoint),
+        finalizedCheckpoint: ssz.phase0.Checkpoint.clone(anchorState.finalizedCheckpoint),
+        gloasAnchor:
+          isStatePostGloas(anchorState) && anchorState.latestBlockHeader.slot > 0
+            ? {
+                fork: anchorState.forkName,
+                proposerIndex: anchorState.latestBlockHeader.proposerIndex,
+                bid: ssz.gloas.ExecutionPayloadBid.clone(anchorState.latestExecutionPayloadBid),
+              }
+            : null,
+      };
+      this.anchorState = undefined;
+      this.anchorStateBytes = undefined;
+      this.startupPhase = "ready";
+      return structuredClone(bootstrap);
+    } catch (e) {
+      this.startupPhase = "failed";
+      throw e;
+    }
+  }
+
+  private assertStartupPhase(expected: "created" | "prepared"): void {
+    if (this.closed || this.startupPhase !== expected) {
+      throw new LodestarError({
+        code: "BEACON_ENGINE_STARTUP_PHASE",
+        expected,
+        actual: this.closed ? "closed" : this.startupPhase,
+      });
+    }
+  }
+
+  private onSlot?: (slot: Slot) => void;
+  private onEpoch?: (epoch: Epoch) => void;
+  private readonly checkpointListener = this.onCheckpoint.bind(this);
+
+  private initializeRuntime(anchorState: IBeaconStateView): void {
+    const modules = this.modules;
+    const {
+      opts,
+      config,
+      logger,
+      metrics,
+      clock,
+      cpStateDatastore,
+      emitter,
+      signal,
+      db,
+      validatorMonitor,
+      seenBlockInputCache,
+      isAnchorStateFinalized,
+    } = modules;
     // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
-    this.seenBlockInputCache = seenBlockInputCache;
-    this.validatorMonitor = validatorMonitor;
     this.lightClientServer = modules.lightClientServer;
-    this.emitter = emitter;
-    // Warm the shuffling cache on each checkpoint — engine-internal (re-fetches the checkpoint state from
-    // regen, so no IBeaconStateView crosses the seam on the event).
-    this.emitter.addListener(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
 
     // by default, verify signatures on both main threads and worker threads
     this.bls = opts.blsVerifyAllMainThread
@@ -445,7 +551,7 @@ export class BeaconEngine implements IBeaconEngine {
 
     // The engine prunes its OWN caches on the clock tick (the facade no longer reaches in). More
     // engine-owned pools/caches move under this listener in later slices.
-    clock.addListener(ClockEvent.slot, (slot: Slot) => {
+    this.onSlot = (slot: Slot) => {
       this.attestationPool.prune(slot);
       this.aggregatedAttestationPool.prune(slot);
       this.syncCommitteeMessagePool.prune(slot);
@@ -456,15 +562,18 @@ export class BeaconEngine implements IBeaconEngine {
       this.seenSyncCommitteeMessages.prune(slot);
       this.seenExecutionPayloadBids.prune(slot);
       this.seenAttestationDatas.onSlot(slot);
-    });
-    clock.addListener(ClockEvent.epoch, (epoch: Epoch) => {
+    };
+    this.onEpoch = (epoch: Epoch) => {
       this.seenAttesters.prune(epoch);
       this.seenAggregators.prune(epoch);
       this.seenPayloadAttesters.prune(epoch);
       this.seenAggregatedAttestations.prune(epoch);
       this.seenBlockAttesters.prune(epoch);
       this.beaconProposerCache.prune(epoch);
-    });
+    };
+    this.clock.on(ClockEvent.slot, this.onSlot);
+    this.clock.on(ClockEvent.epoch, this.onEpoch);
+    this.emitter.on(ChainEvent.checkpoint, this.checkpointListener);
 
     // The engine reports metrics for its own (internal) op pools.
     if (metrics) {
@@ -2078,6 +2187,8 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Validator-monitor end-of-epoch hook against the head state (facade clock listener drives the timing). */
   validatorMonitorOnceEveryEndOfEpoch(): void {
+    // TODO - beacon engine: keep state-dependent monitoring inside the engine or pass derived data
+    // to the shared validator monitor before introducing a worker; do not pass live state views across it.
     this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
   }
 
@@ -2144,8 +2255,17 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Tear down engine-owned resources: historical-state worker + BLS pool (graceful shutdown). */
   async close(): Promise<void> {
+    this.closed = true;
+    await this.pendingPersistence?.catch(() => {});
+    this.pendingPersistence = undefined;
+    if (this.onSlot) this.clock.off(ClockEvent.slot, this.onSlot);
+    if (this.onEpoch) this.clock.off(ClockEvent.epoch, this.onEpoch);
+    this.emitter?.off(ChainEvent.checkpoint, this.checkpointListener);
     await this.historicalStateRegen?.close();
-    await this.bls.close();
+    await this.bls?.close();
+    this.anchorState = undefined;
+    this.anchorStateBytes = undefined;
+    this.startupPhase = "closed";
   }
 
   /** Prometheus metrics from the historical-state worker. */

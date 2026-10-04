@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {BeaconDb, DbCPStateDatastore, nodeUtils} from "@lodestar/beacon-node";
+import {BeaconDb, DbCPStateDatastore, defaultOptions, nodeUtils} from "@lodestar/beacon-node";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -11,6 +12,9 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, computeAnchorCheckpoint, computeWeakSubjectivityPeriod} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ExecutionEngineDisabled} from "../../../../beacon-node/lib/execution/engine/disabled.js";
+import {executeStateInitialization} from "../../../../beacon-node/lib/node/nodejs.js";
+import {createTestBeaconEngine} from "../../../../beacon-node/test/utils/engine.js";
 import {initBeaconState} from "../../../src/cmds/beacon/initBeaconState.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {StateInitializationErrorCode} from "../../../src/cmds/beacon/stateInitialization/errors.js";
@@ -122,7 +126,7 @@ describe("initBeaconState", () => {
 
   // Reduce the result to a summary, a failing assertion would otherwise try to print the whole state
   async function init(db: BeaconDb, args: Partial<BeaconArgs & GlobalArgs>): Promise<AnchorSummary> {
-    const {anchorState, isFinalized} = await initBeaconState(
+    const stateInit = await initBeaconState(
       {network: "dev", ...args} as BeaconArgs & GlobalArgs,
       fixturesDir,
       path.join(fixturesDir, "pubkeys"),
@@ -130,7 +134,45 @@ describe("initBeaconState", () => {
       db,
       getMockedLogger()
     );
-    return {slot: anchorState.slot, stateRoot: toRootHex(anchorState.hashTreeRoot()), isFinalized};
+    let summary: AnchorSummary | undefined;
+    const modules = createTestBeaconEngine(
+      {
+        ...defaultOptions.chain,
+        blsVerifyAllMainThread: true,
+        disablePrepareNextSlot: true,
+        disableLightClientServer: true,
+        disableArchiveOnCheckpoint: true,
+      },
+      {
+        privateKey: await generateKeyPair("secp256k1"),
+        config: stateInit.config,
+        pubkeyCache,
+        // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
+        db,
+        dbName: path.join(fixturesDir, "db"),
+        dataDir: fixturesDir,
+        logger: getMockedLogger(),
+        processShutdownCallback: () => {},
+        metrics: null,
+        validatorMonitor: null,
+        anchorStateBytes: stateInit.stateBytes,
+        isAnchorStateFinalized: stateInit.isFinalized,
+        // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
+        executionEngine: new ExecutionEngineDisabled(),
+      }
+    );
+    // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
+    await executeStateInitialization(modules.beaconEngine, {
+      ...stateInit,
+      log(anchor) {
+        stateInit.log(anchor);
+        summary = {slot: anchor.slot, stateRoot: toRootHex(anchor.stateRoot), isFinalized: stateInit.isFinalized};
+      },
+    });
+    modules.abortController.abort();
+    await modules.beaconEngine.close();
+    if (!summary) throw new Error("Missing anchor summary");
+    return summary;
   }
 
   function anchorOf(fixture: Fixture, isFinalized: boolean): AnchorSummary {

@@ -32,7 +32,13 @@ describe("Events api impl", () => {
     let controller: AbortController;
 
     beforeEach(() => {
-      chainStub = vi.mocked(new BeaconChain({} as any, {} as any), {partial: true, deep: false});
+      chainStub = vi.mocked(
+        new BeaconChain(
+          {} as ConstructorParameters<typeof BeaconChain>[0],
+          {} as ConstructorParameters<typeof BeaconChain>[1]
+        ),
+        {partial: true, deep: false}
+      );
       chainEventEmmitter = chainStub.emitter;
       api = getEventsApi({config, chain: chainStub, logger: testLogger()});
       controller = new AbortController();

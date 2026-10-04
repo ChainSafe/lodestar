@@ -65,6 +65,7 @@ import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {IBeaconEngineEventBus} from "./events.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
+import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
@@ -222,6 +223,9 @@ export type ApiStateResultWithFork<T> =
   | null;
 
 export interface IBeaconEngine {
+  prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
+  persistAnchorState(): Promise<void>;
+  initializeFromAnchor(): Promise<EngineBootstrap>;
   readonly events: IBeaconEngineEventBus;
   getChainViewSnapshot(): ChainViewSnapshot;
   readonly config: BeaconConfig;

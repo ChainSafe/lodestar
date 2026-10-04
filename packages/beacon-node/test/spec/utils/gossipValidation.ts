@@ -42,6 +42,7 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "../../utils/chain.js";
 import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 
 /**
@@ -371,7 +372,7 @@ export async function runGossipValidationTest(
   );
   const anchorStateView = new BeaconStateView(cachedState);
 
-  const chain = new BeaconChain(
+  const chain = await createBeaconChain(
     {
       ...defaultChainOptions,
       // Disable non-spec maxSkipSlots check for conformance tests
@@ -396,7 +397,7 @@ export async function runGossipValidationTest(
       clock,
       metrics: null,
       validatorMonitor: null,
-      anchorState: anchorStateView,
+      anchorStateBytes: anchorStateView.serialize(),
       isAnchorStateFinalized: true,
       executionEngine,
       executionBuilder: undefined,

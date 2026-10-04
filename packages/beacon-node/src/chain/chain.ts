@@ -1,5 +1,4 @@
 import path from "node:path";
-import {PrivateKey} from "@libp2p/interface";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -13,7 +12,6 @@ import {
   SLOTS_PER_EPOCH,
   isForkPostGloas,
 } from "@lodestar/params";
-import {IBeaconStateView, isStatePostGloas} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -39,11 +37,10 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
-import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
-import {Clock, ClockEvent, IClock} from "../util/clock.js";
+import {ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
@@ -53,7 +50,8 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {BeaconEngineEvent} from "./beaconEngine/events.js";
-import {BeaconEngine, IBeaconEngine} from "./beaconEngine/index.js";
+import {IBeaconEngine} from "./beaconEngine/index.js";
+import {EngineBootstrap} from "./beaconEngine/initialization.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
@@ -76,8 +74,7 @@ import {ProduceResult} from "./produceBlock/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
-import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
+import {checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -104,6 +101,32 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
  * keeping them in memory. Keep moderate to avoid OOM during sync.
  */
 const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
+
+export type BeaconChainModules = {
+  config: BeaconConfig;
+  pubkeyCache: PubkeyCache;
+  db: IBeaconDb;
+  dbName: string;
+  dataDir: string;
+  dataColumnDir?: string;
+  logger: Logger;
+  processShutdownCallback: ProcessShutdownCallback;
+  metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
+  executionEngine: IExecutionEngine;
+  executionBuilder?: IExecutionBuilder;
+  beaconEngine: IBeaconEngine;
+  builderApiClient: BuilderApiClient;
+  anchor: EngineBootstrap;
+  abortController: AbortController;
+  clock: IClock;
+  emitter: ChainEventEmitter;
+  cpStateDatastore: CPStateDatastore;
+  custodyConfig: CustodyConfig;
+  serializedCache: SerializedCache;
+  seenBlockInputCache: SeenBlockInput;
+  lightClientServer?: LightClientServer;
+};
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -168,7 +191,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconChainDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
-  private abortController = new AbortController();
+  private readonly abortController: AbortController;
   private processShutdownCallback: ProcessShutdownCallback;
   private _earliestAvailableSlot: Slot;
 
@@ -183,10 +206,8 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  constructor(
-    opts: IChainOptions,
-    {
-      privateKey,
+  constructor(opts: IChainOptions, modules: BeaconChainModules) {
+    const {
       config,
       pubkeyCache,
       db,
@@ -195,35 +216,21 @@ export class BeaconChain implements IBeaconChain {
       dataColumnDir,
       logger,
       processShutdownCallback,
-      clock,
       metrics,
       validatorMonitor,
-      anchorState,
-      isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
-      builderApiClientOpts,
-    }: {
-      privateKey: PrivateKey;
-      config: BeaconConfig;
-      pubkeyCache: PubkeyCache;
-      db: IBeaconDb;
-      dbName: string;
-      dataDir: string;
-      dataColumnDir?: string;
-      logger: Logger;
-      processShutdownCallback: ProcessShutdownCallback;
-      /** Used for testing to supply fake clock */
-      clock?: IClock;
-      metrics: Metrics | null;
-      validatorMonitor: ValidatorMonitor | null;
-      anchorState: IBeaconStateView;
-      isAnchorStateFinalized: boolean;
-      executionEngine: IExecutionEngine;
-      executionBuilder?: IExecutionBuilder;
-      builderApiClientOpts?: BuilderApiClientOpts;
-    }
-  ) {
+      beaconEngine,
+      anchor,
+      abortController,
+      clock,
+      emitter,
+      cpStateDatastore,
+      custodyConfig,
+      serializedCache,
+      seenBlockInputCache,
+      lightClientServer,
+    } = modules;
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -231,88 +238,32 @@ export class BeaconChain implements IBeaconChain {
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
     this.validatorMonitor = validatorMonitor;
-    this.genesisTime = anchorState.genesisTime;
-    this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
-    this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
+    this.genesisTime = anchor.genesisTime;
+    this.anchorStateLatestBlockSlot = anchor.latestBlockSlot;
+    this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    const signal = this.abortController.signal;
-    const emitter = new ChainEventEmitter();
-
-    if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
-
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-    // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
-    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
-
-    const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
-    this.metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
-    // TODO: backfill not implemented yet
-    this.metrics?.peerDas.custodyGroupsBackfilled.set(0);
-    this.custodyConfig = new CustodyConfig({
-      nodeId,
-      config,
-      initialCustodyGroupCount,
-    });
-
-    this.serializedCache = new SerializedCache();
-    // seenBlockInputCache stays facade-owned but is built before the engine so it can be injected into regen.
-    this.seenBlockInputCache = new SeenBlockInput({
-      config,
-      custodyConfig: this.custodyConfig,
-      clock,
-      chainEvents: emitter,
-      signal,
-      serializedCache: this.serializedCache,
-      metrics,
-      logger,
-    });
-
-    // lightClientServer proof-gen is engine-owned; created here (depends on nothing from the engine)
-    // and injected at construction.
-    if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
-    }
-
-    const beaconEngine = new BeaconEngine(
-      {
-        executionEngine,
-        executionBuilder,
-        builderApiClientOpts,
-        opts,
-        config,
-        logger,
-        dbName,
-        dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
-        metrics,
-        clock,
-        pubkeyCache,
-        cpStateDatastore: this.cpStateDatastore,
-        emitter,
-        signal,
-        db,
-        validatorMonitor,
-        seenBlockInputCache: this.seenBlockInputCache,
-        isAnchorStateFinalized,
-        lightClientServer: this.lightClientServer,
-      },
-      anchorState
-    );
+    this.abortController = abortController;
+    const signal = abortController.signal;
+    this.cpStateDatastore = cpStateDatastore;
+    this.custodyConfig = custodyConfig;
+    this.serializedCache = serializedCache;
+    this.seenBlockInputCache = seenBlockInputCache;
+    this.lightClientServer = lightClientServer;
     this.beaconEngine = beaconEngine;
     // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.
-    this.builderApiClient = beaconEngine.builderApiClient;
+    this.builderApiClient = modules.builderApiClient;
     this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
     beaconEngine.events.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
-    this._earliestAvailableSlot = anchorState.slot;
+    this._earliestAvailableSlot = anchor.slot;
 
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
 
-    const {checkpoint} = anchorState.computeAnchorCheckpoint();
+    const {checkpoint} = anchor;
 
     this.reprocessController = new ReprocessController(this.metrics);
 
@@ -332,14 +283,14 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    const anchorBlockSlot = anchorState.latestBlockHeader.slot;
-    if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
-      const anchorBid = anchorState.latestExecutionPayloadBid;
+    const anchorBlockSlot = anchor.latestBlockSlot;
+    if (anchor.gloasAnchor !== null) {
+      const anchorBid = anchor.gloasAnchor.bid;
       this.seenPayloadEnvelopeInputCache.addFromBid({
         blockRootHex: toRootHex(checkpoint.root),
         slot: anchorBlockSlot,
-        forkName: anchorState.forkName,
-        proposerIndex: anchorState.latestBlockHeader.proposerIndex,
+        forkName: anchor.gloasAnchor.fork,
+        proposerIndex: anchor.gloasAnchor.proposerIndex,
         bid: anchorBid,
         sampledColumns: this.custodyConfig.sampledColumns,
         custodyColumns: this.custodyConfig.custodyColumns,
@@ -371,7 +322,7 @@ export class BeaconChain implements IBeaconChain {
         ...opts,
         dbName,
         dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
-        anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint},
+        anchorState: {finalizedCheckpoint: anchor.finalizedCheckpoint},
       },
       signal
     );

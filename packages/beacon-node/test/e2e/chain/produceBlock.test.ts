@@ -31,6 +31,7 @@ import {getExecutionEngineFromBackend} from "../../../src/execution/engine/index
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {initDevState} from "../../../src/node/utils/state.js";
 import {getApiTestModules} from "../../utils/api.js";
+import {createBeaconChain} from "../../utils/chain.js";
 
 describe("engine block production", () => {
   for (const fork of [ForkName.electra, ForkName.fulu]) {
@@ -78,7 +79,7 @@ describe("engine block production", () => {
       };
       let chain: BeaconChain | undefined;
       try {
-        chain = new BeaconChain(
+        chain = await createBeaconChain(
           {
             blsVerifyAllMainThread: true,
             disableArchiveOnCheckpoint: true,
@@ -99,7 +100,7 @@ describe("engine block production", () => {
             processShutdownCallback: () => {},
             metrics: null,
             validatorMonitor: null,
-            anchorState: state,
+            anchorStateBytes: state.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,
             executionBuilder: builder,
