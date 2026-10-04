@@ -7,6 +7,7 @@ import {
   isValidAggregationBits,
   isValidAttestationData,
   isValidIndexedAttestation2,
+  readHeightPair,
 } from "../util/decoupled.js";
 
 // Spec: process_attestation [Modified in DC] (decoupled-consensus/beacon-chain.md)
@@ -16,9 +17,9 @@ export function processAttestationsDecoupled(
   verifySignature = true
 ): void {
   const currentRound = computeRoundAtSlot(state.slot);
-  const targetPair = state.targetPair.toValue();
-  const justifiedPair = state.justifiedPair.toValue();
-  const finalizedPair = state.finalizedPair.toValue();
+  const targetPair = readHeightPair(state.targetPair);
+  const justifiedPair = readHeightPair(state.justifiedPair);
+  const finalizedPair = readHeightPair(state.finalizedPair);
 
   for (const attestation of attestations) {
     const {data} = attestation;

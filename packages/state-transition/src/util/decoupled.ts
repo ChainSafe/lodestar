@@ -52,6 +52,11 @@ export function heightPairEquals(a: decoupled.HeightPair, b: decoupled.HeightPai
   return a.height === b.height && byteArrayEquals(a.root, b.root);
 }
 
+/** Read through the view getters so uncommitted writes from process_slot are visible, unlike toValue() */
+export function readHeightPair(view: CachedBeaconStateDecoupled["targetPair"]): decoupled.HeightPair {
+  return {height: view.height, root: view.root};
+}
+
 // Spec: compute_round_at_slot (decoupled-consensus/beacon-chain.md)
 export function computeRoundAtSlot(slot: Slot): Round {
   return Math.floor(slot / SLOTS_PER_ROUND);
@@ -243,9 +248,9 @@ export function isValidAttestationData(state: CachedBeaconStateDecoupled, data: 
   }
 
   const statePairs = {
-    target: state.targetPair.toValue(),
-    justified: state.justifiedPair.toValue(),
-    finalized: state.finalizedPair.toValue(),
+    target: readHeightPair(state.targetPair),
+    justified: readHeightPair(state.justifiedPair),
+    finalized: readHeightPair(state.finalizedPair),
   };
 
   const isValidTargetRoot =

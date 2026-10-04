@@ -8,7 +8,7 @@ import {
 import {Root, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateDecoupled} from "../types.js";
-import {FINALITY_FLAG, hasQuorum, isZeroRoot} from "../util/decoupled.js";
+import {FINALITY_FLAG, hasQuorum, isZeroRoot, readHeightPair} from "../util/decoupled.js";
 import {zeroProgressiveListBasicRootNode} from "../util/ssz.js";
 
 export type ProcessHeightEventsOpts = {
@@ -51,12 +51,12 @@ export function processHeightEvents(state: CachedBeaconStateDecoupled, opts: Pro
   const timeoutDelayRounds = opts.timeoutDelayRounds ?? TIMEOUT_DELAY_ROUNDS;
 
   if (state.justifiedPair.height > state.finalizedPair.height && hasQuorum(state, FINALITY_FLAG_INDEX)) {
-    state.finalizedPair = ssz.decoupled.HeightPair.toViewDU(state.justifiedPair.toValue());
+    state.finalizedPair = ssz.decoupled.HeightPair.toViewDU(readHeightPair(state.justifiedPair));
     state.finalizedSlot = state.justifiedSlot;
   }
 
   if (hasQuorum(state, TARGET_FLAG_INDEX)) {
-    state.justifiedPair = ssz.decoupled.HeightPair.toViewDU(state.targetPair.toValue());
+    state.justifiedPair = ssz.decoupled.HeightPair.toViewDU(readHeightPair(state.targetPair));
     state.justifiedSlot = state.targetSlot;
     advanceHeight(state, true);
     return;
