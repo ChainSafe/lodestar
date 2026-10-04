@@ -7,14 +7,12 @@ import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {IChainOptions} from "../../src/chain/options.js";
-import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
 import {BuilderApiClientOpts} from "../../src/execution/builder/apiClient.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../src/util/clock.js";
 import {CustodyConfig} from "../../src/util/dataColumns.js";
-import {SerializedCache} from "../../src/util/serializedCache.js";
 
 export type TestBeaconEngineModules = Omit<
   BeaconChainModules,
@@ -25,8 +23,6 @@ export type TestBeaconEngineModules = Omit<
   | "emitter"
   | "cpStateDatastore"
   | "custodyConfig"
-  | "serializedCache"
-  | "seenBlockInputCache"
   | "lightClientServer"
   | "builderApiClient"
 > & {
@@ -79,19 +75,6 @@ export function createTestBeaconEngine(
     initialCustodyGroupCount,
   });
 
-  const serializedCache = new SerializedCache();
-  // seenBlockInputCache stays facade-owned but is built before the engine so it can be injected into regen.
-  const seenBlockInputCache = new SeenBlockInput({
-    config,
-    custodyConfig,
-    clock,
-    chainEvents: emitter,
-    signal,
-    serializedCache,
-    metrics,
-    logger,
-  });
-
   // lightClientServer proof-gen is engine-owned; created here (depends on nothing from the engine)
   // and injected at construction.
   const lightClientServer = opts.disableLightClientServer
@@ -115,7 +98,6 @@ export function createTestBeaconEngine(
     signal,
     db,
     validatorMonitor,
-    seenBlockInputCache,
     isAnchorStateFinalized,
     lightClientServer,
   });
@@ -127,8 +109,6 @@ export function createTestBeaconEngine(
     emitter,
     cpStateDatastore,
     custodyConfig,
-    serializedCache,
-    seenBlockInputCache,
     lightClientServer,
   };
 }

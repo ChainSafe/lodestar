@@ -18,7 +18,6 @@ import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
 import {LightClientServer} from "../chain/lightClient/index.js";
-import {SeenBlockInput} from "../chain/seenCache/seenGossipBlockInput.js";
 import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
 import {StateInitialization} from "../chain/stateInitialization.js";
@@ -32,7 +31,6 @@ import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
-import {SerializedCache} from "../util/serializedCache.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -245,20 +243,6 @@ export class BeaconNode {
       initialCustodyGroupCount,
     });
 
-    const serializedCache = new SerializedCache();
-    // TODO - beacon engine: keep this cache facade-owned and replace regen's shared reference with
-    // engine-owned pending blocks retained until persistence completes before introducing a worker.
-    const seenBlockInputCache = new SeenBlockInput({
-      config,
-      custodyConfig,
-      clock,
-      chainEvents: emitter,
-      signal: chainController.signal,
-      serializedCache,
-      metrics,
-      logger: chainLogger,
-    });
-
     // TODO - beacon engine: move LightClientServer into the engine and expose data-only queries/events
     // before introducing a worker; the facade currently shares this state-consuming service.
     const lightClientServer = opts.chain.disableLightClientServer
@@ -296,7 +280,6 @@ export class BeaconNode {
       signal: chainController.signal,
       emitter,
       cpStateDatastore,
-      seenBlockInputCache,
       lightClientServer,
       executionEngine,
       executionBuilder,
@@ -340,8 +323,6 @@ export class BeaconNode {
       emitter,
       cpStateDatastore,
       custodyConfig,
-      serializedCache,
-      seenBlockInputCache,
       lightClientServer,
       anchor,
       builderApiClient: beaconEngine.builderApiClient,

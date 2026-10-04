@@ -153,7 +153,7 @@ export async function validateGossipFuluDataColumnSidecar(
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
   const signature = dataColumnSidecar.signedBlockHeader.signature;
-  if (!this.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+  if (!this.isVerifiedProposerSignature(blockRootHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
       this.config,
       dataColumnSidecar.signedBlockHeader
@@ -173,7 +173,7 @@ export async function validateGossipFuluDataColumnSidecar(
       });
     }
 
-    this.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
+    this.markVerifiedProposerSignature(blockRootHex, signature);
   }
 
   // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block

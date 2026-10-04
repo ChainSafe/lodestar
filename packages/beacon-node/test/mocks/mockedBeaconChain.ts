@@ -229,6 +229,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenAggregatedAttestations: new SeenAggregatedAttestations(null),
       seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
       seenBlockProposers: new SeenBlockProposers(),
+      isVerifiedProposerSignature: vi.fn().mockReturnValue(false),
+      markVerifiedProposerSignature: vi.fn(),
       seenSyncCommitteeMessages: new SeenSyncCommitteeMessages(),
       seenContributionAndProof: new SeenContributionAndProof(null),
       seenAttestationDatas: new SeenAttestationDatas(null),

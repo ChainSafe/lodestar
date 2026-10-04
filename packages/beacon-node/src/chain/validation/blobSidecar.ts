@@ -137,7 +137,7 @@ export async function validateGossipBlobSidecar(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   const signature = blobSidecar.signedBlockHeader.signature;
-  if (!this.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
+  if (!this.isVerifiedProposerSignature(blockHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
       this.config,
       blockState.slot,
@@ -153,7 +153,7 @@ export async function validateGossipBlobSidecar(
       });
     }
 
-    this.seenBlockInputCache.markVerifiedProposerSignature(blobSlot, blockHex, signature);
+    this.markVerifiedProposerSignature(blockHex, signature);
   }
 
   // verify if the blob inclusion proof is correct

@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {bellatrix, ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {
@@ -116,8 +116,9 @@ describe("BeaconEngine block execution verification", () => {
         ? {status, latestValidHash: toRootHex(Buffer.alloc(32, 1)), validationError: null}
         : {status, latestValidHash: null, validationError: null}
     );
+    const blockBytes = ssz.bellatrix.SignedBeaconBlock.serialize(input.getBlock() as bellatrix.SignedBeaconBlock);
     const result = await chain.beaconEngine.verifyBlocks(
-      [],
+      [blockBytes],
       zeroProtoBlock,
       [input],
       {validSignatures: true},
@@ -125,6 +126,7 @@ describe("BeaconEngine block execution verification", () => {
     );
     expect(result.segmentExecStatus).toMatchObject({executionStatuses: [expected]});
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.executionStatus).toBe(expected);
+    expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(blockBytes);
   });
 
   it("starts STF and signatures while the EL request is pending", async () => {

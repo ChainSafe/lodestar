@@ -51,6 +51,7 @@ import {
   Attestation,
   AttesterSlashing,
   BLSPubkey,
+  BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
   BuilderIndex,
@@ -79,7 +80,16 @@ import {
   rewards,
   ssz,
 } from "@lodestar/types";
-import {LodestarError, Logger, byteArrayEquals, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {
+  LodestarError,
+  Logger,
+  byteArrayEquals,
+  fromHex,
+  isErrorAborted,
+  pruneSetToMax,
+  sleep,
+  toRootHex,
+} from "@lodestar/utils";
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
@@ -135,7 +145,6 @@ import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../regen/index.
 import {
   SeenAggregators,
   SeenAttesters,
-  SeenBlockInput,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
@@ -219,6 +228,8 @@ import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {verifyBlocks} from "./verifyBlock.js";
 
+const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
+
 /** Owns consensus state. Anchor preparation precedes validation and runtime initialization. */
 export class BeaconEngine implements IBeaconEngine {
   readonly config: BeaconConfig;
@@ -276,8 +287,7 @@ export class BeaconEngine implements IBeaconEngine {
   seenAggregatedAttestations!: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
 
-  // TODO - beacon engine: how to remove this?
-  readonly seenBlockInputCache: SeenBlockInput;
+  private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
   readonly validatorMonitor: ValidatorMonitor | null;
   // Engine owns execution requests; envelope persistence and serving remain facade-owned.
   readonly db: IBeaconEngineDb;
@@ -335,7 +345,6 @@ export class BeaconEngine implements IBeaconEngine {
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
-    this.seenBlockInputCache = modules.seenBlockInputCache;
     this.validatorMonitor = modules.validatorMonitor;
     this.emitter = modules.emitter;
   }
@@ -447,7 +456,6 @@ export class BeaconEngine implements IBeaconEngine {
       signal,
       db,
       validatorMonitor,
-      seenBlockInputCache,
       isAnchorStateFinalized,
     } = modules;
     // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
@@ -533,7 +541,6 @@ export class BeaconEngine implements IBeaconEngine {
       forkChoice: this.forkChoice,
       blockStateCache: this.blockStateCache,
       checkpointStateCache: this.checkpointStateCache,
-      seenBlockInputCache,
       db,
       metrics,
       validatorMonitor,
@@ -786,11 +793,6 @@ export class BeaconEngine implements IBeaconEngine {
   async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
     const slot = await this.db.blockArchive.getSlotByParentRoot(parentRoot);
     return slot !== null ? ((await this.db.blockArchive.getBinary(slot)) ?? null) : null;
-  }
-
-  /** Persist a hot block, bytes-first (key = block root). */
-  async persistBlock(root: Uint8Array, serializedBytes: Uint8Array): Promise<void> {
-    await this.db.block.putBinary(root, serializedBytes);
   }
 
   // --- Cold block archive writes/reverse-lookup (backfill; engine-owned). Bytes-first + root/parent indexes. ---
@@ -1958,19 +1960,29 @@ export class BeaconEngine implements IBeaconEngine {
     }
   }
 
+  isVerifiedProposerSignature(blockRoot: RootHex, signature: BLSSignature): boolean {
+    const cachedSignature = this.verifiedProposerSignatures.get(blockRoot);
+    return cachedSignature !== undefined && byteArrayEquals(cachedSignature, signature);
+  }
+
+  markVerifiedProposerSignature(blockRoot: RootHex, signature: BLSSignature): void {
+    this.verifiedProposerSignatures.set(blockRoot, Uint8Array.from(signature));
+    pruneSetToMax(this.verifiedProposerSignatures, MAX_VERIFIED_PROPOSER_SIGNATURES);
+  }
+
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean {
     return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
   async verifyBlocks(
-    _blockBytes: Uint8Array[],
+    blockBytes: Uint8Array[],
     parentBlock: ProtoBlock,
     blockInputs: IBlockInput[],
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
     try {
-      return await verifyBlocks.call(this, _blockBytes, parentBlock, blockInputs, opts, signal);
+      return await verifyBlocks.call(this, blockBytes, parentBlock, blockInputs, opts, signal);
     } catch (error) {
       this.publishChainView();
       throw error;

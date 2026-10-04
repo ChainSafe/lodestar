@@ -19,7 +19,7 @@ import {BeaconEngine} from "./beaconEngine.js";
 export async function verifyBlocks(
   this: BeaconEngine,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
-  _blockBytes: Uint8Array[],
+  blockBytes: Uint8Array[],
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts,
@@ -117,6 +117,7 @@ export async function verifyBlocks(
       executionStatus: segmentExecStatus.executionStatuses[i],
       postState: postStates[i],
       blockInput,
+      blockBytes: blockBytes[i],
       indexedAttestations: indexedAttestationsByBlock[i],
       proposerBalanceDelta: proposerBalanceDeltas[i],
       parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,

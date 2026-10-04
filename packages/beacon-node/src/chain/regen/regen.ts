@@ -16,7 +16,6 @@ import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
@@ -27,8 +26,6 @@ export type RegenModules = {
   forkChoice: IForkChoice;
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
-  // TODO - beacon engine: remove this, use db instead
-  seenBlockInputCache: SeenBlockInput;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
   logger: Logger;
@@ -195,12 +192,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const protoBlocksAsc = blocksToReplay.reverse();
     for (const [i, protoBlock] of protoBlocksAsc.entries()) {
       replaySlots[i] = protoBlock.slot;
-      // TODO - beacon engine: cannot have this seenBlockInputCache
-      // use a separate cache in BeaconEngine?
-      const blockInput = this.modules.seenBlockInputCache.get(protoBlock.blockRoot);
-      blockPromises[i] = blockInput?.hasBlock()
-        ? Promise.resolve(blockInput.getBlock())
-        : this.modules.db.block.get(fromHex(protoBlock.blockRoot));
+      blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
     }
 
     const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};

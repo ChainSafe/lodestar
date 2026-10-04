@@ -57,7 +57,6 @@ import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
 import {ProduceResult} from "../produceBlock/produceBlockBody.js";
 import {RegenRequest} from "../regen/index.js";
-import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {GossipBlockValidationResult} from "../validation/block.js";
@@ -88,7 +87,6 @@ export type BeaconEngineModules = {
   signal: AbortSignal;
   db: IBeaconEngineDb;
   validatorMonitor: ValidatorMonitor | null;
-  seenBlockInputCache: SeenBlockInput;
   isAnchorStateFinalized: boolean;
   lightClientServer?: LightClientServer;
 };
@@ -258,7 +256,6 @@ export interface IBeaconEngine {
   getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
   getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
   getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
-  persistBlock(root: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
   getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
   // Cold block-archive writes + reverse-lookup (backfill).
   persistArchiveBlock(

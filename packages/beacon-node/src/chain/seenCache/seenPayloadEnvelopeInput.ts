@@ -214,9 +214,7 @@ export class SeenPayloadEnvelopeInput {
       return undefined;
     }
 
-    // In-memory first: persistBlockInput writes db.block THEN prunes seenBlockInputCache, so a
-    // just-imported block whose async write (unfinalizedBlockWrites) has not flushed yet is still here;
-    // older blocks (already pruned from the cache) fall through to the hot db.
+    // Reuse the decoded block if sidecar persistence has not evicted it yet.
     const cachedBlockInput = this.seenBlockInputCache.get(blockRootHex);
     // [beacon-engine] deviation: reload only hot block bytes through the owning engine.
     const blockBytes = cachedBlockInput?.hasBlock()

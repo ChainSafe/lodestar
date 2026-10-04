@@ -59,6 +59,7 @@ export type VerifiedBlockBundle = {
   executionStatus: BlockExecutionStatus;
   postState: IBeaconStateView;
   blockInput: IBlockInput;
+  blockBytes: Uint8Array;
   indexedAttestations: IndexedAttestation[];
   proposerBalanceDelta: number;
   parentBlockSlot: number;
@@ -90,6 +91,10 @@ export async function importBlock(
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
 
   const blockRootHex = toRootHex(blockRoot);
+
+  // Regen must be able to read the block from DB as soon as fork choice exposes it.
+  this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
+  await this.db.block.putBinary(blockRoot, v.blockBytes);
 
   const currentSlot = this.forkChoice.getTime();
 

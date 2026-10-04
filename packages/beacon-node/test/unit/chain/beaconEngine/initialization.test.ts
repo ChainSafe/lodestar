@@ -5,7 +5,7 @@ import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
@@ -73,6 +73,31 @@ describe("bytes-based engine startup", () => {
     engine = undefined;
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("owns a bounded signature cache independent of the facade cache", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    const {beaconEngine, seenBlockInputCache} = chain;
+    if (!(beaconEngine instanceof BeaconEngine)) throw new Error("Expected a local BeaconEngine");
+    const root = toRootHex(Buffer.alloc(32));
+    const signature = Buffer.alloc(96, 1);
+    expect(beaconEngine.isVerifiedProposerSignature(root, signature)).toBe(false);
+    beaconEngine.markVerifiedProposerSignature(root, signature);
+    expect(beaconEngine.isVerifiedProposerSignature(root, Buffer.alloc(96, 1))).toBe(true);
+    expect(beaconEngine.isVerifiedProposerSignature(root, Buffer.alloc(96, 2))).toBe(false);
+    expect(seenBlockInputCache.isVerifiedProposerSignature(0, root, signature)).toBe(false);
+    signature.fill(2);
+    expect(beaconEngine.isVerifiedProposerSignature(root, signature)).toBe(false);
+    expect(beaconEngine.isVerifiedProposerSignature(root, Buffer.alloc(96, 1))).toBe(true);
+    for (let i = 1; i <= 3 * SLOTS_PER_EPOCH; i++) {
+      const bytes = Buffer.alloc(32);
+      bytes.writeUInt32LE(i);
+      const nextRoot = toRootHex(bytes);
+      beaconEngine.markVerifiedProposerSignature(nextRoot, signature);
+      expect(beaconEngine.isVerifiedProposerSignature(nextRoot, signature), `signature for root ${i}`).toBe(true);
+    }
+    expect(beaconEngine.isVerifiedProposerSignature(root, Buffer.alloc(96, 1))).toBe(false);
   });
 
   it("constructs once, validates before writing, and logs before starting runtime", async () => {

@@ -34,7 +34,7 @@ export async function importBlock(
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
-  // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
+  // Persist column data asynchronously; the engine persists the block before fork-choice import.
   await this.unfinalizedBlockWrites.waitForSpace();
   this.unfinalizedBlockWrites.push(blockInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {

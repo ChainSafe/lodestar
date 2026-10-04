@@ -123,8 +123,6 @@ export type BeaconChainModules = {
   emitter: ChainEventEmitter;
   cpStateDatastore: CPStateDatastore;
   custodyConfig: CustodyConfig;
-  serializedCache: SerializedCache;
-  seenBlockInputCache: SeenBlockInput;
   lightClientServer?: LightClientServer;
 };
 
@@ -227,8 +225,6 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       cpStateDatastore,
       custodyConfig,
-      serializedCache,
-      seenBlockInputCache,
       lightClientServer,
     } = modules;
     this.opts = opts;
@@ -247,8 +243,17 @@ export class BeaconChain implements IBeaconChain {
     const signal = abortController.signal;
     this.cpStateDatastore = cpStateDatastore;
     this.custodyConfig = custodyConfig;
-    this.serializedCache = serializedCache;
-    this.seenBlockInputCache = seenBlockInputCache;
+    this.serializedCache = new SerializedCache();
+    this.seenBlockInputCache = new SeenBlockInput({
+      config,
+      custodyConfig: this.custodyConfig,
+      clock,
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
     this.lightClientServer = lightClientServer;
     this.beaconEngine = beaconEngine;
     // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.

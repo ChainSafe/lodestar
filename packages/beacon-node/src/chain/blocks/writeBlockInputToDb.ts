@@ -1,76 +1,27 @@
-import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb} from "@lodestar/params";
-import {SignedBeaconBlock} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {ForkPostFulu} from "@lodestar/params";
+import {fromHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
-/**
- * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
- * Else the node will be in an inconsistent state that can lead to being stuck.
- *
- * This operation may be performed before, during or after importing to the fork-choice. As long as errors
- * are handled properly for eventual consistency.
- *
- * Block+blobs (pre-fulu) and data columns (fulu+) are written in parallel.
- */
+/** Persists blob sidecars and data columns. Beacon blocks are persisted during engine import. */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];
-
-  if (isBlockInputColumns(blockInput)) {
-    promises.push(writeDataColumnsToDb.call(this, blockInput));
-  }
-
-  await Promise.all(promises);
-  this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot, root: blockInput.blockRootHex});
-}
-
-async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  const block = blockInput.getBlock();
-  const slot = block.message.slot;
-  const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-  const blockRootHex = toRootHex(blockRoot);
-  const numBlobs = isForkPostDeneb(blockInput.forkName)
-    ? getBlobKzgCommitments(blockInput.forkName, block as SignedBeaconBlock<ForkPostDeneb>).length
-    : undefined;
-  const fnPromises: Promise<void>[] = [];
-
-  // Block DB is engine-owned; write through the engine (bytes-first). Serialize on a cache miss.
-  const blockBytes = this.serializedCache.get(block);
-  if (blockBytes) {
-    // skip serializing data if we already have it
-    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-  } else {
-    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-  }
-  fnPromises.push(
-    this.beaconEngine.persistBlock(
-      blockRoot,
-      blockBytes ?? this.config.getForkTypes(slot).SignedBeaconBlock.serialize(block)
-    )
-  );
-
-  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
-
   if (isBlockInputBlobs(blockInput)) {
-    fnPromises.push(
-      (async () => {
-        if (!blockInput.hasAllData()) {
-          await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-        }
-        const blobSidecars = blockInput.getBlobs();
-        await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          slot,
-          root: blockRootHex,
-          numBlobs: blobSidecars.length,
-        });
-      })()
-    );
+    if (!blockInput.hasAllData()) {
+      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
+    }
+    const {slot} = blockInput;
+    const blockRoot = fromHex(blockInput.blockRootHex);
+    const blobSidecars = blockInput.getBlobs();
+    await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
+    this.logger.debug("Persisted blobSidecars to hot DB", {
+      slot,
+      root: blockInput.blockRootHex,
+      numBlobs: blobSidecars.length,
+    });
+  } else if (isBlockInputColumns(blockInput)) {
+    await writeDataColumnsToDb.call(this, blockInput);
   }
-
-  await Promise.all(fnPromises);
 }
 
 /**

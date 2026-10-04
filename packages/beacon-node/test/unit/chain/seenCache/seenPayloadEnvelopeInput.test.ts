@@ -279,7 +279,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     it("reconstructs from seenBlockInputCache without reading db when the block is still in memory", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
       vi.mocked(beaconEngine.hasBlockHex).mockReturnValue(true);
-      // Block imported but its async db write has not flushed yet: it is still in seenBlockInputCache.
+      // Block imported and still in seenBlockInputCache while sidecar data is being persisted.
       vi.mocked(seenBlockInputCache.get).mockReturnValue({
         hasBlock: () => true,
         getBlock: () => block,
@@ -294,7 +294,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       expect(beaconEngine.getSerializedUnfinalizedBlockByRoot).not.toHaveBeenCalled();
     });
 
-    it("returns undefined during the import-to-persist window (block not yet in hot db)", async () => {
+    it("returns undefined when the hot block is missing", async () => {
       vi.mocked(beaconEngine.hasBlockHex).mockReturnValue(true);
       vi.mocked(beaconEngine.getSerializedUnfinalizedBlockByRoot).mockResolvedValue(null);
 

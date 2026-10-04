@@ -315,7 +315,7 @@ export async function verifyBlockProposerSignature(
   opts: {verifyOnMainThread?: boolean} = {}
 ): Promise<void> {
   const blockSlot = signedBlock.message.slot;
-  if (this.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
+  if (this.isVerifiedProposerSignature(blockRoot, signedBlock.signature)) {
     return;
   }
 
@@ -329,5 +329,5 @@ export async function verifyBlockProposerSignature(
     });
   }
 
-  this.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
+  this.markVerifiedProposerSignature(blockRoot, signedBlock.signature);
 }
