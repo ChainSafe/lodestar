@@ -206,6 +206,11 @@ export const FINALITY_FLAG_INDEX = 0;
 export const TARGET_FLAG_INDEX = 1;
 export const PROGRESS_FLAG_INDEX = 2;
 
+// Payload status (gloas fork-choice), serialized in AvailableChainAttestationData
+export const PAYLOAD_STATUS_PENDING = 0;
+export const PAYLOAD_STATUS_EMPTY = 1;
+export const PAYLOAD_STATUS_FULL = 2;
+
 // Decoupled consensus misc
 // 2**64 - 1, serialized through UintNumInf64 like FAR_FUTURE_EPOCH
 export const EMPTY_HEIGHT = Infinity;

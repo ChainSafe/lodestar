@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz as altairSsz} from "./altair/index.js";
 import {ssz as bellatrixSsz} from "./bellatrix/index.js";
 import {ssz as capellaSsz} from "./capella/index.js";
+import {ssz as decoupledSsz} from "./decoupled/index.js";
 import {ssz as denebSsz} from "./deneb/index.js";
 import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
@@ -12,11 +13,37 @@ import {ssz as phase0Ssz} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
 
+type Merge<A, B> = Omit<A, keyof B> & B;
+
+type Phase0SSZTypes = typeof phase0Ssz;
+type AltairSSZTypes = Merge<Phase0SSZTypes, typeof altairSsz>;
+type BellatrixSSZTypes = Merge<AltairSSZTypes, typeof bellatrixSsz>;
+type CapellaSSZTypes = Merge<BellatrixSSZTypes, typeof capellaSsz>;
+type DenebSSZTypes = Merge<CapellaSSZTypes, typeof denebSsz>;
+type ElectraSSZTypes = Merge<DenebSSZTypes, typeof electraSsz>;
+type FuluSSZTypes = Merge<ElectraSSZTypes, typeof fuluSsz>;
+type GloasSSZTypes = Merge<FuluSSZTypes, typeof gloasSsz>;
+type HezeSSZTypes = Merge<GloasSSZTypes, typeof hezeSsz>;
+type DecoupledSSZTypes = Merge<HezeSSZTypes, typeof decoupledSsz>;
+
 /**
  * Index the ssz types that differ by fork
  * A record of AllForksSSZTypes indexed by fork
+ *
+ * The per-fork aliases above keep the declaration emit small enough to serialize (TS7056).
  */
-const typesByFork = {
+const typesByFork: {
+  [ForkName.phase0]: Phase0SSZTypes;
+  [ForkName.altair]: AltairSSZTypes;
+  [ForkName.bellatrix]: BellatrixSSZTypes;
+  [ForkName.capella]: CapellaSSZTypes;
+  [ForkName.deneb]: DenebSSZTypes;
+  [ForkName.electra]: ElectraSSZTypes;
+  [ForkName.fulu]: FuluSSZTypes;
+  [ForkName.gloas]: GloasSSZTypes;
+  [ForkName.heze]: HezeSSZTypes;
+  [ForkName.decoupled]: DecoupledSSZTypes;
+} = {
   [ForkName.phase0]: {...phase0Ssz},
   [ForkName.altair]: {...phase0Ssz, ...altairSsz},
   [ForkName.bellatrix]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz},
@@ -45,6 +72,18 @@ const typesByFork = {
     ...gloasSsz,
     ...hezeSsz,
   },
+  [ForkName.decoupled]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...fuluSsz,
+    ...gloasSsz,
+    ...hezeSsz,
+    ...decoupledSsz,
+  },
 };
 
 // Export these types to ensure that each fork is a superset of the previous one (with overridden types obviously)
@@ -59,6 +98,7 @@ export const electra = typesByFork[ForkName.electra];
 export const fulu = typesByFork[ForkName.fulu];
 export const gloas = typesByFork[ForkName.gloas];
 export const heze = typesByFork[ForkName.heze];
+export const decoupled = typesByFork[ForkName.decoupled];
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.
