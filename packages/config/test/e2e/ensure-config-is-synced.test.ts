@@ -47,7 +47,11 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant.
  */
-const ignoredLocalConfigFields: (keyof ChainConfig)[] = [];
+const ignoredLocalConfigFields: (keyof ChainConfig)[] = [
+  // Decoupled consensus is a research feature spec with no release config yet
+  "DECOUPLED_FORK_VERSION",
+  "DECOUPLED_FORK_EPOCH",
+];
 
 describe("Ensure chainConfig is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

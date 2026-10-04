@@ -64,6 +64,10 @@ export const chainConfig: ChainConfig = {
   HEZE_FORK_VERSION: b("0x08000000"),
   HEZE_FORK_EPOCH: Infinity,
 
+  // DECOUPLED
+  DECOUPLED_FORK_VERSION: b("0x09000000"),
+  DECOUPLED_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds (DEPRECATED)

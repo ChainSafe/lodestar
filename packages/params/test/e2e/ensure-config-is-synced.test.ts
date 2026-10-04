@@ -11,7 +11,14 @@ import {loadConfigYaml} from "../yaml.js";
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
  */
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [
+  // Decoupled consensus is a research feature spec with no release preset yet
+  "SLOTS_PER_ROUND",
+  "COMMITTEES_PER_ROUND",
+  "MAX_VALIDATORS_PER_AGGREGATE",
+  "AVAILABLE_CHAIN_COMMITTEE_SIZE",
+  "TIMEOUT_DELAY_ROUNDS",
+];
 
 const ignoredRemotePresetFields: string[] = [];
 
@@ -65,6 +72,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams: Record<string, unknown>[] = [];
 
   for (const forkName of Object.values(ForkName)) {
+    if (forkName === ForkName.decoupled) continue;
     const response = await axios({
       url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
       timeout: 30 * 1000,

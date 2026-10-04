@@ -127,6 +127,12 @@ export const {
   INCLUSION_LIST_COMMITTEE_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   MAX_SIGNED_INCLUSION_LIST_SIZE,
+
+  SLOTS_PER_ROUND,
+  COMMITTEES_PER_ROUND,
+  MAX_VALIDATORS_PER_AGGREGATE,
+  AVAILABLE_CHAIN_COMMITTEE_SIZE,
+  TIMEOUT_DELAY_ROUNDS,
 } = activePreset;
 
 ////////////
@@ -174,6 +180,8 @@ export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
+export const DOMAIN_BEACON_ATTESTER_2 = Uint8Array.from([17, 0, 0, 0]);
+export const DOMAIN_AVAILABLE_CHAIN_ATTESTER = Uint8Array.from([18, 0, 0, 0]);
 
 // Application specific domains
 
@@ -192,6 +200,15 @@ export const DOMAIN_BUILDER_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 export const TIMELY_SOURCE_FLAG_INDEX = 0;
 export const TIMELY_TARGET_FLAG_INDEX = 1;
 export const TIMELY_HEAD_FLAG_INDEX = 2;
+
+// Decoupled consensus height participation flag indices
+export const FINALITY_FLAG_INDEX = 0;
+export const TARGET_FLAG_INDEX = 1;
+export const PROGRESS_FLAG_INDEX = 2;
+
+// Decoupled consensus misc
+// 2**64 - 1, serialized through UintNumInf64 like FAR_FUTURE_EPOCH
+export const EMPTY_HEIGHT = Infinity;
 
 // Incentivization weights
 

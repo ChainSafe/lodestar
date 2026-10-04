@@ -160,4 +160,17 @@ export const minimalPreset: BeaconPreset = {
   INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
   MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
+
+  // DECOUPLED
+  // Spec has no minimal preset, see DC-ISSUES.md "No minimal preset values"
+  // [customized] must divide SLOTS_PER_EPOCH (8)
+  SLOTS_PER_ROUND: 4, // 2**2
+  // [customized] mainnet / 128, keeps the ratio to MAX_COMMITTEES_PER_SLOT * SLOTS_PER_EPOCH
+  COMMITTEES_PER_ROUND: 16, // 2**4
+  // [customized] MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT, as on mainnet
+  MAX_VALIDATORS_PER_AGGREGATE: 8192, // 2**13
+  // [customized]
+  AVAILABLE_CHAIN_COMMITTEE_SIZE: 8, // 2**3
+  // Not in spec, see DC-ISSUES.md "Timeout delay on progress-based advancement"
+  TIMEOUT_DELAY_ROUNDS: 2,
 };

@@ -105,6 +105,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
   const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
+  const decoupledForkRelevant = localConfig.DECOUPLED_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -149,6 +150,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // heze
     HEZE_FORK_VERSION: hezeForkRelevant,
     HEZE_FORK_EPOCH: hezeForkRelevant,
+    // decoupled
+    DECOUPLED_FORK_VERSION: decoupledForkRelevant,
+    DECOUPLED_FORK_EPOCH: decoupledForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
@@ -346,6 +350,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
     MAX_SIGNED_INCLUSION_LIST_SIZE: false,
+
+    // DECOUPLED
+    SLOTS_PER_ROUND: decoupledForkRelevant,
+    COMMITTEES_PER_ROUND: decoupledForkRelevant,
+    MAX_VALIDATORS_PER_AGGREGATE: decoupledForkRelevant,
+    AVAILABLE_CHAIN_COMMITTEE_SIZE: decoupledForkRelevant,
+    TIMEOUT_DELAY_ROUNDS: decoupledForkRelevant,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

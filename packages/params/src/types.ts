@@ -118,6 +118,13 @@ export type BeaconPreset = {
   INCLUSION_LIST_COMMITTEE_SIZE: number;
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: number;
   MAX_SIGNED_INCLUSION_LIST_SIZE: number;
+
+  // DECOUPLED
+  SLOTS_PER_ROUND: number;
+  COMMITTEES_PER_ROUND: number;
+  MAX_VALIDATORS_PER_AGGREGATE: number;
+  AVAILABLE_CHAIN_COMMITTEE_SIZE: number;
+  TIMEOUT_DELAY_ROUNDS: number;
 };
 
 /**
@@ -241,6 +248,13 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   INCLUSION_LIST_COMMITTEE_SIZE: "number",
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: "number",
   MAX_SIGNED_INCLUSION_LIST_SIZE: "number",
+
+  // DECOUPLED
+  SLOTS_PER_ROUND: "number",
+  COMMITTEES_PER_ROUND: "number",
+  MAX_VALIDATORS_PER_AGGREGATE: "number",
+  AVAILABLE_CHAIN_COMMITTEE_SIZE: "number",
+  TIMEOUT_DELAY_ROUNDS: "number",
 };
 
 type BeaconPresetTypes = {

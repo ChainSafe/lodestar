@@ -93,10 +93,18 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.GLOAS_FORK_VERSION,
     prevForkName: ForkName.gloas,
   };
+  const decoupled: ForkInfo = {
+    name: ForkName.decoupled,
+    seq: ForkSeq.decoupled,
+    epoch: config.DECOUPLED_FORK_EPOCH,
+    version: config.DECOUPLED_FORK_VERSION,
+    prevVersion: config.HEZE_FORK_VERSION,
+    prevForkName: ForkName.heze,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze, decoupled};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

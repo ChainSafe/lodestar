@@ -54,6 +54,9 @@ export type ChainConfig = {
   // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
+  // DECOUPLED
+  DECOUPLED_FORK_VERSION: Uint8Array;
+  DECOUPLED_FORK_EPOCH: number;
 
   // Time parameters
   /** @deprecated Use `SLOT_DURATION_MS` instead. */
@@ -191,6 +194,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",
+  // DECOUPLED
+  DECOUPLED_FORK_VERSION: "bytes",
+  DECOUPLED_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",

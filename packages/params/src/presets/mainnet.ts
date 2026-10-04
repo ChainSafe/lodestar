@@ -159,4 +159,13 @@ export const mainnetPreset: BeaconPreset = {
   INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
   MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
+
+  // DECOUPLED
+  // Spec: specs/_features/decoupled-consensus/beacon-chain.md (mkalinin/dc-feature 5c5d42ac4)
+  SLOTS_PER_ROUND: 8, // 2**3
+  COMMITTEES_PER_ROUND: 2048, // 2**11
+  MAX_VALIDATORS_PER_AGGREGATE: 131072, // 2**17
+  AVAILABLE_CHAIN_COMMITTEE_SIZE: 1024, // 2**10
+  // Not in spec, see DC-ISSUES.md "Timeout delay on progress-based advancement"
+  TIMEOUT_DELAY_ROUNDS: 2,
 };
