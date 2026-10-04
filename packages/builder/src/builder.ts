@@ -112,7 +112,7 @@ export class Builder {
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
-    const blockObserver = new BlockObserver(config, logger, api);
+    const blockObserver = new BlockObserver(config, logger, api, {builderIndex: index});
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();

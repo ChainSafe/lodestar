@@ -1,7 +1,7 @@
 import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
+import {BuilderIndex, RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger, TimeoutError, isErrorAborted, isFetchError, pruneSetToMax, retry, toRootHex} from "@lodestar/utils";
 
 const {EventType} = routes.events;
@@ -9,6 +9,7 @@ const {EventType} = routes.events;
 type BlockEvent = routes.events.EventData[typeof EventType.block];
 
 type BlockObserverOptions = {
+  builderIndex?: BuilderIndex;
   retries?: number;
   retryDelay?: number;
   maxSeenBlockRoots?: number;
@@ -37,16 +38,18 @@ export class BlockObserver {
   private readonly retries: number;
   private readonly retryDelay: number;
   private readonly maxSeenBlockRoots: number;
+  private readonly builderIndex: BuilderIndex | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: Logger,
     private readonly api: ApiClient,
-    {retries = 5, retryDelay = 200, maxSeenBlockRoots = 256}: BlockObserverOptions = {}
+    {builderIndex, retries = 5, retryDelay = 200, maxSeenBlockRoots = 256}: BlockObserverOptions = {}
   ) {
     this.retries = retries;
     this.retryDelay = retryDelay;
     this.maxSeenBlockRoots = maxSeenBlockRoots;
+    this.builderIndex = builderIndex;
     this.logger.info("Block observer initialized", {retries, retryDelay, maxSeenBlockRoots});
   }
 
@@ -75,9 +78,18 @@ export class BlockObserver {
         return;
       }
 
+      if (this.builderIndex !== undefined && "builderIndex" in event && event.builderIndex !== this.builderIndex) {
+        this.logger.debug("Ignoring block event for another builder", {
+          slot,
+          blockRoot,
+          builderIndex: event.builderIndex,
+        });
+        return;
+      }
+
       const response = await retry(
         async () => {
-          // TODO GLOAS: Remove this lookup once bid-selection notifications provide the required data.
+          // The event identifies the builder, but selection still needs the full signed bid.
           const result = await this.api.beacon.getBlockV2({blockId: blockRoot}, {signal});
           result.assertOk();
           return result;

@@ -47,6 +47,29 @@ describe("beacon / events / block codec", () => {
       expect((json as {builder_index: string}).builder_index).toBe("18446744073709551615");
       expect(blockType.fromJson(json)).toEqual(event);
     });
+
+    it("decodes a legacy block event without Builder fields", () => {
+      expect(blockType.fromJson({slot: "10", block: blockRoot, execution_optimistic: false})).toEqual({
+        slot: 10,
+        block: blockRoot,
+        executionOptimistic: false,
+      });
+    });
+
+    it.each([
+      {builder_index: "1"},
+      {block_hash: blockHash},
+      {builder_index: "invalid", block_hash: blockHash},
+      {builder_index: null, block_hash: blockHash},
+    ])("does not treat incomplete or invalid Builder fields as a legacy event: %o", (fields) => {
+      expect(() =>
+        blockType.fromJson({slot: "10", block: blockRoot, execution_optimistic: false, ...fields})
+      ).toThrow();
+    });
+
+    it("still requires Builder fields when producing post-Gloas events", () => {
+      expect(() => blockType.toJson({slot: 10, block: blockRoot, executionOptimistic: false})).toThrow();
+    });
   });
 
   describe("pre-gloas", () => {
