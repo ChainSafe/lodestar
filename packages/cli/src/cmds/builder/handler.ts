@@ -11,6 +11,7 @@ import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs
 import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
+import {getBuilderBidOptions} from "./runtime.js";
 
 const ZERO_ADDRESS = "0x" + "0".repeat(40);
 
@@ -40,6 +41,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
+  const abortController = new AbortController();
+  const bidRuntime = getBuilderBidOptions(args, config, abortController.signal);
+
   const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
@@ -47,7 +51,6 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
 
-  const abortController = new AbortController();
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const register = args.metrics ? new RegistryMetricCreator() : null;
@@ -79,6 +82,10 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     api,
     executionFeeRecipient: fromHex(executionFeeRecipient),
     metrics,
+    bidRuntime,
+  }).catch(async (error: unknown) => {
+    await Promise.allSettled(onGracefulShutdownCbs.map(async (cb) => cb()));
+    throw error;
   });
 
   onGracefulShutdownCbs.push(() => builder.close());

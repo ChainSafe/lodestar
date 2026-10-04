@@ -16,6 +16,18 @@ export type IBuilderCliArgs = LogArgs & {
   executionFeeRecipient: string;
   requestTimeout: number;
 
+  "bid.enabled"?: boolean;
+  "execution.url"?: string;
+  jwtSecret?: string;
+  "bid.shareBps"?: number;
+  "bid.fixedCostGwei"?: number;
+  "bid.minValueGwei"?: number;
+  "bid.maxValueGwei"?: number;
+  "bid.minOperatingBalanceGwei"?: number;
+  "bid.getPayloadAtBps"?: number;
+  "bid.getPayloadTimeout"?: number;
+  "bid.revealCutoffBps"?: number;
+
   metrics?: boolean;
   "metrics.port"?: number;
   "metrics.address"?: string;
@@ -57,6 +69,67 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     description: "Timeout in milliseconds for HTTP requests to the beacon node",
     type: "number",
     default: defaultOptions.requestTimeout,
+  },
+
+  "bid.enabled": {
+    description:
+      "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL, JWT secret and explicit bid timing.",
+    type: "boolean",
+    default: false,
+    group: "bid",
+  },
+  "execution.url": {
+    description:
+      "Authenticated JSON-RPC URL of one building EL. Sharing the beacon node's EL is not production-qualified.",
+    type: "string",
+    group: "bid",
+  },
+  jwtSecret: {
+    description: "Path to the building EL's JWT secret file",
+    type: "string",
+    group: "bid",
+  },
+  "bid.shareBps": {
+    description: "Share of payload value offered to the proposer, in basis points. Required when bidding is enabled.",
+    type: "number",
+    group: "bid",
+  },
+  "bid.fixedCostGwei": {
+    description: "Fixed amount deducted from the proportional bid, in Gwei",
+    type: "number",
+    group: "bid",
+  },
+  "bid.minValueGwei": {
+    description: "Minimum bid value in Gwei",
+    type: "number",
+    group: "bid",
+  },
+  "bid.maxValueGwei": {
+    description: "Maximum bid value in Gwei",
+    type: "number",
+    group: "bid",
+  },
+  "bid.minOperatingBalanceGwei": {
+    description: "Builder balance reserved from bidding, in Gwei. Defaults to MIN_DEPOSIT_AMOUNT.",
+    type: "number",
+    group: "bid",
+  },
+  "bid.getPayloadAtBps": {
+    description:
+      "Retrieve the built payload at this fraction of the slot BEFORE proposal, in basis points. Required when bidding is enabled.",
+    type: "number",
+    group: "bid",
+  },
+  "bid.getPayloadTimeout": {
+    description: "Payload retrieval timeout in milliseconds. Required when bidding is enabled.",
+    type: "number",
+    group: "bid",
+  },
+  "bid.revealCutoffBps": {
+    description:
+      "Stop reveal publication at this fraction of the selected block's slot, in basis points. Required when bidding is enabled.",
+    type: "number",
+    group: "bid",
   },
 
   // Metrics
