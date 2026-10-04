@@ -98,6 +98,20 @@ export class PayloadAttributesConsumer {
     this.slot = slot;
   }
 
+  onDisconnect(): void {
+    this.active?.controller.abort(new ErrorAborted("Payload input connection lost"));
+    this.active = undefined;
+    this.pending = undefined;
+    this.head = undefined;
+  }
+
+  async onPreferences(signal: AbortSignal): Promise<ConsumerResult> {
+    signal.throwIfAborted();
+    if (this.closed) return {status: "ignored", reason: "closed"};
+    this.onSlot(this.modules.clock.getCurrentSlot());
+    return this.tryBuild(signal);
+  }
+
   close(): void {
     this.closed = true;
     this.active?.controller.abort(new ErrorAborted("Payload input consumer closed"));

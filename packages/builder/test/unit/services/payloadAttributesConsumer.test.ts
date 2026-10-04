@@ -121,6 +121,36 @@ describe("Gloas payload attributes consumer", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it("cancels on disconnect and requires fresh correlated inputs without replaying a prior job", async () => {
+    const {consumer, head, attributes, run, signal} = setup();
+    const result = defer<SlotBidResult>();
+    run.mockReturnValueOnce(result.promise);
+    await consumer.onEvent(head, signal);
+    const pending = consumer.onEvent(attributes, signal);
+    const rejected = expect(pending).rejects.toThrow();
+    const jobSignal = run.mock.calls[0][1];
+    consumer.onDisconnect();
+    expect(jobSignal.aborted).toBe(true);
+    expect(await consumer.onPreferences(signal)).toMatchObject({reason: "awaiting_matching_head"});
+    expect(await consumer.onEvent(attributes, signal)).toMatchObject({reason: "awaiting_matching_head"});
+    expect(await consumer.onEvent(head, signal)).toMatchObject({reason: "duplicate_input"});
+    result.resolve({status: "not_published", reason: "policy_declined"});
+    await rejected;
+    expect(run).toHaveBeenCalledOnce();
+    attributes.message.data.parentBlockHash = Buffer.alloc(32, 22);
+    await consumer.onEvent(attributes, signal);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a waiting input when snapshot preferences have been inserted", async () => {
+    const {consumer, head, attributes, tracker, preference, run, signal} = setup(10, false);
+    await consumer.onEvent(head, signal);
+    expect(await consumer.onEvent(attributes, signal)).toMatchObject({reason: "awaiting_preference"});
+    tracker.onProposerPreferences(preference);
+    expect(await consumer.onPreferences(signal)).toMatchObject({status: "published"});
+    expect(run).toHaveBeenCalledOnce();
+  });
+
   it("rejects late results for every caller sharing an aborted job", async () => {
     const {consumer, head, attributes, run, signal, controller} = setup();
     const pending = defer<SlotBidResult>();

@@ -270,6 +270,10 @@ type EventstreamArgs = {
   topics: EventType[];
   signal: AbortSignal;
   onEvent: (event: BeaconEvent) => void;
+  /** Called on the initial connection and each successful reconnection. */
+  onOpen?: () => void;
+  /** Transport interruption, distinct from a malformed event or consumer error. */
+  onDisconnect?: () => void;
   onError?: (err: Error) => void;
   onClose?: () => void;
 };

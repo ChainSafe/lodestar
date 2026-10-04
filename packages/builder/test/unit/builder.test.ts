@@ -18,7 +18,7 @@ import type {BuiltPayload, PayloadSource} from "../../src/services/payloadSource
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {SlotBidder} from "../../src/services/slotBidder.js";
-import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
+import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
 import {mockGetStateBuildersResponse} from "./utils/mocks.js";
@@ -85,6 +85,8 @@ describe("Builder", () => {
       topics,
       signal: controller.signal,
       onEvent: expect.any(Function),
+      onOpen: expect.any(Function),
+      onDisconnect: expect.any(Function),
       onError: expect.any(Function),
       onClose: expect.any(Function),
     });
@@ -126,6 +128,185 @@ describe("Builder", () => {
     onEvent({type: EventType.proposerPreferences, message: {version, data: preferences}});
     expect(modules.proposerPreferencesTracker.get(0, root)).toBe(preferences);
     expect(api.events.eventstream).toHaveBeenCalledOnce();
+  });
+
+  it("recovers preferences after subscribing without replacing live entries or keeping expired slots", async () => {
+    clock.currentSlot = 10;
+    const live = ssz.gloas.SignedProposerPreferences.defaultValue();
+    live.message.proposalSlot = 11;
+    const older = ssz.gloas.SignedProposerPreferences.clone(live);
+    older.message.feeRecipient = Buffer.alloc(20, 9);
+    const future = ssz.gloas.SignedProposerPreferences.clone(live);
+    future.message.proposalSlot = 12;
+    const expired = ssz.gloas.SignedProposerPreferences.clone(live);
+    expired.message.proposalSlot = 9;
+    const response: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = mockApiResponse({
+      data: [older, future, expired],
+      meta: {version: ForkName.gloas},
+    });
+    const pending = defer<typeof response>();
+    api.beacon.getProposerPreferences.mockReturnValue(pending.promise);
+    new Builder(modules);
+    const {onOpen, onEvent} = api.events.eventstream.mock.calls[0][0];
+    expect(api.beacon.getProposerPreferences).not.toHaveBeenCalled();
+    onOpen?.();
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: live}});
+    pending.resolve(response);
+    const root = toRootHex(live.message.dependentRoot);
+
+    await vi.waitFor(() => expect(modules.proposerPreferencesTracker.get(12, root)).toBe(future));
+    expect(modules.proposerPreferencesTracker.get(11, root)).toBe(live);
+    expect(modules.proposerPreferencesTracker.get(9, root)).toBeNull();
+    expect(api.events.eventstream).toHaveBeenCalledOnce();
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledWith({}, {signal: expect.any(AbortSignal), retries: 0});
+  });
+
+  it("ignores a stale snapshot after reconnect and fetches again on the new connection", async () => {
+    const old = ssz.gloas.SignedProposerPreferences.defaultValue();
+    old.message.proposalSlot = 1;
+    const current = ssz.gloas.SignedProposerPreferences.clone(old);
+    current.message.proposalSlot = 2;
+    const response: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = mockApiResponse({
+      data: [old],
+      meta: {version: ForkName.gloas},
+    });
+    const pending = defer<typeof response>();
+    api.beacon.getProposerPreferences
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce(mockApiResponse({data: [current], meta: {version: ForkName.gloas}}));
+    new Builder(modules);
+    const {onOpen, onDisconnect} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    const firstSignal = api.beacon.getProposerPreferences.mock.calls[0][1]?.signal;
+    onDisconnect?.();
+    expect(firstSignal?.aborted).toBe(true);
+    onOpen?.();
+    pending.resolve(response);
+    const root = toRootHex(old.message.dependentRoot);
+
+    await vi.waitFor(() => expect(modules.proposerPreferencesTracker.get(2, root)).toBe(current));
+    expect(modules.proposerPreferencesTracker.get(1, root)).toBeNull();
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledTimes(2);
+    expect(api.events.eventstream).toHaveBeenCalledOnce();
+  });
+
+  it("keeps live delivery working when the preference snapshot request fails", async () => {
+    api.beacon.getProposerPreferences.mockRejectedValue(Error("snapshot unavailable"));
+    new Builder(modules);
+    const {onOpen, onEvent} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    await vi.waitFor(() =>
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Failed to recover proposer preferences",
+        {code: "BUILDER_PREFERENCES_RECOVERY_FAILED"},
+        expect.any(Error)
+      )
+    );
+    const preference = ssz.gloas.SignedProposerPreferences.defaultValue();
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preference}});
+    expect(modules.proposerPreferencesTracker.get(0, toRootHex(preference.message.dependentRoot))).toBe(preference);
+    expect(controller.signal.aborted).toBe(false);
+  });
+
+  it.each([429, 503] as const)("retries a temporary preference snapshot failure (%s)", async (status) => {
+    vi.useFakeTimers();
+    const preference = ssz.gloas.SignedProposerPreferences.defaultValue();
+    const failure: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = await mockApiErrorResponse(status);
+    api.beacon.getProposerPreferences
+      .mockResolvedValueOnce(failure)
+      .mockResolvedValueOnce(mockApiResponse({data: [preference], meta: {version: ForkName.gloas}}));
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledTimes(2);
+    expect(modules.proposerPreferencesTracker.get(0, toRootHex(preference.message.dependentRoot))).toBe(preference);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("bounds preference snapshot retries while the stream stays connected", async () => {
+    vi.useFakeTimers();
+    const failure: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = await mockApiErrorResponse(503);
+    api.beacon.getProposerPreferences.mockResolvedValue(failure);
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledTimes(3);
+    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(controller.signal.aborted).toBe(false);
+  });
+
+  it.each([400, 404] as const)("does not retry a rejected preference snapshot request (%s)", async (status) => {
+    vi.useFakeTimers();
+    const failure: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = await mockApiErrorResponse(status);
+    api.beacon.getProposerPreferences.mockResolvedValue(failure);
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledOnce();
+  });
+
+  it("does not retry or insert a snapshot that fails decoding", async () => {
+    vi.useFakeTimers();
+    const response: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = mockApiResponse({
+      data: [],
+      meta: {version: ForkName.gloas},
+    });
+    vi.spyOn(response, "value").mockImplementation(() => {
+      throw Error("Invalid proposer preference");
+    });
+    const insert = vi.spyOn(modules.proposerPreferencesTracker, "onProposerPreferences");
+    api.beacon.getProposerPreferences.mockResolvedValue(response);
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledOnce();
+    expect(insert).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledOnce();
+  });
+
+  it.each(["disconnect", "shutdown"])("cancels preference retry backoff on %s", async (cause) => {
+    vi.useFakeTimers();
+    const failure: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = await mockApiErrorResponse(503);
+    api.beacon.getProposerPreferences.mockResolvedValue(failure);
+    const builder = new Builder(modules);
+    const {onOpen, onDisconnect} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    await vi.advanceTimersByTimeAsync(0);
+    if (cause === "disconnect") onDisconnect?.();
+    else await builder.close();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledOnce();
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not recover or insert a snapshot after shutdown", async () => {
+    const preference = ssz.gloas.SignedProposerPreferences.defaultValue();
+    const response: Awaited<ReturnType<typeof api.beacon.getProposerPreferences>> = mockApiResponse({
+      data: [preference],
+      meta: {version: ForkName.gloas},
+    });
+    const pending = defer<typeof response>();
+    api.beacon.getProposerPreferences.mockReturnValue(pending.promise);
+    const builder = new Builder(modules);
+    const {onOpen} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    await builder.close();
+    pending.resolve(response);
+    await Promise.resolve();
+    expect(modules.proposerPreferencesTracker.get(0, toRootHex(preference.message.dependentRoot))).toBeNull();
+    onOpen?.();
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledOnce();
   });
 
   it("does not block preferences while a block consumer is pending", async () => {
@@ -360,31 +541,36 @@ describe("Builder", () => {
     await builder.close();
   });
 
-  it.each(["slot", "shutdown"])("cancels input work on %s without logging a late result", async (cause) => {
-    const {events, run} = configureInputs(modules, clock);
-    const pending = defer<Awaited<ReturnType<SlotBidder["run"]>>>();
-    run.mockReturnValue(pending.promise);
-    const builder = new Builder(modules);
-    const {onEvent} = api.events.eventstream.mock.calls[0][0];
-    onEvent(events.preference);
-    onEvent(events.head);
-    onEvent(events.attributes);
-    expect(run).toHaveBeenCalledOnce();
-    const signal = run.mock.calls[0][1];
-    if (cause === "slot") {
-      clock.currentSlot++;
-      await clock.tickSlotFns(clock.currentSlot, controller.signal);
-    } else {
+  it.each(["slot", "shutdown", "disconnect"])(
+    "cancels input work on %s without logging a late result",
+    async (cause) => {
+      const {events, run} = configureInputs(modules, clock);
+      const pending = defer<Awaited<ReturnType<SlotBidder["run"]>>>();
+      run.mockReturnValue(pending.promise);
+      const builder = new Builder(modules);
+      const {onEvent, onDisconnect} = api.events.eventstream.mock.calls[0][0];
+      onEvent(events.preference);
+      onEvent(events.head);
+      onEvent(events.attributes);
+      expect(run).toHaveBeenCalledOnce();
+      const signal = run.mock.calls[0][1];
+      if (cause === "slot") {
+        clock.currentSlot++;
+        await clock.tickSlotFns(clock.currentSlot, controller.signal);
+      } else if (cause === "disconnect") {
+        onDisconnect?.();
+      } else {
+        await builder.close();
+      }
+      expect(signal.aborted).toBe(true);
+      pending.resolve({status: "not_published", reason: "policy_declined"});
+      await pending.promise;
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
       await builder.close();
     }
-    expect(signal.aborted).toBe(true);
-    pending.resolve({status: "not_published", reason: "policy_declined"});
-    await pending.promise;
-    await new Promise((resolve) => setImmediate(resolve));
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
-    await builder.close();
-  });
+  );
 
   describe("opt-in bid runtime", () => {
     function prepareStartup() {

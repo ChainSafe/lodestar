@@ -1,8 +1,18 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {LodestarError, Logger, isErrorAborted, toHex, toRootHex, withTimeout} from "@lodestar/utils";
+import {
+  LodestarError,
+  Logger,
+  TimeoutError,
+  isErrorAborted,
+  isFetchError,
+  retry,
+  toHex,
+  toRootHex,
+  withTimeout,
+} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -82,6 +92,7 @@ export class Builder {
   private readonly payloadStore: PayloadStore;
   private readonly payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
   private readonly bidLedger: BidLedger | undefined;
+  private preferencesController: AbortController | undefined;
 
   constructor({
     opts,
@@ -288,10 +299,19 @@ export class Builder {
         onEvent: (event) => {
           void this.onEvent(event);
         },
+        onOpen: () => {
+          void this.recoverPreferences(api);
+        },
+        onDisconnect: () => {
+          this.preferencesController?.abort();
+          this.payloadAttributesConsumer?.onDisconnect();
+        },
         onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
+          this.preferencesController?.abort();
+          this.payloadAttributesConsumer?.onDisconnect();
           if (signal.aborted) {
             this.logger.verbose("Closed builder event stream", {topics: topics.join(",")});
           } else {
@@ -308,6 +328,49 @@ export class Builder {
           );
         }
       });
+  }
+
+  private async recoverPreferences(api: ApiClient): Promise<void> {
+    if (this.controller.signal.aborted) return;
+    this.preferencesController?.abort();
+    const controller = new AbortController();
+    this.preferencesController = controller;
+    const signal = AbortSignal.any([this.controller.signal, controller.signal]);
+    try {
+      const response = await retry(
+        async () => {
+          signal.throwIfAborted();
+          const response = await api.beacon.getProposerPreferences({}, {signal, retries: 0});
+          response.assertOk();
+          return response;
+        },
+        {
+          retries: 2,
+          retryDelay: 500,
+          signal,
+          shouldRetry: (error) =>
+            (error instanceof ApiError && (error.status === 429 || error.status >= 500)) ||
+            error instanceof TimeoutError ||
+            (isFetchError(error) && error.type !== "input"),
+        }
+      );
+      signal.throwIfAborted();
+      const slot = this.clock.getCurrentSlot();
+      for (const preference of response.value()) {
+        if (preference.message.proposalSlot >= slot) {
+          this.proposerPreferencesTracker.onProposerPreferences(preference);
+        }
+      }
+      await this.payloadAttributesConsumer?.onPreferences(signal);
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to recover proposer preferences",
+          {code: "BUILDER_PREFERENCES_RECOVERY_FAILED"},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+    }
   }
 
   private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
@@ -341,6 +404,7 @@ export class Builder {
 
   async close(): Promise<void> {
     this.controller.abort();
+    this.preferencesController?.abort();
     this.payloadAttributesConsumer?.close();
   }
 }
