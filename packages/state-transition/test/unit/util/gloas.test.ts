@@ -4,14 +4,10 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {IndexedBuilderState} from "../../../src/block/indexedBuilderState.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 import {CachedBeaconStateGloas} from "../../../src/types.js";
-import {
-  addBuilderToRegistry,
-  appendBuilderToRegistry,
-  getExpectedGasLimit,
-  isGasLimitTargetCompatible,
-} from "../../../src/util/gloas.js";
+import {appendBuilderToRegistry, getExpectedGasLimit, isGasLimitTargetCompatible} from "../../../src/util/gloas.js";
 
 function buildGloasState(slot = 0): CachedBeaconStateGloas {
   const config = getConfig(ForkName.gloas);
@@ -107,25 +103,23 @@ describe("util / gloas", () => {
   });
 
   describe("appendBuilderToRegistry", () => {
-    // At the fork transition the builders registry is append-only (no reusable slot exists), so the
-    // scan-free appendBuilderToRegistry must produce a byte-identical registry to the scan-based
-    // addBuilderToRegistry. addBuilderToRegistry is the oracle here.
     it("matches addBuilderToRegistry for append-only onboarding", () => {
       const slot = 0; // any slot; both paths compute depositEpoch identically
-      const scanState = buildGloasState(slot);
+      const indexedState = buildGloasState(slot);
       const appendState = buildGloasState(slot);
 
+      const indexed = new IndexedBuilderState(indexedState);
       const n = 256;
       for (let i = 0; i < n; i++) {
         const pubkey = new Uint8Array(48).fill(i & 0xff);
         const execAddr = new Uint8Array(20).fill(i & 0xff);
         const amount = MIN_DEPOSIT_AMOUNT + i; // balance > 0, as for a fresh builder at the fork
 
-        addBuilderToRegistry(scanState, pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount, slot);
+        indexed.addBuilderToRegistry(pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount);
         appendBuilderToRegistry(appendState, pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount, slot);
 
         // byte-for-byte registry equivalence after every onboard
-        expect(appendState.builders.hashTreeRoot()).toEqual(scanState.builders.hashTreeRoot());
+        expect(appendState.builders.hashTreeRoot()).toEqual(indexedState.builders.hashTreeRoot());
       }
 
       expect(appendState.builders.length).toBe(n);

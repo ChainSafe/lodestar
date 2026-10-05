@@ -3,6 +3,7 @@ import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {IndexedBuilderState} from "./indexedBuilderState.js";
 import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
 import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
@@ -67,12 +68,14 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
     processConsolidationRequest(state, consolidation);
   }
 
-  for (const builderDeposit of requests.builderDeposits) {
-    processBuilderDepositRequest(state, builderDeposit);
-  }
-
-  for (const builderExit of requests.builderExits) {
-    processBuilderExitRequest(state, builderExit);
+  if (requests.builderDeposits.length > 0 || requests.builderExits.length > 0) {
+    const indexedState = new IndexedBuilderState(state);
+    for (const builderDeposit of requests.builderDeposits) {
+      processBuilderDepositRequest(indexedState, builderDeposit);
+    }
+    for (const builderExit of requests.builderExits) {
+      processBuilderExitRequest(indexedState, builderExit);
+    }
   }
 
   // Settle the builder payment
