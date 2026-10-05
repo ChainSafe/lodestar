@@ -5,7 +5,6 @@ import {
   AttestationError,
   AttestationErrorCode,
   AttesterSlashingErrorCode,
-  BlobSidecarErrorCode,
   BlockErrorCode,
   BlsToExecutionChangeErrorCode,
   DataColumnSidecarErrorCode,
@@ -53,10 +52,6 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.beacon_block]: {
     default: PeerAction.LowToleranceError,
     byCode: {[BlockErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
-  },
-  [GossipType.blob_sidecar]: {
-    default: PeerAction.LowToleranceError,
-    byCode: {[BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
   },
   [GossipType.data_column_sidecar]: {
     default: PeerAction.LowToleranceError,

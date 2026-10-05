@@ -267,13 +267,6 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.deneb) {
-      protocolsAtFork.push(
-        [protocols.BlobSidecarsByRoot(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
-        [protocols.BlobSidecarsByRange(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
-      );
-    }
-
     if (ForkSeq[fork] < ForkSeq.fulu) {
       // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
       protocolsAtFork.push(

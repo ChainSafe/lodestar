@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {ForkPostDeneb} from "@lodestar/params";
+import {ForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
@@ -115,9 +115,11 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHeadRoot = toHex(
     env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
   );
-  const currentSidecars = (
-    await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
-  ).value();
+  // Legacy deneb..electra blob sidecars are not persisted, so only post-fulu heads
+  // (reconstructed from data columns) can include blobs on publish
+  const currentSidecars = isForkPostFulu(env.forkConfig.getForkName(currentHead.message.slot))
+    ? (await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})).value()
+    : [];
 
   const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
 

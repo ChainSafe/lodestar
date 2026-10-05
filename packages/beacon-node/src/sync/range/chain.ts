@@ -1,11 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
@@ -564,12 +563,8 @@ export class SyncChain {
           // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
           switch (errCode) {
             case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
-            case DownloadByRangeErrorCode.MISSING_BLOBS:
-            case DownloadByRangeErrorCode.EXTRA_BLOBS:
             case DownloadByRangeErrorCode.MISSING_COLUMNS:
             case DownloadByRangeErrorCode.EXTRA_COLUMNS:
-            case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
-            case BlobSidecarErrorCode.INCORRECT_BLOCK:
             case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
             case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
               this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
@@ -582,8 +577,6 @@ export class SyncChain {
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT:
           case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
-          case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
-          case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
           case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
@@ -631,12 +624,7 @@ export class SyncChain {
         }
 
         for (const block of downloadSuccessOutput.blocks) {
-          if (isBlockInputBlobs(block)) {
-            const blockLogMeta = block.getLogMeta();
-            const expectedBlobs = typeof blockLogMeta.expectedBlobs === "number" ? blockLogMeta.expectedBlobs : 0;
-            logMeta.expectedBlobCount = (logMeta.expectedBlobCount ?? 0) + expectedBlobs;
-            logMeta.receivedBlobCount = (logMeta.receivedBlobCount ?? 0) + blockLogMeta.receivedBlobs;
-          } else if (isBlockInputColumns(block)) {
+          if (isBlockInputColumns(block)) {
             logMeta.columnCount = (logMeta.columnCount ?? 0) + block.getLogMeta().receivedColumns;
           }
         }

@@ -7,16 +7,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {
-  ACTIVE_PRESET,
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPostGloas,
-  ForkPreDeneb,
-  ForkPreFulu,
-  ForkPreGloas,
-  ForkSeq,
-} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkPostFulu, ForkPostGloas, ForkPreFulu, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -27,7 +18,6 @@ import {
   createCachedBeaconState,
   isExecutionStateType,
   isGloasStateType,
-  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -41,16 +31,15 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex, toHex} from "@lodestar/utils";
+import {bnToNum, toHex} from "@lodestar/utils";
 import {
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
@@ -64,7 +53,6 @@ import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
@@ -230,15 +218,7 @@ const fastConfirmationTest =
 
               // Post-Deneb and pre-Fulu, `columns` should not be present. Post-Fulu `blobs` and
               // `proofs` should not be present.
-              let blobs: deneb.Blob[] | undefined;
-              let proofs: deneb.KZGProof[] | undefined;
               let columns: fulu.DataColumnSidecar[] | undefined;
-              if (step.blobs !== undefined) {
-                blobs = testcase.blobs.get(step.blobs);
-              }
-              if (step.proofs !== undefined) {
-                proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
-              }
               if (step.columns !== undefined) {
                 columns = [];
                 for (const columnName of step.columns) {
@@ -333,59 +313,11 @@ const fastConfirmationTest =
                     });
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
-                  if (blobs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("Missing blobs for the deneb+ block");
-                    blobs = [];
-                  }
-                  if (proofs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("proofs for the deneb+ block");
-                    proofs = [];
-                  }
-                  // the kzg lib for validation of minimal setup is not yet integrated, lets just verify lengths
-                  // post integration use validateBlobsAndProofs
-                  const commitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-                  if (blobs.length !== commitments.length || proofs.length !== commitments.length) {
-                    throw Error("Invalid blobs or proofs lengths");
-                  }
-
-                  const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
-                    return {
-                      index,
-                      blob,
-                      kzgCommitment: commitments[index],
-                      kzgProof: (proofs ?? [])[index],
-                      signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
-                        fork,
-                        signedBlock.message.body,
-                        index
-                      ),
-                    };
-                  });
-
-                  blockImport = BlockInputBlobs.createFromBlock({
-                    forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
-                    blockRootHex,
-                    source: BlockInputSource.gossip,
-                    seenTimestampSec: 0,
-                    daOutOfRange: false,
-                  });
-                  for (const blob of blobSidecars) {
-                    blockImport.addBlob({
-                      blockRootHex,
-                      blobSidecar: blob,
-                      source: BlockInputSource.gossip,
-                      seenTimestampSec: 0,
-                    });
-                  }
                 } else {
+                  // Pre-fulu blocks carry no tracked sidecar data, legacy deneb..electra blobs are not loaded
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -395,7 +327,6 @@ const fastConfirmationTest =
 
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
                   // required to be valid), so only verify signatures when bls_setting=1.

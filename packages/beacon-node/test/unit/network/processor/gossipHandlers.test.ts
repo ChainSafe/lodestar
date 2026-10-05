@@ -5,7 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -223,7 +223,7 @@ async function runBeaconBlockProcessingError(
   const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
   signedBlock.message.slot = 1;
   const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
-  const blockInput = BlockInputBlobs.createFromBlock({
+  const blockInput = BlockInputPreData.createFromBlock({
     block: signedBlock,
     blockRootHex,
     forkName: ForkName.deneb,
@@ -304,7 +304,7 @@ async function runBeaconBlockRepeatProposal(
   signedBlock.message.slot = 1;
   signedBlock.message.proposerIndex = 3;
   const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
-  const blockInput = BlockInputBlobs.createFromBlock({
+  const blockInput = BlockInputPreData.createFromBlock({
     block: signedBlock,
     blockRootHex,
     forkName: ForkName.deneb,
