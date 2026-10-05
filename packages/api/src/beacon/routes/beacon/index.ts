@@ -1,6 +1,7 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, Slot, phase0, ssz} from "@lodestar/types";
+import {ArrayOf, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
 import {VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 import {Schema} from "../../../utils/schema.js";
@@ -55,8 +56,8 @@ export type Endpoints = block.Endpoints &
      */
     getProposerPreferences: Endpoint<
       "GET",
-      {slot?: Slot},
-      {query: {slot?: number}},
+      {slot?: Slot; dependentRoot?: Root},
+      {query: {slot?: number; dependent_root?: string}},
       SignedProposerPreferencesList,
       VersionMeta
     >;
@@ -77,9 +78,14 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/proposer_preferences",
       method: "GET",
       req: {
-        writeReq: ({slot}) => ({query: {slot}}),
-        parseReq: ({query}) => ({slot: query.slot}),
-        schema: {query: {slot: Schema.Uint}},
+        writeReq: ({slot, dependentRoot}) => ({
+          query: {slot, dependent_root: dependentRoot && toRootHex(dependentRoot)},
+        }),
+        parseReq: ({query}) => ({
+          slot: query.slot,
+          dependentRoot: query.dependent_root ? fromHex(query.dependent_root) : undefined,
+        }),
+        schema: {query: {slot: Schema.Uint, dependent_root: Schema.String}},
       },
       resp: {
         data: SignedProposerPreferencesListType,

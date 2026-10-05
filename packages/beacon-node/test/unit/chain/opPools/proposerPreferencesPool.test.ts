@@ -60,6 +60,22 @@ describe("chain / opPools / ProposerPreferencesPool", () => {
     expect(pool.getAll(10)).toHaveLength(2);
   });
 
+  it("getAll(slot, dependentRoot) returns the single matching entry", () => {
+    const a = makePrefs(10, 1, rootA);
+    pool.add(a);
+    pool.add(makePrefs(10, 2, rootB));
+    pool.add(makePrefs(11, 3, rootA));
+    expect(pool.getAll(10, rootAHex)).toEqual([a]);
+    expect(pool.getAll(10, rootBHex)).toHaveLength(1);
+  });
+
+  it("getAll(undefined, dependentRoot) filters across slots by dependent root", () => {
+    pool.add(makePrefs(10, 1, rootA));
+    pool.add(makePrefs(10, 2, rootB));
+    pool.add(makePrefs(11, 3, rootA));
+    expect(pool.getAll(undefined, rootAHex)).toHaveLength(2);
+  });
+
   it("getAll() flattens across all slots", () => {
     pool.add(makePrefs(10, 1, rootA));
     pool.add(makePrefs(11, 2, rootA));

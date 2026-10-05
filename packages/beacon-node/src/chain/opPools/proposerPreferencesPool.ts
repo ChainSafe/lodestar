@@ -37,15 +37,19 @@ export class ProposerPreferencesPool {
     byRoot.set(rootHex, signed);
   }
 
-  /** API read-out: flatten across branches, optionally filtered by slot. */
-  getAll(slot?: Slot): gloas.SignedProposerPreferences[] {
-    if (slot !== undefined) {
-      const byRoot = this.bySlot.get(slot);
-      return byRoot ? Array.from(byRoot.values()) : [];
-    }
+  /** API read-out: flatten across branches, optionally filtered by slot and dependent root. */
+  getAll(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[] {
     const out: gloas.SignedProposerPreferences[] = [];
-    for (const byRoot of this.bySlot.values()) {
-      for (const v of byRoot.values()) out.push(v);
+    for (const [s, byRoot] of this.bySlot) {
+      if (slot !== undefined && s !== slot) {
+        continue;
+      }
+      for (const [root, signed] of byRoot) {
+        if (dependentRootHex !== undefined && root !== dependentRootHex) {
+          continue;
+        }
+        out.push(signed);
+      }
     }
     return out;
   }

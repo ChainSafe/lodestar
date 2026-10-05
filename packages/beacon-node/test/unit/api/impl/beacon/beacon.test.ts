@@ -60,6 +60,10 @@ describe("beacon api implementation", () => {
         data: [preferences[1]],
         meta: {version: ForkName.gloas},
       });
+      expect(await gloasApi.getProposerPreferences({dependentRoot: preferences[0].message.dependentRoot})).toEqual({
+        data: preferences,
+        meta: {version: ForkName.gloas},
+      });
     });
 
     it("returns the preferences of the first Gloas slots in the epoch before the fork", async () => {
