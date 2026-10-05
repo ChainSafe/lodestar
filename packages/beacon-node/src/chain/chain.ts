@@ -278,6 +278,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
+      earliestAvailableSlot,
       executionEngine,
       executionBuilder,
       builderApiClientOpts,
@@ -297,6 +298,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor: ValidatorMonitor | null;
       anchorState: IBeaconStateView;
       isAnchorStateFinalized: boolean;
+      earliestAvailableSlot: Slot;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
       builderApiClientOpts?: BuilderApiClientOpts;
@@ -362,7 +364,7 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
-    this._earliestAvailableSlot = anchorState.slot;
+    this._earliestAvailableSlot = earliestAvailableSlot;
 
     this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {

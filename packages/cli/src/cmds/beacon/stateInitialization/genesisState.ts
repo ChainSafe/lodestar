@@ -73,6 +73,19 @@ export async function prepareGenesisInitialization(
         logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
       }
     },
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      if (stored !== null && stored !== state.slot) {
+        logger.warn("Resetting earliest available slot for genesis initialization", {
+          previousSlot: stored,
+          earliestAvailableSlot: state.slot,
+        });
+      }
+      if (stored !== state.slot) {
+        await db.earliestAvailableSlot.set(state.slot);
+      }
+      return state.slot;
+    },
     persist: (state, bytes) => persistAnchorState(config, db, state, bytes),
     log(state) {
       logger.info("Initialized genesis state", {

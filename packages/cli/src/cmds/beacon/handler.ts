@@ -79,6 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       anchorState,
       config: beaconConfig,
       isFinalized,
+      earliestAvailableSlot,
     } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
@@ -94,6 +95,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       isAnchorStateFinalized: isFinalized,
+      earliestAvailableSlot,
     });
 
     // dev debug option to have access to the BN instance

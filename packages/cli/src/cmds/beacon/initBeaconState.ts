@@ -10,6 +10,7 @@ import {
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
 } from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {Logger, formatBytes} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/globalOptions.js";
 import {BeaconArgs} from "./options.js";
@@ -27,7 +28,12 @@ import {
   StatePreparationContext,
 } from "./stateInitialization/types.js";
 
-type InitBeaconStateResult = {anchorState: IBeaconStateView; config: BeaconConfig; isFinalized: boolean};
+type InitBeaconStateResult = {
+  anchorState: IBeaconStateView;
+  config: BeaconConfig;
+  isFinalized: boolean;
+  earliestAvailableSlot: Slot;
+};
 
 /**
  * Select serialized anchor bytes before constructing the state used for validation, persistence, and return.
@@ -152,7 +158,8 @@ async function executeStateInitialization(
   pubkeyCache.ensureCapacity(pubkeyCacheCapacity);
   const anchorState = createBeaconStateView({useNative, config, stateBytes});
   stateInit.validate(anchorState);
+  const earliestAvailableSlot = await stateInit.initializeEarliestAvailableSlot(anchorState);
   await stateInit.persist?.(anchorState, stateBytes);
   stateInit.log(anchorState);
-  return {anchorState, config, isFinalized: stateInit.isFinalized};
+  return {anchorState, config, isFinalized: stateInit.isFinalized, earliestAvailableSlot};
 }

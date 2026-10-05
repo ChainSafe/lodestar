@@ -223,6 +223,20 @@ function prepareCheckpointInitialization(
         }
       }
     },
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      const floor = useArchived ? (stored ?? state.slot) : Math.max(stored ?? 0, state.slot);
+      if (stored !== floor) {
+        await db.earliestAvailableSlot.set(floor);
+      }
+      logger.verbose("Initialized earliest available slot", {
+        source,
+        anchorSlot: state.slot,
+        previousSlot: stored,
+        earliestAvailableSlot: floor,
+      });
+      return floor;
+    },
     persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
     log(state) {
       const {checkpoint} = state.computeAnchorCheckpoint();
