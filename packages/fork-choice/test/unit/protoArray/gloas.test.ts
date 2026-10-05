@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode, getPtcVerdict} from "../../../src/index.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -871,6 +871,22 @@ describe("Gloas Fork Choice", () => {
       protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
       protoArray.notifyPtcMessages("0x02", gloasForkSlot, [majority[0]], false, true);
       expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: true});
+    });
+  });
+
+  describe("getPtcVerdict()", () => {
+    it.each<[boolean | null, boolean | null, boolean | null]>([
+      [null, null, null],
+      [true, null, null],
+      [null, true, null],
+      [true, true, true],
+      [false, null, false],
+      [null, false, false],
+      [true, false, false],
+      [false, true, false],
+      [false, false, false],
+    ])("payloadPresent=%s blobDataAvailable=%s -> %s", (payloadPresent, blobDataAvailable, verdict) => {
+      expect(getPtcVerdict({payloadPresent, blobDataAvailable})).toBe(verdict);
     });
   });
 

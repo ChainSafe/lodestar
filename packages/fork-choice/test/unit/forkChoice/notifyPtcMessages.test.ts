@@ -43,7 +43,7 @@ function setup(metrics: ForkChoiceMetrics | null = null): {
 }
 
 describe("Forkchoice / notifyPtcMessages", () => {
-  it("notifies the store with the new quorum state once a majority is reached", () => {
+  it("notifies the store once both fields have a majority in favour", () => {
     const {forkChoice, notifyPtcQuorum} = setup();
 
     forkChoice.notifyPtcMessages(headRoot, headSlot, exactlyThreshold, true, true);
@@ -54,12 +54,43 @@ describe("Forkchoice / notifyPtcMessages", () => {
     expect(notifyPtcQuorum).toHaveBeenCalledWith({
       blockRoot: headRoot,
       slot: headSlot,
+      verdict: true,
       payloadPresent: true,
       blobDataAvailable: true,
     });
   });
 
-  it("does not notify again while the quorum state is unchanged", () => {
+  it("does not notify on a majority in favour of only one field", () => {
+    const {forkChoice, notifyPtcQuorum} = setup();
+
+    forkChoice.notifyPtcMessages(headRoot, headSlot, exactlyThreshold, true, true);
+    forkChoice.notifyPtcMessages(headRoot, headSlot, [threshold], true, false);
+    expect(forkChoice.getPtcQuorum(headRoot)).toEqual({payloadPresent: true, blobDataAvailable: null});
+    expect(notifyPtcQuorum).not.toHaveBeenCalled();
+
+    forkChoice.notifyPtcMessages(headRoot, headSlot, [threshold], true, true);
+    expect(notifyPtcQuorum).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["payloadPresent", false, true],
+    ["blobDataAvailable", true, false],
+  ])("notifies on a majority against %s alone", (_field, payloadPresent, blobDataAvailable) => {
+    const {forkChoice, notifyPtcQuorum} = setup();
+
+    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, payloadPresent, blobDataAvailable);
+
+    expect(notifyPtcQuorum).toHaveBeenCalledTimes(1);
+    expect(notifyPtcQuorum).toHaveBeenCalledWith({
+      blockRoot: headRoot,
+      slot: headSlot,
+      verdict: false,
+      payloadPresent,
+      blobDataAvailable,
+    });
+  });
+
+  it("does not notify again while the verdict is unchanged", () => {
     const {forkChoice, notifyPtcQuorum} = setup();
 
     forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, true);
@@ -69,41 +100,30 @@ describe("Forkchoice / notifyPtcMessages", () => {
     expect(notifyPtcQuorum).toHaveBeenCalledTimes(1);
   });
 
-  it("notifies separately as each field reaches its majority", () => {
-    const {forkChoice, notifyPtcQuorum} = setup();
-
-    forkChoice.notifyPtcMessages(headRoot, headSlot, exactlyThreshold, true, false);
-    forkChoice.notifyPtcMessages(headRoot, headSlot, [threshold], true, true);
-    expect(notifyPtcQuorum).toHaveBeenNthCalledWith(1, {
-      blockRoot: headRoot,
-      slot: headSlot,
-      payloadPresent: true,
-      blobDataAvailable: null,
-    });
-
-    forkChoice.notifyPtcMessages(headRoot, headSlot, exactlyThreshold, true, true);
-    expect(notifyPtcQuorum).toHaveBeenNthCalledWith(2, {
-      blockRoot: headRoot,
-      slot: headSlot,
-      payloadPresent: true,
-      blobDataAvailable: true,
-    });
-    expect(notifyPtcQuorum).toHaveBeenCalledTimes(2);
-  });
-
-  it("notifies when a flipped vote drops a majority", () => {
+  it("notifies when re-votes flip the verdict", () => {
     const {forkChoice, notifyPtcQuorum} = setup();
 
     forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, true);
-    forkChoice.notifyPtcMessages(headRoot, headSlot, [majority[0]], false, true);
+    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, false);
 
     expect(notifyPtcQuorum).toHaveBeenCalledTimes(2);
     expect(notifyPtcQuorum).toHaveBeenLastCalledWith({
       blockRoot: headRoot,
       slot: headSlot,
-      payloadPresent: null,
-      blobDataAvailable: true,
+      verdict: false,
+      payloadPresent: true,
+      blobDataAvailable: false,
     });
+  });
+
+  it("does not notify when a re-vote only makes the verdict undecided", () => {
+    const {forkChoice, notifyPtcQuorum} = setup();
+
+    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, true);
+    forkChoice.notifyPtcMessages(headRoot, headSlot, [majority[0]], false, true);
+
+    expect(forkChoice.getPtcQuorum(headRoot)).toEqual({payloadPresent: null, blobDataAvailable: true});
+    expect(notifyPtcQuorum).toHaveBeenCalledTimes(1);
   });
 
   it("ignores messages whose slot does not match the block", () => {
@@ -115,19 +135,16 @@ describe("Forkchoice / notifyPtcMessages", () => {
     expect(forkChoice.getPtcQuorum(headRoot)).toEqual({payloadPresent: null, blobDataAvailable: null});
   });
 
-  it("counts each field reaching a majority in the ptc quorum metric", () => {
+  it("counts each decided verdict in the ptc quorum metric", () => {
     const inc = vi.fn();
     const {forkChoice} = setup({
       forkChoice: {votes: {addCollect: vi.fn()}, ptcQuorum: {inc}},
     } as unknown as ForkChoiceMetrics);
 
-    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, false);
-    forkChoice.notifyPtcMessages(headRoot, headSlot, [majority[0]], false, false);
+    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, true, true);
+    forkChoice.notifyPtcMessages(headRoot, headSlot, majority, false, true);
 
-    expect(inc.mock.calls).toEqual([
-      [{vote: "payloadPresent", result: "true"}],
-      [{vote: "blobDataAvailable", result: "false"}],
-    ]);
+    expect(inc.mock.calls).toEqual([[{verdict: "true"}], [{verdict: "false"}]]);
   });
 
   it("ignores unknown blocks", () => {

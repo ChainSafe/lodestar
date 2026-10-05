@@ -106,7 +106,7 @@ describe("ForkChoiceStore", () => {
   });
 
   describe("notifyPtcQuorum", () => {
-    const event = {blockRoot: root, slot: 42 as Slot, payloadPresent: true, blobDataAvailable: null};
+    const event = {blockRoot: root, slot: 42 as Slot, verdict: true, payloadPresent: true, blobDataAvailable: true};
 
     it("invokes onPtcQuorum when callback is provided", () => {
       const onPtcQuorum = vi.fn();

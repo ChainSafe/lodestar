@@ -46,5 +46,5 @@ export type {
   ProtoNode,
   PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
+export {ExecutionStatus, PayloadStatus, getPtcVerdict, isGloasBlock} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

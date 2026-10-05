@@ -189,3 +189,15 @@ export type PtcQuorum = {
   payloadPresent: boolean | null;
   blobDataAvailable: boolean | null;
 };
+
+/**
+ * The PTC verdict fork choice acts on: `false` once either field has a majority against the
+ * payload, `true` once both have a majority for it, `null` while undecided. A single majority
+ * against is final on its own because should_extend_payload needs both in favour and
+ * should_build_on_full moves the proposer onto EMPTY on either.
+ */
+export function getPtcVerdict({payloadPresent, blobDataAvailable}: PtcQuorum): boolean | null {
+  if (payloadPresent === false || blobDataAvailable === false) return false;
+  if (payloadPresent === true && blobDataAvailable === true) return true;
+  return null;
+}

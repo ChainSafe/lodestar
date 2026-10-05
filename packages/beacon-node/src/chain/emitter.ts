@@ -37,7 +37,8 @@ export enum ChainEvent {
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
-   * This event signals that the PTC majority for a block changed, for payload presence and/or blob data availability.
+   * This event signals that the PTC verdict on a block was decided: a majority against payload presence or blob data
+   * availability, or a majority for both.
    */
   forkChoicePtcQuorum = "forkChoice:ptcQuorum",
   /**

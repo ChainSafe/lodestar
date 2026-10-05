@@ -47,6 +47,7 @@ import {
   ProtoNode,
   PtcQuorum,
   VoteIndex,
+  getPtcVerdict,
   isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
@@ -1094,21 +1095,17 @@ export class ForkChoice implements IForkChoice {
     const before = this.protoArray.getPtcQuorum(blockRoot);
     this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
     const after = this.protoArray.getPtcQuorum(blockRoot);
-    if (
-      before === null ||
-      after === null ||
-      (before.payloadPresent === after.payloadPresent && before.blobDataAvailable === after.blobDataAvailable)
-    ) {
+    if (before === null || after === null) {
+      return;
+    }
+    const verdict = getPtcVerdict(after);
+    if (verdict === null || verdict === getPtcVerdict(before)) {
       return;
     }
 
-    for (const vote of ["payloadPresent", "blobDataAvailable"] as const) {
-      if (after[vote] !== null && after[vote] !== before[vote]) {
-        this.metrics?.forkChoice.ptcQuorum.inc({vote, result: after[vote] ? "true" : "false"});
-      }
-    }
-    this.logger?.verbose("PTC quorum changed", {slot, blockRoot, ...after});
-    this.fcStore.notifyPtcQuorum?.({blockRoot, slot, ...after});
+    this.metrics?.forkChoice.ptcQuorum.inc({verdict: verdict ? "true" : "false"});
+    this.logger?.verbose("PTC quorum reached", {slot, blockRoot, verdict, ...after});
+    this.fcStore.notifyPtcQuorum?.({blockRoot, slot, verdict, ...after});
   }
 
   /**

@@ -32,8 +32,8 @@ export type CheckpointWithTotalBalance = CheckpointWithBalance & {
   totalBalance: number;
 };
 
-/** Emitted whenever the PTC majority state of a block changes, carrying the new state */
-export type PtcQuorumEvent = PtcQuorum & {blockRoot: RootHex; slot: Slot};
+/** Emitted when the PTC verdict on a block is decided or flips, see getPtcVerdict */
+export type PtcQuorumEvent = PtcQuorum & {blockRoot: RootHex; slot: Slot; verdict: boolean};
 
 export enum EpochDifference {
   current = 0,
