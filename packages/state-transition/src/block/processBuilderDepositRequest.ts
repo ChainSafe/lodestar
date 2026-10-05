@@ -1,5 +1,6 @@
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
+import {computeEpochAtSlot} from "../util/epoch.js";
 import {isBuilderWithdrawalCredential, isValidBuilderDepositSignature} from "../util/gloas.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 
@@ -30,5 +31,15 @@ export function processBuilderDepositRequest(
     return;
   }
 
-  indexedState.topUp(builderIndex, amount);
+  const builder = state.builders.get(builderIndex);
+
+  // If the builder has exited and been fully swept (balance drained to 0), reset the
+  // withdrawable epoch so this top-up becomes withdrawable again. Must run before the
+  // balance increase, since the reset is gated on the current balance being 0.
+  if (builder.withdrawableEpoch !== FAR_FUTURE_EPOCH && builder.balance === 0) {
+    builder.withdrawableEpoch = computeEpochAtSlot(state.slot) + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
+  }
+
+  // Increase balance by deposit amount
+  builder.balance += amount;
 }

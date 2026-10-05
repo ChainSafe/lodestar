@@ -103,12 +103,12 @@ describe("util / gloas", () => {
   });
 
   describe("appendBuilderToRegistry", () => {
-    it("matches addBuilderToRegistry for append-only onboarding", () => {
+    it("matches IndexedBuilderState.addBuilderToRegistry for append-only onboarding", () => {
       const slot = 0; // any slot; both paths compute depositEpoch identically
-      const indexedState = buildGloasState(slot);
+      const oracleState = buildGloasState(slot);
       const appendState = buildGloasState(slot);
 
-      const indexed = new IndexedBuilderState(indexedState);
+      const indexed = new IndexedBuilderState(oracleState);
       const n = 256;
       for (let i = 0; i < n; i++) {
         const pubkey = new Uint8Array(48).fill(i & 0xff);
@@ -119,7 +119,7 @@ describe("util / gloas", () => {
         appendBuilderToRegistry(appendState, pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount, slot);
 
         // byte-for-byte registry equivalence after every onboard
-        expect(appendState.builders.hashTreeRoot()).toEqual(indexedState.builders.hashTreeRoot());
+        expect(appendState.builders.hashTreeRoot()).toEqual(oracleState.builders.hashTreeRoot());
       }
 
       expect(appendState.builders.length).toBe(n);
