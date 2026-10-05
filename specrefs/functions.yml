@@ -3994,7 +3994,7 @@
 - name: get_execution_payload_bid_signature#gloas
   sources:
     - file: packages/builder/src/services/builderSigner.ts
-      search: "signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid)"
+      search: "signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid): gloas.SignedExecutionPayloadBid {"
   spec: |
     <spec fn="get_execution_payload_bid_signature" fork="gloas" hash="c09cbb78">
     def get_execution_payload_bid_signature(
@@ -8421,7 +8421,9 @@
 - name: is_within_weak_subjectivity_period#phase0
   sources:
     - file: packages/state-transition/src/util/weakSubjectivity.ts
-      search: export function isWithinWeakSubjectivityPeriod(
+      search: export function isWithinWeakSubjectivityPeriodFromSummary(
+    - file: packages/cli/src/cmds/beacon/stateInitialization/checkpointState.ts
+      search: function assertStateMatchesCheckpoint(
   spec: |
     <spec fn="is_within_weak_subjectivity_period" fork="phase0" hash="aef08e82">
     def is_within_weak_subjectivity_period(
@@ -8440,7 +8442,9 @@
 - name: is_within_weak_subjectivity_period#electra
   sources:
     - file: packages/state-transition/src/util/weakSubjectivity.ts
-      search: export function isWithinWeakSubjectivityPeriod(
+      search: export function isWithinWeakSubjectivityPeriodFromSummary(
+    - file: packages/cli/src/cmds/beacon/stateInitialization/checkpointState.ts
+      search: function assertStateMatchesCheckpoint(
   spec: |
     <spec fn="is_within_weak_subjectivity_period" fork="electra" hash="d05d230d">
     def is_within_weak_subjectivity_period(

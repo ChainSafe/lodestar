@@ -2,6 +2,7 @@ import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
 import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
+import {toHex} from "@lodestar/utils";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
@@ -316,27 +317,26 @@ describe("ExecutionEngine / http", () => {
     expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
   });
 
-  it("getBlobs does not write into the caller's pooled buffers", async () => {
-    const proofHex = `0x${"22".repeat(48)}`;
-    returnValue = {
-      jsonrpc: "2.0",
-      id: 1,
-      result: [
-        {
-          blob: `0x${"11".repeat(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)}`,
-          proofs: Array.from({length: CELLS_PER_EXT_BLOB}, () => proofHex),
-        },
-      ],
-    };
-    // GetBlobsTracker pools one buffer per max blob, which is usually more than the requested blobs
+  it("getBlobsV2 with more preallocated buffers than versioned hashes", async () => {
+    const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+    blob[0] = 0x11;
+    const proofs = Array.from({length: CELLS_PER_EXT_BLOB}, () => `0x${"cc".repeat(48)}`);
+    const versionedHash = `0x${"01".repeat(32)}`;
+    returnValue = {jsonrpc: "2.0", id: 67, result: [{blob: toHex(blob), proofs}]};
+    // GetBlobsTracker preallocates one buffer per max blobs of the epoch, not per requested hash
     const buffers = [new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES), new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES)];
 
-    const res = await executionEngine.getBlobs(ForkName.fulu, [new Uint8Array(32)], buffers);
+    const res = await executionEngine.getBlobs(
+      ForkName.fulu,
+      [Uint8Array.from(Buffer.from(versionedHash.slice(2), "hex"))],
+      buffers
+    );
 
+    expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getBlobsV2", params: [[versionedHash]]});
     expect(res?.length).toBe(1);
-    expect(res?.[0].proofs[0]).toEqual(new Uint8Array(48).fill(0x22));
-    // Sidecars keep the returned proofs after the tracker reuses its buffers, so they must not alias them
-    expect(buffers.every((buffer) => buffer.every((byte) => byte === 0))).toBe(true);
+    expect(res?.[0].blob.buffer).toBe(buffers[0].buffer);
+    expect(res?.[0].blob[0]).toBe(0x11);
+    expect(res?.[0].proofs.length).toBe(CELLS_PER_EXT_BLOB);
   });
 
   it("error - unknown payload", async () => {

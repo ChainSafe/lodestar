@@ -165,21 +165,22 @@ export async function getDataColumnSidecarsFromExecution(
   return DataColumnEngineResult.SuccessResolved;
 }
 
-/** engine_getPayloadBodiesByHashV2: ELs MUST support at least 32 hashes per request. */
-const MAX_BODIES_REQUEST = 32;
+/** engine_getPayloadBodiesByHashV2: every EL must accept requests of up to 32 hashes, larger ones may fail with -38004 */
+export const MAX_BODIES_PER_REQUEST = 32;
 
 type SlotEnvelopeBytes = {slot: Slot; envelopeBytes: Uint8Array};
 
 type RangeEntry = ArchivedEnvelope & {slot: Slot};
 
-/** What a body root mismatch means on a given serving path */
-export type ReconstructMismatchPolicy = "throw" | "omit";
+/** What an envelope that cannot be rebuilt (EL-unavailable body or body root mismatch) means on a given serving path */
+export type ReconstructMissPolicy = "throw" | "omit";
 
-export type RebuildMiss =
-  /** EL does not have the block, or has pruned its block access list */
-  | {slot: Slot; reason: "unavailable"}
-  /** An EL body does not hash to its stored root (local inconsistency) */
-  | {slot: Slot; reason: "mismatch"; error: EnvelopeReconstructionError};
+/**
+ * An archived envelope that could not be rebuilt. `"unavailable"`: the EL does not have the block or its
+ * block access list (BODY_UNAVAILABLE). `"mismatch"`: an EL body does not hash to its stored root, a local
+ * inconsistency (BODY_ROOT_MISMATCH). `error` carries the matching code for paths that surface it.
+ */
+export type RebuildMiss = {slot: Slot; reason: "unavailable" | "mismatch"; error: EnvelopeReconstructionError};
 
 /**
  * Stream finalized envelopes over [startSlot, endSlot) as serialized bytes, rebuilding header
@@ -205,7 +206,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
 
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
     batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelope(bytes)});
-    if (batch.length === MAX_BODIES_REQUEST) {
+    if (batch.length === MAX_BODIES_PER_REQUEST) {
       yield* reconstructBatch(executionEngine, logger, metrics, batch);
       batch = [];
     }
@@ -265,9 +266,13 @@ export async function reconstructExecutionPayloadEnvelopes(
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
   const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
-  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_REQUEST) {
+  for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_PER_REQUEST) {
     out.push(
-      ...(await reconstructEnvelopesBatch(executionEngine, metrics, headerEnvelopes.slice(i, i + MAX_BODIES_REQUEST)))
+      ...(await reconstructEnvelopesBatch(
+        executionEngine,
+        metrics,
+        headerEnvelopes.slice(i, i + MAX_BODIES_PER_REQUEST)
+      ))
     );
   }
   return out;
@@ -307,7 +312,14 @@ async function reconstructEnvelopesBatch(
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
       metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "unavailable"});
-      return {slot, reason: "unavailable"};
+      return {
+        slot,
+        reason: "unavailable",
+        error: new EnvelopeReconstructionError(
+          {code: EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE, slot},
+          `execution client cannot serve the payload body or block access list for archived envelope slot=${slot}`
+        ),
+      };
     }
     try {
       const envelope = signedHeaderEnvelopeToFull(headerEnvelope, {
@@ -315,7 +327,7 @@ async function reconstructEnvelopesBatch(
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,
       });
-      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "ok"});
+      metrics?.payloadEnvelopeReconstruction.envelopes.inc({result: "success"});
       return envelope;
     } catch (e) {
       if (

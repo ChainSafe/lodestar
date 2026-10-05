@@ -2044,6 +2044,16 @@ export function createLodestarMetrics(
         help: "ExecutionEngineHttp client - total count of request retries",
         labelNames: ["routeId"],
       }),
+      requestBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes sent to the execution client by routeId",
+        labelNames: ["routeId"],
+      }),
+      responseBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_response_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes received from the execution client by routeId",
+        labelNames: ["routeId"],
+      }),
       requestUsedFallbackUrl: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
         help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",

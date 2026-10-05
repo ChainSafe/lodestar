@@ -504,19 +504,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getBlobs(
     _fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
-    _buffers?: Uint8Array[]
+    buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
-    // Pooled buffers are not forwarded: GetBlobsTracker sizes them by max blobs rather than the request,
-    // and data column sidecars retain the returned proofs after the tracker reuses the buffers
-    return await this.getBlobsV2(versionedHashesHex);
+    return await this.getBlobsV2(versionedHashesHex, buffers);
   }
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
     if (buffers) {
-      if (buffers.length !== versionedHashesHex.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
+      if (buffers.length < versionedHashesHex.length) {
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
       }
 
       for (const [i, buffer] of buffers.entries()) {

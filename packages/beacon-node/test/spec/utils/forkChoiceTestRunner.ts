@@ -83,7 +83,7 @@ export const forkChoiceTestRunner =
   (fork) => {
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
-        const {steps, anchorState} = testcase;
+        const {steps, anchorState, anchorBlock} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
         // const state = createCachedBeaconStateTest(anchorState, config);
@@ -158,6 +158,10 @@ export const forkChoiceTestRunner =
 
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
+
+        const specStoreBlockRoots = new Set<RootHex>([
+          toHex(config.getForkTypes(anchorBlock.slot).BeaconBlock.hashTreeRoot(anchorBlock)),
+        ]);
 
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
@@ -357,6 +361,16 @@ export const forkChoiceTestRunner =
                 isValid,
               });
 
+              if (specStoreBlockRoots.has(blockRootHex)) {
+                if (!isValid) {
+                  throw Error(`Known block marked invalid at step ${i}, root=${blockRootHex}`);
+                }
+                logger.debug(`Step ${i}/${stepsLen} skip block: already known (spec on_block returns early)`, {
+                  root: blockRootHex,
+                });
+                continue;
+              }
+
               try {
                 let blockImport;
                 const forkSeq = config.getForkSeq(slot);
@@ -443,10 +457,6 @@ export const forkChoiceTestRunner =
                   seenTimestampSec: tickTime,
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
-                  // A block the spec store already has is a no-op for on_block. Lodestar would reject it instead,
-                  // as already known or, once pruned by finalization, for being at or below the finalized slot.
-                  ignoreIfKnown: isValid,
-                  ignoreIfFinalized: isValid,
                 });
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
                 if (protoBlock === null) {
@@ -455,6 +465,7 @@ export const forkChoiceTestRunner =
                 const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
                 expectValidProgressiveBalances(postState, metrics);
                 if (!isValid) throw Error("Expect error since this is a negative test");
+                specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") {
                   throw e;
