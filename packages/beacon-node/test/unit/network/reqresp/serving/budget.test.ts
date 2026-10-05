@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {RespStatus, ResponseOutgoing} from "@lodestar/reqresp";
 import {defer} from "@lodestar/utils";
 import {HostServingBudget} from "../../../../../src/network/reqresp/serving/budget.js";
 import {startServingHandler} from "../../../../../src/network/reqresp/serving/handler.js";
@@ -60,7 +60,9 @@ describe("environment serving retirement", () => {
     occupancy(budget, 1, 1);
     expect(returnFn).toHaveBeenCalledOnce();
     expect(HostServingBudget.forEnvironment(policy)).toBe(budget);
-    expect(() => startServingHandler(budget, async function* () {})).toThrow("capacity");
+    expect(() => startServingHandler(budget, async function* () {})).toThrow(
+      expect.objectContaining({status: RespStatus.RATE_LIMITED, errorMessage: expect.stringContaining("Rate limited")})
+    );
     expect(() => HostServingBudget.forEnvironment({...policy, capacity: 2})).toThrow("outstanding");
     try {
       next.resolve({done: true, value: undefined});

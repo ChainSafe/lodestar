@@ -14,7 +14,7 @@ import {
 } from "@lodestar/reqresp";
 import {PeerAction} from "../../peers/score/index.js";
 import {onOutgoingReqRespError} from "../../reqresp/score.js";
-import {BoundedServing, LocalServingResponseError, ServingHandler} from "../../reqresp/serving/handler.js";
+import {BoundedServing, ServingHandler} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
@@ -209,7 +209,7 @@ export class NativeRequests {
   async serve(request: IncomingRequest): Promise<void> {
     if (this.closed) return request.cancel();
     const protocol = nativeProtocols.get(request.protocol);
-    if (!protocol) return fail(request, new LocalServingResponseError());
+    if (!protocol) return fail(request, new ResponseError(RespStatus.SERVER_ERROR, "Unsupported serving protocol"));
     let handler: ServingHandler;
     try {
       handler = this.getHandler(protocol.method)(

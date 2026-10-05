@@ -322,8 +322,10 @@ it("answers a stored block exceeding its native read bound with SERVER_ERROR", a
   const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
   permission.resolve();
   await owner.serve(request);
-  expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.SERVER_ERROR, expect.any(Uint8Array));
-  expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe("Local serving capacity exhausted");
+  expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
+  expect(new TextDecoder().decode(vi.mocked(request.fail).mock.calls[0][1])).toBe(
+    "Requested data exceeds serving limits"
+  );
   expect(getBinary).toHaveBeenCalledExactlyOnceWith(
     root,
     expect.objectContaining({fillCache: false, maxValueBytes: config.MAX_PAYLOAD_SIZE})

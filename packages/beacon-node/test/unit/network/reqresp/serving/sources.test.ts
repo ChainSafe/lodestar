@@ -524,8 +524,7 @@ describe("actual serving sources", () => {
       const getBinary = vi.spyOn(db.blockArchive, "getBinary");
       const bad = handler(request, peer, "test");
       await expect(bad.next()).rejects.toMatchObject({
-        code: "HOST_SERVING_CAPACITY",
-        status: RespStatus.SERVER_ERROR,
+        status: RespStatus.RESOURCE_UNAVAILABLE,
       });
       await bad.retired;
       expect(getBinary).toHaveBeenCalledOnce();
@@ -751,8 +750,7 @@ describe("actual serving sources", () => {
       const budget = HostServingBudget.forEnvironment(policy);
       const handler = startServingHandler(budget, (context) => onLightClientBootstrap(root, chain, context));
       await expect(handler.next()).rejects.toMatchObject({
-        status: RespStatus.SERVER_ERROR,
-        code: "HOST_SERVING_CAPACITY",
+        status: RespStatus.RESOURCE_UNAVAILABLE,
       });
       await handler.retired;
       expect(budget.snapshot().occupancy).toBe(0);

@@ -7,13 +7,6 @@ import {ReqRespMethod} from "../types.js";
 import {HostServingBudget, ServingLease} from "./budget.js";
 import {assertSupportedServingSlot} from "./policy.js";
 
-export class LocalServingResponseError extends ResponseError {
-  readonly code = "HOST_SERVING_CAPACITY";
-  constructor() {
-    super(RespStatus.SERVER_ERROR, "Local serving capacity exhausted");
-  }
-}
-
 export interface ServingHandler extends AsyncIterableIterator<ResponseOutgoing> {
   prepare(): Promise<void>;
   cancel(): void;
@@ -35,7 +28,8 @@ export function startServingHandler(
   try {
     lease = budget.acquire(peer, method);
   } catch (error) {
-    if (isServingCapacityError(error)) throw new LocalServingResponseError();
+    if (isServingCapacityError(error))
+      throw new ResponseError(RespStatus.RATE_LIMITED, "Rate limited: local serving capacity exhausted");
     throw error;
   }
   let iterator: AsyncIterator<ResponseOutgoing> | undefined;
@@ -98,7 +92,8 @@ export function startServingHandler(
           void requestReturn();
           lease.finish();
         }
-        if (isServingCapacityError(error)) throw new LocalServingResponseError();
+        if (isServingCapacityError(error))
+          throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "Requested data exceeds serving limits");
         throw error;
       } finally {
         pulling = false;

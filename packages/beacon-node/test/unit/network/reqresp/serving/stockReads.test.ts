@@ -7,7 +7,7 @@ import {LevelDb} from "@chainsafe/lodestar-z/leveldb";
 import {LevelDbController} from "@lodestar/db";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {RespStatus, ResponseOutgoing} from "@lodestar/reqresp";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {Logger, byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
@@ -287,7 +287,7 @@ describe("stock serving reads", () => {
       for (const source of sources) {
         const budget = HostServingBudget.forEnvironment(policy);
         const handler = startServingHandler(budget, source);
-        await expect(handler.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
+        await expect(handler.next()).rejects.toMatchObject({status: RespStatus.RESOURCE_UNAVAILABLE});
         await handler.retired;
         expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0, reservedBytes: 0});
       }
