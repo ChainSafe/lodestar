@@ -1,6 +1,11 @@
 import {describe, expect, it} from "vitest";
-import {ForkSeq} from "@lodestar/params";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ForkName, ForkSeq, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
+import {createCachedBeaconState} from "../../../src/index.js";
 import {numValidators} from "../../../src/testUtils/util.js";
 import {beforeValue} from "../../utils/beforeValue.js";
 import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
@@ -44,4 +49,48 @@ describe("getExpectedWithdrawals", () => {
       expect(expectedWithdrawals.length).toBe(opts.withdrawals);
     });
   }
+});
+
+describe("getExpectedWithdrawals gloas", () => {
+  it("sweeps the full builder balance regardless of its pending withdrawals", () => {
+    const config = getConfig(ForkName.gloas);
+    const view = ssz.gloas.BeaconState.defaultViewDU();
+    view.fork = ssz.phase0.Fork.toViewDU({
+      previousVersion: config.GENESIS_FORK_VERSION,
+      currentVersion: config.GLOAS_FORK_VERSION,
+      epoch: 0,
+    });
+    const state = createCachedBeaconState(
+      view,
+      {config: createBeaconConfig(config, view.genesisValidatorsRoot), pubkeyCache},
+      {skipSyncCommitteeCache: true}
+    );
+
+    const builderBalance = 32_000_000_000;
+    const pendingAmount = 1_000_000_000;
+    state.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey: new Uint8Array(48).fill(1),
+        version: PAYLOAD_BUILDER_VERSION,
+        executionAddress: new Uint8Array(20).fill(1),
+        balance: builderBalance,
+        depositEpoch: 0,
+        withdrawableEpoch: 0,
+      })
+    );
+    state.builderPendingWithdrawals.push(
+      ssz.gloas.BuilderPendingWithdrawal.toViewDU({
+        feeRecipient: new Uint8Array(20).fill(2),
+        amount: pendingAmount,
+        builderIndex: 0,
+      })
+    );
+
+    const {expectedWithdrawals} = getExpectedWithdrawals(ForkSeq.gloas, state);
+
+    expect(expectedWithdrawals.map((withdrawal) => withdrawal.amount)).toEqual([
+      BigInt(pendingAmount),
+      BigInt(builderBalance),
+    ]);
+  });
 });
