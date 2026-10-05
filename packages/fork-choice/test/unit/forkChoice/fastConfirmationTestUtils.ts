@@ -195,7 +195,7 @@ export function makeContext(
       if (!message) return null;
       return {root: message.root, epoch: message.epoch, payloadStatus: message.payloadStatus ?? PayloadStatus.FULL};
     },
-    getParentPayloadStatus: (blockRoot: RootHex) => {
+    getExtendedParentPayloadStatus: (blockRoot: RootHex) => {
       const block = blocksByRoot.get(blockRoot);
       const parent = block && blocksByRoot.get(block.parentRoot);
       return parent ? parent.payloadStatus : null;

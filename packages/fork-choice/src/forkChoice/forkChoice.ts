@@ -2369,7 +2369,7 @@ export class ForkChoice implements IForkChoice {
           epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex]),
         };
       },
-      getParentPayloadStatus: (blockRoot: RootHex) => {
+      getExtendedParentPayloadStatus: (blockRoot: RootHex) => {
         const nodeIndex = this.protoArray.getDefaultNodeIndex(blockRoot);
         if (nodeIndex === undefined) return null;
         const parentIndex = this.protoArray.nodes[nodeIndex]?.parent;
