@@ -1336,16 +1336,18 @@ export function getValidatorApi(
         // After Gloas, attestation.data.index signals payload status in fork-choice:
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
+        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
         if (canonicalBlock.slot !== slot) {
           index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          if (isOptimisticBlock(canonicalBlock)) {
+            throw new NodeIsSyncing(
+              `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
+            );
+          }
         } else {
           index = 0;
-        }
-        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
-        if (isOptimisticBlock(canonicalBlock)) {
-          throw new NodeIsSyncing(
-            `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
-          );
+          // Same-slot votes support the PENDING variant, which does not depend on the block's own payload
+          notOnOptimisticBlockRoot(beaconBlockRoot);
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;

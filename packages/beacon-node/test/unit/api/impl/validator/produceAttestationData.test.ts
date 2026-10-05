@@ -125,6 +125,35 @@ describe("api - validator - produceAttestationData", () => {
       expect(data.index).toBe(1);
       expect(toRootHex(data.beaconBlockRoot)).toBe(toRootHex(headRoot));
     });
+
+    it("Should vote same-slot post-gloas when only the FULL head is optimistic", async () => {
+      // Same-slot votes support the PENDING variant, which is valid
+      setup(gloasConfig, ExecutionStatus.Valid);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      const {data} = await api.produceAttestationData({committeeIndex: 0, slot: headSlot});
+      if (data instanceof Uint8Array) {
+        throw Error("Expected attestation data object");
+      }
+      expect(data.index).toBe(0);
+    });
+
+    it("Should throw same-slot post-gloas when the PENDING head is optimistic", async () => {
+      setup(gloasConfig, ExecutionStatus.Syncing);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      await expect(api.produceAttestationData({committeeIndex: 0, slot: headSlot})).rejects.toThrow("Node is syncing");
+    });
   });
 
   describe("producePayloadAttestationData", () => {
