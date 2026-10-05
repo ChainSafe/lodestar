@@ -484,75 +484,81 @@ describe("sync / range / chain", () => {
     expect(downloads).toBeGreaterThanOrEqual(2);
   });
 
-  it("Should retry a rate-limited peer if the backoff expires while the retry timer callback runs", async () => {
-    const rateLimitedUntilMs = 10_000;
-    let nowMs = rateLimitedUntilMs - 1000;
-    let advanceOnRead = false;
-    let downloads = 0;
+  // The retry timer can fire before the backoff expires and the expiry can land between clock reads in its callback.
+  // Try each crossing point so the test does not depend on how many times the callback reads the clock.
+  it.each([0, 1, 2, 3, 4])(
+    "Should retry a rate-limited peer if the backoff expires after %i clock reads in the retry timer callback",
+    async (readsBeforeExpiry) => {
+      const rateLimitedUntilMs = 10_000;
+      let inRetryWindow = false;
+      let readsInRetryWindow = 0;
+      let downloads = 0;
 
-    vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
-    const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => (advanceOnRead ? nowMs++ : nowMs));
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+      const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+        if (!inRetryWindow) return rateLimitedUntilMs - 1000;
+        return readsInRetryWindow++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+      });
 
-    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
-      downloads++;
-      if (downloads === 1) {
-        throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs});
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
+        downloads++;
+        if (downloads === 1) {
+          throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs});
+        }
+
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              seenTimestampSec: 0,
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      const target: ChainTarget = {slot: computeStartSlotAtEpoch(2), root: ZERO_HASH};
+      const controller = new AbortController();
+      const clock = new Clock({config, genesisTime: 0, signal: controller.signal});
+      const initialSync = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        logSyncChainFns(logger, {
+          processChainSegment: async () => {},
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd: () => {},
+        }),
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
+      );
+
+      try {
+        initialSync.addPeer(peer, target);
+        initialSync.startSyncing(0);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(downloads).toBe(1);
+
+        inRetryWindow = true;
+        await vi.advanceTimersByTimeAsync(2000);
+
+        expect(downloads).toBeGreaterThanOrEqual(2);
+      } finally {
+        initialSync.remove();
+        controller.abort();
+        dateNowSpy.mockRestore();
+        vi.useRealTimers();
       }
-
-      const blocks: IBlockInput[] = [];
-      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
-        blocks.push(
-          BlockInputPreData.createFromBlock({
-            block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
-            blockRootHex: "0x00",
-            forkName: config.getForkName(i),
-            seenTimestampSec: 0,
-            daOutOfRange: false,
-            source: BlockInputSource.byRange,
-          })
-        );
-      }
-      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
-    };
-
-    const target: ChainTarget = {slot: computeStartSlotAtEpoch(2), root: ZERO_HASH};
-    const controller = new AbortController();
-    const clock = new Clock({config, genesisTime: 0, signal: controller.signal});
-    const initialSync = new SyncChain(
-      0,
-      target,
-      RangeSyncType.Finalized,
-      logSyncChainFns(logger, {
-        processChainSegment: async () => {},
-        downloadByRange,
-        getConnectedPeerSyncMeta,
-        reportPeer,
-        pruneBlockInputs,
-        onEnd: () => {},
-      }),
-      {config, logger, clock, custodyConfig, metrics: null},
-      undefined
-    );
-
-    try {
-      initialSync.addPeer(peer, target);
-      initialSync.startSyncing(0);
-      await vi.advanceTimersByTimeAsync(0);
-      expect(downloads).toBe(1);
-
-      // The retry timer fires 1ms early and the clock passes the backoff expiry while its callback runs
-      nowMs = rateLimitedUntilMs - 1;
-      advanceOnRead = true;
-      await vi.advanceTimersByTimeAsync(1000);
-
-      expect(downloads).toBeGreaterThanOrEqual(2);
-    } finally {
-      initialSync.remove();
-      controller.abort();
-      dateNowSpy.mockRestore();
-      vi.useRealTimers();
     }
-  });
+  );
 
   describe("batch teardown peer reporting", () => {
     async function runToTeardown(
