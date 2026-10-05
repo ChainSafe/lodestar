@@ -337,8 +337,10 @@ export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
   | "builderPendingPayments"
   | "builderPendingWithdrawals"
+  | "computeAttestationsRewards"
   | "computeBlockRewards"
   | "computeNewStateRoot"
+  | "computeSyncCommitteeRewards"
   | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
@@ -367,6 +369,11 @@ export type IBeaconStateViewNative = Omit<
     isBlinded: boolean,
     proposerRewards?: RewardCache
   ): rewards.BlockRewards;
+  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): rewards.AttestationsRewards;
+  computeSyncCommitteeRewards(
+    block: BeaconBlock,
+    validatorIds: (ValidatorIndex | string)[]
+  ): rewards.SyncCommitteeRewards;
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
   getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];

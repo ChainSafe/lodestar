@@ -498,7 +498,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.computeBlockRewards(signedBlockBytes, isBlinded, proposerRewards);
   }
 
-  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
+  async computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
     return this.binding.computeAttestationsRewards(validatorIds);
   }
 
@@ -744,7 +744,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
-  computeSyncCommitteeRewards(
+  async computeSyncCommitteeRewards(
     block: BeaconBlock,
     validatorIds: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards> {
