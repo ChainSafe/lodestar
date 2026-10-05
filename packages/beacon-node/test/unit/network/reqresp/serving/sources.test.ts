@@ -49,7 +49,7 @@ async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Prom
   const path = await mkdtemp(join(tmpdir(), "lodestar-serving-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
-    const db = new BeaconDb(config, controller);
+    const db = new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger});
     await run(db, controller);
   } finally {
     await controller.close();

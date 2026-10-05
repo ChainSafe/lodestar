@@ -26,8 +26,10 @@ export class NativeGossipExecutor {
     private readonly wake: () => void
   ) {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
-    this.validate = getGossipValidatorFn(handlers, modules);
-    this.validateBatch = getGossipValidatorBatchFn(handlers, modules);
+    // Native owns the validation queue; peer bans go through core.reportPeer.
+    const onFatalPeer = (): void => {};
+    this.validate = getGossipValidatorFn(handlers, modules, onFatalPeer);
+    this.validateBatch = getGossipValidatorBatchFn(handlers, modules, onFatalPeer);
     gossip.attach(this);
     modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
     modules.chain.clock.on(ClockEvent.slot, this.onSlot);
@@ -99,9 +101,10 @@ export class NativeGossipExecutor {
     this.modules.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
-  searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+  searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr, slotIsPayloadSlot = false): void {
     if (this.stopped || this.modules.chain.seenPayloadEnvelope(root)) return;
-    this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, slot, peer, source});
+    if (slotIsPayloadSlot) this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
+    else this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
   }
 
   private readonly onBlock = ({block}: {block: string}): void => {

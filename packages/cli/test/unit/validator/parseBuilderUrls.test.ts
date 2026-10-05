@@ -17,7 +17,7 @@ describe("validator / parseBuilderUrls", () => {
 
   it("rejects duplicate entries, comparing an omitted auth data as derived from the url", () => {
     const url = "https://builder.example.com";
-    const derived = `0x${Buffer.from(url).toString("hex")}`;
+    const derived = `0x${Buffer.from("builder.example.com").toString("hex")}`;
     expect(() => parseBuilderUrls([url, url])).toThrow(/Duplicate builder url/);
     expect(() => parseBuilderUrls([url, `${url}#${derived}`])).toThrow(/Duplicate builder url/);
   });
@@ -25,6 +25,7 @@ describe("validator / parseBuilderUrls", () => {
   it("rejects invalid urls and auth data", () => {
     expect(() => parseBuilderUrls(["builder.example.com"])).toThrow(/Invalid builder url/);
     expect(() => parseBuilderUrls(["https://builder.example.com/é"])).toThrow(/Invalid builder url/);
+    expect(() => parseBuilderUrls(["https://platåberget.dev"])).toThrow("use https://xn--platberget-45a.dev/ instead");
     expect(() => parseBuilderUrls(["https://builder.example.com#"])).toThrow(/auth data/);
     expect(() => parseBuilderUrls(["https://builder.example.com#0x"])).toThrow(/auth data/);
     expect(() => parseBuilderUrls(["https://builder.example.com#secret"])).toThrow(/auth data/);

@@ -180,7 +180,7 @@ describe("native gossip handler order", () => {
   it("defers handler work to the next event loop where the result is reported synchronously", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
-    const validate = getGossipValidatorFn(getGossipHandlers(f.modules, {}), f.modules);
+    const validate = getGossipValidatorFn(getGossipHandlers(f.modules, {}), f.modules, vi.fn());
     try {
       const result = await validate({
         topic: {type: GossipType.voluntary_exit, boundary},

@@ -7,7 +7,6 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
-import bindings from "@chainsafe/lodestar-z";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {NativeApplicationConfig, NativeLocalIntent} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
@@ -291,7 +290,6 @@ describe("native Lodestar integration", () => {
       16
     );
     application.local.status.finalizedEpoch = (1n << 64n) - 1n;
-    bindings.config.set(config, config.genesisValidatorsRoot);
     const remote = await nativeBindingProcess(application, config);
     application.identitySecretKey.fill(0);
     try {
@@ -566,7 +564,6 @@ describe("native Lodestar integration", () => {
         config.CUSTODY_REQUIREMENT,
         16384
       );
-      bindings.config.set(config, config.genesisValidatorsRoot);
       const network = createSettlingNetwork(application);
       try {
         expect((await network.getIdentity()).localEndpoint.port).toBeGreaterThan(0);

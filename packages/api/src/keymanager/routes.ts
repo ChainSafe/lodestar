@@ -7,7 +7,7 @@ import {
   MAX_BUILDER_URL_SIZE,
 } from "@lodestar/params";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
-import {isValidAsciiHttpUrl} from "@lodestar/utils";
+import {isValidAsciiHttpUrl, toAsciiHttpUrl} from "@lodestar/utils";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -107,7 +107,7 @@ export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 export type BuilderEntryConfig = {
   /** URL the bid requests for this entry are sent to */
   url: string;
-  /** Auth data hex string as agreed with the builder, derived from the UTF-8 bytes of the builder url when omitted */
+  /** Auth data hex string as agreed with the builder, derived from the builder url hostname when omitted */
   authData?: string;
   /** Builder BLS pubkeys this entry accepts bids from, empty or omitted accepts any builder */
   builderPubkeys?: string[];
@@ -194,7 +194,11 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
         throw Error(`builders[${i}].url must not exceed ${MAX_BUILDER_URL_SIZE} bytes`);
       }
       if (!isValidAsciiHttpUrl(url)) {
-        throw Error(`builders[${i}].url must be a valid HTTP or HTTPS URL using only ASCII characters`);
+        const asciiUrl = toAsciiHttpUrl(url);
+        throw Error(
+          `builders[${i}].url must be a valid HTTP or HTTPS URL using only ASCII characters` +
+            (asciiUrl !== null ? `, use ${asciiUrl} instead` : "")
+        );
       }
       if (auth_data !== undefined && (typeof auth_data !== "string" || !BUILDER_AUTH_DATA_PATTERN.test(auth_data))) {
         throw Error(

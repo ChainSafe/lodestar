@@ -1,7 +1,12 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import bindings from "@chainsafe/lodestar-z";
+import {
+  init as initNativeMetrics,
+  registerLocalValidator as registerNativeLocalValidator,
+  scrapeMetrics as scrapeNativeMetrics,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -9,7 +14,6 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
@@ -23,7 +27,6 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {HostServingBudget} from "../network/reqresp/serving/budget.js";
 import {getBoundedReqRespHandlers} from "../network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../network/reqresp/serving/policy.js";
-import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
@@ -42,7 +45,6 @@ export type BeaconNodeModules = {
   chain: IBeaconChain;
   api: BeaconApiMethods;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
@@ -58,10 +60,10 @@ export type BeaconNodeInitModules = {
   processShutdownCallback: ProcessShutdownCallback;
   privateKey: PrivateKey;
   dataDir: string;
+  dataColumnDir: string;
   peerStoreDir?: string;
   anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
-  wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 };
 
@@ -73,7 +75,6 @@ export enum BeaconNodeStatus {
 
 enum LoggerModule {
   api = "api",
-  backfill = "backfill",
   chain = "chain",
   execution = "execution",
   metrics = "metrics",
@@ -108,7 +109,6 @@ export class BeaconNode {
   api: BeaconApiMethods;
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -126,7 +126,6 @@ export class BeaconNode {
     api,
     restApi,
     sync,
-    backfillSync,
     controller,
   }: BeaconNodeModules) {
     this.opts = opts;
@@ -141,7 +140,6 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
-    this.backfillSync = backfillSync;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -160,10 +158,10 @@ export class BeaconNode {
     processShutdownCallback,
     privateKey,
     dataDir,
+    dataColumnDir,
     peerStoreDir,
     anchorState,
     isAnchorStateFinalized,
-    wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
@@ -182,10 +180,16 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
+      if (opts.chain.nativeStateTransition) {
+        initNativeMetrics();
+      }
+
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
+        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
+      });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
-      db.setMetrics(metrics.db);
+      db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
@@ -196,11 +200,19 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            opts.validatorMonitor,
+            opts.chain.nativeStateTransition
+              ? {
+                  registerLocalValidator: registerNativeLocalValidator,
+                  unregisterLocalValidator: unregisterNativeLocalValidator,
+                }
+              : null
           )
         : null;
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
+
+    await db.init();
 
     const boundedServing = opts.network.backend === "native";
     // Prune hot db repos
@@ -243,14 +255,13 @@ export class BeaconNode {
       };
     }
 
-    if (opts.network.backend === "native") bindings.config.set(config, config.genesisValidatorsRoot);
-
     const chain = new BeaconChain(opts.chain, {
       privateKey,
       config,
       clock,
       pubkeyCache,
       dataDir,
+      dataColumnDir,
       db,
       dbName: opts.db.name,
       logger: logger.child({module: LoggerModule.chain}),
@@ -305,24 +316,8 @@ export class BeaconNode {
       chain,
       metrics,
       network,
-      wsCheckpoint,
       logger: logger.child({module: LoggerModule.sync}),
     });
-
-    const backfillSync =
-      opts.sync.backfillBatchSize > 0
-        ? await BackfillSync.init(opts.sync, {
-            config,
-            db,
-            chain,
-            metrics,
-            network,
-            wsCheckpoint,
-            anchorState,
-            logger: logger.child({module: LoggerModule.backfill}),
-            signal,
-          })
-        : null;
 
     const api = getApi(opts.api, {
       config,
@@ -338,7 +333,17 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
+          getOtherMetrics: async () => {
+            const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
+            if (opts.chain.nativeStateTransition) {
+              try {
+                otherMetrics.push(scrapeNativeMetrics());
+              } catch (e) {
+                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+              }
+            }
+            return otherMetrics;
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;
@@ -371,7 +376,6 @@ export class BeaconNode {
       api,
       restApi,
       sync,
-      backfillSync,
       controller,
     }) as T;
   }
@@ -383,7 +387,6 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
-      this.backfillSync?.close();
       if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();

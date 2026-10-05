@@ -169,6 +169,7 @@ export const zeroProtoBlock: ProtoBlock = {
   unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
   timeliness: false,
+  importedTimely: false,
   ptcTimeliness: false,
   proposerIndex: 0,
 

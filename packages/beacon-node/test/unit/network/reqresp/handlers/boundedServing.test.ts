@@ -112,7 +112,7 @@ describe("bounded serving actual behavior", () => {
     const path = await mkdtemp(join(tmpdir(), "serving-red-"));
     const controller = await LevelDbController.create({name: path}, {logger});
     try {
-      const db = new BeaconDb(config, controller);
+      const db = new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger});
       const root = new Uint8Array(32);
       await db.block.putBinary(root, new Uint8Array(2048));
       const chain = {

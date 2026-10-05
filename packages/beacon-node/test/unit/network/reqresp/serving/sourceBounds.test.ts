@@ -62,7 +62,7 @@ async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Prom
   const path = await mkdtemp(join(tmpdir(), "lodestar-source-bounds-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
-    await run(new BeaconDb(config, controller), controller);
+    await run(new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger}), controller);
   } finally {
     await controller.close();
     await rm(path, {recursive: true, force: true});
@@ -249,7 +249,7 @@ describe("serving source bounds with native reads", () => {
         expect(protocol(fork, config).responseSizes(fork).maxSize).toBe(network);
       }
       const boundary = {fork, epoch: config.forks[fork].epoch};
-      expect(getGossipSSZMaxSize({type: GossipType.beacon_block, boundary}, config.MAX_PAYLOAD_SIZE)).toBe(
+      expect(getGossipSSZMaxSize({type: GossipType.beacon_block, boundary}, config, sszTypesFor(fork).SignedBeaconBlock)).toBe(
         config.MAX_PAYLOAD_SIZE
       );
       // From Bellatrix the schema admits about 2^50 bytes of transactions, so it bounds nothing

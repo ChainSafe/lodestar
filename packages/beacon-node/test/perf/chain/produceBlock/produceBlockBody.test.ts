@@ -40,7 +40,10 @@ describe("produceBlockBody", () => {
       logger: testLogger("executionEngine"),
     });
 
-    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}), {
+      dataColumnDir: ".tmpdb-data-columns",
+      logger,
+    });
     chain = new BeaconChain(
       {
         proposerBoost: true,

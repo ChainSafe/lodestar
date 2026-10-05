@@ -1,4 +1,5 @@
 export {type BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+export {IndexedBuilderState} from "./block/indexedBuilderState.js";
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
 export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
@@ -13,7 +14,7 @@ export {
 } from "./block/processVoluntaryExit.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-export {ProposerRewardType} from "./block/types.js";
+export {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 export {
   type EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsWithLen,
@@ -43,6 +44,8 @@ export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
 export {BeaconStateView} from "./stateView/beaconStateView.js";
 export {
+  type BlockSTFInput,
+  type ComputeNewStateRootResult,
   type IBeaconStateView,
   type IBeaconStateViewAltair,
   type IBeaconStateViewBellatrix,
@@ -52,6 +55,7 @@ export {
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
   type IBeaconStateViewHeze,
+  type IBeaconStateViewNative,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -61,6 +65,7 @@ export {
   isStatePostGloas,
   isStatePostHeze,
 } from "./stateView/interface.js";
+export {NativeBeaconStateView} from "./stateView/nativeBeaconStateView.js";
 export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {
   BeaconStateAllForks,

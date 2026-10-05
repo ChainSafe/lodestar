@@ -81,7 +81,7 @@ async function withDb(
     return it;
   };
   try {
-    await run(new BeaconDb(config, controller), reads, level);
+    await run(new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger}), reads, level);
   } finally {
     await controller.close();
     await rm(path, {recursive: true, force: true});

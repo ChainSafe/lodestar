@@ -1,5 +1,6 @@
-import {describe, expect, it} from "vitest";
+import {Mock, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
@@ -78,6 +79,7 @@ describe("beacon state api utils", () => {
         getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
         getFinalizedBlock: () => ({slot: 0}),
       },
+      regen: {getStateSync: () => servedResponse.state},
       getStateByStateRoot: () => Promise.resolve(servedResponse),
       getStateOrBytesByCheckpoint: () => Promise.resolve(servedResponse),
       getStateBySlot: () => Promise.resolve(servedResponse),
@@ -94,6 +96,44 @@ describe("beacon state api utils", () => {
       for (const stateId of ["head", "finalized", "justified", "genesis"] as const) {
         await expect(getStateResponseWithRegen(syncingChain, sync, stateId), stateId).resolves.toBeDefined();
       }
+    });
+  });
+
+  describe("getStateResponseWithRegen head", () => {
+    const head = {slot: 15902, stateRoot: "0xaa", executionStatus: ExecutionStatus.Valid};
+    const headPostState = {epoch: 496, slot: 15902};
+    // Anchor state at the epoch boundary after the head block, slots 15903-15904 skipped
+    const anchorState = {epoch: 497, slot: 15904};
+    const sync = {state: SyncState.Synced} as unknown as IBeaconSync;
+
+    function getChain(cachedState: unknown): {chain: IBeaconChain; getHeadState: Mock} {
+      const getHeadState = vi.fn(() => anchorState);
+      const chain = {
+        forkChoice: {
+          getHead: () => head,
+          getFinalizedCheckpoint: () => ({rootHex: "0xbb", epoch: 497}),
+        },
+        regen: {getStateSync: (stateRoot: string) => (stateRoot === head.stateRoot ? cachedState : null)},
+        getHeadState,
+      } as unknown as IBeaconChain;
+      return {chain, getHeadState};
+    }
+
+    it("serves the head block's post-state from the block state cache", async () => {
+      const {chain, getHeadState} = getChain(headPostState);
+      const res = await getStateResponseWithRegen(chain, sync, "head");
+      expect(res.state).toBe(headPostState);
+      expect(res.finalized).toBe(true);
+      expect(res.executionOptimistic).toBe(false);
+      expect(getHeadState).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the closest head state if the head block's post-state is not cached (anchor at skipped boundary slot)", async () => {
+      const {chain, getHeadState} = getChain(null);
+      const res = await getStateResponseWithRegen(chain, sync, "head");
+      expect(res.state).toBe(anchorState);
+      expect(res.finalized).toBe(true);
+      expect(getHeadState).toHaveBeenCalledOnce();
     });
   });
 });

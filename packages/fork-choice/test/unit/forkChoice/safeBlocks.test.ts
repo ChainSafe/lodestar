@@ -28,6 +28,7 @@ function buildBlock(opts: {
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: "0x00",
     timeliness: true,
+    importedTimely: true,
     ptcTimeliness: false,
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,
@@ -79,7 +80,7 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
     });
     const fc = mockForkChoice(confirmed, confirmed);
 
-    expect(getSafeExecutionBlockHash(fc, {debug})).toBe("0xpayloadA");
+    expect(getSafeExecutionBlockHash(fc, {debug, warn: vi.fn()})).toBe("0xpayloadA");
     expect(debug).toHaveBeenCalledWith("Confirmed block is the finalized block", {
       blockRoot: confirmed.blockRoot,
       slot: confirmed.slot,
@@ -106,7 +107,9 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
     expect(getSafeExecutionBlockHash(fc)).toBe("0xparentEL");
   });
 
-  it("throws when the confirmed block is not found", () => {
+  it("falls back to finalized when the confirmed block is not found", () => {
+    const debug = vi.fn();
+    const warn = vi.fn();
     const finalized = buildBlock({
       blockRoot: "0xbb",
       executionPayloadBlockHash: "0xpayloadF",
@@ -114,9 +117,11 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
     });
     const fc = mockForkChoice(null, finalized);
 
-    expect(() => getSafeExecutionBlockHash(fc)).toThrowError(
-      new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: "0xconfirmed"})
-    );
+    expect(getSafeExecutionBlockHash(fc, {debug, warn})).toBe("0xpayloadF");
+    expect(warn).toHaveBeenCalledExactlyOnceWith("Confirmed block unavailable, using finalized block", {
+      confirmedRoot: "0xconfirmed",
+      finalizedRoot: finalized.blockRoot,
+    });
   });
 
   it("throws when a post-Merge block is missing its execution payload block hash", () => {

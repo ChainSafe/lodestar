@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ErrorAborted} from "@lodestar/utils";
 import {getEventSource} from "../../utils/client/eventSource.js";
 import {stringifyQuery, urlJoin} from "../../utils/client/format.js";
 import {ApiClientMethods} from "../../utils/client/method.js";
@@ -26,6 +27,9 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       const query = stringifyQuery({topics});
       const url = `${urlJoin(baseUrl, definitions.eventstream.url)}?${query}`;
       const EventSource = await getEventSource();
+      if (signal.aborted) {
+        throw new ErrorAborted("eventstream request");
+      }
       const eventSource = new EventSource(url);
 
       const close = (): void => {
@@ -37,8 +41,13 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
 
       for (const topic of topics) {
         eventSource.addEventListener(topic, (event: MessageEvent) => {
-          const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
-          onEvent({type: topic, message} as BeaconEvent);
+          try {
+            const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
+            onEvent({type: topic, message} as BeaconEvent);
+          } catch (e) {
+            // A throw here leaves the EventSource parser with a stale data buffer which breaks all later events
+            onError?.(e as Error);
+          }
         });
       }
 

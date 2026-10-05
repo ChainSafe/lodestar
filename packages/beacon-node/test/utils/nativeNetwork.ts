@@ -2,7 +2,6 @@ import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
@@ -52,7 +51,8 @@ export async function nativeNetworkFixture(
   };
   try {
     controller = await LevelDbController.create({name: directory}, {logger});
-    const db = new BeaconDb(config, controller);
+    const db = new BeaconDb(config, controller, {dataColumnDir: join(directory, "columns"), logger});
+    await db.init();
     const privateKey = await generateKeyPair("secp256k1");
     const state = generateState({slot: 0}, config, true);
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
@@ -60,7 +60,6 @@ export async function nativeNetworkFixture(
     const cached = createCachedBeaconState(state, {config: beaconConfig, pubkeyCache}, {skipSyncPubkeys: true});
     const clock = new ClockStopped(0);
     clock.genesisTime = state.genesisTime;
-    if (backend === "native") bindings.config.set(beaconConfig, beaconConfig.genesisValidatorsRoot);
     chain = new BeaconChain(
       {
         archiveStateEpochFrequency: 0,

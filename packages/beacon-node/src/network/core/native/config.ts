@@ -1,3 +1,4 @@
+import bindings from "@chainsafe/lodestar-z";
 import {TopicScoreParams, defaultPeerScoreParams, defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
@@ -356,7 +357,7 @@ export function createNativeConfig(
       const schema = getGossipSSZType(topic);
       maxSszSizes[kind] = Math.max(
         maxSszSizes[kind],
-        Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE, schema))
+        Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config, schema))
       );
     }
   }
@@ -384,6 +385,7 @@ export function createNativeConfig(
     bytes: limit.bytes,
   }));
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
+    beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
     profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
     discovery: discovery(opts, key),

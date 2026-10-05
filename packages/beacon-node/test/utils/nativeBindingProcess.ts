@@ -51,7 +51,7 @@ export async function nativeBindingProcess(config: Omit<NativeApplicationConfig,
   }
   try {
     const values = Object.fromEntries(Object.entries(chain).filter(([key]) => key === key.toUpperCase()));
-    const identity = await call<NativeIdentity>("initialize", [config, values, chain.genesisValidatorsRoot]);
+    const identity = await call<NativeIdentity>("initialize", [{...config, beaconConfig: undefined}, values, chain.genesisValidatorsRoot]);
     return {
       identity,
       applyIntent: (value: NativeLocalIntent, slot: bigint) => call<void>("applyIntent", [value, slot]),

@@ -5,6 +5,7 @@ import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
+  ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
@@ -40,7 +41,6 @@ import {
   Slot,
   SyncPeriod,
   altair,
-  electra,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -53,7 +53,12 @@ import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ServingContext, servingRead} from "../serving/context.js";
-import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
+import {
+  getBlockBodyExecutionBlockHashProof,
+  getBlockBodyExecutionHeaderProof,
+  getCurrentSyncCommitteeBranch,
+  getNextSyncCommitteeBranch,
+} from "./proofs.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -62,6 +67,7 @@ export type LightClientServerOpts = {
 
 type DependentRootHex = RootHex;
 type BlockRooHex = RootHex;
+type LightClientZeroFinality = Pick<LightClientUpdate, "finalityBranch" | "finalizedHeader">;
 
 export type SyncAttestedData = {
   attestedHeader: LightClientHeader;
@@ -200,6 +206,7 @@ export class LightClientServer {
   private readonly clock: IClock;
   private readonly signal: AbortSignal;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependentRootHex>>(() => new Set());
+  private readonly zeroFinalityByFork = new Map<ForkName, LightClientZeroFinality>();
   private storedCurrentSyncCommittee = false;
 
   /**
@@ -209,10 +216,6 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
-  private readonly zero: Pick<
-    altair.LightClientUpdate | electra.LightClientUpdate,
-    "finalityBranch" | "finalizedHeader"
-  >;
   private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
@@ -227,14 +230,6 @@ export class LightClientServer {
     this.emitter = emitter;
     this.logger = logger;
     this.signal = signal;
-
-    this.zero = {
-      // Assign the highest pre-Gloas light-client header because post-Gloas light-client updates are skipped for now.
-      finalizedHeader: ssz.electra.LightClientHeader.defaultValue(),
-      // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
-      // when serializing as altair LightClientUpdate
-      finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
-    };
 
     if (metrics) {
       metrics.lightclientServer.highestSlot.addCollect(() => {
@@ -268,14 +263,6 @@ export class LightClientServer {
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
     // While this function is only called for head blocks, best to disable.
     if (this.opts.disableLightClientServerOnImportBlockHead) {
-      return;
-    }
-
-    // TODO GLOAS: Light client updates for gloas are not yet updated in the spec.
-    // The block body no longer contains execution payload, so `blockToLightClientHeader`
-    // cannot construct a header from a gloas block. Skip all light client processing
-    // for post-gloas blocks, revisit once there is a spec for it.
-    if (this.config.getForkSeq(block.slot) >= ForkSeq.gloas) {
       return;
     }
 
@@ -716,9 +703,16 @@ export class LightClientServer {
       }
     } else {
       isFinalized = false;
-      finalityBranch = this.zero.finalityBranch;
-      // No need to upgrade finalizedHeader because its anyway set to zero of highest fork
-      finalizedHeader = this.zero.finalizedHeader;
+      let zeroFinality = this.zeroFinalityByFork.get(attestedFork);
+      if (!zeroFinality) {
+        const {finalityBranch, finalizedHeader} = this.config
+          .getPostAltairForkTypes(attestedHeader.beacon.slot)
+          .LightClientUpdate.defaultValue();
+        zeroFinality = {finalityBranch, finalizedHeader};
+        this.zeroFinalityByFork.set(attestedFork, zeroFinality);
+      }
+      finalityBranch = zeroFinality.finalityBranch;
+      finalizedHeader = zeroFinality.finalizedHeader;
     }
 
     const newUpdate = {
@@ -790,22 +784,24 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-// TODO GLOAS: Pending light-client spec but this function probably won't be used
-// in Gloas. So we can assume any types here are pre-gloas
-export function blockToLightClientHeader(
-  fork: ForkName,
-  block: BeaconBlock<ForkPostAltair & ForkPreGloas>
-): LightClientHeader {
-  const blockSlot = block.slot;
+export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkPostAltair>): LightClientHeader {
   const beacon: phase0.BeaconBlockHeader = {
-    slot: blockSlot,
+    slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair & ForkPreGloas, "BeaconBlockBody">).hashTreeRoot(
-      block.body
-    ),
+    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
+
+  if (isForkPostGloas(fork)) {
+    const blockBody = block.body as BeaconBlockBody<ForkPostGloas>;
+    return {
+      beacon,
+      executionBlockHash: blockBody.signedExecutionPayloadBid.message.parentBlockHash,
+      executionBranch: getBlockBodyExecutionBlockHashProof(fork, blockBody),
+    };
+  }
+
   if (ForkSeq[fork] >= ForkSeq.capella) {
     const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);

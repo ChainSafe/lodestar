@@ -7,17 +7,17 @@ import {BuilderApiClient} from "../../../../src/execution/builder/apiClient.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
-const {getExecutionPayloadBid, submitBuilderPreferences, submitSignedBeaconBlock, verifySignatureSets} = vi.hoisted(
-  () => ({
+const {getExecutionPayloadBid, submitBuilderPreferences, submitSignedBeaconBlock, status, verifySignatureSets} =
+  vi.hoisted(() => ({
     getExecutionPayloadBid: vi.fn(),
     submitBuilderPreferences: vi.fn(),
     submitSignedBeaconBlock: vi.fn(),
+    status: vi.fn(),
     verifySignatureSets: vi.fn().mockResolvedValue(true),
-  })
-);
+  }));
 
 vi.mock("@lodestar/api/builder", () => ({
-  getClient: () => ({getExecutionPayloadBid, submitBuilderPreferences, submitSignedBeaconBlock}),
+  getClient: () => ({getExecutionPayloadBid, submitBuilderPreferences, submitSignedBeaconBlock, status}),
 }));
 
 const bls = {
@@ -182,7 +182,47 @@ describe("execution/builder/apiClient", () => {
 
     expect(bids.map((bid) => bid.signedBid.message.builderIndex)).toEqual([1, 0]);
   });
+
+  it("logs a debug line for each builder that is ready", async () => {
+    const url = "https://builder.example.com";
+    const {client, logger} = await getClientWithBuilder(url);
+    status.mockResolvedValue({assertOk: () => {}});
+
+    await client.checkStatus();
+
+    expect(status).toHaveBeenCalledOnce();
+    expect(logger.debug).toHaveBeenCalledWith("Builder is ready", {builder: url});
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("warns when a builder fails its status check without throwing", async () => {
+    const url = "https://builder.example.com";
+    const {client, logger} = await getClientWithBuilder(url);
+    status.mockRejectedValue(new Error("builder is down"));
+
+    await expect(client.checkStatus()).resolves.toBeUndefined();
+
+    expect(logger.warn).toHaveBeenCalledWith("Builder status check failed", {builder: url}, expect.any(Error));
+    expect(logger.debug).not.toHaveBeenCalledWith("Builder is ready", {builder: url});
+  });
 });
+
+/** A client with one builder already dialed, so there is something to check the status of */
+async function getClientWithBuilder(url: string) {
+  const logger = getMockedLogger();
+  const client = new BuilderApiClient({}, config, clock, bls, null, logger);
+
+  getExecutionPayloadBid.mockResolvedValue({value: () => undefined});
+  await client.getExecutionPayloadBids(
+    [getBuilderEntry(url, 1)],
+    1,
+    new Uint8Array(32),
+    new Uint8Array(32),
+    new Uint8Array(48)
+  );
+  vi.clearAllMocks();
+  return {client, logger};
+}
 
 function getBuilderEntry(url: string, slot: number): routes.validator.BuilderEntry {
   const auth = ssz.gloas.SignedBuilderRequestAuth.defaultValue();

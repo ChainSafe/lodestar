@@ -51,7 +51,7 @@ import {
 } from "@lodestar/types";
 import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ISlashingProtection} from "../slashingProtection/index.js";
+import {ISlashingProtection, InvalidBlockError, InvalidBlockErrorCode} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
@@ -172,6 +172,32 @@ export const defaultOptions = {
 };
 
 export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
+
+/** Pre-Gloas there is no in-protocol builder so the default is local-only, post-Gloas bids are used */
+export function getDefaultBuilderSelection(isPostGloas: boolean): routes.validator.BuilderSelection {
+  return isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+}
+
+/** Boost factor implied by a builder selection, `configuredBoostFactor` only applies to `maxprofit` */
+export function getBuilderBoostFactor(
+  selection: routes.validator.BuilderSelection,
+  configuredBoostFactor: bigint
+): bigint {
+  switch (selection) {
+    case routes.validator.BuilderSelection.Default:
+      // Default value slightly favors local block to improve censorship resistance of Ethereum
+      // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
+      return BigInt(90);
+    case routes.validator.BuilderSelection.MaxProfit:
+      return configuredBoostFactor;
+    case routes.validator.BuilderSelection.BuilderAlways:
+    case routes.validator.BuilderSelection.BuilderOnly:
+      return MAX_BUILDER_BOOST_FACTOR;
+    case routes.validator.BuilderSelection.ExecutionAlways:
+    case routes.validator.BuilderSelection.ExecutionOnly:
+      return BigInt(0);
+  }
+}
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -323,7 +349,7 @@ export class ValidatorStore {
     isPostGloas: boolean
   ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
     const validatorBuilder = this.validators.get(pubkeyHex)?.builder;
-    const defaultSelection = isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+    const defaultSelection = getDefaultBuilderSelection(isPostGloas);
     let selection = validatorBuilder?.selection ?? this.defaultProposerConfig.builder.selection ?? defaultSelection;
 
     // The standard per-key builder config directly controls the post-Gloas boost. It takes
@@ -343,27 +369,10 @@ export class ValidatorStore {
       }
     }
 
-    let boostFactor: bigint;
-    switch (selection) {
-      case routes.validator.BuilderSelection.Default:
-        // Default value slightly favors local block to improve censorship resistance of Ethereum
-        // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
-        boostFactor = BigInt(90);
-        break;
-
-      case routes.validator.BuilderSelection.MaxProfit:
-        boostFactor = validatorBuilder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
-        break;
-
-      case routes.validator.BuilderSelection.BuilderAlways:
-      case routes.validator.BuilderSelection.BuilderOnly:
-        boostFactor = MAX_BUILDER_BOOST_FACTOR;
-        break;
-
-      case routes.validator.BuilderSelection.ExecutionAlways:
-      case routes.validator.BuilderSelection.ExecutionOnly:
-        boostFactor = BigInt(0);
-    }
+    const boostFactor = getBuilderBoostFactor(
+      selection,
+      validatorBuilder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor
+    );
 
     return {selection, boostFactor};
   }
@@ -466,7 +475,7 @@ export class ValidatorStore {
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
    * builders. A value omitted on an entry takes this key's default, then the validator
-   * client's configuration, while omitted auth data is derived from the entry url instead.
+   * client's configuration, while omitted auth data is derived from the entry url hostname instead.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -484,7 +493,8 @@ export class ValidatorStore {
     const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
     return builders.map((entry) => ({
       url: entry.url,
-      authData: entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(entry.url),
+      authData:
+        entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(new URL(entry.url).hostname),
       builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
       maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
       minBid: entry.minBid ?? keyMinBid,
@@ -535,7 +545,9 @@ export class ValidatorStore {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
       const authData =
-        entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(new TextEncoder().encode(entry.url));
+        entry.authData !== undefined
+          ? toHex(fromHex(entry.authData))
+          : toHex(new TextEncoder().encode(new URL(entry.url).hostname));
       const entryKey = `${entry.url}|${authData}`;
       if (seenEntries.has(entryKey)) {
         throw Error(`Duplicate builder entry url=${entry.url} authData=${authData}`);
@@ -654,12 +666,11 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: BeaconBlock | BlindedBeaconBlock,
-    currentSlot: Slot,
+    dutySlot: Slot,
     logger?: LoggerVc
   ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    if (blindedOrFull.slot !== dutySlot) {
+      throw new InvalidBlockError({code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blindedOrFull.slot, dutySlot});
     }
 
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
@@ -900,7 +911,7 @@ export class ValidatorStore {
     });
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE,
       data,
     };
 
@@ -1175,6 +1186,11 @@ export class ValidatorStore {
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
+    }
+    if (data.target.epoch !== computeEpochAtSlot(data.slot)) {
+      throw Error(
+        `Inconsistent attestation data during signing: att.target.epoch ${data.target.epoch} != epoch of att.slot ${data.slot}`
+      );
     }
 
     const forkSeq = this.config.getForkSeq(data.slot);

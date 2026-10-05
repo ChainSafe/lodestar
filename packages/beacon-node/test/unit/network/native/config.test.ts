@@ -1,7 +1,6 @@
 import {generateKeyPair, privateKeyFromRaw} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
-import bindings from "@chainsafe/lodestar-z";
 import {createBeaconConfig} from "@lodestar/config";
 import {genesisData, networksChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -68,7 +67,6 @@ describe("native configuration boundary", () => {
   it("fits the fixed native plan for a million-validator Fulu workload", async () => {
     const node = await fixture();
     const application = node.create({}, 0, 1_000_000);
-    bindings.config.set(config, config.genesisValidatorsRoot);
     // Initialization refuses a plan past its native or bridge budget.
     const network = createSettlingNetwork(application);
     try {

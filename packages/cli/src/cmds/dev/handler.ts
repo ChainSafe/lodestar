@@ -31,7 +31,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
   // Flag --reset cleans up the custom dirs on dev stop
-  const beaconDbDir = getBeaconPaths(args, network).dbDir;
+  const {dbDir: beaconDbDir, pubkeysFile} = getBeaconPaths(args, network);
   const validatorsDbDir = getValidatorPaths(args, network).validatorsDbDir;
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
@@ -39,6 +39,8 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   if (args.genesisTime === undefined) {
     await rimraf(beaconDbDir);
     await rimraf(validatorsDbDir);
+    // Validators deposited in the previous run do not exist on the new chain
+    await rimraf(pubkeysFile);
   }
 
   mkdir(beaconDbDir);

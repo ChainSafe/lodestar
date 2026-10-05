@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "^1.0.0"
+  "@chainsafe/lodestar-z": "2.0.0"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
@@ -34,6 +34,7 @@ allowBuilds:
   ssh2: true
 
 overrides:
+  "@chainsafe/lodestar-z": "link:../lodestar-z-network-all"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"

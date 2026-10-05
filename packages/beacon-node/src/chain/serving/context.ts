@@ -1,4 +1,5 @@
 import {BUCKET_LENGTH, DbReqOpts, FilterOptions, uintLen} from "@lodestar/db";
+import {DataColumnStoreError, DataColumnStoreErrorCode} from "../../db/flatFileStore/errors.js";
 
 export class ServingCapacityError extends Error {
   readonly code = "HOST_SERVING_CAPACITY";
@@ -14,6 +15,7 @@ export class ServingConfigurationError extends Error {
 export function isServingCapacityError(error: unknown): boolean {
   return (
     error instanceof ServingCapacityError ||
+    (error instanceof DataColumnStoreError && error.type.code === DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED) ||
     (error instanceof Error && "code" in error && (error.code === "ValueTooLarge" || error.code === "BatchTooLarge"))
   );
 }

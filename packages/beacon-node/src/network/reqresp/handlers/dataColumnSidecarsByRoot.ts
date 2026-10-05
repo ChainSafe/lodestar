@@ -84,6 +84,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (unavailableColumnIndices.length) {
+      const finalized = knownSlot === undefined || (!context && (await db.blockArchive.getSlotByRoot(blockRoot)) === slot);
       await handleColumnSidecarUnavailability({
         chain,
         context,
@@ -91,6 +92,7 @@ export async function* onDataColumnSidecarsByRoot(
         metrics: chain.metrics,
         slot,
         blockRoot,
+        finalized,
         unavailableColumnIndices,
         requestedColumns,
         availableColumns,
