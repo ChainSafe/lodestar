@@ -34,7 +34,6 @@
     "skipLibCheck": true,
     "types": [
       "node",
-      "snappyjs",
       "mitt",
       "vitest"
     ],

@@ -33,6 +33,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY packages/api/package.json packages/api/
 COPY packages/beacon-node/package.json packages/beacon-node/
+COPY packages/builder/package.json packages/builder/
 COPY packages/cli/package.json packages/cli/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/

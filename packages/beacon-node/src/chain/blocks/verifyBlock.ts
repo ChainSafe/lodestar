@@ -76,14 +76,7 @@ export async function verifyBlocksInEpoch(
   // Retrieve preState from cache (regen)
   const preState0 = await this.regen
     // transfer cache to process faster, postState will be in block state cache
-    .getPreState(
-      block0.message,
-      {
-        dontTransferCache: false,
-        dangerouslyAssumeValidDepositSignatures: opts.dangerouslyAssumeValidDepositSignatures,
-      },
-      RegenCaller.processBlocksInEpoch
-    )
+    .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
     .catch((e) => {
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
@@ -139,12 +132,15 @@ export async function verifyBlocksInEpoch(
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
-            // Validate DA for ALL payloads in the Map, not just those paired with blockInputs.
+            // Range sync creates a PayloadEnvelopeInput for every Gloas block, but an entry without
+            // an envelope represents a valid EMPTY slot and has no payload DA to verify.
             // A checkpoint-sync batch may include a payload for a slot whose block was filtered
             // out of relevantBlocks (e.g., the anchor at the finalized slot); that payload still
             // needs DA validation so it can be imported in processBlocks.
             const payloadInputsForDa: PayloadEnvelopeInput[] =
-              payloadEnvelopes !== null ? Array.from(payloadEnvelopes.values()) : [];
+              payloadEnvelopes !== null
+                ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
+                : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
               payloadInputsForDa,
               abortController.signal

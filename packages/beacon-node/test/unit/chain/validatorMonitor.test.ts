@@ -2,10 +2,10 @@ import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
+import {Slot, ssz} from "@lodestar/types";
+import {RootHexCache, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 
 describe("ValidatorMonitor", () => {
   // Use phase0 config (no altair) to avoid needing full state with block roots
@@ -57,6 +57,38 @@ describe("ValidatorMonitor", () => {
       const indices = monitor.getMonitoredValidatorIndices();
       expect(indices).toHaveLength(1);
       expect(indices).toContain(1);
+    });
+  });
+
+  describe("RootHexCache", () => {
+    const stateSlot = SLOTS_PER_HISTORICAL_ROOT + 64;
+    function createRootCache() {
+      const getBlockRootAtSlot = vi.fn((slot: Slot) => Uint8Array.from({length: 32}, () => slot % 256));
+      const state = {slot: stateSlot, getBlockRootAtSlot} as unknown as BeaconStateView;
+      return {rootCache: new RootHexCache(state), getBlockRootAtSlot};
+    }
+
+    it("returns the root for slots covered by the state and caches it", () => {
+      const {rootCache, getBlockRootAtSlot} = createRootCache();
+      const root = rootCache.getBlockRootAtSlot(stateSlot - 1);
+      expect(root).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(rootCache.getBlockRootAtSlot(stateSlot - 1)).toBe(root);
+      expect(getBlockRootAtSlot).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns null for the state's own slot and later instead of throwing", () => {
+      const {rootCache, getBlockRootAtSlot} = createRootCache();
+      // attestation included in a block the head state does not know yet, or the slot after the last attestation
+      expect(rootCache.getBlockRootAtSlot(stateSlot)).toBeNull();
+      expect(rootCache.getBlockRootAtSlot(stateSlot + 1)).toBeNull();
+      expect(getBlockRootAtSlot).not.toHaveBeenCalled();
+    });
+
+    it("returns null for slots older than SLOTS_PER_HISTORICAL_ROOT", () => {
+      const {rootCache, getBlockRootAtSlot} = createRootCache();
+      expect(rootCache.getBlockRootAtSlot(stateSlot - SLOTS_PER_HISTORICAL_ROOT)).not.toBeNull();
+      expect(rootCache.getBlockRootAtSlot(stateSlot - SLOTS_PER_HISTORICAL_ROOT - 1)).toBeNull();
+      expect(getBlockRootAtSlot).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -12,7 +12,12 @@ export type Metrics = BeaconMetrics &
   BeaconStateTransitionMetrics &
   LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
-export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
+export function createMetrics(
+  opts: MetricsOptions,
+  genesisTime: number,
+  externalRegistries: Registry[] = [],
+  {collectNodeMetrics = true}: {collectNodeMetrics?: boolean} = {}
+): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const forkChoice = getForkChoiceMetrics(register);
@@ -24,7 +29,7 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
   };
   process.on("unhandledRejection", onUnhandledRejection);
 
-  const nodeJsMetricsClose = collectNodeJSMetrics(register);
+  const nodeJsMetricsClose = collectNodeMetrics ? collectNodeJSMetrics(register) : (): void => {};
   const close = (): void => {
     process.removeListener("unhandledRejection", onUnhandledRejection);
     nodeJsMetricsClose();

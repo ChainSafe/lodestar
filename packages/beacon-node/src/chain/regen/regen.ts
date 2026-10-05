@@ -3,7 +3,6 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
-  EpochTransitionCacheOpts,
   ExecutionPayloadStatus,
   IBeaconStateView,
   StateHashTreeRootSource,
@@ -80,7 +79,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     }
 
     // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot, regenCaller, allowDiskReload, opts);
+    return this.getState(parentBlock.stateRoot, regenCaller, allowDiskReload);
   }
 
   /**
@@ -119,7 +118,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
-    const blockStateCtx = await this.getState(block.stateRoot, regenCaller, allowDiskReload, opts);
+    const blockStateCtx = await this.getState(block.stateRoot, regenCaller, allowDiskReload);
     return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts);
   }
 
@@ -132,9 +131,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     stateRoot: RootHex,
     caller: RegenCaller,
     // internal option, don't want to expose to external caller
-    allowDiskReload = false,
-    // internal option, don't want to expose to external caller
-    opts?: EpochTransitionCacheOpts
+    allowDiskReload = false
   ): Promise<IBeaconStateView> {
     // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.modules.blockStateCache.get(stateRoot);
@@ -246,8 +243,6 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,
-            // replaying already imported blocks, keep the same deposit handling they were imported with
-            dangerouslyAssumeValidDepositSignatures: opts?.dangerouslyAssumeValidDepositSignatures,
             dontTransferCache: false,
           },
           this.modules

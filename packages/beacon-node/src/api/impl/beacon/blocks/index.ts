@@ -35,7 +35,7 @@ import {
   isSignedExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -47,6 +47,8 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -104,8 +106,8 @@ export function getBeaconBlockApi({
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
-    {signedBlockContents, broadcastValidation},
-    _context,
+    {signedBlockContents, broadcastValidation, builderUrl},
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -209,6 +211,12 @@ export function getBeaconBlockApi({
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
+    if (chain.forkChoice.hasBlockHex(blockRoot)) {
+      // Block was already imported, e.g. published again by the validator client or received via gossip
+      chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+      return;
+    }
+
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
@@ -228,7 +236,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_gossip_failure"
+              "api_reject_gossip_failure",
+              blockRoot
             );
             throw error;
           }
@@ -251,7 +260,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_parent_unknown"
+              "api_reject_parent_unknown",
+              blockRoot
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
@@ -271,7 +281,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw error;
           }
@@ -300,7 +311,8 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_failure"
+              "api_reject_consensus_failure",
+              blockRoot
             );
             throw e;
           }
@@ -356,6 +368,24 @@ export function getBeaconBlockApi({
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);
+
+    // Forward the signed block to the winning builder echoed by the validator client so it can
+    // help disseminate the block and learn that its bid won without waiting for block gossip.
+    // Failures are non-fatal, the builder also sees the block on gossip.
+    if (isForkPostGloas(fork) && builderUrl !== undefined) {
+      const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
+      if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+        chain.builderApiClient
+          .submitSignedBeaconBlock(builderUrl, {data: gloasBlock, bytes: context?.sszBytes ?? undefined})
+          .then(() => {
+            chain.logger.debug("Submitted signed block to builder", {slot, builderUrl});
+          })
+          .catch((e) => {
+            chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
+          });
+      }
+    }
+
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behavior.
@@ -374,16 +404,20 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (
-              e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
-            ) {
-              chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                blockInput: blockForImport,
-                peer: IDENTITY_PEER_ID,
-                source: BlockInputSource.api,
-              });
+            if (e instanceof BlockError) {
+              switch (e.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block was imported while publishing, e.g. received via gossip
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                    blockInput: blockForImport,
+                    peer: IDENTITY_PEER_ID,
+                    source: BlockInputSource.api,
+                  });
+              }
             }
             throw e;
           }),
@@ -1036,17 +1070,14 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
+      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+      // TODO: once the builder is tested and can be trusted, skip this local validation
+      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+      validationTimer?.();
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
-
-      try {
-        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
@@ -1060,7 +1091,7 @@ export function getBeaconBlockApi({
         builderIndex: bid.builderIndex,
         blockHash: toRootHex(bid.blockHash),
         parentBlockHash: toRootHex(bid.parentBlockHash),
-        value: bid.value,
+        value: prettyGweiToEth(bid.value),
         sentPeers,
       });
     },
@@ -1080,9 +1111,23 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      try {
+        data = context?.returnBytes
+          ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+          : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      } catch (e) {
+        if (e instanceof EnvelopeReconstructionError) {
+          // The envelope is archived but our EL cannot serve it right now (EL down, or it does not
+          // have the body / block access list): 503 so clients retry or ask another node, rather than
+          // 500 for what is not a beacon node fault. A body root mismatch is a local inconsistency.
+          const unavailable =
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ||
+            e.type.code === EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE;
+          throw new ApiError(unavailable ? 503 : 500, `Failed to reconstruct execution payload envelope: ${e.message}`);
+        }
+        throw e;
+      }
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);

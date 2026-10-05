@@ -8,6 +8,7 @@ import {
   CachedBeaconStatePhase0,
   hasCompoundingWithdrawalCredential,
 } from "../index.js";
+import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {
   FLAG_CURR_HEAD_ATTESTER,
@@ -21,21 +22,6 @@ import {
   hasMarkers,
 } from "../util/attesterStatus.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
-
-export type EpochTransitionCacheOpts = {
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
-  /**
-   * Treat every pending deposit signature as valid instead of verifying it.
-   *
-   * SPEC TESTS ONLY. Mirrors pyspec's `bls_setting: 2`, where `bls.Verify` is stubbed to return true
-   * so vectors can carry placeholder deposit signatures. Enabling this on a real node applies
-   * deposits with invalid proofs of possession, which is a consensus fault.
-   */
-  dangerouslyAssumeValidDepositSignatures?: boolean;
-};
 
 /**
  * EpochTransitionCache is the parent object of:
@@ -202,9 +188,6 @@ export interface EpochTransitionCache {
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
   isActiveNextEpoch: boolean[];
-
-  /** {@see} {@link EpochTransitionCacheOpts.dangerouslyAssumeValidDepositSignatures} */
-  dangerouslyAssumeValidDepositSignatures: boolean;
 }
 
 // reuse arrays to avoid memory reallocation and gc
@@ -231,7 +214,7 @@ const currentEpochParticipation = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
-  opts?: EpochTransitionCacheOpts
+  metrics?: Pick<BeaconStateTransitionMetrics, "progressiveBalancesMismatches"> | null
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
@@ -480,17 +463,16 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (opts?.assertCorrectProgressiveBalances && forkSeq >= ForkSeq.altair) {
-    // TODO: describe issue. Compute progressive target balances
-    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-      throw Error(
-        `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+  if (forkSeq >= ForkSeq.altair) {
+    const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
+    const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
+    if (currentTargetMismatch) {
+      metrics?.progressiveBalancesMismatches?.inc({target: "current"});
+      epochCtx.currentTargetUnslashedBalanceIncrements = currTargetUnslStake;
     }
-    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-      throw Error(
-        `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+    if (previousTargetMismatch) {
+      metrics?.progressiveBalancesMismatches?.inc({target: "previous"});
+      epochCtx.previousTargetUnslashedBalanceIncrements = prevTargetUnslStake;
     }
   }
 
@@ -529,7 +511,6 @@ export function beforeProcessEpoch(
     inclusionDelays,
     flags,
     isCompoundingValidatorArr,
-    dangerouslyAssumeValidDepositSignatures: opts?.dangerouslyAssumeValidDepositSignatures ?? false,
     // Will be assigned in processRewardsAndPenalties()
     balances: undefined,
   };

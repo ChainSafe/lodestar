@@ -61,6 +61,8 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {decodeArchivedEnvelope} from "../db/repositories/index.js";
+import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -69,6 +71,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
+import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
@@ -81,7 +84,7 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
-import {ImportPayloadOpts} from "./blocks/types.js";
+import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
@@ -165,6 +168,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -266,6 +270,7 @@ export class BeaconChain implements IBeaconChain {
       db,
       dbName,
       dataDir,
+      dataColumnDir,
       logger,
       processShutdownCallback,
       clock,
@@ -275,6 +280,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
+      builderApiClientOpts,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -282,6 +288,7 @@ export class BeaconChain implements IBeaconChain {
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
+      dataColumnDir?: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
@@ -292,6 +299,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      builderApiClientOpts?: BuilderApiClientOpts;
     }
   ) {
     this.opts = opts;
@@ -448,6 +456,8 @@ export class BeaconChain implements IBeaconChain {
       {forkChoice, logger, metrics}
     );
 
+    this.builderApiClient = new BuilderApiClient(builderApiClientOpts ?? {}, config, clock, bls, metrics, logger);
+
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
@@ -499,7 +509,12 @@ export class BeaconChain implements IBeaconChain {
 
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
-      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      {
+        ...opts,
+        dbName,
+        dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
+        anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint},
+      },
       signal
     );
 
@@ -596,7 +611,7 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -913,21 +928,72 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-    if (payloadInput?.hasPayloadEnvelope()) {
-      const envelope = payloadInput.getPayloadEnvelope();
-      const serialized = this.serializedCache.get(envelope);
-      if (serialized) {
-        return serialized;
+    const [bytes] = await this.getSerializedExecutionPayloadEnvelopes([{blockSlot, blockRootHex}]);
+    return bytes;
+  }
+
+  /**
+   * Batch variant: archived header envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
+   * An archived envelope that cannot be rebuilt (EL-unavailable body or body root mismatch) is not the
+   * same as an unknown one: `"throw"` surfaces it, `"omit"` returns null for that entry, for
+   * peer-facing paths where the spec allows omission.
+   */
+  async getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMiss: ReconstructMissPolicy = "throw"
+  ): Promise<(Uint8Array | null)[]> {
+    const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
+    const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+    const headerEnvelopeIdxs: number[] = [];
+
+    for (let i = 0; i < requests.length; i++) {
+      const {blockSlot, blockRootHex} = requests[i];
+
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        const envelope = payloadInput.getPayloadEnvelope();
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        continue;
       }
-      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      const hot = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+      if (hot !== null) {
+        out[i] = hot;
+        continue;
+      }
+
+      const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+      if (archivedBytes === null) continue;
+
+      const archived = decodeArchivedEnvelope(archivedBytes);
+      if (archived.envelopeBytes !== undefined) {
+        out[i] = archived.envelopeBytes;
+        continue;
+      }
+      headerEnvelopes.push(archived.headerEnvelope);
+      headerEnvelopeIdxs.push(i);
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+    if (headerEnvelopes.length > 0) {
+      const rebuilt = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, headerEnvelopes);
+      for (let j = 0; j < rebuilt.length; j++) {
+        const result = rebuilt[j];
+        if (isRebuildMiss(result)) {
+          if (onMiss === "throw") throw result.error;
+          this.logger.debug(
+            result.reason === "mismatch"
+              ? "Archived envelope failed body root check against EL bodies"
+              : "EL cannot serve bodies for archived envelope, omitting",
+            {slot: result.slot},
+            result.error
+          );
+          continue;
+        }
+        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+      }
+    }
+
+    return out;
   }
 
   async getExecutionPayloadEnvelope(
@@ -939,11 +1005,20 @@ export class BeaconChain implements IBeaconChain {
       return payloadInput.getPayloadEnvelope();
     }
 
-    return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
+    if (hot !== null) return hot;
+
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+    if (archivedBytes === null) return null;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    if (archived.envelopeBytes !== undefined) {
+      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+    }
+    const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
+      archived.headerEnvelope,
+    ]);
+    if (isRebuildMiss(result)) throw result.error;
+    return result;
   }
 
   async getParentExecutionRequests(
@@ -954,21 +1029,36 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
-    if (envelope === null) {
+    // executionRequests is kept in the header envelope, so read it without reconstructing
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (hot !== null) return hot.message.executionRequests;
+
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
+    if (archivedBytes === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
-    return envelope.message.executionRequests;
+    const archived = decodeArchivedEnvelope(archivedBytes);
+    return archived.envelopeBytes !== undefined
+      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
+      : archived.headerEnvelope.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);
+    const sidecarsByIndex = new Map<number, DataColumnSidecar>();
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return payloadInput.getAllColumns();
+        for (const sidecar of payloadInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -977,16 +1067,17 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return blockInput.getAllColumns();
+        for (const sidecar of blockInput.getAllColumns()) {
+          sidecarsByIndex.set(sidecar.index, sidecar);
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
-    if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
+    for (const sidecar of await this.db.dataColumns.getAll({slot: blockSlot, blockRoot: blockRootHex})) {
+      if (!sidecarsByIndex.has(sidecar.index)) sidecarsByIndex.set(sidecar.index, sidecar);
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+
+    return [...sidecarsByIndex.values()].sort((a, b) => a.index - b.index);
   }
 
   async getSerializedDataColumnSidecars(
@@ -995,22 +1086,25 @@ export class BeaconChain implements IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
     const fork = this.config.getForkName(blockSlot);
+    const dataColumnSidecars: (Uint8Array | undefined)[] = indices.map(() => undefined);
 
     if (isForkPostGloas(fork)) {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = payloadInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
           }
-          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     } else {
       // Before gloas, columns are tracked in BlockInput
@@ -1019,26 +1113,42 @@ export class BeaconChain implements IBeaconChain {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        return indices.map((index) => {
+        for (let i = 0; i < indices.length; i++) {
+          const index = indices[i];
           const sidecar = blockInput.getColumn(index);
           if (!sidecar) {
-            return undefined;
+            continue;
           }
           const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            return serialized;
+            dataColumnSidecars[i] = serialized;
+          } else {
+            dataColumnSidecars[i] = sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(
+              sidecar
+            );
           }
-          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-        });
+        }
       }
     }
 
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
-    if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
-      return sidecarsUnfinalized;
+    const missingPositions = dataColumnSidecars
+      .map((sidecar, position) => (sidecar === undefined ? position : -1))
+      .filter((position) => position !== -1);
+
+    if (missingPositions.length > 0) {
+      const persistedSidecars = await this.db.dataColumns.getManyBinary(
+        {slot: blockSlot, blockRoot: blockRootHex},
+        missingPositions.map((position) => indices[position])
+      );
+      for (let i = 0; i < missingPositions.length; i++) {
+        const sidecar = persistedSidecars[i];
+        if (sidecar !== undefined) {
+          dataColumnSidecars[missingPositions[i]] = sidecar;
+        }
+      }
     }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices);
-    return sidecarsFinalized;
+
+    return dataColumnSidecars;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
@@ -1161,15 +1271,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], null, opts);
+    await this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
   async processChainSegment(
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void> {
-    await this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
+  ): Promise<ProcessBlocksResult> {
+    return this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
@@ -1217,13 +1327,13 @@ export class BeaconChain implements IBeaconChain {
       };
 
       try {
-        await validateApiProposerSlashing(this, proposerSlashing);
+        const verifiedDomain = await validateApiProposerSlashing(this, proposerSlashing);
+        this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       } catch (e) {
         this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
         return;
       }
 
-      this.opPool.insertProposerSlashing(proposerSlashing);
       this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();
@@ -1265,53 +1375,7 @@ export class BeaconChain implements IBeaconChain {
     try {
       const prevHead = this.forkChoice.getHead();
       const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-
-      const headRootChanged = head.blockRoot !== prevHead.blockRoot;
-
-      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
-        return head;
-      }
-
-      try {
-        const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
-        const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
-        const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
-        const executionOptimistic = isOptimisticBlock(head);
-
-        if (headRootChanged) {
-          this.emitter.emit(routes.events.EventType.head, {
-            block: head.blockRoot,
-            epochTransition,
-            slot: head.slot,
-            state: head.stateRoot,
-            previousDutyDependentRoot,
-            currentDutyDependentRoot,
-            executionOptimistic,
-          });
-        }
-
-        this.emitter.emit(routes.events.EventType.headV2, {
-          version: this.config.getForkName(head.slot),
-          data: {
-            slot: head.slot,
-            block: head.blockRoot,
-            state: head.stateRoot,
-            payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-            epochTransition,
-            currentEpochDependentRoot: previousDutyDependentRoot,
-            nextEpochDependentRoot: currentDutyDependentRoot,
-            executionOptimistic,
-          },
-        });
-      } catch (e) {
-        // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-        this.logger.debug(
-          "Error emitting head/head_v2 event",
-          {slot: head.slot, root: head.blockRoot, headRootChanged},
-          e as Error
-        );
-      }
-
+      this.emitHeadEvents(prevHead, head);
       return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
@@ -1321,9 +1385,62 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  predictProposerHead(slot: Slot): ProtoBlock {
+  /**
+   * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
+   * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
+   */
+  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+    const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+
+    if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+      return;
+    }
+
+    try {
+      const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+      const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+      const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+      const executionOptimistic = isOptimisticBlock(head);
+
+      if (headRootChanged) {
+        this.emitter.emit(routes.events.EventType.head, {
+          block: head.blockRoot,
+          epochTransition,
+          slot: head.slot,
+          state: head.stateRoot,
+          previousDutyDependentRoot,
+          currentDutyDependentRoot,
+          executionOptimistic,
+        });
+      }
+
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(head.slot),
+        data: {
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
+          payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+          epochTransition,
+          currentEpochDependentRoot: previousDutyDependentRoot,
+          nextEpochDependentRoot: currentDutyDependentRoot,
+          executionOptimistic,
+        },
+      });
+    } catch (e) {
+      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      this.logger.debug(
+        "Error emitting head/head_v2 event",
+        {slot: head.slot, root: head.blockRoot, headRootChanged},
+        e as Error
+      );
+    }
+  }
+
+  predictProposerHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const slot = this.clock.currentSlot;
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
@@ -1374,10 +1491,15 @@ export class BeaconChain implements IBeaconChain {
     const slot = data.slot;
     if (isBlindedBeaconBlock(data)) {
       const sszType = this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock;
-      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject(
+        "BlindedBeaconBlock",
+        sszType.serialize(data),
+        toRootHex(sszType.hashTreeRoot(data)),
+        suffix
+      );
     } else {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
-      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), toRootHex(sszType.hashTreeRoot(data)), suffix);
     }
   }
 
@@ -1398,33 +1520,39 @@ export class BeaconChain implements IBeaconChain {
       this.persistSszObject(
         `SignedBeaconBlock_slot_${blockSlot}`,
         blockType.serialize(block),
-        blockType.hashTreeRoot(block),
+        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
         `${logStr}_block`
       ),
       this.persistSszObject(
         `preState_slot_${preState.slot}_BeaconState`,
         preState.serialize(),
-        preState.hashTreeRoot(),
+        toRootHex(preState.hashTreeRoot()),
         `${logStr}_pre_state`
       ),
       this.persistSszObject(
         `postState_slot_${postState.slot}_BeaconState`,
         postState.serialize(),
-        postState.hashTreeRoot(),
+        toRootHex(postStateRoot),
         `${logStr}_post_state`
       ),
     ]);
   }
 
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(
+        type.typeName,
+        type.serialize(sszObject),
+        // in SignedBeaconBlock case, we want to use BeaconBlock root instead
+        rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
+        suffix
+      );
     }
   }
 
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
+  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
@@ -1555,14 +1683,14 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
+  private async persistSszObject(prefix: string, bytes: Uint8Array, rootHex: RootHex, logStr?: string): Promise<void> {
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
 
     // by default store to lodestar_archive of current dir
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
+    const filepath = path.join(dirpath, `${prefix}_${rootHex}.ssz`);
 
     await ensureDir(dirpath);
 
@@ -1605,7 +1733,10 @@ export class BeaconChain implements IBeaconChain {
       this.processShutdownCallback(this.forkChoice.irrecoverableError);
     }
 
+    // updateTime() recomputes the head on epoch-boundary checkpoint pull-up and under fast confirmation
+    const prevHead = this.forkChoice.getHead();
     this.forkChoice.updateTime(slot);
+    this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
@@ -1663,6 +1794,25 @@ export class BeaconChain implements IBeaconChain {
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
+    this.metrics?.finalizedEpoch.set(cp.epoch);
+    const finalizedBlock = this.forkChoice.getBlockHexDefaultStatus(cp.rootHex);
+    if (finalizedBlock) {
+      // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
+      callInNextEventLoop(() => {
+        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+          block: cp.rootHex,
+          epoch: cp.epoch,
+          state: finalizedBlock.stateRoot,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+        });
+      });
+    } else {
+      this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {
+        epoch: cp.epoch,
+        root: cp.rootHex,
+      });
+    }
+
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
 

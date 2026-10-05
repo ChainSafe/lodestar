@@ -57,6 +57,11 @@ export function fromHex(hex: string): Uint8Array {
   }
 
   const b = Buffer.from(hex, "hex");
+
+  if (b.length !== hex.length / 2) {
+    throw new Error("hex string contains invalid characters");
+  }
+
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
 

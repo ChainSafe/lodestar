@@ -29,6 +29,8 @@ export type IChainOptions = BlockProcessOpts &
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
+    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
+    dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     persistOrphanedBlocks?: boolean;
@@ -63,16 +65,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
-  /**
-   * Skip pending deposit signature verification during epoch processing, treating every signature as
-   * valid. Used for fast_confirmation spec tests, whose `bls_setting: 2` vectors carry placeholder
-   * deposit signatures; pyspec stubs `bls.Verify` to true for those. MUST stay false on a real node.
-   */
-  dangerouslyAssumeValidDepositSignatures?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -115,13 +107,12 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: true,
+  dedupePayloads: true,
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
-  dangerouslyAssumeValidDepositSignatures: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,

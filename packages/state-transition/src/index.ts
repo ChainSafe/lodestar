@@ -13,7 +13,7 @@ export {
 } from "./block/processVoluntaryExit.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-export {ProposerRewardType} from "./block/types.js";
+export {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
 export {
   type EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsWithLen,
@@ -24,11 +24,7 @@ export {
   type EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
-export {
-  type EpochTransitionCache,
-  type EpochTransitionCacheOpts,
-  beforeProcessEpoch,
-} from "./cache/epochTransitionCache.js";
+export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 // Main state caches
 export {
   type BeaconStateCache,
@@ -47,6 +43,8 @@ export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
 export {BeaconStateView} from "./stateView/beaconStateView.js";
 export {
+  type ComputeNewStateRootInput,
+  type ComputeNewStateRootResult,
   type IBeaconStateView,
   type IBeaconStateViewAltair,
   type IBeaconStateViewBellatrix,

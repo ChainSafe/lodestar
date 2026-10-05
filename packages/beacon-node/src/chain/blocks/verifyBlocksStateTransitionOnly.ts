@@ -58,7 +58,6 @@ export async function verifyBlocksStateTransitionOnly(
           // if block is trusted don't verify proposer or op signature
           verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
           verifySignatures: !useBlsBatchVerify && !validSignatures,
-          dangerouslyAssumeValidDepositSignatures: opts.dangerouslyAssumeValidDepositSignatures,
           dontTransferCache: false,
         },
         {metrics, validatorMonitor}

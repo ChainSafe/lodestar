@@ -69,6 +69,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {
       signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
+      builderUrl: "https://builder.example.com",
     },
     res: undefined,
   },
@@ -266,6 +267,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: ssz.fulu.ProposerLookahead.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.gloas.BuilderPendingPayments.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.gloas.BuilderPendingWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
 

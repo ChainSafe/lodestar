@@ -24,17 +24,19 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
+import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
@@ -95,10 +97,11 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly earliestAvailableSlot: Slot;
+  earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -234,6 +237,10 @@ export interface IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMiss?: ReconstructMissPolicy
+  ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
@@ -260,7 +267,7 @@ export interface IBeaconChain {
     blocks: IBlockInput[],
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
-  ): Promise<void>;
+  ): Promise<ProcessBlocksResult>;
 
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
@@ -272,8 +279,8 @@ export interface IBeaconChain {
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 
-  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
-  predictProposerHead(slot: Slot): ProtoBlock;
+  /** When proposerBoostReorg is enabled, predict (as of the current slot) the head block a proposer would build on next slot */
+  predictProposerHead(): ProtoBlock;
 
   /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
   getProposerHead(slot: Slot): ProtoBlock;
@@ -288,8 +295,8 @@ export interface IBeaconChain {
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,

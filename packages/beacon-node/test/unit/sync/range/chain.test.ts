@@ -1,13 +1,16 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
-import {Logger, fromHex} from "@lodestar/utils";
-import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
@@ -18,6 +21,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
@@ -154,6 +158,89 @@ describe("sync / range / chain", () => {
       });
     });
   }
+
+  it.each([
+    {receivedSlots: [1, 3], expectedEnvelopeSlots: "[1, 3]"},
+    {receivedSlots: [], expectedEnvelopeSlots: "[]"},
+  ])("logs only received envelope slots: $expectedEnvelopeSlots", async ({receivedSlots, expectedEnvelopeSlots}) => {
+    const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+    const gloasCustodyConfig = new CustodyConfig({nodeId, config: gloasConfig});
+    const log = getMockedLogger();
+    const blocks: IBlockInput[] = [];
+    const payloadEnvelopes = new Map<Slot, PayloadEnvelopeInput>();
+
+    for (const slot of [3, 1, 2]) {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      blocks.push(
+        BlockInputNoData.createFromBlock({
+          block,
+          blockRootHex,
+          forkName: ForkName.gloas,
+          daOutOfRange: false,
+          source: BlockInputSource.byRange,
+          seenTimestampSec: 0,
+        })
+      );
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: gloasCustodyConfig.sampledColumns,
+        custodyColumns: gloasCustodyConfig.custodyColumns,
+        daOutOfRange: false,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      if (receivedSlots.includes(slot)) {
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.beaconBlockRoot = blockRoot;
+        envelope.message.payload.slotNumber = slot;
+        payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0});
+      }
+      payloadEnvelopes.set(slot, payloadInput);
+    }
+
+    const target: ChainTarget = {slot: 3, root: ZERO_HASH};
+    const processChainSegment = vi.fn<SyncChainFns["processChainSegment"]>().mockResolvedValue(undefined);
+    await new Promise<void>((resolve, reject) => {
+      const chain = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        {
+          processChainSegment,
+          downloadByRange: async () => ({result: {blocks, payloadEnvelopes}, warnings: null}),
+          getConnectedPeerSyncMeta: (peerId) => ({
+            ...getConnectedPeerSyncMeta(peerId),
+            custodyColumns: gloasCustodyConfig.sampledColumns,
+            earliestAvailableSlot: 0,
+          }),
+          reportPeer,
+          pruneBlockInputs,
+          onEnd: (err) => (err ? reject(err) : resolve()),
+        },
+        {
+          config: gloasConfig,
+          clock: new Clock({config: gloasConfig, genesisTime: 0, signal: new AbortController().signal}),
+          custodyConfig: gloasCustodyConfig,
+          logger: log,
+          metrics: null,
+        },
+        undefined
+      );
+      chain.addPeer(peer, target);
+      chain.startSyncing(0);
+    });
+
+    expect(processChainSegment).toHaveBeenCalledExactlyOnceWith(blocks, payloadEnvelopes, RangeSyncType.Finalized);
+    const expectedLog = expect.objectContaining({envelopeSlots: expectedEnvelopeSlots, blockSlots: "[1-3]"});
+    expect(log.debug).toHaveBeenCalledWith("Finished downloading batch by range", expectedLog);
+    expect(log.verbose).toHaveBeenCalledWith("Processing batch", expectedLog);
+    expect(log.verbose).toHaveBeenCalledWith("Processed batch", expectedLog);
+  });
 
   it("does not self-register a metrics collect fn per SyncChain (leak regression)", () => {
     const headSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};

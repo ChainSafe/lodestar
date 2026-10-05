@@ -37,6 +37,7 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: 
 
   inactivityScoresArr.length = state.validators.length;
   inactivityScores.getAll(inactivityScoresArr);
+  let shouldSetInactivityScores = false;
 
   for (let i = 0; i < flags.length; i++) {
     const flag = flags[i];
@@ -53,8 +54,14 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: 
         inactivityScore -= Math.min(INACTIVITY_SCORE_RECOVERY_RATE, inactivityScore);
       }
       if (inactivityScore !== prevInactivityScore) {
-        inactivityScores.set(i, inactivityScore);
+        inactivityScoresArr[i] = inactivityScore;
+        shouldSetInactivityScores = true;
       }
     }
+  }
+
+  if (shouldSetInactivityScores) {
+    // Rebuilding the full view is slightly slower than individual sets only when very few scores change.
+    state.inactivityScores = state.type.fields.inactivityScores.toViewDU(inactivityScoresArr);
   }
 }

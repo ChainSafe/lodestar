@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {EpochTransitionCacheOpts, IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {CheckpointHex} from "../stateCache/types.js";
 
@@ -24,6 +24,7 @@ export enum RegenCaller {
   validateApiVoluntaryExit = "validateApiVoluntaryExit",
   publishDeferredVoluntaryExits = "publishDeferredVoluntaryExits",
   validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
+  validateApiExecutionPayloadBid = "validateApiExecutionPayloadBid",
   validateGossipPayloadAttestationMessage = "validateGossipPayloadAttestationMessage",
   validateGossipProposerPreferences = "validateGossipProposerPreferences",
   onForkChoiceFinalized = "onForkChoiceFinalized",
@@ -36,7 +37,7 @@ export enum RegenFnName {
   getPreState = "getPreState",
 }
 
-export type StateRegenerationOpts = EpochTransitionCacheOpts & {
+export type StateRegenerationOpts = {
   dontTransferCache: boolean;
 };
 
