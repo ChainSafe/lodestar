@@ -38,6 +38,28 @@ describe("LegacyDataColumnStore", () => {
     expect(getArchived).toHaveBeenCalledWith(10, [0, 2]);
   });
 
+  it.each([{columns: [new Uint8Array([1]), undefined]}, {columns: [undefined, undefined]}])(
+    "should not read legacy storage for an existing flat file: $columns",
+    async ({columns}) => {
+      const flatFiles = makeFlatFiles();
+      vi.mocked(flatFiles.getDataColumnsBinary).mockResolvedValue([...columns]);
+      const getHot = vi.fn().mockResolvedValue([new Uint8Array([2]), new Uint8Array([3])]);
+      const getArchived = vi.fn().mockResolvedValue([new Uint8Array([4]), new Uint8Array([5])]);
+      const getSlotByRoot = vi.fn().mockResolvedValue(10);
+      const store = new LegacyDataColumnStore(
+        flatFiles,
+        {values: vi.fn(), getManyBinary: getHot, deleteMany: vi.fn()},
+        {values: vi.fn(), getManyBinary: getArchived, keys: vi.fn(), deleteMany: vi.fn()},
+        {getSlotByRoot}
+      );
+
+      await expect(store.getManyBinary({slot: 10, blockRoot: ROOT}, [0, 1])).resolves.toEqual(columns);
+      expect(getHot).not.toHaveBeenCalled();
+      expect(getArchived).not.toHaveBeenCalled();
+      expect(getSlotByRoot).not.toHaveBeenCalled();
+    }
+  );
+
   it("should skip legacy reads when no column indices are requested", async () => {
     const getHot = vi.fn();
     const store = new LegacyDataColumnStore(

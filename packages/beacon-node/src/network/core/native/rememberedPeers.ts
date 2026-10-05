@@ -11,12 +11,11 @@ const MAX_FILE_BYTES = 128 * 1024;
 const MAX_PEERS = 256;
 /** Native's bound on a peer id's text; decoding longer base58 text costs quadratic time. */
 const MAX_PEER_ID_LENGTH = 55;
-const EXPIRY_S = 24 * 60 * 60;
 const WRITE_INTERVAL_MS = 5 * 60 * 1000;
 const FINAL_WRITE_TIMEOUT_MS = 2000;
 
 /**
- * The seed for native init: the unexpired peers an earlier run of this network remembered, one per identity.
+ * Decodes a seed for native init, which owns peer expiry and deduplication.
  * A missing, oversized or malformed file, or another network's, means a cold start: null.
  */
 export function readRememberedPeers(
@@ -27,7 +26,7 @@ export function readRememberedPeers(
   const file = path.join(dir, FILE_NAME);
   try {
     const peers = parsePeers(readBounded(file), toHex(genesisValidatorsRoot));
-    logger.debug("Loaded native remembered peers", {peers: peers.length});
+    logger.debug("Read native remembered peers", {peers: peers.length});
     return {genesisValidatorsRoot, peers};
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") logger.debug("No native remembered peers", {file});
@@ -55,15 +54,7 @@ function parsePeers(text: string, root: string): NativeRememberedPeer[] {
   if (!isObject(file) || file.version !== VERSION) throw Error("Unsupported version");
   if (file.genesisValidatorsRoot !== root) throw Error("Another network");
   if (!Array.isArray(file.peers) || file.peers.length > MAX_PEERS) throw Error(`Expected at most ${MAX_PEERS} peers`);
-  const nowS = Math.floor(Date.now() / 1000);
-  const newest = new Map<string, NativeRememberedPeer>();
-  for (const entry of file.peers) {
-    const peer = parsePeer(entry);
-    const kept = newest.get(peer.peerId);
-    if (nowS - peer.qualifiedAtUnixS < EXPIRY_S && (!kept || peer.qualifiedAtUnixS > kept.qualifiedAtUnixS))
-      newest.set(peer.peerId, peer);
-  }
-  return Array.from(newest.values());
+  return file.peers.map(parsePeer);
 }
 
 /** Native rejects the whole seed for one malformed peer, so these are its rules. */

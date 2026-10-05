@@ -26,6 +26,7 @@ export type ServingOptions = {
 };
 export type ServingPolicy = ServingLimits &
   Readonly<{
+    decodedBytes: number;
     totalBytes: number;
     maxTasks: number;
     capacity: number;
@@ -169,7 +170,6 @@ export function resolveServingPolicy(
     throw new ServingConfigurationError("Transaction work exceeds schema");
   const limits: ServingLimits = {
     sourceBytes,
-    decodedBytes,
     transactionVisits,
     blockBytes,
     columnBytes,
@@ -217,6 +217,7 @@ export function resolveServingPolicy(
   if (capacity < 1) throw new ServingConfigurationError("No maximum serving task fits");
   return Object.freeze({
     ...limits,
+    decodedBytes,
     totalBytes,
     maxTasks,
     capacity,

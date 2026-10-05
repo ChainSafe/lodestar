@@ -71,7 +71,7 @@ describe("native remembered peers file", () => {
     });
     expect(fs.readdirSync(dir)).toEqual(["native-remembered-peers.json"]);
     expect(readRememberedPeers(dir, root, logger)).toEqual({genesisValidatorsRoot: root, peers});
-    expect(logger.debug).toHaveBeenCalledWith("Loaded native remembered peers", {peers: 2});
+    expect(logger.debug).toHaveBeenCalledWith("Read native remembered peers", {peers: 2});
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
@@ -127,22 +127,18 @@ describe("native remembered peers file", () => {
     expect(readRememberedPeers(dir, root, logger)?.peers).toEqual([peer(a)]);
   });
 
-  it("drops expired records and keeps the newest record of each identity", () => {
-    write(
-      valid(
-        encoded([
-          peer(a, 9000, nowS - 10),
-          peer(b, 9000, nowS - 24 * 60 * 60),
-          peer(a, 9001, nowS - 5),
-          peer(c, 9000, nowS - 24 * 60 * 60 + 60),
-          peer(a, 9002, nowS - 20),
-        ])
-      )
-    );
-    expect(readRememberedPeers(dir, root, logger)?.peers).toEqual([
+  it("passes expiry, duplicate identities and future timestamps to native unchanged", () => {
+    const peers = [
+      peer(a, 9000, nowS - 10),
+      peer(b, 9000, nowS - 24 * 60 * 60),
       peer(a, 9001, nowS - 5),
       peer(c, 9000, nowS - 24 * 60 * 60 + 60),
-    ]);
+      peer(a, 9002, nowS - 20),
+      peer(a, 9003, nowS + 10),
+      peer(a, 9004, nowS + 20),
+    ];
+    write(valid(encoded(peers)));
+    expect(readRememberedPeers(dir, root, logger)?.peers).toEqual(peers);
   });
 
   it.each(["writeFile", "rename"] as const)("keeps the previous file when %s fails", async (step) => {

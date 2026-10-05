@@ -22,7 +22,6 @@ export function isServingCapacityError(error: unknown): boolean {
 
 export type ServingLimits = Readonly<{
   sourceBytes: number;
-  decodedBytes: number;
   transactionVisits: number;
   blockBytes: number;
   columnBytes: number;

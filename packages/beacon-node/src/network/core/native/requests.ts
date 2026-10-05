@@ -1,11 +1,5 @@
 import {peerIdFromString} from "@libp2p/peer-id";
-import {
-  IncomingRequest,
-  NativeNetwork,
-  NativeRequestError,
-  NativeRequestOptions,
-  NativeResponseChunk,
-} from "@chainsafe/lodestar-z/network";
+import {IncomingRequest, NativeNetwork, NativeRequestError, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
@@ -76,7 +70,6 @@ function requestError(error: unknown): unknown {
 export function outgoingNativeRequest(
   network: Pick<NativeNetwork, "request">,
   data: OutgoingRequestArgs,
-  options: NativeRequestOptions,
   report: (action: PeerAction, reason: string) => void
 ): AsyncIterableIterator<ResponseIncoming> {
   nativeInteger(data.versions.length, "request versions", 3, 1);
@@ -91,7 +84,7 @@ export function outgoingNativeRequest(
   const protocol = selected;
   let iterator: AsyncIterableIterator<NativeResponseChunk>;
   try {
-    iterator = network.request(data.peerId, protocol.id, data.requestData, options);
+    iterator = network.request(data.peerId, protocol.id, data.requestData);
   } catch (error) {
     throw requestError(error);
   }

@@ -1,4 +1,4 @@
-import {AbortOptions} from "@libp2p/interface";
+import {AbortOptions, Startable} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
 import {Datastore, Key, KeyQuery, Pair, Query} from "interface-datastore";
 import {NotFoundError} from "interface-store";
@@ -24,7 +24,7 @@ type PeerDatastore = Datastore & {open(): Promise<void>; close(): Promise<void>}
  *     -  update memory datastore, only update db datastore if there are at least threshold dirty items
  *     -  Update lastAccessedMs
  */
-export class Eth2PeerDataStore extends BaseDatastore {
+export class Eth2PeerDataStore extends BaseDatastore implements Startable {
   private dbDatastore: PeerDatastore;
   private memoryDatastore: Map<string, MemoryItem>;
   /** Same to PersistentPeerStore of the old libp2p implementation */
@@ -57,10 +57,24 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return this.dbDatastore.open();
   }
 
+  // Components may read during start and write during stop, so use the surrounding lifecycle phases.
+  beforeStart(): Promise<void> {
+    return this.open();
+  }
+  start(): void {}
+  stop(): void {}
+  afterStop(): Promise<void> {
+    return this.close();
+  }
+
   async close(): Promise<void> {
-    if (this.dirtyItems.size > 0) await this._commitData();
-    await this.dbDatastore.close();
-    this.memoryDatastore.clear();
+    try {
+      if (this.dirtyItems.size > 0) await this._commitData();
+    } finally {
+      await this.dbDatastore.close();
+      this.dirtyItems.clear();
+      this.memoryDatastore.clear();
+    }
   }
 
   async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {

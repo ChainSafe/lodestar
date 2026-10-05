@@ -186,7 +186,7 @@ describe("native peer datastore", () => {
     expect(await peers.has(key)).toBe(false);
   });
 
-  it("retains dirty cached peers when the shutdown flush fails so close can retry", async () => {
+  it("closes the database even when the shutdown flush fails", async () => {
     const peers = new Eth2PeerDataStore(datastore, {threshold: 2, maxMemoryItems: 3});
     const key = new Key("/peer");
     await peers.put(key, Uint8Array.of(7));
@@ -194,10 +194,10 @@ describe("native peer datastore", () => {
     vi.spyOn(LevelDb.prototype, "batch").mockRejectedValueOnce(failure);
     const close = vi.spyOn(datastore, "close");
     await expect(peers.close()).rejects.toBe(failure);
-    expect(close).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
     await peers.close();
     await datastore.open();
-    expect(await datastore.get(key)).toEqual(Uint8Array.of(7));
+    expect(await peers.has(key)).toBe(false);
   });
 
   it("commits native batches atomically in operation order", async () => {

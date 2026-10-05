@@ -1,7 +1,6 @@
-import {DbReqOpts} from "@lodestar/db";
 import {ColumnIndex, DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import type {IFlatFileStore} from "./flatFileStore/interface.js";
+import type {DataColumnReadOpts, IFlatFileStore} from "./flatFileStore/interface.js";
 import type {
   BlockArchiveRepository,
   DataColumnSidecarArchiveRepository,
@@ -20,7 +19,11 @@ type BlockRootIndex = Pick<BlockArchiveRepository, "getSlotByRoot">;
 
 export interface IDataColumnStore {
   getAll(key: DataColumnKey): Promise<DataColumnSidecar[]>;
-  getManyBinary(key: DataColumnKey, indices: ColumnIndex[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]>;
+  getManyBinary(
+    key: DataColumnKey,
+    indices: ColumnIndex[],
+    opts?: DataColumnReadOpts
+  ): Promise<(Uint8Array | undefined)[]>;
   putManyBinary(key: DataColumnKey, columns: IndexedDataColumnBytes[]): Promise<void>;
   deleteMany(keys: DataColumnKey[]): Promise<void>;
   pruneBefore(slot: Slot): Promise<Slot[]>;
@@ -60,7 +63,7 @@ export class LegacyDataColumnStore implements IDataColumnStore {
   async getManyBinary(
     {slot, blockRoot}: DataColumnKey,
     indices: ColumnIndex[],
-    opts?: DbReqOpts
+    opts?: DataColumnReadOpts
   ): Promise<(Uint8Array | undefined)[]> {
     const flatFileSidecars = await this.flatFiles.getDataColumnsBinary(slot, blockRoot, indices, opts);
     if (flatFileSidecars !== null) return flatFileSidecars;

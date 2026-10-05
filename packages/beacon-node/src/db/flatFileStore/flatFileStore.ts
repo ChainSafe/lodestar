@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
-import {DbReqOpts} from "@lodestar/db";
 import {ForkPostFulu} from "@lodestar/params";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
@@ -19,7 +18,7 @@ import {
   totalBits,
 } from "./dcolFormat.js";
 import {DataColumnStoreError, DataColumnStoreErrorCode, isFsNotFoundError} from "./errors.js";
-import type {IFlatFileStore} from "./interface.js";
+import type {DataColumnReadOpts, IFlatFileStore} from "./interface.js";
 import {type FlatFileStoreMetrics, FlatFileStoreOperation, observeFlatFileStoreOperation} from "./metrics.js";
 import {assertValidRootHex, padSlot} from "./path.js";
 import {SlotIndex} from "./slotIndex.js";
@@ -103,7 +102,7 @@ export class FlatFileStore implements IFlatFileStore {
     slot: Slot,
     blockRoot: RootHex,
     indices: number[],
-    opts?: DbReqOpts
+    opts?: DataColumnReadOpts
   ): Promise<(Uint8Array | undefined)[] | null> {
     return observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.read, () =>
       this.getColumnsBinaryUninstrumented(slot, blockRoot, indices, opts)
@@ -225,7 +224,7 @@ export class FlatFileStore implements IFlatFileStore {
     slot: Slot,
     rootHex: RootHex,
     indices: number[],
-    opts?: DbReqOpts
+    opts?: DataColumnReadOpts
   ): Promise<(Uint8Array | undefined)[] | null> {
     let fd: fs.promises.FileHandle;
     try {

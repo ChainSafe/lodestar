@@ -140,6 +140,7 @@ describe("native Lodestar integration", () => {
     );
     const nowS = Math.floor(Date.now() / 1000);
     const remembered = {peerId, endpoint: {family: 4, address: "0x7f000001", port: 9}, qualifiedAtUnixS: nowS - 60};
+    const older = {...remembered, endpoint: {...remembered.endpoint, port: 10}, qualifiedAtUnixS: nowS - 120};
     const expired = {...remembered, peerId: expiredPeerId, qualifiedAtUnixS: nowS - 24 * 60 * 60};
     let written: string | undefined;
     const originalInit = NativeNetworkCore.init;
@@ -150,8 +151,7 @@ describe("native Lodestar integration", () => {
         peers: [remembered],
       };
       written = JSON.stringify(seed);
-      // The host drops the expired record, and native rewrites the indented file compactly.
-      writeFileSync(file, JSON.stringify({...seed, peers: [remembered, expired]}, null, 2));
+      writeFileSync(file, JSON.stringify({...seed, peers: [older, remembered, expired]}, null, 2));
       return originalInit({...modules, peerStoreDir: directory});
     });
     let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
@@ -159,7 +159,8 @@ describe("native Lodestar integration", () => {
       node = await nativeNetworkFixture(fuluConfig());
       const metrics = await node.network.scrapeMetrics();
       expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="loaded"} 1\n');
-      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="expired"} 0\n');
+      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="expired"} 1\n');
+      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="duplicate"} 1\n');
       await node.network.close();
       expect(readFileSync(file, "utf8")).toBe(written);
     } finally {

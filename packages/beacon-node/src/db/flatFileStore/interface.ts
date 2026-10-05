@@ -1,6 +1,8 @@
 import {DbReqOpts} from "@lodestar/db";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 
+export type DataColumnReadOpts = Pick<DbReqOpts, "maxValueBytes" | "maxTotalBytes">;
+
 /**
  * Flat file storage interface for data columns.
  *
@@ -18,7 +20,7 @@ export interface IFlatFileStore {
     slot: Slot,
     blockRoot: RootHex,
     indices: number[],
-    opts?: DbReqOpts
+    opts?: DataColumnReadOpts
   ): Promise<(Uint8Array | undefined)[] | null>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
 

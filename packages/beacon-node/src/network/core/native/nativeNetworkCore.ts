@@ -119,7 +119,6 @@ export class NativeNetworkCore implements INetworkCore {
     directPeers: NativePeerAddress[],
     bootPeers: NativePeerAddress[]
   ): Promise<void> {
-    const {opts} = this.modules;
     for (const peer of directPeers) {
       if (this.closed) return;
       await this.network.setDirectPeer(peer.peerId, peer.addresses);
@@ -127,7 +126,7 @@ export class NativeNetworkCore implements INetworkCore {
     for (const peer of bootPeers) {
       if (this.closed) return;
       try {
-        await this.network.connect(peer.peerId, peer.addresses, BigInt(opts.dialTimeoutMs ?? 10000));
+        await this.network.connect(peer.peerId, peer.addresses);
       } catch (error) {
         this.modules.logger.debug("Native bootstrap dial failed", {peer: peer.peerId}, error as Error);
       }
@@ -248,8 +247,7 @@ export class NativeNetworkCore implements INetworkCore {
     nativeInteger(addresses.length, "dial addresses", 2, 1);
     return this.network.connect(
       peer,
-      addresses.map((address) => parseNativeEndpoint(address, true, peer)),
-      BigInt(this.modules.opts.dialTimeoutMs ?? 10000)
+      addresses.map((address) => parseNativeEndpoint(address, true, peer))
     );
   }
   disconnectPeer(peer: string): Promise<void> {
@@ -267,24 +265,14 @@ export class NativeNetworkCore implements INetworkCore {
     return (await this.network.getDirectPeers()).identities;
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
-    const {opts} = this.modules;
-    return outgoingNativeRequest(
-      this.network,
-      data,
-      {
-        negotiationTimeoutMs: opts.dialTimeoutMs,
-        requestTimeoutMs: opts.requestTimeoutMs,
-        responseTimeoutMs: opts.respTimeoutMs,
-      },
-      (action, reason) => {
-        if (this.closed) return;
-        try {
-          this.reports.report(data.peerId, action, reason);
-        } catch (error) {
-          this.modules.logger.debug("Native request peer report failed", {peer: data.peerId, reason}, error as Error);
-        }
+    return outgoingNativeRequest(this.network, data, (action, reason) => {
+      if (this.closed) return;
+      try {
+        this.reports.report(data.peerId, action, reason);
+      } catch (error) {
+        this.modules.logger.debug("Native request peer report failed", {peer: data.peerId, reason}, error as Error);
       }
-    );
+    });
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.gossip.publish(topic, data, opts);

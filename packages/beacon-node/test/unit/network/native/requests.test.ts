@@ -34,7 +34,6 @@ it("maps native admission refusal to local request rate limiting", async () => {
         versions: [2],
         requestData: new Uint8Array(32),
       },
-      {},
       vi.fn()
     )
   ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
@@ -65,7 +64,6 @@ it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
       versions: [2],
       requestData: new Uint8Array(32),
     },
-    {},
     vi.fn()
   );
   await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.EMPTY_RESPONSE}});
@@ -103,7 +101,6 @@ it.each([
       versions: [2],
       requestData: new Uint8Array(32),
     },
-    {},
     report
   );
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
@@ -126,7 +123,6 @@ it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "slo
           },
         },
         {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
-        {},
         report
       )
     ).toThrow();

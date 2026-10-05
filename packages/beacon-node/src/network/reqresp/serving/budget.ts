@@ -16,7 +16,6 @@ export class ServingLease {
   waiting: {kind: "retained" | "work"; completion: ReturnType<typeof defer<void>>} | undefined;
 
   constructor(
-    readonly policy: ServingPolicy,
     readonly work: ServingWork,
     readonly peer: string,
     private readonly budget: HostServingBudget
@@ -84,7 +83,6 @@ export class HostServingBudget {
   private retainedBytes = 0;
   private workingBytes = 0;
   private working = 0;
-  private refused = 0;
   retiring = 0;
   private constructor(private policy: ServingPolicy) {}
   private static environment: HostServingBudget | undefined;
@@ -102,21 +100,15 @@ export class HostServingBudget {
     }
     return budget;
   }
-  canAcquire(): boolean {
-    return this.remaining() > 0;
-  }
   /** Leases acquirable now. */
   remaining(): number {
     return this.policy.capacity - this.leases.size;
   }
   acquire(peer = "", method = ReqRespMethod.BeaconBlocksByRoot): ServingLease {
-    if (!this.canAcquire()) {
-      this.refused++;
-      throw new ServingCapacityError("handler admission");
-    }
+    if (this.remaining() <= 0) throw new ServingCapacityError("handler admission");
     const work = this.policy.methods[method];
     if (!work) throw new ServingConfigurationError(`Unsupported serving method ${method}`);
-    const lease = new ServingLease(this.policy, work, peer, this);
+    const lease = new ServingLease(work, peer, this);
     this.leases.add(lease);
     return lease;
   }
@@ -196,7 +188,6 @@ export class HostServingBudget {
     }
   }
   snapshot() {
-    const decoded = this.leases.size * this.policy.decodedBytes;
     const state = this.leases.size * this.policy.stateBytes;
     let pendingSourceLimitBytes = 0;
     for (const lease of this.leases) pendingSourceLimitBytes += lease.context.snapshot().pendingSourceLimitBytes;
@@ -211,8 +202,6 @@ export class HostServingBudget {
       pendingSourceLimitBytes,
       retainedBytes: this.retainedBytes,
       workingBytes: this.workingBytes,
-      reservedDecodedBytes: decoded,
-      refusedAdmission: this.refused,
       outstandingRetirements: this.retiring,
     };
   }
