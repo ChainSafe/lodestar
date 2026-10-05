@@ -5,6 +5,7 @@ import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
+import {computeSyncCommitteeRewards} from "../../../src/rewards/syncCommitteeRewards.js";
 import {stateTransition} from "../../../src/stateTransition.js";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateAllForks} from "../../../src/types.js";
@@ -107,8 +108,14 @@ describe("chain / rewards / blockRewards", () => {
       }
       if (opts.attesterSlashingLen === 0) {
         expect(attesterSlashings).toBe(0);
+      } else {
+        expect(attesterSlashings).toBeGreaterThan(0);
+      }
+      if (opts.attestationLen > 0) {
+        expect(attestations).toBeGreaterThan(0);
       }
 
+      const proposerBalanceBefore = state.balances.get(proposerIndex);
       const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         dataAvailabilityStatus: DataAvailabilityStatus.Available,
@@ -123,6 +130,16 @@ describe("chain / rewards / blockRewards", () => {
       expect(attestations).toBe(rewardCache.attestations);
       expect(syncAggregate).toBe(rewardCache.syncAggregate);
       expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
+
+      // Cross check with the proposer's balance delta, which also includes their own sync committee reward
+      const syncRewards = await computeSyncCommitteeRewards(
+        config,
+        state.epochCtx.pubkeyCache,
+        block.message,
+        state as CachedBeaconStateAllForks
+      );
+      const proposerSyncReward = syncRewards.find((r) => r.validatorIndex === proposerIndex)?.reward ?? 0;
+      expect(postState.balances.get(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
     });
   }
 
