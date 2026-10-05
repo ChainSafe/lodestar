@@ -95,8 +95,8 @@ export class PtcDutiesService {
   }
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    const nextEpoch = epoch + 1;
-    if (!isForkPostGloas(this.config.getForkName(nextEpoch * SLOTS_PER_EPOCH))) {
+    // PTC duties of the first Gloas epoch only exist after the fork upgrade, they can't be polled one epoch ahead
+    if (!isForkPostGloas(this.config.getForkName(epoch * SLOTS_PER_EPOCH))) {
       return;
     }
 
@@ -171,19 +171,17 @@ export class PtcDutiesService {
     } else {
       const existingDuties = dutiesAtEpoch.dutiesByIndex;
       const existingDutiesCount = existingDuties.size;
-      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
-
-      if (discoveredNewDuties) {
-        for (const duty of relevantDuties) {
-          if (!existingDuties.has(duty.validatorIndex)) {
-            existingDuties.set(duty.validatorIndex, duty);
-          }
+      for (const duty of relevantDuties) {
+        if (!existingDuties.has(duty.validatorIndex)) {
+          existingDuties.set(duty.validatorIndex, duty);
         }
+      }
 
+      if (existingDuties.size > existingDutiesCount) {
         this.logger.debug("Discovered new PTC duties", {
           epoch,
           dependentRoot,
-          count: relevantDuties.length - existingDutiesCount,
+          count: existingDuties.size - existingDutiesCount,
         });
       }
     }

@@ -856,6 +856,8 @@ export function getPayloadAttributesForSSE(
     prepareSlot,
     parentBlockRoot,
     parentBlockHash,
+    safeBlockHash,
+    finalizedBlockHash,
     feeRecipient,
   }: {
     /**
@@ -866,6 +868,8 @@ export function getPayloadAttributesForSSE(
     prepareSlot: Slot;
     parentBlockRoot: Root;
     parentBlockHash: Bytes32;
+    safeBlockHash: RootHex;
+    finalizedBlockHash: RootHex;
     feeRecipient: string;
   }
 ): SSEPayloadAttributes {
@@ -885,7 +889,10 @@ export function getPayloadAttributesForSSE(
     payloadAttributes,
   } as SSEPayloadAttributes;
 
-  if (!isForkPostGloas(fork)) {
+  if (isForkPostGloas(fork)) {
+    (ssePayloadAttributes as gloas.SSEPayloadAttributes).safeBlockHash = fromHex(safeBlockHash);
+    (ssePayloadAttributes as gloas.SSEPayloadAttributes).finalizedBlockHash = fromHex(finalizedBlockHash);
+  } else {
     // Removed in Gloas, builders can get the block number from the EL via the block hash if required
     (ssePayloadAttributes as bellatrix.SSEPayloadAttributes).parentBlockNumber = prepareState.payloadBlockNumber;
   }

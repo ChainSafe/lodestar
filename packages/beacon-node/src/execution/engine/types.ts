@@ -93,14 +93,7 @@ export type EngineApiRpcParamTypes = {
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
-  engine_getPayloadBodiesByHashV1: DATA[][];
   engine_getPayloadBodiesByHashV2: DATA[][];
-
-  /**
-   *  1. start: QUANTITY, 64 bits - Starting block number
-   *  2. count: QUANTITY, 64 bits - Number of blocks to return
-   */
-  engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
 
   /**
    * Object - Instance of ClientVersion
@@ -166,10 +159,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV5: ExecutionPayloadResponse;
   engine_getPayloadV6: ExecutionPayloadResponse;
 
-  engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
   engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
-
-  engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
 

@@ -22,7 +22,6 @@ import {
   BlobsBundleRpc,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  ExecutionPayloadBodyRpc,
   ExecutionPayloadBodyV2Rpc,
   ExecutionPayloadRpc,
   ExecutionRequestsRpc,
@@ -50,7 +49,7 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
-  /** Bodies as received via newPayload, served back by engine_getPayloadBodiesByHash{V1,V2} */
+  /** Bodies as received via newPayload, served back by engine_getPayloadBodiesByHashV2 */
   body: ExecutionPayloadBodyV2Rpc;
 };
 
@@ -150,9 +149,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
-      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
-      engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
@@ -160,26 +157,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     };
   }
 
-  private getPayloadBodiesByHash(
-    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return this.getPayloadBodiesByHashV2(blockHashes).map((body) =>
-      body ? {transactions: body.transactions, withdrawals: body.withdrawals} : null
-    );
-  }
-
   private getPayloadBodiesByHashV2(
     blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV2"] {
     // null for unknown blocks, as a real EL does; the genesis/eth1 seed blocks carry no body
     return blockHashes.map((hash) => this.validBlocks.get(hash)?.body ?? null);
-  }
-
-  private getPayloadBodiesByRange(
-    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
-    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
   }
 
   /**

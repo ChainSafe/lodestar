@@ -218,7 +218,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
     payloadEnvelopeReconstruction: {
-      envelopes: register.counter<{result: "ok" | "unavailable" | "mismatch"}>({
+      envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
         name: "beacon_payload_envelope_reconstruction_envelopes_total",
         help: "Archived header envelopes rebuilt from EL bodies, by outcome",
         labelNames: ["result"],
