@@ -1,7 +1,7 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -14,7 +14,6 @@ import {
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
-  nativeStateTransition,
   replaceStateViewForTest,
   stateViewToBeaconState,
 } from "../utils/stateTransition.js";
@@ -77,8 +76,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks | undefined> 
         }
         expectEqualBeaconState(fork, expected, actual);
       },
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => nativeStateTransition && isForkPostGloas(fork),
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     },
   };
 };

@@ -75,7 +75,6 @@ import {
   expectNoProgressiveBalancesMismatches,
   expectValidProgressiveBalances,
 } from "./progressiveBalances.js";
-import {nativeStateTransition} from "./stateTransition.js";
 import {TestRunnerFn} from "./types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -859,9 +858,7 @@ export const forkChoiceTestRunner =
         // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          (nativeStateTransition && (name.includes("gloas") || name.includes("heze"))),
+        shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
       },
     };
   };

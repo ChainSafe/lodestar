@@ -2,7 +2,7 @@ import path from "node:path";
 import {expect} from "vitest";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -16,7 +16,6 @@ import {
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
-  nativeStateTransition,
   replaceStateViewForTest,
   stateViewToBeaconState,
 } from "../utils/stateTransition.js";
@@ -111,8 +110,7 @@ const transition =
         },
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
         shouldSkip: (_testcase, name, _index) =>
-          (nativeStateTransition && isForkPostGloas(forkNext)) ||
-          (skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false),
+          skipTestNames?.some((skipTestName) => name.includes(skipTestName)) ?? false,
       },
     };
   };

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
@@ -137,13 +137,15 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
+      // lodestar-z does not support Gloas state transition yet
+      (nativeStateTransition && isForkPostGloas(fork)) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;
     }
-    const fork = forkStr as ForkName;
 
     const forkDirpath = path.join(configDirpath, forkStr);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {

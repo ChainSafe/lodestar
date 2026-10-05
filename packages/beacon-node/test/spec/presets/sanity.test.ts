@@ -1,7 +1,7 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -16,7 +16,6 @@ import {
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
-  nativeStateTransition,
   replaceStateViewForTest,
   stateViewToBeaconState,
 } from "../utils/stateTransition.js";
@@ -68,8 +67,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks | undef
         }
         expectEqualBeaconState(fork, expected, actual);
       },
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => nativeStateTransition && isForkPostGloas(fork),
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     },
   };
 };
@@ -135,8 +133,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks | und
         }
         expectEqualBeaconState(fork, expected, actual);
       },
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: () => nativeStateTransition && isForkPostGloas(fork),
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     },
   };
 };
