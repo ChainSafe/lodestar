@@ -110,7 +110,7 @@ Use `--execution.engineApi` to select how Lodestar communicates with the executi
 - `ssz`: require one execution URL with a working REST capabilities endpoint. Use REST without JSON-RPC fallback.
 - `json-rpc`: use JSON-RPC without probing REST support.
 
-In `auto` mode, a capabilities `404` selects JSON-RPC until the execution client reconnects. Temporary discovery failures, such as timeouts or server errors, use JSON-RPC while allowing another probe after 12 seconds. Authentication failures and malformed capability responses remain errors.
+In `auto` mode, a capabilities response from a server without the REST API selects JSON-RPC until the execution client reconnects. That is a `4xx` other than `401` or `403`, or a successful response that is not JSON, as older execution clients return for any `GET`. Temporary discovery failures, such as timeouts or server errors, use JSON-RPC while allowing another probe after 12 seconds. Authentication failures and malformed JSON capabilities remain errors.
 
 After REST is selected, request failures do not switch protocols. The exception in `auto` mode is an explicit `400 /engine-api/errors/unsupported-fork`: Lodestar retries through JSON-RPC and remembers that choice for the fork until reconnection. An unknown payload, invalid forkchoice, or invalid payload does not trigger this workaround.
 

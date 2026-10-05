@@ -25,7 +25,8 @@ describe("REST engine compatibility", () => {
   let server: FastifyInstance;
   let url: string;
   let controller: AbortController;
-  let discovery: {status: number; body: unknown};
+  /** `untyped` sends the body without a content type, like Nethermind <= 1.32 answering any GET */
+  let discovery: {status: number; body: unknown; untyped?: boolean};
   let restError: {status: number; body: unknown} | undefined;
   let jsonRpcError: {code: number; message: string} | undefined;
   let malformedResponse: boolean;
@@ -52,6 +53,12 @@ describe("REST engine compatibility", () => {
     server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_, body, done) => done(null, body));
     server.get("/engine/v1/capabilities", (_, reply) => {
       requests.push("capabilities");
+      if (discovery.untyped) {
+        reply.hijack();
+        reply.raw.writeHead(discovery.status);
+        reply.raw.end(String(discovery.body));
+        return;
+      }
       return reply.code(discovery.status).send(discovery.body);
     });
     server.get("/engine/v1/identity", () => [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]);
@@ -119,6 +126,22 @@ describe("REST engine compatibility", () => {
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     now.mockReturnValue(200_000);
     discovery = {status: 200, body: capabilities};
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
+    expectCompatibilityLogsAtDebugOnly();
+  });
+
+  it.each([
+    {name: "405", discovery: {status: 405, body: "Method Not Allowed"}},
+    {name: "400", discovery: {status: 400, body: "Bad Request"}},
+    {name: "200 text/plain", discovery: {status: 200, body: "JSON RPC server"}},
+    {name: "200 without content type", discovery: {status: 200, body: "Nethermind JSON RPC", untyped: true}},
+  ])("remembers a discovery $name from a server without the REST API", async ({discovery: response}) => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+    discovery = response;
+    const engine = createEngine();
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    now.mockReturnValue(200_000);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     expectCompatibilityLogsAtDebugOnly();
