@@ -270,7 +270,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,

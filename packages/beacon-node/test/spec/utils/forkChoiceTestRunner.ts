@@ -531,7 +531,7 @@ export const forkChoiceTestRunner =
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
                 const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
-                expectValidProgressiveBalances(postState, metrics);
+                expectValidProgressiveBalances(postState, metrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
                 specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
