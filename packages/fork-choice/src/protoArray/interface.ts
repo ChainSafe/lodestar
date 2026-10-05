@@ -180,3 +180,12 @@ export type ProtoNode = ProtoBlock & {
   bestChild?: number;
   bestDescendant?: number;
 };
+
+/**
+ * PTC majority per PayloadAttestationData field: `true` or `false` once more than PTC_SIZE // 2
+ * members voted that way, `null` while neither outcome has a majority.
+ */
+export type PtcQuorum = {
+  payloadPresent: boolean | null;
+  blobDataAvailable: boolean | null;
+};

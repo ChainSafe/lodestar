@@ -45,6 +45,7 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   VoteIndex,
   isGloasBlock,
 } from "../protoArray/interface.js";
@@ -1090,7 +1091,24 @@ export class ForkChoice implements IForkChoice {
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
+    const before = this.protoArray.getPtcQuorum(blockRoot);
     this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
+    const after = this.protoArray.getPtcQuorum(blockRoot);
+    if (
+      before === null ||
+      after === null ||
+      (before.payloadPresent === after.payloadPresent && before.blobDataAvailable === after.blobDataAvailable)
+    ) {
+      return;
+    }
+
+    for (const vote of ["payloadPresent", "blobDataAvailable"] as const) {
+      if (after[vote] !== null && after[vote] !== before[vote]) {
+        this.metrics?.forkChoice.ptcQuorum.inc({vote, result: after[vote] ? "true" : "false"});
+      }
+    }
+    this.logger?.verbose("PTC quorum changed", {slot, blockRoot, ...after});
+    this.fcStore.notifyPtcQuorum?.({blockRoot, slot, ...after});
   }
 
   /**
@@ -1221,6 +1239,10 @@ export class ForkChoice implements IForkChoice {
     dataAvailableCount: number;
   } | null {
     return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getPtcQuorum(blockRootHex: RootHex): PtcQuorum | null {
+    return this.protoArray.getPtcQuorum(blockRootHex);
   }
 
   getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {

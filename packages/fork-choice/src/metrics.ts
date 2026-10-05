@@ -68,6 +68,11 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
       }),
+      ptcQuorum: register.counter<{vote: "payloadPresent" | "blobDataAvailable"; result: "true" | "false"}>({
+        name: "beacon_fork_choice_ptc_quorum_total",
+        help: "Count of PTC vote fields reaching a majority, by field and outcome",
+        labelNames: ["vote", "result"],
+      }),
       computeDeltas: {
         duration: register.histogram({
           name: "beacon_fork_choice_compute_deltas_seconds",

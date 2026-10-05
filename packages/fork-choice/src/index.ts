@@ -26,6 +26,7 @@ export {
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
+  type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";
 export {
@@ -43,6 +44,7 @@ export type {
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "./protoArray/interface.js";
 export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";
