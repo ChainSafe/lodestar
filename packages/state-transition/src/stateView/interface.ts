@@ -346,6 +346,7 @@ export type IBeaconStateViewNative = Omit<
   | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
+  | "getInclusionListCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
   | "getPayloadTimelinessCommittee"
   | "loadOtherState"
