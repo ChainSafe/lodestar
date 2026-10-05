@@ -7,13 +7,14 @@ import {
 } from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
-import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {ExecutionPayloadStatus, isForkchoiceUpdateInvalidError} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
 import {ImportPayloadOpts} from "./types.js";
+import {invalidateForkchoiceHeadFromFcuInvalid} from "./utils/forkchoiceUpdateInvalid.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
@@ -267,6 +268,10 @@ export async function importExecutionPayload(
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (isForkchoiceUpdateInvalidError(e)) {
+        invalidateForkchoiceHeadFromFcuInvalid(this, head.blockRoot, blockHashHex, e);
+        return;
+      }
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
       }
