@@ -5,6 +5,7 @@ import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
+import {computeSyncCommitteeRewards} from "../../../src/rewards/syncCommitteeRewards.js";
 import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateAllForks} from "../../../src/types.js";
@@ -142,7 +143,7 @@ describe("chain / rewards / blockRewards", () => {
         state as CachedBeaconStateAllForks
       );
       const proposerSyncReward = syncRewards.find((r) => r.validatorIndex === proposerIndex)?.reward ?? 0;
-      expect(postState.balances.get(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
+      expect(postState.getBalance(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
     });
   }
 
