@@ -555,6 +555,75 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode).toBeDefined();
     });
 
+    it("validates all blocks building on a payload once it turns VALID, not only one chain", () => {
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x0a", genesisRoot, genesisRoot), gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x0a",
+        gloasForkSlot,
+        "0xa1",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // 0x0b and 0x0c build on A's SYNCING payload, 0x0d builds on EMPTY(0x0c) and so on A's payload too
+      const children = [
+        [gloasForkSlot + 1, "0x0b", "0x0a"],
+        [gloasForkSlot + 1, "0x0c", "0x0a"],
+        [gloasForkSlot + 2, "0x0d", "0x0c"],
+      ] as const;
+      for (const [slot, root, parentRoot] of children) {
+        protoArray.onBlock(
+          {
+            ...createTestBlock(slot, root, parentRoot, "0xa1"),
+            executionPayloadBlockHash: "0xa1",
+            executionStatus: ExecutionStatus.Syncing,
+          } as ProtoBlock,
+          slot,
+          null
+        );
+      }
+      protoArray.onExecutionPayload(
+        "0x0c",
+        gloasForkSlot + 1,
+        "0xc1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // 0x0b's payload is VALID, which implies A's payload is
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x0a", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      for (const [, root] of children) {
+        expect(getNodeByPayloadStatus(protoArray, root, PayloadStatus.PENDING)?.executionStatus).toBe(
+          ExecutionStatus.Valid
+        );
+        expect(getNodeByPayloadStatus(protoArray, root, PayloadStatus.EMPTY)?.executionStatus).toBe(
+          ExecutionStatus.Valid
+        );
+      }
+      // 0x0c's own payload has not been validated
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+
     it("throws for pre-Gloas blocks", () => {
       const block = createTestBlock(gloasForkSlot - 1, "0x02", genesisRoot);
       protoArray.onBlock(block, gloasForkSlot - 1, null);
