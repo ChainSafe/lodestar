@@ -1,7 +1,7 @@
 - name: add_builder_to_registry#gloas
   sources:
     - file: packages/state-transition/src/block/indexedBuilderState.ts
-      search: addBuilderToRegistry(pubkey: Uint8Array,
+      search: "addBuilderToRegistry(pubkey: Uint8Array,"
   spec: |
     <spec fn="add_builder_to_registry" fork="gloas" hash="16d64e88">
     def add_builder_to_registry(
@@ -4809,7 +4809,7 @@
 - name: get_index_for_new_builder#gloas
   sources:
     - file: packages/state-transition/src/block/indexedBuilderState.ts
-      search: private findReusableBuilderIndex(): BuilderIndex | null {
+      search: "private findReusableBuilderIndex(): BuilderIndex | null {"
   spec: |
     <spec fn="get_index_for_new_builder" fork="gloas" hash="82dfbdb5">
     def get_index_for_new_builder(state: BeaconState) -> BuilderIndex:
