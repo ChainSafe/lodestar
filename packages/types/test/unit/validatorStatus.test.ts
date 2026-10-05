@@ -4,7 +4,7 @@ import {
   GeneralValidatorStatus,
   ValidatorStatus,
   getValidatorStatus,
-  statusMatches,
+  mapToGeneralStatus,
 } from "../../src/utils/validatorStatus.js";
 
 describe("getValidatorStatus", () => {
@@ -104,7 +104,7 @@ describe("getValidatorStatus", () => {
   });
 });
 
-describe("statusMatches", () => {
+describe("mapToGeneralStatus", () => {
   const groupMembers: Record<GeneralValidatorStatus, ValidatorStatus[]> = {
     active: ["active_ongoing", "active_exiting", "active_slashed"],
     pending: ["pending_initialized", "pending_queued"],
@@ -113,27 +113,10 @@ describe("statusMatches", () => {
   };
 
   for (const [group, members] of Object.entries(groupMembers) as [GeneralValidatorStatus, ValidatorStatus[]][]) {
-    it(`group status "${group}" matches its fine-grained members`, () => {
+    it(`maps "${group}" members to the group status`, () => {
       for (const member of members) {
-        expect(statusMatches([group], member), `${group} should match ${member}`).toBe(true);
+        expect(mapToGeneralStatus(member), `${member} should map to ${group}`).toBe(group);
       }
     });
   }
-
-  it("fine-grained statuses still match exactly", () => {
-    expect(statusMatches(["active_ongoing"], "active_ongoing")).toBe(true);
-    expect(statusMatches(["active_ongoing"], "active_exiting")).toBe(false);
-    expect(statusMatches(["active_ongoing"], "pending_queued")).toBe(false);
-  });
-
-  it("does not match unrelated group statuses", () => {
-    expect(statusMatches(["pending"], "active_ongoing")).toBe(false);
-    expect(statusMatches(["exited"], "active_ongoing")).toBe(false);
-    expect(statusMatches(["withdrawal"], "active_ongoing")).toBe(false);
-  });
-
-  it("matches when filter contains either fine-grained or group status", () => {
-    expect(statusMatches(["pending", "active"], "active_ongoing")).toBe(true);
-    expect(statusMatches(["pending", "active_ongoing"], "active_ongoing")).toBe(true);
-  });
 });

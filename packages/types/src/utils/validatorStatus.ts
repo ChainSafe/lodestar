@@ -91,8 +91,3 @@ export function mapToGeneralStatus(subStatus: ValidatorStatus): GeneralValidator
       throw new Error(`Unknown substatus: ${subStatus}`);
   }
 }
-
-/** Match fine-grained validator status against Beacon API filter statuses (incl. group statuses). */
-export function statusMatches(filterStatuses: readonly string[], validatorStatus: ValidatorStatus): boolean {
-  return filterStatuses.includes(validatorStatus) || filterStatuses.includes(mapToGeneralStatus(validatorStatus));
-}

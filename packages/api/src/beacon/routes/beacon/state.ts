@@ -44,7 +44,10 @@ export type BuilderId = string | number;
 
 export type {BuilderStatus, ValidatorStatus};
 
-/** Fine-grained or Beacon API group status used as a request filter */
+/**
+ * Beacon API `status` filter: oneOf [ValidatorStatus, enum [active, pending, exited, withdrawal]].
+ * https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/states/validators.yaml
+ */
 export type ValidatorStatusFilter = ValidatorStatus | GeneralValidatorStatus;
 
 export const RandaoResponseType = new ContainerType({
