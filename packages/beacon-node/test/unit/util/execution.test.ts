@@ -256,12 +256,13 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
   });
 
-  it("reports an unavailable miss on the batch getter path when the EL cannot serve the bodies", async () => {
+  it("reports an unavailable miss carrying BODY_UNAVAILABLE on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    expect(await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)])).toEqual([
-      {slot: 10, reason: "unavailable"},
-    ]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)]);
+    if (!isRebuildMiss(result) || result.reason !== "unavailable") throw Error("expected an unavailable miss");
+    expect(result.slot).toBe(10);
+    expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE);
   });
 });
 

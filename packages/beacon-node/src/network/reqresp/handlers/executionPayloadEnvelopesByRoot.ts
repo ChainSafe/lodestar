@@ -53,7 +53,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     const batch = requests.slice(i, i + MAX_BODIES_PER_REQUEST);
     let envelopesBytes: (Uint8Array | null)[];
     try {
-      // By-root allows omission, so a mismatched envelope is left out rather than failing the response.
+      // By-root allows omission, so an envelope that cannot be rebuilt is left out rather than failing the response.
       envelopesBytes = await chain.getSerializedExecutionPayloadEnvelopes(batch, "omit");
     } catch (e) {
       if (e instanceof EnvelopeReconstructionError) {

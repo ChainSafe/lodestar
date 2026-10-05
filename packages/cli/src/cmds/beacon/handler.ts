@@ -27,6 +27,7 @@ import {initBeaconState} from "./initBeaconState.js";
 import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
+import {savePubkeysFile} from "./pubkeysFile.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -78,7 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       anchorState,
       config: beaconConfig,
       isFinalized,
-    } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
+    } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
       opts: options,
@@ -139,21 +140,21 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     abortController.signal.addEventListener(
       "abort",
       async () => {
+        let exitCode = 0;
         try {
           await node.close();
           logger.debug("Beacon node closed");
-          // Explicitly exit until active handles issue is resolved
-          // See https://github.com/ChainSafe/lodestar/issues/5642
-          process.exit(0);
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
           logger.warn("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
           await db.close();
-          // Must explicitly exit process due to potential active handles
-          process.exit(1);
+          exitCode = 1;
         }
+        savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
+        // Explicitly exit process due to potential active handles
+        process.exit(exitCode);
       },
       {once: true}
     );

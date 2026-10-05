@@ -4000,7 +4000,7 @@
 - name: get_execution_payload_bid_signature#gloas
   sources:
     - file: packages/builder/src/services/builderSigner.ts
-      search: "signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid)"
+      search: "signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid): gloas.SignedExecutionPayloadBid {"
   spec: |
     <spec fn="get_execution_payload_bid_signature" fork="gloas" hash="c09cbb78">
     def get_execution_payload_bid_signature(
