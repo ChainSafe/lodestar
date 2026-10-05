@@ -1,7 +1,7 @@
 - name: add_builder_to_registry#gloas
   sources:
-    - file: packages/state-transition/src/util/gloas.ts
-      search: export function addBuilderToRegistry(
+    - file: packages/state-transition/src/block/indexedBuilderState.ts
+      search: addBuilderToRegistry(pubkey: Uint8Array,
   spec: |
     <spec fn="add_builder_to_registry" fork="gloas" hash="16d64e88">
     def add_builder_to_registry(
@@ -4808,8 +4808,8 @@
 
 - name: get_index_for_new_builder#gloas
   sources:
-    - file: packages/state-transition/src/util/gloas.ts
-      search: if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+    - file: packages/state-transition/src/block/indexedBuilderState.ts
+      search: private findReusableBuilderIndex(): BuilderIndex | null {
   spec: |
     <spec fn="get_index_for_new_builder" fork="gloas" hash="82dfbdb5">
     def get_index_for_new_builder(state: BeaconState) -> BuilderIndex:
@@ -12558,8 +12558,8 @@
   sources:
     - file: packages/state-transition/src/block/processDeposit.ts
       search: stateAltair.inactivityScores.push(
-    - file: packages/state-transition/src/util/gloas.ts
-      search: if (builderIndex < state.builders.length) {
+    - file: packages/state-transition/src/block/indexedBuilderState.ts
+      search: if (reusableIndex !== null) {
   spec: |
     <spec fn="set_or_append_list" fork="altair" hash="45764cd4">
     def set_or_append_list(
