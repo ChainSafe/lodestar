@@ -67,7 +67,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     }
   );
 
-  it("falls through to regen when a skipped-boundary checkpoint has a different state root", async () => {
+  it("falls through to regen when the finalized block is not at the epoch start slot", async () => {
     const blockState = new BeaconStateView(generateCachedState({slot: checkpointState.slot - 1}));
     const blockStateRoot = toRootHex(blockState.hashTreeRoot());
     const finalizedBlock = generateProtoBlock({slot: blockState.slot, blockRoot: rootHex, stateRoot: blockStateRoot});
@@ -78,7 +78,7 @@ describe("BeaconChain getStateByStateRoot", () => {
       executionOptimistic: false,
       finalized: true,
     });
-    expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 2, rootHex});
+    expect(chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
     expect(chain.regen.getState).toHaveBeenCalledWith(blockStateRoot, RegenCaller.restApi);
   });
 
@@ -104,7 +104,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     expect(chain.regen.getState).toHaveBeenCalledWith(stateRoot, RegenCaller.restApi);
   });
 
-  it("preserves epoch-zero regen and finalization metadata", async () => {
+  it("serves the genesis checkpoint state as not finalized", async () => {
     const state = new BeaconStateView(generateCachedState({slot: 0}));
     const root = toRootHex(state.hashTreeRoot());
     const finalizedBlock = generateProtoBlock({blockRoot: rootHex, stateRoot: root});
@@ -115,7 +115,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     });
 
     expect(await getStateByStateRoot(root)).toEqual({state, executionOptimistic: false, finalized: false});
-    expect(chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
-    expect(chain.regen.getState).toHaveBeenCalledWith(root, RegenCaller.restApi);
+    expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 0, rootHex});
+    expect(chain.regen.getState).not.toHaveBeenCalled();
   });
 });
