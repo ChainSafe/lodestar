@@ -1341,6 +1341,12 @@ export function getValidatorApi(
         } else {
           index = 0;
         }
+        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
+        if (isOptimisticBlock(canonicalBlock)) {
+          throw new NodeIsSyncing(
+            `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
+          );
+        }
       } else if (isForkPostElectra(fork)) {
         index = 0;
       } else {
@@ -1357,8 +1363,11 @@ export function getValidatorApi(
             headBlockRoot
           : headState.getBlockRootAtSlot(targetSlot);
 
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      // Check on target is sufficient as a valid target would imply a valid source
+      // Check the execution status as validator shouldn't vote on an optimistic head, post-gloas the
+      // variant voted for is checked above. Check on target is sufficient for a valid source
+      if (!isForkPostGloas(fork)) {
+        notOnOptimisticBlockRoot(beaconBlockRoot);
+      }
       notOnOptimisticBlockRoot(targetRoot);
       notOnOutOfRangeData(targetRoot);
 
