@@ -395,7 +395,7 @@ export function getValidatorApi(
    * Both the above scenarios could be problematic and hence validator shouldn't participate
    * or weigh its vote on a head till it resolves to a Valid execution status.
    * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
+   * 1. Attestation if the head block voted for (post-gloas the variant voted for) or the targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
    * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
    *    explicitly as only local payload production consults the EL, blinded blocks from an
