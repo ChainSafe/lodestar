@@ -1,4 +1,5 @@
 export {type BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+export {IndexedBuilderState} from "./block/indexedBuilderState.js";
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
 export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
