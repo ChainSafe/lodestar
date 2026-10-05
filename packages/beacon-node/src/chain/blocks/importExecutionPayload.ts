@@ -8,7 +8,7 @@ import {
 import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
-import {getInclusionListDependentRoot} from "../../util/dependentRoot.js";
+import {getInclusionListDependentRootFromState} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -181,7 +181,7 @@ export async function importExecutionPayload(
   const inclusionListTransactions = isStatePostHeze(blockState)
     ? this.inclusionListStore.getInclusionListTransactions(
         inclusionListSlot,
-        getInclusionListDependentRoot(this.forkChoice, protoBlock, inclusionListSlot),
+        getInclusionListDependentRootFromState(blockState, inclusionListSlot),
         true
       )
     : undefined;
