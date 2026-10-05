@@ -7,6 +7,7 @@ import {
   IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
+  NativeGossipProcessorLimit,
   NativeLocalState,
   NativeTopicKind,
   NativeTopicScoreParams,
@@ -362,29 +363,39 @@ export function createNativeConfig(
       );
     }
   }
-  const processor = kinds.map((kind) => {
-    const {items, minMiB} = gossipKindLimits[kind];
-    const largest = maxSszSizes[kind];
-    const compressedMax = 32 + largest + Math.floor(largest / 6);
-    const pages = Math.ceil(Math.max(4096, compressedMax, minMiB * MiB) / 4096);
-    return {
-      items:
-        kind === "beacon_attestation"
-          ? Math.max(items, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1))
-          : items,
-      bytes: pages * 4096,
-    };
-  });
+  const processor = Object.fromEntries(
+    kinds.map((kind) => {
+      const {items, minMiB} = gossipKindLimits[kind];
+      const largest = maxSszSizes[kind];
+      const compressedMax = 32 + largest + Math.floor(largest / 6);
+      const pages = Math.ceil(Math.max(4096, compressedMax, minMiB * MiB) / 4096);
+      return [
+        kind,
+        {
+          items:
+            kind === "beacon_attestation"
+              ? Math.max(items, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1))
+              : items,
+          bytes: pages * 4096,
+        },
+      ];
+    })
+  ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   nativeInteger(
-    processor.reduce((sum, limit) => sum + limit.items, 0),
+    Object.values(processor).reduce((sum, limit) => sum + limit.items, 0),
     "gossip work capacity",
     65535,
     1
   );
-  const execution = gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => ({
-    items: Math.min(limit.items, processor[i].items),
-    bytes: limit.bytes,
-  }));
+  const execution = Object.fromEntries(
+    gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => [
+      kinds[i],
+      {
+        items: Math.min(limit.items, processor[kinds[i]].items),
+        bytes: limit.bytes,
+      },
+    ])
+  ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
     profile: opts.native?.profile ?? "beaconNode",

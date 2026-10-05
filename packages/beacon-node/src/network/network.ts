@@ -265,7 +265,7 @@ export class Network implements INetwork {
         void core.terminated
           .then(async (failure) => {
             try {
-              if (failure && !network?.closed) processShutdownCallback(failure);
+              if (failure) processShutdownCallback(failure);
             } finally {
               await network?.close();
             }

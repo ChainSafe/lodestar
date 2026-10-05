@@ -7,9 +7,10 @@ import {ChainEvent} from "../../../chain/emitter.js";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {GossipMessageInfo, GossipType} from "../../gossip/interface.js";
+import {MAX_PEERS_PER_ROOT} from "../../processor/constants.js";
 import {getGossipHandlers} from "../../processor/gossipHandlers.js";
 import {getGossipValidatorBatchFn, getGossipValidatorFn} from "../../processor/gossipValidatorFn.js";
-import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
+import {MAX_SEARCHED_ROOTS_PER_SLOT, NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import {NativeGossip} from "./gossip.js";
@@ -18,6 +19,7 @@ export class NativeGossipExecutor {
   private readonly validate;
   private readonly validateBatch;
   private stopped = false;
+  private readonly searches = new Map<number, Map<string, Set<PeerIdStr>>>();
 
   constructor(
     private readonly modules: NetworkProcessorModules,
@@ -96,8 +98,27 @@ export class NativeGossipExecutor {
     }
   }
 
-  searchUnknownBlock({root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+  searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (this.stopped || this.modules.chain.seenBlock(root)) return;
+    const currentSlot = this.modules.chain.clock.currentSlot;
+    if (slot < currentSlot - 2 || slot > currentSlot + 1) return;
+    for (const tracked of this.searches.keys()) if (tracked < currentSlot - 2) this.searches.delete(tracked);
+    let roots = this.searches.get(slot);
+    const peers = roots?.get(root);
+    if (peers?.has(peer ?? "") || (peers?.size ?? 0) >= MAX_PEERS_PER_ROOT) return;
+    if (!peers) {
+      if ((roots?.size ?? 0) >= MAX_SEARCHED_ROOTS_PER_SLOT) return;
+      // Leave search room for the other mesh peers even before an unknown root can be validated.
+      let fromPeer = 0;
+      for (const sources of roots?.values() ?? []) if (sources.has(peer ?? "")) fromPeer++;
+      if (peer !== undefined && fromPeer >= 4) return;
+    }
+    if (!roots) {
+      roots = new Map();
+      this.searches.set(slot, roots);
+    }
+    if (peers) peers.add(peer ?? "");
+    else roots.set(root, new Set([peer ?? ""]));
     this.modules.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
@@ -122,6 +143,7 @@ export class NativeGossipExecutor {
 
   dropAllJobs(): void {
     this.gossip.dropQueued();
+    this.searches.clear();
   }
 
   dumpGossipQueue(_type: GossipType): PendingGossipsubMessage[] {

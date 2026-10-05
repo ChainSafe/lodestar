@@ -225,7 +225,8 @@ export class NativeIntent {
           this.custodyUpdate = undefined;
         }
         if (command) command.reject(error);
-        else this.onFailure(error);
+        else if (!(error instanceof NativeNetworkError && error.type.code === NativeNetworkErrorCode.CLOSED))
+          this.onFailure(error);
       }
     }
   }

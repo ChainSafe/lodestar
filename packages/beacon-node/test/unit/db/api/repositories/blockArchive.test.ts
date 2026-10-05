@@ -127,10 +127,10 @@ describe("block archive repository", () => {
       if (method === "batch") await blockArchive.batch([{type: "put", key: 10, value: block}]);
       if (method === "batchBinary") await blockArchive.batchBinary([{type: "put", key: 10, value: bytes}]);
 
-      expect(await blockArchive.getBinary(10)).toEqual(Buffer.from(bytes));
+      expect(await blockArchive.getBinary(10)).toEqual(bytes);
       expect(await blockArchive.getSlotByRoot(root)).toBe(10);
       expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBe(10);
-      expect(await db.get(encodeKey(Bucket.index_mainChain, 10))).toEqual(Buffer.from(root));
+      expect(await db.get(encodeKey(Bucket.index_mainChain, 10))).toEqual(root);
     }
   );
 
@@ -177,11 +177,9 @@ describe("block archive repository", () => {
 
     await beaconDb.init();
 
-    expect(await beaconDb.blockArchive.getBinary(0)).toEqual(Buffer.from(existingBytes));
+    expect(await beaconDb.blockArchive.getBinary(0)).toEqual(existingBytes);
     expect(await beaconDb.blockArchive.getRootBySlot(0)).toBeNull();
-    expect(await beaconDb.blockArchive.getRootBySlot(1)).toEqual(
-      Buffer.from(ssz.fulu.BeaconBlock.hashTreeRoot(newBlock.message))
-    );
+    expect(await beaconDb.blockArchive.getRootBySlot(1)).toEqual(ssz.fulu.BeaconBlock.hashTreeRoot(newBlock.message));
   });
 
   it("should get slot by root", async () => {

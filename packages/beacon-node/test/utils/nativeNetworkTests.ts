@@ -62,11 +62,11 @@ describe("native Lodestar integration", () => {
       await vi.waitFor(() => expect(shutdown).toHaveBeenCalledExactlyOnceWith(failure));
       await vi.waitFor(() => expect(node.network.closed).toBe(true));
       node.chain.clock.emit(ClockEvent.slot, 2);
-      await node.network.close();
+      await expect(node.network.close()).rejects.toBe(failure);
       expect(shutdown).toHaveBeenCalledOnce();
     } finally {
       refresh.mockRestore();
-      await node.close();
+      await expect(node.close()).rejects.toBe(failure);
     }
   }, 15000);
 
@@ -104,12 +104,13 @@ describe("native Lodestar integration", () => {
         .catch(() => {});
       await vi.waitFor(() => expect(shutdown).toHaveBeenCalledExactlyOnceWith(failure), {timeout: 5000});
       await vi.waitFor(() => expect(node.network.closed).toBe(true));
-      await node.network.close();
+      await expect(node.network.close()).rejects.toBe(failure);
       expect(shutdown).toHaveBeenCalledOnce();
     } finally {
       deliver.mockRestore();
       const results = await Promise.allSettled([remote.close(), node.close()]);
-      expect(results.filter((result) => result.status === "rejected")).toEqual([]);
+      expect(results[0].status).toBe("fulfilled");
+      expect(results[1]).toEqual({status: "rejected", reason: failure});
     }
   }, 15000);
 

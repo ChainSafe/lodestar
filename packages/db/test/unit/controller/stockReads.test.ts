@@ -121,7 +121,7 @@ describe("stock LevelDB serving reads", () => {
     calls.length = 0;
     const limited = await Array.fromAsync(rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5, limit: 2}));
     expect(limited).toHaveLength(2);
-    expect(calls).toEqual([{call: "iterator", fillCache: true, maxEntries: 1, limit: 2}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: 1, limit: 2}]);
 
     const stream = rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5})[Symbol.asyncIterator]();
     expect((await stream.next()).done).toBe(false);

@@ -665,6 +665,18 @@ describe("native local intent transactions", () => {
     }
   });
 
+  it("does not report an acknowledged refresh as a fatal failure after close", async () => {
+    const node = await fixture(false, 0, false);
+    const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
+    node.applyIntent.mockReturnValueOnce(held.promise);
+    node.intent.refresh();
+    node.intent.close();
+    held.resolve({slot: 0n, ownerSequence: 2n, changed: true});
+    await held.promise;
+    expect(node.applyIntent).toHaveBeenCalledOnce();
+    expect(node.failed).not.toHaveBeenCalled();
+  });
+
   it("rejects mixed queued commands when closed during a narrow Status acknowledgement", async () => {
     const node = await fixture();
     const held = defer<void>();

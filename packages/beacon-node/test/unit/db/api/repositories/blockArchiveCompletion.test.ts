@@ -7,7 +7,7 @@ import {defer} from "@lodestar/utils";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/blockArchive.js";
 import {parentRootIndexBucketId, rootIndexBucketId} from "../../../../../src/db/repositories/blockArchiveIndex.js";
 
-const operations = ["batchPut", "batchPutBinary", "batchRemove"] as const;
+const operations = ["batchRemove"] as const;
 
 function fixture(operation: (typeof operations)[number]) {
   const roots = [defer<void>(), defer<void>()];
@@ -34,18 +34,6 @@ function fixture(operation: (typeof operations)[number]) {
   });
   const run = (): Promise<void> => {
     switch (operation) {
-      case "batchPut":
-        return repository.batchPut(blocks.map((value) => ({key: value.message.slot, value})));
-      case "batchPutBinary":
-        return repository.batchPutBinary(
-          blocks.map((block) => ({
-            key: block.message.slot,
-            slot: block.message.slot,
-            value: ssz.phase0.SignedBeaconBlock.serialize(block),
-            blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-            parentRoot: block.message.parentRoot,
-          }))
-        );
       case "batchRemove":
         return repository.batchRemove(blocks);
     }
@@ -83,5 +71,44 @@ describe.each(operations)("block archive %s completion", (operation) => {
       if (completion !== rejected) completion.resolve();
     }
     await failed;
+  });
+});
+
+describe.each(["batchPut", "batchPutBinary"] as const)("block archive %s completion", (operation) => {
+  it.each([false, true])("awaits the atomic block and index batch (failure: %s)", async (fail) => {
+    const completion = defer<void>();
+    const batchPut = vi.fn<Db["batchPut"]>(() => completion.promise);
+    const repository = new BlockArchiveRepository(config, {batchPut} as unknown as Db);
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    const running =
+      operation === "batchPut"
+        ? repository.batchPut([{key: 0, value: block}])
+        : repository.batchPutBinary([
+            {
+              key: 0,
+              slot: 0,
+              value: ssz.phase0.SignedBeaconBlock.serialize(block),
+              blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+              parentRoot: block.message.parentRoot,
+            },
+          ]);
+    const error = new Error("batch failed");
+    const result = fail ? expect(running).rejects.toBe(error) : expect(running).resolves.toBeUndefined();
+    let settled = false;
+    void running.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    await setImmediate();
+    expect(settled).toBe(false);
+    expect(batchPut).toHaveBeenCalledOnce();
+    expect(batchPut.mock.calls[0][0]).toHaveLength(4);
+    if (fail) completion.reject(error);
+    else completion.resolve();
+    await result;
   });
 });

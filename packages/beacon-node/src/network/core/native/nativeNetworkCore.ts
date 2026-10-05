@@ -157,7 +157,7 @@ export class NativeNetworkCore implements INetworkCore {
     error: (error) => this.onOperationError(error),
   };
   private readonly onFailure = (error: unknown): void => {
-    if (this.closed) return;
+    if (this.failure) return;
     this.failure =
       error instanceof Error ? error : new NativeNetworkError({code: NativeNetworkErrorCode.FAILED, resource: "host"});
     if (!(error instanceof Error)) this.failure.cause = error;
@@ -201,10 +201,12 @@ export class NativeNetworkCore implements INetworkCore {
         errors.push(error);
       }
       try {
-        await this.network?.close();
+        const result = await this.network?.close();
+        if (result?.reason === "failed") this.failure ??= result.error;
       } catch (error) {
         errors.push(error);
       }
+      if (this.failure) errors.push(this.failure);
       if (errors.length === 1) throw errors[0];
       if (errors.length > 1) throw new AggregateError(errors, "Native network cleanup failed");
     })().then(() => completion.resolve(), completion.reject);

@@ -111,7 +111,8 @@ export function outgoingNativeRequest(
       };
     } catch (error) {
       const mapped = requestError(error);
-      if (score && !reported && mapped instanceof RequestError) {
+      const nativeFault = error instanceof Error && "peerFault" in error && error.peerFault !== null;
+      if (score && !reported && !nativeFault && mapped instanceof RequestError) {
         reported = true;
         const action = onOutgoingReqRespError(mapped, data.method);
         if (action !== null) report(action, mapped.type.code);

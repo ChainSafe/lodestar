@@ -82,6 +82,7 @@ it.each([
     reason,
     phase,
     detail,
+    peerFault: null,
     peerStatus: null,
   });
   const response: AsyncIterableIterator<NativeResponseChunk> = {
@@ -109,6 +110,28 @@ it.each([
   await expect(iterator.throw?.(failure)).rejects.toMatchObject({type: {code}});
   if (action === null) expect(report).not.toHaveBeenCalled();
   else expect(report).toHaveBeenCalledExactlyOnceWith(action, code);
+});
+
+it.each(["protocol", "non_completion"])("does not score a native %s fault twice", async (peerFault) => {
+  const failure = Object.assign(new Error("invalid response"), {
+    code: "NetworkRequestFailed",
+    reason: "invalid_response",
+    peerFault,
+  });
+  const report = vi.fn();
+  const response: AsyncIterableIterator<NativeResponseChunk> = {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(failure),
+  };
+  const iterator = outgoingNativeRequest(
+    {request: () => response},
+    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+    report
+  );
+  await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ}});
+  expect(report).not.toHaveBeenCalled();
 });
 
 it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "slots_exhausted"])(

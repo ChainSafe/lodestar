@@ -1,4 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
+import {CloseResult} from "@chainsafe/lodestar-z/network";
 import {defer} from "@lodestar/utils";
 import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetworkCore.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
@@ -12,7 +13,7 @@ function fixture() {
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
   const remembered = {close: vi.fn(async () => {})};
-  const network = {notifyCapacity: vi.fn(), close: vi.fn(async () => {})};
+  const network = {notifyCapacity: vi.fn(), close: vi.fn(async (): Promise<CloseResult> => ({reason: "requested"}))};
   Object.assign(core, {modules: {clock}, onSlot, gossip, requests, peers, intent, remembered, network});
   return {core, clock, onSlot, gossip, requests, peers, intent, remembered, network};
 }
@@ -21,7 +22,7 @@ describe("native core close", () => {
   it("takes the final snapshot before closing native and shares one completion", async () => {
     const {core, remembered, network, clock, onSlot} = fixture();
     const snapshot = defer<void>();
-    const joined = defer<void>();
+    const joined = defer<CloseResult>();
     remembered.close.mockReturnValue(snapshot.promise);
     network.close.mockReturnValue(joined.promise);
     const first = core.close();
@@ -36,7 +37,7 @@ describe("native core close", () => {
     });
     await Promise.resolve();
     expect(settled).toBe(false);
-    joined.resolve();
+    joined.resolve({reason: "requested"});
     await first;
     expect(core.close()).toBe(first);
   });
@@ -76,6 +77,13 @@ describe("native core close", () => {
     network.close.mockRejectedValue(joinError);
     await expect(core.close()).rejects.toMatchObject({errors: [snapshotError, joinError]});
     expect(network.close).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a requested close if native fails while joining", async () => {
+    const {core, network} = fixture();
+    const error = new Error("owner failed during close");
+    network.close.mockResolvedValue({reason: "failed", error});
+    await expect(core.close()).rejects.toBe(error);
   });
 
   it("latches completion before a reentrant cleanup", async () => {

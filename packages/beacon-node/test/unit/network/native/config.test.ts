@@ -70,7 +70,10 @@ describe("native configuration boundary", () => {
     // Initialization refuses a plan past its native or bridge budget.
     const network = createSettlingNetwork(application);
     try {
-      const capacity = application.gossipPolicy.processor.reduce((items, limit) => items + limit.items, 0);
+      const capacity = Object.values(application.gossipPolicy.processor).reduce(
+        (items, limit) => items + limit.items,
+        0
+      );
       expect(capacity).toBeGreaterThan(34_375);
     } finally {
       application.identitySecretKey.fill(0);
@@ -332,7 +335,7 @@ describe("native gossip limits", () => {
       return {
         validators,
         limits: Object.fromEntries(
-          kinds.map((kind, i) => [kind, {processor: processor[i], execution: execution?.[i]}])
+          kinds.map((kind) => [kind, {processor: processor[kind], execution: execution?.[kind]}])
         ),
       };
     });

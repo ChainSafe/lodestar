@@ -379,8 +379,8 @@ describe("native gossip recovery through BlockInputSync", () => {
     return {...f, network, requests, connect, close};
   }
 
-  it("lets the JS pending queue admit fresh roots beyond 96, including peerless recovery", async () => {
-    const f = recoveryFixture(2);
+  it("limits one peer before sync admission and preserves an honest recovery", async () => {
+    const f = recoveryFixture();
     const peer = await getRandPeerIdStr();
     const roots = Array.from({length: 102}, (_, index) => new Uint8Array(32).fill(index));
     try {
@@ -395,18 +395,18 @@ describe("native gossip recovery through BlockInputSync", () => {
       const peerless = {slot: 64, root: toRootHex(roots[101])};
       f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
       f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
-      expect(f.requests).toHaveBeenCalledTimes(roots.length);
+      expect(f.requests).toHaveBeenCalledTimes(5);
       expect(f.network.sendBeaconBlocksByRoot).not.toHaveBeenCalled();
 
       f.network.getConnectedPeers.mockReturnValue([peer]);
       f.connect(peer);
       expect(f.network.sendBeaconBlocksByRoot.mock.calls).toEqual([
-        [peer, [roots[100]]],
-        [peer, [roots[101]]],
+        [peer, [roots[0]]],
+        [peer, [roots[1]]],
       ]);
       f.executor.searchUnknownBlock(peerless, BlockInputSource.gossip);
       expect(f.network.sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2);
-      expect(f.requests).toHaveBeenCalledTimes(roots.length);
+      expect(f.requests).toHaveBeenCalledTimes(5);
     } finally {
       f.close();
     }

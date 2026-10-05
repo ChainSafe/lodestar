@@ -254,7 +254,7 @@ function levelIteratorOptions(opts: FilterOptions<Uint8Array>): LevelDbIteratorO
     reverse,
     maxValueBytes,
     maxTotalBytes,
-    fillCache: fillCache ?? true,
+    fillCache: fillCache ?? false,
     limit: limit !== undefined && Number.isInteger(limit) && limit >= 0 ? limit : undefined,
     maxEntries: opts.rowAtATime === true ? 1 : undefined,
   };
