@@ -8,12 +8,12 @@ import {defer} from "@lodestar/utils";
 import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
-import {assertBoundedReqRespHandlers} from "../../reqresp/serving/handler.js";
+import {BoundedServing} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {BaseNetworkInit} from "../networkCore.js";
 import {INetworkCore} from "../types.js";
-import {NativeDirectPeer, nativeMultiaddr, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
+import {NativePeerAddress, nativeMultiaddr, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -22,13 +22,12 @@ import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
 import {NativePeers, formatNativePeer} from "./peers.js";
-import {nativeProtocols} from "./protocols.js";
 import {RememberedPeersWriter, readRememberedPeers} from "./rememberedPeers.js";
 import {NativePeerReports} from "./reports.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
 
 /** The binding renders its metric families, and the adapter adds its serving reservation gauges and report counter. */
-type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry">;
+type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry" | "getReqRespHandler"> & {serving: BoundedServing};
 
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
@@ -45,13 +44,13 @@ export class NativeNetworkCore implements INetworkCore {
   private constructor(private readonly modules: NativeNetworkInit) {}
 
   static init(modules: NativeNetworkInit): NativeNetworkCore {
-    assertBoundedReqRespHandlers(modules.getReqRespHandler);
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
     const {peerStoreDir, logger} = modules;
     const {
       application,
       network: networkConfig,
       directPeers,
+      bootPeers,
     } = createNativeConfig(
       opts,
       config,
@@ -66,8 +65,6 @@ export class NativeNetworkCore implements INetworkCore {
       opts: {
         ...opts,
         native: opts.native && {...opts.native},
-        directPeers: opts.directPeers?.slice(),
-        bootMultiaddrs: opts.bootMultiaddrs?.slice(),
       },
     });
     try {
@@ -88,7 +85,7 @@ export class NativeNetworkCore implements INetworkCore {
       );
       core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
-      core.requests = new NativeRequests(config, modules.getReqRespHandler, core.network.limits.incomingCapacity);
+      core.requests = new NativeRequests(config, modules.serving, core.network.limits.incomingCapacity);
       core.reports = new NativePeerReports(core.network);
       void core.network.closed
         .then((result) => {
@@ -100,7 +97,7 @@ export class NativeNetworkCore implements INetworkCore {
       modules.clock.on(ClockEvent.slot, core.onSlot);
       core.intent.refresh();
       queueMicrotask(() => {
-        if (!core.closed) void core.connectConfiguredPeers(directPeers).catch(core.onFailure);
+        if (!core.closed) void core.connectConfiguredPeers(directPeers, bootPeers).catch(core.onFailure);
       });
       if (peerStoreDir) core.remembered = new RememberedPeersWriter(peerStoreDir, core.network, logger);
       return core;
@@ -118,23 +115,21 @@ export class NativeNetworkCore implements INetworkCore {
     return new NativeGossipExecutor(modules, opts, this.gossip, () => this.network.notifyCapacity());
   }
 
-  private async connectConfiguredPeers(directPeers: NativeDirectPeer[]): Promise<void> {
+  private async connectConfiguredPeers(
+    directPeers: NativePeerAddress[],
+    bootPeers: NativePeerAddress[]
+  ): Promise<void> {
     const {opts} = this.modules;
     for (const peer of directPeers) {
       if (this.closed) return;
-      await this.network.setDirectPeer(peer.identity, peer.addresses);
+      await this.network.setDirectPeer(peer.peerId, peer.addresses);
     }
-    await this.connectBootnodes(opts.bootMultiaddrs ?? []);
-  }
-
-  private async connectBootnodes(addresses: string[]): Promise<void> {
-    for (const address of addresses) {
+    for (const peer of bootPeers) {
       if (this.closed) return;
-      const peer = address.split("/p2p/")[1];
       try {
-        await this.connectToPeer(peer, [address]);
+        await this.network.connect(peer.peerId, peer.addresses, BigInt(opts.dialTimeoutMs ?? 10000));
       } catch (error) {
-        this.modules.logger.debug("Native bootstrap dial failed", {peer}, error as Error);
+        this.modules.logger.debug("Native bootstrap dial failed", {peer: peer.peerId}, error as Error);
       }
     }
   }
@@ -261,9 +256,9 @@ export class NativeNetworkCore implements INetworkCore {
     return this.network.disconnect(peer);
   }
   async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
-    const direct = parseNativeDirectPeer(peer);
-    await this.network.setDirectPeer(direct.identity, direct.addresses);
-    return direct.id;
+    const direct = parseNativePeerAddress(peer);
+    await this.network.setDirectPeer(direct.peerId, direct.addresses);
+    return direct.peerId;
   }
   removeDirectPeer(peer: string): Promise<boolean> {
     return this.network.setDirectPeer(peer, null);
@@ -272,12 +267,24 @@ export class NativeNetworkCore implements INetworkCore {
     return (await this.network.getDirectPeers()).identities;
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
-    const {opts, config, clock} = this.modules;
-    return outgoingNativeRequest(this.network, nativeProtocols(config, config.getForkName(clock.currentSlot)), data, {
-      negotiationTimeoutMs: opts.dialTimeoutMs,
-      requestTimeoutMs: opts.requestTimeoutMs,
-      responseTimeoutMs: opts.respTimeoutMs,
-    });
+    const {opts} = this.modules;
+    return outgoingNativeRequest(
+      this.network,
+      data,
+      {
+        negotiationTimeoutMs: opts.dialTimeoutMs,
+        requestTimeoutMs: opts.requestTimeoutMs,
+        responseTimeoutMs: opts.respTimeoutMs,
+      },
+      (action, reason) => {
+        if (this.closed) return;
+        try {
+          this.reports.report(data.peerId, action, reason);
+        } catch (error) {
+          this.modules.logger.debug("Native request peer report failed", {peer: data.peerId, reason}, error as Error);
+        }
+      }
+    );
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.gossip.publish(topic, data, opts);

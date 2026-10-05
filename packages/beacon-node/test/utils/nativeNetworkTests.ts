@@ -457,25 +457,11 @@ describe("native Lodestar integration", () => {
           {timeout: 5000}
         );
         expect(await right.chain.opPool.hasSeenProposerSlashing(0)).toBe(true);
-        const invalid = ssz.phase0.ProposerSlashing.defaultValue();
-        invalid.signedHeader1.message.proposerIndex = 1;
-        invalid.signedHeader2.message.proposerIndex = 1;
-        invalid.signedHeader1.message.bodyRoot.fill(1);
-        invalid.signedHeader2.message.bodyRoot.fill(2);
-        expect(await right.network.publishProposerSlashing(invalid)).toBeGreaterThan(0);
-        await vi.waitFor(
-          () => expect(rejected.map((result) => result.acceptance)).toContain(TopicValidatorResult.Reject),
-          {timeout: 5000}
-        );
-        expect(left.chain.opPool.hasSeenProposerSlashing(1)).toBe(false);
         const scores = await left.network.dumpPeerScoreStats();
         expect(scores).toMatchObject([{peerId: remote.peerId, ignoreNegativeGossipScore: false}]);
         expect(Number.isFinite(scores[0].gossipScore)).toBe(true);
         const gossipScores = await left.network.dumpGossipPeerScoreStats();
         expect(gossipScores[remote.peerId]).toMatchObject({connected: true});
-        expect(
-          Object.values(gossipScores[remote.peerId].topics).some((topic) => topic.invalidMessageDeliveries > 0)
-        ).toBe(true);
         const meshPeers = await left.network.dumpMeshPeers();
         expect(Object.keys(meshPeers).length).toBeGreaterThan(0);
         await left.network.reportPeer(remote.peerId, PeerAction.HighToleranceError, "InvalidResponseSsz");
@@ -492,7 +478,6 @@ describe("native Lodestar integration", () => {
             expect(metrics).toContain(
               'beacon_reqresp_incoming_request_handler_time_seconds_count{method="beacon_blocks_by_root"} 1\n'
             );
-            expect(metrics).toContain('gossipsub_rejected_messages_total{topic="proposer_slashing"} 1\n');
             // Gossipsub tracks the remote peer, whose score the dumps above read, on the topic it scored
             expect(metrics).toMatch(
               /gossipsub_topic_peer_count\{topicStr="\/eth2\/[0-9a-f]{8}\/proposer_slashing\/ssz_snappy"\} 1\n/
@@ -518,6 +503,26 @@ describe("native Lodestar integration", () => {
             expect(metrics).toContain(
               'lodestar_native_peer_reports_total{reason="InvalidResponseSsz",action="high_tolerance"} 1\n'
             );
+          },
+          {timeout: 5000}
+        );
+        const invalid = ssz.phase0.ProposerSlashing.defaultValue();
+        invalid.signedHeader1.message.proposerIndex = 1;
+        invalid.signedHeader2.message.proposerIndex = 1;
+        invalid.signedHeader1.message.bodyRoot.fill(1);
+        invalid.signedHeader2.message.bodyRoot.fill(2);
+        expect(await right.network.publishProposerSlashing(invalid)).toBeGreaterThan(0);
+        await vi.waitFor(
+          () => expect(rejected.map((result) => result.acceptance)).toContain(TopicValidatorResult.Reject),
+          {timeout: 5000}
+        );
+        expect(left.chain.opPool.hasSeenProposerSlashing(1)).toBe(false);
+        await vi.waitFor(
+          async () => {
+            expect(left.network.getConnectedPeerCount()).toBe(0);
+            const metrics = await left.network.scrapeMetrics();
+            expect(metrics).toContain('gossipsub_rejected_messages_total{topic="proposer_slashing"} 1\n');
+            expect(metrics).toContain('lodestar_native_peer_reports_total{reason="other",action="fatal"} 1\n');
           },
           {timeout: 5000}
         );

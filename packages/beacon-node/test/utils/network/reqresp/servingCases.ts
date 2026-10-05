@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {ServingContext} from "../../../../src/chain/serving/context.js";
 import {serializeServingValue} from "../../../../src/chain/serving/serialization.js";
@@ -22,27 +22,17 @@ export function servingConfig(blobs = 21) {
   );
 }
 
-export function measureOwners(values: unknown[]): {bytes: number; byteArrays: number; arrays: number; objects: number} {
+export function decodedBackingBytes(values: unknown[]): number {
   const pending = [...values];
-  let bytes = 0,
-    byteArrays = 0,
-    arrays = 0,
-    objects = 0;
+  let bytes = 0;
   for (let visits = 0; pending.length; visits++) {
     if (visits >= 8192 || pending.length > 4096) throw Error("Fixture owner bound");
     const value = pending.pop();
-    if (value instanceof Uint8Array) {
-      bytes += value.buffer.byteLength;
-      byteArrays++;
-    } else if (Array.isArray(value)) {
-      arrays++;
-      pending.push(...value);
-    } else if (value && typeof value === "object") {
-      objects++;
-      pending.push(...Object.values(value));
-    }
+    if (value instanceof Uint8Array) bytes += value.buffer.byteLength;
+    else if (Array.isArray(value)) pending.push(...value);
+    else if (value && typeof value === "object") pending.push(...Object.values(value));
   }
-  return {bytes, byteArrays, arrays, objects};
+  return bytes;
 }
 
 export function registerServingSchemaCases(): void {
@@ -76,30 +66,22 @@ export function registerServingSchemaCases(): void {
           nextSyncCommitteeRoot: new Uint8Array(32),
         };
         bootstrap.currentSyncCommitteeBranch = [witness.nextSyncCommitteeRoot, ...witness.witness];
-        const owners = measureOwners([witness, current, next, decodedHeader, bootstrap.currentSyncCommitteeBranch]);
-        expect(owners.bytes).toBeLessThanOrEqual(policy.lightClient.decodedBytes);
-        expect(owners.byteArrays + owners.arrays + owners.objects).toBeLessThanOrEqual(policy.lightClient.metadata);
+        const owners = decodedBackingBytes([
+          witness,
+          current,
+          next,
+          decodedHeader,
+          bootstrap.currentSyncCommitteeBranch,
+        ]);
+        expect(owners).toBeLessThanOrEqual(policy.decodedBytes);
         expect(current.pubkeys).toHaveLength(SYNC_COMMITTEE_SIZE);
         expect(current.pubkeys[0].buffer).not.toBe(committeeBytes.buffer);
         const update = types.LightClientUpdate.defaultValue();
         if ("execution" in update.attestedHeader) update.attestedHeader.execution.extraData = new Uint8Array(32);
         if ("execution" in update.finalizedHeader) update.finalizedHeader.execution.extraData = new Uint8Array(32);
         const decoded = types.LightClientUpdate.deserialize(types.LightClientUpdate.serialize(update));
-        const updateOwners = measureOwners([decoded, decoded]);
-        expect(updateOwners.bytes).toBeLessThanOrEqual(policy.lightClient.decodedBytes);
-        expect(updateOwners.byteArrays + updateOwners.arrays + updateOwners.objects).toBeLessThanOrEqual(
-          policy.lightClient.metadata
-        );
-        console.info(
-          "serving owners",
-          JSON.stringify({
-            preset: ACTIVE_PRESET,
-            fork,
-            bootstrap: owners,
-            twoUpdates: updateOwners,
-            allowanceBytes: policy.decodedBytes,
-          })
-        );
+        const updateOwners = decodedBackingBytes([decoded, decoded]);
+        expect(updateOwners).toBeLessThanOrEqual(policy.decodedBytes);
         const context = new ServingContext(policy);
         for (const [type, value] of [[types.LightClientBootstrap, bootstrap]] as const) {
           const bytes = serializeServingValue(type, value, context, type.maxSize);

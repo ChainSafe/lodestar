@@ -162,8 +162,8 @@ describe("native configuration boundary", () => {
     );
     try {
       enr.quic = 9003;
-      expect(plan.directPeers.map((peer) => peer.id)).toEqual([id, id]);
-      expect(plan.directPeers[0].identity).toEqual(enr.peerId.toString());
+      expect(plan.directPeers.map((peer) => peer.peerId)).toEqual([id, id]);
+      expect(plan.directPeers[0].peerId).toEqual(enr.peerId.toString());
       expect(plan.directPeers[0].addresses).toMatchObject([
         {family: 4, port: 9001},
         {family: 6, port: 19001},

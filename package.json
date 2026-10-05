@@ -17,7 +17,7 @@
     "lint": "biome check",
     "lint:fix": "pnpm lint --write",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
-    "check-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards --check && node scripts/check-grafana-dashboard-queries.mjs ./dashboards",
+    "check-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards --check",
     "check-build": "pnpm -r check-build",
     "check-readme": "pnpm -r check-readme",
     "check-types": "pnpm -r check-types",

@@ -20,7 +20,6 @@ import {onBeaconBlocksByRoot} from "../../../../../src/network/reqresp/handlers/
 import {onBlobSidecarsByRange} from "../../../../../src/network/reqresp/handlers/blobSidecarsByRange.js";
 import {onBlobSidecarsByRoot} from "../../../../../src/network/reqresp/handlers/blobSidecarsByRoot.js";
 import {onDataColumnSidecarsByRange} from "../../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
-import {onDataColumnSidecarsByRoot} from "../../../../../src/network/reqresp/handlers/dataColumnSidecarsByRoot.js";
 import {onLightClientBootstrap} from "../../../../../src/network/reqresp/handlers/lightClientBootstrap.js";
 import {onLightClientUpdatesByRange} from "../../../../../src/network/reqresp/handlers/lightClientUpdatesByRange.js";
 import {HostServingBudget} from "../../../../../src/network/reqresp/serving/budget.js";
@@ -47,13 +46,14 @@ type Read = {
 
 async function withDb(
   run: (db: BeaconDb, reads: Read[], level: LevelDb) => Promise<void>,
-  {delay}: {delay?: Promise<void>} = {}
+  {delay, onRead}: {delay?: Promise<void>; onRead?: () => void} = {}
 ): Promise<void> {
   const path = await mkdtemp(join(tmpdir(), "lodestar-stock-reads-"));
   const level = await LevelDb.open(path);
   const controller = await LevelDbController.create({name: path, db: level}, {logger});
   const reads: Read[] = [];
   const wait = async (): Promise<void> => {
+    onRead?.();
     if (delay) await delay;
   };
   const get = level.get.bind(level);
@@ -124,16 +124,6 @@ function blob(marker = 0) {
   return sidecar;
 }
 
-function column(index: number, blobs = 0): Uint8Array {
-  const value = ssz.fulu.DataColumnSidecar.defaultValue();
-  value.index = index;
-  value.signedBlockHeader.message.slot = slot;
-  value.column = Array.from({length: blobs}, () => ssz.fulu.Cell.defaultValue());
-  value.kzgCommitments = Array.from({length: blobs}, () => ssz.deneb.KZGCommitment.defaultValue());
-  value.kzgProofs = Array.from({length: blobs}, () => ssz.deneb.KZGProof.defaultValue());
-  return ssz.fulu.DataColumnSidecar.serialize(value);
-}
-
 /** Seeds one row of every served repository */
 async function seed(db: BeaconDb): Promise<LightClientServer> {
   const block = ssz.altair.SignedBeaconBlock.defaultValue();
@@ -144,8 +134,6 @@ async function seed(db: BeaconDb): Promise<LightClientServer> {
   }
   await db.blobSidecars.put(root, {blockRoot: root, slot: blobSlot, blobSidecars: [blob(1), blob(2)]});
   await db.blobSidecarsArchive.put(blobSlot, {blockRoot: root, slot: blobSlot, blobSidecars: [blob(3)]});
-  await db.dataColumnSidecarArchive.putBinary(slot, 0, column(0));
-  await db.dataColumnSidecarArchive.putBinary(slot, 2, column(2));
   const types = sszTypesFor(ForkName.fulu);
   const header = types.LightClientHeader.defaultValue();
   header.beacon.slot = config.forks.fulu.epoch * SLOTS_PER_EPOCH;
@@ -187,17 +175,6 @@ function sources(
         context
       ),
     blobsByRange: (context) => onBlobSidecarsByRange({startSlot: blobSlot, count: 1}, chain, db, context),
-    columnsByRoot: (context) =>
-      onDataColumnSidecarsByRoot(
-        [{blockRoot: new Uint8Array(32).fill(9), columns: [2, 0, 2]}],
-        chain,
-        db,
-        peer,
-        "test",
-        context
-      ),
-    columnsByRange: (context) =>
-      onDataColumnSidecarsByRange({startSlot: slot, count: 1, columns: [2, 0, 2]}, chain, db, peer, "test", context),
     bootstrap: (context) => onLightClientBootstrap(root, chain, context),
     updates: (context) => onLightClientUpdatesByRange({startPeriod: 0, count: 1}, chain, context),
   };
@@ -207,10 +184,6 @@ describe("stock serving reads", () => {
   it("keep every serving read out of the block cache without database certification", async () =>
     withDb(async (db, reads) => {
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
-      // The root index row of the unknown by-root column request
-      await db.blockArchive.batchPutBinary([
-        {key: slot, value: new Uint8Array(8), slot, blockRoot: new Uint8Array(32).fill(9), parentRoot: root},
-      ]);
       for (const [name, source] of Object.entries(sources(chain, db))) {
         const expected = await Array.fromAsync(source());
         expect(expected.length, name).toBeGreaterThan(0);
@@ -224,7 +197,7 @@ describe("stock serving reads", () => {
     }));
 
   it("read hot and archived blocks without scanning and reject oversized archived values", async () =>
-    withDb(async (db, reads) => {
+    withDb(async (db, reads, level) => {
       const chain = {...makeChain(db), lightClientServer: await seed(db)};
       const archivedRoot = new Uint8Array(32).fill(5);
       await db.blockArchive.batchPutBinary([
@@ -247,7 +220,7 @@ describe("stock serving reads", () => {
         expect(opened).toEqual(opened.map((read) => ({...read, fillCache: false})));
       }
 
-      await db.blockArchive.putBinary(1, new Uint8Array(config.MAX_PAYLOAD_SIZE + 1));
+      await level.put(db.blockArchive.encodeKey(1), new Uint8Array(config.MAX_PAYLOAD_SIZE + 1));
       reads.length = 0;
       await expect(Array.fromAsync(blocksByRange(new ServingContext(policy)))).rejects.toMatchObject({
         code: "ValueTooLarge",
@@ -310,7 +283,7 @@ describe("stock serving reads", () => {
       const oversized = new Uint8Array(bytes.byteLength + 1);
       oversized.set(bytes);
       await db.block.putBinary(root, oversized);
-      await db.blockArchive.putBinary(slot, oversized);
+      await level.put(db.blockArchive.encodeKey(slot), oversized);
       for (const source of sources) {
         const budget = HostServingBudget.forEnvironment(policy);
         const handler = startServingHandler(budget, source);
@@ -332,6 +305,8 @@ describe("stock serving reads", () => {
       await db.block.putBinary(root, bytes);
       await db.blockArchive.batchPutBinary([{key: slot, value: bytes, slot, blockRoot: root, parentRoot: root}]);
 
+      const getHotBlock = vi.spyOn(db.block, "getBinary");
+      const getArchivedBlock = vi.spyOn(db.blockArchive, "getBinary");
       reads.length = 0;
       const served = Array.fromAsync(
         onDataColumnSidecarsByRange(
@@ -344,8 +319,9 @@ describe("stock serving reads", () => {
         )
       );
       await expect(served).resolves.toEqual([]);
-      // The column lookup ran; the block read behind the missing column never did
-      expect(reads).toEqual([{call: "getMany", fillCache: false}]);
+      expect(reads.some((read) => read.call === "getMany")).toBe(true);
+      expect(getHotBlock).not.toHaveBeenCalled();
+      expect(getArchivedBlock).not.toHaveBeenCalled();
     }));
 
   it("read a stock range one row per native read and keep its snapshot under writes", async () =>
@@ -375,42 +351,9 @@ describe("stock serving reads", () => {
       expect(pulls.length).toBeGreaterThanOrEqual(3);
     }));
 
-  it("retire a cancelled stock getMany only after its outstanding read settles", async () => {
-    const gate = defer<void>();
-    await withDb(
-      async (db, reads) => {
-        await db.dataColumnSidecarArchive.putBinary(slot, 0, column(0));
-        const chain = makeChain(db);
-        const budget = HostServingBudget.forEnvironment(policy);
-        const handler = startServingHandler(
-          budget,
-          (context) =>
-            onDataColumnSidecarsByRange({startSlot: slot, count: 1, columns: [0, 0]}, chain, db, peer, "test", context),
-          undefined,
-          "peer",
-          ReqRespMethod.DataColumnSidecarsByRange
-        );
-        const next = handler.next();
-        await vi.waitFor(() => expect(reads.some((read) => read.call === "getMany")).toBe(true));
-        handler.cancel();
-        let retired = false;
-        void handler.retired.then(() => {
-          retired = true;
-        });
-        await new Promise((resolve) => setTimeout(resolve, 20));
-        expect(retired).toBe(false);
-        expect(budget.snapshot()).toMatchObject({occupancy: 1, outstandingRetirements: 1});
-        gate.resolve();
-        await Promise.allSettled([next]);
-        await handler.retired;
-        expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0, reservedBytes: 0});
-      },
-      {delay: gate.promise}
-    );
-  });
-
   it("retire a cancelled stock range stream only after its outstanding row read settles and the stream closes", async () => {
     const gate = defer<void>();
+    const started = defer<void>();
     await withDb(
       async (db, reads) => {
         await db.blobSidecarsArchive.put(blobSlot, {blockRoot: root, slot: blobSlot, blobSidecars: [blob(1)]});
@@ -419,25 +362,20 @@ describe("stock serving reads", () => {
         const handler = startServingHandler(
           budget,
           (context) => onBlobSidecarsByRange({startSlot: blobSlot, count: 1}, chain, db, context),
-          undefined,
           "peer",
           ReqRespMethod.BlobSidecarsByRange
         );
         const next = handler.next();
-        await vi.waitFor(() => expect(reads.some((read) => read.call === "next")).toBe(true));
+        await started.promise;
+        expect(reads.some((read) => read.call === "next")).toBe(true);
         handler.cancel();
-        let retired = false;
-        void handler.retired.then(() => {
-          retired = true;
-        });
-        await new Promise((resolve) => setTimeout(resolve, 20));
-        expect(retired).toBe(false);
+        expect(budget.snapshot()).toMatchObject({occupancy: 1, outstandingRetirements: 1});
         gate.resolve();
         await Promise.allSettled([next]);
         await handler.retired;
         expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0, reservedBytes: 0});
       },
-      {delay: gate.promise}
+      {delay: gate.promise, onRead: () => started.resolve()}
     );
   });
 
@@ -446,9 +384,6 @@ describe("stock serving reads", () => {
       const chain = makeChain(db);
       const blobSidecars = Array.from({length: config.MAX_BLOBS_PER_BLOCK_ELECTRA}, () => blob());
       await db.blobSidecars.put(root, {blockRoot: root, slot: blobSlot, blobSidecars});
-      for (let index = 0; index < NUMBER_OF_COLUMNS; index++) {
-        await db.dataColumnSidecarArchive.putBinary(slot, index, column(index, 21));
-      }
       // Move the rows out of the memtable, so reads load compressed table blocks
       await level.compactRange(new Uint8Array([0]), new Uint8Array([255]));
       const usage = async (): Promise<number> => Number(await level.getProperty("leveldb.approximate-memory-usage"));
@@ -457,22 +392,10 @@ describe("stock serving reads", () => {
       const blobs = await Array.fromAsync(
         onBlobSidecarsByRoot([{blockRoot: root, index: 0}], unfinalized as IBeaconChain, new ServingContext(policy))
       );
-      const columns = await Array.fromAsync(
-        onDataColumnSidecarsByRange(
-          {startSlot: slot, count: 1, columns: Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i)},
-          chain,
-          db,
-          peer,
-          "test",
-          new ServingContext(policy)
-        )
-      );
       expect(blobs).toHaveLength(1);
-      expect(columns).toHaveLength(NUMBER_OF_COLUMNS);
       expect((await usage()) - before).toBeLessThan(64 * 1024);
       // The same rows read with the stock default fill the cache
       await db.blobSidecars.getBinary(root);
-      await db.dataColumnSidecarArchive.getManyBinary(slot, [0, 1, 2]);
       expect((await usage()) - before).toBeGreaterThan(1024 * 1024);
     }));
 });

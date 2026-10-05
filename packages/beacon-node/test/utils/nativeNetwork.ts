@@ -15,7 +15,7 @@ import {NativeBackendOptions} from "../../src/network/core/native/options.js";
 import {Network} from "../../src/network/network.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
 import {HostServingBudget} from "../../src/network/reqresp/serving/budget.js";
-import {getBoundedReqRespHandlers} from "../../src/network/reqresp/serving/handler.js";
+import {createBoundedServing} from "../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../src/network/reqresp/serving/policy.js";
 import {ClockStopped} from "../mocks/clock.js";
 import {generateState} from "./state.js";
@@ -91,6 +91,7 @@ export async function nativeNetworkFixture(
     );
     // As at native node startup; both backends serve through the bounded handlers here
     const budget = HostServingBudget.forEnvironment(resolveServingPolicy(beaconConfig, 6, clock.currentSlot));
+    const nativeServing = createBoundedServing({db, chain}, budget);
     network = await Network.init({
       processShutdownCallback,
       opts: {
@@ -110,7 +111,8 @@ export async function nativeNetworkFixture(
       metrics: null,
       chain,
       db,
-      getReqRespHandler: getBoundedReqRespHandlers({db, chain}, budget),
+      getReqRespHandler: nativeServing.getHandler,
+      nativeServing,
     });
     return {network, chain, db, clock, privateKey, budget, close};
   } catch (error) {

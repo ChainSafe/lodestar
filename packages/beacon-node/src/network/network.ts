@@ -33,6 +33,7 @@ import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
 import type {ProcessShutdownCallback} from "@lodestar/validator";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {ServingConfigurationError} from "../chain/serving/context.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -65,6 +66,7 @@ import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
+import {BoundedServing} from "./reqresp/serving/handler.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
@@ -98,6 +100,7 @@ export type NetworkInitModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   getReqRespHandler: GetReqRespHandlerFn;
+  nativeServing?: BoundedServing;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
 };
@@ -168,6 +171,7 @@ export class Network implements INetwork {
     privateKey,
     peerStoreDir,
     getReqRespHandler,
+    nativeServing,
     processShutdownCallback,
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
@@ -182,9 +186,42 @@ export class Network implements INetwork {
     }
 
     // Native construction and consumer attachment stay in one JS turn, before notifications run.
-    const core =
-      opts.backend === "native"
-        ? NativeNetworkCore.init({
+    let core: INetworkCore;
+    if (opts.backend === "native") {
+      if (!nativeServing) throw new ServingConfigurationError("Native network requires bounded serving handlers");
+      core = NativeNetworkCore.init({
+        opts,
+        config,
+        privateKey,
+        peerStoreDir,
+        logger,
+        clock: chain.clock,
+        events,
+        serving: nativeServing,
+        initialStatus,
+        initialCustodyGroupCount,
+        activeValidatorCount,
+      });
+    } else {
+      core = opts.useWorker
+        ? await WorkerNetworkCore.init({
+            opts: {
+              ...opts,
+              peerStoreDir,
+              metricsEnabled: Boolean(metrics),
+              activeValidatorCount,
+              genesisTime: chain.genesisTime,
+              initialStatus,
+              initialCustodyGroupCount,
+            },
+            config,
+            privateKey,
+            logger,
+            events,
+            metrics,
+            getReqRespHandler,
+          })
+        : await NetworkCore.init({
             opts,
             config,
             privateKey,
@@ -193,42 +230,12 @@ export class Network implements INetwork {
             clock: chain.clock,
             events,
             getReqRespHandler,
+            metricsRegistry: metrics ? new RegistryMetricCreator() : null,
             initialStatus,
             initialCustodyGroupCount,
             activeValidatorCount,
-          })
-        : opts.useWorker
-          ? await WorkerNetworkCore.init({
-              opts: {
-                ...opts,
-                peerStoreDir,
-                metricsEnabled: Boolean(metrics),
-                activeValidatorCount,
-                genesisTime: chain.genesisTime,
-                initialStatus,
-                initialCustodyGroupCount,
-              },
-              config,
-              privateKey,
-              logger,
-              events,
-              metrics,
-              getReqRespHandler,
-            })
-          : await NetworkCore.init({
-              opts,
-              config,
-              privateKey,
-              peerStoreDir,
-              logger,
-              clock: chain.clock,
-              events,
-              getReqRespHandler,
-              metricsRegistry: metrics ? new RegistryMetricCreator() : null,
-              initialStatus,
-              initialCustodyGroupCount,
-              activeValidatorCount,
-            });
+          });
+    }
 
     let networkProcessor: NetworkProcessor | NativeGossipExecutor | undefined;
     let network: Network | undefined;

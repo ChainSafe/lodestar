@@ -23,19 +23,17 @@ describe("serving policy", () => {
     const decoded = columnsType.deserialize(columnsType.serialize(identifiers));
     expect(decoded).toHaveLength(128);
     expect(decoded.reduce((sum, value) => sum + value.columns.length, 0)).toBe(16384);
-    expect(policy.requestScalars).toBeGreaterThanOrEqual(16384);
-    expect(policy.requestMetadata).toBeGreaterThanOrEqual(decoded.length * 3 + 1);
-    expect(policy.requestDecodedBytes).toBeGreaterThanOrEqual(decoded.length * 32);
+    expect(policy.decodedBytes).toBeGreaterThanOrEqual(decoded.length * 32);
     expect(policy.decodedBytes).toBe(128 * 1024);
     for (const fork of [ForkName.phase0, ForkName.deneb, ForkName.electra, ForkName.fulu]) {
       const blocksType = BeaconBlocksByRootRequestType(fork, config);
       const blocks = Array.from({length: blocksType.limit}, () => new Uint8Array(32));
       expect(blocksType.deserialize(blocksType.serialize(blocks))).toHaveLength(blocks.length);
-      expect(policy.requestDecodedBytes).toBeGreaterThanOrEqual(blocks.length * 32);
+      expect(policy.decodedBytes).toBeGreaterThanOrEqual(blocks.length * 32);
       const blobsType = BlobSidecarsByRootRequestType(fork, config);
       const blobs = Array.from({length: blobsType.limit}, () => ({blockRoot: new Uint8Array(32), index: 0}));
       expect(blobsType.deserialize(blobsType.serialize(blobs))).toHaveLength(blobs.length);
-      expect(policy.requestDecodedBytes).toBeGreaterThanOrEqual(blobs.length * 32);
+      expect(policy.decodedBytes).toBeGreaterThanOrEqual(blobs.length * 32);
     }
   });
   for (const [blobs, cap] of [

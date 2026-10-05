@@ -54,441 +54,36 @@
   "liveNow": false,
   "panels": [
     {
-      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 1,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 0
       },
-      "id": 646,
-      "panels": [],
-      "title": "Peers",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Score-threshold populations: connected gossip peers whose score is at or above each configured gate. The gates are cumulative, so the series do not add up; native all counts every connected gossip peer, and its nonnegative gate is the one libp2p labels mesh. Direct peers count by their numeric score, so this is not a count of peers whose RPCs would be accepted.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "id": 330,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.2.2",
+      "id": 662,
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_peer_score_by_threshold_count",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "{{threshold}}",
+          "expr": "lodestar_native_quic_connections_active",
+          "legendFormat": "open (handshakes included)",
           "refId": "A"
         },
         {
-          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\"}",
-          "legendFormat": "{{threshold}}",
+          "expr": "lodestar_native_quic_connections_handshaking",
+          "legendFormat": "handshaking",
           "refId": "B"
         }
       ],
-      "title": "Connected gossip peers per score threshold",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Minimum, mean and maximum gossip score of connected gossip peers; libp2p labels the mean avg. A native target without connected gossip peers has no statistics rather than zeros.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "max"
-            },
-            "properties": [
-              {
-                "id": "custom.fillBelowTo",
-                "value": "avg"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 12
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "semi-dark-green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg"
-            },
-            "properties": [
-              {
-                "id": "custom.fillBelowTo",
-                "value": "min"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 12
-              },
-              {
-                "id": "custom.gradientMode",
-                "value": "opacity"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "super-light-green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "min"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "id": 331,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.2.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_score_avg_min_max_max",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "max",
-          "refId": "max"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_score_avg_min_max_avg",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "avg",
-          "refId": "avg"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_score_avg_min_max_min",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "min",
-          "refId": "min"
-        },
-        {
-          "expr": "lodestar_native_gossip_score{scope=\"connected\"}",
-          "legendFormat": "{{stat}}",
-          "refId": "native"
-        }
-      ],
-      "title": "Connected gossip peer score min / mean / max",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Peer misbehaviour reports Lodestar submitted per second, by reason. libp2p counts each report as its peer score store applies it; native counts each submission before native merges a peer's pending reports, so the native series counts submissions, not applied penalties. Native reasons outside Lodestar's fixed report names, such as sync download error messages, read as other.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
-      "id": 507,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "7.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_peers_report_peer_count[$rate_interval]) > 0",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        },
-        {
-          "expr": "sum without (action) (rate(lodestar_native_peer_reports_total[$rate_interval]))",
-          "legendFormat": "{{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Peer bad behaviour reports submitted by reason / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Every peer the native backend closes or loses, by reason: local decisions such as count_pruning or health_timeout, and remote ones such as remote_goodbye or transport_closed.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 10
-      },
-      "id": 647,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_peer_closes_total[$rate_interval])",
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native peer departures by reason (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Connection attempts the native peer manager selected, by the demand that selected them, and how attempts ended. Outcomes other than connected include local policy (deferred, cancelled, admission_refused), so they are not all failures.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 19
-      },
-      "id": 648,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_selections_total[$rate_interval])",
-          "legendFormat": "selected {{source}}",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_peer_dial_outcomes_total[$rate_interval])",
-          "legendFormat": "{{outcome}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native selected attempts and their outcomes (per min)",
+      "title": "Native QUIC connections",
       "type": "timeseries"
     },
     {
@@ -540,10 +135,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 0
       },
       "id": 643,
       "options": {
@@ -578,36 +173,82 @@
         }
       ],
       "title": "Native current peer demand",
-      "type": "timeseries",
-      "description": "Whether the running node is below its peer target, and how many relevant outbound peers it lacks. Below target does not indicate chain-head starvation."
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Outbound peers as a share of connected peers, per target. Both backends export the peers-by-direction gauge; the libp2p peer manager's ratio counts healthy peers only.",
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 8
       },
-      "id": 649,
+      "id": 330,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.2.2",
       "targets": [
         {
-          "expr": "sum without (direction) (lodestar_peers_by_direction_count{direction=\"outbound\"})\n/\nsum without (direction) (lodestar_peers_by_direction_count)",
-          "legendFormat": "outbound share",
-          "refId": "A"
+          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\"}",
+          "legendFormat": "{{threshold}}",
+          "refId": "B"
         }
       ],
-      "title": "Outbound share of connected peers",
+      "title": "Connected peers by gossip score threshold",
       "type": "timeseries"
     },
     {
@@ -659,10 +300,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 8
       },
       "id": 644,
       "options": {
@@ -714,186 +355,6 @@
         }
       ],
       "title": "Native locally subscribed subnets with an empty mesh",
-      "type": "timeseries",
-      "description": "Counts zero-member meshes only where this node has a local subscription. Unsubscribed subnets are intentionally excluded. Each visible fork boundary is separate."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 37
-      },
-      "id": 645,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_topic_peers_by_data_column_subnet_count",
-          "interval": "",
-          "legendFormat": "column {{subnet}} {{boundary}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native remote data-column subscriptions",
-      "type": "timeseries",
-      "description": "Accepted remote subscription memberships include topics with no local mesh or overlay row. Advertised subscriptions are distinct from usable policy coverage."
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 46
-      },
-      "id": 55,
-      "panels": [],
-      "title": "Discovery",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 47
-      },
-      "id": 24,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.2.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "lodestar_discv5_active_session_count or discv5_active_session_count",
-          "interval": "",
-          "legendFormat": "sessions",
-          "refId": "A"
-        }
-      ],
-      "title": "Active Session Count",
       "type": "timeseries"
     },
     {
@@ -943,10 +404,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 47
+        "x": 0,
+        "y": 16
       },
       "id": 26,
       "options": {
@@ -969,13 +430,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_discv5_kad_table_size or discv5_kad_table_size",
+          "expr": "discv5_kad_table_size",
           "interval": "",
           "legendFormat": "ENR count",
           "refId": "A"
         }
       ],
-      "title": "KAD Table Size",
+      "title": "Discovery routing table size",
       "type": "timeseries"
     },
     {
@@ -983,1970 +444,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 56
-      },
-      "id": 54,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_discv5_discovered_status_total_count[$rate_interval])",
-          "legendFormat": "{{status}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Discovered ENR Relevancy Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 56
-      },
-      "id": 48,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_discv5_decode_enr_error_count[$rate_interval]) / rate(lodestar_discv5_decode_enr_attempt_count[$rate_interval])",
-          "hide": false,
-          "legendFormat": "error rate",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "ENR decode error rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "errors"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 65
-      },
-      "id": 50,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_discv5_decode_enr_error_count[$rate_interval])",
-          "legendFormat": "errors",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_discv5_decode_enr_attempt_count[$rate_interval])",
-          "hide": false,
-          "legendFormat": "attempts",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "ENR decode attempts",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Lookups started, and lookups finished by reason.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 65
-      },
-      "id": 56,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_lookups_started_total[$rate_interval])",
-          "legendFormat": "started",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_discovery_lookup_finishes_total[$rate_interval])",
-          "legendFormat": "finished {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native discovery lookups (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Candidates discovery handed to peer management, and candidates it refused by reason. Candidates are decoded records, not the raw ENRs queries return; published and refused are separate stages, not a success rate.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 74
-      },
-      "id": 57,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_candidates_published_total[$rate_interval])",
-          "legendFormat": "published",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_discovery_candidate_rejections_total[$rate_interval])",
-          "legendFormat": "refused {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native discovery candidates (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Discovery datagrams rejected while processing, by stage and reason: malformed or unexpected input, and local admission pressure. admission_limited can refuse valid traffic, including datagrams refused before decoding, until admission credits refill.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 74
-      },
-      "id": 58,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_discovery_datagram_rejections_total[$rate_interval])",
-          "legendFormat": "{{stage}} {{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native discovery datagrams rejected (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time from selecting a connection attempt to its outcome, mean and p95 by outcome. It includes local start deferrals, and a connected attempt ends at connection admission, before Status and Metadata, so this is not handshake latency. Each outcome's count equals its selected attempt outcome count.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 83
-      },
-      "id": 60,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_peer_dial_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_native_peer_dial_time_seconds_count[$rate_interval])",
-          "legendFormat": "mean {{outcome}}",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, rate(lodestar_native_peer_dial_time_seconds_bucket[$rate_interval]))",
-          "legendFormat": "p95 {{outcome}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native selected attempt to outcome time",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 92
-      },
-      "id": 516,
-      "panels": [],
-      "title": "Gossip",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Committed mesh joins (+) and leaves (-) per second by reason; GRAFT and PRUNE controls that change no membership do not count. The backends name their reasons differently: libp2p inclusion and churn events; native joins by fill_mesh, fill_outbound, opportunistic and remote_graft, and leaves by ineligible, excess, remote_prune, local_unsubscribe, remote_unsubscribe, session_end, direct_peer and refused_graft.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "cps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 93
-      },
-      "id": 386,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_fanout_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ fanout",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_random_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ random",
-          "range": true,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_subscribed_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ subscribed",
-          "range": true,
-          "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_outbound_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ outbound",
-          "range": true,
-          "refId": "F"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_not_enough_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ not_enough",
-          "range": true,
-          "refId": "G"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_opportunistic_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "+ opportunistic",
-          "range": true,
-          "refId": "H"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "- sum(rate(gossipsub_peer_churn_events_disconnected_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- disconnected",
-          "range": true,
-          "refId": "I"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "- sum(rate(gossipsub_peer_churn_events_bad_score_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- bad_score",
-          "range": true,
-          "refId": "J"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "- sum(rate(gossipsub_peer_churn_events_prune_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- prune",
-          "range": true,
-          "refId": "K"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "- sum(rate(gossipsub_peer_churn_events_excess_total[$rate_interval]))",
-          "hide": false,
-          "legendFormat": "- excess",
-          "range": true,
-          "refId": "L"
-        },
-        {
-          "expr": "sum by (reason) (rate(lodestar_native_gossip_mesh_changes_total{event=\"join\"}[$rate_interval]))",
-          "legendFormat": "+ {{reason}}",
-          "refId": "M"
-        },
-        {
-          "expr": "- sum by (reason) (rate(lodestar_native_gossip_mesh_changes_total{event=\"leave\"}[$rate_interval]))",
-          "legendFormat": "- {{reason}}",
-          "refId": "N"
-        }
-      ],
-      "title": "Mesh inclusion (+) / churn (-) events - sum by reason",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Gossip messages received from peers per second by topic, before duplicate filtering and validation, so duplicates and invalid messages count. Both backends; native topics outside the fixed gossip kinds read as unknown.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "cps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 93
-      },
-      "id": 424,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_msg_received_prevalidation_total[$rate_interval])\nor rate(lodestar_native_gossip_messages_received_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Received msg / sec (log)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Duplicates as a share of received messages per topic over 32 minutes, exactly 5 epochs; a duplicate was already seen or is awaiting validation. Both backends, each target's own counters summed across targets.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 102
-      },
-      "id": 425,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum by (topic) (\n  rate(gossipsub_pre_validation_duplicate_total{topic!~\"light.*\"}[32m])\n  or rate(lodestar_native_gossip_messages_duplicate_total{topic!~\"light.*\"}[32m])\n)\n/\nsum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total{topic!~\"light.*\"}[32m])\n  or rate(lodestar_native_gossip_messages_received_total{topic!~\"light.*\"}[32m])\n)",
-          "interval": "",
-          "legendFormat": "{{topic}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Received msg duplicate share (except light_* topics)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages received per nonduplicate message, per topic over 32 minutes: one plus the duplicates each message arrives with. A nonduplicate is a message's first receipt, invalid ones included, and a topic without duplicates reads 1. Both backends, each target's own counters summed across targets.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 102
-      },
-      "id": 433,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum by (topic) (\n  rate(gossipsub_msg_received_prevalidation_total[32m])\n  or rate(lodestar_native_gossip_messages_received_total[32m])\n)\n/\n(\n  sum by (topic) (\n    rate(gossipsub_msg_received_prevalidation_total[32m])\n    or rate(lodestar_native_gossip_messages_received_total[32m])\n  )\n  -\n  (\n    sum by (topic) (\n      rate(gossipsub_pre_validation_duplicate_total[32m])\n      or rate(lodestar_native_gossip_messages_duplicate_total[32m])\n    )\n    or 0 * sum by (topic) (\n      rate(gossipsub_msg_received_prevalidation_total[32m])\n      or rate(lodestar_native_gossip_messages_received_total[32m])\n    )\n  )\n)",
-          "interval": "",
-          "legendFormat": "{{topic}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Received msg per nonduplicate msg - by topic",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Local publications admitted to gossip per second by topic, including those without recipients; a duplicate publication does not count. Both backends.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "cps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 111
-      },
-      "id": 411,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_msg_publish_count_total[$rate_interval])\nor rate(lodestar_native_gossip_messages_published_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Published msg / sec by topic (LOG)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Recipients each local publication was queued to. libp2p per topic; native across topics, where publications admitted without recipients count too. Queued is not delivery: native completed means QUIC accepted the final byte, not that the peer received the message.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 111
-      },
-      "id": 412,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_msg_publish_peers_total[$rate_interval])\n/\nrate(gossipsub_msg_publish_count_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        },
-        {
-          "expr": "sum without (origin, outcome) (rate(lodestar_native_gossip_data_recipients_total{origin=\"publication\",outcome=\"queued\"}[$rate_interval]))\n/\nsum without (topic) (rate(lodestar_native_gossip_messages_published_total[$rate_interval]))",
-          "legendFormat": "recipients per publication",
-          "refId": "B"
-        }
-      ],
-      "title": "Published msg avg recipients queued per publication",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Sampled IWANT promises: one message id per IWANT request, broken when no peer delivers it before the deadline; broken counts on both backends. Native arms a promise when the request's send completes with its sample outstanding, and local cancellation can remove one before it expires. Broken / armed is a ratio of sampled promises, not peer delivery reliability.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "broken_ratio"
-            },
-            "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "unit",
-                "value": "percentunit"
-              }
-            ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "broken ratio"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 120
-      },
-      "id": 462,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
-          "interval": "",
-          "legendFormat": "sent (libp2p backend)",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_resolved_total[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "resolved (libp2p backend)",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "broken",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])/rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "broken ratio (libp2p backend)",
-          "refId": "broken_ratio"
-        },
-        {
-          "expr": "rate(lodestar_native_gossip_iwant_promises_started_total[$rate_interval])",
-          "legendFormat": "armed (native backend)",
-          "refId": "D"
-        },
-        {
-          "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])\n/\nrate(lodestar_native_gossip_iwant_promises_started_total[$rate_interval])",
-          "legendFormat": "broken / armed (native backend)",
-          "refId": "E"
-        }
-      ],
-      "title": "Sampled IWANT promises broken / armed",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages whose applied validation verdict was accept, per topic. Both backends; the received VALID panel counts prevalidation instead.",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            }
-          },
-          "unit": "cps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 120
-      },
-      "id": 514,
-      "targets": [
-        {
-          "expr": "rate(gossipsub_accepted_messages_total[$rate_interval])",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Accepted msg / sec by topic (log)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Share of applied verdicts per topic over 32 minutes, exactly 5 epochs. Both backends; the async validation result panel divides by prevalidated messages instead.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 129
-      },
-      "id": 515,
-      "targets": [
-        {
-          "expr": "sum by (topic) (rate(gossipsub_ignored_messages_total[32m]))\n/\nsum by (topic) (\n  label_replace(rate(gossipsub_accepted_messages_total[32m]), \"verdict\", \"accepted\", \"\", \"\")\n  or label_replace(rate(gossipsub_ignored_messages_total[32m]), \"verdict\", \"ignored\", \"\", \"\")\n  or label_replace(rate(gossipsub_rejected_messages_total[32m]), \"verdict\", \"rejected\", \"\", \"\")\n)",
-          "legendFormat": "IGNORE {{topic}}",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (topic) (rate(gossipsub_rejected_messages_total[32m]))\n/\nsum by (topic) (\n  label_replace(rate(gossipsub_accepted_messages_total[32m]), \"verdict\", \"accepted\", \"\", \"\")\n  or label_replace(rate(gossipsub_ignored_messages_total[32m]), \"verdict\", \"ignored\", \"\", \"\")\n  or label_replace(rate(gossipsub_rejected_messages_total[32m]), \"verdict\", \"rejected\", \"\", \"\")\n)",
-          "legendFormat": "REJECT {{topic}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Applied verdicts - IGNORE / REJECT shares",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Score-threshold populations of the distinct peers in any mesh, the union across topics: those whose score is at or above each configured gate. The gates are cumulative, so the series do not add up, and all counts every mesh peer. Not per topic, unlike the libp2p mesh score panels.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 129
-      },
-      "id": 524,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_score_peers{scope=\"mesh\"}",
-          "legendFormat": "{{threshold}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native mesh peers per score threshold",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Minimum, mean and maximum gossip score of the distinct peers in any mesh, not per topic. No statistics while no peer is in a mesh, rather than zeros.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 138
-      },
-      "id": 525,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_score{scope=\"mesh\"}",
-          "legendFormat": "{{stat}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native mesh peer score min / mean / max",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Behaviour penalty units applied to peers per second, by protocol violation: GRAFT during backoff or flooding, broken IWANT promises, malformed RPCs and frames, and large frame timeouts. Applied units, not the decaying score value; local receive pressure never counts. libp2p's score penalties panel also counts message deficits and IP colocation.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 138
-      },
-      "id": 526,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_gossip_behaviour_penalties_total[$rate_interval])",
-          "legendFormat": "{{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native P7 behaviour penalties by violation / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Recipients selected for local publications and forwarded messages, by outcome. completed means QUIC accepted the final byte, not that the peer received the message.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 147
-      },
-      "id": 517,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_gossip_data_recipients_total{origin=~\"publication|forward\"}[$rate_interval])",
-          "legendFormat": "{{origin}} {{outcome}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native publication and forwarding QUIC-acceptance funnel / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Recipients queued for forwarding, per accepted message forwarded to at least one recipient.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 147
-      },
-      "id": 518,
-      "targets": [
-        {
-          "expr": "sum without (origin, outcome) (rate(lodestar_native_gossip_data_recipients_total{origin=\"forward\",outcome=\"queued\"}[$rate_interval]))\n/\nsum without (topic) (rate(gossipsub_msg_forward_count_total[$rate_interval]))",
-          "legendFormat": "recipients per forwarded message",
-          "refId": "A"
-        }
-      ],
-      "title": "Native forward recipients queued per forwarded message",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "IWANT message ids the native backend queued for sending, and those it could not serve: history misses, refusals, limits and suppressions.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 156
-      },
-      "id": 519,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_gossip_iwant_ids_total[$rate_interval])",
-          "legendFormat": "{{outcome}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native IWANT message ids by outcome / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages holding a validation slot, against the pool capacity.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 156
-      },
-      "id": 520,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossipsub_pending_validations",
-          "legendFormat": "in use",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossipsub_validation_capacity",
-          "legendFormat": "capacity",
-          "refId": "B"
-        }
-      ],
-      "title": "Native gossip validation slots",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Receive pages in use against their capacity, and message store pages in use.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 165
-      },
-      "id": 521,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossipsub_receive_pages",
-          "legendFormat": "receive in use",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossipsub_receive_page_capacity",
-          "legendFormat": "receive capacity",
-          "refId": "B"
-        },
-        {
-          "expr": "lodestar_native_gossipsub_store_pages",
-          "legendFormat": "store in use",
-          "refId": "C"
-        }
-      ],
-      "title": "Native gossip receive and store pages",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Delivery descriptors in use against the pool capacity.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 165
-      },
-      "id": 522,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossipsub_delivery_descriptors_capacity - lodestar_native_gossipsub_delivery_descriptors_available",
-          "legendFormat": "in use",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossipsub_delivery_descriptors_capacity",
-          "legendFormat": "capacity",
-          "refId": "B"
-        }
-      ],
-      "title": "Native gossip delivery descriptors",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Outgoing gossip bytes queued for sending.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 174
-      },
-      "id": 523,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossipsub_queued_bytes",
-          "legendFormat": "queued",
-          "refId": "A"
-        }
-      ],
-      "title": "Native outgoing gossip bytes queued",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 183
-      },
-      "id": 651,
-      "panels": [],
-      "title": "Gossip processor",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages admitted and queued for Lodestar validation, per kind. Messages waiting on a dependency are in the next panel.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 184
-      },
-      "id": 652,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"queued\"}",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native queued gossip work by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "waiting: messages held until their block root is known. checking: messages awaiting Lodestar's dependency answer.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 184
-      },
-      "id": 653,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"waiting\"}",
-          "legendFormat": "waiting {{kind}}",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"checking\"}",
-          "legendFormat": "checking {{kind}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native dependency-waiting gossip work by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages executing on the host, as a share of each kind's execution item credits.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 193
-      },
-      "id": 654,
-      "targets": [
-        {
-          "expr": "lodestar_native_gossip_processor_items{state=\"executing\"}\n/ ignoring(state, credit)\nlodestar_native_gossip_processor_execution_credit_limit{credit=\"items\"}",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native execution credit use by kind",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Messages refused admission: by the processor per kind, where ineligible means outside the eligible slot window or on an unknown fork digest, not only past-slot; and by gossipsub storage pool limits.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 193
-      },
-      "id": 655,
-      "targets": [
-        {
-          "expr": "12 * rate(lodestar_native_gossip_processor_refusals_total[$rate_interval])",
-          "legendFormat": "{{kind}} {{reason}}",
-          "refId": "A"
-        },
-        {
-          "expr": "12 * rate(lodestar_native_gossipsub_storage_refusals_total[$rate_interval])",
-          "legendFormat": "storage {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native gossip admission refusals by reason (per slot)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 202
-      },
-      "id": 656,
-      "panels": [],
-      "title": "Reqresp serving",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Inbound requests the native backend refused for local capacity, by method and reason.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 203
-      },
-      "id": 657,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_reqresp_admission_refusals_total[$rate_interval])",
-          "legendFormat": "{{method}} {{reason}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native local request admission refusals / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Outgoing requests that could not open a stream before the dial timeout. Both backends; other dial failures are among the outgoing error reasons.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 203
-      },
-      "id": 658,
-      "targets": [
-        {
-          "expr": "rate(beacon_reqresp_outgoing_requests_error_reason_total{reason=\"REQUEST_ERROR_DIAL_TIMEOUT\"}[$rate_interval])",
-          "legendFormat": "dial timeouts",
-          "refId": "A"
-        }
-      ],
-      "title": "Outgoing request dial timeouts / sec",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Serving entries in use, retiring entries included; entries retiring after their stream ended while host work finishes; and serving capacity.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 212
-      },
-      "id": 659,
-      "targets": [
-        {
-          "expr": "lodestar_native_reqresp_resources_serving_occupied",
-          "legendFormat": "occupied (retiring included)",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_reqresp_resources_retiring",
-          "legendFormat": "retiring",
-          "refId": "B"
-        },
-        {
-          "expr": "lodestar_native_reqresp_resources_serving_capacity",
-          "legendFormat": "capacity",
-          "refId": "C"
-        }
-      ],
-      "title": "Native serving entries",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Host serving allowance still charged, retiring leases included, and source reads outstanding. Reservations, not allocated memory; source is part of total, so do not add the scopes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 212
-      },
-      "id": 660,
-      "targets": [
-        {
-          "expr": "lodestar_native_host_serving_reserved_bytes",
-          "legendFormat": "reserved {{scope}}",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_host_serving_source_pending_bytes",
-          "legendFormat": "source reads pending",
-          "refId": "B"
-        }
-      ],
-      "title": "Native host serving reservations",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 221
-      },
-      "id": 661,
-      "panels": [],
-      "title": "Transport",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Open QUIC connections, handshakes included, and the handshakes among them. Do not add the two.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 222
-      },
-      "id": 662,
-      "targets": [
-        {
-          "expr": "lodestar_native_quic_connections_active",
-          "legendFormat": "open (handshakes included)",
-          "refId": "A"
-        },
-        {
-          "expr": "lodestar_native_quic_connections_handshaking",
-          "legendFormat": "handshaking",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC connections",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Authenticated connections by direction, and closes by direction and reason, handshake failures included.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 222
-      },
-      "id": 663,
-      "targets": [
-        {
-          "expr": "60 * rate(lodestar_native_quic_connections_established_total[$rate_interval])",
-          "legendFormat": "established {{direction}}",
-          "refId": "A"
-        },
-        {
-          "expr": "60 * rate(lodestar_native_quic_connections_closed_total[$rate_interval])",
-          "legendFormat": "closed {{direction}} {{reason}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Native QUIC connections established and closed (per min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "UDP bytes the native QUIC transport received and sent.",
       "fieldConfig": {
         "defaults": {
           "unit": "Bps"
@@ -2954,10 +451,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 231
+        "x": 12,
+        "y": 16
       },
       "id": 664,
       "targets": [
@@ -2980,33 +477,27 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "UDP datagrams the native QUIC transport received and sent.",
       "fieldConfig": {
         "defaults": {
-          "unit": "pps"
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 231
+        "x": 0,
+        "y": 24
       },
-      "id": 665,
+      "id": 652,
       "targets": [
         {
-          "expr": "rate(lodestar_native_quic_udp_received_datagrams_total[$rate_interval])",
-          "legendFormat": "received",
+          "expr": "lodestar_native_gossip_processor_items",
+          "legendFormat": "{{kind}} {{state}}",
           "refId": "A"
-        },
-        {
-          "expr": "rate(lodestar_native_quic_udp_sent_datagrams_total[$rate_interval])",
-          "legendFormat": "sent",
-          "refId": "B"
         }
       ],
-      "title": "Native QUIC UDP datagrams",
+      "title": "Gossip work by kind and state",
       "type": "timeseries"
     },
     {
@@ -3014,7 +505,128 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Datagrams the kernel dropped at native sockets, per socket role and address family.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 655,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_gossip_processor_refusals_total[$rate_interval])",
+          "legendFormat": "{{kind}} {{reason}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(lodestar_native_gossipsub_storage_refusals_total[$rate_interval])",
+          "legendFormat": "storage {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Gossip admission refusals / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 658,
+      "targets": [
+        {
+          "expr": "rate(beacon_reqresp_outgoing_requests_error_reason_total[$rate_interval])",
+          "legendFormat": "{{method}} {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Outgoing request errors / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "id": 660,
+      "targets": [
+        {
+          "expr": "lodestar_native_host_serving_reserved_bytes",
+          "legendFormat": "reserved {{scope}}",
+          "refId": "A"
+        },
+        {
+          "expr": "lodestar_native_host_serving_source_pending_bytes",
+          "legendFormat": "source reads pending",
+          "refId": "B"
+        }
+      ],
+      "title": "Native host serving reservations",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 517,
+      "targets": [
+        {
+          "expr": "rate(lodestar_native_gossip_data_recipients_total{origin=~\"publication|forward\"}[$rate_interval])",
+          "legendFormat": "{{origin}} {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip recipients queued and sent / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "pps"
@@ -3022,10 +634,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 240
+        "x": 12,
+        "y": 40
       },
       "id": 666,
       "targets": [
@@ -3043,49 +655,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Native socket buffer sizes as getsockopt reports them. Linux reports double the size it granted, which the system limits can cap below the size requested, as it counts its bookkeeping overhead.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 240
-      },
-      "id": 667,
-      "targets": [
-        {
-          "expr": "lodestar_native_udp_socket_buffer_bytes",
-          "legendFormat": "{{role}} {{family}} {{direction}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Native UDP socket buffers (kernel-reported)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 249
-      },
-      "id": 564,
-      "panels": [],
-      "title": "Network owner",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time per native owner loop step. It is not heartbeat lateness or event loop lag.",
       "fieldConfig": {
         "defaults": {
           "unit": "s"
@@ -3093,10 +662,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 250
+        "y": 48
       },
       "id": 565,
       "targets": [
@@ -3124,35 +693,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Owner loop step time accumulated per second of wall time.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 250
-      },
-      "id": 566,
-      "targets": [
-        {
-          "expr": "rate(lodestar_native_network_step_seconds_sum[$rate_interval])",
-          "legendFormat": "busy share",
-          "refId": "A"
-        }
-      ],
-      "title": "Native owner busy share",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3196,10 +736,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 259
+        "x": 12,
+        "y": 48
       },
       "id": 512,
       "options": {
@@ -3228,8 +768,7 @@
         }
       ],
       "title": "Native metrics export freshness",
-      "type": "timeseries",
-      "description": "Age of the native network owner's last metrics update. It uses Prometheus time, so it keeps growing if the owner stalls."
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
@@ -3376,5 +915,5 @@
   "uid": "lodestar-native-network",
   "version": 1,
   "weekStart": "monday",
-  "description": "Native network peers, discovery, gossip, reqresp, transport and resource use."
+  "description": "Native network health, traffic, request failures and resource pressure. Select an instance with Filters."
 }

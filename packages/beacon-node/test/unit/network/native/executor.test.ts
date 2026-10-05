@@ -79,7 +79,7 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
       db: getMockedBeaconDb(),
       config,
       aggregatorTracker: new AggregatorTracker(),
-      core: {} as INetworkCore,
+      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
       logger,
       metrics,
       gossipHandlers: stubbed ? handlers : undefined,
@@ -241,7 +241,6 @@ describe("native gossip host execution", () => {
       );
       f.executor.searchUnknownEnvelope({slot: 64, root: toRootHex(root)}, BlockInputSource.gossip, check.peerId);
       expect(envelopeSearch).toHaveBeenCalledExactlyOnceWith({
-        slot: 64,
         rootHex: toRootHex(root),
         source: BlockInputSource.gossip,
         peer: check.peerId,

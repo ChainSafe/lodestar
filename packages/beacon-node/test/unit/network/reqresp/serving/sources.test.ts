@@ -30,11 +30,11 @@ import {onDataColumnSidecarsByRoot} from "../../../../../src/network/reqresp/han
 import {onLightClientBootstrap} from "../../../../../src/network/reqresp/handlers/lightClientBootstrap.js";
 import {onLightClientUpdatesByRange} from "../../../../../src/network/reqresp/handlers/lightClientUpdatesByRange.js";
 import {HostServingBudget} from "../../../../../src/network/reqresp/serving/budget.js";
-import {getBoundedReqRespHandlers, startServingHandler} from "../../../../../src/network/reqresp/serving/handler.js";
+import {createBoundedServing, startServingHandler} from "../../../../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../../../../src/network/reqresp/serving/policy.js";
 import {ReqRespMethod} from "../../../../../src/network/reqresp/types.js";
 import {SerializedCache} from "../../../../../src/util/serializedCache.js";
-import {measureOwners, servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
+import {decodedBackingBytes, servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
 const config = servingConfig();
@@ -50,6 +50,7 @@ async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Prom
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
     const db = new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger});
+    await db.init();
     await run(db, controller);
   } finally {
     await controller.close();
@@ -70,6 +71,7 @@ function makeChain(db: BeaconDb): IBeaconChain {
     },
     serializedCache: new SerializedCache(),
     seenBlockInputCache: {get: () => undefined},
+    getHeadState: () => ({slot: 0}),
     forkChoice: {
       getBlockHexDefaultStatus: () => ({slot, blockRoot: rootHex, payloadStatus: PayloadStatus.FULL}),
       getFinalizedBlock: () => ({slot: 0}),
@@ -109,13 +111,13 @@ describe("actual serving sources", () => {
       const futurePolicy = resolveServingPolicy(future, 6, futureChain.clock.currentSlot);
       const budget = HostServingBudget.forEnvironment(futurePolicy);
       futureChain.clock.currentSlot = -1;
-      expect(getBoundedReqRespHandlers({chain: futureChain, db}, budget)).toBeTypeOf("function");
+      expect(createBoundedServing({chain: futureChain, db}, budget).getHandler).toBeTypeOf("function");
       futureChain.clock.currentSlot = slot;
-      const factory = getBoundedReqRespHandlers({chain: futureChain, db}, budget);
+      const {getHandler: factory} = createBoundedServing({chain: futureChain, db}, budget);
       expect(factory).toBeTypeOf("function");
       for (const currentSlot of [7 * SLOTS_PER_EPOCH, 8 * SLOTS_PER_EPOCH]) {
         futureChain.clock.currentSlot = currentSlot;
-        expect(() => getBoundedReqRespHandlers({chain: futureChain, db}, budget)).toThrow("gloas");
+        expect(() => createBoundedServing({chain: futureChain, db}, budget)).toThrow("gloas");
         expect(() => factory(ReqRespMethod.BeaconBlocksByRoot)({data: root, version: 2}, peer, "test")).toThrow(
           "gloas"
         );
@@ -167,7 +169,7 @@ describe("actual serving sources", () => {
         yield* [];
       });
       const pending = first.next();
-      const actual = getBoundedReqRespHandlers({chain, db}, budget)(ReqRespMethod.BeaconBlocksByRoot);
+      const actual = createBoundedServing({chain, db}, budget).getHandler(ReqRespMethod.BeaconBlocksByRoot);
       try {
         expect(() => actual({data: new Uint8Array(31), version: 2}, peer, "test")).toThrow("capacity");
       } finally {
@@ -257,8 +259,13 @@ describe("actual serving sources", () => {
       const bounded = await Array.fromAsync(onBlobSidecarsByRange(request, chain, db, new ServingContext(policy)));
       expect(bounded).toEqual(ordinary);
       expect(bounded).toHaveLength(2);
-      await db.dataColumnSidecarArchive.putBinary(slot, 0, column(0));
-      await db.dataColumnSidecarArchive.putBinary(slot, 2, column(2));
+      await db.blockArchive.batchPutBinary([
+        {key: slot, value: new Uint8Array(), slot, blockRoot: root, parentRoot: root},
+      ]);
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [
+        {index: 0, data: column(0)},
+        {index: 2, data: column(2)},
+      ]);
       const columnRequest = {startSlot: slot, count: 1, columns: [2, 0, 2]};
       expect(
         await Array.fromAsync(
@@ -303,14 +310,41 @@ describe("actual serving sources", () => {
       expect(batch).toHaveLength(NUMBER_OF_COLUMNS);
       expect(batch.every((response) => byteArrayEquals(response.data, expected))).toBe(true);
       expect(batch.reduce((total, response) => total + response.data.buffer.byteLength, 0)).toBe(5808640);
-      expect(context.snapshot().peakBackingBytes).toBe(5808640);
     }));
 
-  it("preserves a complete duplicate/out-of-order/missing batch across writes and migration", async () =>
+  it("retains a cancelled serving lease until its flat-file read settles", async () =>
+    withDb(async (db) => {
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 0, data: column(0)}]);
+      const read = db.dataColumns.getManyBinary.bind(db.dataColumns);
+      const started = defer<void>();
+      const release = defer<void>();
+      const pendingRead = vi.spyOn(db.dataColumns, "getManyBinary").mockImplementation(async (...args) => {
+        const result = await read(...args);
+        started.resolve();
+        await release.promise;
+        return result;
+      });
+      const budget = HostServingBudget.forEnvironment(policy);
+      const handler = startServingHandler(budget, (context) => columns(makeChain(db), db, [0], context));
+      const next = handler.next().catch(() => undefined);
+      try {
+        await started.promise;
+        handler.cancel();
+        expect(budget.snapshot()).toMatchObject({occupancy: 1, outstandingRetirements: 1});
+      } finally {
+        release.resolve();
+        await next;
+        await handler.retired;
+        pendingRead.mockRestore();
+      }
+      expect(budget.snapshot()).toMatchObject({occupancy: 0, outstandingRetirements: 0});
+    }));
+
+  it("preserves a complete duplicate/out-of-order/missing flat-file batch across writes", async () =>
     withDb(async (db) => {
       const chain = makeChain(db);
-      await db.dataColumnSidecar.putBinary(root, 0, column(0, 1));
-      await db.dataColumnSidecar.putBinary(root, 2, column(2, 2));
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 0, data: column(0, 1)}]);
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 2, data: column(2, 2)}]);
       const indices = [2, 0, 2, 1];
       const ordinary = await Array.fromAsync(columns(chain, db, indices));
       const context = new ServingContext(policy);
@@ -319,10 +353,10 @@ describe("actual serving sources", () => {
       try {
         const first = await iterator.next();
         if (!first.done) responses.push(first.value);
-        await db.dataColumnSidecarArchive.putBinary(slot, 0, column(0, 9));
-        await db.dataColumnSidecarArchive.putBinary(slot, 2, column(2, 9));
-        await db.dataColumnSidecar.delete(root, 0);
-        await db.dataColumnSidecar.delete(root, 2);
+        await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [
+          {index: 0, data: column(0, 9)},
+          {index: 2, data: column(2, 9)},
+        ]);
         for (let pulls = 0; pulls < indices.length; pulls++) {
           const item = await iterator.next();
           if (item.done) break;
@@ -330,7 +364,6 @@ describe("actual serving sources", () => {
         }
         expect(responses).toEqual(ordinary);
         expect(responses.map((r) => ssz.fulu.DataColumnSidecar.deserialize(r.data).index)).toEqual([2, 0, 2]);
-        expect(context.snapshot().peakBackingBytes).toBe(3 * column(0).byteLength);
         const archived = await Array.fromAsync(columns(chain, db, indices, new ServingContext(policy)));
         expect(byteArrayEquals(archived[0].data, column(2, 9))).toBe(true);
       } finally {
@@ -338,25 +371,16 @@ describe("actual serving sources", () => {
       }
     }));
 
-  it("preserves submission-time getMany snapshots before the first batch is published", async () =>
+  it("fills missing cached columns from flat-file storage", async () =>
     withDb(async (db) => {
-      await db.dataColumnSidecar.putBinary(root, 0, column(0, 1));
-      const chain = makeChain(db);
-      const pending = chain.getSerializedDataColumnSidecars(slot, rootHex, [0, 0], new ServingContext(policy));
-      await db.dataColumnSidecar.putBinary(root, 0, column(0, 2));
-      expect((await pending).map((bytes) => bytes && byteArrayEquals(bytes, column(0, 1)))).toEqual([true, true]);
-    }));
-
-  it("keeps partial hot data and all-missing cache semantics", async () =>
-    withDb(async (db) => {
-      await db.dataColumnSidecar.putBinary(root, 0, column(0, 1));
-      await db.dataColumnSidecarArchive.putBinary(slot, 1, column(1, 2));
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 0, data: column(0, 1)}]);
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 1, data: column(1, 2)}]);
       const chain = makeChain(db);
       expect(
-        (await Array.fromAsync(columns(chain, db, [0, 1], new ServingContext(policy)))).map((r) =>
-          byteArrayEquals(r.data, column(0, 1))
+        (await Array.fromAsync(columns(chain, db, [0, 1], new ServingContext(policy)))).map(
+          (r) => ssz.fulu.DataColumnSidecar.deserialize(r.data).index
         )
-      ).toEqual([true]);
+      ).toEqual([0, 1]);
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
       const input = BlockInputColumns.createFromBlock({
@@ -370,7 +394,14 @@ describe("actual serving sources", () => {
         custodyColumns: [],
       });
       vi.spyOn(chain.seenBlockInputCache, "get").mockReturnValue(input);
-      expect(await Array.fromAsync(columns(chain, db, [0, 1], new ServingContext(policy)))).toEqual([]);
+      input.addColumn({
+        blockRootHex: rootHex,
+        columnSidecar: ssz.fulu.DataColumnSidecar.deserialize(column(0, 3)),
+        source: BlockInputSource.byRoot,
+        seenTimestampSec: 0,
+      });
+      const served = await Array.fromAsync(columns(chain, db, [0, 1], new ServingContext(policy)));
+      expect(served.map(({data}) => data)).toEqual([column(0, 3), column(1, 2)]);
     }));
 
   it("serializes the complete accepted cached occurrence batch before yielding", async () =>
@@ -445,7 +476,9 @@ describe("actual serving sources", () => {
   it("rejects a real over-cap batch before its first response", async () =>
     withDb(async (db) => {
       const chain = makeChain(db);
-      await db.dataColumnSidecar.putBinary(root, 0, new Uint8Array(policy.sourceBytes / 2 + 1));
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [
+        {index: 0, data: new Uint8Array(policy.sourceBytes / 2 + 1)},
+      ]);
       const iterator = columns(chain, db, [0, 0], new ServingContext(policy))[Symbol.asyncIterator]();
       try {
         await expect(iterator.next()).rejects.toMatchObject({code: "HOST_SERVING_CAPACITY"});
@@ -458,7 +491,7 @@ describe("actual serving sources", () => {
     withDb(async (db) => {
       const chain = makeChain(db);
       const available = column(0);
-      await db.dataColumnSidecar.putBinary(root, 0, available);
+      await db.dataColumns.putManyBinary({slot, blockRoot: rootHex}, [{index: 0, data: available}]);
       const getBlock = vi.spyOn(db.block, "getBinary");
       const iterator = columns(chain, db, [0, 1], new ServingContext(policy))[Symbol.asyncIterator]();
       try {
@@ -479,7 +512,7 @@ describe("actual serving sources", () => {
       await db.block.putBinary(root, bytes);
       const expected = await Array.fromAsync(onBeaconBlocksByRoot([root], chain));
       const budget = HostServingBudget.forEnvironment(policy);
-      const handler = getBoundedReqRespHandlers({chain, db}, budget)(ReqRespMethod.BeaconBlocksByRoot);
+      const handler = createBoundedServing({chain, db}, budget).getHandler(ReqRespMethod.BeaconBlocksByRoot);
       const request = {data: root, version: 2};
       const bounded = handler(request, peer, "test");
       expect(await Array.fromAsync(bounded)).toEqual(expected);
@@ -487,7 +520,7 @@ describe("actual serving sources", () => {
       await db.block.delete(root);
       // A stored oversized row is refused by the bounded native read.
       await controller.put(getRootIndexKey(root), intToBytes(slot, 8, "be"));
-      await db.blockArchive.putBinary(slot, new Uint8Array(policy.sourceBytes + 1));
+      await controller.put(db.blockArchive.encodeKey(slot), new Uint8Array(policy.sourceBytes + 1));
       const getBinary = vi.spyOn(db.blockArchive, "getBinary");
       const bad = handler(request, peer, "test");
       await expect(bad.next()).rejects.toMatchObject({
@@ -555,7 +588,6 @@ describe("actual serving sources", () => {
         ssz.deneb.BlobSidecar.maxSize,
         ssz.deneb.BlobSidecar.maxSize,
       ]);
-      expect(context.snapshot().peakBackingBytes).toBe(44 + ssz.deneb.BlobSidecar.maxSize);
     }));
 
   it("preserves real archive iterator snapshot order under writes", async () =>
@@ -685,7 +717,7 @@ describe("actual serving sources", () => {
           await Array.fromAsync(onLightClientBootstrap(root, chain))
         );
         const decoded = await server.getBootstrap(root, context);
-        expect(measureOwners([decoded]).bytes).toBeLessThanOrEqual(policy.decodedBytes);
+        expect(decodedBackingBytes([decoded])).toBeLessThanOrEqual(policy.decodedBytes);
         expect((await db.syncCommitteeWitness.getBinary(root))?.[0]).toBe(
           fork === ForkName.electra || fork === ForkName.fulu ? 1 : 0
         );

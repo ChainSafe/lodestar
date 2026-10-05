@@ -4,9 +4,9 @@ import {ENR} from "@chainsafe/enr";
 import {IpEndpoint} from "@chainsafe/lodestar-z/network";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-export type NativeDirectPeer = {id: string; identity: string; addresses: IpEndpoint[]};
+export type NativePeerAddress = {peerId: string; addresses: IpEndpoint[]};
 
-export function parseNativeDirectPeer(address: string): NativeDirectPeer {
+export function parseNativePeerAddress(address: string): NativePeerAddress {
   if (typeof address !== "string" || address.length > 404)
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "direct peer address length"});
   if (address.startsWith("enr:")) {
@@ -20,13 +20,13 @@ export function parseNativeDirectPeer(address: string): NativeDirectPeer {
         code: NativeNetworkErrorCode.CONFIGURATION,
         resource: "direct peer has no QUIC address",
       });
-    return {id, identity: id, addresses};
+    return {peerId: id, addresses};
   }
   const encoded = address.split("/p2p/")[1];
   if (!encoded)
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "direct peer identity"});
   const id = peerIdFromString(encoded).toString();
-  return {id, identity: id, addresses: [parseNativeEndpoint(address, true, id)]};
+  return {peerId: id, addresses: [parseNativeEndpoint(address, true, id)]};
 }
 
 export function parseNativeEndpoint(address: string, quic: boolean, peer?: string): IpEndpoint {

@@ -37,41 +37,21 @@ describe("environment serving retirement", () => {
     occupancy(budget, 0, 0);
   });
 
-  it("cleans up when the route-clear callback throws", async () => {
-    const budget = HostServingBudget.forEnvironment(policy);
-    const handler = startServingHandler(
-      budget,
-      async function* () {},
-      () => {
-        throw Error("route");
-      }
-    );
-    expect(() => handler.cancel()).toThrow("route");
-    await handler.retired;
-    occupancy(budget, 0, 0);
-  });
-
   it("retains next, return and started ancillary operations independently across replacement", async () => {
     const budget = HostServingBudget.forEnvironment(policy);
     const next = defer<IteratorResult<ResponseOutgoing>>();
     const returned = defer<IteratorResult<ResponseOutgoing>>();
     const ancillary = defer<void>();
-    const clear = vi.fn();
     const returnFn = vi.fn(() => {
-      expect(clear).toHaveBeenCalledOnce();
       return returned.promise;
     });
     let tracked: Promise<void> | undefined;
     const started = defer<void>();
-    const handler = startServingHandler(
-      budget,
-      (context) => {
-        tracked = context.read(() => ancillary.promise);
-        started.resolve();
-        return {[Symbol.asyncIterator]: () => ({next: () => next.promise, return: returnFn})};
-      },
-      clear
-    );
+    const handler = startServingHandler(budget, (context) => {
+      tracked = context.read(() => ancillary.promise);
+      started.resolve();
+      return {[Symbol.asyncIterator]: () => ({next: () => next.promise, return: returnFn})};
+    });
     occupancy(budget, 1, 0);
     const pending = handler.next();
     await started.promise;
@@ -97,7 +77,6 @@ describe("environment serving retirement", () => {
       await handler.retired;
     }
     occupancy(budget, 0, 0);
-    expect(clear).toHaveBeenCalledOnce();
   });
 
   it("releases factory throws before an iterator exists", async () => {
@@ -174,7 +153,6 @@ it("paused responses retain sources without occupying production permits", async
       async function* () {
         yield response;
       },
-      undefined,
       `peer-${Math.floor(index / 4)}`
     )
   );
@@ -208,7 +186,6 @@ it("a full retained allowance leaves work capacity for an existing response to r
       async function* () {
         yield {data: new Uint8Array([index]), boundary: {fork: config.getForkName(0), epoch: 0}};
       },
-      undefined,
       `peer-${index}`
     )
   );
@@ -240,7 +217,6 @@ it("bounded production gives waiting peers a turn and cancellation removes queue
         await hold.promise;
         yield* [];
       },
-      undefined,
       "a"
     )
   );
@@ -251,7 +227,6 @@ it("bounded production gives waiting peers a turn and cancellation removes queue
         order.push(peer);
         yield* [];
       },
-      undefined,
       peer
     );
   const nextA = make("a");
@@ -291,8 +266,8 @@ it("cancels retained-memory admission without starting a source operation", asyn
   const budget = HostServingBudget.forEnvironment(limits);
   const factory = vi.fn(async function* () {});
   // Block ranges retain the largest charge, so a second one waits for the first
-  const first = startServingHandler(budget, factory, undefined, "", ReqRespMethod.BeaconBlocksByRange);
-  const second = startServingHandler(budget, factory, undefined, "", ReqRespMethod.BeaconBlocksByRange);
+  const first = startServingHandler(budget, factory, "", ReqRespMethod.BeaconBlocksByRange);
+  const second = startServingHandler(budget, factory, "", ReqRespMethod.BeaconBlocksByRange);
   try {
     await first.prepare();
     const pending = second.prepare();

@@ -3,7 +3,7 @@ import {IBeaconChain} from "../../../chain/interface.js";
 import {ServingConfigurationError, ServingContext, isServingCapacityError} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getReqRespHandlers} from "../handlers/index.js";
-import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
+import {ReqRespMethod} from "../types.js";
 import {HostServingBudget, ServingLease} from "./budget.js";
 import {assertSupportedServingSlot} from "./policy.js";
 
@@ -23,24 +23,11 @@ export interface ServingHandler extends AsyncIterableIterator<ResponseOutgoing> 
 export type BoundedReqRespHandlers = (
   method: ReqRespMethod
 ) => (...args: Parameters<ProtocolHandler>) => ServingHandler;
-const boundedFactories = new WeakMap<GetReqRespHandlerFn, HostServingBudget>();
+export type BoundedServing = {getHandler: BoundedReqRespHandlers; budget: HostServingBudget};
 
-export function servingBudget(factory: GetReqRespHandlerFn): HostServingBudget {
-  const budget = boundedFactories.get(factory);
-  if (!budget) throw new ServingConfigurationError("Native network requires bounded serving handlers");
-  return budget;
-}
-
-export function assertBoundedReqRespHandlers(factory: GetReqRespHandlerFn): asserts factory is BoundedReqRespHandlers {
-  if (!boundedFactories.has(factory))
-    throw new ServingConfigurationError("Native network requires bounded serving handlers");
-}
-
-/** route must drop the adapter's native route synchronously, before iterator cleanup. */
 export function startServingHandler(
   budget: HostServingBudget,
   factory: (context: ServingContext) => AsyncIterable<ResponseOutgoing>,
-  route: (() => void) | undefined = undefined,
   peer = "",
   method = ReqRespMethod.BeaconBlocksByRoot
 ): ServingHandler {
@@ -55,11 +42,6 @@ export function startServingHandler(
   let closed = false;
   let pulling = false;
   let returning: Promise<IteratorResult<ResponseOutgoing>> | undefined;
-  const clear = (): void => {
-    const current = route;
-    route = undefined;
-    current?.();
-  };
   const requestReturn = (): Promise<IteratorResult<ResponseOutgoing>> => {
     if (!returning) {
       returning = lease.track(async () => {
@@ -84,13 +66,9 @@ export function startServingHandler(
     cancel() {
       if (closed) return;
       closed = true;
-      try {
-        clear();
-      } finally {
-        lease.cancel();
-        void requestReturn();
-        lease.finish();
-      }
+      lease.cancel();
+      void requestReturn();
+      lease.finish();
     },
     async return() {
       if (!closed) handler.cancel();
@@ -111,22 +89,14 @@ export function startServingHandler(
         if (result.done) {
           closed = true;
           iterator = undefined;
-          try {
-            clear();
-          } finally {
-            lease.finish();
-          }
+          lease.finish();
         }
         return result;
       } catch (error) {
         if (!closed) {
           closed = true;
-          try {
-            clear();
-          } finally {
-            void requestReturn();
-            lease.finish();
-          }
+          void requestReturn();
+          lease.finish();
         }
         if (isServingCapacityError(error)) throw new LocalServingResponseError();
         throw error;
@@ -138,10 +108,10 @@ export function startServingHandler(
   return handler;
 }
 
-export function getBoundedReqRespHandlers(
+export function createBoundedServing(
   modules: {chain: IBeaconChain; db: IBeaconDb},
   budget: HostServingBudget
-): BoundedReqRespHandlers {
+): BoundedServing {
   assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
   const factory: BoundedReqRespHandlers =
     (method) =>
@@ -153,11 +123,9 @@ export function getBoundedReqRespHandlers(
           assertSupportedServingSlot(modules.chain.config, modules.chain.clock.currentSlot);
           return getReqRespHandlers(modules, context)(method)(...args);
         },
-        undefined,
         args[1].toString(),
         method
       );
     };
-  boundedFactories.set(factory, budget);
-  return factory;
+  return {getHandler: factory, budget};
 }

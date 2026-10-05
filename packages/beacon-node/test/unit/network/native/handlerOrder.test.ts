@@ -1,5 +1,5 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
-import {describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {GossipJob, GossipMessage, NativeTopicKind} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -8,11 +8,13 @@ import {defer} from "@lodestar/utils";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
+import {OpPool} from "../../../../src/chain/opPools/opPool.js";
 import {
   AttestationValidationResult,
   validateGossipAttestationsSameAttData,
   validateGossipVoluntaryExit,
 } from "../../../../src/chain/validation/index.js";
+import {validateGossipVoluntaryExit as validateActualExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {IBeaconDb} from "../../../../src/db/interface.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
@@ -52,12 +54,18 @@ const boundary = {fork: ForkName.electra, epoch: 0};
  */
 function fixture() {
   const order: string[] = [];
+  const opPool = new OpPool(config);
+  const insertExit = opPool.insertVoluntaryExit.bind(opPool);
+  vi.spyOn(opPool, "insertVoluntaryExit").mockImplementation((exit) => {
+    insertExit(exit);
+    order.push("exit handler");
+  });
   const chain = {
     config,
     clock: new ClockStopped(1),
     emitter: new ChainEventEmitter(),
     forkChoice: {onAttestation: vi.fn(() => order.push("attestation handler"))},
-    opPool: {insertVoluntaryExit: vi.fn(() => order.push("exit handler"))},
+    opPool,
     validatorMonitor: null,
   };
   const modules = {
@@ -68,7 +76,7 @@ function fixture() {
     metrics: null,
     events: new NetworkEventBus(),
     aggregatorTracker: new AggregatorTracker(),
-    core: {} as INetworkCore,
+    core: {reportPeer: vi.fn()} as unknown as INetworkCore,
   };
   const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn()};
   const gossip = new NativeGossip(network, config, modules.events, defaultNetworkOptions, vi.fn());
@@ -79,6 +87,7 @@ function fixture() {
 /** A job whose owner holds its verdicts until the test releases them, which admits accepts to forwarding. */
 function heldJob(kind: NativeTopicKind, messages: GossipMessage[], order: string[]) {
   const reported = defer<void>();
+  void reported.promise.catch(() => {});
   const job: GossipJob = {kind, grouped: messages.length > 1, messages, reported: reported.promise};
   return {
     job,
@@ -92,14 +101,14 @@ function heldJob(kind: NativeTopicKind, messages: GossipMessage[], order: string
 
 function message(type: GossipType.beacon_attestation | GossipType.voluntary_exit, id: number): GossipMessage {
   const attestation = type === GossipType.beacon_attestation;
+  const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+  exit.message.validatorIndex = id;
   return {
     connection: {index: 0, generation: 1},
     peerId: "peer",
     topic: stringifyGossipTopic(config, attestation ? {type, boundary, subnet: 3} : {type, boundary}),
     id: new Uint8Array(20).fill(id),
-    data: attestation
-      ? new Uint8Array(8)
-      : ssz.phase0.SignedVoluntaryExit.serialize(ssz.phase0.SignedVoluntaryExit.defaultValue()),
+    data: attestation ? new Uint8Array(8) : ssz.phase0.SignedVoluntaryExit.serialize(exit),
     receivedAtUnixMs: 0,
     slot: attestation ? 1n : null,
     attestationData: attestation ? "attestation data" : null,
@@ -122,9 +131,15 @@ function accepted(validatorCommitteeIndex: number): {err: null; result: Attestat
 }
 
 /** Lets every timer the handler work could have scheduled become due and run. */
-function timersDue(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 20));
+async function timersDue(): Promise<void> {
+  await vi.runAllTimersAsync();
 }
+
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
+});
 
 describe("native gossip handler order", () => {
   it("runs a batch's handler work only after the owner disposed of its verdicts, in a later event loop", async () => {
@@ -158,7 +173,7 @@ describe("native gossip handler order", () => {
     }
   });
 
-  it("runs a single message's handler work only after forwarding admission, and never once the network closed", async () => {
+  it("records accepted operations before forwarding, even when the network closes", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
     const forwarded = heldJob("voluntary_exit", [message(GossipType.voluntary_exit, 1)], f.order);
@@ -167,17 +182,35 @@ describe("native gossip handler order", () => {
       expect(await f.gossip.validate(forwarded.job)).toEqual(["accept"]);
       expect(await f.gossip.validate(closed.job)).toEqual(["accept"]);
       await timersDue();
-      expect(f.order).toEqual([]);
+      expect(f.order).toEqual(["exit handler", "exit handler"]);
       closed.close();
       forwarded.forward();
       await timersDue();
-      expect(f.order).toEqual(["forwarded", "exit handler"]);
+      expect(f.order).toEqual(["exit handler", "exit handler", "forwarded"]);
     } finally {
       f.executor.stop();
     }
   });
 
-  it("defers handler work to the next event loop where the result is reported synchronously", async () => {
+  it("ignores a duplicate exit while the first verdict still awaits forwarding", async () => {
+    const f = fixture();
+    vi.mocked(validateGossipVoluntaryExit).mockImplementation(validateActualExit).mockResolvedValueOnce(undefined);
+    const exit = message(GossipType.voluntary_exit, 1);
+    const held = heldJob("voluntary_exit", [exit], f.order);
+    const duplicate = heldJob("voluntary_exit", [{...exit, id: new Uint8Array(20).fill(2)}], f.order);
+    try {
+      expect(await f.gossip.validate(held.job)).toEqual(["accept"]);
+      expect(await f.gossip.validate(duplicate.job)).toEqual(["ignore"]);
+      expect(f.chain.opPool.insertVoluntaryExit).toHaveBeenCalledOnce();
+      expect(f.order).toEqual(["exit handler"]);
+    } finally {
+      held.close();
+      duplicate.close();
+      f.executor.stop();
+    }
+  });
+
+  it("records an accepted operation before returning its synchronous-backend verdict", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
     const validate = getGossipValidatorFn(getGossipHandlers(f.modules, {}), f.modules, vi.fn());
@@ -192,8 +225,6 @@ describe("native gossip handler order", () => {
         msgSlot: null,
       });
       expect(result).toBe(TopicValidatorResult.Accept);
-      expect(f.order).toEqual([]);
-      await timersDue();
       expect(f.order).toEqual(["exit handler"]);
     } finally {
       f.executor.stop();

@@ -61,9 +61,12 @@ describe("FlatFileStore", () => {
     it("bounds decompression and cumulative output, including duplicate column requests", async () => {
       const value = new Uint8Array(1024).fill(1);
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: value}]);
-      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 0], {
-        maxValueBytes: 1024, maxTotalBytes: 2048,
-      })).resolves.toEqual([value, value]);
+      await expect(
+        store.getDataColumnsBinary(1000, ROOT_A, [0, 0], {
+          maxValueBytes: 1024,
+          maxTotalBytes: 2048,
+        })
+      ).resolves.toEqual([value, value]);
       for (const opts of [{maxValueBytes: 1023}, {maxTotalBytes: 2047}]) {
         await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 0], opts)).rejects.toMatchObject({
           type: {code: DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED},

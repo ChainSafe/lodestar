@@ -25,7 +25,7 @@ import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from ".
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
 import {HostServingBudget} from "../network/reqresp/serving/budget.js";
-import {getBoundedReqRespHandlers} from "../network/reqresp/serving/handler.js";
+import {createBoundedServing} from "../network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../network/reqresp/serving/policy.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
@@ -288,6 +288,15 @@ export class BeaconNode {
     // Load persisted data from disk to in-memory caches
     await chain.init();
 
+    const nativeServing = boundedServing
+      ? createBoundedServing(
+          {db, chain},
+          HostServingBudget.forEnvironment(
+            resolveServingPolicy(config, opts.network.native?.profile === "small" ? 6 : 32, chain.clock.currentSlot)
+          )
+        )
+      : undefined;
+
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
     const network = await Network.init({
@@ -300,14 +309,8 @@ export class BeaconNode {
       db,
       privateKey,
       peerStoreDir,
-      getReqRespHandler: boundedServing
-        ? getBoundedReqRespHandlers(
-            {db, chain},
-            HostServingBudget.forEnvironment(
-              resolveServingPolicy(config, opts.network.native?.profile === "small" ? 6 : 32, chain.clock.currentSlot)
-            )
-          )
-        : getReqRespHandlers({db, chain}),
+      getReqRespHandler: nativeServing?.getHandler ?? getReqRespHandlers({db, chain}),
+      nativeServing,
     });
 
     const sync = new BeaconSync(opts.sync, {

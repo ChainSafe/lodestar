@@ -272,7 +272,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(column);
-      expect(getRootBySlot).toHaveBeenCalledWith(10);
+      expect(getRootBySlot).toHaveBeenCalledWith(10, undefined);
     });
 
     it("should not load a block when its archive slot index entry is absent", async () => {
@@ -534,7 +534,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(columnData);
-      expect(getSerializedDataColumnSidecars).toHaveBeenCalledWith(10, ROOT_A, [0]);
+      expect(getSerializedDataColumnSidecars).toHaveBeenCalledWith(10, ROOT_A, [0], undefined);
     });
 
     for (const {name, payloadStatus} of [
@@ -903,7 +903,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot);
+      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot, undefined);
       expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot);
       expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);

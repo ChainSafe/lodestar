@@ -18,12 +18,9 @@ import {
   RpcResponseStatusError,
   responseStatusErrorToRequestError,
 } from "@lodestar/reqresp";
-import {
-  LocalServingResponseError,
-  ServingHandler,
-  getBoundedReqRespHandlers,
-  servingBudget,
-} from "../../reqresp/serving/handler.js";
+import {PeerAction} from "../../peers/score/index.js";
+import {onOutgoingReqRespError} from "../../reqresp/score.js";
+import {BoundedServing, LocalServingResponseError, ServingHandler} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
@@ -35,7 +32,7 @@ function requestError(error: unknown): unknown {
     if (["too_many_requests", "slots_exhausted", "negotiation_table_full"].includes(native.reason)) {
       return new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
     }
-    return new RequestError({code: RequestErrorCode.DIAL_ERROR, error});
+    return new RequestError({code: RequestErrorCode.REQUEST_ERROR, error});
   }
   if (native.code !== "NetworkRequestFailed") return error;
   if (native.reason === "peer_error" && native.peerStatus !== null) {
@@ -47,6 +44,15 @@ function requestError(error: unknown): unknown {
         )
       )
     );
+  }
+  if (native.reason === "negotiation_failed" && native.detail === "timeout") {
+    return new RequestError({code: RequestErrorCode.DIAL_TIMEOUT});
+  }
+  if (native.reason === "negotiation_rejected" || native.reason === "negotiation_failed") {
+    return new RequestError({
+      code: RequestErrorCode.DIAL_ERROR,
+      error: native.reason === "negotiation_rejected" ? new Error("protocol selection failed") : error,
+    });
   }
   if (native.reason === "timeout") {
     return new RequestError({
@@ -69,15 +75,15 @@ function requestError(error: unknown): unknown {
 
 export function outgoingNativeRequest(
   network: Pick<NativeNetwork, "request">,
-  protocols: ReadonlyMap<string, NativeProtocol>,
   data: OutgoingRequestArgs,
-  options: NativeRequestOptions
+  options: NativeRequestOptions,
+  report: (action: PeerAction, reason: string) => void
 ): AsyncIterableIterator<ResponseIncoming> {
   nativeInteger(data.versions.length, "request versions", 3, 1);
   let selected: NativeProtocol | undefined;
   for (const version of data.versions) {
     nativeInteger(version, "request version", 3, 1);
-    selected = protocols.get(`/eth2/beacon_chain/req/${data.method}/${version}/ssz_snappy`);
+    selected = nativeProtocols.get(`/eth2/beacon_chain/req/${data.method}/${version}/ssz_snappy`);
     if (selected) break;
   }
   if (!selected)
@@ -89,11 +95,13 @@ export function outgoingNativeRequest(
   } catch (error) {
     throw requestError(error);
   }
+  let reported = false;
   const map = async (
-    promise: Promise<IteratorResult<NativeResponseChunk>>
+    operation: () => Promise<IteratorResult<NativeResponseChunk>>,
+    score = false
   ): Promise<IteratorResult<ResponseIncoming>> => {
     try {
-      const result = await promise;
+      const result = await operation();
       if (result.done) return {done: true, value: undefined};
       if (result.value.protocol !== protocol.id)
         throw new NativeNetworkError({
@@ -109,16 +117,22 @@ export function outgoingNativeRequest(
         },
       };
     } catch (error) {
-      throw requestError(error);
+      const mapped = requestError(error);
+      if (score && !reported && mapped instanceof RequestError) {
+        reported = true;
+        const action = onOutgoingReqRespError(mapped, data.method);
+        if (action !== null) report(action, mapped.type.code);
+      }
+      throw mapped;
     }
   };
   return {
     [Symbol.asyncIterator]() {
       return this;
     },
-    next: () => map(iterator.next()),
-    return: () => map(iterator.return ? iterator.return() : Promise.resolve({done: true, value: undefined})),
-    throw: (error?: unknown) => map(iterator.throw ? iterator.throw(error) : Promise.reject(error)),
+    next: () => map(() => iterator.next(), true),
+    return: () => map(() => (iterator.return ? iterator.return() : Promise.resolve({done: true, value: undefined}))),
+    throw: (error?: unknown) => map(() => (iterator.throw ? iterator.throw(error) : Promise.reject(error))),
   };
 }
 
@@ -131,7 +145,6 @@ function fail(request: IncomingRequest, error: unknown): Promise<void> {
 async function respond(
   request: IncomingRequest,
   handler: ServingHandler,
-  protocol: NativeProtocol,
   config: BeaconConfig,
   maxChunks: number
 ): Promise<void> {
@@ -144,15 +157,10 @@ async function respond(
     if (chunks === maxChunks)
       throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "response chunks"});
     const {boundary} = result.value;
-    const submission = request.respond(
-      result.value.data,
-      protocol.context
-        ? {
-            fork: nativeFork(boundary.fork),
-            digest: config.forkBoundary2ForkDigest(boundary),
-          }
-        : null
-    );
+    const submission = request.respond(result.value.data, {
+      fork: nativeFork(boundary.fork),
+      digest: config.forkBoundary2ForkDigest(boundary),
+    });
     result = undefined;
     await submission;
   }
@@ -164,21 +172,21 @@ const PENDING_NAME = "lodestar_native_host_serving_source_pending_bytes";
 export class NativeRequests {
   /** Each request's handler until it retires, with the stream it answers. */
   private readonly serving = new Map<ServingHandler, IncomingRequest>();
-  private readonly protocols: ReadonlyMap<string, NativeProtocol>;
   private readonly maxChunks: number;
   private closed = false;
   /** Requests served at once. */
   private readonly limit: number;
   private readonly budget;
+  private readonly getHandler;
   constructor(
     private readonly config: BeaconConfig,
-    private readonly getHandler: ReturnType<typeof getBoundedReqRespHandlers>,
+    serving: BoundedServing,
     capacity: number
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
-    this.budget = servingBudget(getHandler);
+    this.budget = serving.budget;
+    this.getHandler = serving.getHandler;
     this.limit = Math.min(capacity, this.budget.snapshot().limits.capacity);
-    this.protocols = nativeProtocols(config, config.getForkName(0));
     this.maxChunks = nativeInteger(
       Math.max(
         config.MAX_REQUEST_BLOCKS,
@@ -206,7 +214,7 @@ export class NativeRequests {
    */
   async serve(request: IncomingRequest): Promise<void> {
     if (this.closed) return request.cancel();
-    const protocol = this.protocols.get(request.protocol);
+    const protocol = nativeProtocols.get(request.protocol);
     if (!protocol) return fail(request, new LocalServingResponseError());
     let handler: ServingHandler;
     try {
@@ -221,7 +229,7 @@ export class NativeRequests {
     this.serving.set(handler, request);
     void request.closed.then(() => handler.cancel());
     try {
-      await respond(request, handler, protocol, this.config, this.maxChunks);
+      await respond(request, handler, this.config, this.maxChunks);
     } catch (error) {
       await fail(request, error);
     } finally {

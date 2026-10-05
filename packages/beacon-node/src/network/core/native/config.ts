@@ -1,7 +1,7 @@
-import bindings from "@chainsafe/lodestar-z";
 import {TopicScoreParams, defaultPeerScoreParams, defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
+import bindings from "@chainsafe/lodestar-z";
 import {
   AdvertisedEndpoints,
   IpEndpoint,
@@ -25,7 +25,7 @@ import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
-import {NativeDirectPeer, parseNativeDirectPeer, parseNativeEndpoint} from "./addresses.js";
+import {NativePeerAddress, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {nativeFork} from "./protocols.js";
 
@@ -301,11 +301,6 @@ function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
     opts.targetPeers - Math.max(1, Math.floor(opts.targetPeers / 4))
   );
   nativeInteger(opts.bootMultiaddrs?.length ?? 0, "bootstrap peers", 64);
-  for (const address of opts.bootMultiaddrs ?? []) {
-    if (typeof address !== "string" || address.length > 256 || !address.startsWith("/"))
-      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "bootstrap address"});
-    parseNativeDirectPeer(address);
-  }
 }
 
 export function createNativeConfig(
@@ -320,10 +315,16 @@ export function createNativeConfig(
   /** The network selects the log level from its logger at initialization. */
   application: Omit<NativeApplicationConfig, "logLevel">;
   network: NetworkConfig;
-  directPeers: NativeDirectPeer[];
+  directPeers: NativePeerAddress[];
+  bootPeers: NativePeerAddress[];
 } {
   validateOptions(opts, config);
-  const directPeers = (opts.directPeers ?? []).map(parseNativeDirectPeer);
+  const directPeers = (opts.directPeers ?? []).map(parseNativePeerAddress);
+  const bootPeers = (opts.bootMultiaddrs ?? []).map((address) => {
+    if (typeof address !== "string" || address.length > 256 || !address.startsWith("/"))
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "bootstrap address"});
+    return parseNativePeerAddress(address);
+  });
   if (key.type !== "secp256k1")
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "secp256k1 identity required"});
   nativeInteger(activeValidatorCount, "active validators", Number.MAX_SAFE_INTEGER, 1);
@@ -445,5 +446,5 @@ export function createNativeConfig(
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };
-  return {application, network, directPeers};
+  return {application, network, directPeers, bootPeers};
 }

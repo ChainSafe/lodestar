@@ -69,6 +69,7 @@ function snapshotStatus(status: Status): Status {
 export class NativeIntent {
   private desired: Desired;
   private readonly commands: Command[] = [];
+  private custodyUpdate: {count: number; completion: ReturnType<typeof defer<void>>} | undefined;
   private busy = false;
   private dirty = false;
   private closed = false;
@@ -105,14 +106,15 @@ export class NativeIntent {
   }
   custody(count: number): Promise<void> {
     nativeInteger(count, "custody count", this.network.config.NUMBER_OF_CUSTODY_GROUPS, 1);
-    return this.enqueue({
-      type: "intent",
-      change: (state) => {
-        state.custodyGroupCount = count;
-        state.custodyTopics = true;
-      },
-    });
+    if (this.closed)
+      return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"}));
+    this.custodyUpdate ??= {count, completion: defer<void>()};
+    this.custodyUpdate.count = count;
+    const {promise} = this.custodyUpdate.completion;
+    this.refresh();
+    return promise;
   }
+
   committee(subscriptions: CommitteeSubscription[], sync: boolean): Promise<void> {
     return this.enqueue({
       type: "committee",
@@ -160,6 +162,7 @@ export class NativeIntent {
     for (let turn = 0; turn < 16 && !this.closed; turn++) {
       const command = this.commands.shift();
       if (!command && !this.dirty) return;
+      const custodyCount = this.custodyUpdate?.count;
       const refresh = this.dirty;
       this.dirty = false;
       try {
@@ -185,12 +188,20 @@ export class NativeIntent {
           if (command?.type === "status") desired.status = command.status;
           else if (command?.type === "committee") mergeCommitteeDemand(desired, command.demand);
           else command?.change(desired);
+          if (custodyCount !== undefined) {
+            desired.custodyGroupCount = custodyCount;
+            desired.custodyTopics = true;
+          }
           pruneCommitteeDemand(desired, slot);
           await this.runtime.applyIntent(this.render(desired, slot), BigInt(Math.max(0, slot)));
           if (this.closed)
             throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"});
           this.desired = desired;
           this.appliedSlot = slot;
+          if (this.custodyUpdate?.count === custodyCount) {
+            this.custodyUpdate?.completion.resolve();
+            this.custodyUpdate = undefined;
+          }
         }
         if (slot !== this.clock.currentSlot) this.dirty = true;
         command?.resolve();
@@ -208,6 +219,10 @@ export class NativeIntent {
             }
           }
           return;
+        }
+        if (custodyCount !== undefined && this.custodyUpdate?.count === custodyCount) {
+          this.custodyUpdate.completion.reject(error);
+          this.custodyUpdate = undefined;
         }
         if (command) command.reject(error);
         else this.onFailure(error);
@@ -314,6 +329,10 @@ export class NativeIntent {
     for (const command of this.commands)
       command.reject(new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"}));
     this.commands.length = 0;
+    this.custodyUpdate?.completion.reject(
+      new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "local intent"})
+    );
+    this.custodyUpdate = undefined;
     this.desired.attDuties.clear();
     this.desired.attDemand.clear();
     this.desired.syncDuties.clear();

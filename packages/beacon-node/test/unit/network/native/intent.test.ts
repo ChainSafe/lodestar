@@ -109,6 +109,69 @@ describe("native local intent transactions", () => {
     }
   });
 
+  it("retains and coalesces custody targets across temporary refusal and slot changes", async () => {
+    const node = await fixture(false, 0, false);
+    const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});
+    vi.useFakeTimers();
+    try {
+      node.applyIntent.mockRejectedValueOnce(full);
+      const first = node.intent.custody(8);
+      const completed = vi.fn();
+      void first.then(completed);
+      await vi.advanceTimersByTimeAsync(0);
+      const latest = node.intent.custody(16);
+      expect(latest).toBe(first);
+      node.clock.setSlot(1);
+      node.intent.refresh();
+      expect(completed).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(25);
+      await latest;
+      expect(node.latest().update.local.metadata.custodyGroupCount).toBe(16n);
+      node.clock.setSlot(2);
+      node.intent.refresh();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(node.latest().update.local.metadata.custodyGroupCount).toBe(16n);
+      expect(node.failed).not.toHaveBeenCalled();
+    } finally {
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("preserves a custody target submitted while an older Status command fails", async () => {
+    const node = await fixture();
+    const held = defer<void>();
+    node.updateStatus.mockImplementationOnce(() => held.promise);
+    try {
+      const status = node.intent.updateStatus(ssz.fulu.Status.defaultValue());
+      const failed = expect(status).rejects.toThrow("status rejected");
+      const custody = node.intent.custody(16);
+      held.reject(new Error("status rejected"));
+      await failed;
+      await custody;
+      expect(node.latest().update.local.metadata.custodyGroupCount).toBe(16n);
+    } finally {
+      node.intent.close();
+    }
+  });
+
+  it("rejects a pending custody target and cancels its retry on close", async () => {
+    const node = await fixture(false, 0, false);
+    vi.useFakeTimers();
+    try {
+      node.applyIntent.mockRejectedValue(Object.assign(new Error("full"), {code: "NetworkCommandFull"}));
+      const pending = node.intent.custody(16);
+      const rejected = expect(pending).rejects.toThrow("NATIVE_NETWORK_CLOSED");
+      await vi.advanceTimersByTimeAsync(0);
+      node.intent.close();
+      await rejected;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      node.intent.close();
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects a refused caller command, retains the refresh and preserves later command order", async () => {
     const node = await fixture();
     const full = Object.assign(new Error("NetworkCommandFull"), {code: "NetworkCommandFull"});

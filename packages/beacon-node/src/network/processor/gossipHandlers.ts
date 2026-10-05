@@ -1070,10 +1070,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const attesterSlashing = sszDeserialize(topic, serializedData);
       const verifiedDomains = await validateGossipAttesterSlashing(chain, attesterSlashing);
 
-      // Handler - deferred to next event loop so the validation result propagates first
+      try {
+        chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
+      } catch (e) {
+        logger.debug("Error storing gossip attester slashing", {}, e as Error);
+      }
       callAfterValidation(reported, () => {
         try {
-          chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
           chain.forkChoice.onAttesterSlashing(attesterSlashing);
           chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
         } catch (e) {
@@ -1086,59 +1089,50 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     },
 
-    [GossipType.proposer_slashing]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.proposer_slashing>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.proposer_slashing]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
       const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
       const verifiedDomain = await validateGossipProposerSlashing(chain, proposerSlashing);
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
-          chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip proposer slashing",
-            {
-              slot: proposerSlashing.signedHeader1.message.slot,
-              proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex,
-            },
-            e as Error
-          );
-        }
-      });
+      try {
+        chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
+        chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip proposer slashing",
+          {
+            slot: proposerSlashing.signedHeader1.message.slot,
+            proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex,
+          },
+          e as Error
+        );
+      }
     },
 
-    [GossipType.voluntary_exit]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
       const {serializedData} = gossipData;
       const voluntaryExit = sszDeserialize(topic, serializedData);
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          chain.opPool.insertVoluntaryExit(voluntaryExit);
-          chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip voluntary exit",
-            {epoch: voluntaryExit.message.epoch, validatorIndex: voluntaryExit.message.validatorIndex},
-            e as Error
-          );
-        }
-      });
+      try {
+        chain.opPool.insertVoluntaryExit(voluntaryExit);
+        chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip voluntary exit",
+          {epoch: voluntaryExit.message.epoch, validatorIndex: voluntaryExit.message.validatorIndex},
+          e as Error
+        );
+      }
     },
 
-    [GossipType.sync_committee_contribution_and_proof]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.sync_committee_contribution_and_proof]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>) => {
       const {serializedData} = gossipData;
       const contributionAndProof = sszDeserialize(topic, serializedData);
       const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
@@ -1151,36 +1145,30 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       });
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          chain.validatorMonitor?.registerGossipSyncContributionAndProof(
-            contributionAndProof.message,
-            syncCommitteeParticipantIndices
-          );
-          const insertOutcome = chain.syncContributionAndProofPool.add(
-            contributionAndProof.message,
-            syncCommitteeParticipantIndices.length
-          );
-          metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
-          chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip contribution and proof",
-            {
-              slot: contributionAndProof.message.contribution.slot,
-              subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
-            },
-            e as Error
-          );
-        }
-      });
+      try {
+        chain.validatorMonitor?.registerGossipSyncContributionAndProof(
+          contributionAndProof.message,
+          syncCommitteeParticipantIndices
+        );
+        const insertOutcome = chain.syncContributionAndProofPool.add(
+          contributionAndProof.message,
+          syncCommitteeParticipantIndices.length
+        );
+        metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
+        chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip contribution and proof",
+          {
+            slot: contributionAndProof.message.contribution.slot,
+            subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
+          },
+          e as Error
+        );
+      }
     },
 
-    [GossipType.sync_committee]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.sync_committee]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>) => {
       const {serializedData} = gossipData;
       const syncCommittee = sszDeserialize(topic, serializedData);
       const {subnet} = topic;
@@ -1194,22 +1182,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      // Handler - deferred to next event loop so the validation result propagates first
       // add for ALL positions this validator holds in the subcommittee
-      callAfterValidation(reported, () => {
-        try {
-          for (const indexInSubcommittee of indicesInSubcommittee) {
-            const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-            metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
-          }
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip sync committee",
-            {slot: syncCommittee.slot, subnet, validatorIndex: syncCommittee.validatorIndex},
-            e as Error
-          );
+      try {
+        for (const indexInSubcommittee of indicesInSubcommittee) {
+          const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+          metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
         }
-      });
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip sync committee",
+          {slot: syncCommittee.slot, subnet, validatorIndex: syncCommittee.validatorIndex},
+          e as Error
+        );
+      }
     },
 
     [GossipType.light_client_finality_update]: async ({
@@ -1231,27 +1216,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.bls_to_execution_change]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
       const {serializedData} = gossipData;
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-          chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip bls to execution change",
-            {validatorIndex: blsToExecutionChange.message.validatorIndex},
-            e as Error
-          );
-        }
-      });
+      try {
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip bls to execution change",
+          {validatorIndex: blsToExecutionChange.message.validatorIndex},
+          e as Error
+        );
+      }
     },
     [GossipType.execution_payload]: async (
       {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.execution_payload>,
@@ -1426,71 +1408,66 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       });
     },
-    [GossipType.execution_payload_bid]: async (
-      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.execution_payload_bid>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.execution_payload_bid]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          // this could be negative, because it's most likely the bid of next slot comes at this clock slot
-          const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
-          metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.gossip}, elapsedSec);
+      try {
+        // this could be negative, because it's most likely the bid of next slot comes at this clock slot
+        const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
+        metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.gossip}, elapsedSec);
 
-          // Handle valid payload bid by storing in a bid pool
-          const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid, Math.floor(elapsedSec * 1000));
-          metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+        // Handle valid payload bid by storing in a bid pool
+        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid, Math.floor(elapsedSec * 1000));
+        metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
 
-          chain.validatorMonitor?.registerExecutionPayloadBid(
-            OpSource.gossip,
+        chain.validatorMonitor?.registerExecutionPayloadBid(
+          OpSource.gossip,
+          proposerIndex,
+          executionPayloadBid.message
+        );
+
+        chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+          version: config.getForkName(executionPayloadBid.message.slot),
+          data: executionPayloadBid,
+        });
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip execution payload bid",
+          {
+            slot: executionPayloadBid.message.slot,
+            root: toRootHex(executionPayloadBid.message.parentBlockRoot),
             proposerIndex,
-            executionPayloadBid.message
-          );
-
-          chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
-            version: config.getForkName(executionPayloadBid.message.slot),
-            data: executionPayloadBid,
-          });
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip execution payload bid",
-            {
-              slot: executionPayloadBid.message.slot,
-              root: toRootHex(executionPayloadBid.message.parentBlockRoot),
-              proposerIndex,
-            },
-            e as Error
-          );
-        }
-      });
+          },
+          e as Error
+        );
+      }
     },
-    [GossipType.proposer_preferences]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.proposer_preferences>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.proposer_preferences]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
 
-      // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
-        try {
-          chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-            version: config.getForkName(signedProposerPreferences.message.proposalSlot),
-            data: signedProposerPreferences,
-          });
-        } catch (e) {
-          logger.debug(
-            "Error handling gossip proposer preferences",
-            {proposalSlot: signedProposerPreferences.message.proposalSlot},
-            e as Error
-          );
-        }
-      });
+      try {
+        chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+          version: config.getForkName(signedProposerPreferences.message.proposalSlot),
+          data: signedProposerPreferences,
+        });
+      } catch (e) {
+        logger.debug(
+          "Error handling gossip proposer preferences",
+          {proposalSlot: signedProposerPreferences.message.proposalSlot},
+          e as Error
+        );
+      }
     },
   };
 }

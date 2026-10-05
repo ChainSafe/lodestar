@@ -23,9 +23,6 @@ export function isServingCapacityError(error: unknown): boolean {
 export type ServingLimits = Readonly<{
   sourceBytes: number;
   decodedBytes: number;
-  requestDecodedBytes: number;
-  requestMetadata: number;
-  requestScalars: number;
   transactionVisits: number;
   blockBytes: number;
   columnBytes: number;
@@ -36,22 +33,18 @@ export type ServingLimits = Readonly<{
     committee: number;
     header: number;
     update: number;
-    decodedBytes: number;
-    metadata: number;
   }>;
 }>;
 
 /**
- * Retained sources survive yields; temporary source work stays charged until all reads settle. Every serving read
- * keeps the blocks it loads out of the LevelDB block cache and bounds native read output before copying it.
+ * Retained sources survive yields; temporary source work stays charged until all reads settle. Production reads
+ * bound output before allocation or decompression; LevelDB reads also bypass its block cache. Legacy column
+ * fallback reads do not enforce these limits.
  */
 export class ServingContext {
   private operations = 0;
   private pendingSourceLimitBytes = 0;
   private cancelled = false;
-  private peakBackingBytes = 0;
-  private peakPendingSourceLimitBytes = 0;
-  private backingOccurrences = 0;
   constructor(
     readonly limits: ServingLimits,
     private readonly onSettle: () => void = () => {}
@@ -64,9 +57,6 @@ export class ServingContext {
     return {
       pendingOperations: this.operations,
       pendingSourceLimitBytes: this.pendingSourceLimitBytes,
-      peakPendingSourceLimitBytes: this.peakPendingSourceLimitBytes,
-      peakBackingBytes: this.peakBackingBytes,
-      backingOccurrences: this.backingOccurrences,
     };
   }
   cancel(): void {
@@ -133,7 +123,6 @@ export class ServingContext {
     }
     this.operations++;
     this.pendingSourceLimitBytes += reservation;
-    this.peakPendingSourceLimitBytes = Math.max(this.peakPendingSourceLimitBytes, this.pendingSourceLimitBytes);
     try {
       return await operation(opts);
     } finally {
@@ -162,8 +151,6 @@ export class ServingContext {
       if (value) total += value.buffer.byteLength;
       if (!Number.isSafeInteger(total) || total > maxBytes) throw new ServingCapacityError("backing bytes");
     }
-    this.backingOccurrences += values.length;
-    this.peakBackingBytes = Math.max(this.peakBackingBytes, total);
   }
 }
 

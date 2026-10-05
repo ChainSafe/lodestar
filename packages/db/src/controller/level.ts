@@ -172,51 +172,45 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     iterator: AsyncIterableIterator<T> & {close(): Promise<void>},
     bucket: string
   ): AsyncIterableIterator<T> {
+    let started = false;
+    let itemsRead = 0;
     let closing: Promise<void> | undefined;
     const close = (): Promise<void> => {
-      closing ??= iterator.close();
+      if (!closing) {
+        if (started) this.metrics?.dbReadItems.inc({bucket}, itemsRead);
+        closing = iterator.close();
+      }
       return closing;
     };
-    const measured = this.measureIterator(iterator, bucket, close);
     return {
       [Symbol.asyncIterator]() {
         return this;
       },
-      next: () => measured.next(),
-      return: async () => {
-        try {
-          return await measured.return();
-        } finally {
-          // Returning before the first pull never enters the generator's finally block.
-          await close();
+      next: async () => {
+        if (closing) return {done: true, value: undefined};
+        if (!started) {
+          started = true;
+          this.metrics?.dbReadReq.inc({bucket}, 1);
         }
+        try {
+          const result = await iterator.next();
+          if (result.done) await close();
+          else itemsRead++;
+          return result;
+        } catch (error) {
+          await close();
+          throw error;
+        }
+      },
+      return: async () => {
+        await close();
+        return {done: true, value: undefined};
       },
       throw: async (error: unknown) => {
-        try {
-          return await measured.throw(error);
-        } finally {
-          await close();
-        }
+        await close();
+        throw error;
       },
     };
-  }
-
-  private async *measureIterator<T>(
-    iterator: AsyncIterable<T>,
-    bucket: string,
-    close: () => Promise<void>
-  ): AsyncGenerator<T, void, unknown> {
-    this.metrics?.dbReadReq.inc({bucket}, 1);
-    let itemsRead = 0;
-    try {
-      for await (const item of iterator) {
-        itemsRead++;
-        yield item;
-      }
-    } finally {
-      this.metrics?.dbReadItems.inc({bucket}, itemsRead);
-      await close();
-    }
   }
 
   /** Start interval to capture metric for db size */

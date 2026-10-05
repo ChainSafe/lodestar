@@ -26,7 +26,7 @@ export class NativeGossipExecutor {
     private readonly wake: () => void
   ) {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
-    // Native owns the validation queue; peer bans go through core.reportPeer.
+    // Peer bans go through core.reportPeer; native retains already queued messages until validation or expiry.
     const onFatalPeer = (): void => {};
     this.validate = getGossipValidatorFn(handlers, modules, onFatalPeer);
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules, onFatalPeer);
@@ -101,9 +101,15 @@ export class NativeGossipExecutor {
     this.modules.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
-  searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr, slotIsPayloadSlot = false): void {
+  searchUnknownEnvelope(
+    {slot, root}: SlotRootHex,
+    source: BlockInputSource,
+    peer?: PeerIdStr,
+    slotIsPayloadSlot = false
+  ): void {
     if (this.stopped || this.modules.chain.seenPayloadEnvelope(root)) return;
-    if (slotIsPayloadSlot) this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
+    if (slotIsPayloadSlot)
+      this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
     else this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
   }
 

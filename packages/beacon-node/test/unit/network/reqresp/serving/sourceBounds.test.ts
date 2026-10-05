@@ -12,7 +12,7 @@ import {
   isForkPostBellatrix,
 } from "@lodestar/params";
 import {LightClientHeader, LightClientUpdate, fulu, ssz, sszTypesFor} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../../../src/db/repositories/blobSidecars.js";
 import {getRootIndex} from "../../../../../src/db/repositories/blockArchiveIndex.js";
@@ -62,7 +62,9 @@ async function withDb(run: (db: BeaconDb, controller: LevelDbController) => Prom
   const path = await mkdtemp(join(tmpdir(), "lodestar-source-bounds-"));
   const controller = await LevelDbController.create({name: path}, {logger});
   try {
-    await run(new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger}), controller);
+    const db = new BeaconDb(config, controller, {dataColumnDir: join(path, "columns"), logger});
+    await db.init();
+    await run(db, controller);
   } finally {
     await controller.close();
     await rm(path, {recursive: true, force: true});
@@ -135,32 +137,30 @@ describe("serving source bounds with native reads", () => {
     let batchBytes = 0;
     let largest = 0;
     await withDb(async (db) => {
-      // The only hot writer persists custody columns whose length equals the imported block's commitments
-      await db.dataColumnSidecar.putMany(
-        root,
-        indices.map((index) => Object.assign(maxColumn(MAX_BLOBS), {index}))
+      const key = {slot, blockRoot: toRootHex(root)};
+      await db.dataColumns.putManyBinary(
+        key,
+        indices.map((index) => ({
+          index,
+          data: ssz.fulu.DataColumnSidecar.serialize(Object.assign(maxColumn(MAX_BLOBS), {index})),
+        }))
       );
-      const hot = await db.dataColumnSidecar.getManyBinary(root, indices);
-      for (const value of hot) {
+      const stored = await db.dataColumns.getManyBinary(key, indices, {
+        maxValueBytes: policy.columnBytes,
+        maxTotalBytes: policy.columnBatchBytes,
+      });
+      for (const value of stored) {
         expect(value?.byteLength).toBe(ssz.fulu.DataColumnSidecar.minSize + MAX_BLOBS * COLUMN_BLOB_BYTES);
         batchBytes += value?.byteLength ?? 0;
         largest = Math.max(largest, value?.byteLength ?? 0);
       }
-      // Finalization migrates the hot bytes unchanged
-      await db.dataColumnSidecarArchive.putManyBinary(
-        slot,
-        hot.map((value, index) => ({key: index, value: value as Uint8Array}))
-      );
-      const archived = await db.dataColumnSidecarArchive.getManyBinary(slot, indices);
-      expect(archived.reduce((sum, value) => sum + (value?.byteLength ?? 0), 0)).toBe(batchBytes);
     });
     expect(batchBytes).toBe(policy.columnBatchBytes);
     expect(largest).toBeLessThanOrEqual(policy.columnBytes);
-    // Native completion holds the whole output batch while building its JS copies.
-    expect(2 * batchBytes).toBeLessThanOrEqual(columns.workingBytes);
+    // The decoded batch coexists with one column's compressed read buffer.
+    const compressedColumnBytes = 32 + largest + Math.floor(largest / 6);
+    expect(batchBytes + compressedColumnBytes).toBeLessThanOrEqual(columns.workingBytes);
     expect(batchBytes).toBeLessThanOrEqual(columns.retainedBytes);
-    // A missing column reads the block for its blob count while the batch is held
-    expect(nativeGetPull(policy.blockBytes)).toBeLessThanOrEqual(columns.workingBytes);
     // A single column at the schema maximum fits the source, a batch of them would not: the batch bound rests on the
     // blob count guards of gossip, req/resp and the state transition, not on the schema
     expect(ssz.fulu.DataColumnSidecar.maxSize).toBe(
@@ -249,9 +249,9 @@ describe("serving source bounds with native reads", () => {
         expect(protocol(fork, config).responseSizes(fork).maxSize).toBe(network);
       }
       const boundary = {fork, epoch: config.forks[fork].epoch};
-      expect(getGossipSSZMaxSize({type: GossipType.beacon_block, boundary}, config, sszTypesFor(fork).SignedBeaconBlock)).toBe(
-        config.MAX_PAYLOAD_SIZE
-      );
+      expect(
+        getGossipSSZMaxSize({type: GossipType.beacon_block, boundary}, config, sszTypesFor(fork).SignedBeaconBlock)
+      ).toBe(network);
       // From Bellatrix the schema admits about 2^50 bytes of transactions, so it bounds nothing
       if (isForkPostBellatrix(fork)) expect(schema).toBeGreaterThan(2 ** 49);
     }

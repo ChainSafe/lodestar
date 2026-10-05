@@ -5,7 +5,6 @@ import {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -135,19 +134,11 @@ export function resolveServingPolicy(
     NUMBER_OF_COLUMNS * (columnType.minSize + columnElementBytes * maxColumnsBlobs),
     "column batch"
   );
-  const witnessRoots = Math.max(NUM_WITNESS, NUM_WITNESS_ELECTRA) + 2;
-  const committeeOwners = SYNC_COMMITTEE_SIZE + 3;
-  const headerOwners = 3 + 2 + 10 + 1 + 4 + 1;
-  const bootstrapOwners = witnessRoots + 2 + 2 * committeeOwners + headerOwners + witnessRoots + 2;
-  const updateOwners = 2 * headerOwners + committeeOwners + (NUM_WITNESS_ELECTRA + 2) * 2 + 6;
-  const lightClient = Object.freeze({
-    witness,
-    committee,
-    header,
-    update,
-    decodedBytes: Math.max(witness + 2 * committee + header + (NUM_WITNESS_ELECTRA + 1) * 32, 2 * update),
-    metadata: Math.max(bootstrapOwners, 2 * updateOwners),
-  });
+  const lightClient = Object.freeze({witness, committee, header, update});
+  const lightClientDecodedBytes = Math.max(
+    witness + 2 * committee + header + (NUM_WITNESS_ELECTRA + 1) * 32,
+    2 * update
+  );
   const decodedBytes = 128 * 1024;
   const blockRoots = integer(
     Math.max(config.MAX_REQUEST_BLOCKS, config.MAX_REQUEST_BLOCKS_DENEB),
@@ -159,12 +150,8 @@ export function resolveServingPolicy(
   );
   const columnRoots = integer(config.MAX_REQUEST_BLOCKS_DENEB, "request column roots");
   const requestDecodedBytes = integer(32 * Math.max(blockRoots, blobIdentifiers, columnRoots), "request decoded bytes");
-  const requestMetadata = integer(
-    Math.max(blockRoots + 1, 2 * blobIdentifiers + 1, 3 * columnRoots + 1),
-    "request metadata"
-  );
   const requestScalars = integer(Math.max(blobIdentifiers, columnRoots * NUMBER_OF_COLUMNS), "request scalars");
-  if (Math.max(lightClient.decodedBytes + 32, requestDecodedBytes) > decodedBytes)
+  if (Math.max(lightClientDecodedBytes + 32, requestDecodedBytes) > decodedBytes)
     throw new ServingConfigurationError("Decoded serving allowance");
   const sourceBytes = integer(
     Math.ceil(Math.max(wireBytes, wrapperBytes, witness + 2 * committee + header, update, columnBatchBytes) / MiB) *
@@ -183,9 +170,6 @@ export function resolveServingPolicy(
   const limits: ServingLimits = {
     sourceBytes,
     decodedBytes,
-    requestDecodedBytes,
-    requestMetadata,
-    requestScalars,
     transactionVisits,
     blockBytes,
     columnBytes,

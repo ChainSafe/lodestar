@@ -72,12 +72,7 @@ export async function* onDataColumnSidecarsByRange(
   )) {
     const dataColumnSidecars =
       block.blockRoot === null
-        ? await servingRead(
-            context,
-            (opts) => db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns, opts),
-            context?.limits.sourceBytes,
-            availableColumns.length
-          )
+        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
         : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns, context);
     context?.checkBatch(dataColumnSidecars, context.limits.sourceBytes, context.limits.columnBytes);
     if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
