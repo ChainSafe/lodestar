@@ -1,7 +1,8 @@
 import {EpochDifference, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {MIN_SEED_LOOKAHEAD} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {GENESIS_SLOT, MIN_SEED_LOOKAHEAD} from "@lodestar/params";
+import {IBeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 
 /**
  * Get dependent root of a shuffling given a message epoch and a proto block.
@@ -69,4 +70,15 @@ export function getInclusionListDependentRoot(
     return block.blockRoot;
   }
   return forkChoice.getDependentRoot(block, blockEpoch - epoch + MIN_SEED_LOOKAHEAD);
+}
+
+/**
+ * Same as `getInclusionListDependentRoot` but resolved from `block_roots` of a state on the block's branch at or
+ * after the block. Fork choice cannot resolve ancestors below its anchor, which the payloads of the first blocks
+ * after checkpoint sync or a restart need.
+ */
+export function getInclusionListDependentRootFromState(state: IBeaconStateView, inclusionListSlot: Slot): RootHex {
+  const epoch = computeEpochAtSlot(inclusionListSlot);
+  const dependentSlot = Math.max(GENESIS_SLOT, computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1);
+  return toRootHex(state.getBlockRootAtSlot(dependentSlot));
 }
