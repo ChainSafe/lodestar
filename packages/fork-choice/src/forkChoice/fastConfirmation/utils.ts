@@ -534,8 +534,8 @@ export function computeEmptySlotSupportDiscount(
 
   // Post-Gloas the parent block has PENDING, EMPTY and FULL nodes. Only the support of the node this
   // block actually extends is discounted; votes for the other parent nodes are not support for it.
-  const extendedParentPayloadStatus = ctx.getExtendedParentPayloadStatus(blockRoot);
-  if (extendedParentPayloadStatus === null) return 0;
+  const parentNodePayloadStatus = ctx.getParentNodePayloadStatus(blockRoot);
+  if (parentNodePayloadStatus === null) return 0;
 
   const parentSupportInEmptySlots = getNodeSupportBetweenSlots(
     ctx,
@@ -543,7 +543,7 @@ export function computeEmptySlotSupportDiscount(
     cache,
     balanceSource,
     block.parentRoot,
-    extendedParentPayloadStatus,
+    parentNodePayloadStatus,
     (parentBlock.slot + 1) as Slot,
     (block.slot - 1) as Slot
   );

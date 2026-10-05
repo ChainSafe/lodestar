@@ -129,7 +129,7 @@ export type FastConfirmationContext = {
   getAncestor(root: RootHex, slot: Slot): RootHex;
   isDescendant(ancestor: RootHex, descendant: RootHex): boolean;
   getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; payloadStatus: PayloadStatus; epoch: Epoch} | null;
-  getExtendedParentPayloadStatus(blockRoot: RootHex): PayloadStatus | null;
+  getParentNodePayloadStatus(blockRoot: RootHex): PayloadStatus | null;
   getUnrealizedJustified(): {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements};
   getFinalizedCheckpoint(): CheckpointWithHex;
   getEquivocatingIndices(): Set<ValidatorIndex>;
