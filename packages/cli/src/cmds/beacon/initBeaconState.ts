@@ -1,4 +1,3 @@
-import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {IBeaconDb} from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -147,9 +146,6 @@ async function executeStateInitialization(
   // by its native lock; if this headroom is exceeded, it grows by the same fixed step.
   // The view syncs pubkeys during construction, so capacity must be reserved first.
   const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
-  if (nativeStateTransition) {
-    bindings.config.set(config, config.genesisValidatorsRoot);
-  }
   const pubkeyCacheCapacity = validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
   loadPubkeysFile(pubkeyCache, pubkeysFile, pubkeyCacheCapacity, config, stateBytes, validatorCount, logger);
   // unilaterally expand capacity after best-effort pubkey file loading

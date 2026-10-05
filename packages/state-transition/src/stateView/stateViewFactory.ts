@@ -24,10 +24,7 @@ type CreateBeaconStateViewOpts = {
  */
 export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
-    return new NativeBeaconStateView(
-      opts.config,
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative
-    );
+    return createNativeBeaconStateView(opts.config, opts.stateBytes);
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
@@ -56,13 +53,18 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
-    return new NativeBeaconStateView(
-      opts.config,
-      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative
-    );
+    return createNativeBeaconStateView(opts.config, opts.stateBytes);
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
   const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
   return new BeaconStateView(cachedState);
+}
+
+function createNativeBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+  const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
+  return new NativeBeaconStateView(
+    config,
+    bindings.BeaconStateView.createFromBytes(stateBytes, nativeConfig) as IBeaconStateViewNative
+  );
 }

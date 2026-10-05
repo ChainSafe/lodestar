@@ -1,4 +1,3 @@
-import bindings from "@chainsafe/lodestar-z";
 import {ChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
@@ -27,7 +26,6 @@ export function createBeaconStateViewForTest(
 ): IBeaconStateView {
   const cachedState = createCachedBeaconStateTest(state, chainConfig);
   if (nativeStateTransition) {
-    bindings.config.set(cachedState.config, cachedState.genesisValidatorsRoot);
     return createBeaconStateView({
       nativeStateTransition: true,
       config: cachedState.config,
