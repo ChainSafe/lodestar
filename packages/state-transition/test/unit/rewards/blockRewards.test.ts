@@ -107,8 +107,14 @@ describe("chain / rewards / blockRewards", () => {
       }
       if (opts.attesterSlashingLen === 0) {
         expect(attesterSlashings).toBe(0);
+      } else {
+        expect(attesterSlashings).toBeGreaterThan(0);
+      }
+      if (opts.attestationLen > 0) {
+        expect(attestations).toBeGreaterThan(0);
       }
 
+      const proposerBalanceBefore = state.balances.get(proposerIndex);
       const postState = new BeaconStateView(state as CachedBeaconStateAllForks).stateTransition(
         {block},
         {
@@ -127,6 +133,16 @@ describe("chain / rewards / blockRewards", () => {
       expect(attestations).toBe(rewardCache.attestations);
       expect(syncAggregate).toBe(rewardCache.syncAggregate);
       expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
+
+      // Cross check with the proposer's balance delta, which also includes their own sync committee reward
+      const syncRewards = await computeSyncCommitteeRewards(
+        config,
+        state.epochCtx.pubkeyCache,
+        block.message,
+        state as CachedBeaconStateAllForks
+      );
+      const proposerSyncReward = syncRewards.find((r) => r.validatorIndex === proposerIndex)?.reward ?? 0;
+      expect(postState.balances.get(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
     });
   }
 
