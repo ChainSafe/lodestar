@@ -217,7 +217,10 @@ describe("native Lodestar integration", () => {
           node = await nativeNetworkFixture(config);
           const initial = await node.network.getNetworkIdentity();
           expect(initial.metadata.attnets.uint8Array.some((byte) => byte !== 0)).toBe(true);
+          await Promise.all([node.network.subscribeGossipCoreTopics(), node.network.unsubscribeGossipCoreTopics()]);
+          expect(node.network.isSubscribedToGossipCoreTopics()).toBe(false);
           await node.network.subscribeGossipCoreTopics();
+          expect(node.network.isSubscribedToGossipCoreTopics()).toBe(true);
           expect(node.network.closed).toBe(false);
           expect((await node.network.getNetworkIdentity()).metadata.custodyGroupCount).toBeGreaterThan(0);
         }

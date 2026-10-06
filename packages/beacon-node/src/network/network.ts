@@ -382,8 +382,8 @@ export class Network implements INetwork {
   async subscribeGossipCoreTopics(): Promise<void> {
     if (!this.subscribedToCoreTopics || this.core instanceof NativeNetworkCore) {
       await this.core.subscribeGossipCoreTopics();
-      // Only mark subscribedToCoreTopics if worker resolved this call
-      this.subscribedToCoreTopics = !this.closed;
+      this.subscribedToCoreTopics =
+        !this.closed && (this.core instanceof NativeNetworkCore ? this.core.isSubscribedToGossipCoreTopics() : true);
     }
   }
 
@@ -395,7 +395,8 @@ export class Network implements INetwork {
     this.networkProcessor.dropAllJobs();
 
     await this.core.unsubscribeGossipCoreTopics();
-    this.subscribedToCoreTopics = false;
+    this.subscribedToCoreTopics =
+      !this.closed && this.core instanceof NativeNetworkCore && this.core.isSubscribedToGossipCoreTopics();
   }
 
   isSubscribedToGossipCoreTopics(): boolean {

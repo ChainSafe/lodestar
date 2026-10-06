@@ -12,7 +12,7 @@ Select native networking with `--network.backend=native --tcp=false --quic=true`
 
 When a peer store directory is configured, `rememberedPeers.ts` loads and periodically saves up to 256 qualified peers in `native-remembered-peers.json`, scoped to the genesis validators root and expiring after 24 hours. A missing or invalid file gives a cold start. Shutdown attempts a final snapshot before closing the network.
 
-`NetworkCommandFull` means no command was admitted. Slot refresh and chain-owned custody targets retain their pending state and retry after temporary refusal. Custody updates coalesce to the latest target; other caller commands still reject. This retry avoids shutdown under temporary pressure but does not guarantee admission under sustained competing traffic. Once an admitted command races shutdown, rejection is not proof that its effect was rolled back.
+`NativeIntent` keeps one submitted update and one pending batch. Pending Status, custody and core-topic values coalesce to the latest request; committee demands merge. Callers in the same pending batch share its completion, so a superseded intermediate value need not be applied. Failed batches leave the last acknowledged state unchanged. The adapter submits only one state command at a time, using admission reserved from unrelated commands, without a retry timer. Once an admitted command races shutdown, rejection is not proof that its effect was rolled back.
 
 Building or publishing an exchange result while JavaScript remains runnable is part of the bridge contract: a failure there is process-fatal, not an operation-local `NetworkResultAllocationFailed` rejection. If the JavaScript environment has stopped, native teardown reclaims the outstanding obligations.
 

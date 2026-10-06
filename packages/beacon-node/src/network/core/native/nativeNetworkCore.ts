@@ -218,6 +218,9 @@ export class NativeNetworkCore implements INetworkCore {
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.intent.committee(subscriptions, true);
   }
+  isSubscribedToGossipCoreTopics(): boolean {
+    return this.intent.isSubscribedToCoreTopics();
+  }
   subscribeGossipCoreTopics(): Promise<void> {
     return this.intent.coreTopics(true);
   }
