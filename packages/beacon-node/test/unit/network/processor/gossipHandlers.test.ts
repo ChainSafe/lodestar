@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -12,7 +12,7 @@ import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelope
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import {BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
-import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
+import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
@@ -38,6 +38,198 @@ vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
 vi.mock("../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("../../../../src/chain/validation/dataColumnSidecar.js", async (importActual) => ({
+  ...(await importActual<typeof import("../../../../src/chain/validation/dataColumnSidecar.js")>()),
+  validateGossipGloasDataColumnSidecar: vi.fn().mockResolvedValue(undefined),
+}));
+
+describe("incomplete payload gossip", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function setup(blobCount = 1) {
+    const config = createBeaconConfig(
+      {
+        ...defaultConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        PAYLOAD_DUE_BPS: 7500,
+      },
+      new Uint8Array(32)
+    );
+    vi.setSystemTime(config.SLOT_DURATION_MS);
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from(
+      {length: blobCount},
+      () => new Uint8Array(48)
+    );
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const payloadInput = PayloadEnvelopeInput.createFromBlock({
+      block,
+      blockRootHex: toRootHex(blockRoot),
+      forkName: ForkName.gloas,
+      sampledColumns: [0, 1],
+      custodyColumns: [0, 1],
+      daOutOfRange: false,
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: Date.now() / 1000,
+    });
+    const logger = testLogger();
+    const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+    const emitter = new ChainEventEmitter();
+    const onIncomplete = vi.fn();
+    emitter.on(ChainEvent.incompletePayloadEnvelope, onIncomplete);
+    const getPayloadInput = vi.fn().mockReturnValue(payloadInput);
+    const chain = {
+      config,
+      genesisTime: 0,
+      clock: new ClockStopped(1),
+      logger,
+      emitter,
+      processExecutionPayload: vi.fn().mockResolvedValue(undefined),
+      seenPayloadEnvelopeInputCache: {get: getPayloadInput},
+      forkChoice: {getBlockHex: vi.fn().mockReturnValue(null)},
+      serializedCache: {set: vi.fn()},
+      columnReconstructionTracker: {triggerColumnReconstruction: vi.fn()},
+    } as unknown as IBeaconChain;
+    const handlers = getGossipHandlers(
+      {
+        chain,
+        config,
+        logger,
+        metrics: null,
+        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+        events: new NetworkEventBus(),
+        aggregatorTracker: {} as AggregatorTracker,
+      },
+      {}
+    );
+    const envelopeHandler = handlers[
+      GossipType.execution_payload
+    ] as SequentialGossipHandler<GossipType.execution_payload>;
+    const columnHandler = handlers[
+      GossipType.data_column_sidecar
+    ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
+
+    async function sendEnvelope(): Promise<void> {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = blockRoot;
+      envelope.message.payload.slotNumber = 1;
+      await envelopeHandler({
+        gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)},
+        topic: {boundary: {fork: ForkName.gloas, epoch: 0}, type: GossipType.execution_payload},
+        peerIdStr,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    async function sendColumn(index: number): Promise<void> {
+      const column = ssz.gloas.DataColumnSidecar.defaultValue();
+      column.beaconBlockRoot = blockRoot;
+      column.slot = 1;
+      column.index = index;
+      await columnHandler({
+        gossipData: {serializedData: ssz.gloas.DataColumnSidecar.serialize(column)},
+        topic: {boundary: {fork: ForkName.gloas, epoch: 0}, type: GossipType.data_column_sidecar, subnet: 0},
+        peerIdStr,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    return {config, payloadInput, onIncomplete, getPayloadInput, peerIdStr, sendEnvelope, sendColumn};
+  }
+
+  it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
+    const {config, payloadInput, onIncomplete, peerIdStr, sendEnvelope} = setup();
+    await sendEnvelope();
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() - 1);
+    expect(onIncomplete).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledExactlyOnceWith({
+      payloadInput,
+      peer: peerIdStr,
+      source: BlockInputSource.gossip,
+    });
+  });
+
+  it("emits once for multiple columns, including arrivals after the deadline", async () => {
+    const {config, onIncomplete, sendColumn} = setup();
+    await sendColumn(0);
+    await sendColumn(1);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() - 1);
+    expect(onIncomplete).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+    await sendColumn(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it.each(["envelope", "column"])("shares one deadline when %s arrives first", async (first) => {
+    const {config, onIncomplete, sendEnvelope, sendColumn} = setup();
+    if (first === "envelope") {
+      await sendEnvelope();
+      await sendColumn(0);
+    } else {
+      await sendColumn(0);
+      await sendEnvelope();
+    }
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it("does not emit if gossip completes the payload before the deadline", async () => {
+    const {config, payloadInput, onIncomplete, sendEnvelope, sendColumn} = setup();
+    await sendEnvelope();
+    await sendColumn(0);
+    await sendColumn(1);
+    expect(payloadInput.isComplete()).toBe(true);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+
+  it("does not arm a timeout for an envelope without blobs", async () => {
+    const {config, payloadInput, onIncomplete, sendEnvelope} = setup(0);
+    await sendEnvelope();
+    expect(payloadInput.isComplete()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+
+  it("emits once when the first message arrives after the deadline", async () => {
+    const {config, onIncomplete, sendEnvelope, sendColumn} = setup();
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() + 1);
+    await sendEnvelope();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+    await sendColumn(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it("does not enqueue an input removed from the cache while waiting", async () => {
+    const {config, onIncomplete, getPayloadInput, sendColumn} = setup();
+    await sendColumn(0);
+    getPayloadInput.mockReturnValue(undefined);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+});
 
 describe("getGossipHandlers", () => {
   const denebConfig = createBeaconConfig(
