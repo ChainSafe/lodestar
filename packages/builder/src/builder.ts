@@ -147,6 +147,9 @@ export class Builder {
         onEvent: (event) => {
           void this.onEvent(event);
         },
+        onOpen: () => {
+          void this.fetchProposerPreferences(api);
+        },
         onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
@@ -167,6 +170,32 @@ export class Builder {
           );
         }
       });
+  }
+
+  /**
+   * Proposer preferences are only broadcast once per proposal slot, fetch the ones the beacon node
+   * already knows to cover those missed while not connected, e.g. after a restart
+   */
+  private async fetchProposerPreferences(api: ApiClient): Promise<void> {
+    const signal = this.controller.signal;
+
+    try {
+      const preferences = (await api.beacon.getProposerPreferences({}, {signal})).value();
+      let added = 0;
+      for (const signedProposerPreferences of preferences) {
+        // Does not replace preferences already received from the event stream
+        if (this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences)) added++;
+      }
+      this.logger.verbose("Fetched proposer preferences", {count: preferences.length, added});
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to fetch proposer preferences",
+          {},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+    }
   }
 
   private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
