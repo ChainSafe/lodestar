@@ -432,6 +432,7 @@ export class BeaconChain implements IBeaconChain {
       blockStateCache,
       checkpointStateCache,
       seenBlockInputCache: this.seenBlockInputCache,
+      serializedCache: this.serializedCache,
       db,
       metrics,
       validatorMonitor,
@@ -702,6 +703,26 @@ export class BeaconChain implements IBeaconChain {
     stateRoot: RootHex,
     opts?: StateGetOpts
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    // Checkpoint state only equals the block post-state if the block is at the epoch start slot
+    if (
+      finalizedBlock.stateRoot === stateRoot &&
+      finalizedBlock.slot === computeStartSlotAtEpoch(finalizedCheckpoint.epoch)
+    ) {
+      const state = this.regen.getCheckpointStateSync({
+        epoch: finalizedCheckpoint.epoch,
+        rootHex: finalizedCheckpoint.rootHex,
+      });
+      if (state) {
+        return {
+          state,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+          finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH,
+        };
+      }
+    }
+
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlockDefaultStatus(

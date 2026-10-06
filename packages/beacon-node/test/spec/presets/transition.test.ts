@@ -3,15 +3,9 @@ import {expect} from "vitest";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  stateTransition,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {
@@ -20,6 +14,11 @@ import {
   expectNoProgressiveBalancesMismatches,
 } from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {
+  createBeaconStateViewForTest,
+  replaceStateViewForTest,
+  stateViewToBeaconState,
+} from "../utils/stateTransition.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
@@ -57,24 +56,26 @@ const transition =
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
         const verify = shouldVerify(testcase);
 
-        let state = createCachedBeaconStateTest(testcase.pre, testConfig);
+        let state = createBeaconStateViewForTest(forkPrev, testcase.pre, testConfig);
         const {metrics, register} = createSpecTestMetrics();
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-          const transitionState = () =>
-            stateTransition(
-              state,
-              signedBlock,
-              {
-                // Assume valid and available for this test
-                executionPayloadStatus: ExecutionPayloadStatus.valid,
-                dataAvailabilityStatus: DataAvailabilityStatus.Available,
-                verifyStateRoot: true,
-                verifyProposer: verify,
-                verifySignatures: verify,
-              },
-              {metrics}
+          const transitionState = (): void => {
+            state = replaceStateViewForTest(state, (preState) =>
+              preState.stateTransition(
+                {block: signedBlock},
+                {
+                  // Assume valid and available for this test
+                  executionPayloadStatus: ExecutionPayloadStatus.valid,
+                  dataAvailabilityStatus: DataAvailabilityStatus.Available,
+                  verifyStateRoot: true,
+                  verifyProposer: verify,
+                  verifySignatures: verify,
+                },
+                {metrics}
+              )
             );
+          };
           if (testcase.post === undefined && i === bnToNum(meta.blocks_count) - 1) {
             await expectInvalidStateTransitionWithNoProgressiveBalancesMismatches(
               transitionState,
@@ -83,11 +84,11 @@ const transition =
             );
             return undefined;
           }
-          state = transitionState();
+          transitionState();
         }
 
         await expectNoProgressiveBalancesMismatches(register, testCaseName);
-        return state;
+        return stateViewToBeaconState(forkNext, state);
       },
       options: {
         inputTypes: inputTypeSszTreeViewDU,
