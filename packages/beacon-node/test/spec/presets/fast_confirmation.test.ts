@@ -73,13 +73,7 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
-// Vectors generated with bls_setting=2 carry placeholder deposit signatures and expect the deposits
-// to be applied, as pyspec stubs `bls.Verify` to true. Deposits are applied in epoch processing, past
-// the point where `validSignatures` can mark a block trusted, so stub the deposit signature check.
-// The mock must target the module `processPendingDeposits` imports at runtime, which is the built `lib`
-// (spec tests resolve @lodestar/state-transition via its `import` export). If it stops applying, the
-// is_one_confirmed deposit vectors fail with INVALID_STATE_ROOT. The batch `verifyDepositSignatures` is
-// not covered (only used by prepareNextSlot, which these tests disable).
+// bls_setting=2 vectors carry placeholder deposit signatures; mocks the built lib module that epoch processing imports
 const shouldVerifyDepositSignatures = vi.hoisted(() => ({value: true}));
 vi.mock("../../../../state-transition/lib/block/processDeposit.js", async (importOriginal) => {
   const actual = await importOriginal<{isValidDepositSignature: (...args: unknown[]) => boolean}>();
