@@ -479,3 +479,43 @@ it("requests waiting for retained memory leave native credit available to existi
   }
   expect(budget.snapshot()).toMatchObject({occupancy: 0, working: 0, waiting: 0, reservedBytes: 0});
 });
+
+it("waits for initial credit once and each response before producing the next chunk", async () => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+  const input = await incoming();
+  const second = defer<void>();
+  vi.mocked(input.request.respond)
+    .mockImplementationOnce(() => input.written.promise)
+    .mockImplementationOnce(() => second.promise);
+  let produced = 0;
+  const handler = handlers.startServingHandler(budget, async function* () {
+    for (let index = 0; index < 2; index++) {
+      produced++;
+      yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
+    }
+  });
+  const owner = new NativeRequests(config, {getHandler: () => () => handler, budget}, 1);
+  const served = owner.serve(input.request);
+  try {
+    expect(await settled(served)).toBe(false);
+    expect(produced).toBe(0);
+    input.permission.resolve();
+    expect(await settled(served)).toBe(false);
+    expect(produced).toBe(1);
+    input.written.resolve();
+    expect(await settled(served)).toBe(false);
+    expect(produced).toBe(2);
+    second.resolve();
+    await served;
+    expect(input.request.ready).toHaveBeenCalledOnce();
+    expect(input.request.respond).toHaveBeenCalledTimes(2);
+    expect(input.request.finish).toHaveBeenCalledOnce();
+  } finally {
+    input.permission.resolve();
+    input.written.resolve();
+    second.resolve();
+    owner.close();
+    await handler.retired;
+  }
+});

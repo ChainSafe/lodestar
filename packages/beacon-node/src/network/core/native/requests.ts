@@ -144,8 +144,8 @@ async function respond(
 ): Promise<void> {
   // Reserve retained data before native credit so new requests cannot block existing responses from finishing.
   await handler.prepare();
+  await request.ready();
   for (let chunks = 0; chunks <= maxChunks; chunks++) {
-    await request.ready();
     let result: IteratorResult<ResponseOutgoing> | undefined = await handler.next();
     if (result.done) return request.finish();
     if (chunks === maxChunks)
