@@ -63,16 +63,6 @@ export class EngineRestResponseError extends LodestarError<{
   }
 }
 
-/** Successful response in a different media type, e.g. a legacy JSON-RPC server that answers any GET */
-export class EngineRestContentTypeError extends EngineRestResponseError {
-  constructor(
-    routeId: string,
-    readonly contentType: string | undefined
-  ) {
-    super(routeId, `Unexpected content type ${contentType}`);
-  }
-}
-
 export type EngineRestHttpClientOpts = {
   signal?: AbortSignal;
   timeout?: number;
@@ -221,7 +211,7 @@ export class EngineRestHttpClient {
       const contentType = res.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
       const expectedContentType = req.responseType === "ssz" ? MEDIA_TYPE_SSZ : MEDIA_TYPE_JSON;
       if (res.status !== 204 && contentType !== expectedContentType) {
-        throw new EngineRestContentTypeError(routeId, contentType);
+        throw new EngineRestResponseError(routeId, `Unexpected content type ${contentType}`);
       }
 
       return {status: res.status, body};

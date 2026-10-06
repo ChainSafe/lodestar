@@ -30,12 +30,7 @@ import {
 } from "./interface.js";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
-import {
-  EngineRestContentTypeError,
-  EngineRestError,
-  EngineRestResponseError,
-  isRetryableEngineRestError,
-} from "./restHttpClient.js";
+import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
 import {IEngineTransport, PayloadStatusResult} from "./transport.js";
@@ -126,10 +121,9 @@ const REST_PROBE_RETRY_MS = 12_000;
  * https://github.com/ethereum/execution-apis/tree/main/src/engine
  *
  * In `auto` mode a capabilities response from a server without the REST API, a 4xx other than
- * 401/403 or a success that is not JSON, selects JSON-RPC until the EL reconnects. Transient
- * discovery failures use JSON-RPC while awaiting another probe; authentication failures and
- * malformed capabilities fail visibly. Forks and blob revisions the EL does not advertise also use
- * JSON-RPC.
+ * 401/403, selects JSON-RPC until the EL reconnects. Transient discovery failures use JSON-RPC while
+ * awaiting another probe; authentication failures and malformed capabilities fail visibly. Forks and
+ * blob revisions the EL does not advertise also use JSON-RPC.
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
@@ -559,12 +553,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         (e: Error): RestSupport => {
           if (this.engineApi === "auto" && isRestApiAbsent(e)) {
             this.restSupport = {state: "unsupported"};
-            this.logger.debug(
-              "Execution client does not support engine API over REST, using JSON-RPC",
-              e instanceof EngineRestError
-                ? {status: e.status, type: e.type ?? "unknown"}
-                : {contentType: (e as EngineRestContentTypeError).contentType ?? "none"}
-            );
+            this.logger.debug("Execution client does not support engine API over REST, using JSON-RPC", {
+              status: e.status,
+              type: e.type ?? "unknown",
+            });
           } else {
             const transient = isRetryableEngineRestError(e);
             this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};
@@ -657,11 +649,10 @@ function isEngineResponseError(e: Error): boolean {
 }
 
 /**
- * Legacy JSON-RPC servers and proxies answer the capabilities probe in different ways, a 404,
- * another client error such as 405, or any GET with a non-JSON body. None of them serve the REST API.
+ * Legacy JSON-RPC servers and proxies reject the capabilities probe in different ways, a 404 or
+ * another client error such as 405. Neither serves the REST API.
  */
-function isRestApiAbsent(e: Error): boolean {
-  if (e instanceof EngineRestContentTypeError) return true;
+function isRestApiAbsent(e: Error): e is EngineRestError {
   return e instanceof EngineRestError && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 403;
 }
 
