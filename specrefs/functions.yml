@@ -4357,7 +4357,13 @@
     </spec>
 
 - name: get_filtered_node_tree#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: '^\s+findHead\('
+      regex: true
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: '^\s+maybeUpdateBestChildAndDescendant\('
+      regex: true
   spec: |
     <spec fn="get_filtered_node_tree" fork="gloas" hash="5e59710d">
     def get_filtered_node_tree(store: Store) -> Sequence[ForkChoiceNode]:
@@ -8655,7 +8661,9 @@
     </spec>
 
 - name: milliseconds_to_seconds#phase0
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/slot.ts
+      search: return genesisTime + slot * (config.SLOT_DURATION_MS / 1000);
   spec: |
     <spec fn="milliseconds_to_seconds" fork="phase0" hash="25f94fde">
     def milliseconds_to_seconds(milliseconds: Uint64) -> Uint64:
