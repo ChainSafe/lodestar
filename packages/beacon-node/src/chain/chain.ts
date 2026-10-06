@@ -244,6 +244,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   protected readonly db: IBeaconDb;
+  private genesisStateRoot?: RootHex | null;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
@@ -720,6 +721,17 @@ export class BeaconChain implements IBeaconChain {
           executionOptimistic: isOptimisticBlock(finalizedBlock),
           finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH,
         };
+      }
+    }
+
+    if (this.genesisStateRoot === undefined) {
+      const genesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
+      this.genesisStateRoot = genesisBlock ? toRootHex(genesisBlock.message.stateRoot) : null;
+    }
+    if (this.genesisStateRoot === stateRoot) {
+      const state = await this.db.stateArchive.getBinary(GENESIS_SLOT);
+      if (state) {
+        return {state, executionOptimistic: false, finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH};
       }
     }
 
