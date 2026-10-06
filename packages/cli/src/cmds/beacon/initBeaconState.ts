@@ -153,6 +153,6 @@ async function executeStateInitialization(
   const anchorState = createBeaconStateView({nativeStateTransition, config, stateBytes});
   stateInit.validate(anchorState);
   await stateInit.persist?.(anchorState, stateBytes);
-  stateInit.log(anchorState);
+  stateInit.log(anchorState, nativeStateTransition);
   return {anchorState, config, isFinalized: stateInit.isFinalized};
 }
