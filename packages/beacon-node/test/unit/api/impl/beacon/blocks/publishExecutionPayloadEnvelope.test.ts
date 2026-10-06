@@ -4,17 +4,13 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {
-  ExecutionPayloadEnvelopeError,
-  ExecutionPayloadEnvelopeErrorCode,
-  GossipAction,
-} from "../../../../../../src/chain/errors/index.js";
+import {ExecutionPayloadEnvelopeErrorCode} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -23,9 +19,11 @@ import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 vi.mock("../../../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js", () => ({
   verifyExecutionPayloadEnvelope: vi.fn(),
 }));
-vi.mock("../../../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
-  validateApiExecutionPayloadEnvelope: vi.fn(),
-}));
+vi.mock("../../../../../../src/chain/validation/executionPayloadEnvelope.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../../src/chain/validation/executionPayloadEnvelope.js")>();
+  return {...actual, validateApiExecutionPayloadEnvelope: vi.fn(actual.validateApiExecutionPayloadEnvelope)};
+});
 
 describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   const config = createChainForkConfig({
@@ -55,6 +53,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
   function setupEnvelope(conflicting: boolean) {
     const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 1;
     const blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(signedBlock.message));
     const payloadInput = PayloadEnvelopeInput.createFromBlock({
       blockRootHex: blockRoot,
@@ -68,9 +67,17 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     });
     const cachedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     cachedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
+    cachedEnvelope.message.payload.slotNumber = signedBlock.message.slot;
     const incomingEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(cachedEnvelope);
     if (conflicting) incomingEnvelope.message.payload.blockHash = new Uint8Array(32).fill(1);
-    modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot: 0}));
+    modules.forkChoice.getBlockHex.mockImplementation((_root, status) =>
+      status === PayloadStatus.FULL ? null : generateProtoBlock({slot: 1})
+    );
+    modules.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 1}));
+    modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      ...ssz.phase0.Checkpoint.defaultValue(),
+      rootHex: toRootHex(new Uint8Array(32)),
+    });
     vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
     const addCachedEnvelope = () =>
       payloadInput.addPayloadEnvelope({
@@ -78,6 +85,16 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         source: PayloadEnvelopeInputSource.gossip,
         seenTimestampSec: 0,
       });
+    const warning = [
+      "Execution payload envelope block hash differs from already-known envelope",
+      expect.objectContaining({
+        slot: 1,
+        blockRoot,
+        code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+        blockHash: toRootHex(incomingEnvelope.message.payload.blockHash),
+        knownBlockHash: toRootHex(cachedEnvelope.message.payload.blockHash),
+      }),
+    ];
     return {
       api: getBeaconBlockApi(modules),
       payloadInput,
@@ -85,124 +102,95 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       incomingEnvelope,
       blockRoot,
       addCachedEnvelope,
+      expectedWarnings: conflicting ? [warning] : [],
     };
   }
 
-  it.each([false, true])("handles an already-known envelope with conflicting hash=%s", async (conflicting) => {
-    const {api, payloadInput, cachedEnvelope, incomingEnvelope, blockRoot, addCachedEnvelope} =
-      setupEnvelope(conflicting);
-    addCachedEnvelope();
-    vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
-      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
-        blockRoot,
-        slot: 0,
-      })
-    );
+  describe.each([false, true])("conflicting hash=%s", (conflicting) => {
+    it.each([true, false])("handles a stateful duplicate with cached envelope=%s", async (cached) => {
+      const {api, payloadInput, cachedEnvelope, incomingEnvelope, addCachedEnvelope, expectedWarnings} =
+        setupEnvelope(conflicting);
+      addCachedEnvelope();
+      if (!cached) {
+        vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(undefined);
+        modules.forkChoice.getBlockHex.mockImplementation((_root, status) =>
+          generateProtoBlock({
+            slot: 1,
+            executionPayloadBlockHash: toRootHex(
+              status === PayloadStatus.FULL ? cachedEnvelope.message.payload.blockHash : new Uint8Array(32).fill(2)
+            ),
+          })
+        );
+      }
 
-    await api.publishExecutionPayloadEnvelope({signedEnvelopeOrContents: incomingEnvelope});
+      await api.publishExecutionPayloadEnvelope({signedEnvelopeOrContents: incomingEnvelope});
 
-    expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
-    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
-    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
-    expect(modules.chain.logger.warn).toHaveBeenCalledTimes(conflicting ? 1 : 0);
-    if (conflicting) {
-      expect(modules.chain.logger.warn).toHaveBeenCalledWith(
-        "Execution payload envelope block hash differs from already-known envelope",
-        expect.objectContaining({
-          slot: 0,
-          blockRoot,
-          blockHash: toRootHex(incomingEnvelope.message.payload.blockHash),
-          knownBlockHash: toRootHex(cachedEnvelope.message.payload.blockHash),
-        })
-      );
-    }
-  });
-
-  it("warns about a conflicting retry after the envelope was pruned from memory", async () => {
-    const {api, incomingEnvelope, blockRoot} = setupEnvelope(true);
-    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(undefined);
-    modules.forkChoice.getBlockHex.mockImplementation((_root, status) =>
-      generateProtoBlock({
-        slot: 0,
-        executionPayloadBlockHash: status === PayloadStatus.FULL ? toRootHex(new Uint8Array(32)) : null,
-      })
-    );
-    vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
-      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
-        blockRoot,
-        slot: 0,
-      })
-    );
-
-    await api.publishExecutionPayloadEnvelope({signedEnvelopeOrContents: incomingEnvelope});
-
-    expect(modules.chain.logger.warn).toHaveBeenCalledOnce();
-    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
-  });
-
-  it.each([false, true])("handles gossip during the slot wait with conflicting hash=%s", async (conflicting) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-    const {api, payloadInput, cachedEnvelope, incomingEnvelope, addCachedEnvelope} = setupEnvelope(conflicting);
-    Object.assign(modules.chain, {genesisTime: 1001});
-    const publish = api.publishExecutionPayloadEnvelope({signedEnvelopeOrContents: incomingEnvelope});
-    await vi.advanceTimersByTimeAsync(0);
-    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
-    addCachedEnvelope();
-    await vi.advanceTimersByTimeAsync(1000);
-    await publish;
-
-    expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
-    expect(modules.chain.processExecutionPayload).toHaveBeenCalledOnce();
-    expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-    expect(modules.chain.logger.warn).toHaveBeenCalledTimes(conflicting ? 1 : 0);
-  });
-
-  it.each([false, true])("continues a stateless duplicate publish with conflicting hash=%s", async (conflicting) => {
-    const {api, incomingEnvelope, blockRoot, addCachedEnvelope} = setupEnvelope(conflicting);
-    addCachedEnvelope();
-    vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
-      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
-        blockRoot,
-        slot: 0,
-      })
-    );
-
-    await api.publishExecutionPayloadEnvelope({
-      signedEnvelopeOrContents: {signedExecutionPayloadEnvelope: incomingEnvelope, blobs: [], kzgProofs: []},
+      expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
+      expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+      expect(modules.chain.logger.warn.mock.calls).toEqual(expectedWarnings);
     });
 
-    expect(modules.chain.processExecutionPayload).toHaveBeenCalledOnce();
-    expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-    expect(modules.chain.logger.warn).toHaveBeenCalledTimes(conflicting ? 1 : 0);
+    it("handles gossip during the slot wait with validation disabled", async () => {
+      vi.useFakeTimers();
+      const {api, payloadInput, cachedEnvelope, incomingEnvelope, addCachedEnvelope, expectedWarnings} =
+        setupEnvelope(conflicting);
+      vi.setSystemTime(computeTimeAtSlot(config, 1, modules.chain.genesisTime) * 1000 - 1000);
+      const publish = api.publishExecutionPayloadEnvelope({
+        signedEnvelopeOrContents: incomingEnvelope,
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+      addCachedEnvelope();
+      await vi.advanceTimersByTimeAsync(1000);
+      await publish;
+
+      expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
+      expect(modules.chain.processExecutionPayload.mock.calls).toEqual([[payloadInput, {validSignature: true}]]);
+      expect(modules.network.publishSignedExecutionPayloadEnvelope.mock.calls).toEqual([[incomingEnvelope]]);
+      expect(modules.chain.logger.warn.mock.calls).toEqual(expectedWarnings);
+    });
+
+    it("continues a stateless duplicate publish", async () => {
+      const {api, payloadInput, cachedEnvelope, incomingEnvelope, addCachedEnvelope, expectedWarnings} =
+        setupEnvelope(conflicting);
+      addCachedEnvelope();
+
+      await api.publishExecutionPayloadEnvelope({
+        signedEnvelopeOrContents: {signedExecutionPayloadEnvelope: incomingEnvelope, blobs: [], kzgProofs: []},
+      });
+
+      expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
+      expect(modules.chain.processExecutionPayload.mock.calls).toEqual([[payloadInput, {validSignature: true}]]);
+      expect(modules.network.publishSignedExecutionPayloadEnvelope.mock.calls).toEqual([[incomingEnvelope]]);
+      expect(modules.chain.logger.warn.mock.calls).toEqual(expectedWarnings);
+    });
+  });
+
+  it("rejects a first envelope whose hash differs from the bid", async () => {
+    const {api, incomingEnvelope, payloadInput} = setupEnvelope(true);
+
+    await expect(
+      api.publishExecutionPayloadEnvelope({signedEnvelopeOrContents: incomingEnvelope})
+    ).rejects.toMatchObject({
+      type: {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH},
+    });
+
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.chain.logger.warn).not.toHaveBeenCalled();
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
     it("rejects an envelope for an observed proposer equivocation", async () => {
-      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-      const slot = signedBlock.message.slot;
-      const proposerIndex = signedBlock.message.proposerIndex;
-      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const {api, payloadInput, incomingEnvelope: signedEnvelope, blockRoot} = setupEnvelope(false);
+      const slot = signedEnvelope.message.payload.slotNumber;
+      const proposerIndex = payloadInput.proposerIndex;
       const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 1));
-      const payloadInput = PayloadEnvelopeInput.createFromBlock({
-        blockRootHex: blockRoot,
-        block: signedBlock,
-        forkName: ForkName.gloas,
-        sampledColumns: [],
-        custodyColumns: [],
-        seenTimestampSec: 0,
-        source: PayloadEnvelopeInputSource.byRange,
-        daOutOfRange: false,
-      });
-      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
-      signedEnvelope.message.payload.slotNumber = slot;
-
-      modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
-      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+      vi.mocked(validateApiExecutionPayloadEnvelope).mockResolvedValueOnce();
       modules.chain.regen.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
       modules.chain.seenBlockProposers.add(slot, proposerIndex, blockRoot);
       modules.chain.seenBlockProposers.observeBlockRoot(
@@ -218,7 +206,6 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
-      const api = getBeaconBlockApi(modules);
       await expect(
         api.publishExecutionPayloadEnvelope({
           signedEnvelopeOrContents: signedEnvelope,
