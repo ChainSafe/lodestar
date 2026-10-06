@@ -54,5 +54,5 @@ export type StateInitialization = {
   isFinalized: boolean;
   validate: (state: IBeaconStateView) => void;
   persist: ((state: IBeaconStateView, stateBytes: Uint8Array) => Promise<void>) | null;
-  log: (state: IBeaconStateView) => void;
+  log: (state: IBeaconStateView, nativeStateTransition: boolean) => void;
 };
