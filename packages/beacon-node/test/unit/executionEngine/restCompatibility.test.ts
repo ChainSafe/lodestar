@@ -25,7 +25,7 @@ describe("REST engine compatibility", () => {
   let server: FastifyInstance;
   let url: string;
   let controller: AbortController;
-  /** `untyped` sends the body without a content type, like Nethermind <= 1.32 answering any GET */
+  /** `untyped` sends the body without a content type, like a legacy server or proxy answering any GET */
   let discovery: {status: number; body: unknown; untyped?: boolean};
   let restError: {status: number; body: unknown} | undefined;
   let jsonRpcError: {code: number; message: string} | undefined;
@@ -135,7 +135,7 @@ describe("REST engine compatibility", () => {
     {name: "405", discovery: {status: 405, body: "Method Not Allowed"}},
     {name: "400", discovery: {status: 400, body: "Bad Request"}},
     {name: "200 text/plain", discovery: {status: 200, body: "JSON RPC server"}},
-    {name: "200 without content type", discovery: {status: 200, body: "Nethermind JSON RPC", untyped: true}},
+    {name: "200 without content type", discovery: {status: 200, body: "JSON RPC", untyped: true}},
   ])("remembers a discovery $name from a server without the REST API", async ({discovery: response}) => {
     const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
     discovery = response;
