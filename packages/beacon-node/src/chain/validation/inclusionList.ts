@@ -179,7 +179,7 @@ async function validateInclusionList(
 
   // [REJECT] The signature is valid with respect to the validator's public key
   const signatureSet = getInclusionListSignatureSet(chain.config, chain.clock.currentSlot, signedInclusionList);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: false}))) {
     reject(InvalidInclusionListReason.invalidSignature, {code: InclusionListErrorCode.INVALID_SIGNATURE});
   }
 
