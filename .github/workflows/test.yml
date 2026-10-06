@@ -226,6 +226,7 @@ jobs:
           path: |
             packages/beacon-node/spec-tests
             packages/beacon-node/spec-tests-ssz
+            packages/beacon-node/spec-tests-bls
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
         run: pnpm download-spec-tests
@@ -267,9 +268,12 @@ jobs:
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: packages/beacon-node/spec-tests
+          path: |
+            packages/beacon-node/spec-tests
+            packages/beacon-node/spec-tests-ssz
+            packages/beacon-node/spec-tests-bls
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
         run: pnpm download-spec-tests
