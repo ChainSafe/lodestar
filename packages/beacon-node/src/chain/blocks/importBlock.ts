@@ -538,6 +538,10 @@ export async function importBlock(
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...(isGloasBeaconBlock(block.message) && {
+            blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+            builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+          }),
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {

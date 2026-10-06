@@ -244,6 +244,10 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
+        // The payload_attributes event must carry the same hashes we send to the EL
+        const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
+        const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
+
         let payloadAttributes: PayloadAttributes | undefined;
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
         // every slot. Without the flag, only emit the event if we are proposing in the next slot.
@@ -256,6 +260,8 @@ export class PrepareNextSlotScheduler {
             prepareSlot,
             parentBlockRoot: fromHex(updatedHead.blockRoot),
             parentBlockHash,
+            safeBlockHash,
+            finalizedBlockHash,
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
@@ -266,9 +272,6 @@ export class PrepareNextSlotScheduler {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-
-          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
-          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the

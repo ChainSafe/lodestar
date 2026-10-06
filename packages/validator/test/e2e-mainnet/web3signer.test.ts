@@ -4,7 +4,12 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
 import {ACTIVE_PRESET, ForkSeq, PresetName} from "@lodestar/params";
-import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  interopSecretKey,
+  interopSecretKeys,
+} from "@lodestar/state-transition";
 import {StartedExternalSigner, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -94,7 +99,8 @@ describe("web3signer signature test", () => {
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
     attestationData.index = duty.committeeIndex;
-    await assertSameSignature("signAttestation", duty, attestationData, epoch);
+    attestationData.target.epoch = computeEpochAtSlot(duty.slot);
+    await assertSameSignature("signAttestation", duty, attestationData, attestationData.target.epoch);
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
@@ -109,6 +115,7 @@ describe("web3signer signature test", () => {
       const slot = computeStartSlotAtEpoch(fork.epoch);
       aggregateAndProof.aggregate.data.slot = slot;
       aggregateAndProof.aggregate.data.index = duty.committeeIndex;
+      aggregateAndProof.aggregate.data.target.epoch = fork.epoch;
 
       await assertSameSignature(
         "signAggregateAndProof",

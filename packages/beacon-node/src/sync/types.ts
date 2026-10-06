@@ -105,8 +105,6 @@ export enum DroppedItemReason {
   invalidEnvelope = "invalid_envelope",
   /** a payload had an invalid signature (INVALID_SIGNATURE) */
   invalidSignature = "invalid_signature",
-  /** a block root was given up on after exhausting download attempts (data could not be fetched) */
-  unavailable = "unavailable",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
 }

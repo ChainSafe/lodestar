@@ -773,6 +773,7 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
   }
 
   private onProcessingError(attempt: FailedAttempt): void {
@@ -784,6 +785,16 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
+  }
+
+  /**
+   * After a partial download `requests` only cover the data still missing from the downloaded blocks,
+   * e.g. a single column. Once those blocks are dropped, request the whole batch again, otherwise
+   * every peer fails the retry for lack of blocks to validate the data against.
+   */
+  private resetRequests(): void {
+    this.requests = this.getRequests([]);
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */

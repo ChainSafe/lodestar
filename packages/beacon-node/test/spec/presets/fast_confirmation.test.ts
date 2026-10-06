@@ -699,26 +699,20 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
+        // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
         shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
-          // and these tests are failing until we update our implementation.
-          name.includes("voting_source_beyond_two_epoch") ||
-          name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
           // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
           // be applied. Passing them requires skipping deposit signature verification inside epoch
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
           // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
+          // consensus-specs#5672 fixed the gloas empty slot support discount to count only the
+          // parent node a block extends. The pinned v1.7.0-beta.2 vectors predate that fix and
+          // still assert the pre-fix confirmed root, so post-gloas they disagree with the spec.
+          // Unskip together with the spec-tests pin bump to the first release carrying #5672.
+          (ForkSeq[fork] >= ForkSeq.gloas &&
+            name.includes("is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_1")),
       },
     };
   };

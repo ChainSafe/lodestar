@@ -13,7 +13,7 @@ import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, ca
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
-import {ExecutionPayloadBody} from "./types.js";
+import {ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
@@ -170,9 +170,8 @@ export interface IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }>;
 
-  getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
-
-  getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+  /** Amsterdam: payload bodies including the block access list (null if the EL no longer has it) */
+  getPayloadBodiesByHashV2(blockHash: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
   getBlobs(
     fork: ForkPostFulu,

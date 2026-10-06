@@ -47,6 +47,8 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -1109,9 +1111,23 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      try {
+        data = context?.returnBytes
+          ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+          : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      } catch (e) {
+        if (e instanceof EnvelopeReconstructionError) {
+          // The envelope is archived but our EL cannot serve it right now (EL down, or it does not
+          // have the body / block access list): 503 so clients retry or ask another node, rather than
+          // 500 for what is not a beacon node fault. A body root mismatch is a local inconsistency.
+          const unavailable =
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ||
+            e.type.code === EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE;
+          throw new ApiError(unavailable ? 503 : 500, `Failed to reconstruct execution payload envelope: ${e.message}`);
+        }
+        throw e;
+      }
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
