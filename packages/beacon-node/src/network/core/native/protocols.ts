@@ -1,10 +1,10 @@
-import {NativeProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
+import {NativeRequestProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
 import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {ReqRespMethod} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 
 export type NativeProtocol = {
-  id: NativeProtocolId;
+  id: NativeRequestProtocolId;
   method: ReqRespMethod;
   version: 1 | 2;
 };
