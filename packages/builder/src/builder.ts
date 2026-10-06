@@ -181,12 +181,11 @@ export class Builder {
 
     try {
       const preferences = (await api.beacon.getProposerPreferences({}, {signal})).value();
-      let added = 0;
       for (const signedProposerPreferences of preferences) {
         // Does not replace preferences already received from the event stream
-        if (this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences)) added++;
+        this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
       }
-      this.logger.verbose("Fetched proposer preferences", {count: preferences.length, added});
+      this.logger.verbose("Fetched proposer preferences", {count: preferences.length});
     } catch (error) {
       if (!signal.aborted && !isErrorAborted(error)) {
         this.logger.warn(
