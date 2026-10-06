@@ -141,8 +141,8 @@ export class ArchiveStore {
   }
 
   /**
-   * CLI initialize the earliestAvailableSlot
-   * Here we should only advance it because of pruneHistory() flow
+   * The CLI owns the initial value; this only advances it during pruneHistory.
+   * Persisted before any deletion so a crash mid-prune never leaves the floor below deleted data.
    */
   private advanceEarliestAvailableSlot = async (blockCutoffSlot: Slot): Promise<void> => {
     const earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
