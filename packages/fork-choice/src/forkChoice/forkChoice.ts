@@ -2388,9 +2388,21 @@ export class ForkChoice implements IForkChoice {
         if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
           return null;
         }
+        // The vote is tracked by node index, so the node already is the message's supported node
         const node = this.protoArray.nodes[nextIndex];
         if (!node) return null;
-        return {root: node.blockRoot, epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex])};
+        return {
+          root: node.blockRoot,
+          payloadStatus: node.payloadStatus,
+          epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex]),
+        };
+      },
+      getParentNodePayloadStatus: (blockRoot: RootHex) => {
+        const nodeIndex = this.protoArray.getDefaultNodeIndex(blockRoot);
+        if (nodeIndex === undefined) return null;
+        const parentIndex = this.protoArray.nodes[nodeIndex]?.parent;
+        if (parentIndex === undefined) return null;
+        return this.protoArray.nodes[parentIndex]?.payloadStatus ?? null;
       },
       getUnrealizedJustified: () => ({
         checkpoint: this.fcStore.unrealizedJustified.checkpoint,
