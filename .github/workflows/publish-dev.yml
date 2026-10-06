@@ -11,6 +11,8 @@ permissions:
   contents: write # Required for OIDC
   id-token: write # Required to create a Github release
   pull-requests: write # Required to add tags to pull requests
+  attestations: write # Required by docker.yml reusable workflow
+  artifact-metadata: write # Required by docker.yml reusable workflow
 
 jobs:
   npm:
@@ -61,6 +63,7 @@ jobs:
           NEXT_VERSION=$(npx --yes semver --increment minor $PACKAGE_VERSION)
           export VERSION=${NEXT_VERSION}-dev.${GITHUB_SHA:0:10}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
       - name: Change and commit version
@@ -113,6 +116,7 @@ jobs:
           --exact
     outputs:
       version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
 
   docker:
     name: Publish to Docker Hub
@@ -120,4 +124,5 @@ jobs:
     uses: ./.github/workflows/docker.yml
     with:
       tag: next
+      extra-tags: next-${{ needs.npm.outputs.short_sha }}
     secrets: inherit

@@ -1,6 +1,10 @@
+import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, ssz} from "@lodestar/types";
+import {ArrayOf, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
+import {VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import {Schema} from "../../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
@@ -29,6 +33,10 @@ export type {
   ValidatorStatus,
 } from "./state.js";
 
+const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);
+
+type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
+
 export type Endpoints = block.Endpoints &
   pool.Endpoints &
   state.Endpoints &
@@ -41,6 +49,18 @@ export type Endpoints = block.Endpoints &
       phase0.Genesis,
       EmptyMeta
     >;
+
+    /**
+     * Get proposer preferences
+     * Retrieves the signed proposer preferences known by the node for upcoming proposal slots.
+     */
+    getProposerPreferences: Endpoint<
+      "GET",
+      {slot?: Slot; dependentRoot?: Root},
+      {query: {slot?: number; dependent_root?: string}},
+      SignedProposerPreferencesList,
+      VersionMeta
+    >;
   };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -52,6 +72,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.Genesis,
         meta: EmptyMetaCodec,
+      },
+    },
+    getProposerPreferences: {
+      url: "/eth/v1/beacon/proposer_preferences",
+      method: "GET",
+      req: {
+        writeReq: ({slot, dependentRoot}) => ({
+          query: {slot, dependent_root: dependentRoot && toRootHex(dependentRoot)},
+        }),
+        parseReq: ({query}) => ({
+          slot: query.slot,
+          dependentRoot: query.dependent_root ? fromHex(query.dependent_root) : undefined,
+        }),
+        schema: {query: {slot: Schema.Uint, dependent_root: Schema.String}},
+      },
+      resp: {
+        data: SignedProposerPreferencesListType,
+        meta: VersionCodec,
       },
     },
     ...block.getDefinitions(config),

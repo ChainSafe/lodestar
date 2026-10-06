@@ -29,6 +29,8 @@ export type IChainOptions = BlockProcessOpts &
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
+    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
+    dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     persistOrphanedBlocks?: boolean;
@@ -50,7 +52,7 @@ export type IChainOptions = BlockProcessOpts &
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
-    nativeStateView?: boolean;
+    nativeStateTransition?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
@@ -63,10 +65,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -109,12 +107,12 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: true,
+  dedupePayloads: true,
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
@@ -133,7 +131,7 @@ export const defaultChainOptions: IChainOptions = {
   //   - users can prune the persisted checkpoint state files manually to save disc space
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
-  nativeStateView: false,
+  nativeStateTransition: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,

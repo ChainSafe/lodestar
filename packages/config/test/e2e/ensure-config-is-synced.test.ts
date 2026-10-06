@@ -19,15 +19,6 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Networking params that may be in presets instead of chainConfig
   "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
   "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,
-  "ATTESTATION_SUBNET_PREFIX_BITS" as keyof ChainConfig,
-  // Future spec params not yet in Lodestar
-  "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
-  "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
-  // Future forks not yet implemented in Lodestar
-  "EIP7928_FORK_VERSION" as keyof ChainConfig,
-  "EIP7928_FORK_EPOCH" as keyof ChainConfig,
-  "EIP8025_FORK_VERSION" as keyof ChainConfig,
-  "EIP8025_FORK_EPOCH" as keyof ChainConfig,
   // Network-specific fork epochs and versions - these vary per network deployment
   // and are not meant to be synced from the spec defaults
   "ALTAIR_FORK_EPOCH",
@@ -50,6 +41,8 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // These are preset values, not config values - they're tested separately
   "PRESET_BASE",
   "CONFIG_NAME",
+  // EIP-8198 quick slots are not implemented.
+  "MIN_BLOB_DATA_RETENTION_MS" as keyof ChainConfig,
 ];
 
 /**

@@ -22,6 +22,7 @@ import {
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.js";
+import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -34,7 +35,12 @@ import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
-import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {
+  ValidatorFnModules,
+  getGossipValidatorBatchFn,
+  getGossipValidatorFn,
+  rejectPeerAction,
+} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
 
 export * from "./types.js";
@@ -101,6 +107,12 @@ type SearchedRootEntry = {
  * This is mainly for DOS protection, see https://github.com/ChainSafe/lodestar/issues/5393
  */
 const DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
+
+/**
+ * The network worker bans a Fatal peer only on its next PeerManager heartbeat (30s). Until then the main thread
+ * would keep validating that peer's messages, so drop them here. 3 slots (36s) outlasts one heartbeat.
+ */
+export const FATAL_PEER_EXPIRY_SLOTS = 3;
 
 type WorkOpts = {
   bypassQueue?: boolean;
@@ -197,6 +209,19 @@ type PreprocessResult =
   | {action: PreprocessAction.AwaitBlock; root: RootHex}
   | {action: PreprocessAction.AwaitEnvelope; root: RootHex};
 
+enum SearchTarget {
+  Block,
+  PayloadEnvelope,
+}
+
+type SearchUnknownRootTarget =
+  | {target: SearchTarget.Block}
+  | {
+      target: SearchTarget.PayloadEnvelope;
+      /** The message slot is the payload's slot, so it can be used for UnknownBlockInput search */
+      slotIsPayloadSlot: boolean;
+    };
+
 /**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
  * - Decides when to process work and what to process
@@ -219,6 +244,7 @@ type PreprocessResult =
  */
 export class NetworkProcessor {
   private readonly chain: IBeaconChain;
+  private readonly core: INetworkCore;
   private readonly events: NetworkEventBus;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
@@ -243,23 +269,31 @@ export class NetworkProcessor {
     () => new MapDef<RootHex, SearchedRootEntry>(() => ({}))
   );
   private bufferedRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  /** peer -> clock slot when it was Fatal'ed */
+  private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
   constructor(
     modules: NetworkProcessorModules,
     private readonly opts: NetworkProcessorOpts
   ) {
-    const {chain, events, logger, metrics} = modules;
+    const {chain, core, events, logger, metrics} = modules;
     this.chain = chain;
+    this.core = core;
     this.events = events;
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
     this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
-    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
+    this.gossipValidatorFn = getGossipValidatorFn(
+      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules,
+      this.onFatalPeer
+    );
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
       modules.gossipHandlers ?? getGossipHandlers(modules, opts),
-      modules
+      modules,
+      this.onFatalPeer
     );
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
@@ -393,19 +427,47 @@ export class NetworkProcessor {
     }
   }
 
+  private onFatalPeer = (peer: PeerIdStr): void => {
+    this.fatalPeers.set(peer, this.chain.clock.currentSlot);
+  };
+
   private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
     const topicType = message.topic.type;
+    if (this.fatalPeers.has(message.propagationSource)) {
+      this.metrics?.networkProcessor.gossipValidationError.inc({topic: topicType, error: GossipErrorCode.FATAL_PEER});
+      // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
+      return;
+    }
+
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
+    if (extractBlockSlotRootFn === undefined) {
+      // some messages don't have slot and root
+      this.pushPendingGossipsubMessageToQueue(message);
+      return;
+    }
 
     // 1st extract round: make sure slot is in range and if block root is not available
     // proactively search for it + queue the message
-    const slotRoot = extractBlockSlotRootFn
-      ? extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork)
-      : null;
+    const slotRoot = extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork);
     if (slotRoot === null) {
-      // some messages don't have slot and root
-      // if the msg.data is invalid, message will be rejected when deserializing data in later phase (gossipValidatorFn)
-      this.pushPendingGossipsubMessageToQueue(message);
+      // DOS protection: null means malformed bytes or slot >= 2^32, neither is forwarded by honest peers.
+      const {propagationSource, clientAgent, clientVersion} = message;
+      const code = GossipErrorCode.INVALID_SLOT;
+      const peerAction = rejectPeerAction(topicType, code);
+      this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
+      this.core.reportPeer(propagationSource, peerAction, code);
+      this.logger.debug(`Gossip validation ${topicType} rejected due to null slot`, {
+        peer: propagationSource,
+        clientAgent,
+        clientVersion,
+        peerAction,
+        code,
+      });
+      this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+        msgId: message.msgId,
+        propagationSource,
+        acceptance: TopicValidatorResult.Reject,
+      });
       return;
     }
 
@@ -450,7 +512,7 @@ export class NetworkProcessor {
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
-      this.searchUnknownRoot({slot, root}, true, false, peerId);
+      this.searchUnknownRoot({slot, root}, peerId, {target: SearchTarget.Block});
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
       // if "index = 1" we need to await for the Envelope instead
       preprocessResult = {action: PreprocessAction.AwaitBlock, root};
@@ -465,27 +527,28 @@ export class NetworkProcessor {
     if (topicType === GossipType.beacon_block) {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot) {
-        let searchParentBlock = false;
-        let searchParentEnvelope = false;
+        let search: SearchUnknownRootTarget | null = null;
         if (ForkSeq[fork] >= ForkSeq.gloas) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
           const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
           if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
-              searchParentBlock = true;
+              search = {target: SearchTarget.Block};
             } else if (
               protoBlock.executionPayloadBlockHash &&
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
               // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
-              searchParentEnvelope = true;
+              search = {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
             }
           }
         } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
-          searchParentBlock = true;
+          search = {target: SearchTarget.Block};
         }
-        this.searchUnknownRoot({slot, root: parentRoot}, searchParentBlock, searchParentEnvelope, peerId);
+        if (search !== null) {
+          this.searchUnknownRoot({slot, root: parentRoot}, peerId, search);
+        }
       }
       preprocessResult = {action: PreprocessAction.PushToQueue};
     }
@@ -504,7 +567,10 @@ export class NetworkProcessor {
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
-            this.searchUnknownRoot({slot, root}, false, true, peerId);
+            this.searchUnknownRoot({slot, root}, peerId, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: false,
+            });
             preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
@@ -514,8 +580,12 @@ export class NetworkProcessor {
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // payload attestation votes that the payload is available but it is not yet known.
+            // this is optimistic search, the peer may not have the payload (only the ptc committee had).
             // the PTC vote's slot is the payload's slot
-            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
+            this.searchUnknownRoot({slot, root}, undefined, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: true,
+            });
             // do not await the envelope, payload attestation processing only requires that the block is known
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -524,8 +594,12 @@ export class NetworkProcessor {
         case GossipType.data_column_sidecar: {
           if (root == null) break;
           if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+            // this is optimistic search, the peer may not have the payload.
             // the sidecar's slot is the block's (and so the payload's) slot
-            this.searchUnknownRoot({slot, root}, false, true, peerId, true);
+            this.searchUnknownRoot({slot, root}, undefined, {
+              target: SearchTarget.PayloadEnvelope,
+              slotIsPayloadSlot: true,
+            });
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
@@ -536,7 +610,7 @@ export class NetworkProcessor {
           // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
           if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
-            this.searchUnknownRoot({slot, root: blockRoot}, true, false, peerId);
+            this.searchUnknownRoot({slot, root: blockRoot}, peerId, {target: SearchTarget.Block});
             // We always want to await the block
             // This allows us to properly forward the payload envelope
             preprocessResult = {action: PreprocessAction.AwaitBlock, root: blockRoot};
@@ -555,13 +629,16 @@ export class NetworkProcessor {
           ) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
             if (protoBlock === null) {
-              this.searchUnknownRoot({slot, root: parentBlockRoot}, true, false, peerId);
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {target: SearchTarget.Block});
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
             } else if (
               protoBlock.executionPayloadBlockHash &&
               protoBlock.executionPayloadBlockHash !== parentBlockHash
             ) {
-              this.searchUnknownRoot({slot, root: parentBlockRoot}, false, true, peerId);
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {
+                target: SearchTarget.PayloadEnvelope,
+                slotIsPayloadSlot: false,
+              });
               preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
             }
           }
@@ -664,20 +741,21 @@ export class NetworkProcessor {
 
   /**
    * Search block/envelope given a SlotRootHex
-   * envelopeSlotIsPayloadSlot: the message slot is the payload's slot or not
+   * undefined peer id means optimistic search
    */
   private searchUnknownRoot(
     slotRoot: SlotRootHex,
-    searchBlock: boolean,
-    searchEnvelope: boolean,
-    peerId: PeerIdStr,
-    envelopeSlotIsPayloadSlot = false
+    peerId: PeerIdStr | undefined,
+    search: SearchUnknownRootTarget
   ): void {
-    if (!searchBlock && !searchEnvelope) return;
     if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
-    if (searchBlock) this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
-    if (searchEnvelope) {
-      this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, envelopeSlotIsPayloadSlot);
+    switch (search.target) {
+      case SearchTarget.Block:
+        this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
+        break;
+      case SearchTarget.PayloadEnvelope:
+        this.searchUnknownEnvelope(slotRoot, BlockInputSource.network_processor, peerId, search.slotIsPayloadSlot);
+        break;
     }
   }
 
@@ -843,6 +921,10 @@ export class NetworkProcessor {
     for (const slot of this.bufferedRootsBySlot.keys()) {
       if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
     }
+
+    for (const [peer, slot] of this.fatalPeers) {
+      if (clockSlot - slot > FATAL_PEER_EXPIRY_SLOTS) this.fatalPeers.delete(peer);
+    }
   };
 
   private executeWork(): void {
@@ -898,6 +980,32 @@ export class NetworkProcessor {
   private async processPendingGossipsubMessage(
     messageOrArray: PendingGossipsubMessage | PendingGossipsubMessage[]
   ): Promise<void> {
+    // drop messages from peers Fatal'ed after these were queued or started awaiting a block/envelope
+    // No need to report the dropped jobs to gossip. They will be eventually pruned from the mcache
+    if (this.fatalPeers.size > 0) {
+      if (Array.isArray(messageOrArray)) {
+        const allowed: PendingGossipsubMessage[] = [];
+        for (const msg of messageOrArray) {
+          if (this.fatalPeers.has(msg.propagationSource)) {
+            this.metrics?.networkProcessor.gossipValidationError.inc({
+              topic: msg.topic.type,
+              error: GossipErrorCode.FATAL_PEER,
+            });
+          } else {
+            allowed.push(msg);
+          }
+        }
+        if (allowed.length === 0) return;
+        messageOrArray = allowed;
+      } else if (this.fatalPeers.has(messageOrArray.propagationSource)) {
+        this.metrics?.networkProcessor.gossipValidationError.inc({
+          topic: messageOrArray.topic.type,
+          error: GossipErrorCode.FATAL_PEER,
+        });
+        return;
+      }
+    }
+
     const nowSec = Date.now() / 1000;
     if (Array.isArray(messageOrArray)) {
       for (const msg of messageOrArray) {

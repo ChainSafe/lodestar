@@ -22,7 +22,7 @@ import {
   BlobsBundleRpc,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  ExecutionPayloadBodyRpc,
+  ExecutionPayloadBodyV2Rpc,
   ExecutionPayloadRpc,
   ExecutionRequestsRpc,
   PayloadStatus,
@@ -49,6 +49,8 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
+  /** Bodies as received via newPayload, served back by engine_getPayloadBodiesByHashV2 */
+  body: ExecutionPayloadBodyV2Rpc;
 };
 
 const TX_TYPE_EIP1559 = 2;
@@ -93,6 +95,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: ZERO_HASH_HEX,
       timestamp: 0,
       blockNumber: 0,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const eth1BlockHash = opts.eth1BlockHash ?? toRootHex(INTEROP_BLOCK_HASH);
@@ -102,6 +105,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: eth1BlockHash,
       timestamp: 0,
       blockNumber: 1,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const {config} = opts;
@@ -143,25 +147,18 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
-      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
-      engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
     };
   }
 
-  private getPayloadBodiesByHash(
-    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
-  }
-
-  private getPayloadBodiesByRange(
-    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
-    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+  private getPayloadBodiesByHashV2(
+    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV2"] {
+    // null for unknown blocks, as a real EL does; the genesis/eth1 seed blocks carry no body
+    return blockHashes.map((hash) => this.validBlocks.get(hash)?.body ?? null);
   }
 
   /**
@@ -227,6 +224,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash,
       timestamp: quantityToNum(executionPayloadRpc.timestamp),
       blockNumber: quantityToNum(executionPayloadRpc.blockNumber),
+      body: {
+        transactions: executionPayloadRpc.transactions,
+        withdrawals: executionPayloadRpc.withdrawals ?? null,
+        blockAccessList: executionPayloadRpc.blockAccessList ?? null,
+      },
     });
 
     // IF the payload has been fully validated while processing the call

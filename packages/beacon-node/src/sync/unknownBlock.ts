@@ -5,7 +5,7 @@ import {ForkSeq, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
-import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
@@ -15,9 +15,10 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
 import {MAX_PEERS_PER_ROOT} from "../network/processor/constants.js";
+import {ClockEvent} from "../util/clock.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -26,6 +27,7 @@ import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
 import {SyncOptions} from "./options.js";
 import {
   BlockInputSyncCacheItem,
+  DeferredPayloadResult,
   DownloadResult,
   DroppedItemReason,
   FetchResult,
@@ -56,6 +58,11 @@ const MAX_PENDING_BLOCKS = 100;
  * A pending payload without slot can only stay at most 2 epochs.
  */
 const PRUNE_UNRESOLVED_SLOT_EPOCHS = 2;
+
+/**
+ * Poll pending payloads of the current slot this often, between PAYLOAD_DUE and the end of the slot.
+ */
+export const PAYLOAD_POLL_INTERVAL_MS = 1_000;
 
 type AdvancePendingBlockResult =
   | "ready"
@@ -116,6 +123,11 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  /**
+   * Search unknown payload starting at PAYLOAD_DUE_BPS.
+   */
+  private readonly deferredPayloadRoots = new Map<RootHex, {slot: Slot; source: BlockInputSource; peer?: PeerIdStr}>();
+  private payloadPollAbortController: AbortController | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -161,6 +173,7 @@ export class BlockInputSync {
       this.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayloadImported);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+      this.chain.clock.on(ClockEvent.slot, this.startPayloadPollAtSlot);
 
       // Seed the balancer with peers that connected before we subscribed
       for (const peerId of this.network.getConnectedPeers()) {
@@ -172,12 +185,19 @@ export class BlockInputSync {
       }
 
       this.subscribedToNetworkEvents = true;
+      // we subscribe mid-slot, and a root can be deferred at any point in the slot, so start this
+      // slot's loop now instead of waiting for the next ClockEvent.slot
+      this.startPayloadPollAtSlot(this.chain.clock.currentSlot);
     }
   }
 
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
+    this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
+    this.payloadPollAbortController?.abort();
+    this.payloadPollAbortController = undefined;
+    this.deferredPayloadRoots.clear();
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
     this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRootSlot, this.onUnknownEnvelopeBlockRootSlot);
@@ -207,8 +227,11 @@ export class BlockInputSync {
   private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
       const isNewRoot = this.addByRootHex(data.rootHex, data.peer);
-      if (isNewRoot) {
+      // A retained entry (an earlier download failed, #10018) is not new but still needs a retry pass.
+      if (this.pendingBlocks.get(data.rootHex)?.status === PendingBlockInputStatus.pending) {
         this.triggerUnknownBlockSearch();
+      }
+      if (isNewRoot) {
         this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
         this.metrics?.blockInputSync.source.inc({source: data.source});
       }
@@ -246,6 +269,20 @@ export class BlockInputSync {
 
   private onUnknownEnvelopeBlockRootSlot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]): void => {
     try {
+      if (data.slot === this.chain.clock.currentSlot) {
+        // we receive the optimistic search, the poll loop searches it at PAYLOAD_DUE or on its next
+        // tick. If that loop already returned - every root it watched was imported - this root waits
+        // for the next slot, where startPayloadPollAtSlot moves it to pendingPayloads. That is not the normal
+        // scenario, and in a forking condition it only delays the search of the extra root
+        const deferred = this.deferredPayloadRoots.get(data.rootHex);
+        if (deferred === undefined) {
+          this.deferredPayloadRoots.set(data.rootHex, {slot: data.slot, source: data.source, peer: data.peer});
+        } else if (deferred.peer === undefined) {
+          deferred.peer = data.peer;
+        }
+        return;
+      }
+
       const isNewRoot = this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
       if (isNewRoot) {
         this.triggerUnknownBlockSearch();
@@ -359,12 +396,21 @@ export class BlockInputSync {
       }
     }
 
-    let deletedBlocks = 0;
+    let belowFinalizedBlocks = 0;
+    let agedOutBlocks = 0;
     for (const [rootHex, block] of this.pendingBlocks) {
       const slot = getBlockInputSyncCacheItemSlot(block);
-      if (typeof slot === "number" && slot < finalizedSlot) {
+      if (typeof slot !== "number") {
+        // we may not be able to download a root, hence there is no slot for it
+        if (nowSec - block.timeAddedSec > maxSecInCache) {
+          this.pendingBlocks.delete(rootHex);
+          agedOutBlocks++;
+        }
+        continue;
+      }
+      if (slot < finalizedSlot) {
         this.pendingBlocks.delete(rootHex);
-        deletedBlocks++;
+        belowFinalizedBlocks++;
       }
     }
 
@@ -377,21 +423,30 @@ export class BlockInputSync {
     if (agedOutPayloads > 0) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: DroppedItemReason.agedOut}, agedOutPayloads);
     }
-    if (deletedBlocks > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.belowFinalized}, deletedBlocks);
+    if (belowFinalizedBlocks > 0) {
+      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.belowFinalized}, belowFinalizedBlocks);
+    }
+    if (agedOutBlocks > 0) {
+      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.agedOut}, agedOutBlocks);
     }
 
-    this.logger.debug("BlockInputSync.pruneFinalized dropped pre-finalized pending items", {
+    this.logger.debug("BlockInputSync.pruneFinalized dropped stale pending items", {
       finalizedSlot,
       finalizedRoot: checkpoint.rootHex,
       belowFinalizedPayloads,
       agedOutPayloads,
-      deletedBlocks,
+      belowFinalizedBlocks,
+      agedOutBlocks,
       unresolvedSlotPayloads,
     });
   };
 
   private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): boolean => {
+    if (this.knownBadBlocks.has(rootHex)) {
+      this.logger.debug("Ignoring known bad block root", {root: rootHex, peerIdStr: peerIdStr ?? "unknown peer"});
+      return false;
+    }
+
     let pendingBlock = this.pendingBlocks.get(rootHex);
     let added = false;
     if (!pendingBlock) {
@@ -427,6 +482,11 @@ export class BlockInputSync {
   };
 
   private addByBlockInput = (blockInput: IBlockInput, peerIdStr?: string): void => {
+    if (this.knownBadBlocks.has(blockInput.blockRootHex)) {
+      this.logger.debug("Ignoring known bad block", {slot: blockInput.slot, root: blockInput.blockRootHex, peerIdStr});
+      return;
+    }
+
     let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
     // if entry is missing or was added via rootHex and now we have more complete information overwrite
     // the existing information with the more complete cache entry
@@ -463,6 +523,15 @@ export class BlockInputSync {
   };
 
   private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
+    if (this.knownBadBlocks.has(rootHex)) {
+      this.logger.debug("Ignoring payload for known bad block root", {
+        slot: slot ?? "unknown",
+        root: rootHex,
+        peerIdStr,
+      });
+      return false;
+    }
+
     let pendingPayload = this.pendingPayloads.get(rootHex);
     let added = false;
     if (!pendingPayload) {
@@ -531,6 +600,15 @@ export class BlockInputSync {
     peerIdStr?: PeerIdStr,
     envelope?: gloas.SignedExecutionPayloadEnvelope
   ): void => {
+    if (this.knownBadBlocks.has(payloadInput.blockRootHex)) {
+      this.logger.debug("Ignoring payload input for known bad block root", {
+        slot: payloadInput.slot,
+        root: payloadInput.blockRootHex,
+        peerIdStr,
+      });
+      return;
+    }
+
     const pendingPayload = this.toPendingPayloadInput(
       payloadInput,
       this.pendingPayloads.get(payloadInput.blockRootHex),
@@ -604,6 +682,7 @@ export class BlockInputSync {
       return {kind: "ready"};
     }
 
+    // The parent's payload is known but does not match `parentBlockHashHex`
     if (this.chain.forkChoice.hasPayloadHexUnsafe(parentRootHex)) {
       return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
     }
@@ -800,6 +879,122 @@ export class BlockInputSync {
     }
   }
 
+  /**
+   * Start this slot's payload poll: end the previous slot's loop, move roots it never got to
+   * into pendingPayloads, then poll from PAYLOAD_DUE to the end of the slot.
+   */
+  private startPayloadPollAtSlot = (slot: Slot): void => {
+    if (!isForkPostGloas(this.config.getForkName(slot))) {
+      return;
+    }
+    // end the previous slot's loop, wherever it is: its sleep is bound to this same controller
+    this.payloadPollAbortController?.abort();
+    this.payloadPollAbortController = new AbortController();
+    // entries from an earlier slot is not polled
+    for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
+      if (deferredSlot < slot) {
+        if (!this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+          this.addDeferredPayloadRoot(rootHex, deferredSlot, source, peer);
+        }
+        this.deferredPayloadRoots.delete(rootHex);
+      }
+    }
+    this.pollPayloadsAtSlot(slot, this.payloadPollAbortController.signal).catch((e) => {
+      if (!isErrorAborted(e)) {
+        this.logger.debug("Error polling payloads", {slot}, e as Error);
+      }
+    });
+  };
+
+  /**
+   * Poll unknown payloads of the current slot.
+   */
+  private async pollPayloadsAtSlot(slot: Slot, signal: AbortSignal): Promise<void> {
+    // fixed tick count so the loop cannot outlive its slot: for mainnet, it's 6 ticks
+    const tickCount = Math.floor(
+      (this.config.SLOT_DURATION_MS - this.config.getPayloadDueMs()) / PAYLOAD_POLL_INTERVAL_MS
+    );
+    // a root still missing on several ticks is searched on each of them, recorded once
+    const searchedRoots = new Set<RootHex>();
+    let polls = 0;
+
+    try {
+      await sleep(Math.max(0, this.config.getPayloadDueMs() - this.chain.clock.msFromSlot(slot)), signal);
+
+      for (polls = 0; polls < tickCount; polls++) {
+        let importedCount = 0;
+        for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
+          if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+            importedCount++;
+            continue;
+          }
+          // copy to the regular pendingPayloads so that we can search
+          this.addDeferredPayloadRoot(rootHex, deferredSlot, source, peer);
+          searchedRoots.add(rootHex);
+        }
+
+        // an empty deferredPayloadRoots means there is no optimistic search comes before PAYLOAD_DUE
+        // we have to poll until the payload of current slot is imported or slot end
+        if (this.deferredPayloadRoots.size > 0 && importedCount === this.deferredPayloadRoots.size) {
+          if (searchedRoots.size > 0) {
+            // the backup search was needed
+            this.metrics?.blockInputSync.deferredPayloadResult.inc({
+              result: DeferredPayloadResult.ImportedAfterSearch,
+            });
+            this.metrics?.blockInputSync.deferredPayloadPolls.observe(polls);
+            this.logger.verbose("Payload imported after unknown sync search", {
+              slot,
+              roots: Array.from(searchedRoots).join(","),
+              polls,
+            });
+          } else {
+            // this happens most of the time on devnet
+            // gossip delivered everything before PAYLOAD_DUE
+            this.metrics?.blockInputSync.deferredPayloadResult.inc({
+              result: DeferredPayloadResult.ImportedBeforeSearch,
+            });
+          }
+          return;
+        }
+
+        this.triggerUnknownBlockSearch();
+        if (polls < tickCount - 1) {
+          // no sleep after the last tick: the loop would otherwise end right at the slot boundary,
+          // where startPayloadPollAtSlot aborts it
+          await sleep(PAYLOAD_POLL_INTERVAL_MS, signal);
+        }
+      }
+
+      // reaching here means the early return never fired
+      if (this.deferredPayloadRoots.size > 0) {
+        this.metrics?.blockInputSync.deferredPayloadResult.inc({result: DeferredPayloadResult.Unresolved});
+        this.logger.debug("Deferred payloads still missing at end of slot", {
+          slot,
+          roots: Array.from(this.deferredPayloadRoots.keys()).join(","),
+        });
+      } else {
+        // no optimistic search and no payload import ended the loop, eg a skipped slot
+        this.metrics?.blockInputSync.deferredPayloadResult.inc({result: DeferredPayloadResult.ResolvedNoRoot});
+        this.logger.debug("No deferred payloads at slot", {
+          slot,
+        });
+      }
+    } catch (e) {
+      if (!isErrorAborted(e)) {
+        throw e;
+      }
+      this.logger.verbose("Payload poll aborted", {slot, polls, msIntoSlot: this.chain.clock.msFromSlot(slot)});
+    }
+  }
+
+  private addDeferredPayloadRoot(rootHex: RootHex, slot: Slot, source: BlockInputSource, peer?: PeerIdStr): void {
+    const isNewRoot = this.addByPayloadRootHex(rootHex, peer, slot);
+    if (isNewRoot) {
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.DEFERRED_PAYLOAD_BLOCK_ROOT});
+      this.metrics?.blockInputSync.payloadSource.inc({source});
+    }
+  }
+
   private async downloadBlock(block: BlockInputSyncCacheItem): Promise<void> {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
@@ -823,7 +1018,12 @@ export class BlockInputSync {
     if (!res.err) {
       this.metrics?.blockInputSync.downloadedBlocksSuccess.inc();
       const pending = res.result;
-      this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
+      // pruning may have deleted this entry while we were awaiting the network, do not resurrect it via the set below
+      if (!this.pendingBlocks.has(rootHex)) {
+        this.logger.verbose("Dropping downloaded block, entry pruned during fetch", logCtx);
+        return;
+      }
+      this.pendingBlocks.set(rootHex, pending);
       const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
       const delaySec = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.chain.genesisTime);
@@ -861,7 +1061,8 @@ export class BlockInputSync {
         }
       } else if (blockSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
-        // we should found it through forkchoice. If not, we should penalize all peers sending us this block chain
+        // we should found it through forkchoice. If not, drop the chain without penalizing peers because pending entries are
+        // block retained on failed download, so finalization can pass the block while it is still pending
         // 0 - 1 - ... - n - finalizedSlot
         //                \
         //                parent 1 - parent 2 - ... - unknownParent block
@@ -869,7 +1070,7 @@ export class BlockInputSync {
           ...logCtx2,
           finalizedSlot,
         });
-        this.removeAndDownScoreAllDescendants(block, DroppedItemReason.belowFinalized);
+        this.removeAllDescendants(block, DroppedItemReason.belowFinalized);
       } else {
         this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
       }
@@ -885,8 +1086,11 @@ export class BlockInputSync {
       }
 
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
-      this.logger.debug("Ignoring unknown block root after many failed downloads", logCtx, res.err);
-      this.removeAndDownScoreAllDescendants(block, DroppedItemReason.unavailable);
+      this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
+      const pendingBlock = this.pendingBlocks.get(rootHex);
+      if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
+        pendingBlock.status = PendingBlockInputStatus.pending;
+      }
     }
   }
 
@@ -998,15 +1202,18 @@ export class BlockInputSync {
             break;
 
           case BlockErrorCode.EXECUTION_ENGINE_INVALID:
-            // the peer served a bad block
+            // Ban but do not downscore: optimistic-sync peers may forward and serve blocks whose payload is later
+            // rejected by the execution engine. Per the spec, an INVALID execution payload SHOULD NOT cause a peer
+            // to be down-scored or disconnected, only consensus-layer invalidity MAY.
+            // https://github.com/ethereum/consensus-specs/blob/master/specs/bellatrix/p2p-interface.md#the-reqresp-domain
             this.logger.debug("Execution engine rejected block from unknown parent sync", errorData, res.err);
-            this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.elInvalid);
+            this.removeAndBanAllDescendants(pendingBlock, DroppedItemReason.elInvalid);
             break;
 
           default:
             // Block is not correct with respect to our chain. Log error loudly
             this.logger.debug("Error processing block from unknown parent sync", errorData, res.err);
-            this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.invalidBlock);
+            this.removeAllDescendants(pendingBlock, DroppedItemReason.invalidBlock);
         }
       }
 
@@ -1153,7 +1360,7 @@ export class BlockInputSync {
     }
 
     this.metrics?.blockInputSync.downloadedPayloadsResult.inc({result: DownloadResult.Failed});
-    this.logger.debug("Ignoring unknown payload root after failed download", logCtx, res.err);
+    this.logger.debug("Failed to download unknown payload root, retained for retry", logCtx, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
     }
@@ -1219,20 +1426,23 @@ export class BlockInputSync {
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
           break;
 
+        // The invalid envelope is evicted from the seen cache in the cases below, otherwise the next
+        // attempt would reuse it instead of fetching another envelope from peers
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.elInvalid);
           break;
 
         case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidEnvelope);
           break;
 
         case PayloadErrorCode.INVALID_SIGNATURE:
-          // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
-          // reintroducing envelope replacement / recreation flows.
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
+          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidSignature);
           break;
 
@@ -1304,11 +1514,11 @@ export class BlockInputSync {
       }
 
       const {peerId, client: peerClient} = peerMeta;
-      cacheItem.peerIdStrings.add(peerId);
 
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
+          cacheItem.peerIdStrings.add(peerId);
           const slotWasUnknown = typeof slot !== "number";
           slot = envelope.message.payload.slotNumber;
           if (slotWasUnknown) {
@@ -1350,6 +1560,8 @@ export class BlockInputSync {
           const missing = pendingPayload.payloadInput.getMissingSampledColumnMeta().missing;
           if (missing.length > 0) {
             const columnSidecars = await this.fetchPayloadColumns(peerMeta, pendingPayload.payloadInput, missing);
+            // toPendingPayloadInput copied cacheItem's set, so add to the object that is carried forward
+            pendingPayload.peerIdStrings.add(peerId);
             const seenTimestampSec = Date.now() / 1000;
             for (const columnSidecar of columnSidecars) {
               if (pendingPayload.payloadInput.hasColumn(columnSidecar.index)) {
@@ -1542,8 +1754,6 @@ export class BlockInputSync {
       }
       const {peerId, client: peerClient} = peerMeta;
 
-      cacheItem.peerIdStrings.add(peerId);
-
       try {
         const downloadResult = await downloadByRoot({
           config: this.config,
@@ -1554,6 +1764,7 @@ export class BlockInputSync {
           cacheItem,
         });
         cacheItem = downloadResult.result;
+        cacheItem.peerIdStrings.add(peerId);
         if (slot === undefined) {
           slot = cacheItem.blockInput.slot;
           // we were not able to observe the time into slot when starting the fetch, do it now
@@ -1613,7 +1824,11 @@ export class BlockInputSync {
         this.peerBalancer.onRequestCompleted(peerId);
       }
 
-      this.pendingBlocks.set(getBlockInputSyncCacheItemRootHex(cacheItem), cacheItem);
+      const cacheItemRootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
+      // pruning may have dropped it mid-fetch
+      if (this.pendingBlocks.has(cacheItemRootHex)) {
+        this.pendingBlocks.set(cacheItemRootHex, cacheItem);
+      }
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
         // download was successful, no need to go with another peer, return
@@ -1665,44 +1880,8 @@ export class BlockInputSync {
     throw Error(message);
   }
 
-  /**
-   * Gets all descendant blocks of `block` recursively from `pendingBlocks`.
-   * Assumes that if a parent block does not exist or is not processable, all descendant blocks are bad too.
-   * Downscore all peers that have referenced any of this bad blocks. May report peers multiple times if they have
-   * referenced more than one bad block.
-   */
-  private removeAndDownScoreAllDescendants(block: BlockInputSyncCacheItem, headReason: DroppedItemReason): void {
-    // Get all blocks that are a descendant of this one
-    const badPendingBlocks = this.removeAllDescendants(block, headReason, DroppedItemReason.invalidParent);
-    // just console log and do not penalize on pending/bad blocks for debugging
-    // console.log("removeAndDownscoreAllDescendants", {block});
-
-    for (const block of badPendingBlocks) {
-      //
-      // TODO(fulu): why is this commented out here?
-      //
-      //   this.knownBadBlocks.add(block.blockRootHex);
-      //   for (const peerIdStr of block.peerIdStrings) {
-      //     // TODO: Refactor peerRpcScores to work with peerIdStr only
-      //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
-      //   }
-      this.logger.debug("ignored Banning unknown block", {
-        slot: getBlockInputSyncCacheItemSlot(block),
-        root: getBlockInputSyncCacheItemRootHex(block),
-        peerIdStrings: Array.from(block.peerIdStrings)
-          .map((id) => prettyPrintPeerIdStr(id))
-          .join(","),
-      });
-    }
-
-    // Prune knownBadBlocks
-    pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
-  }
-
   // Once a parent payload is invalid, every descendant waiting on that payload lineage becomes unrecoverable too.
   private removePendingPayloadAndDescendants(rootHex: RootHex, headReason: DroppedItemReason): void {
-    // Keep PayloadEnvelopeInput resident in the seen cache. importBlock() owns that object and
-    // later validation/finalization logic decides when it can leave memory.
     if (this.pendingPayloads.delete(rootHex)) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: headReason}, 1);
     }
@@ -1725,13 +1904,61 @@ export class BlockInputSync {
     }
   }
 
+  /**
+   * Same as `removeAndBanAllDescendants`, and downscores every peer that referenced or served a banned item, once per
+   * peer. Only call for consensus-layer invalidity, never for an INVALID execution payload:
+   * https://github.com/ethereum/consensus-specs/blob/master/specs/bellatrix/p2p-interface.md#the-reqresp-domain
+   */
+  private removeAndDownScoreAllDescendants(block: BlockInputSyncCacheItem, headReason: DroppedItemReason): void {
+    const peersToReport = new Set<PeerIdStr>();
+    for (const bannedBlock of this.removeAndBanAllDescendants(block, headReason)) {
+      for (const peerIdStr of bannedBlock.peerIdStrings) {
+        peersToReport.add(peerIdStr);
+      }
+    }
+
+    for (const peerIdStr of peersToReport) {
+      this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, headReason);
+    }
+  }
+
+  /**
+   * Removes `block` and all its pending descendants and bans their roots in `knownBadBlocks`. Only call when the chain
+   * is provably bad: a banned root is never searched for again. Returns the banned items.
+   */
+  private removeAndBanAllDescendants(
+    block: BlockInputSyncCacheItem,
+    headReason: DroppedItemReason
+  ): BlockInputSyncCacheItem[] {
+    const bannedBlocks: BlockInputSyncCacheItem[] = [];
+    for (const badBlock of this.removeAllDescendants(block, headReason, DroppedItemReason.invalidParent)) {
+      const rootHex = getBlockInputSyncCacheItemRootHex(badBlock);
+      // a gossip import may race a failing sync path, never ban a root fork choice has imported
+      if (this.chain.forkChoice.hasBlockHex(rootHex)) {
+        continue;
+      }
+      this.knownBadBlocks.add(rootHex);
+      bannedBlocks.push(badBlock);
+      this.logger.debug("Banning unknown block", {
+        slot: getBlockInputSyncCacheItemSlot(badBlock),
+        root: rootHex,
+        reason: headReason,
+        peerIdStrings: Array.from(badBlock.peerIdStrings)
+          .map((id) => prettyPrintPeerIdStr(id))
+          .join(","),
+      });
+    }
+
+    pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
+    return bannedBlocks;
+  }
+
   private removeAllDescendants(
     block: BlockInputSyncCacheItem,
     headReason: DroppedItemReason,
     descendantReason: DroppedItemReason = DroppedItemReason.invalidParent
   ): BlockInputSyncCacheItem[] {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
-    const slot = getBlockInputSyncCacheItemSlot(block);
     // Get all blocks that are a descendant of this one (index 0 is the head item itself)
     const badPendingBlocks = [block, ...getAllDescendantBlocks(rootHex, this.pendingBlocks)];
 
@@ -1748,8 +1975,8 @@ export class BlockInputSync {
       // Keep PayloadEnvelopeInput resident in the seen cache for consistency with the
       // importBlock()-owned lifecycle.
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
-        slot,
-        blockRoot: rootHex,
+        slot: getBlockInputSyncCacheItemSlot(block),
+        root: rootHex,
       });
     }
 

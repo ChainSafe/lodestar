@@ -7,8 +7,10 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {SyncChain} from "../../../../src/sync/range/chain.js";
 import {RangeSync} from "../../../../src/sync/range/range.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
@@ -103,3 +105,90 @@ describe("sync / range / per-block processing", () => {
     }
   });
 });
+
+describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegment: true}])(
+  "sync / range / invalid payload envelope, disableProcessAsChainSegment=$disableProcessAsChainSegment",
+  (opts) => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it.each<{errorType: PayloadErrorType; evicted: boolean}>([
+      {errorType: {code: PayloadErrorCode.INVALID_SIGNATURE}, evicted: true},
+      {
+        errorType: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+        evicted: true,
+      },
+      {
+        errorType: {
+          code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "invalid payload",
+        },
+        evicted: true,
+      },
+      {
+        errorType: {
+          code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: ExecutionPayloadStatus.ELERROR,
+          errorMessage: "execution engine offline",
+        },
+        evicted: false,
+      },
+    ])("payload error $errorType.code evicts the cached envelope: $evicted", async ({errorType, evicted}) => {
+      const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+      const chain = getMockedBeaconChain({config: gloasConfig});
+      chain.getHeadState.mockReturnValue({
+        forkName: ForkName.gloas,
+        latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
+      } as IBeaconStateViewGloas);
+      const rangeSync = new RangeSync(
+        {chain, network: getMockedNetwork(), config: chain.config, logger: chain.logger, metrics: null},
+        opts
+      );
+      const localStatus = ssz.fulu.Status.defaultValue();
+      rangeSync.addPeer(validPeerIdStr, localStatus, {...localStatus, finalizedEpoch: 1});
+      const {processChainSegment} = vi.mocked(SyncChain).mock.calls[0][3];
+
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      const blockInput = BlockInputNoData.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        daOutOfRange: false,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        daOutOfRange: false,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = blockRoot;
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
+
+      const error = new PayloadError(payloadInput, errorType);
+      chain.processChainSegment = vi.fn().mockRejectedValue(error);
+      chain.processExecutionPayload = vi.fn().mockRejectedValue(error);
+
+      await expect(
+        processChainSegment([blockInput], new Map([[block.message.slot, payloadInput]]), RangeSyncType.Head)
+      ).rejects.toBe(error);
+
+      if (evicted) {
+        expect(chain.seenPayloadEnvelopeInputCache.removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+      } else {
+        expect(chain.seenPayloadEnvelopeInputCache.removeInvalid).not.toHaveBeenCalled();
+      }
+    });
+  }
+);

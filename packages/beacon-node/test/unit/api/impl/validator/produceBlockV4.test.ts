@@ -4,7 +4,7 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
-import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
+import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
@@ -589,6 +589,12 @@ describe("api/validator - produceBlockV4", () => {
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    modules.chain.produceBlock.mockResolvedValue({
+      block: engineBlock,
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
+      shouldOverrideBuilder: true,
+    });
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
 
@@ -618,6 +624,11 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
+    expect(modules.chain.logger.info).toHaveBeenCalledWith(
+      "Selected local block: builder circuit breaker is active",
+      expect.objectContaining({reason: EngineBlockSelectionReason.BuilderCircuitBreaker})
+    );
+    expect(modules.chain.logger.warn).not.toHaveBeenCalled();
   });
 
   it("prefers the builder bid with the maximum builder boost factor", async () => {

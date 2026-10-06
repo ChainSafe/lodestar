@@ -56,7 +56,7 @@ export enum Bucket {
   // altair_lightClientSyncCommitteeProof = 35, // DEPRECATED on v0.32.0
   // index_lightClientInitProof = 36, // DEPRECATED on v0.32.0
 
-  backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
+  // backfilled_ranges = 42, // DEPRECATED on v1.48.0
 
   // Buckets to support LightClient server v2
   lightClient_syncCommitteeWitness = 51, // BlockRoot -> SyncCommitteeWitness
@@ -71,7 +71,7 @@ export enum Bucket {
   allForks_dataColumnSidecarsArchive = 58, // BeaconBlockSlot -> DataColumnSidecars
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
-  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope
+  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope, or 0x00 + SignedExecutionPayloadHeaderEnvelope
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

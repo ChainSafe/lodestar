@@ -1,6 +1,6 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {expect} from "vitest";
+import {expect, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
@@ -69,10 +69,20 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
+
+// bls_setting=2 vectors carry placeholder deposit signatures; mocks the built lib module that epoch processing imports
+const shouldVerifyDepositSignatures = vi.hoisted(() => ({value: true}));
+vi.mock("../../../../state-transition/lib/block/processDeposit.js", async (importOriginal) => {
+  const actual = await importOriginal<{isValidDepositSignature: (...args: unknown[]) => boolean}>();
+  return {
+    ...actual,
+    isValidDepositSignature: (...args: unknown[]) =>
+      !shouldVerifyDepositSignatures.value || actual.isValidDepositSignature(...args),
+  };
+});
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -91,6 +101,7 @@ const fastConfirmationTest =
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
+        shouldVerifyDepositSignatures.value = testcase.meta?.bls_setting === BigInt(1);
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
         // const state = createCachedBeaconStateTest(anchorState, config);
@@ -140,7 +151,6 @@ const fastConfirmationTest =
             // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
             // we don't use these in fork choice spec tests
             disablePrepareNextSlot: true,
-            assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
             fastConfirmation: true,
@@ -701,26 +711,6 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
-          // and these tests are failing until we update our implementation.
-          name.includes("voting_source_beyond_two_epoch") ||
-          name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
-          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
-          // be applied. Passing them requires skipping deposit signature verification inside epoch
-          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
-          // real, or if full bls_setting=2 support is ever added.
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };
