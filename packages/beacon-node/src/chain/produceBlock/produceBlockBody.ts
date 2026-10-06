@@ -1050,6 +1050,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
+  this.shufflingCache.processState(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,

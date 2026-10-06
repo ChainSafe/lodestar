@@ -2,24 +2,25 @@ import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import {getNotSeenValidatorsFn} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {
   BlockType,
   getPayloadAttributesForSSE,
   produceBlockBody,
   produceCommonBlockBody,
 } from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {PayloadIdCache} from "../../../../src/execution/index.js";
 import {getApiTestModules} from "../../../utils/api.js";
 import {generateState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-function setup(fork: ForkName.fulu | ForkName.gloas | ForkName.heze = ForkName.fulu) {
-  const slot = 2;
+function setup(fork: ForkName.fulu | ForkName.gloas | ForkName.heze = ForkName.fulu, slot = 2) {
   const config = createBeaconConfig(getConfig(fork), new Uint8Array(32));
   const state = new BeaconStateView(
     createCachedBeaconState(generateState({slot}, config, true), {config, pubkeyCache})
@@ -57,6 +58,29 @@ function setup(fork: ForkName.fulu | ForkName.gloas | ForkName.heze = ForkName.f
 }
 
 describe("supported proposal body fields", () => {
+  it.each([ForkName.fulu, ForkName.gloas, ForkName.heze] as const)(
+    "%s produces a block when the state's shufflings are not cached",
+    async (fork) => {
+      const {config, state, modules, chain, attrs, common} = setup(fork, SLOTS_PER_EPOCH + 2);
+      const shufflingCache = new ShufflingCache();
+      Object.assign(chain, {shufflingCache});
+      modules.chain.aggregatedAttestationPool.getAttestationsForBlock.mockImplementation(
+        (_fork, _forkChoice, cache, blockState) => {
+          const notSeenValidators = getNotSeenValidatorsFn(config, cache, blockState);
+          notSeenValidators(0, SLOTS_PER_EPOCH - 1, 0);
+          notSeenValidators(1, SLOTS_PER_EPOCH + 1, 0);
+          return common.attestations;
+        }
+      );
+
+      expect(shufflingCache.has(state.epoch, state.currentDecisionRoot)).toBe(false);
+      const body = await produceCommonBlockBody.call(chain, BlockType.Full, state, attrs);
+      expect(body.attestations).toEqual(common.attestations);
+      expect(shufflingCache.has(state.epoch - 1, state.previousDecisionRoot)).toBe(true);
+      expect(shufflingCache.has(state.epoch, state.currentDecisionRoot)).toBe(true);
+    }
+  );
+
   for (const fork of [ForkName.fulu, ForkName.gloas, ForkName.heze] as const) {
     for (const blockType of [BlockType.Full, BlockType.Blinded]) {
       it(`${fork} ${blockType} includes selected operations and the parent sync aggregate`, async () => {
