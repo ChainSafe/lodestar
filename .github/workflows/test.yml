@@ -133,7 +133,7 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -226,6 +226,7 @@ jobs:
           path: |
             packages/beacon-node/spec-tests
             packages/beacon-node/spec-tests-ssz
+            packages/beacon-node/spec-tests-bls
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
         run: pnpm download-spec-tests
@@ -247,3 +248,38 @@ jobs:
       - name: Spec tests validator
         run: pnpm test:spec
         working-directory: packages/validator
+
+  spec-tests-native:
+    name: Spec tests (native)
+    needs: build
+    runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24]
+        preset: [mainnet]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: "./.github/actions/setup-and-build"
+        env:
+          LODESTAR_PRESET: ${{ matrix.preset }}
+        with:
+          node: ${{ matrix.node }}
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            packages/beacon-node/spec-tests
+            packages/beacon-node/spec-tests-ssz
+            packages/beacon-node/spec-tests-bls
+          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
+      - name: Download spec tests
+        run: pnpm download-spec-tests
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests ${{ matrix.preset }}
+        run: LODESTAR_NATIVE_STATE_TRANSITION=true NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:${{ matrix.preset }}
+        working-directory: packages/beacon-node

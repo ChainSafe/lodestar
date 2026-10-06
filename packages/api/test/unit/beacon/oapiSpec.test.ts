@@ -63,6 +63,8 @@ const ignoredOperations = [
   "produceBlockV4",
   // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
   "submitBuilderPreferences",
+  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#659
+  "getProposerPreferences",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
@@ -81,6 +83,9 @@ const ignoredTopics: string[] = [
   // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
   // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
   "fast_confirmation",
+  // TODO: unskip once the spec release adds `builder_index` and `block_hash` to the block event
+  // (tracked in https://github.com/ethereum/beacon-APIs/issues/599)
+  "block",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

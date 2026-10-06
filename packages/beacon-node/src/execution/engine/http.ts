@@ -31,12 +31,12 @@ import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  ExecutionPayloadBody,
+  ExecutionPayloadBodyV2,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
-  deserializeExecutionPayloadBody,
+  deserializeExecutionPayloadBodyV2,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
@@ -44,7 +44,7 @@ import {
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
-import {bytesToData, getExecutionEngineState, numToQuantity} from "./utils.js";
+import {bytesToData, getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -112,7 +112,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
@@ -466,30 +465,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
+  async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
+    const method = "engine_getPayloadBodiesByHashV2";
     assertReqSizeLimit(blockHashes.length, 32);
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
-    return response.map(deserializeExecutionPayloadBody);
-  }
-
-  async getPayloadBodiesByRange(
-    _fork: ForkName,
-    startBlockNumber: number,
-    blockCount: number
-  ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
-    assertReqSizeLimit(blockCount, 32);
-    const start = numToQuantity(startBlockNumber);
-    const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
-    return response.map(deserializeExecutionPayloadBody);
+    return response.map(deserializeExecutionPayloadBodyV2);
   }
 
   async getBlobs(
@@ -504,12 +487,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
-    versionedHashes: VersionedHashes
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex);
+      return await this.getBlobsV2(versionedHashesHex, buffers);
     }
     return await this.getBlobsV1(versionedHashesHex);
   }
@@ -539,8 +523,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
     if (buffers) {
-      if (buffers.length !== versionedHashesHex.length) {
-        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
+      if (buffers.length < versionedHashesHex.length) {
+        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
       }
 
       for (const [i, buffer] of buffers.entries()) {

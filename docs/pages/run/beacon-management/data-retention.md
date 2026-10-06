@@ -13,6 +13,7 @@ $dataDir # specified by --dataDir on the beacon command
 ├── beacon.log # there can be many of these
 ├── enr
 ├── peer-id.json
+├── pubkeys
 ├── chain-db # default if --dbDir not specified
 │   └── (db files)
 ├── data_columns # default if --dataColumnDir not specified
@@ -59,6 +60,6 @@ There is really only one flag that is needed to manage the data for Lodestar, [`
 
 ### Pruning history
 
-For validators seeking to store the least amount of data possible, and store no historical data, use [`--chain.pruneHistory`](./beacon-cli#--chainprunehistory). This flag will configure the beacon node to continually prune all old blocks (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`) and all prior finalized states.
+For validators seeking to store the least amount of data possible, and store no historical data, use [`--chain.pruneHistory`](./beacon-cli#--chainprunehistory). This flag will configure the beacon node to continually prune all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`) and all prior finalized states.
 
 **Note:** The initial pruning process can be slow on first startup with an existing large database.

@@ -238,7 +238,6 @@ describe("sync / unknown block sync thru gloas", () => {
         case ChainEvent.unknownEnvelopeBlockRoot:
           bn2.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
             rootHex: headRootHex,
-            slot: headSlot,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });

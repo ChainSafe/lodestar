@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PtcQuorumEvent} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
@@ -36,6 +36,11 @@ export enum ChainEvent {
    * This event is guaranteed to be triggered whenever the fork choice finalized checkpoint is updated. This is either in response to a newly processed block or a new clock tick.
    */
   forkChoiceFinalized = "forkChoice:finalized",
+  /**
+   * This event signals that the PTC verdict on a block was decided: a majority against payload presence or blob data
+   * availability, or a majority for both.
+   */
+  forkChoicePtcQuorum = "forkChoice:ptcQuorum",
   /**
    * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
    */
@@ -73,6 +78,10 @@ export enum ChainEvent {
    */
   unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**
+   * Same as unknownEnvelopeBlockRoot, but with slot
+   */
+  unknownEnvelopeBlockRootSlot = "unknownEnvelopeBlockRootSlot",
+  /**
    * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
    * cut-off window passes for waiting on gossip
    */
@@ -99,8 +108,8 @@ export type ChainEventData = {
     peer: PeerIdStr;
     source: BlockInputSource;
   };
-  // slot is the message slot, not necessarily the envelope's slot, but useful as a logging/prune hint
-  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -108,6 +117,7 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoicePtcQuorum]: (data: PtcQuorumEvent) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
@@ -126,6 +136,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
   [ChainEvent.incompletePayloadEnvelope]: (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]) => void;
   [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]) => void;
 };
 
 /**
