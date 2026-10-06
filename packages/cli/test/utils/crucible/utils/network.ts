@@ -96,24 +96,13 @@ export async function waitForHead(
     if (!options.silent) {
       console.log(`\nWaiting for head=${options.head} slot=${options.slot} on node=${node.id}.`);
     }
-    let firstHeadEventSlot: number;
-
     const cb = (event: {block: string; slot: Slot}): void => {
-      if (!firstHeadEventSlot) {
-        firstHeadEventSlot = event.slot;
-      }
-
-      // The syncing happens quickly and we already crossed the head slot
-      if (firstHeadEventSlot >= options.slot) {
+      // The head event stream may connect after the node already imported the target block while
+      // syncing, in which case the target root is never emitted. Any head at or past the target slot
+      // means the node has synced past it.
+      if (event.slot >= options.slot || event.block === options.head) {
         env.tracker.off(node, SimulationTrackerEvent.Head, cb);
         resolve();
-        return;
-      }
-
-      if (event.block === options.head) {
-        env.tracker.off(node, SimulationTrackerEvent.Head, cb);
-        resolve();
-        return;
       }
     };
 
