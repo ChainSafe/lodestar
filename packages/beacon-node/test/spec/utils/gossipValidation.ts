@@ -121,9 +121,9 @@ class GossipTestClock extends EventEmitter implements IClock {
     return (toMs ?? this.currentTimeMs) - slotTimeMs;
   }
 
-  /** Set the current time in milliseconds since genesis */
+  /** Set the current Unix time in milliseconds */
   setCurrentTimeMs(ms: number): void {
-    this.currentTimeMs = this.genesisTime * 1000 + ms;
+    this.currentTimeMs = ms;
   }
 
   /** Also support setSlot for block import phases */
@@ -138,9 +138,8 @@ interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
-  current_time_ms?: bigint;
   messages: {
-    offset_ms?: bigint;
+    current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
@@ -270,7 +269,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -515,10 +514,10 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
-      clock.setCurrentTimeMs(messageTimeMs);
+      if (message.current_time_ms !== undefined) {
+        clock.setCurrentTimeMs(Number(message.current_time_ms));
+      }
 
       let result: "valid" | "ignore" | "reject";
       try {
@@ -643,17 +642,17 @@ async function validateMessageForTopic(
 
     case GossipType.proposer_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
-      await validateGossipProposerSlashing(chain, slashing);
+      const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing);
+      chain.opPool.insertProposerSlashing(slashing, verifiedDomain);
       break;
     }
 
     case GossipType.attester_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
-      await validateGossipAttesterSlashing(chain, slashing);
+      const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing);
+      chain.opPool.insertAttesterSlashing(fork, slashing, verifiedDomains);
       chain.forkChoice.onAttesterSlashing(slashing);
       break;
     }

@@ -417,8 +417,10 @@ export class SyncChain {
     this.rateLimitBackoffTimeout = setTimeout(
       () => {
         this.rateLimitBackoffTimeout = undefined;
-        this.triggerBatchDownloader();
+        // Must run before the downloader, it drops expired peers without triggering a download. If it ran
+        // after, a backoff expiring in between would leave the peer idle with no retry scheduled.
         this.scheduleRateLimitBackoffRetry();
+        this.triggerBatchDownloader();
       },
       Math.max(0, retryAt - now)
     );

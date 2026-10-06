@@ -5,7 +5,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
   BlockType,
@@ -168,6 +168,9 @@ describe("Fulu engine body", () => {
 });
 
 describe("supported payload attributes", () => {
+  const safeBlockHash = toRootHex(new Uint8Array(32).fill(1));
+  const finalizedBlockHash = toRootHex(new Uint8Array(32).fill(2));
+
   it("rejects an unapplied full Gloas parent before preparing withdrawals", () => {
     const {state, chain, slot, parentBlockRoot} = setup(ForkName.gloas);
     const parentBlockHash = new Uint8Array(32).fill(5);
@@ -183,6 +186,8 @@ describe("supported payload attributes", () => {
         prepareSlot: slot,
         parentBlockRoot,
         parentBlockHash,
+        safeBlockHash,
+        finalizedBlockHash,
         feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
       })
     ).toThrow("Expected state with parent execution payload applied for withdrawals");
@@ -223,6 +228,8 @@ describe("supported payload attributes", () => {
           prepareSlot: slot,
           parentBlockRoot,
           parentBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
           feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
         });
         expect(result.payloadAttributes).toMatchObject({
@@ -234,8 +241,14 @@ describe("supported payload attributes", () => {
         if (fork !== ForkName.fulu) {
           expect(result.payloadAttributes).toMatchObject({slotNumber: slot, targetGasLimit: 30_000_000n});
           expect(result).not.toHaveProperty("parentBlockNumber");
+          expect(result).toMatchObject({
+            safeBlockHash: fromHex(safeBlockHash),
+            finalizedBlockHash: fromHex(finalizedBlockHash),
+          });
         } else {
           expect(result).toHaveProperty("parentBlockNumber", state.payloadBlockNumber);
+          expect(result).not.toHaveProperty("safeBlockHash");
+          expect(result).not.toHaveProperty("finalizedBlockHash");
           expect(result.payloadAttributes).not.toHaveProperty("slotNumber");
         }
         if (fork === ForkName.heze) expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", []);

@@ -63,9 +63,7 @@ describe("REST engine metadata and limits", () => {
       jsonResponse({...capabilities, limits: {"bodies.max_count": 1, "blobs.max_versioned_hashes": 1}})
     );
     await transport.getCapabilities();
-    await expect(transport.getPayloadBodiesByHash(ForkName.capella, [hashHex, hashHex])).rejects.toThrow();
     await expect(transport.getPayloadBodiesByHashV2([hashHex, hashHex])).rejects.toThrow();
-    await expect(transport.getPayloadBodiesByRange(ForkName.capella, 1, 2)).rejects.toThrow();
     await expect(transport.getBlobsV1([hash, hash])).rejects.toThrow();
     await expect(transport.getBlobsV2([hash, hash])).rejects.toThrow();
     expect(request).not.toHaveBeenCalled();

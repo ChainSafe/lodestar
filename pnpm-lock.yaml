@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: ^1.1.0
-      version: 1.1.0
+      specifier: 2.0.0
+      version: 2.0.0
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -41,7 +41,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -181,7 +181,7 @@ importers:
         version: 8.18.0
       fastify:
         specifier: ^5.8.1
-        version: 5.12.1
+        version: 5.12.5
 
   packages/beacon-node:
     dependencies:
@@ -198,11 +198,11 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: ^2.1.4
-        version: 2.1.4
+        specifier: ^2.1.5
+        version: 2.1.5
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -313,7 +313,7 @@ importers:
         version: 4.3.1
       fastify:
         specifier: ^5.8.1
-        version: 5.12.1
+        version: 5.12.5
       interface-datastore:
         specifier: ^10.0.1
         version: 10.0.1
@@ -389,7 +389,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@chainsafe/ssz':
         specifier: ^1.8.0
         version: 1.8.0
@@ -435,7 +435,7 @@ importers:
         version: 6.0.2
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -556,7 +556,7 @@ importers:
         version: 2.2.1
       fastify:
         specifier: ^5.8.1
-        version: 5.12.1
+        version: 5.12.5
       tmp:
         specifier: ^0.2.4
         version: 0.2.7
@@ -608,7 +608,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -769,7 +769,7 @@ importers:
         version: 1.2.5
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -803,7 +803,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -877,7 +877,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 1.1.0
+        version: 2.0.0
       '@chainsafe/ssz':
         specifier: ^1.8.0
         version: 1.8.0
@@ -1179,92 +1179,92 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.4':
-    resolution: {integrity: sha512-2EZ7BNZ0NNIBgO2zjg2kSIM1Hk6ZeRokufMf8KWoFApq0WVDxmEWCgF6LKyO4GL0dyoxSC1V/WUaXO5p3boX7Q==}
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.5':
+    resolution: {integrity: sha512-c2snL79+juXP2TjhquzshCimAEnvMHW9kv3NRQswvLFIIoudPBABeTCchj60Qb+ABsgyEgAUQ+W+H9BgY4DrQg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.4':
-    resolution: {integrity: sha512-KKNmmW0blgYbnELu+hWRq36EJOkmoPKI/MSZ0Kvdg4gK4s+FxqbkjIEa2fTfd0ywImXTemA80MvfC8pRruDvFQ==}
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.5':
+    resolution: {integrity: sha512-+GAcR2uX/DTiCYME7oZDuzTrPCQvEiOOIoUUaNM0XSUxZfaZ6fymocpGg+8pRSM/k96UXR2wM8wWo68ZbHkHNA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.4':
-    resolution: {integrity: sha512-/EE3gP895N8Y/ifRf4RwWUZuB5qIBWp+4KfiTzfeAjYWIVL+bxwn8G9eBjiwafVmSlHh4uhk0NhkM0T2DuUmvA==}
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.5':
+    resolution: {integrity: sha512-6SDQ9jA6VHNRUwCD33UbRP5uwM15blCp83u8lHbOsCGroAoyHI6gP1FCeXsnqiTbgXBg8dn5ALj03nCq99EBrA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.4':
-    resolution: {integrity: sha512-Maoz+mwRYzcd5K9KGDXAR3XFooedlmEcNCDzcVfYhSpJMnDR/bmLU5xfWpIVyU7ZKWMu1mcKpPi1oWedG8GlXQ==}
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.5':
+    resolution: {integrity: sha512-6W0+zFrnsxjFO4QMEhxZlbdQ+7HPihMsW3Qw2u/8I6SC00WQOGLkAyDko7hz8BpfQzpY/EbmYd1ve3fZ018fag==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.4':
-    resolution: {integrity: sha512-pHVT5dGhLf57u4Fe1P2BnoDdTsXYDXpd+QySrTKRNbpXBB3T+A3CyOLBNdisDvDqQeKYgIwjDPMnViIt0Z6FWQ==}
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.5':
+    resolution: {integrity: sha512-SRglDp0QZbmWqeYsZfvr9YRP5Q12zf34Q7fp+XnoyU2NyDxJ4UCs7uYdCEZkViD1RphyQ7TvBfWFsJYDbJpBMg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.4':
-    resolution: {integrity: sha512-ihn0OQ4Wkcbql3Mh/EHMm/zM5WecBvN6g4r2i7s4Kvq39s2IkSs+mtT+CZOSOa5sym1TeWtYZTC1RNWo+Unbjg==}
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.5':
+    resolution: {integrity: sha512-Dx49Hoo2CdtygSVtlBT0y1RkcYDFXmzeXfNnjHdI1gnxmNlXwyz5v0/1pQNChAqoaH+FbGGbVqLgwpeEvJErIA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.4':
-    resolution: {integrity: sha512-usPwEo2G9SKlwut4qtxBNnXM7RgdKcmt1lIthYj69dHQAcNzpkSGyvg/0iqW8aESvPiVK7+XbylslwluJDlmXg==}
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.5':
+    resolution: {integrity: sha512-MDNQL0CryvA7y9NOZAIyksrcurdA/EfbtLap+0oHTJjK6Bk6k6cNkYr/rGb+rXzkZR3UZasRILkLjnR0jyhTOw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@chainsafe/libp2p-quic@2.1.4':
-    resolution: {integrity: sha512-hI1pvoKtcZQPyUG50fco7yosbzPehB0matOk8doxHQHbZscyp5k/orwKMgdkL7xk85KpBhKqr7PPGXmkv+j0qg==}
+  '@chainsafe/libp2p-quic@2.1.5':
+    resolution: {integrity: sha512-U/4P2ApgPVAEC7PCfUgtneCQvmdLiPSFNYkbK1OTXj23Vpguk2rKQFSp9onfT/wEbOGTwWwBs53wgT/NToOKSw==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.1.0':
-    resolution: {integrity: sha512-3Fw62bh0UIBnnT5keJ0qyUKTOCjIShkihfpOSdpv1UiMsYrtnah7zC6m8toXUxU638X9nOI5FeESjXm84hX5Eg==}
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.0.0':
+    resolution: {integrity: sha512-wmTQV7yQFUl2Bsu0DQgvGBtfSDve0/qjV61Wv8xzSZDiyuM/L/xwLyK6Aji+Eq0OpLIDzSB22/6dQ3LEwrpH+A==}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.1.0':
-    resolution: {integrity: sha512-ikdd1jeE1FH0bsHPOjLhYEvk35SIUEZU3zUtBqtlsHnXqYhwngdVaBxIBdvSnbH7jJJclZxA6Zvg98Y885xzRw==}
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.0.0':
+    resolution: {integrity: sha512-HgC50Q4SunPDhy58L9liNXL4gvhqydMnILCu+UBos6fSnWNEpOqMKE4daeOhmvDrrBHNVejiuD65lXOfZ9Fggg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.1.0':
-    resolution: {integrity: sha512-jQiPlBhakPDibSKWzw3WjXIZTVOB2geuhpouhSgP4m9SLjeCChvK8/MsffpHhtoz6x/GMhe8EG8nK7jn/QeApg==}
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.0.0':
+    resolution: {integrity: sha512-KohDy5uhu3w/FQxSGJ7VfK7J82LJ91KWVNhUPt6HFAk3f9ZophK+4q+9NV+J9Rp55ih4VNfox5yLqk6SeHQ3Bg==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.1.0':
-    resolution: {integrity: sha512-P+eOidy4ji8jn8B4GRBaqvl8AeT3DqXARyjI8tXzl+savFIDARAwtdQxLm8V7ZQYO1OkYl/YrdeXQ9WPf6o08A==}
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.0.0':
+    resolution: {integrity: sha512-uKqrR1WLGeoR6CwmbDOwNBZ6NxoHufOP0CdBIhASvABjA6PfHgsdQi29/lJHvynlwj+P0HnVBB5BcajBCr/1Xg==}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.1.0':
-    resolution: {integrity: sha512-C7Vn14A8iA15VKx6x/KtRq1/bTJOpbHwDfwu47JP4iu32ReiQchEiPRIyM5lMfHDt/act0Ldpwzou+NcUSnuEg==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.0.0':
+    resolution: {integrity: sha512-8s36ilUfpHQ/jl0ZWW7XuNcrD02i6YZzOofySq9BIdOa0JV6XsLRJtmzH6dfdSoXLxkKjYivLMgD/1u2Usex0w==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.1.0':
-    resolution: {integrity: sha512-m0rJDTMhtmgYZGndEoQM3qmxgYUiGhW9fVxva/I2PL4b6GaJAtzeO9GvWbcm1gT7I2lrah8QJ7IbZpvHOlOEYA==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.0.0':
+    resolution: {integrity: sha512-Ymtz4z/V7ccmPpl6zJynST4/S4fDrW3LnRKtTJK1ibjvg4qi4JyTwEzPT7U6/rLHwzFhTRRfW/SkJoBH4dSW2Q==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/lodestar-z@1.1.0':
-    resolution: {integrity: sha512-tGyibyQNGe8G9D2FEcec/OwdLH6k06mH/j8cwvu/8vVzny/7VidIETCeanCAdlW/IwQfb2CJbiil/OqHRS5INA==}
+  '@chainsafe/lodestar-z@2.0.0':
+    resolution: {integrity: sha512-YZjOTaNtM45j2aeijUbL/1onz7da45LtJQOynfbKjrJJMVDsI0twwSoo9RhYowaEQulYcQkEW4WsvNUlU7JRgw==}
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -1287,8 +1287,8 @@ packages:
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@4.0.0':
-    resolution: {integrity: sha512-jcWUJT7bsS7F3H2aycUEs7sBTw+oL+MgKOC2CZ80n2asvCmAXjz6D0H2ZYuAbfmwG12myBDezGHs+JzIUQEs+A==}
+  '@chainsafe/zapi@4.1.0':
+    resolution: {integrity: sha512-U/JgUc9KAfDeKlgJWWTvBuKEMezhnb4GVEGd3zYaMB3Vi85YTJtcd2b9eO+upk5buROwRo9DEF+ev32PaO98mg==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -1766,8 +1766,8 @@ packages:
   '@fastify/merge-json-schemas@0.2.1':
     resolution: {integrity: sha512-OA3KGBCy6KtIvLf8DINC5880o5iBlDX4SxzLQS8HorJAbqluzLRn80UXU0bxZn7UOFhFgpRJDasfwn9nG4FG4A==}
 
-  '@fastify/proxy-addr@5.1.0':
-    resolution: {integrity: sha512-INS+6gh91cLUjB+PVHfu1UqcB76Sqtpyp7bnL+FYojhjygvOPA9ctiD/JDKsyD9Xgu4hUhCSJBPig/w7duNajw==}
+  '@fastify/proxy-addr@5.1.1':
+    resolution: {integrity: sha512-zv07Y9GEuDsJPegZoDFd4SDWaZOW8N2pa0GSrYmKpId/tjt1Hgo3BjZBVjdVpfVrHaA+Qv5jawtS2O50J5xM9g==}
 
   '@fastify/send@3.1.1':
     resolution: {integrity: sha512-LdiV2mle/2tH8vh6GwGl0ubfUAgvY+9yF9oGI1iiwVyNUVOQamvw5n+OFu6iCNNoyuCY80FFURBn4TZCbTe8LA==}
@@ -3903,8 +3903,8 @@ packages:
   fast-uri@3.1.0:
     resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
 
-  fast-uri@4.1.4:
-    resolution: {integrity: sha512-dODXrIxlS9JSdgAnhIUKOosKV1oMtU2VtVw87QRaHzyl5jxO290Ii5tEZfCfzfWNHi3jKWwBSdQj0qIyshdZdQ==}
+  fast-uri@4.2.1:
+    resolution: {integrity: sha512-TmHQgewjHtMq1E5QKA0tOE0yeYGQs25KZC/ziJpubRtWI15W92e6vPFydWOeZBVROSHBYw/QhD9d5OefdD6LDg==}
 
   fast-xml-parser@4.5.1:
     resolution: {integrity: sha512-y655CeyUQ+jj7KBbYMc4FG01V8ZQqjN+gDYGJ50RtfsUB8iG9AmwmwoAgeKLJdmueKKMrH1RJ7yXHTSoczdv5w==}
@@ -3913,8 +3913,8 @@ packages:
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
 
-  fastify@5.12.1:
-    resolution: {integrity: sha512-FWi+tQvwxR/PeRX7Z2mhfEF5ozJ3jn9asiiclzKXNSzJRHAYcU924aIOKAdHFJ+YIKieh3cqr1IwCOvTr41B3Q==}
+  fastify@5.12.5:
+    resolution: {integrity: sha512-OB2k1dlxs5/NAABqeKV2FUHkSD2BbENsCak8yULVcymn3fHIPDVa9TI3SDnJSWYSllZmSYuZXy2gTnsT+Sut1A==}
 
   fastq@1.17.1:
     resolution: {integrity: sha512-sRVD3lWVIXWg6By68ZN7vho9a1pQcN/WBFaAAsDDFzlJjvoGx0P8z7V1t72grFJfJhu3YPZBuu25f7Kaw2jN1w==}
@@ -5231,8 +5231,8 @@ packages:
   pino-std-serializers@7.1.0:
     resolution: {integrity: sha512-BndPH67/JxGExRgiX1dX0w1FvZck5Wa4aal9198SrRhZjH3GxKQUKIBnYJTdj2HDN3UQAS06HlfcSbQj2OHmaw==}
 
-  pino@10.3.1:
-    resolution: {integrity: sha512-r34yH/GlQpKZbU1BvFFqOjhISRo1MNx1tWYsYvmj6KIRHSPMT2+yHOEb1SG6NMvRoHRF0a07kCOox/9yakl1vg==}
+  pino@10.4.0:
+    resolution: {integrity: sha512-bk1ZMTwG/Vymx+zPoa28MhNzucFvXJWp3csrSuxuHPSMeUettaCoQ5Jvg07mtC4JGNpcfTwz41oVCnNgBK9+vA==}
     hasBin: true
 
   pixelmatch@7.1.0:
@@ -5431,10 +5431,6 @@ packages:
 
   readdir-glob@1.1.3:
     resolution: {integrity: sha512-v05I2k7xN8zXvPD9N+z/uhXPaj0sUFCe2rcWZIpBsqxfP7xXFQ0tipAd/wjj1YxWyWtUS5IDJpOG82JKt2EAVA==}
-
-  real-require@0.2.0:
-    resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
-    engines: {node: '>= 12.13.0'}
 
   real-require@1.0.0:
     resolution: {integrity: sha512-P4nbQYQfePJxRSmY+v/KINxVucm4NF3p3s7pJveMTtom52FR4YGltUQLB8idDXwDDWW+eYrWDFbuzUnjoWHF7g==}
@@ -6797,28 +6793,28 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.4':
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.4':
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.4':
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.4':
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.4':
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.4':
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.4':
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.5':
     optional: true
 
-  '@chainsafe/libp2p-quic@2.1.4':
+  '@chainsafe/libp2p-quic@2.1.5':
     dependencies:
       '@libp2p/crypto': 5.1.23
       '@libp2p/interface': 3.3.0
@@ -6829,42 +6825,42 @@ snapshots:
       race-signal: 1.1.3
       uint8arraylist: 2.4.8
     optionalDependencies:
-      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.4
-      '@chainsafe/libp2p-quic-darwin-x64': 2.1.4
-      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.4
-      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.4
-      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.4
-      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.4
-      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.4
+      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.5
+      '@chainsafe/libp2p-quic-darwin-x64': 2.1.5
+      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.5
+      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.5
+      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.5
+      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.5
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.5
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@1.1.0':
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@1.1.0':
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@1.1.0':
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@1.1.0':
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@1.1.0':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@1.1.0':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.0.0':
     optional: true
 
-  '@chainsafe/lodestar-z@1.1.0':
+  '@chainsafe/lodestar-z@2.0.0':
     dependencies:
-      '@chainsafe/zapi': 4.0.0
+      '@chainsafe/zapi': 4.1.0
     optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 1.1.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 1.1.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 1.1.0
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 1.1.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 1.1.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 1.1.0
+      '@chainsafe/lodestar-z-aarch64-apple-darwin': 2.0.0
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 2.0.0
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 2.0.0
+      '@chainsafe/lodestar-z-x86_64-apple-darwin': 2.0.0
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 2.0.0
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 2.0.0
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
@@ -6898,7 +6894,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.0.0': {}
+  '@chainsafe/zapi@4.1.0': {}
 
   '@colors/colors@1.5.0': {}
 
@@ -7251,7 +7247,7 @@ snapshots:
     dependencies:
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
-      fast-uri: 4.1.4
+      fast-uri: 4.2.1
 
   '@fastify/bearer-auth@10.0.1':
     dependencies:
@@ -7279,7 +7275,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  '@fastify/proxy-addr@5.1.0':
+  '@fastify/proxy-addr@5.1.1':
     dependencies:
       '@fastify/forwarded': 3.0.2
       ipaddr.js: 2.5.0
@@ -9821,7 +9817,7 @@ snapshots:
       '@fastify/merge-json-schemas': 0.2.1
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
-      fast-uri: 4.1.4
+      fast-uri: 4.2.1
       json-schema-ref-resolver: 3.0.0
       rfdc: 1.4.1
 
@@ -9837,7 +9833,7 @@ snapshots:
 
   fast-uri@3.1.0: {}
 
-  fast-uri@4.1.4: {}
+  fast-uri@4.2.1: {}
 
   fast-xml-parser@4.5.1:
     dependencies:
@@ -9845,18 +9841,18 @@ snapshots:
 
   fastify-plugin@5.0.1: {}
 
-  fastify@5.12.1:
+  fastify@5.12.5:
     dependencies:
       '@fastify/ajv-compiler': 4.0.6
       '@fastify/error': 4.2.0
       '@fastify/fast-json-stringify-compiler': 5.1.0
-      '@fastify/proxy-addr': 5.1.0
+      '@fastify/proxy-addr': 5.1.1
       abstract-logging: 2.0.1
       avvio: 9.3.0
       fast-json-stringify: 7.0.1
       find-my-way: 9.9.0
       light-my-request: 6.6.0
-      pino: 10.3.1
+      pino: 10.4.0
       process-warning: 5.1.0
       rfdc: 1.4.1
       secure-json-parse: 4.1.0
@@ -11297,7 +11293,7 @@ snapshots:
 
   pino-std-serializers@7.1.0: {}
 
-  pino@10.3.1:
+  pino@10.4.0:
     dependencies:
       '@pinojs/redact': 0.4.0
       atomic-sleep: 1.0.0
@@ -11306,7 +11302,7 @@ snapshots:
       pino-std-serializers: 7.1.0
       process-warning: 5.1.0
       quick-format-unescaped: 4.0.4
-      real-require: 0.2.0
+      real-require: 1.0.0
       safe-stable-stringify: 2.5.0
       sonic-boom: 4.2.1
       thread-stream: 4.2.0
@@ -11498,8 +11494,6 @@ snapshots:
   readdir-glob@1.1.3:
     dependencies:
       minimatch: 5.1.0
-
-  real-require@0.2.0: {}
 
   real-require@1.0.0: {}
 

@@ -39,7 +39,7 @@ import {
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
 import {IEngineTransport, PayloadStatusResult} from "./transport.js";
-import {ExecutionPayloadBody, ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
+import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
@@ -412,23 +412,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    return this.withTransport(fork, undefined, (transport) => transport.getPayloadBodiesByHash(fork, blockHashes));
-  }
-
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
     return this.withTransport(ForkName.gloas, undefined, (transport) =>
       transport.getPayloadBodiesByHashV2(blockHashes)
-    );
-  }
-
-  async getPayloadBodiesByRange(
-    fork: ForkName,
-    startBlockNumber: number,
-    blockCount: number
-  ): Promise<(ExecutionPayloadBody | null)[]> {
-    return this.withTransport(fork, undefined, (transport) =>
-      transport.getPayloadBodiesByRange(fork, startBlockNumber, blockCount)
     );
   }
 

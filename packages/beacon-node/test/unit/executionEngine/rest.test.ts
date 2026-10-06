@@ -13,7 +13,6 @@ import {
   BlobsV1Response,
   BlobsV2Response,
   BodiesByHashRequest,
-  BodiesResponseCapella,
   BodiesResponseGloas,
   BuiltPayloadFulu,
   ForkchoiceUpdateBellatrix,
@@ -501,19 +500,6 @@ describe("ExecutionEngine / rest", () => {
       const req = lastRequest("/engine/v1/bodies/hash");
       expect(req.headers["eth-execution-version"]).toBe("amsterdam");
       expect(BodiesByHashRequest.deserialize(req.body as Uint8Array)).toEqual({blockHashes: [hash, hash]});
-    });
-
-    it("getPayloadBodiesByRange returns the truncated response", async () => {
-      const engine = createEngine();
-      sszResponse.body = BodiesResponseCapella.serialize({
-        entries: [{available: true, body: {transactions, withdrawals: [withdrawal]}}],
-      });
-
-      const bodies = await engine.getPayloadBodiesByRange(ForkName.capella, 2, 3);
-
-      expect(bodies).toEqual([{transactions, withdrawals: [withdrawal]}]);
-      const req = lastRequest("/engine/v1/bodies?from=2&count=3");
-      expect(req.headers["eth-execution-version"]).toBe("shanghai");
     });
   });
 

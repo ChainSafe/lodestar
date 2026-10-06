@@ -4,7 +4,7 @@ import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
 import {JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
-import {ExecutionPayloadBody, ExecutionPayloadBodyV2} from "./types.js";
+import {ExecutionPayloadBodyV2} from "./types.js";
 
 export type PayloadStatusResult = {
   status: ExecutionPayloadStatus;
@@ -51,11 +51,7 @@ export interface IEngineTransport {
 
   getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
 
-  getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]>;
-
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
-
-  getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 

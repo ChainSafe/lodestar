@@ -47,7 +47,6 @@ import {
 } from "./sszTypes.js";
 import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
 import {
-  ExecutionPayloadBody,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
   deserializeExecutionRequestsFromBytes,
@@ -76,7 +75,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
@@ -320,48 +318,20 @@ export class RestEngineTransport implements IEngineTransport {
     return {executionPayload: payload, executionPayloadValue: blockValue, shouldOverrideBuilder: false};
   }
 
-  async getPayloadBodiesByHash(fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const bodies = await this.requestBodiesByHash(fork, blockHashes);
-    return bodies.map((body) => (body ? {transactions: body.transactions, withdrawals: body.withdrawals} : null));
-  }
-
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
-    return this.requestBodiesByHash(ForkName.gloas, blockHashes);
-  }
-
-  async getPayloadBodiesByRange(
-    fork: ForkName,
-    start: number,
-    count: number
-  ): Promise<(ExecutionPayloadBody | null)[]> {
-    assertReqSizeLimit(count, this.limits.bodiesMaxCount);
-    const res = await this.client.request(
-      {
-        method: "GET",
-        path: "/bodies",
-        query: {from: start, count},
-        executionFork: toExecutionForkName(fork),
-        responseType: "ssz",
-      },
-      getPayloadBodiesByRangeOpts
-    );
-    // The response is truncated at the latest known block, trailing entries are omitted rather than unavailable
-    return deserializeBodiesResponse(fork, res.body).map((body) =>
-      body ? {transactions: body.transactions, withdrawals: body.withdrawals} : null
-    );
-  }
-
-  private async requestBodiesByHash(
-    fork: ForkName,
-    blockHashes: RootHex[]
-  ): Promise<(ExecutionPayloadBodyV2 | null)[]> {
     assertReqSizeLimit(blockHashes.length, this.limits.bodiesMaxCount);
     const body = BodiesByHashRequest.serialize({blockHashes: blockHashes.map((hash) => fromHex(hash))});
     const res = await this.client.request(
-      {method: "POST", path: "/bodies/hash", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
+      {
+        method: "POST",
+        path: "/bodies/hash",
+        executionFork: toExecutionForkName(ForkName.gloas),
+        body,
+        responseType: "ssz",
+      },
       getPayloadBodiesByHashOpts
     );
-    const bodies = deserializeBodiesResponse(fork, res.body);
+    const bodies = deserializeBodiesResponse(ForkName.gloas, res.body);
     if (bodies.length !== blockHashes.length) {
       throw Error(`Invalid bodies response length=${bodies.length} blockHashes=${blockHashes.length}`);
     }
