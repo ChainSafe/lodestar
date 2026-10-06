@@ -32,8 +32,11 @@ describe("payload import error context", () => {
     envelope.message.beaconBlockRoot = blockRoot;
     envelope.message.payload.slotNumber = 1;
     payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0});
+    Object.defineProperty(chain, "unfinalizedPayloadEnvelopeWrites", {
+      value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: vi.fn()},
+    });
     const error = new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
-    chain.beaconEngine.verifyExecutionPayloadEnvelope = vi.fn().mockRejectedValue(error);
+    chain.beaconEngine.importExecutionPayload = vi.fn().mockRejectedValue(error);
     chain.executionEngine.notifyNewPayload = vi.fn<typeof chain.executionEngine.notifyNewPayload>().mockResolvedValue({
       status: ExecutionPayloadStatus.VALID,
       latestValidHash: toRootHex(new Uint8Array(32)),
@@ -44,5 +47,8 @@ describe("payload import error context", () => {
     await expect(importing).rejects.toBeInstanceOf(PayloadImportError);
     await expect(importing).rejects.toMatchObject({payloadInput, type: error.type, message: error.message});
     expect("payloadInput" in error).toBe(false);
+    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledOnce();
+    expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
+    expect(chain.unfinalizedPayloadEnvelopeWrites.push).not.toHaveBeenCalled();
   });
 });

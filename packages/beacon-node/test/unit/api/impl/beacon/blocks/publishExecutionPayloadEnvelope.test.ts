@@ -7,6 +7,7 @@ import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
@@ -39,6 +40,14 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
+    modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope =
+      BeaconEngine.prototype.validateApiExecutionPayloadEnvelope.bind(modules.chain.beaconEngine);
+    modules.chain.beaconEngine.verifyEnvelopeForPublish = BeaconEngine.prototype.verifyEnvelopeForPublish.bind(
+      modules.chain.beaconEngine
+    );
+    modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngine.prototype.getConflictingBlockRoots.bind(
+      modules.chain.beaconEngine
+    );
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {

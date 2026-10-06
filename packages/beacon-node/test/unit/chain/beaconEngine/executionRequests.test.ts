@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
@@ -17,9 +17,12 @@ import {
   PayloadEnvelopeInput,
   PayloadEnvelopeInputSource,
 } from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/index.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
-import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
+import {encodeArchivedHeaderEnvelope} from "../../../../src/db/repositories/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
+import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
@@ -70,8 +73,15 @@ describe("BeaconEngine execution requests persistence", () => {
     chain.beaconEngine.getParentExecutionRequests = BeaconEngine.prototype.getParentExecutionRequests.bind(
       chain.beaconEngine
     );
-    chain.beaconEngine.importExecutionPayload = BeaconEngine.prototype.importExecutionPayload.bind(chain.beaconEngine);
+    chain.beaconEngine.importExecutionPayload = vi.fn(
+      BeaconEngine.prototype.importExecutionPayload.bind(chain.beaconEngine)
+    );
     chain.forkChoice.onExecutionPayload = vi.fn();
+    chain.forkChoice.getBlockHex.mockReturnValue(null);
+    const state = new BeaconStateView(createCachedBeaconState(generateState({slot: 1}, config), {config, pubkeyCache}));
+    chain.regen.getBlockSlotState.mockResolvedValue(state);
+    chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(parent);
+    chain.executionEngine.notifyNewPayload = vi.fn().mockResolvedValue({status: ExecutionPayloadStatus.VALID});
     chain.forkChoice.getHead.mockReturnValue(parent);
     chain.opts.disableImportExecutionFcU = true;
   }
@@ -87,9 +97,12 @@ describe("BeaconEngine execution requests persistence", () => {
     directory = await mkdtemp(path.join(os.tmpdir(), "lodestar-execution-requests-"));
     db = await openDb();
     setupChain();
+    vi.spyOn(payloadVerification, "verifyExecutionPayloadEnvelope").mockReturnValue(undefined);
+    vi.spyOn(payloadVerification, "verifyExecutionPayloadEnvelopeSignature").mockResolvedValue(true);
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await db.close();
     await rm(directory, {recursive: true, force: true});
   });
@@ -116,28 +129,25 @@ describe("BeaconEngine execution requests persistence", () => {
     expect(ssz.gloas.ExecutionRequests.equals(result.body.parentExecutionRequests, requests)).toBe(true);
   }
 
-  async function finalize(
-    finalizedRoot: Uint8Array,
-    ancestors: (typeof parent)[],
-    nonAncestors: (typeof parent)[]
-  ): Promise<void> {
-    chain.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus.mockReturnValue({ancestors, nonAncestors});
-    chain.forkChoice.prune = vi.fn().mockReturnValue([]);
-    Object.defineProperty(chain.beaconEngine, "stateArchiveStrategy", {
-      value: {
-        onFinalizedCheckpoint: vi.fn().mockResolvedValue(undefined),
-        maybeArchiveState: vi.fn().mockResolvedValue(undefined),
-      },
-      configurable: true,
-    });
-    await BeaconEngine.prototype.completeFinalization.call(chain.beaconEngine, {
-      epoch: 1,
-      root: finalizedRoot,
-      rootHex: toRootHex(finalizedRoot),
-    });
+  function makeEnvelope() {
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.beaconBlockRoot = root;
+    envelope.message.payload.slotNumber = 1;
+    envelope.message.executionRequests = requests;
+    return envelope;
   }
 
-  it("produces on a FULL parent while the facade envelope write queue is blocked", async () => {
+  async function importEnvelope(): Promise<void> {
+    const envelope = makeEnvelope();
+    await chain.beaconEngine.importExecutionPayload(
+      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+      0,
+      DataAvailabilityStatus.Available,
+      {validSignature: true}
+    );
+  }
+
+  it("produces on a FULL parent while the facade column write queue is blocked", async () => {
     const input = PayloadEnvelopeInput.createFromBlock({
       block: parentBlock,
       blockRootHex: rootHex,
@@ -158,27 +168,22 @@ describe("BeaconEngine execution requests persistence", () => {
     Object.defineProperty(chain, "unfinalizedPayloadEnvelopeWrites", {
       value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: queuedWrite},
     });
-    chain.beaconEngine.verifyExecutionPayloadEnvelope = vi.fn().mockResolvedValue(undefined);
-    chain.executionEngine.notifyNewPayload = vi.fn().mockResolvedValue({status: ExecutionPayloadStatus.VALID});
 
     await importExecutionPayload.call(chain, input, DataAvailabilityStatus.Available);
+    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
+      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+      input.proposerIndex,
+      DataAvailabilityStatus.Available,
+      {validSignature: false, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0}
+    );
     expect(queuedWrite).toHaveBeenCalledOnce();
-    expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
+    expect(await db.executionPayloadEnvelope.get(root)).not.toBeNull();
     await produceChild();
   });
 
-  it("produces on a FULL parent after reopening the DB with an empty envelope store", async () => {
-    await chain.beaconEngine.importExecutionPayload(
-      root,
-      rootHex,
-      1,
-      30_000_000,
-      requests,
-      ExecutionStatus.Valid,
-      DataAvailabilityStatus.Available
-    );
+  it("produces on a FULL parent after reopening the envelope DB", async () => {
+    await importEnvelope();
     await reopenDb();
-    expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
     await produceChild();
   });
 
@@ -188,56 +193,39 @@ describe("BeaconEngine execution requests persistence", () => {
       ssz.gloas.ExecutionRequests.defaultValue()
     );
     await expect(chain.beaconEngine.getParentExecutionRequests(1, rootHex)).rejects.toThrow(
-      `Parent execution requests not found slot=1, root=${rootHex}`
+      `Parent execution payload envelope not found slot=1, root=${rootHex}`
     );
   });
 
-  it("keeps the finalized block's requests and drops the rest of the snapshot", async () => {
-    const olderRoot = Buffer.alloc(32, 2);
-    const orphanRoot = Buffer.alloc(32, 3);
-    const emptyRoot = Buffer.alloc(32, 4);
-    const descendantRoot = Buffer.alloc(32, 5);
-    await db.executionRequests.batchPut(
-      [root, olderRoot, orphanRoot, emptyRoot, descendantRoot].map((key) => ({key, value: requests}))
-    );
-    for (const [blockRoot, slot] of [
-      [root, 1],
-      [olderRoot, 0],
-    ] as const) {
-      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
-      block.message.slot = slot;
-      await db.block.putBinary(blockRoot, ssz.gloas.SignedBeaconBlock.serialize(block));
+  it.each([false, true])(
+    "reads parent requests from an archived envelope after restart (header: %s)",
+    async (header) => {
+      const envelope = makeEnvelope();
+      const bytes = header
+        ? encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope))
+        : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      await db.executionPayloadEnvelopeArchive.putBinary(1, bytes);
+      await reopenDb();
+      expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
+      await produceChild();
+      expect(chain.executionEngine.getPayload).not.toHaveBeenCalled();
     }
+  );
 
-    // The finalized block is the default (PENDING) variant, as fork choice returns it.
-    await finalize(
-      root,
-      [
-        {...parent, payloadStatus: PayloadStatus.PENDING},
-        {...parent, blockRoot: toRootHex(olderRoot), slot: 0},
-      ],
-      [
-        {...parent, blockRoot: toRootHex(orphanRoot), slot: 1},
-        {...parent, blockRoot: toRootHex(emptyRoot), slot: 1, payloadStatus: PayloadStatus.EMPTY},
-        {...parent, payloadStatus: PayloadStatus.EMPTY},
-      ]
-    );
-
-    for (const blockRoot of [olderRoot, orphanRoot, emptyRoot]) {
-      expect(await db.executionRequests.has(blockRoot), `requests remain for ${toRootHex(blockRoot)}`).toBe(false);
+  it.each([false, true])(
+    "does not read a different root's archived requests at the same slot (header: %s)",
+    async (header) => {
+      const envelope = makeEnvelope();
+      envelope.message.beaconBlockRoot = Buffer.alloc(32, 99);
+      await db.executionPayloadEnvelopeArchive.putBinary(
+        1,
+        header
+          ? encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope))
+          : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)
+      );
+      await expect(chain.beaconEngine.getParentExecutionRequests(1, rootHex)).rejects.toThrow(
+        "Parent execution payload envelope not found"
+      );
     }
-    expect(await db.executionRequests.has(descendantRoot)).toBe(true);
-
-    await reopenDb();
-    await produceChild();
-
-    // Next finalization drops the previous finalized block's requests.
-    await finalize(
-      descendantRoot,
-      [{...parent, blockRoot: toRootHex(descendantRoot), slot: 2, payloadStatus: PayloadStatus.PENDING}, parent],
-      []
-    );
-    expect(await db.executionRequests.has(root)).toBe(false);
-    expect(await db.executionRequests.has(descendantRoot)).toBe(true);
-  });
+  );
 });

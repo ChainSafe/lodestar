@@ -7,6 +7,7 @@ import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -196,6 +197,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       forkChoice: getMockedForkChoice(),
       serializedCache: new Map(),
       verifiedBlocks: new Map(),
+      events: new BeaconEngineEventBus(),
       publishChainView: vi.fn(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),

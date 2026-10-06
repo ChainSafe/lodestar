@@ -7,7 +7,6 @@ import {
   EpochDifference,
   ForkChoiceStateGetter,
   IForkChoice,
-  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -93,6 +92,7 @@ import {
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
+import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
@@ -108,8 +108,8 @@ import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {
   migrateBlocksFromHotToColdDb,
+  migrateExecutionPayloadEnvelopesFromHotToColdDb,
   persistOrphanedBlock,
-  pruneFinalizedExecutionRequests,
 } from "../archiveStore/utils/archiveBlocks.js";
 import {pruneHistory} from "../archiveStore/utils/pruneHistory.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
@@ -204,7 +204,7 @@ import {
   runGossipValidation,
 } from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
-import {importExecutionPayload, verifyExecutionPayloadEnvelope} from "./importExecutionPayload.js";
+import {importExecutionPayload} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import type {ApiStateId} from "./interface.js";
 import {
@@ -216,6 +216,7 @@ import {
   FinalizedProtoSummary,
   IBeaconEngine,
   ImportBlockResult,
+  ImportExecutionPayloadOpts,
   PrepareNextSlotResponse,
   ProduceBlockRequest,
   ProduceBlockResponse,
@@ -289,7 +290,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
   readonly validatorMonitor: ValidatorMonitor | null;
-  // Engine owns execution requests; envelope persistence and serving remain facade-owned.
+  // Engine owns envelope writes; the facade retains direct DB reads for API/reqresp serving.
   readonly db: IBeaconEngineDb;
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
@@ -834,23 +835,29 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   /**
-   * Moved from unstable@551b8b0a3d chain/chain.ts#getParentExecutionRequests.
-   * [beacon-engine] deviation: read engine-owned requests (kept until the parent is finalized away)
-   * instead of the facade envelope.
+   * Source: unstable@1bf214377e chain/chain.ts#getParentExecutionRequests.
+   * [beacon-engine] Read persisted envelopes directly; header archives retain requests without EL reconstruction.
    */
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
   ): Promise<gloas.ExecutionRequests> {
-    // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const requests = await this.db.executionRequests.get(fromHex(parentBlockRootHex));
-    if (requests === null) {
-      throw Error(`Parent execution requests not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+    const envelope = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (envelope !== null) return envelope.message.executionRequests;
+
+    const bytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
+    if (bytes !== null) {
+      const archived = decodeArchivedEnvelope(bytes);
+      const envelope =
+        archived.headerEnvelope ?? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+      if (toRootHex(envelope.message.beaconBlockRoot) === parentBlockRootHex) {
+        return envelope.message.executionRequests;
+      }
     }
-    return requests;
+    throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
   }
 
   produceCommonBlockBody(attrs: BlockAttributes): Promise<CommonBlockBody> {
@@ -2009,51 +2016,14 @@ export class BeaconEngine implements IBeaconEngine {
     }
   }
 
-  /**
-   * Verify a gloas execution payload envelope before importing it: resolve the block's state (regen),
-   * check the envelope fields against it, and verify the BLS signature (skipped when gossip/API already
-   * did — `opts.validSignature`). Consensus-only; the EL `notifyNewPayload` runs facade-side in parallel
-   * with this (mirrors the block pipeline's state/sig ∥ EL split). Throws `PayloadError` on failure.
-   *
-   * `_envelopeBytes` is the SSZ bytes of `signedEnvelope` — the JS engine works off the POJO and ignores
-   * it; the native engine deserializes from it (bytes-first FFI, `(bytes, pojo)` seam, like `verifyBlocks`).
-   */
-  async verifyExecutionPayloadEnvelope(
-    _envelopeBytes: Uint8Array,
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    opts: {validSignature: boolean}
-  ): Promise<void> {
-    return verifyExecutionPayloadEnvelope.call(this, _envelopeBytes, signedEnvelope, proposerIndex, opts);
-  }
-
-  /**
-   * Import a verified execution payload envelope into fork choice (transitions the block's PENDING
-   * variant to FULL) and queue the post-import FCU. The facade awaits `notifyNewPayload` before
-   * this call and emits events afterward. `execStatus` is the EL result mapped facade-side;
-   * `blockRoot` is bytes-first (native FFI).
-   * Runs inside BeaconEngine. FCU dispatch moved from unstable@551b8b0a3d
-   * chain/blocks/importExecutionPayload.ts#importExecutionPayload; fork choice import uses the branch's bytes-first contract.
-   */
+  /** Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts#importExecutionPayload. */
   async importExecutionPayload(
-    blockRoot: Root,
-    blockHashHex: RootHex,
-    payloadBlockNumber: number,
-    payloadGasLimit: number,
-    executionRequests: gloas.ExecutionRequests,
-    execStatus: PayloadExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    envelopeBytes: Uint8Array,
+    proposerIndex: ValidatorIndex,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}> {
-    return importExecutionPayload.call(
-      this,
-      blockRoot,
-      blockHashHex,
-      payloadBlockNumber,
-      payloadGasLimit,
-      executionRequests,
-      execStatus,
-      dataAvailabilityStatus
-    );
+    return importExecutionPayload.call(this, envelopeBytes, proposerIndex, dataAvailabilityStatus, opts);
   }
 
   discardVerifiedBlocks(blockRootHexes: string[]): void {
@@ -2074,7 +2044,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.forkChoice.irrecoverableError;
   }
 
-  // --- DB ownership (blocks + states + execution requests) ---
+  // --- DB ownership (blocks + states + payload envelopes) ---
 
   /** TODO - beacon engine (codex_beacon_engine_worker.md Task 8): retain these ordered persistence operations across the worker seam. */
   getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot {
@@ -2083,6 +2053,13 @@ export class BeaconEngine implements IBeaconEngine {
   }
   async migrateCanonicalBlocks(blocks: BlockRootSlot[]): Promise<Slot[]> {
     return migrateBlocksFromHotToColdDb(this.db, this.logger, blocks);
+  }
+  /** Source: unstable@1bf214377e chain/archiveStore/utils/archiveBlocks.ts, Gloas envelope migration. */
+  async migrateExecutionPayloadEnvelopes(blocks: FinalizedProtoSummary[], dedupePayloads: boolean): Promise<Slot[]> {
+    return migrateExecutionPayloadEnvelopesFromHotToColdDb(this.config, this.db, this.logger, blocks, dedupePayloads);
+  }
+  async deleteNonCanonicalExecutionPayloadEnvelopes(roots: Uint8Array[]): Promise<void> {
+    await this.db.executionPayloadEnvelope.batchDelete(roots);
   }
   async persistOrphanedBlocks(blocks: FinalizedProtoSummary[], directory?: string): Promise<void> {
     await Promise.all(
@@ -2106,7 +2083,6 @@ export class BeaconEngine implements IBeaconEngine {
   async completeFinalization(finalized: CheckpointWithHex): Promise<number> {
     await this.stateArchiveStrategy.onFinalizedCheckpoint(finalized, this.metrics);
     await this.stateArchiveStrategy.maybeArchiveState(finalized, this.metrics);
-    await pruneFinalizedExecutionRequests(this.db, this.getFinalizedBlockSnapshot(finalized.rootHex));
     const count = this.forkChoice.prune(finalized.rootHex).length;
     this.publishChainView();
     return count;
@@ -2129,7 +2105,7 @@ export class BeaconEngine implements IBeaconEngine {
     await this.stateArchiveStrategy.onCheckpoint(headStateRoot, this.metrics);
   }
 
-  /** Prune finalized blocks + states below the retention window (engine-owned block/state DB). */
+  /** Prune finalized blocks, states and envelopes below the retention window. */
   async pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot> {
     const {blockCutoffSlot, stateCutoffSlot} = await pruneHistory(
       this.config,
@@ -2139,6 +2115,10 @@ export class BeaconEngine implements IBeaconEngine {
       finalizedEpoch,
       currentEpoch,
       this.statePruneFromSlot
+    );
+    // Source: chain/archiveStore/archiveStore.ts, startup and finalized-checkpoint history pruning.
+    await this.db.executionPayloadEnvelopeArchive.batchDelete(
+      await this.db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot})
     );
     this.statePruneFromSlot = stateCutoffSlot;
     return blockCutoffSlot;

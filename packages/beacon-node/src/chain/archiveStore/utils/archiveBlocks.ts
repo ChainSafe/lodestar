@@ -12,7 +12,7 @@ import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {toSignedHeaderEnvelope} from "../../../util/headerEnvelope.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
-import type {FinalizedBlockSnapshot, FinalizedProtoSummary, IBeaconEngine} from "../../beaconEngine/interface.js";
+import type {FinalizedProtoSummary, IBeaconEngine} from "../../beaconEngine/interface.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
 // Process in chunks to avoid OOM
@@ -155,13 +155,9 @@ export async function archiveBlocks(
     }
 
     if (finalizedPostGloas) {
-      const migratedSlots = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
-        config,
-        db,
-        logger,
-        finalizedCanonicalBlocks,
-        dedupePayloads
-      );
+      // [beacon-engine] Keep upstream's envelope migration at this point in archiveBlocks;
+      // the unchanged helper below now runs through BeaconEngine with its writable DB.
+      const migratedSlots = await engine.migrateExecutionPayloadEnvelopes(finalizedCanonicalBlocks, dedupePayloads);
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
         ...logCtx,
         migratedEntries: migratedSlots.length,
@@ -211,7 +207,7 @@ export async function archiveBlocks(
     }
 
     if (finalizedPostGloas) {
-      await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
+      await engine.deleteNonCanonicalExecutionPayloadEnvelopes(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", nonCanonicalLogCtx);
     }
   }
@@ -465,6 +461,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 }
 
 /**
+ * Source: unstable@1bf214377e chain/archiveStore/utils/archiveBlocks.ts, same helper.
+ * [beacon-engine] Only the DB owner changes; preserve the upstream migration body.
+ *
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
  *
@@ -474,7 +473,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  */
 export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
-  db: IBeaconChainDb,
+  db: IBeaconEngineDb,
   logger: Logger,
   canonicalBlocks: FinalizedProtoSummary[],
   dedupePayloads: boolean
@@ -603,16 +602,4 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   }
 
   return nonCheckpointBlocks;
-}
-
-export async function pruneFinalizedExecutionRequests(
-  db: IBeaconEngineDb,
-  snapshot: FinalizedBlockSnapshot
-): Promise<void> {
-  const finalizedRoot = snapshot.canonical[0]?.blockRoot;
-  const rootsToDelete = new Set<string>();
-  for (const block of [...snapshot.canonical, ...snapshot.nonCanonical]) {
-    if (block.blockRoot !== finalizedRoot) rootsToDelete.add(block.blockRoot);
-  }
-  if (rootsToDelete.size > 0) await db.executionRequests.batchDelete(Array.from(rootsToDelete, fromHex));
 }

@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {IForkChoice} from "@lodestar/fork-choice";
-import {CheckpointWithHex, PayloadExecutionStatus, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
@@ -45,7 +45,7 @@ import {IClock} from "../../util/clock.js";
 import {BlockRootSlot} from "../../util/sszBytes.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {IBlsVerifier} from "../bls/index.js";
@@ -219,6 +219,12 @@ export type ApiStateResultWithFork<T> =
   | {data: T; executionOptimistic: boolean; finalized: boolean; fork: ForkName}
   | {invalid: {code: number; message: string}}
   | null;
+
+export type ImportExecutionPayloadOpts = {
+  validSignature: boolean;
+  source?: PayloadEnvelopeInputSource;
+  seenTimestampSec?: number;
+};
 
 export interface IBeaconEngine {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
@@ -631,39 +637,28 @@ export interface IBeaconEngine {
   updateTime(currentSlot: Slot): void;
   getIrrecoverableError(): Error | undefined;
 
-  // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
-  // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs
-  // facade-parallel to the EL `notifyNewPayload`; `importExecutionPayload` does the fork-choice write
-  // and FCU dispatch, persisting execution requests before FULL. The facade awaits import before events.
-  // Bytes-first (native FFI): `envelopeBytes`
-  // is the SSZ envelope (JS engine ignores it, uses the pojo); `blockRoot` is the SSZ root as raw bytes.
-  verifyExecutionPayloadEnvelope(
-    envelopeBytes: Uint8Array,
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    opts: {validSignature: boolean}
-  ): Promise<void>;
+  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
+  // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
   importExecutionPayload(
-    blockRoot: Root,
-    blockHashHex: RootHex,
-    payloadBlockNumber: number,
-    payloadGasLimit: number,
-    executionRequests: gloas.ExecutionRequests,
-    execStatus: PayloadExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    envelopeBytes: Uint8Array,
+    proposerIndex: ValidatorIndex,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}>;
 
-  // --- DB ownership (blocks + states + execution requests) ---
+  // --- DB ownership (blocks + states + payload envelopes) ---
 
   /**
    * Process a newly finalized checkpoint: migrate canonical blocks hot→cold, archive the finalized
-   * state, prune execution requests, prune fork choice — all engine-owned persistence. Returns the
-   * canonical/non-canonical block snapshot the facade uses to clean the envelopes + DA + light-client artifacts it
+   * state, prune fork choice — all engine-owned persistence. Returns the
+   * canonical/non-canonical block snapshot the facade uses to clean the DA + light-client artifacts it
    * owns. State bytes never cross; archival is internal.
    */
   // TODO - beacon engine: preserve this ordered archive protocol in the worker implementation.
   getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot;
   migrateCanonicalBlocks(blocks: BlockRootSlot[]): Promise<Slot[]>;
+  migrateExecutionPayloadEnvelopes(blocks: FinalizedProtoSummary[], dedupePayloads: boolean): Promise<Slot[]>;
+  deleteNonCanonicalExecutionPayloadEnvelopes(roots: Uint8Array[]): Promise<void>;
   persistOrphanedBlocks(blocks: FinalizedProtoSummary[], directory?: string): Promise<void>;
   deleteNonCanonicalBlocks(roots: Uint8Array[]): Promise<void>;
   completeFinalization(finalized: CheckpointWithHex): Promise<number>;
@@ -678,7 +673,7 @@ export interface IBeaconEngine {
    */
   archiveStateOnCheckpoint(): Promise<void>;
 
-  /** Prune finalized blocks + states below the retention window (engine-owned block/state DB). */
+  /** Prune finalized blocks, states and envelopes below the retention window. */
   pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot>;
 
   /** Load / persist the (engine-owned) op pool from/to its DB repos. Facade lifecycle delegates here. */

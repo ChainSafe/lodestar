@@ -16,7 +16,6 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
-  ExecutionRequestsRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -30,8 +29,8 @@ import {
  * but instead expose relevant beacon chain objects.
  *
  * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
- * engine owns (blocks, states, checkpoint states, execution requests, op-pool persistence); `IBeaconChainDb`
- * holds the envelope + DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
+ * engine owns (blocks, states, checkpoint states, envelopes, op-pool persistence); `IBeaconChainDb`
+ * retains envelope reads and the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
  * only by the bootstrap (CLI / `BeaconNode`).
  */
 export interface IBeaconEngineDb {
@@ -45,7 +44,8 @@ export interface IBeaconEngineDb {
   // checkpoint states
   checkpointState: CheckpointStateRepository;
 
-  executionRequests: ExecutionRequestsRepository;
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
   // op pool persistence (the OpPool is engine-owned)
   voluntaryExit: VoluntaryExitRepository;
@@ -54,9 +54,13 @@ export interface IBeaconEngineDb {
   blsToExecutionChange: BLSToExecutionChangeRepository;
 }
 
+// TODO - beacon engine: Add read-only block and blockArchive access for local facade serving reads.
 export interface IBeaconChainDb {
-  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
-  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+  executionPayloadEnvelope: Pick<ExecutionPayloadEnvelopeRepository, "get" | "getBinary">;
+  executionPayloadEnvelopeArchive: Pick<
+    ExecutionPayloadEnvelopeArchiveRepository,
+    "getBinary" | "binaryEntriesStream" | "decodeKey"
+  >;
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
@@ -74,14 +78,15 @@ export interface IBeaconChainDb {
   readonly lastLegacyArchiveSlot: Slot | null;
 }
 
-export interface IBeaconDb extends IBeaconChainDb, IBeaconEngineDb {
-  init(): Promise<void>;
-  pruneHotDb(): Promise<void>;
+export type IBeaconDb = IBeaconChainDb &
+  IBeaconEngineDb & {
+    init(): Promise<void>;
+    pruneHotDb(): Promise<void>;
 
-  deleteDeprecatedEth1Data(): Promise<void>;
+    deleteDeprecatedEth1Data(): Promise<void>;
 
-  /**  Close the connection to the db instance and close the db store. */
-  close(): Promise<void>;
-  /** To inject metrics after CLI initialization */
-  setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics?: FlatFileStoreMetrics | null): void;
-}
+    /**  Close the connection to the db instance and close the db store. */
+    close(): Promise<void>;
+    /** To inject metrics after CLI initialization */
+    setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics?: FlatFileStoreMetrics | null): void;
+  };

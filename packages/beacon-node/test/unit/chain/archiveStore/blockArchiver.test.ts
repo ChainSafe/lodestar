@@ -38,11 +38,16 @@ describe("block archiver task", () => {
     forkChoiceStub = chain.forkChoice;
     lightclientServer = chain.lightClientServer;
     // Exercise the owning engine's persistence adapters against the same upstream DB fixtures.
-    const context = {db: dbStub, forkChoice: forkChoiceStub, logger, opts: {}};
+    const context = {config: defaultConfig, db: dbStub, forkChoice: forkChoiceStub, logger, opts: {}};
     engine = {
       getFinalizedBlockSnapshot: BeaconEngine.prototype.getFinalizedBlockSnapshot.bind(
         context as unknown as BeaconEngine
       ),
+      migrateExecutionPayloadEnvelopes: BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.bind(
+        context as unknown as BeaconEngine
+      ),
+      deleteNonCanonicalExecutionPayloadEnvelopes:
+        BeaconEngine.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(context as unknown as BeaconEngine),
       migrateCanonicalBlocks: BeaconEngine.prototype.migrateCanonicalBlocks.bind(context as unknown as BeaconEngine),
       persistOrphanedBlocks: BeaconEngine.prototype.persistOrphanedBlocks.bind(context as unknown as BeaconEngine),
       deleteNonCanonicalBlocks: BeaconEngine.prototype.deleteNonCanonicalBlocks.bind(

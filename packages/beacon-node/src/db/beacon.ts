@@ -21,7 +21,6 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
-  ExecutionRequestsRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -44,7 +43,6 @@ export class BeaconDb implements IBeaconDb {
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
-  executionRequests: ExecutionRequestsRepository;
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
@@ -80,7 +78,6 @@ export class BeaconDb implements IBeaconDb {
     this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
-    this.executionRequests = new ExecutionRequestsRepository(config, db);
     this.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, db);
     this.executionPayloadEnvelopeArchive = new ExecutionPayloadEnvelopeArchiveRepository(config, db);
 

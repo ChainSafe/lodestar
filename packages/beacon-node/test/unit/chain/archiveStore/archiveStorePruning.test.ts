@@ -43,6 +43,15 @@ describe("engine / state pruning progress", () => {
     expect(keys.mock.calls.filter(([opts]) => opts?.gte !== undefined)).toEqual([[{gte: previousSlot, lt: nextSlot}]]);
   });
 
+  it("prunes envelopes at the block-history cutoff, retaining the boundary", async () => {
+    const epoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 1;
+    const cutoff = computeStartSlotAtEpoch(1);
+    await db.executionPayloadEnvelopeArchive.putBinary(cutoff - 1, Uint8Array.of(1));
+    await db.executionPayloadEnvelopeArchive.putBinary(cutoff, Uint8Array.of(2));
+    expect(await prune(epoch)).toBe(cutoff);
+    expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoff]);
+  });
+
   it("retries the same state range when deletion fails", async () => {
     await db.stateArchive.putBinary(nextSlot, new Uint8Array([2]));
     const keys = vi.spyOn(db.stateArchive, "keys");

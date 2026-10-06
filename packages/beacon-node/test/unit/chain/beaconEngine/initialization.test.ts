@@ -1,6 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -9,6 +10,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
@@ -73,6 +75,24 @@ describe("bytes-based engine startup", () => {
     engine = undefined;
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("forwards engine payload imports to SSE only for recent payloads", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    const imported = vi.fn();
+    chain.emitter.on(routes.events.EventType.executionPayload, imported);
+    const event = {
+      slot: 0,
+      blockRoot: toRootHex(Buffer.alloc(32)),
+      blockHash: toRootHex(Buffer.alloc(32)),
+      builderIndex: 0,
+      executionOptimistic: false,
+    };
+    chain.beaconEngine.events.emit(BeaconEngineEvent.executionPayloadImported, event);
+    expect(imported).toHaveBeenCalledExactlyOnceWith(event);
+    chain.beaconEngine.events.emit(BeaconEngineEvent.executionPayloadImported, {...event, slot: -64});
+    expect(imported).toHaveBeenCalledOnce();
   });
 
   it("owns a bounded signature cache independent of the facade cache", async () => {

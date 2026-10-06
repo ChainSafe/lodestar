@@ -12,7 +12,8 @@ import {
   BlockRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  ExecutionRequestsRepository,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -29,7 +30,8 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
 
   stateArchive: Mocked<StateArchiveRepository>;
-  executionRequests: Mocked<ExecutionRequestsRepository>;
+  executionPayloadEnvelope: Mocked<ExecutionPayloadEnvelopeRepository>;
+  executionPayloadEnvelopeArchive: Mocked<ExecutionPayloadEnvelopeArchiveRepository>;
 
   voluntaryExit: Mocked<VoluntaryExitRepository>;
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
@@ -59,7 +61,10 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
       stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
-      executionRequests: vi.mocked(new ExecutionRequestsRepository({} as any, {} as any)),
+      executionPayloadEnvelope: vi.mocked(new ExecutionPayloadEnvelopeRepository(minimalConfig, {} as Db)),
+      executionPayloadEnvelopeArchive: vi.mocked(
+        new ExecutionPayloadEnvelopeArchiveRepository(minimalConfig, {} as Db)
+      ),
 
       voluntaryExit: vi.mocked(new VoluntaryExitRepository({} as any, {} as any)),
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),

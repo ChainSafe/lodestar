@@ -5,32 +5,57 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
-import {Root, RootHex, ValidatorIndex, gloas} from "@lodestar/types";
+import {ValidatorIndex, gloas, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {PayloadEnvelopeInputSource} from "../blocks/payloadEnvelopeInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../blocks/payloadError.js";
 import {
-  verifyExecutionPayloadEnvelope as verifyExecutionPayloadEnvelopeFields,
+  verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngine} from "./beaconEngine.js";
+import {BeaconEngineEvent} from "./events.js";
+import {ImportExecutionPayloadOpts} from "./interface.js";
+
+function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
+  switch (status) {
+    case ExecutionPayloadStatus.VALID:
+      return ExecutionStatus.Valid;
+    case ExecutionPayloadStatus.SYNCING:
+    case ExecutionPayloadStatus.ACCEPTED:
+      return ExecutionStatus.Syncing;
+    default:
+      throw new Error(`Unexpected execution payload status for fork choice: ${status}`);
+  }
+}
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
+ * Runs inside BeaconEngine. Moved from unstable@1bf214377e packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
-export async function verifyExecutionPayloadEnvelope(
+export async function importExecutionPayload(
   this: BeaconEngine,
-  // [beacon-engine] deviation: bytes/POJO entry replaces the upstream payload-input object.
-  _envelopeBytes: Uint8Array,
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  // [beacon-engine] deviation: serialized envelope replaces the upstream payload-input object.
+  envelopeBytes: Uint8Array,
   proposerIndex: ValidatorIndex,
-  opts: {validSignature: boolean}
-): Promise<void> {
-  // [beacon-engine] deviation: facade handles EL, DA, persistence and events; this function verifies consensus.
+  dataAvailabilityStatus: DataAvailabilityStatus,
+  opts: ImportExecutionPayloadOpts
+): Promise<{executionOptimistic: boolean}> {
+  let signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+  try {
+    // TODO - beacon engine: we have to deserialize twice, one in BeaconChain and one in BeaconEngine
+    signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes);
+  } catch (e) {
+    throw new PayloadError({code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message});
+  }
   const envelope = signedEnvelope.message;
-  const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+  const blockRoot = envelope.beaconBlockRoot;
+  const blockRootHex = toRootHex(blockRoot);
+  const blockHashHex = toRootHex(envelope.payload.blockHash);
 
   // Get the ProtoBlock for the block whose payload this envelope carries.
   const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
@@ -59,7 +84,7 @@ export async function verifyExecutionPayloadEnvelope(
   // Verify envelope fields against state. When validSignature is true, gossip/API already verified
   // both the signature and the executionRequestsRoot, so we skip those checks here.
   try {
-    verifyExecutionPayloadEnvelopeFields(this.config, blockState, envelope, {
+    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
       verifyExecutionRequestsRoot: !opts.validSignature,
     });
   } catch (e) {
@@ -69,47 +94,79 @@ export async function verifyExecutionPayloadEnvelope(
     );
   }
 
-  // [beacon-engine] deviation: facade runs newPayload in parallel with this consensus-only signature check.
-  if (opts.validSignature !== true) {
-    const signatureValid = await verifyExecutionPayloadEnvelopeSignature(
-      this.config,
-      blockState,
-      signedEnvelope,
-      proposerIndex,
-      this.bls
-    );
-    if (!signatureValid) {
-      throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
-    }
+  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, steps 4a-4c.
+  // The state supplies the committed bid instead of crossing the DA input into the engine.
+  const slot = envelope.payload.slotNumber;
+  const fork = this.config.getForkName(slot);
+  const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
+  this.logger.debug("Call engine api newPayload", logCtx);
+  const verifyStartSec = Date.now() / 1000;
+  const [execResult, signatureValid] = await Promise.all([
+    this.executionEngine.notifyNewPayload(
+      fork,
+      envelope.payload,
+      blockState.latestExecutionPayloadBid.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
+      envelope.parentBeaconBlockRoot,
+      envelope.executionRequests
+    ),
+    opts.validSignature === true
+      ? Promise.resolve(true)
+      : verifyExecutionPayloadEnvelopeSignature(this.config, blockState, signedEnvelope, proposerIndex, this.bls),
+  ]);
+  this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+  this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+  if (!signatureValid) {
+    throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
-}
 
-/**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
- * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
- */
-export async function importExecutionPayload(
-  this: BeaconEngine,
-  // [beacon-engine] deviation: receive the verified payload fields and mapped EL/DA statuses.
-  blockRoot: Root,
-  blockHashHex: RootHex,
-  payloadBlockNumber: number,
-  payloadGasLimit: number,
-  executionRequests: gloas.ExecutionRequests,
-  execStatus: PayloadExecutionStatus,
-  dataAvailabilityStatus: DataAvailabilityStatus
-): Promise<{executionOptimistic: boolean}> {
-  // [beacon-engine] deviation: persist requests before exposing FULL; facade owns the envelope pipeline.
-  const blockRootHex = toRootHex(blockRoot);
+  switch (execResult.status) {
+    case ExecutionPayloadStatus.VALID:
+      break;
 
-  // If finalization prunes this block during the write, the entry is orphaned (harmless, never read).
-  await this.db.executionRequests.put(blockRoot, executionRequests);
+    case ExecutionPayloadStatus.INVALID:
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "",
+      });
+
+    case ExecutionPayloadStatus.ACCEPTED:
+    case ExecutionPayloadStatus.SYNCING:
+      break;
+
+    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+    case ExecutionPayloadStatus.ELERROR:
+    case ExecutionPayloadStatus.UNAVAILABLE:
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "",
+      });
+  }
+
+  const {source, seenTimestampSec} = opts;
+  if (
+    execResult.status === ExecutionPayloadStatus.VALID &&
+    source === PayloadEnvelopeInputSource.gossip &&
+    seenTimestampSec !== undefined
+  ) {
+    const nowSec = Date.now() / 1000;
+    this.metrics?.gossipExecutionPayloadEnvelope.executionPayload.recvToValidation.observe(nowSec - seenTimestampSec);
+    // same metric as pre-gloas, it tracks EL verification time regardless of fork
+    this.metrics?.gossipBlock.executionPayload.validationTime.observe(nowSec - verifyStartSec);
+  }
+
+  const execStatus = toForkChoiceExecutionStatus(execResult.status);
+
+  // [beacon-engine] deviation from upstream step 5: await the envelope write before FULL.
+  // Columns remain in BeaconChain's write queue, as for chain/beaconEngine/importBlock.ts.
+  await this.db.executionPayloadEnvelope.putBinary(blockRoot, envelopeBytes);
 
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
-    payloadBlockNumber,
-    payloadGasLimit,
+    envelope.payload.blockNumber,
+    envelope.payload.gasLimit,
     execStatus,
     dataAvailabilityStatus
   );
@@ -119,8 +176,6 @@ export async function importExecutionPayload(
   // Fire the FCU only when this payload's block is the canonical head.
   const head = this.forkChoice.getHead();
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
-    // [beacon-engine] deviation: derive the fork from the canonical head instead of payloadInput.
-    const fork = this.config.getForkName(head.slot);
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
@@ -130,6 +185,13 @@ export async function importExecutionPayload(
     });
   }
 
-  // [beacon-engine] deviation: return event optimism to the facade.
-  return {executionOptimistic: execStatus === ExecutionStatus.Syncing};
+  const executionOptimistic = execStatus === ExecutionStatus.Syncing;
+  this.events.emit(BeaconEngineEvent.executionPayloadImported, {
+    slot: envelope.payload.slotNumber,
+    builderIndex: envelope.builderIndex,
+    blockHash: blockHashHex,
+    blockRoot: blockRootHex,
+    executionOptimistic,
+  });
+  return {executionOptimistic};
 }
