@@ -57,7 +57,12 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   const abortController = new AbortController();
 
-  logger.info("Lodestar", {network, version, commit});
+  logger.info("Lodestar", {
+    network,
+    version,
+    commit,
+    stateTransition: options.chain.nativeStateTransition ? "native" : "js",
+  });
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
