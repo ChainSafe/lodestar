@@ -118,7 +118,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
     for (let i = 0; i < sorted.length; i += DELETE_RANGE_CHUNK_SIZE) {
       const chunk = sorted.slice(i, i + DELETE_RANGE_CHUNK_SIZE);
-      const roots = await Promise.all(chunk.map((slot) => this.getRootBySlot(slot)));
+      const roots = await this.db.getMany(chunk.map(getSlotIndexKey), {
+        bucketId: getBucketNameByValue(Bucket.index_mainChain),
+      });
 
       const keys: Uint8Array[] = [];
       for (let j = 0; j < chunk.length; j++) {
@@ -134,7 +136,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
           parentRoot = parentRootHex ? fromHex(parentRootHex) : null;
         }
         if (parentRoot) keys.push(getParentRootIndexKey(parentRoot));
-        prevRoot = root;
+        prevRoot = root ?? null;
       }
       await this.db.batchDelete(keys, this.dbReqOpts);
     }
