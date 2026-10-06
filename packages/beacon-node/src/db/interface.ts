@@ -29,7 +29,6 @@ import {
  * but instead expose relevant beacon chain objects
  */
 export interface IBeaconDb {
-  /** Which stored blocks serving may read with stock reads */
   // unfinalized blocks
   block: BlockRepository;
   // finalized blocks
