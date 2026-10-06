@@ -87,11 +87,12 @@ export async function prepareGenesisInitialization(
       return state.slot;
     },
     persist: (state, bytes) => persistAnchorState(config, db, state, bytes),
-    log(state) {
+    log(state, nativeStateTransition) {
       logger.info("Initialized genesis state", {
         slot: state.slot,
         stateRoot: toRootHex(state.hashTreeRoot()),
         isFinalized: true,
+        nativeStateTransition,
       });
     },
   };

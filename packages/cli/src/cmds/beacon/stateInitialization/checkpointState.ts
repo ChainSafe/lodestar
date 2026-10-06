@@ -238,7 +238,7 @@ function prepareCheckpointInitialization(
       return floor;
     },
     persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
-    log(state) {
+    log(state, nativeStateTransition) {
       const {checkpoint} = state.computeAnchorCheckpoint();
       logger.info("Initialized checkpoint state", {
         source,
@@ -248,6 +248,7 @@ function prepareCheckpointInitialization(
         stateRoot: toRootHex(state.hashTreeRoot()),
         checkpointRoot: toRootHex(checkpoint.root),
         isFinalized,
+        nativeStateTransition,
         ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockHeader.slot}),
       });
     },

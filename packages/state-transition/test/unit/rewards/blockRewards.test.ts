@@ -6,7 +6,7 @@ import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
 import {computeSyncCommitteeRewards} from "../../../src/rewards/syncCommitteeRewards.js";
-import {stateTransition} from "../../../src/stateTransition.js";
+import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateAllForks} from "../../../src/types.js";
 import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
@@ -116,13 +116,17 @@ describe("chain / rewards / blockRewards", () => {
       }
 
       const proposerBalanceBefore = state.balances.get(proposerIndex);
-      const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus: DataAvailabilityStatus.Available,
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
+      const postState = new BeaconStateView(state as CachedBeaconStateAllForks).stateTransition(
+        {block},
+        {
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+        },
+        {}
+      );
 
       // Cross check with rewardCache
       const rewardCache = postState.proposerRewards;
@@ -139,7 +143,7 @@ describe("chain / rewards / blockRewards", () => {
         state as CachedBeaconStateAllForks
       );
       const proposerSyncReward = syncRewards.find((r) => r.validatorIndex === proposerIndex)?.reward ?? 0;
-      expect(postState.balances.get(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
+      expect(postState.getBalance(proposerIndex) - proposerBalanceBefore).toBe(total + proposerSyncReward);
     });
   }
 
@@ -154,13 +158,17 @@ describe("chain / rewards / blockRewards", () => {
     preState.hashTreeRoot();
     cachedStateAltairPopulateCaches(preState);
 
-    const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      verifyProposer: false,
-      verifySignatures: false,
-      verifyStateRoot: false,
-    });
+    const postState = new BeaconStateView(preState as CachedBeaconStateAllForks).stateTransition(
+      {block},
+      {
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      },
+      {}
+    );
 
     // Set postState's reward cache
     const rewardCache = postState.proposerRewards; // Grab original reward cache before overwritten

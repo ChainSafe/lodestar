@@ -48,7 +48,7 @@ export async function initBeaconState(
   logger: Logger
 ): Promise<InitBeaconStateResult> {
   const options: StateInitializationOptions = args;
-  const useNative = options["chain.nativeStateView"] ?? false;
+  const nativeStateTransition = options["chain.nativeStateTransition"] ?? false;
   if (
     options.forceCheckpointSync &&
     !(options.checkpointState || options.checkpointSyncUrl || options.unsafeCheckpointState)
@@ -76,7 +76,7 @@ export async function initBeaconState(
     if (!options.forceCheckpointSync && (!hasCheckpointSource || archived.isWithinWeakSubjectivityPeriod)) {
       return executeStateInitialization(
         prepareArchivedStateInitialization(archived, context),
-        useNative,
+        nativeStateTransition,
         pubkeysFile,
         logger
       );
@@ -90,7 +90,7 @@ export async function initBeaconState(
         ? prepareArchivedStateInitialization(archived, context)
         : await prepareGenesisInitialization(options, context);
   }
-  return executeStateInitialization(stateInit, useNative, pubkeysFile, logger);
+  return executeStateInitialization(stateInit, nativeStateTransition, pubkeysFile, logger);
 }
 
 /**
@@ -135,7 +135,7 @@ async function readLatestArchivedStateBytes({
  */
 async function executeStateInitialization(
   stateInit: StateInitialization,
-  useNative: boolean,
+  nativeStateTransition: boolean,
   pubkeysFile: string,
   logger: Logger
 ): Promise<InitBeaconStateResult> {
@@ -156,10 +156,10 @@ async function executeStateInitialization(
   loadPubkeysFile(pubkeyCache, pubkeysFile, pubkeyCacheCapacity, config, stateBytes, validatorCount, logger);
   // unilaterally expand capacity after best-effort pubkey file loading
   pubkeyCache.ensureCapacity(pubkeyCacheCapacity);
-  const anchorState = createBeaconStateView({useNative, config, stateBytes});
+  const anchorState = createBeaconStateView({nativeStateTransition, config, stateBytes});
   stateInit.validate(anchorState);
   const earliestAvailableSlot = await stateInit.initializeEarliestAvailableSlot(anchorState);
   await stateInit.persist?.(anchorState, stateBytes);
-  stateInit.log(anchorState);
+  stateInit.log(anchorState, nativeStateTransition);
   return {anchorState, config, isFinalized: stateInit.isFinalized, earliestAvailableSlot};
 }

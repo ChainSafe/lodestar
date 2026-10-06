@@ -9,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.js";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.js";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
 import {
   type BalanceSourceKey,
@@ -409,12 +409,13 @@ export function getAttestationScore(
   return score;
 }
 
-export function getBlockSupportBetweenSlots(
+export function getNodeSupportBetweenSlots(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex,
+  nodeRoot: RootHex,
+  nodePayloadStatus: PayloadStatus,
   startSlot: Slot,
   endSlot: Slot
 ): number {
@@ -434,7 +435,7 @@ export function getBlockSupportBetweenSlots(
     if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage?.root === blockRoot) {
+    if (latestMessage?.root === nodeRoot && latestMessage.payloadStatus === nodePayloadStatus) {
       score += balances[i] ?? 0;
     }
   }
@@ -531,12 +532,18 @@ export function computeEmptySlotSupportDiscount(
     return 0;
   }
 
-  const parentSupportInEmptySlots = getBlockSupportBetweenSlots(
+  // Post-Gloas the parent block has PENDING, EMPTY and FULL nodes. Only the support of the node this
+  // block actually extends is discounted; votes for the other parent nodes are not support for it.
+  const parentNodePayloadStatus = ctx.getParentNodePayloadStatus(blockRoot);
+  if (parentNodePayloadStatus === null) return 0;
+
+  const parentSupportInEmptySlots = getNodeSupportBetweenSlots(
     ctx,
     store,
     cache,
     balanceSource,
     block.parentRoot,
+    parentNodePayloadStatus,
     (parentBlock.slot + 1) as Slot,
     (block.slot - 1) as Slot
   );

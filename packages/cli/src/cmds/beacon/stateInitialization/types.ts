@@ -19,7 +19,7 @@ export type StateInitializationOptions = Pick<
   | "ignoreWeakSubjectivityCheck"
   | "network"
   | "chain.nHistoricalStatesFileDataStore"
-  | "chain.nativeStateView"
+  | "chain.nativeStateTransition"
 >;
 
 export type StatePreparationContext = {
@@ -56,5 +56,5 @@ export type StateInitialization = {
   validate: (state: IBeaconStateView) => void;
   initializeEarliestAvailableSlot: (state: IBeaconStateView) => Promise<Slot>;
   persist: ((state: IBeaconStateView, stateBytes: Uint8Array) => Promise<void>) | null;
-  log: (state: IBeaconStateView) => void;
+  log: (state: IBeaconStateView, nativeStateTransition: boolean) => void;
 };
