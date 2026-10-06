@@ -860,6 +860,17 @@ export function getBeaconBlockApi({
           // The envelope may already be known, e.g. received via gossip from another node in a
           // multi node setup, this is benign and treated as a successful publish (same as blocks)
           if (submittedContents === null) {
+            const knownInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+            const knownBlockHash = knownInput?.hasPayloadEnvelope()
+              ? toRootHex(knownInput.getPayloadEnvelope().message.payload.blockHash)
+              : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL)?.executionPayloadBlockHash;
+            if (knownBlockHash != null && knownBlockHash !== blockHashHex) {
+              chain.logger.warn("Execution payload envelope block hash differs from already-known envelope", {
+                ...valLogMeta,
+                code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+                knownBlockHash,
+              });
+            }
             chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
             return;
           }
@@ -965,6 +976,14 @@ export function getBeaconBlockApi({
       }
 
       if (payloadInput.hasPayloadEnvelope()) {
+        const knownBlockHash = toRootHex(payloadInput.getPayloadEnvelope().message.payload.blockHash);
+        if (knownBlockHash !== blockHashHex) {
+          chain.logger.warn("Execution payload envelope block hash differs from already-known envelope", {
+            ...valLogMeta,
+            code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+            knownBlockHash,
+          });
+        }
         // The envelope may have been added while this request was being validated, e.g. via gossip
         chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
       } else {
