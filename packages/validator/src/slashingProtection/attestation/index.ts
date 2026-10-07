@@ -201,12 +201,11 @@ export class SlashingProtectionAttestationService {
         });
       }
     }
-    await this.attestationByTarget.set(pubkey, Array.from(attestationsByTarget.values()));
+    // Pre-compute spans for all attestations. Rejected while buffered in memory leaves the db untouched, and
+    // spans are written before the rows they cover so an interrupted import can only ever reject more.
+    await this.minMaxSurround.insertAttestations(pubkey, attestations);
 
-    // Pre-compute spans for all attestations
-    for (const attestation of attestations) {
-      await this.minMaxSurround.insertAttestation(pubkey, attestation);
-    }
+    await this.attestationByTarget.set(pubkey, Array.from(attestationsByTarget.values()));
 
     // Pre-compute and store lower-bound
     const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
