@@ -7,14 +7,13 @@ import {
   getIndexedAttestation,
 } from "@lodestar/state-transition";
 import {Attestation, CommitteeIndex, Epoch, IndexedAttestation, RootHex, Slot} from "@lodestar/types";
-import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, Logger, MapDef} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
 /**
- * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
- * - when loading state bytes from disk, we need to compute shuffling for all epochs (~1s as of Sep 2023)
- * - don't have shuffling to verify attestations, need to do 1 epoch transition to add shuffling to this cache. This never happens
- * with default chain option of maxSkipSlots = 32
+ * Keep the 4 highest epochs: next, current, previous and current - 2. The last one is needed in the last slot of an epoch,
+ * when the next epoch shuffling is already precomputed while attestations of the previous epoch are still valid.
+ * Older epochs are always pruned first, so inserting shufflings of old or side-fork states never evicts these epochs.
  **/
 const MAX_EPOCHS = 4;
 
@@ -37,11 +36,18 @@ type ShufflingCacheItem = {
 type PromiseCacheItem = {
   type: CacheItemType.promise;
   timeInsertedMs: number;
-  promise: Promise<EpochShuffling>;
-  resolveFn: (shuffling: EpochShuffling) => void;
+  /** Resolves to null if the promise is cancelled */
+  promise: Promise<EpochShuffling | null>;
+  resolveFn: (shuffling: EpochShuffling | null) => void;
 };
 
 type CacheItem = ShufflingCacheItem | PromiseCacheItem;
+
+export enum ShufflingPromiseCancelReason {
+  regenError = "regen_error",
+  decisionRootMismatch = "decision_root_mismatch",
+  pruned = "pruned",
+}
 
 export type ShufflingCacheOpts = {
   maxShufflingCacheEpochs?: number;
@@ -50,11 +56,11 @@ export type ShufflingCacheOpts = {
 /**
  * A shuffling cache to help:
  * - get committee quickly for attestation verification
- * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
+ * - if a shuffling is not available, track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
 export class ShufflingCache {
-  /** LRU cache implemented as a map, pruned every time we add an item */
+  /** Pruned to the `maxEpochs` highest epochs every time we add a shuffling */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
   );
@@ -72,6 +78,9 @@ export class ShufflingCache {
         metrics.shufflingCache.size.set(
           Array.from(this.itemsByDecisionRootByEpoch.values()).reduce((total, innerMap) => total + innerMap.size, 0)
         )
+      );
+      metrics.shufflingCache.epochs.addCollect(() =>
+        metrics.shufflingCache.epochs.set(this.itemsByDecisionRootByEpoch.size)
       );
     }
 
@@ -97,8 +106,8 @@ export class ShufflingCache {
         `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${epoch}, decisionRootHex: ${decisionRoot}`
       );
     }
-    let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
-    const promise = new Promise<EpochShuffling>((resolve) => {
+    let resolveFn: ((shuffling: EpochShuffling | null) => void) | null = null;
+    const promise = new Promise<EpochShuffling | null>((resolve) => {
       resolveFn = resolve;
     });
     if (resolveFn === null) {
@@ -121,7 +130,7 @@ export class ShufflingCache {
    * Return null if we don't have a shuffling for this epoch and dependentRootHex.
    */
   async get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null> {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    const cacheItem = this.itemsByDecisionRootByEpoch.get(epoch)?.get(decisionRoot);
     if (cacheItem === undefined) {
       this.metrics?.shufflingCache.miss.inc();
       return null;
@@ -136,12 +145,10 @@ export class ShufflingCache {
   }
 
   /**
-   * Get a shuffling synchronously, return null if not present.
-   * The only time we have a promise cache item is when we regen shuffling for attestation, which never happens
-   * with default chain option.
+   * Get a shuffling synchronously, return null if not present or if it's still being computed.
    */
   getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    const cacheItem = this.itemsByDecisionRootByEpoch.get(epoch)?.get(decisionRoot);
     if (cacheItem === undefined) {
       this.metrics?.shufflingCache.miss.inc();
       return null;
@@ -161,7 +168,7 @@ export class ShufflingCache {
    * `NativeBeaconStateView`.
    */
   has(epoch: Epoch, decisionRoot: RootHex): boolean {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    const cacheItem = this.itemsByDecisionRootByEpoch.get(epoch)?.get(decisionRoot);
     return cacheItem !== undefined && isShufflingCacheItem(cacheItem);
   }
 
@@ -184,6 +191,25 @@ export class ShufflingCache {
     if (!this.has(currentEpoch + 1, state.nextDecisionRoot)) {
       this.set(state.getNextShuffling(), state.nextDecisionRoot);
     }
+  }
+
+  /**
+   * Resolve a pending promise with null so that waiters don't hang, then remove it.
+   */
+  cancelPromise(epoch: Epoch, decisionRoot: RootHex, reason: ShufflingPromiseCancelReason): void {
+    const itemsByDecisionRoot = this.itemsByDecisionRootByEpoch.get(epoch);
+    const cacheItem = itemsByDecisionRoot?.get(decisionRoot);
+    if (itemsByDecisionRoot === undefined || cacheItem === undefined || !isPromiseCacheItem(cacheItem)) {
+      return;
+    }
+
+    cacheItem.resolveFn(null);
+    itemsByDecisionRoot.delete(decisionRoot);
+    if (itemsByDecisionRoot.size === 0) {
+      this.itemsByDecisionRootByEpoch.delete(epoch);
+    }
+    this.metrics?.shufflingCache.cancelledPromises.inc({reason});
+    this.logger?.debug("Cancelled shuffling promise", {epoch, decisionRoot, reason});
   }
 
   getIndexedAttestation(
@@ -243,8 +269,42 @@ export class ShufflingCache {
     }
     // set the shuffling
     shufflingAtEpoch.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
-    // prune the cache
-    pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
+    this.prune();
+  }
+
+  /**
+   * Keep the `maxEpochs` highest epochs, regardless of insertion order.
+   */
+  private prune(): void {
+    const toDelete = this.itemsByDecisionRootByEpoch.size - this.maxEpochs;
+    if (toDelete <= 0) {
+      return;
+    }
+
+    const prunedEpochs = Array.from(this.itemsByDecisionRootByEpoch.keys())
+      .sort((a, b) => a - b)
+      .slice(0, toDelete);
+    let prunedShufflings = 0;
+    for (const epoch of prunedEpochs) {
+      for (const cacheItem of this.itemsByDecisionRootByEpoch.get(epoch)?.values() ?? []) {
+        if (isPromiseCacheItem(cacheItem)) {
+          cacheItem.resolveFn(null);
+          this.metrics?.shufflingCache.cancelledPromises.inc({reason: ShufflingPromiseCancelReason.pruned});
+        } else {
+          prunedShufflings++;
+        }
+      }
+      this.itemsByDecisionRootByEpoch.delete(epoch);
+    }
+    this.metrics?.shufflingCache.prunedShufflings.inc(prunedShufflings);
+
+    this.logger?.verbose("Pruned shuffling cache", {
+      prunedEpochs: prunedEpochs.join(","),
+      prunedShufflings,
+      cachedEpochs: Array.from(this.itemsByDecisionRootByEpoch.keys())
+        .sort((a, b) => a - b)
+        .join(","),
+    });
   }
 }
 
