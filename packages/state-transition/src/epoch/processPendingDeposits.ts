@@ -75,7 +75,7 @@ export function processPendingDeposits(
 
       if (isValidatorWithdrawn) {
         // Deposited balance will never become active. Increase balance but do not consume churn
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       } else if (isValidatorExited) {
         // Validator is exiting, postpone the deposit until after withdrawable epoch
         depositsToPostpone.push(deposit);
@@ -87,7 +87,7 @@ export function processPendingDeposits(
         }
         // Consume churn and apply deposit.
         processedAmount += deposit.amount;
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       }
 
       // Regardless of how the deposit was handled, we move on in the queue.
@@ -114,6 +114,7 @@ export function processPendingDeposits(
 }
 
 function applyPendingDeposit(
+  fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateHeze,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
@@ -125,7 +126,7 @@ function applyPendingDeposit(
   if (!isValidatorKnown(state, validatorIndex)) {
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
+      addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
       const newValidatorIndex = state.validators.length - 1;
       cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
       // set balance, so that the next deposit of same pubkey will increase the balance correctly
