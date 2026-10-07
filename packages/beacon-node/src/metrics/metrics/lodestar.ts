@@ -1619,11 +1619,11 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_epochs",
         help: "Number of epochs in shuffling cache",
       }),
-      prunedShufflings: register.gauge({
+      prunedShufflings: register.counter({
         name: "lodestar_shuffling_cache_pruned_shufflings_total",
         help: "Total number of shufflings pruned from shuffling cache",
       }),
-      cancelledPromises: register.gauge<{reason: ShufflingPromiseCancelReason}>({
+      cancelledPromises: register.counter<{reason: ShufflingPromiseCancelReason}>({
         name: "lodestar_shuffling_cache_cancelled_promises_total",
         help: "Total number of shuffling promises resolved with null",
         labelNames: ["reason"],
