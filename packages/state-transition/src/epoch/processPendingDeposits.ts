@@ -77,7 +77,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
       if (isValidatorWithdrawn) {
         // Deposited balance will never become active. Increase balance but do not consume churn
-        applyPendingDeposit(fork, state, deposit, cache);
+        applyPendingDeposit(state, deposit, cache);
       } else if (isValidatorExited) {
         // Validator is exiting, postpone the deposit until after withdrawable epoch
         depositsToPostpone.push(deposit);
@@ -89,7 +89,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
         }
         // Consume churn and apply deposit.
         processedAmount += deposit.amount;
-        applyPendingDeposit(fork, state, deposit, cache);
+        applyPendingDeposit(state, deposit, cache);
       }
 
       // Regardless of how the deposit was handled, we move on in the queue.
@@ -116,7 +116,6 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 }
 
 function applyPendingDeposit(
-  fork: ForkSeq,
   state: CachedBeaconStateElectra,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
@@ -126,7 +125,7 @@ function applyPendingDeposit(
   const cachedBalances = cache.balances;
 
   if (!isValidatorKnown(state, validatorIndex)) {
-    if (fork >= ForkSeq.heze && withdrawalCredentials[0] === BLS_WITHDRAWAL_PREFIX) {
+    if (withdrawalCredentials[0] === BLS_WITHDRAWAL_PREFIX && state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
       return;
     }
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
