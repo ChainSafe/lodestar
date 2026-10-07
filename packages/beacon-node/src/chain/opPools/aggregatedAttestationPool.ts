@@ -30,7 +30,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
-import {MapDef, assert, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, assert, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -58,7 +58,7 @@ export type AttestationsConsolidation = {
 
 /**
  * This function returns not seen participation for a given epoch and slot and committee index.
- * Return null if all validators are seen or no info to check.
+ * Return an empty set if all validators are seen, or null if the committee cannot be computed (e.g. missing shuffling).
  */
 type GetNotSeenValidatorsFn = (epoch: Epoch, slot: Slot, committeeIndex: number) => Set<number> | null;
 
@@ -140,7 +140,8 @@ export class AggregatedAttestationPool {
 
   constructor(
     private readonly config: BeaconConfig,
-    private readonly metrics: Metrics | null = null
+    private readonly metrics: Metrics | null = null,
+    private readonly logger: Logger | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
   }
@@ -295,7 +296,19 @@ export class AggregatedAttestationPool {
 
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
-          if (notSeenCommitteeMembers === null || notSeenCommitteeMembers.size === 0) {
+          if (notSeenCommitteeMembers === null) {
+            // skip this committee instead of failing the whole block production, other epochs may still have shuffling
+            this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.missingShufflingCommittees.inc();
+            this.logger?.debug("Missing shuffling when packing attestations, skipping committee", {
+              slot,
+              committeeIndex,
+              stateSlot,
+              epoch,
+              decisionRoot: state.getShufflingDecisionRoot(epoch),
+            });
+            continue;
+          }
+          if (notSeenCommitteeMembers.size === 0) {
             this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.seenCommittees.inc();
             continue;
           }
@@ -770,13 +783,15 @@ export function getNotSeenValidatorsFn(
     }
     const cacheKey = slot + "_" + committeeIndex;
     let notSeenCommitteeMembers = cachedNotSeenValidators.get(cacheKey);
-    if (notSeenCommitteeMembers != null) {
-      // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-      return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
+    if (notSeenCommitteeMembers !== undefined) {
+      return notSeenCommitteeMembers;
     }
 
     const decisionRoot = state.getShufflingDecisionRoot(computeEpochAtSlot(slot));
-    const committee = shufflingCache.getBeaconCommittee(epoch, decisionRoot, slot, committeeIndex);
+    const committee = shufflingCache.getBeaconCommitteeOrNull(epoch, decisionRoot, slot, committeeIndex);
+    if (committee === null) {
+      return null;
+    }
     notSeenCommitteeMembers = new Set<number>();
     for (const [i, validatorIndex] of committee.entries()) {
       // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
@@ -786,8 +801,8 @@ export function getNotSeenValidatorsFn(
       }
     }
     cachedNotSeenValidators.set(cacheKey, notSeenCommitteeMembers);
-    // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-    return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
+    // an empty set means all validators are seen, we don't need to check for any attestations of same committee again
+    return notSeenCommitteeMembers;
   };
 }
 

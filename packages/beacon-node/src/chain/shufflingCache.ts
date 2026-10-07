@@ -205,6 +205,11 @@ export class ShufflingCache {
     return this.getBeaconCommittees(epoch, decisionRoot, slot, [index])[0];
   }
 
+  getBeaconCommitteeOrNull(epoch: number, decisionRoot: string, slot: Slot, index: CommitteeIndex): Uint32Array | null {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    return shuffling === null ? null : getBeaconCommittees(shuffling, slot, [index])[0];
+  }
+
   getBeaconCommittees(epoch: number, decisionRoot: string, slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
     const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
     return getBeaconCommittees(shuffling, slot, indices);
