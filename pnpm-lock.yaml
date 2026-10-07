@@ -3090,7 +3090,7 @@ packages:
     resolution: {integrity: sha512-HNrg9CM/Z4ZWB6RuExhuC6FPmLipiShKVMnT9JlQvfhwR47JatWLChA6mtZqVHqypE6p/z6ofcjbyWpM7YLxPQ==}
 
   '@xray/probe@file:.xray/probe-0.1.0.tgz':
-    resolution: {integrity: sha512-FMUumUpc7MmWrX+HTy00GHV8+ydL8l+DZWLZbmB2tSwbXlpEiEvg19KmuZetClg3Z2MdJoJXn3zsuSYNTby1lQ==, tarball: file:.xray/probe-0.1.0.tgz}
+    resolution: {integrity: sha512-qJHLVLafQXm1+8amAcqEEeRIPd7bmcGHG0c1hPnCLqgAhWbQ3MHNEuE90AFZ+Ny842R7bzJ0ObhirQZbU8Vbrg==, tarball: file:.xray/probe-0.1.0.tgz}
     version: 0.1.0
     engines: {node: '>=22'}
     peerDependencies:

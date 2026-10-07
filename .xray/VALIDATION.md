@@ -56,3 +56,24 @@ The SDK remains unpublished. The local archive and libp2p patch make this branch
 self-contained for testing. Replace them with upstream releases before marking
 the Lodestar draft ready for review. Gloas decoding is tested against pinned SSZ fixtures;
 the live devnet exercised Fulu.
+
+## Follow-up review, 2026-10-07
+
+A lifecycle review reproduced lost inbound bytes when libp2p closed a stream
+before the application drained its read buffer. The SDK now defers its stream
+close record until those reads finish, including remote resets and connection
+closure. Weak ownership allows abandoned readers to be collected; a local
+forced-GC check confirmed collection and collector cleanup.
+
+- Xray `6f3eb85`: 11 SDK tests, build, type checks, formatting, `go test ./...`,
+  and targeted race checks pass. New checks cover buffered reads after closure,
+  idle reconnects, decoder cache isolation across forks/topics, and oversized
+  Snappy lengths.
+- js-libp2p `6d18817`: 37 registrar/connection tests, affected package builds,
+  and changed-file lint pass. New connection tests exercise global middleware
+  on outbound-only protocols, selective removal, and repeated inbound handlers.
+- The refreshed SDK archive passes frozen installation, beacon-node type checks,
+  and all four real-collector TCP/QUIC main-thread/worker combinations.
+
+The prior live devnet result above predates this lifecycle fix. The four-case
+collector interoperability suite was rerun after the fix.
