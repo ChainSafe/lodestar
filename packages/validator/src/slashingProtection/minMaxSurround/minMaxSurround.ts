@@ -1,4 +1,5 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
+import {BufferedDistanceStore} from "./bufferedDistanceStore.js";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestation} from "./interface.js";
 
@@ -44,6 +45,20 @@ export class MinMaxSurround implements IMinMaxSurround {
   async insertAttestation(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
     await this.updateMinSpan(pubKey, attestation);
     await this.updateMaxSpan(pubKey, attestation);
+  }
+
+  /**
+   * Insert a batch of attestations, each checked against the spans of the ones before it and of recorded history.
+   * Spans are buffered in memory and written only once every attestation is accepted, so a rejected batch leaves
+   * the store untouched.
+   */
+  async insertAttestations(pubKey: BLSPubkey, attestations: MinMaxSurroundAttestation[]): Promise<void> {
+    const buffered = new BufferedDistanceStore(this.store, pubKey);
+    const bufferedMinMaxSurround = new MinMaxSurround(buffered, {maxEpochLookback: this.maxEpochLookback});
+    for (const attestation of attestations) {
+      await bufferedMinMaxSurround.insertAttestation(pubKey, attestation);
+    }
+    await buffered.commit();
   }
 
   // min span

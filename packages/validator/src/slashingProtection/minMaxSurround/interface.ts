@@ -8,6 +8,7 @@ export type MinMaxSurroundAttestation = {
 export interface IMinMaxSurround {
   assertNoSurround(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void>;
   insertAttestation(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void>;
+  insertAttestations(pubKey: BLSPubkey, attestations: MinMaxSurroundAttestation[]): Promise<void>;
 }
 
 export type DistanceEntry = {
