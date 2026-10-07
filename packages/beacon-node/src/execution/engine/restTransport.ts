@@ -3,6 +3,7 @@ import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, elec
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
+import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
 import {
   ClientCode,
   ClientVersion,
@@ -156,7 +157,7 @@ export class RestEngineTransport implements IEngineTransport {
   async newPayload(
     fork: ForkName,
     executionPayload: ExecutionPayload,
-    _versionedHashes?: VersionedHashes,
+    versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
     executionRequests?: ExecutionRequests
   ): Promise<PayloadStatusResult> {
@@ -164,6 +165,17 @@ export class RestEngineTransport implements IEngineTransport {
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (parentBeaconBlockRoot === undefined) {
         throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
+      }
+      if (versionedHashes === undefined) {
+        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
+      }
+      // The envelope omits the expected hashes, so the EL cannot run Deneb is_valid_versioned_hashes
+      if (!isValidBlobVersionedHashes(executionPayload.transactions, versionedHashes)) {
+        return {
+          status: ExecutionPayloadStatus.INVALID,
+          latestValidHash: null,
+          validationError: "Payload blob versioned hashes do not match the beacon commitments",
+        };
       }
 
       if (ForkSeq[fork] >= ForkSeq.electra) {

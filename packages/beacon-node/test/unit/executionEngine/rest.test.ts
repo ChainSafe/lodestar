@@ -273,6 +273,20 @@ describe("ExecutionEngine / rest", () => {
       }
     );
 
+    it("leaves blob hash validation to the execution client on JSON-RPC", async () => {
+      // JSON-RPC sends the expected hashes to the EL, which runs is_valid_versioned_hashes itself.
+      // Validating locally would also reject the simplified blob transactions the mock EL produces.
+      jsonRpcResult = {status: "VALID", latestValidHash: null, validationError: null};
+      const engine = createEngine("json-rpc");
+      const payload = ssz.deneb.ExecutionPayload.defaultValue();
+      payload.transactions = [new Uint8Array([0x03, ...hash])];
+
+      const res = await engine.notifyNewPayload(ForkName.deneb, payload, [new Uint8Array(32)], hash);
+
+      expect(res.status).toBe("VALID");
+      expect(jsonRpcMethods()).toContain("engine_newPayloadV3");
+    });
+
     it("submits a payload whose transaction blob hashes match the beacon commitments", async () => {
       const engine = createEngine("ssz");
       sszResponse.body = PayloadStatus.serialize(validStatus);
