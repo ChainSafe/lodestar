@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {routes} from "@lodestar/api";
+import {ApiError, routes} from "@lodestar/api";
 import {chainConfigToJson, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MIN_DEPOSIT_AMOUNT} from "@lodestar/params";
@@ -569,6 +569,77 @@ describe("Builder", () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(reveal).toHaveBeenCalledOnce();
       await builder.close();
+    });
+
+    it("reveals a selected block received just before the local slot boundary", async () => {
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      vi.setSystemTime(10 * modules.opts.config.SLOT_DURATION_MS - 200);
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(reveal).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(reveal).toHaveBeenCalledOnce();
+      await builder.close();
+    });
+
+    it("retries transient publication failure with the same envelope and keeps the win", async () => {
+      const recordWin = vi.spyOn(BidLedger.prototype, "recordWin");
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      reveal.mockRejectedValueOnce(new ApiError("unavailable", 503, "publishExecutionPayloadEnvelope"));
+      const root = emitBlock();
+      await vi.advanceTimersByTimeAsync(100);
+      expect(reveal).toHaveBeenCalledTimes(2);
+      expect(reveal.mock.calls[1][0]).toEqual(reveal.mock.calls[0][0]);
+      expect(recordWin.mock.results[0].value).toMatchObject({wonBlockRoots: [root]});
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(100);
+      expect(reveal).toHaveBeenCalledTimes(2);
+      await builder.close();
+    });
+
+    it("bounds transient reveal retries", async () => {
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      reveal.mockRejectedValue(new ApiError("unavailable", 503, "publishExecutionPayloadEnvelope"));
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(reveal).toHaveBeenCalledTimes(3);
+      await builder.close();
+    });
+
+    it.each([400, 401, 403, 404])("does not retry permanent reveal rejection %s", async (status) => {
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      reveal.mockRejectedValue(new ApiError("rejected", status, "publishExecutionPayloadEnvelope"));
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(reveal).toHaveBeenCalledOnce();
+      await builder.close();
+    });
+
+    it("stops reveal retries at the cutoff", async () => {
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      vi.setSystemTime(
+        10 * modules.opts.config.SLOT_DURATION_MS + modules.opts.config.getSlotComponentDurationMs(5000) - 50
+      );
+      reveal.mockRejectedValue(new ApiError("unavailable", 503, "publishExecutionPayloadEnvelope"));
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(reveal).toHaveBeenCalledOnce();
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Payload envelope publication reached reveal cutoff",
+        expect.objectContaining({code: "BUILDER_REVEAL_CUTOFF"})
+      );
+      await builder.close();
+    });
+
+    it("stops reveal retries on shutdown", async () => {
+      const {builder, reveal, emitBlock} = await prepareSelection();
+      reveal.mockRejectedValue(new ApiError("unavailable", 503, "publishExecutionPayloadEnvelope"));
+      emitBlock();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(reveal).toHaveBeenCalledOnce();
+      await builder.close();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(reveal).toHaveBeenCalledOnce();
     });
 
     it("records a selection when reveal policy declines", async () => {
