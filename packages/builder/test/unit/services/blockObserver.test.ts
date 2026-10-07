@@ -90,7 +90,8 @@ describe("BlockObserver", () => {
       slot: "1",
       block: rootHex(1),
       execution_optimistic: false,
-      builder_index: "7", block_hash: rootHex(2),
+      builder_index: "7",
+      block_hash: rootHex(2),
     });
 
     await observer.processBlockEvent(event, controller.signal);
@@ -109,7 +110,10 @@ describe("BlockObserver", () => {
     const observer = new BlockObserver(config, logger, api, {builderIndex: 7, hasBidForSlot});
     const onBlock = vi.fn();
     observer.runOnBlock(onBlock);
-    await observer.processBlockEvent({...blockEvent(rootHex(1), 1), builderIndex, blockHash: rootHex(2)}, controller.signal);
+    await observer.processBlockEvent(
+      {...blockEvent(rootHex(1), 1), builderIndex, blockHash: rootHex(2)},
+      controller.signal
+    );
     expect(hasBidForSlot).toHaveBeenCalledWith(1);
     expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
     expect(onBlock).toHaveBeenCalledOnce();
