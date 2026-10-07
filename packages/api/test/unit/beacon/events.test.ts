@@ -48,12 +48,8 @@ describe("beacon / events / block codec", () => {
       expect(blockType.fromJson(json)).toEqual(event);
     });
 
-    it("decodes a legacy block event without Builder fields", () => {
-      expect(blockType.fromJson({slot: "10", block: blockRoot, execution_optimistic: false})).toEqual({
-        slot: 10,
-        block: blockRoot,
-        executionOptimistic: false,
-      });
+    it("rejects a post-Gloas block event without Builder fields", () => {
+      expect(() => blockType.fromJson({slot: "10", block: blockRoot, execution_optimistic: false})).toThrow();
     });
 
     it.each([
@@ -61,7 +57,7 @@ describe("beacon / events / block codec", () => {
       {block_hash: blockHash},
       {builder_index: "invalid", block_hash: blockHash},
       {builder_index: null, block_hash: blockHash},
-    ])("does not treat incomplete or invalid Builder fields as a legacy event: %o", (fields) => {
+    ])("rejects incomplete or invalid Builder fields: %o", (fields) => {
       expect(() =>
         blockType.fromJson({slot: "10", block: blockRoot, execution_optimistic: false, ...fields})
       ).toThrow();

@@ -79,18 +79,18 @@ describe("BlockObserver", () => {
     expect(onBlock).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])("fetches and verifies a relevant event, legacy=%s", async (legacy) => {
+  it("fetches an own-builder event even without a known local bid", async () => {
     const block = gloasBlock();
     block.message.slot = 1;
     api.beacon.getBlockV2.mockResolvedValue(blockResponse(block));
-    const observer = new BlockObserver(config, logger, api, {builderIndex: 7});
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7, hasBidForSlot: () => false});
     const onBlock = vi.fn();
     observer.runOnBlock(onBlock);
     const event = routes.events.getTypeByEvent(config).block.fromJson({
       slot: "1",
       block: rootHex(1),
       execution_optimistic: false,
-      ...(legacy ? {} : {builder_index: "7", block_hash: rootHex(2)}),
+      builder_index: "7", block_hash: rootHex(2),
     });
 
     await observer.processBlockEvent(event, controller.signal);
@@ -99,6 +99,20 @@ describe("BlockObserver", () => {
     expect(onBlock).toHaveBeenCalledWith(
       expect.objectContaining({block, signedBid: block.message.body.signedExecutionPayloadBid})
     );
+  });
+
+  it.each([8, BUILDER_INDEX_SELF_BUILD])("fetches competing Builder %s in a locally bid slot", async (builderIndex) => {
+    const block = gloasBlock(builderIndex);
+    block.message.slot = 1;
+    api.beacon.getBlockV2.mockResolvedValue(blockResponse(block));
+    const hasBidForSlot = vi.fn((slot: number) => slot === 1);
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7, hasBidForSlot});
+    const onBlock = vi.fn();
+    observer.runOnBlock(onBlock);
+    await observer.processBlockEvent({...blockEvent(rootHex(1), 1), builderIndex, blockHash: rootHex(2)}, controller.signal);
+    expect(hasBidForSlot).toHaveBeenCalledWith(1);
+    expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).toHaveBeenCalledOnce();
   });
 
   it("does not trust the event in place of the fetched block", async () => {

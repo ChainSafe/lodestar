@@ -10,6 +10,7 @@ type BlockEvent = routes.events.EventData[typeof EventType.block];
 
 type BlockObserverOptions = {
   builderIndex?: BuilderIndex;
+  hasBidForSlot?: (slot: Slot) => boolean;
   retries?: number;
   retryDelay?: number;
   maxSeenBlockRoots?: number;
@@ -39,17 +40,19 @@ export class BlockObserver {
   private readonly retryDelay: number;
   private readonly maxSeenBlockRoots: number;
   private readonly builderIndex: BuilderIndex | undefined;
+  private readonly hasBidForSlot: ((slot: Slot) => boolean) | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
     private readonly logger: Logger,
     private readonly api: ApiClient,
-    {builderIndex, retries = 5, retryDelay = 200, maxSeenBlockRoots = 256}: BlockObserverOptions = {}
+    {builderIndex, hasBidForSlot, retries = 5, retryDelay = 200, maxSeenBlockRoots = 256}: BlockObserverOptions = {}
   ) {
     this.retries = retries;
     this.retryDelay = retryDelay;
     this.maxSeenBlockRoots = maxSeenBlockRoots;
     this.builderIndex = builderIndex;
+    this.hasBidForSlot = hasBidForSlot;
     this.logger.info("Block observer initialized", {retries, retryDelay, maxSeenBlockRoots});
   }
 
@@ -78,7 +81,12 @@ export class BlockObserver {
         return;
       }
 
-      if (this.builderIndex !== undefined && "builderIndex" in event && event.builderIndex !== this.builderIndex) {
+      if (
+        this.builderIndex !== undefined &&
+        "builderIndex" in event &&
+        event.builderIndex !== this.builderIndex &&
+        !this.hasBidForSlot?.(slot)
+      ) {
         this.logger.debug("Ignoring block event for another builder", {
           slot,
           blockRoot,

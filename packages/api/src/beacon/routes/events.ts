@@ -357,8 +357,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       fromJson: (data) => {
         const fork = config.getForkName(Number((data as BlockSSE).slot));
-        // Older beacon nodes emit the pre-Gloas shape even after Gloas. Keep server serialization strict.
-        if (isForkPostGloas(fork) && ("builder_index" in (data as object) || "block_hash" in (data as object))) {
+        if (isForkPostGloas(fork)) {
           return gloasBlock.fromJson(data);
         }
         return phase0Block.fromJson(data);
