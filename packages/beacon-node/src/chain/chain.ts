@@ -47,7 +47,7 @@ import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelop
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {BlockRootSlot} from "../util/sszBytes.js";
+import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {BeaconEngineEvent, BeaconEngineEventData} from "./beaconEngine/events.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
@@ -186,8 +186,7 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
-  // Facade owns DA + light-client + backfill stores only; block/state/envelope/op-pool repos are
-  // engine-owned (reached via `beaconEngine`). Bootstrap passes the full `IBeaconDb`, narrowed here.
+  // Facade reads blocks and envelopes and owns DA + light-client + backfill stores.
   protected readonly db: IBeaconChainDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
@@ -281,11 +280,11 @@ export class BeaconChain implements IBeaconChain {
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
-      beaconEngine: this.beaconEngine,
       chainView: this,
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
+      db: this.db,
       seenBlockInputCache: this.seenBlockInputCache,
       custodyConfig: this.custodyConfig,
       metrics,
@@ -545,12 +544,12 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
-        // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
+        // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
         const blockInput = this.seenBlockInputCache.get(block.blockRoot);
         if (blockInput?.hasBlock()) {
           return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
         }
-        const res = await this.beaconEngine.getSerializedBlockByRoot(fromHex(block.blockRoot));
+        const res = await this.readStoredBlockByRoot(fromHex(block.blockRoot));
         if (res) {
           return {
             block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
@@ -563,7 +562,7 @@ export class BeaconChain implements IBeaconChain {
       // this function runtime, so if not found, fallback to the cold db (by slot)
     }
 
-    const bytes = await this.beaconEngine.getSerializedFinalizedBlockBySlot(slot);
+    const bytes = await this.db.blockArchive.getBinary(slot);
     return (
       bytes && {
         block: this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes),
@@ -580,15 +579,14 @@ export class BeaconChain implements IBeaconChain {
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
-      // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
+      // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
       const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
         return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(protoBlock), finalized: false};
       }
     }
 
-    // Engine reads hot→cold and reports which; deserialize facade-side (no object crosses the seam)
-    const res = await this.beaconEngine.getSerializedBlockByRoot(fromHex(root));
+    const res = await this.readStoredBlockByRoot(fromHex(root));
     return (
       res && {
         block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
@@ -606,7 +604,7 @@ export class BeaconChain implements IBeaconChain {
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
-      // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
+      // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
       const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
         const signedBlock = blockInput.getBlock();
@@ -621,7 +619,7 @@ export class BeaconChain implements IBeaconChain {
       }
     }
 
-    const res = await this.beaconEngine.getSerializedBlockByRoot(root);
+    const res = await this.readStoredBlockByRoot(root);
     return (
       res && {
         block: res.bytes,
@@ -632,12 +630,17 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
-  /** Engine passthrough: serialized finalized block by slot (cold archive). */
-  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null> {
-    return this.beaconEngine.getSerializedFinalizedBlockBySlot(slot);
+  private async readStoredBlockByRoot(root: Root): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null> {
+    const hot = await this.db.block.getBinary(root);
+    if (hot) {
+      const slot = getSlotFromSignedBeaconBlockSerialized(hot);
+      if (slot === null) throw Error(`Invalid block data stored in DB for root: ${toRootHex(root)}`);
+      return {bytes: hot, slot, finalized: false};
+    }
+    const cold = await this.db.blockArchive.getBinaryEntryByRoot(root);
+    return cold && {bytes: cold.value, slot: cold.key, finalized: true};
   }
 
-  /** Engine passthrough: thin BeaconBlocksByRange serving refs (fork choice read engine-side). */
   getCanonicalBlockRootSlotsByRange(
     startSlot: Slot,
     endSlot: Slot
@@ -645,14 +648,9 @@ export class BeaconChain implements IBeaconChain {
     return this.chainView.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
   }
 
-  /** Engine passthrough: finalized block slot by root (cold archive index). */
-  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null> {
-    return this.beaconEngine.getFinalizedBlockSlotByRoot(root);
-  }
-
-  /** Engine passthrough: serialized finalized block by parent root (cold archive index). */
-  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
-    return this.beaconEngine.getSerializedFinalizedBlockByParentRoot(parentRoot);
+  async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
+    const slot = await this.db.blockArchive.getSlotByParentRoot(parentRoot);
+    return slot !== null ? this.db.blockArchive.getBinary(slot) : null;
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {

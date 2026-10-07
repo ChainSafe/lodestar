@@ -139,7 +139,7 @@ async function* resolveCanonicalDataColumnBlocks(
     let blockRoot = recentRoots.get(slot);
     if (blockRoot === null) continue;
     if (blockRoot === undefined) {
-      const root = await chain.beaconEngine.getFinalizedBlockRootBySlot(slot);
+      const root = await db.blockArchive.getRootBySlot(slot);
       blockRoot = root === null ? null : toRootHex(root);
     }
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;

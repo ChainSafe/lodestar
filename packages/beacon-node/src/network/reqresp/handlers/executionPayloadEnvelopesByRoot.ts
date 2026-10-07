@@ -13,8 +13,7 @@ import {prettyPrintPeerId} from "../../util.js";
 export async function* onExecutionPayloadEnvelopesByRoot(
   requestBody: ExecutionPayloadEnvelopesByRootRequest,
   chain: IBeaconChain,
-  // [beacon-engine] unused: kept for unstable signature parity
-  _db: IBeaconChainDb,
+  db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -32,7 +31,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
 
     const block = chain.getBlockHexDefaultStatus(rootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
-    const slot = block ? block.slot : await chain.getFinalizedBlockSlotByRoot(root);
+    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(root);
 
     if (slot === null) {
       chain.logger.debug(

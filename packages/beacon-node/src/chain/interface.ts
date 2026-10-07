@@ -148,13 +148,10 @@ export interface IBeaconChain extends IChainView {
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
-  // Engine passthroughs (block DB is engine-owned) — used by p2p handlers / reqresp utils / api.
-  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
   getCanonicalBlockRootSlotsByRange(
     startSlot: Slot,
     endSlot: Slot
   ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
-  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
   getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;

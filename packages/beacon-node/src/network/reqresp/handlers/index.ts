@@ -77,7 +77,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconChainDb; chain: IBea
         chain,
         ReqRespMethod.BeaconBlocksByRange,
         body.count,
-        onBeaconBlocksByRange(body, chain, peerId, peerClient)
+        onBeaconBlocksByRange(body, chain, db, peerId, peerClient)
       );
     },
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {

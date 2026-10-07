@@ -4,13 +4,12 @@ import {ForkPostGloas, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params"
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
+import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
-import type {IBeaconEngine} from "../beaconEngine/interface.js";
 import {isDaOutOfRange} from "../blocks/blockInput/index.js";
 import {
   CreateFromBidProps,
@@ -32,12 +31,11 @@ const MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOT
 export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
   clock: IClock;
-  beaconEngine: IBeaconEngine;
   chainView: IChainView;
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
-
+  db: IBeaconChainDb;
   seenBlockInputCache: SeenBlockInput;
   custodyConfig: CustodyConfig;
   metrics: Metrics | null;
@@ -56,12 +54,11 @@ export type SeenPayloadEnvelopeInputModules = {
 export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
-  private readonly beaconEngine: IBeaconEngine;
   private readonly chainView: IChainView;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
-
+  private readonly db: IBeaconChainDb;
   private readonly seenBlockInputCache: SeenBlockInput;
   private readonly custodyConfig: CustodyConfig;
   private readonly metrics: Metrics | null;
@@ -73,11 +70,11 @@ export class SeenPayloadEnvelopeInput {
   constructor({
     config,
     clock,
-    beaconEngine,
     chainView,
     chainEvents,
     signal,
     serializedCache,
+    db,
     seenBlockInputCache,
     custodyConfig,
     metrics,
@@ -85,11 +82,11 @@ export class SeenPayloadEnvelopeInput {
   }: SeenPayloadEnvelopeInputModules) {
     this.config = config;
     this.clock = clock;
-    this.beaconEngine = beaconEngine;
     this.chainView = chainView;
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
+    this.db = db;
     this.seenBlockInputCache = seenBlockInputCache;
     this.custodyConfig = custodyConfig;
     this.metrics = metrics;
@@ -214,18 +211,13 @@ export class SeenPayloadEnvelopeInput {
       return undefined;
     }
 
-    // Reuse the decoded block if sidecar persistence has not evicted it yet.
+    // In-memory first: persistBlockInput writes db.block THEN prunes seenBlockInputCache, so a
+    // just-imported block whose async write (unfinalizedBlockWrites) has not flushed yet is still here;
+    // older blocks (already pruned from the cache) fall through to the hot db.
     const cachedBlockInput = this.seenBlockInputCache.get(blockRootHex);
-    // [beacon-engine] deviation: reload only hot block bytes through the owning engine.
-    const blockBytes = cachedBlockInput?.hasBlock()
-      ? null
-      : await this.beaconEngine.getSerializedUnfinalizedBlockByRoot(fromHex(blockRootHex));
-    const blockSlot = blockBytes ? getSlotFromSignedBeaconBlockSerialized(blockBytes) : null;
     const block = cachedBlockInput?.hasBlock()
       ? cachedBlockInput.getBlock()
-      : blockBytes && blockSlot !== null
-        ? this.config.getForkTypes(blockSlot).SignedBeaconBlock.deserialize(blockBytes)
-        : null;
+      : await this.db.block.get(fromHex(blockRootHex));
     if (block == null) {
       return undefined;
     }

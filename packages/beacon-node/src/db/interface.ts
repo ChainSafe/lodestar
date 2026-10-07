@@ -30,7 +30,7 @@ import {
  *
  * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
  * engine owns (blocks, states, checkpoint states, envelopes, op-pool persistence); `IBeaconChainDb`
- * retains envelope reads and the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
+ * retains read access to blocks and envelopes, plus the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
  * only by the bootstrap (CLI / `BeaconNode`).
  */
 export interface IBeaconEngineDb {
@@ -54,8 +54,19 @@ export interface IBeaconEngineDb {
   blsToExecutionChange: BLSToExecutionChangeRepository;
 }
 
-// TODO - beacon engine: Add read-only block and blockArchive access for local facade serving reads.
 export interface IBeaconChainDb {
+  block: Pick<BlockRepository, "get" | "getBinary">;
+  blockArchive: Pick<
+    BlockArchiveRepository,
+    | "getBinary"
+    | "getBinaryEntryByRoot"
+    | "getRootBySlot"
+    | "getSlotByRoot"
+    | "getSlotByParentRoot"
+    | "binaryEntriesStream"
+    | "decodeKey"
+  >;
+
   executionPayloadEnvelope: Pick<ExecutionPayloadEnvelopeRepository, "get" | "getBinary">;
   executionPayloadEnvelopeArchive: Pick<
     ExecutionPayloadEnvelopeArchiveRepository,

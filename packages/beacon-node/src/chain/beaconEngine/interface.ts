@@ -254,14 +254,8 @@ export interface IBeaconEngine {
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   getAllNodes(): ProtoNode[];
 
-  // Block + state DB (engine-owned). Bytes-only — no `SignedBeaconBlock`/`BeaconState` crosses the seam.
-  getSerializedUnfinalizedBlockByRoot(root: Uint8Array): Promise<Uint8Array | null>;
-  getSerializedBlockByRoot(root: Uint8Array): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null>;
+  // Engine-owned state reads and fork-choice metadata.
   getRecentCanonicalRoots(startSlot: Slot, endSlot: Slot): Map<Slot, RootHex | null>;
-  getFinalizedBlockRootBySlot(slot: Slot): Promise<Root | null>;
-  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
-  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
-  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
   // Cold block-archive writes + reverse-lookup (backfill).
   persistArchiveBlock(
@@ -273,7 +267,6 @@ export interface IBeaconEngine {
   batchPersistArchiveBlocks(
     entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
   ): Promise<void>;
-  getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null>;
 
   produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;

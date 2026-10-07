@@ -52,8 +52,8 @@ export async function handleColumnSidecarUnavailability({
     }
   }
 
-  const hotBlockBytes = blockRoot ? await chain.beaconEngine.getSerializedUnfinalizedBlockByRoot(blockRoot) : null;
-  const blockBytes = hotBlockBytes ?? (finalized ? await chain.getSerializedFinalizedBlockBySlot(slot) : null);
+  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot) : null;
+  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot) : null);
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${finalized ? "finalized" : "unfinalized"} block not found while handling unavailable dataColumnSidecar`,

@@ -755,15 +755,9 @@ export class BeaconEngine implements IBeaconEngine {
   getAllNodes(): ProtoNode[] {
     return this.forkChoice.getAllNodes();
   }
-  // --- Block DB (engine-owned). Bytes-only; no SignedBeaconBlock crosses the seam. ---
+  // --- Internal block DB read for op-pool pruning. ---
 
-  /** Serialized block by root: hot then cold. `finalized` reflects a cold-db (archive) hit. */
-  /** Hot-only read for DA cache reloads; never substitutes an archived block. */
-  async getSerializedUnfinalizedBlockByRoot(root: Uint8Array): Promise<Uint8Array | null> {
-    return this.db.block.getBinary(root);
-  }
-
-  async getSerializedBlockByRoot(
+  private async getSerializedBlockByRoot(
     root: Uint8Array
   ): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null> {
     const hot = await this.db.block.getBinary(root);
@@ -776,27 +770,7 @@ export class BeaconEngine implements IBeaconEngine {
     return cold && {bytes: cold.value, slot: cold.key, finalized: true};
   }
 
-  /** Serialized finalized block by slot (cold archive). */
-  async getFinalizedBlockRootBySlot(slot: Slot): Promise<Root | null> {
-    return this.db.blockArchive.getRootBySlot(slot);
-  }
-
-  async getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null> {
-    return (await this.db.blockArchive.getBinary(slot)) ?? null;
-  }
-
-  /** Finalized block slot by root (cold archive index). */
-  async getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null> {
-    return this.db.blockArchive.getSlotByRoot(root);
-  }
-
-  /** Serialized finalized block by parent root (cold archive index). */
-  async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
-    const slot = await this.db.blockArchive.getSlotByParentRoot(parentRoot);
-    return slot !== null ? ((await this.db.blockArchive.getBinary(slot)) ?? null) : null;
-  }
-
-  // --- Cold block archive writes/reverse-lookup (backfill; engine-owned). Bytes-first + root/parent indexes. ---
+  // --- Cold block archive writes (backfill; engine-owned). Bytes-first + root/parent indexes. ---
 
   async persistArchiveBlock(
     slot: Slot,
@@ -819,14 +793,6 @@ export class BeaconEngine implements IBeaconEngine {
         parentRoot: e.parentRoot,
       }))
     );
-  }
-
-  /** Nearest archived block strictly below `slot` (reverse range, limit 1) — serialized. */
-  async getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null> {
-    for await (const {key, value} of this.db.blockArchive.binaryEntriesStream({lt: slot, reverse: true, limit: 1})) {
-      return {slot: this.db.blockArchive.decodeKey(key), bytes: value};
-    }
-    return null;
   }
 
   /** Serialized state by state root (cold archive). */
