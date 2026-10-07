@@ -1,7 +1,8 @@
 import {COMPOUNDING_WITHDRAWAL_PREFIX, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../cache/stateCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
-import {CachedBeaconStateElectra, CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -59,7 +60,7 @@ export function queueExcessActiveBalance(
 /**
  * Since we share pubkey2index, pubkey maybe added by other epoch transition but we don't have that validator in this state
  */
-export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStateGloas, pubkey: Uint8Array): boolean {
+export function isPubkeyKnown(state: CachedBeaconStateAllForks, pubkey: Uint8Array): boolean {
   return isValidatorKnown(state, state.epochCtx.getValidatorIndex(pubkey));
 }
 
@@ -67,7 +68,7 @@ export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStat
  * Since we share pubkey2index, validatorIndex maybe not null but we don't have that validator in this state
  */
 export function isValidatorKnown(
-  state: CachedBeaconStateElectra | CachedBeaconStateGloas | CachedBeaconStateHeze,
+  state: CachedBeaconStateAllForks,
   index: ValidatorIndex | null
 ): index is ValidatorIndex {
   return index !== null && index < state.validators.length;
