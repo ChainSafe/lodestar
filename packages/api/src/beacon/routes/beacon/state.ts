@@ -481,7 +481,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: {
-        onlySupport: WireFormat.json,
         data: PtcResponseType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
