@@ -20,7 +20,10 @@ describe("Builder JSON-RPC Engine connection", () => {
   };
   const makeEngine = () => createPayloadSourceEngine({url: "http://localhost:8551", jwtSecret});
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
 
   it.each(["prepare", "getPayload"] as const)("rejects Heze %s before sending a request", async (operation) => {
     const fetch = vi
@@ -150,6 +153,61 @@ describe("Builder JSON-RPC Engine connection", () => {
   it("lets PayloadSource reject a missing payload ID", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({result: {...validResult, payloadId: null}})));
     await expect(prepare(makeEngine())).rejects.toMatchObject({type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"}});
+  });
+
+  it("rejects an empty hexadecimal payload ID on a VALID response", async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({result: {...validResult, payloadId: "0x"}}));
+    vi.stubGlobal("fetch", fetch);
+    await expect(prepare(makeEngine())).rejects.toMatchObject({
+      type: {code: BuilderEngineErrorCode.INVALID_PAYLOAD_ID, payloadId: "0x"},
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["prepare", "getPayload"] as const)("retries a transient transport failure during %s", async (operation) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unavailable", {status: 503}))
+      .mockResolvedValueOnce(Response.json({result: operation === "prepare" ? validResult : payloadResponse()}));
+    vi.stubGlobal("fetch", fetch);
+    const engine = makeEngine();
+    await (operation === "prepare"
+      ? prepare(engine)
+      : engine.getPayload(ForkName.gloas, payloadId, new AbortController().signal));
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const firstRequest = JSON.parse(String(fetch.mock.calls[0][1].body));
+    expect(JSON.parse(String(fetch.mock.calls[1][1].body))).toMatchObject({
+      method: firstRequest.method,
+      params: firstRequest.params,
+    });
+  });
+
+  it.each([400, 401, 403, 404])("does not retry HTTP %s", async (status) => {
+    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("rejected", {status})));
+    vi.stubGlobal("fetch", fetch);
+    await expect(prepare(makeEngine())).rejects.toMatchObject({status});
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("bounds transient retries", async () => {
+    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("busy", {status: 429})));
+    vi.stubGlobal("fetch", fetch);
+    await expect(prepare(makeEngine())).rejects.toMatchObject({status: 429});
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("cancels during transport retry backoff", async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("busy", {status: 503})));
+    vi.stubGlobal("fetch", fetch);
+    const controller = new AbortController();
+    const engine = createPayloadSourceEngine({url: "http://localhost:8551", jwtSecret, signal: controller.signal});
+    const result = expect(prepare(engine)).rejects.toThrow(ErrorAborted);
+    await vi.advanceTimersByTimeAsync(1);
+    controller.abort();
+    await result;
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("preserves an unsupported Engine method error without downgrading or retrying", async () => {
