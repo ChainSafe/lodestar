@@ -8,7 +8,6 @@ import {
   EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
-  JsonOnlyResp,
   WithVersion,
 } from "../../utils/codecs.js";
 import {
@@ -79,6 +78,17 @@ const ForkChoiceResponseType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+const ForkChoiceNodeV2ExtraDataType = new ContainerType(
+  {
+    executionOptimistic: ssz.Boolean,
+    gasLimit: new OptionalType(ssz.UintNum64),
+    timestamp: ssz.UintNum64,
+    target: stringType,
+    unrealizedJustifiedEpoch: ssz.Epoch,
+    unrealizedFinalizedEpoch: ssz.Epoch,
+  },
+  {jsonCase: "eth2"}
+);
 const payloadStatusType = new StringType<"pending" | "empty" | "full">();
 const ForkChoiceNodeV2Type = new ContainerType(
   {
@@ -95,6 +105,17 @@ const ForkChoiceNodeV2Type = new ContainerType(
     payloadAttesterCount: ssz.UintNum64,
     payloadAvailabilityYesCount: ssz.UintNum64,
     payloadDataAvailabilityYesCount: ssz.UintNum64,
+    extraData: ForkChoiceNodeV2ExtraDataType,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceExtraDataType = new ContainerType(
+  {
+    head: new ContainerType({blockRoot: stringType, payloadStatus: payloadStatusType}, {jsonCase: "eth2"}),
+    proposerBoostRoot: stringType,
+    previousProposerBoostRoot: stringType,
+    unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    unrealizedFinalizedCheckpoint: ssz.phase0.Checkpoint,
   },
   {jsonCase: "eth2"}
 );
@@ -103,6 +124,7 @@ const ForkChoiceResponseV2Type = new ContainerType(
     justifiedCheckpoint: ssz.phase0.Checkpoint,
     finalizedCheckpoint: ssz.phase0.Checkpoint,
     forkChoiceNodes: ArrayOf(ForkChoiceNodeV2Type),
+    extraData: ForkChoiceExtraDataType,
   },
   {jsonCase: "eth2"}
 );
@@ -113,11 +135,7 @@ const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
 type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
-type ForkChoiceNodeV2 = ValueOf<typeof ForkChoiceNodeV2Type> & {extraData: Record<string, unknown>};
-type ForkChoiceResponseV2 = Omit<ValueOf<typeof ForkChoiceResponseV2Type>, "forkChoiceNodes"> & {
-  forkChoiceNodes: ForkChoiceNodeV2[];
-  extraData: Record<string, unknown>;
-};
+type ForkChoiceResponseV2 = ValueOf<typeof ForkChoiceResponseV2Type>;
 
 export type Endpoints = {
   /**
@@ -235,39 +253,11 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       url: "/eth/v2/debug/fork_choice",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: JsonOnlyResp<Endpoints["getDebugForkChoiceV2"]>({
-        data: {
-          toJson: (data) => {
-            const json = ForkChoiceResponseV2Type.toJson(data) as {
-              fork_choice_nodes: Record<string, unknown>[];
-            };
-            return {
-              ...json,
-              fork_choice_nodes: json.fork_choice_nodes.map((node, i) => ({
-                ...node,
-                extra_data: data.forkChoiceNodes[i].extraData,
-              })),
-              extra_data: data.extraData,
-            };
-          },
-          fromJson: (json) => {
-            const data = ForkChoiceResponseV2Type.fromJson(json);
-            const {fork_choice_nodes, extra_data} = json as {
-              fork_choice_nodes: {extra_data: unknown}[];
-              extra_data: unknown;
-            };
-            return {
-              ...data,
-              forkChoiceNodes: data.forkChoiceNodes.map((node, i) => ({
-                ...node,
-                extraData: parseExtraData(fork_choice_nodes[i].extra_data),
-              })),
-              extraData: parseExtraData(extra_data),
-            };
-          },
-        },
+      resp: {
+        data: ForkChoiceResponseV2Type,
         meta: EmptyMetaCodec,
-      }),
+        onlySupport: WireFormat.json,
+      },
     },
     getProtoArrayNodes: {
       url: "/eth/v0/debug/forkchoice",
@@ -314,11 +304,4 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
     },
   };
-}
-
-function parseExtraData(json: unknown): Record<string, unknown> {
-  if (typeof json !== "object" || json === null || Array.isArray(json)) {
-    throw Error("extra_data must be an object");
-  }
-  return json as Record<string, unknown>;
 }

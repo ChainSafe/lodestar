@@ -47,19 +47,6 @@ describe("beacon / debug", () => {
       expect(response.json()).toHaveProperty("data.fork_choice_nodes");
     });
 
-    it.each(["response", "node"])("rejects fork choice v2 with missing %s extra data", (location) => {
-      const codec = getDefinitions(config).getDebugForkChoiceV2.resp.data;
-      const data = testData.getDebugForkChoiceV2.res.data;
-      if (data instanceof Uint8Array) throw Error("Expected JSON fixture");
-      const json = codec.toJson(data, undefined) as {
-        extra_data?: unknown;
-        fork_choice_nodes: {extra_data?: unknown}[];
-      };
-      if (location === "response") delete json.extra_data;
-      else delete json.fork_choice_nodes[0].extra_data;
-      expect(() => codec.fromJson(json, undefined)).toThrow("extra_data must be an object");
-    });
-
     it("getStateV2", async () => {
       const state = ssz.electra.BeaconState.defaultValue();
       const stateSerialized = ssz.electra.BeaconState.serialize(state);

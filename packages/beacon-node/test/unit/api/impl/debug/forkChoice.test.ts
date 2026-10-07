@@ -26,7 +26,11 @@ describe("getDebugForkChoiceV2", () => {
     modules.forkChoice.getUnrealizedFinalizedCheckpoint = vi.fn(() => checkpoint);
     modules.forkChoice.getProposerBoostRoot = vi.fn(() => ZERO_HASH_HEX);
     modules.forkChoice.getPreviousProposerBoostRoot = vi.fn(() => ZERO_HASH_HEX);
-    modules.forkChoice.getHeadRoot.mockReturnValue(ZERO_HASH_HEX);
+    modules.forkChoice.getHead.mockImplementation(() => {
+      const head = protoArray.nodes.at(-1);
+      assert(head);
+      return head;
+    });
   });
 
   it("returns parent roots and statuses, execution hashes and PTC counts", async () => {
@@ -84,6 +88,7 @@ describe("getDebugForkChoiceV2", () => {
 
     const {data} = await api.getDebugForkChoiceV2();
     assert(!(data instanceof Uint8Array));
+    expect(data.extraData.head).toEqual({blockRoot: root(5), payloadStatus: "empty"});
     expect(
       data.forkChoiceNodes.map((node) => [
         node.blockRoot,

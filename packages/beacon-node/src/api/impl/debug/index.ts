@@ -3,14 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {
-  BeaconState,
-  DataColumnSidecar,
-  DataColumnSidecars,
-  type SignedBeaconBlock,
-  ssz,
-  sszTypesFor,
-} from "@lodestar/types";
+import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -82,6 +75,7 @@ export function getDebugApi({
     async getDebugForkChoiceV2() {
       const {forkChoice} = chain;
       const nodes = forkChoice.getAllNodes();
+      const head = forkChoice.getHead();
       return {
         data: {
           justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
@@ -107,28 +101,24 @@ export function getDebugApi({
               payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,
               payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? 0,
               extraData: {
-                execution_optimistic: isOptimisticBlock(node),
-                timestamp: String(computeTimeAtSlot(config, node.slot, chain.genesisTime)),
-                target: node.targetRoot,
-                unrealized_justified_epoch: String(node.unrealizedJustifiedEpoch),
-                unrealized_finalized_epoch: String(node.unrealizedFinalizedEpoch),
-                gas_limit:
-                  node.payloadStatus === PayloadStatus.FULL && "executionPayloadGasLimit" in node
-                    ? String(node.executionPayloadGasLimit)
+                executionOptimistic: isOptimisticBlock(node),
+                gasLimit:
+                  node.payloadStatus === PayloadStatus.FULL && node.executionStatus !== ExecutionStatus.PreMerge
+                    ? node.executionPayloadGasLimit
                     : null,
+                timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
+                target: node.targetRoot,
+                unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
+                unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
               },
             };
           }),
           extraData: {
-            unrealized_justified_checkpoint: ssz.phase0.Checkpoint.toJson(
-              forkChoice.getUnrealizedJustifiedCheckpoint()
-            ),
-            unrealized_finalized_checkpoint: ssz.phase0.Checkpoint.toJson(
-              forkChoice.getUnrealizedFinalizedCheckpoint()
-            ),
-            proposer_boost_root: forkChoice.getProposerBoostRoot(),
-            previous_proposer_boost_root: forkChoice.getPreviousProposerBoostRoot(),
-            head_root: forkChoice.getHeadRoot(),
+            head: {blockRoot: head.blockRoot, payloadStatus: toPayloadStatusName(head.payloadStatus)},
+            proposerBoostRoot: forkChoice.getProposerBoostRoot(),
+            previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
+            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
+            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
           },
         },
       };
