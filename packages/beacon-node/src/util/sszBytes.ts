@@ -466,7 +466,7 @@ const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE
 // CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
 export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
   data: Uint8Array,
-  fork: ForkPostGloas = ForkName.gloas
+  fork: ForkPostGloas
 ): RootHex | null {
   const bidOffsetPointer =
     GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK +

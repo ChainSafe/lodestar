@@ -189,7 +189,7 @@ describe("Heze EIP-8015 transition", () => {
   it("exposes no legacy Eth1 data through the Heze state-view contract", () => {
     const pre = buildGloasState(SLOTS_PER_EPOCH - 1);
     expect(new BeaconStateView(pre).eth1Data).toEqual(pre.eth1Data);
-    expect(new BeaconStateView(buildHezeState()).eth1Data).toBeUndefined();
+    expect(() => new BeaconStateView(buildHezeState()).eth1Data).toThrow("eth1Data is not available after Heze");
   });
 
   it("keeps Heze genesis entropy without inventing legacy fields", () => {

@@ -387,7 +387,7 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
 
   it("returns null for invalid data", () => {
     for (const size of [0, 200, 571]) {
-      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size), ForkName.gloas)).toBeNull();
     }
   });
 });

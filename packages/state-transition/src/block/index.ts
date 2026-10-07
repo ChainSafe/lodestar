@@ -6,7 +6,6 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateGloas,
-  CachedBeaconStatePreHeze,
 } from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
@@ -120,7 +119,7 @@ export function processBlock(
 
   if (fork < ForkSeq.heze) {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processEth1Data});
-    processEth1Data(state as CachedBeaconStatePreHeze, (block as BeaconBlock<ForkPreHeze>).body.eth1Data);
+    processEth1Data(state, (block as BeaconBlock<ForkPreHeze>).body.eth1Data);
     timer?.();
   }
 

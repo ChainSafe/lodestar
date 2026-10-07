@@ -10,7 +10,6 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
-  CachedBeaconStatePreHeze,
   ExecutionPayloadStatus,
   IndexedBuilderState,
   getBlockRootAtSlot,
@@ -61,10 +60,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   deposit: (state, testCase: {deposit: phase0.Deposit}) => {
     const fork = state.config.getForkSeq(state.slot);
-    if (fork >= ForkSeq.heze) {
-      throw Error("Legacy deposits are not supported in Heze");
-    }
-    blockFns.processDeposit(fork, state as CachedBeaconStatePreHeze, testCase.deposit);
+    blockFns.processDeposit(fork, state, testCase.deposit);
   },
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {

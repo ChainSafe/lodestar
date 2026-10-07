@@ -80,7 +80,6 @@ export type {
   BeaconStateHeze,
   // Non-cached states
   BeaconStatePhase0,
-  BeaconStatePreHeze,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
@@ -92,6 +91,5 @@ export type {
   CachedBeaconStateGloas,
   CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
-  CachedBeaconStatePreHeze,
 } from "./types.js";
 export * from "./util/index.js";

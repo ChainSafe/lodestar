@@ -117,7 +117,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
 
   bench({
     id: `${stateId} - phase0 processEth1DataReset`,
-    beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
+    beforeEach: () => stateOg.value.clone(),
     fn: (state) => processEth1DataReset(state, cache.value),
   });
 

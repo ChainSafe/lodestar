@@ -1089,9 +1089,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
   };
 
   if (!isForkPostHeze(fork)) {
-    if (currentState.eth1Data === undefined) {
-      throw new Error("Expected legacy Eth1 data for pre-Heze block production");
-    }
     commonBlockBody.eth1Data = currentState.eth1Data;
     commonBlockBody.deposits = [];
   }

@@ -87,7 +87,7 @@ export interface IBeaconStateView {
   epoch: Epoch;
   genesisTime: number;
   genesisValidatorsRoot: Root;
-  eth1Data: phase0.Eth1Data | undefined;
+  eth1Data: phase0.Eth1Data;
   latestBlockHeader: phase0.BeaconBlockHeader;
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
@@ -362,7 +362,7 @@ export type IBeaconStateViewNative = Omit<
   pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
   // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
-  eth1Data: phase0.Eth1Data | undefined;
+  eth1Data: phase0.Eth1Data;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   computeBlockRewards(
     signedBlockBytes: Uint8Array,

@@ -17,10 +17,10 @@ import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
 import {
   BeaconStateAllForks,
-  BeaconStatePreHeze,
+  BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateElectra,
-  CachedBeaconStatePreHeze,
+  CachedBeaconStatePhase0,
 } from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
@@ -94,7 +94,7 @@ export function getGenesisBeaconState(
 
   // Ethereum 1.0 chain data
   if (config.getForkSeq(GENESIS_SLOT) < ForkSeq.heze) {
-    (state as BeaconStatePreHeze).eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
+    (state as BeaconStatePhase0).eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
   }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(randaoMixes);
 
@@ -109,7 +109,7 @@ export function getGenesisBeaconState(
  */
 export function applyEth1BlockHash(state: CachedBeaconStateAllForks, eth1BlockHash: Bytes32): void {
   if (state.config.getForkSeq(state.slot) < ForkSeq.heze) {
-    (state as CachedBeaconStatePreHeze).eth1Data.blockHash = eth1BlockHash;
+    (state as CachedBeaconStatePhase0).eth1Data.blockHash = eth1BlockHash;
   }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, eth1BlockHash));
 }
@@ -147,13 +147,13 @@ export function applyDeposits(
   if (fork >= ForkSeq.heze) {
     throw new Error("Legacy Eth1 genesis deposits are not supported in Heze");
   }
-  const statePreHeze = state as CachedBeaconStatePreHeze;
+  const statePhase0 = state as CachedBeaconStatePhase0;
   const depositDataRootList: Root[] = [];
 
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
 
   if (fullDepositDataRootArr) {
-    const depositCount = Number(statePreHeze.eth1Data.depositCount);
+    const depositCount = Number(statePhase0.eth1Data.depositCount);
     for (let index = 0; index < depositCount; index++) {
       depositDataRootList.push(fullDepositDataRootArr[index]);
     }
@@ -166,18 +166,18 @@ export function applyDeposits(
   for (const [index, deposit] of newDeposits.entries()) {
     if (fullDepositDataRootArr) {
       depositDataRootList.push(fullDepositDataRootArr[index + initDepositCount]);
-      statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
+      statePhase0.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
     } else if (depositDatas) {
       const depositDataList = depositDatas.slice(0, index + 1);
-      statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
+      statePhase0.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
         depositDataList.map((d) => DepositData.hashTreeRoot(d))
       );
     }
 
-    statePreHeze.eth1Data.depositCount += 1n;
+    statePhase0.eth1Data.depositCount += 1n;
 
     const fork = config.getForkSeq(GENESIS_SLOT);
-    processDeposit(fork, statePreHeze, deposit);
+    processDeposit(fork, statePhase0, deposit);
   }
 
   // Process deposit balance updates

@@ -2,23 +2,11 @@ import {Mock, Mocked, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostDeneb,
-  ForkPostGloas,
-  ForkPreFulu,
-  MAX_ATTESTATIONS_ELECTRA,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  MAX_PAYLOAD_ATTESTATIONS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkName, ForkPostDeneb, ForkPreFulu, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
+import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
@@ -90,105 +78,6 @@ describe("gossip block validation", () => {
 
   beforeEach(() => {
     setupChain();
-  });
-
-  describe.each([ForkName.gloas, ForkName.heze] as const)("%s operation limits", (fork) => {
-    const forkConfig = createBeaconConfig(
-      {...gloasConfig, HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity},
-      Buffer.alloc(32, 0xaa)
-    );
-    const operations: {
-      name: string;
-      limit: number;
-      fill: (body: BeaconBlockBody<ForkPostGloas>, count: number) => void;
-    }[] = [
-      {
-        name: "proposerSlashings",
-        limit: MAX_PROPOSER_SLASHINGS,
-        fill: (body, count) => {
-          body.proposerSlashings = Array.from({length: count}, () => ssz.phase0.ProposerSlashing.defaultValue());
-        },
-      },
-      {
-        name: "attesterSlashings",
-        limit: MAX_ATTESTER_SLASHINGS_ELECTRA,
-        fill: (body, count) => {
-          body.attesterSlashings = Array.from({length: count}, () => ssz.gloas.AttesterSlashing.defaultValue());
-        },
-      },
-      {
-        name: "attestations",
-        limit: MAX_ATTESTATIONS_ELECTRA,
-        fill: (body, count) => {
-          body.attestations = Array.from({length: count}, () => ssz.gloas.Attestation.defaultValue());
-        },
-      },
-      {
-        name: "voluntaryExits",
-        limit: MAX_VOLUNTARY_EXITS,
-        fill: (body, count) => {
-          body.voluntaryExits = Array.from({length: count}, () => ssz.phase0.SignedVoluntaryExit.defaultValue());
-        },
-      },
-      {
-        name: "blsToExecutionChanges",
-        limit: MAX_BLS_TO_EXECUTION_CHANGES,
-        fill: (body, count) => {
-          body.blsToExecutionChanges = Array.from({length: count}, () =>
-            ssz.capella.SignedBLSToExecutionChange.defaultValue()
-          );
-        },
-      },
-      {
-        name: "payloadAttestations",
-        limit: MAX_PAYLOAD_ATTESTATIONS,
-        fill: (body, count) => {
-          body.payloadAttestations = Array.from({length: count}, () => ssz.gloas.PayloadAttestation.defaultValue());
-        },
-      },
-    ];
-
-    function setupValidBlock(): SignedBeaconBlock<ForkPostGloas> {
-      setupChain(forkConfig);
-      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
-      forkChoice.getBlockHexAndBlockHash.mockReturnValue({} as ProtoBlock);
-      const state = new BeaconStateView(generateCachedState());
-      regen.getState.mockResolvedValue(state);
-      vi.spyOn(state, "getBeaconProposer").mockReturnValue(proposerIndex);
-      const signedBlock = sszTypesFor(fork).SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = clockSlot;
-      return signedBlock;
-    }
-
-    it("accepts counts at every limit without requiring legacy fields in Heze", async () => {
-      const signedBlock = setupValidBlock();
-      for (const {limit, fill} of operations) {
-        fill(signedBlock.message.body, limit);
-      }
-      await expect(validateGossipBlock(forkConfig, chain, signedBlock, fork)).resolves.toEqual({skippedSlots: 0});
-    });
-
-    it.each(operations)("rejects excessive $name", async ({name, limit, fill}) => {
-      const signedBlock = setupValidBlock();
-      fill(signedBlock.message.body, limit + 1);
-      await expect(validateGossipBlock(forkConfig, chain, signedBlock, fork)).rejects.toMatchObject({
-        action: GossipAction.REJECT,
-        type: {code: BlockErrorCode.TOO_MANY_BODY_OPERATIONS, operation: name, count: limit + 1, limit},
-      });
-      expect(regen.getState).not.toHaveBeenCalled();
-    });
-
-    if (fork === ForkName.gloas) {
-      it("rejects legacy deposits in Gloas", async () => {
-        const signedBlock = setupValidBlock() as SignedBeaconBlock<ForkName.gloas>;
-        signedBlock.message.body.deposits.push(ssz.phase0.Deposit.defaultValue());
-        await expect(validateGossipBlock(forkConfig, chain, signedBlock, fork)).rejects.toMatchObject({
-          action: GossipAction.REJECT,
-          type: {code: BlockErrorCode.TOO_MANY_BODY_OPERATIONS, operation: "deposits", count: 1, limit: 0},
-        });
-      });
-    }
   });
 
   it("FUTURE_SLOT", async () => {

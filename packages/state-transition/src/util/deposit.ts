@@ -1,12 +1,13 @@
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 import {UintNum64, phase0} from "@lodestar/types";
-import {CachedBeaconStateElectra, CachedBeaconStatePreHeze} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStatePhase0} from "../types.js";
 
-export function getEth1DepositCount(state: CachedBeaconStatePreHeze, eth1Data?: phase0.Eth1Data): UintNum64 {
-  const eth1DataToUse = eth1Data ?? state.eth1Data;
+export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
+  const statePhase0 = state as CachedBeaconStatePhase0;
+  const eth1DataToUse = eth1Data ?? statePhase0.eth1Data;
   // Proposer can set any value, use in bigint until the result is bounded by MAX_DEPOSITS
   const depositCount = eth1DataToUse.depositCount;
-  const eth1DepositIndex = BigInt(state.eth1DepositIndex);
+  const eth1DepositIndex = BigInt(statePhase0.eth1DepositIndex);
   const maxDeposits = BigInt(MAX_DEPOSITS);
   if (state.config.getForkSeq(state.slot) >= ForkSeq.electra) {
     const electraState = state as CachedBeaconStateElectra;

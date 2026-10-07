@@ -1,20 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostGloas,
-  MAX_ATTESTATIONS_ELECTRA,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  MAX_PAYLOAD_ATTESTATIONS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MIN_SEED_LOOKAHEAD,
-  isForkPostBellatrix,
-  isForkPostDeneb,
-  isForkPostGloas,
-  isForkPostHeze,
-} from "@lodestar/params";
+import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -24,7 +10,7 @@ import {
   isStatePostBellatrix,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -174,43 +160,8 @@ export async function validateGossipBlock(
   }
 
   if (isForkPostGloas(fork)) {
-    const body = (block as BeaconBlock<ForkPostGloas>).body;
+    const body = (block as gloas.BeaconBlock).body;
     const bid = body.signedExecutionPayloadBid.message;
-
-    for (const [operation, limit] of [
-      ["proposerSlashings", MAX_PROPOSER_SLASHINGS],
-      ["attesterSlashings", MAX_ATTESTER_SLASHINGS_ELECTRA],
-      ["attestations", MAX_ATTESTATIONS_ELECTRA],
-      ["voluntaryExits", MAX_VOLUNTARY_EXITS],
-      ["blsToExecutionChanges", MAX_BLS_TO_EXECUTION_CHANGES],
-      ["payloadAttestations", MAX_PAYLOAD_ATTESTATIONS],
-    ] as const) {
-      const count = body[operation].length;
-      if (count > limit) {
-        throw new BlockGossipError(GossipAction.REJECT, {
-          code: BlockErrorCode.TOO_MANY_BODY_OPERATIONS,
-          slot: blockSlot,
-          root: blockRoot,
-          operation,
-          count,
-          limit,
-        });
-      }
-    }
-
-    if (!isForkPostHeze(fork)) {
-      const count = (body as gloas.BeaconBlockBody).deposits.length;
-      if (count !== 0) {
-        throw new BlockGossipError(GossipAction.REJECT, {
-          code: BlockErrorCode.TOO_MANY_BODY_OPERATIONS,
-          slot: blockSlot,
-          root: blockRoot,
-          operation: "deposits",
-          count,
-          limit: 0,
-        });
-      }
-    }
 
     // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
     // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block

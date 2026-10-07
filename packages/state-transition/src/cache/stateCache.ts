@@ -15,7 +15,6 @@ import {
   BeaconStateGloas,
   BeaconStateHeze,
   BeaconStatePhase0,
-  BeaconStatePreHeze,
 } from "./types.js";
 
 export type BeaconStateCache = {
@@ -142,7 +141,6 @@ export type CachedBeaconStateGloas = CachedBeaconState<BeaconStateGloas>;
 export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
-export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance

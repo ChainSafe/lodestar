@@ -2,7 +2,7 @@ import {afterEach, assert, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, forkAll, isForkPostHeze} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {BeaconStatePreHeze} from "../../../src/types.js";
+import {BeaconStatePhase0} from "../../../src/types.js";
 import {
   getValidatorCountFromStateBytes,
   getValidatorPubkeyFromStateBytes,
@@ -27,7 +27,7 @@ describe("scanActiveValidatorsFromStateBytes", () => {
     const largeEpoch = 2 ** 32 + 3;
     state.historicalRoots.push(new Uint8Array(32).fill(0xa5));
     if (!isForkPostHeze(fork)) {
-      (state as BeaconStatePreHeze).eth1DataVotes.push(ssz.phase0.Eth1Data.defaultViewDU());
+      (state as BeaconStatePhase0).eth1DataVotes.push(ssz.phase0.Eth1Data.defaultViewDU());
     }
     for (const [activationEpoch, exitEpoch, effectiveBalance, slashed] of [
       [0, Infinity, 32_000_000_000, false],

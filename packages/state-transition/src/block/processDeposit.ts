@@ -21,7 +21,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateElectra,
-  CachedBeaconStatePreHeze,
+  CachedBeaconStatePhase0,
 } from "../types.js";
 import {
   computeDomain,
@@ -38,22 +38,23 @@ import {
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
-export function processDeposit(fork: ForkSeq, state: CachedBeaconStatePreHeze, deposit: phase0.Deposit): void {
+export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
+  const statePhase0 = state as CachedBeaconStatePhase0;
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
       ssz.phase0.DepositData.hashTreeRoot(deposit.data),
       deposit.proof,
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-      state.eth1DepositIndex,
-      state.eth1Data.depositRoot
+      statePhase0.eth1DepositIndex,
+      statePhase0.eth1Data.depositRoot
     )
   ) {
     throw new Error("Deposit has invalid merkle proof");
   }
 
   // deposits must be processed in order
-  state.eth1DepositIndex += 1;
+  statePhase0.eth1DepositIndex += 1;
 
   applyDeposit(fork, state, deposit.data);
 }

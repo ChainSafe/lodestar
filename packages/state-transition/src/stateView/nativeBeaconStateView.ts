@@ -227,14 +227,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedGenesisValidatorsRoot;
   }
 
-  get eth1Data(): phase0.Eth1Data | undefined {
+  get eth1Data(): phase0.Eth1Data {
     if (this.forkSeq >= ForkSeq.heze) {
-      return undefined;
+      throw new Error("eth1Data is not available after Heze");
     }
     if (this.cachedEth1Data === null) {
-      this.cachedEth1Data = this.binding.eth1Data ?? null;
+      this.cachedEth1Data = this.binding.eth1Data;
     }
-    return this.cachedEth1Data ?? undefined;
+    return this.cachedEth1Data;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
