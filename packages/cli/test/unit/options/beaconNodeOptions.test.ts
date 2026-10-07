@@ -292,6 +292,28 @@ describe("options / network / tcp and quic flags", () => {
     expect(result.tcp).toBe(false);
   });
 
+  it("should pass Xray options through to the network worker", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      "network.xrayAddress": " /tmp/xray.sock ",
+      "network.xrayWaitForAttach": true,
+    } as NetworkArgs);
+    expect(result.xrayAddress).toBe("/tmp/xray.sock");
+    expect(result.xrayWaitForAttach).toBe(true);
+  });
+
+  it("should require a collector address when waiting for Xray", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        "network.xrayAddress": " ",
+        "network.xrayWaitForAttach": true,
+      } as NetworkArgs)
+    ).toThrow("network.xrayWaitForAttach requires network.xrayAddress");
+  });
+
   it("should throw when both TCP and QUIC are disabled", () => {
     expect(() =>
       parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: false} as NetworkArgs)

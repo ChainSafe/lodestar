@@ -30,6 +30,7 @@ overrides:
   sigstore: 4.0.0
 
 patchedDependencies:
+  libp2p@3.3.9: 8e6edc3c3366a136eae0a86278180da28c59d39228ef7e8f00e7015461f4435d
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
@@ -102,7 +103,7 @@ importers:
         version: 9.1.5
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=8e6edc3c3366a136eae0a86278180da28c59d39228ef7e8f00e7015461f4435d)
       node-gyp:
         specifier: ^9.4.0
         version: 9.4.1
@@ -302,6 +303,9 @@ importers:
       '@multiformats/multiaddr':
         specifier: ^13.0.1
         version: 13.0.3
+      '@xray/probe':
+        specifier: file:../../.xray/probe-0.1.0.tgz
+        version: file:.xray/probe-0.1.0.tgz(@libp2p/interface@3.3.0)
       datastore-core:
         specifier: ^12.0.1
         version: 12.0.1
@@ -322,7 +326,7 @@ importers:
         version: 0.5.6
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=8e6edc3c3366a136eae0a86278180da28c59d39228ef7e8f00e7015461f4435d)
       multiformats:
         specifier: ^13.4.2
         version: 13.4.2
@@ -736,7 +740,7 @@ importers:
         version: link:../types
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=8e6edc3c3366a136eae0a86278180da28c59d39228ef7e8f00e7015461f4435d)
 
   packages/spec-test-util:
     dependencies:
@@ -1088,6 +1092,9 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@bufbuild/protobuf@2.16.0':
+    resolution: {integrity: sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q==}
 
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
@@ -3081,6 +3088,13 @@ packages:
 
   '@vitest/utils@4.0.7':
     resolution: {integrity: sha512-HNrg9CM/Z4ZWB6RuExhuC6FPmLipiShKVMnT9JlQvfhwR47JatWLChA6mtZqVHqypE6p/z6ofcjbyWpM7YLxPQ==}
+
+  '@xray/probe@file:.xray/probe-0.1.0.tgz':
+    resolution: {integrity: sha512-FMUumUpc7MmWrX+HTy00GHV8+ydL8l+DZWLZbmB2tSwbXlpEiEvg19KmuZetClg3Z2MdJoJXn3zsuSYNTby1lQ==, tarball: file:.xray/probe-0.1.0.tgz}
+    version: 0.1.0
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@libp2p/interface': ^3.3.0
 
   abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -6663,6 +6677,8 @@ snapshots:
   '@biomejs/cli-win32-x64@2.2.2':
     optional: true
 
+  '@bufbuild/protobuf@2.16.0': {}
+
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
   '@chainsafe/as-sha256@1.2.5': {}
@@ -8831,6 +8847,11 @@ snapshots:
       '@vitest/pretty-format': 4.0.7
       tinyrainbow: 3.0.3
 
+  '@xray/probe@file:.xray/probe-0.1.0.tgz(@libp2p/interface@3.3.0)':
+    dependencies:
+      '@bufbuild/protobuf': 2.16.0
+      '@libp2p/interface': 3.3.0
+
   abbrev@1.1.1: {}
 
   abbrev@4.0.0: {}
@@ -10577,7 +10598,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  libp2p@3.3.9:
+  libp2p@3.3.9(patch_hash=8e6edc3c3366a136eae0a86278180da28c59d39228ef7e8f00e7015461f4435d):
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0

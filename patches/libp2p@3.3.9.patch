@@ -1,0 +1,130 @@
+diff --git a/dist/src/libp2p.d.ts b/dist/src/libp2p.d.ts
+index f95d4f95fb63098e8cb293cb5d8b8545724ff3c8..4c85b0b8e39d252bf41c1d966c6e32035c4a7659 100644
+--- a/dist/src/libp2p.d.ts
++++ b/dist/src/libp2p.d.ts
+@@ -48,7 +48,7 @@ export declare class Libp2p<T extends ServiceMap = ServiceMap> extends TypedEven
+     register(protocol: string, topology: Topology, options?: AbortOptions): Promise<string>;
+     unregister(id: string): void;
+     use(protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void;
+-    unuse(protocol: string): void;
++    unuse(protocol: string, middleware?: StreamMiddleware): void;
+     isDialable(multiaddr: Multiaddr, options?: IsDialableOptions): Promise<boolean>;
+ }
+ //# sourceMappingURL=libp2p.d.ts.map
+\ No newline at end of file
+diff --git a/dist/src/libp2p.js b/dist/src/libp2p.js
+index 237c0366c6708cc2616f3855f94abaef84f981a7..0516f101525e38b05c4ad2ac4c4432b3f140cf87 100644
+--- a/dist/src/libp2p.js
++++ b/dist/src/libp2p.js
+@@ -313,8 +313,8 @@ export class Libp2p extends TypedEventEmitter {
+     use(protocol, middleware) {
+         this.components.registrar.use(protocol, Array.isArray(middleware) ? middleware : [middleware]);
+     }
+-    unuse(protocol) {
+-        this.components.registrar.unuse(protocol);
++    unuse(protocol, middleware) {
++        this.components.registrar.unuse(protocol, middleware);
+     }
+     async isDialable(multiaddr, options = {}) {
+         return this.components.connectionManager.isDialable(multiaddr, options);
+diff --git a/dist/src/registrar.d.ts b/dist/src/registrar.d.ts
+index 4ed8c327c55c08611595438d31345c2554389748..a6c4b07341ec3e3399bd034cb10908678c3c17fa 100644
+--- a/dist/src/registrar.d.ts
++++ b/dist/src/registrar.d.ts
+@@ -43,7 +43,7 @@ export declare class Registrar implements RegistrarInterface {
+      */
+     unregister(id: string): void;
+     use(protocol: string, middleware: StreamMiddleware[]): void;
+-    unuse(protocol: string): void;
++    unuse(protocol: string, middleware?: StreamMiddleware): void;
+     getMiddleware(protocol: string): StreamMiddleware[];
+     /**
+      * Remove a disconnected peer from the record
+diff --git a/dist/src/registrar.js b/dist/src/registrar.js
+index 0132f23274b4d3833404e9de9145ab86d35986fb..d6ccf2789a69ee6b5a24be4f24cb32b12b04dd99 100644
+--- a/dist/src/registrar.js
++++ b/dist/src/registrar.js
+@@ -124,13 +124,26 @@ export class Registrar {
+         }
+     }
+     use(protocol, middleware) {
+-        this.middleware.set(protocol, middleware);
++        this.middleware.set(protocol, [...(this.middleware.get(protocol) ?? []), ...middleware]);
+     }
+-    unuse(protocol) {
+-        this.middleware.delete(protocol);
++    unuse(protocol, middleware) {
++        if (middleware == null) {
++            this.middleware.delete(protocol);
++            return;
++        }
++        const remaining = (this.middleware.get(protocol) ?? []).filter(item => item !== middleware);
++        if (remaining.length === 0) {
++            this.middleware.delete(protocol);
++        }
++        else {
++            this.middleware.set(protocol, remaining);
++        }
+     }
+     getMiddleware(protocol) {
+-        return this.middleware.get(protocol) ?? [];
++        return [
++            ...(this.middleware.get('*') ?? []),
++            ...(protocol === '*' ? [] : this.middleware.get(protocol) ?? [])
++        ];
+     }
+     /**
+      * Remove a disconnected peer from the record
+diff --git a/src/libp2p.ts b/src/libp2p.ts
+index d69de3af19f568177916185e2856cd42b2efeb97..a30cfdfc74d3ed40272558882395f076fc116923 100644
+--- a/src/libp2p.ts
++++ b/src/libp2p.ts
+@@ -409,8 +409,8 @@ export class Libp2p<T extends ServiceMap = ServiceMap> extends TypedEventEmitter
+     this.components.registrar.use(protocol, Array.isArray(middleware) ? middleware : [middleware])
+   }
+ 
+-  unuse (protocol: string): void {
+-    this.components.registrar.unuse(protocol)
++  unuse (protocol: string, middleware?: StreamMiddleware): void {
++    this.components.registrar.unuse(protocol, middleware)
+   }
+ 
+   async isDialable (multiaddr: Multiaddr, options: IsDialableOptions = {}): Promise<boolean> {
+diff --git a/src/registrar.ts b/src/registrar.ts
+index 01549f2334e01968a47921aacf7bef8febbd5618..d51860c27726cf1c4b02274fe9738c04408b7b7b 100644
+--- a/src/registrar.ts
++++ b/src/registrar.ts
+@@ -166,15 +166,29 @@ export class Registrar implements RegistrarInterface {
+   }
+ 
+   use (protocol: string, middleware: StreamMiddleware[]): void {
+-    this.middleware.set(protocol, middleware)
++    this.middleware.set(protocol, [...(this.middleware.get(protocol) ?? []), ...middleware])
+   }
+ 
+-  unuse (protocol: string): void {
+-    this.middleware.delete(protocol)
++  unuse (protocol: string, middleware?: StreamMiddleware): void {
++    if (middleware == null) {
++      this.middleware.delete(protocol)
++      return
++    }
++
++    const remaining = (this.middleware.get(protocol) ?? []).filter(item => item !== middleware)
++
++    if (remaining.length === 0) {
++      this.middleware.delete(protocol)
++    } else {
++      this.middleware.set(protocol, remaining)
++    }
+   }
+ 
+   getMiddleware (protocol: string): StreamMiddleware[] {
+-    return this.middleware.get(protocol) ?? []
++    return [
++      ...(this.middleware.get('*') ?? []),
++      ...(protocol === '*' ? [] : this.middleware.get(protocol) ?? [])
++    ]
+   }
+ 
+   /**
