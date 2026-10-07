@@ -80,7 +80,7 @@ function fixture() {
   };
   const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn()};
   const gossip = new NativeGossip(network, config, modules.events, defaultNetworkOptions, vi.fn());
-  const executor = new NativeGossipExecutor(modules, {}, gossip, vi.fn());
+  const executor = new NativeGossipExecutor(modules, {}, gossip);
   return {order, chain, modules, gossip, executor};
 }
 

@@ -5,7 +5,8 @@ let network;
 let active = 0;
 // The least a host does: take no work, so the binding only settles results.
 const host = {
-  capacity: () => null,
+  capacity: () => ({gossipValidation: "backpressured", incomingRequestSlots: 0}),
+  subscribeCapacity: () => () => {},
   validate: async (job) => job.messages.map(() => "ignore"),
   checkDependencies: (checks) => checks.map(() => false),
   serve: (request) => request.cancel(),
@@ -22,6 +23,7 @@ process.on("message", async ({id, method, args}) => {
     switch (method) {
       case "initialize":
         network = createNativeNetwork({...args[0], beaconConfig: new bindings.BeaconConfig(args[1], args[2]), logLevel: "off"}, host);
+        network.stopDelivery();
         value = await network.getIdentity();
         break;
       case "applyIntent":

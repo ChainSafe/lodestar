@@ -13,24 +13,30 @@ function fixture() {
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
   const remembered = {close: vi.fn(async () => {})};
-  const network = {notifyCapacity: vi.fn(), close: vi.fn(async (): Promise<CloseResult> => ({reason: "requested"}))};
+  const network = {stopDelivery: vi.fn(), close: vi.fn(async (): Promise<CloseResult> => ({reason: "requested"}))};
   Object.assign(core, {modules: {clock}, onSlot, gossip, requests, peers, intent, remembered, network});
   return {core, clock, onSlot, gossip, requests, peers, intent, remembered, network};
 }
 
 describe("native core close", () => {
-  it("takes the final snapshot before closing native and shares one completion", async () => {
-    const {core, remembered, network, clock, onSlot} = fixture();
+  it("stops delivery before cleanup and the final snapshot, then closes native with one shared completion", async () => {
+    const {core, remembered, network, clock, onSlot, gossip, requests, peers, intent} = fixture();
     const snapshot = defer<void>();
     const joined = defer<CloseResult>();
     remembered.close.mockReturnValue(snapshot.promise);
     network.close.mockReturnValue(joined.promise);
     const first = core.close();
     expect(core.close()).toBe(first);
+    expect(network.stopDelivery).toHaveBeenCalledOnce();
+    for (const cleanup of [clock.off, gossip.close, requests.close, peers.close, intent.close, remembered.close]) {
+      expect(cleanup).toHaveBeenCalledOnce();
+      expect(network.stopDelivery).toHaveBeenCalledBefore(cleanup);
+    }
     expect(clock.off).toHaveBeenCalledExactlyOnceWith(ClockEvent.slot, onSlot);
     expect(network.close).not.toHaveBeenCalled();
     snapshot.resolve();
-    await vi.waitFor(() => expect(network.close).toHaveBeenCalledOnce());
+    await Promise.resolve();
+    expect(network.close).toHaveBeenCalledOnce();
     let settled = false;
     void first.then(() => {
       settled = true;

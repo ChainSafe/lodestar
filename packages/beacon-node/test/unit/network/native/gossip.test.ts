@@ -40,6 +40,7 @@ async function fixture(attach = true) {
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
+    subscribeCapacity: vi.fn((_wake: () => void) => vi.fn()),
     check: vi.fn<NativeGossipExecutor["check"]>((checks) => checks.map(() => true)),
     ready: vi.fn<NativeGossipExecutor["ready"]>(() => true),
     execute: vi.fn<NativeGossipExecutor["execute"]>((messages) => {
@@ -261,4 +262,19 @@ describe("native gossip host", () => {
       now.mockRestore();
     }
   });
+});
+
+it("wakes an existing capacity subscription when its executor attaches and detaches it once", async () => {
+  const f = await fixture(false);
+  const wake = vi.fn();
+  const unsubscribe = f.gossip.subscribeCapacity(wake);
+  expect(f.gossip.ready()).toBe(false);
+  f.gossip.attach(f.processor);
+  expect(f.processor.subscribeCapacity).toHaveBeenCalledExactlyOnceWith(wake);
+  expect(wake).toHaveBeenCalledOnce();
+  expect(f.gossip.ready()).toBe(true);
+  const detach = f.processor.subscribeCapacity.mock.results[0].value;
+  unsubscribe();
+  unsubscribe();
+  expect(detach).toHaveBeenCalledOnce();
 });

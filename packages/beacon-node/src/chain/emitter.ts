@@ -17,6 +17,7 @@ import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelop
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
+  validationCapacity = "validationCapacity",
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint.
    *
@@ -108,6 +109,7 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
+  [ChainEvent.validationCapacity]: () => void;
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;

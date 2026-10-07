@@ -2,7 +2,8 @@ import {NativeApplicationConfig, NativeHost, NativeNetwork, createNativeNetwork}
 
 /** A host that takes no work, so the binding only settles results, as after the adapter closes. */
 const settlingHost: NativeHost = {
-  capacity: () => null,
+  capacity: () => ({gossipValidation: "backpressured", incomingRequestSlots: 0}),
+  subscribeCapacity: () => () => {},
   validate: async (job) => job.messages.map(() => "ignore"),
   checkDependencies: (checks) => checks.map(() => false),
   serve: (request) => request.cancel(),
@@ -14,5 +15,7 @@ const settlingHost: NativeHost = {
 };
 
 export function createSettlingNetwork(application: Omit<NativeApplicationConfig, "logLevel">): NativeNetwork {
-  return createNativeNetwork({...application, logLevel: "off"}, settlingHost);
+  const network = createNativeNetwork({...application, logLevel: "off"}, settlingHost);
+  network.stopDelivery();
+  return network;
 }

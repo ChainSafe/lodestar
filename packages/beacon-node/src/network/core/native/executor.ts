@@ -4,7 +4,6 @@ import {routes} from "@lodestar/api";
 import {SlotRootHex} from "@lodestar/types";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../chain/emitter.js";
-import {ClockEvent} from "../../../util/clock.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {GossipMessageInfo, GossipType} from "../../gossip/interface.js";
 import {MAX_PEERS_PER_ROOT} from "../../processor/constants.js";
@@ -24,8 +23,7 @@ export class NativeGossipExecutor {
   constructor(
     private readonly modules: NetworkProcessorModules,
     opts: NetworkProcessorOpts,
-    private readonly gossip: Pick<NativeGossip, "attach" | "notifyBlock" | "dropQueued">,
-    private readonly wake: () => void
+    private readonly gossip: Pick<NativeGossip, "attach" | "notifyBlock" | "dropQueued">
   ) {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
     // Peer bans go through core.reportPeer; native retains already queued messages until validation or expiry.
@@ -34,7 +32,6 @@ export class NativeGossipExecutor {
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules, onFatalPeer);
     gossip.attach(this);
     modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
-    modules.chain.clock.on(ClockEvent.slot, this.onSlot);
   }
 
   /** Whether each check's block is known; an unknown one starts a search. */
@@ -137,9 +134,13 @@ export class NativeGossipExecutor {
   private readonly onBlock = ({block}: {block: string}): void => {
     this.gossip.notifyBlock(Buffer.from(block.slice(2), "hex"));
   };
-  private readonly onSlot = (): void => {
-    this.wake();
-  };
+  subscribeCapacity(wake: () => void): () => void {
+    const {emitter} = this.modules.chain;
+    emitter.on(ChainEvent.validationCapacity, wake);
+    return () => {
+      emitter.off(ChainEvent.validationCapacity, wake);
+    };
+  }
 
   dropAllJobs(): void {
     this.gossip.dropQueued();
@@ -157,7 +158,6 @@ export class NativeGossipExecutor {
     if (this.stopped) return;
     this.stopped = true;
     this.modules.chain.emitter.off(routes.events.EventType.block, this.onBlock);
-    this.modules.chain.clock.off(ClockEvent.slot, this.onSlot);
     this.dropAllJobs();
   }
 }

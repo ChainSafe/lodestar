@@ -79,6 +79,7 @@ export class ServingLease {
 /** A module instance belongs to one JS environment, including retiring adapter instances. */
 export class HostServingBudget {
   private readonly leases = new Set<ServingLease>();
+  private capacityWake: (() => void) | undefined;
   private readonly waiting: ServingLease[] = [];
   private retainedBytes = 0;
   private workingBytes = 0;
@@ -99,6 +100,13 @@ export class HostServingBudget {
       budget.policy = policy;
     }
     return budget;
+  }
+  subscribeCapacity(wake: () => void): () => void {
+    if (this.capacityWake) throw new ServingConfigurationError("Serving capacity already subscribed");
+    this.capacityWake = wake;
+    return () => {
+      if (this.capacityWake === wake) this.capacityWake = undefined;
+    };
   }
   /** Leases acquirable now. */
   remaining(): number {
@@ -139,11 +147,13 @@ export class HostServingBudget {
     this.drain();
   }
   release(lease: ServingLease, retiring: boolean): void {
+    const wasFull = this.remaining() === 0;
     if (lease.working || lease.waiting || !this.leases.delete(lease))
       throw new ServingConfigurationError("Serving lease accounting invariant");
     if (lease.retained) this.retainedBytes -= lease.work.retainedBytes;
     if (retiring) this.retiring--;
     this.drain();
+    if (wasFull) this.capacityWake?.();
   }
   private drain(): void {
     const stateBytes = this.policy.capacity * this.policy.stateBytes;

@@ -286,3 +286,27 @@ it("cancels retained-memory admission without starting a source operation", asyn
   }
   expect(budget.snapshot().reservedBytes).toBe(0);
 });
+
+it("notifies the current adapter when an old lease retires, without waking its former subscriber", async () => {
+  const budget = HostServingBudget.forEnvironment(policy);
+  const oldWake = vi.fn();
+  const oldUnsubscribe = budget.subscribeCapacity(oldWake);
+  const lease = budget.acquire();
+  const active = defer<void>();
+  const pending = lease.track(() => active.promise);
+  lease.cancel();
+  lease.finish();
+  expect(budget.remaining()).toBe(0);
+  oldUnsubscribe();
+  const wake = vi.fn();
+  const unsubscribe = budget.subscribeCapacity(wake);
+  oldUnsubscribe();
+  expect(wake).not.toHaveBeenCalled();
+  active.resolve();
+  await pending;
+  await lease.retired;
+  expect(wake).toHaveBeenCalledOnce();
+  expect(oldWake).not.toHaveBeenCalled();
+  expect(budget.remaining()).toBe(1);
+  unsubscribe();
+});

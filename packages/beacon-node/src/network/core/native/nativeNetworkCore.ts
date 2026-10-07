@@ -112,7 +112,7 @@ export class NativeNetworkCore implements INetworkCore {
   }
 
   createGossipExecutor(modules: NetworkProcessorModules, opts: NetworkProcessorOpts): NativeGossipExecutor {
-    return new NativeGossipExecutor(modules, opts, this.gossip, () => this.network.notifyCapacity());
+    return new NativeGossipExecutor(modules, opts, this.gossip);
   }
 
   private async connectConfiguredPeers(
@@ -147,7 +147,24 @@ export class NativeNetworkCore implements INetworkCore {
   };
   /** Delivered work goes to the adapter's consumers; once it closes, the binding only settles. */
   private readonly host: NativeHost = {
-    capacity: () => (this.closed ? null : {ordinary: this.gossip.ready(), serving: this.requests.capacity()}),
+    capacity: () => ({
+      gossipValidation: this.gossip.ready() ? "ready" : "backpressured",
+      incomingRequestSlots: this.requests.capacity(),
+    }),
+    subscribeCapacity: (wake) => {
+      const unsubscribeGossip = this.gossip.subscribeCapacity(wake);
+      let unsubscribeRequests: () => void;
+      try {
+        unsubscribeRequests = this.requests.subscribeCapacity(wake);
+      } catch (error) {
+        unsubscribeGossip();
+        throw error;
+      }
+      return () => {
+        unsubscribeGossip();
+        unsubscribeRequests();
+      };
+    },
     validate: (job) => this.gossip.validate(job),
     checkDependencies: (checks) => this.gossip.checkDependencies(checks),
     serve: (request) => this.requests.serve(request),
@@ -181,12 +198,12 @@ export class NativeNetworkCore implements INetworkCore {
     void (async () => {
       const errors: unknown[] = [];
       for (const cleanup of [
+        () => this.network?.stopDelivery(),
         () => this.modules.clock.off(ClockEvent.slot, this.onSlot),
         () => this.gossip?.close(),
         () => this.requests?.close(),
         () => this.peers?.close(),
         () => this.intent?.close(),
-        () => this.network?.notifyCapacity(),
       ]) {
         try {
           cleanup();

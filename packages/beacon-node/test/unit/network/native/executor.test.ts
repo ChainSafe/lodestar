@@ -85,10 +85,10 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
       gossipHandlers: stubbed ? handlers : undefined,
     },
     {},
-    gossip,
-    wake
+    gossip
   );
-  return {executor, chain, gossip, result, wake, single, batch, config, logger};
+  const unsubscribe = executor.subscribeCapacity(wake);
+  return {unsubscribe, executor, chain, gossip, result, wake, single, batch, config, logger};
 }
 
 /** The owner's disposition of a job's verdicts, which these tests never withhold. */
@@ -457,4 +457,27 @@ describe("native gossip recovery through BlockInputSync", () => {
       f.close();
     }
   });
+});
+
+it.each(["bls", "regen"] as const)("rechecks both validation blockers when %s recovers first", (first) => {
+  const f = fixture();
+  let bls = false;
+  let regen = false;
+  f.chain.blsThreadPoolCanAcceptWork.mockImplementation(() => bls);
+  f.chain.regenCanAcceptWork = () => regen;
+  expect(f.executor.ready()).toBe(false);
+  if (first === "bls") bls = true;
+  else regen = true;
+  f.chain.emitter.emit(ChainEvent.validationCapacity);
+  expect(f.wake).toHaveBeenCalledOnce();
+  expect(f.executor.ready()).toBe(false);
+  bls = true;
+  regen = true;
+  f.chain.emitter.emit(ChainEvent.validationCapacity);
+  expect(f.wake).toHaveBeenCalledTimes(2);
+  expect(f.executor.ready()).toBe(true);
+  f.unsubscribe();
+  f.chain.emitter.emit(ChainEvent.validationCapacity);
+  expect(f.wake).toHaveBeenCalledTimes(2);
+  f.executor.stop();
 });

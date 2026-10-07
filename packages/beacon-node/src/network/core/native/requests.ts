@@ -195,6 +195,9 @@ export class NativeRequests {
       1
     );
   }
+  subscribeCapacity(wake: () => void): () => void {
+    return this.budget.subscribeCapacity(wake);
+  }
   /**
    * Serving starts the host can take now: free routes and the host serving budget, which other adapters share, bound
    * them. A request charges a route until its handler retires.

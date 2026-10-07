@@ -10,7 +10,7 @@ import {PendingGossipsubMessage} from "../../processor/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
 
-type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe">;
+type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe" | "subscribeCapacity">;
 
 const verdicts: Record<TopicValidatorResult, Verdict> = {
   [TopicValidatorResult.Accept]: "accept",
@@ -21,6 +21,8 @@ const verdicts: Record<TopicValidatorResult, Verdict> = {
 export class NativeGossip {
   private closed = false;
   private processor: GossipExecutor | undefined;
+  private capacityWake: (() => void) | undefined;
+  private unsubscribeCapacity: (() => void) | undefined;
   constructor(
     private readonly network: Pick<NativeNetwork, "publish" | "blockImported" | "dropQueuedGossip">,
     private readonly config: BeaconConfig,
@@ -35,6 +37,22 @@ export class NativeGossip {
         resource: "gossip executor attachment",
       });
     this.processor = processor;
+    if (this.capacityWake) {
+      this.unsubscribeCapacity = processor.subscribeCapacity(this.capacityWake);
+      this.capacityWake();
+    }
+  }
+  subscribeCapacity(wake: () => void): () => void {
+    if (this.capacityWake)
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "capacity subscription"});
+    this.capacityWake = wake;
+    this.unsubscribeCapacity = this.processor?.subscribeCapacity(wake);
+    return () => {
+      if (this.capacityWake !== wake) return;
+      this.unsubscribeCapacity?.();
+      this.unsubscribeCapacity = undefined;
+      this.capacityWake = undefined;
+    };
   }
   notifyBlock(root: Uint8Array): void {
     if (!this.closed) this.network.blockImported(root);
