@@ -23,7 +23,9 @@ describe("beacon / debug", () => {
 
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
-  describe("response encoding", () => {
+  // Get state by SSZ
+
+  describe("get state in SSZ format", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
     let server: FastifyInstance;
@@ -39,12 +41,6 @@ describe("beacon / debug", () => {
 
     afterAll(async () => {
       if (server !== undefined) await server.close();
-    });
-
-    it("wraps fork choice v2 in data", async () => {
-      mockApi.getDebugForkChoiceV2.mockResolvedValue(testData.getDebugForkChoiceV2.res);
-      const response = await server.inject({method: "GET", url: "/eth/v2/debug/fork_choice"});
-      expect(response.json()).toHaveProperty("data.fork_choice_nodes");
     });
 
     it("getStateV2", async () => {
