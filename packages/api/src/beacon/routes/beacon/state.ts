@@ -328,6 +328,11 @@ export type Endpoints = {
     ExecutionOptimisticAndFinalizedMeta
   >;
 
+  /**
+   * Get the payload timeliness committee for a slot from the given state.
+   *
+   * Defaults to the state's slot. Validator indices are returned in committee order and may contain duplicates.
+   */
   getStatePtc: Endpoint<
     "GET",
     StateArgs & {slot?: Slot},
