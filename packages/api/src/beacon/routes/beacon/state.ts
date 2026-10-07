@@ -6,6 +6,7 @@ import {
   BuilderStatus,
   CommitteeIndex,
   Epoch,
+  GeneralValidatorStatus,
   RootHex,
   Slot,
   StringType,
@@ -42,6 +43,12 @@ export type ValidatorId = string | number;
 export type BuilderId = string | number;
 
 export type {BuilderStatus, ValidatorStatus};
+
+/**
+ * Beacon API `status` filter: oneOf [ValidatorStatus, enum [active, pending, exited, withdrawal]].
+ * https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/states/validators.yaml
+ */
+export type ValidatorStatusFilter = ValidatorStatus | GeneralValidatorStatus;
 
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
@@ -196,9 +203,9 @@ export type Endpoints = {
       /** Either hex encoded public key (with 0x prefix) or validator index */
       validatorIds?: ValidatorId[];
       /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
-      statuses?: ValidatorStatus[];
+      statuses?: ValidatorStatusFilter[];
     },
-    {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
+    {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatusFilter[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -213,9 +220,9 @@ export type Endpoints = {
       /** Either hex encoded public key (with 0x prefix) or validator index */
       validatorIds?: ValidatorId[];
       /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
-      statuses?: ValidatorStatus[];
+      statuses?: ValidatorStatusFilter[];
     },
-    {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
+    {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatusFilter[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
   >;

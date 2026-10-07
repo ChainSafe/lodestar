@@ -16,7 +16,7 @@ import {
   isStatePostFulu,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, getBuilderStatus, getValidatorStatus, ssz} from "@lodestar/types";
+import {ValidatorIndex, getBuilderStatus, getValidatorStatus, mapToGeneralStatus, ssz} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -105,7 +105,8 @@ export function getBeaconStateApi({
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = state.getValidator(validatorIndex);
-            if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            const status = getValidatorStatus(validator, currentEpoch);
+            if (statuses.length && !statuses.includes(status) && !statuses.includes(mapToGeneralStatus(status))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
