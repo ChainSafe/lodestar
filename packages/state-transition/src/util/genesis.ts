@@ -15,7 +15,13 @@ import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {
+  BeaconStateAllForks,
+  BeaconStatePreHeze,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStatePreHeze,
+} from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
@@ -87,7 +93,9 @@ export function getGenesisBeaconState(
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(latestBlockHeader);
 
   // Ethereum 1.0 chain data
-  state.eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
+  if (config.getForkSeq(GENESIS_SLOT) < ForkSeq.heze) {
+    (state as BeaconStatePreHeze).eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
+  }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(randaoMixes);
 
   return state;
@@ -100,7 +108,9 @@ export function getGenesisBeaconState(
  * @param eth1BlockHash eth1 block hash
  */
 export function applyEth1BlockHash(state: CachedBeaconStateAllForks, eth1BlockHash: Bytes32): void {
-  state.eth1Data.blockHash = eth1BlockHash;
+  if (state.config.getForkSeq(state.slot) < ForkSeq.heze) {
+    (state as CachedBeaconStatePreHeze).eth1Data.blockHash = eth1BlockHash;
+  }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, eth1BlockHash));
 }
 
@@ -134,12 +144,16 @@ export function applyDeposits(
   fullDepositDataRootList?: DepositDataRootViewDU
 ): {activatedValidatorCount: number} {
   const fork = config.getForkSeq(state.slot);
+  if (fork >= ForkSeq.heze) {
+    throw new Error("Legacy Eth1 genesis deposits are not supported in Heze");
+  }
+  const statePreHeze = state as CachedBeaconStatePreHeze;
   const depositDataRootList: Root[] = [];
 
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
 
   if (fullDepositDataRootArr) {
-    const depositCount = Number(state.eth1Data.depositCount);
+    const depositCount = Number(statePreHeze.eth1Data.depositCount);
     for (let index = 0; index < depositCount; index++) {
       depositDataRootList.push(fullDepositDataRootArr[index]);
     }
@@ -152,18 +166,18 @@ export function applyDeposits(
   for (const [index, deposit] of newDeposits.entries()) {
     if (fullDepositDataRootArr) {
       depositDataRootList.push(fullDepositDataRootArr[index + initDepositCount]);
-      state.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
+      statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
     } else if (depositDatas) {
       const depositDataList = depositDatas.slice(0, index + 1);
-      state.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
+      statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
         depositDataList.map((d) => DepositData.hashTreeRoot(d))
       );
     }
 
-    state.eth1Data.depositCount += 1n;
+    statePreHeze.eth1Data.depositCount += 1n;
 
     const fork = config.getForkSeq(GENESIS_SLOT);
-    processDeposit(fork, state, deposit);
+    processDeposit(fork, statePreHeze, deposit);
   }
 
   // Process deposit balance updates
@@ -238,6 +252,9 @@ export function initializeBeaconStateFromEth1(
     | typeof ssz.electra.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
+  if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.heze) {
+    throw new Error("Legacy Eth1 genesis deposits are not supported in Heze");
+  }
   const stateView = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return BeaconStateAllForks anyway
     // so it's safe to do a cast here, we can't use get domain until we have genesisValidatorRoot

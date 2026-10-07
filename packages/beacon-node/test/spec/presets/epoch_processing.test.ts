@@ -1,13 +1,14 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
@@ -27,7 +28,12 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processEffectiveBalanceUpdates(fork, state, epochTransitionCache);
   },
-  eth1_data_reset: epochFns.processEth1DataReset,
+  eth1_data_reset: (state, epochTransitionCache) => {
+    if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
+      throw Error("Eth1 data reset is not supported in Heze");
+    }
+    epochFns.processEth1DataReset(state as CachedBeaconStatePreHeze, epochTransitionCache);
+  },
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
   inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
   justification_and_finalization: epochFns.processJustificationAndFinalization,

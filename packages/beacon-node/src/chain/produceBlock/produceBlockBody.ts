@@ -15,11 +15,13 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreGloas,
+  ForkPreHeze,
   ForkSeq,
   INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   G2_POINT_AT_INFINITY,
@@ -681,16 +683,19 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
+
+  if (!isForkPostHeze(fork)) {
+    Object.assign(logMeta, {deposits: (blockBody as BeaconBlockBody<ForkPreHeze>).deposits.length});
+  }
 
   if (isForkPostAltair(fork)) {
     const {syncAggregate} = blockBody as altair.BeaconBlockBody;
@@ -1072,16 +1077,24 @@ export async function produceCommonBlockBody<T extends BlockType>(
   });
 
   // Live proposal production is supported from Fulu onward.
-  return {
+  const commonBlockBody: CommonBlockBody = {
     randaoReveal,
     graffiti,
-    eth1Data: currentState.eth1Data,
     proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits: [],
     voluntaryExits,
     blsToExecutionChanges,
     syncAggregate,
   };
+
+  if (!isForkPostHeze(fork)) {
+    if (currentState.eth1Data === undefined) {
+      throw new Error("Expected legacy Eth1 data for pre-Heze block production");
+    }
+    commonBlockBody.eth1Data = currentState.eth1Data;
+    commonBlockBody.deposits = [];
+  }
+
+  return commonBlockBody;
 }

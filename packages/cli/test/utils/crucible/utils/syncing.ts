@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {ForkPostDeneb} from "@lodestar/params";
+import {ForkPostDeneb, ForkPreGloas} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
@@ -154,7 +154,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     (
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
         signedBlockContents: {
-          signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb>,
+          signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
           blobs: currentSidecars.map((b) => b.blob),
           kzgProofs: currentSidecars.map((b) => b.kzgProof),
         },

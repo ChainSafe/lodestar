@@ -5,7 +5,8 @@ import {config} from "@lodestar/config/default";
 import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
@@ -153,6 +154,33 @@ describe("block archive repository", () => {
     }
   );
 
+  it.each([ForkName.gloas, ForkName.heze])("should archive and remove block root indexes in %s", async (fork) => {
+    const forkConfig = createChainForkConfig({
+      GLOAS_FORK_EPOCH: 0,
+      HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
+    });
+    blockArchive = new BlockArchiveRepository(forkConfig, db);
+    const forkTypes = sszTypesFor(fork);
+    const block = forkTypes.SignedBeaconBlock.defaultValue();
+    block.message.slot = 10;
+    block.message.parentRoot.fill(1);
+    block.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+    const root = forkTypes.BeaconBlock.hashTreeRoot(block.message);
+
+    const bytes = forkTypes.SignedBeaconBlock.serialize(block);
+    await blockArchive.putBinary(10, bytes);
+
+    expect(await blockArchive.getBinary(10)).toEqual(Buffer.from(bytes));
+    expect(await blockArchive.getSlotByRoot(root)).toBe(10);
+    expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBe(10);
+
+    await blockArchive.remove(block);
+
+    expect(await blockArchive.get(10)).toBeNull();
+    expect(await blockArchive.getSlotByRoot(root)).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBeNull();
+  });
+
   it("should not persist a block when its indexed batch fails", async () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const error = Object.assign(new Error("write failed"), {code: "EIO"});
@@ -196,7 +224,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(config.getForkTypes(retrieved.message.slot).SignedBeaconBlock.equals(retrieved, block)).toBe(true);
   });
 
   it("should get slot by parent root", async () => {
@@ -211,7 +239,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(config.getForkTypes(retrieved.message.slot).SignedBeaconBlock.equals(retrieved, block)).toBe(true);
   });
 
   it("should delete index entries of a pruned range", async () => {

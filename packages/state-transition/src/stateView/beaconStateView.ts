@@ -40,6 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
@@ -144,8 +145,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.genesisValidatorsRoot;
   }
 
-  get eth1Data(): phase0.Eth1Data {
-    return this.cachedState.eth1Data;
+  get eth1Data(): phase0.Eth1Data | undefined {
+    return this.forkSeq < ForkSeq.heze ? (this.cachedState as CachedBeaconStatePreHeze).eth1Data : undefined;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {

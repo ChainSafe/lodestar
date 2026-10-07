@@ -717,7 +717,7 @@ describe("UnknownBlockSync", () => {
               source,
               peerIdStr,
             }: {
-              block: SignedBeaconBlock;
+              block: SignedBeaconBlock<ForkName.phase0>;
               blockRootHex: string;
               seenTimestampSec: number;
               source: BlockInputSource;
@@ -832,7 +832,7 @@ describe("UnknownBlockSync", () => {
             source,
             peerIdStr,
           }: {
-            block: SignedBeaconBlock;
+            block: SignedBeaconBlock<ForkName.phase0>;
             blockRootHex: string;
             seenTimestampSec: number;
             source: BlockInputSource;

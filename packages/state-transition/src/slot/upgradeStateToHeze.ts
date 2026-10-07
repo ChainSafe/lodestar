@@ -7,6 +7,9 @@ import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
  * Spec: heze/fork.md `upgrade_to_heze`.
  */
 export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBeaconStateHeze {
+  if (BigInt(stateGloas.eth1DepositIndex) !== stateGloas.depositRequestsStartIndex) {
+    throw new Error("Cannot upgrade to Heze before the legacy deposit mechanism is disabled");
+  }
   const {config} = stateGloas;
 
   ssz.gloas.BeaconState.commitViewDU(stateGloas);
@@ -26,9 +29,6 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.blockRoots = stateHezeCloned.blockRoots;
   stateHezeView.stateRoots = stateHezeCloned.stateRoots;
   stateHezeView.historicalRoots = stateHezeCloned.historicalRoots;
-  stateHezeView.eth1Data = stateHezeCloned.eth1Data;
-  stateHezeView.eth1DataVotes = stateHezeCloned.eth1DataVotes;
-  stateHezeView.eth1DepositIndex = stateHezeCloned.eth1DepositIndex;
   stateHezeView.validators = stateHezeCloned.validators;
   stateHezeView.balances = stateHezeCloned.balances;
   stateHezeView.randaoMixes = stateHezeCloned.randaoMixes;
@@ -46,7 +46,6 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.nextWithdrawalIndex = stateHezeCloned.nextWithdrawalIndex;
   stateHezeView.nextWithdrawalValidatorIndex = stateHezeCloned.nextWithdrawalValidatorIndex;
   stateHezeView.historicalSummaries = stateHezeCloned.historicalSummaries;
-  stateHezeView.depositRequestsStartIndex = stateHezeCloned.depositRequestsStartIndex;
   stateHezeView.depositBalanceToConsume = stateHezeCloned.depositBalanceToConsume;
   stateHezeView.exitBalanceToConsume = stateHezeCloned.exitBalanceToConsume;
   stateHezeView.earliestExitEpoch = stateHezeCloned.earliestExitEpoch;

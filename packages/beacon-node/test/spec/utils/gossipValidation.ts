@@ -9,7 +9,14 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostGloas,
+  ForkPreDeneb,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -23,7 +30,14 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+  BlockInputSource,
+  ForkBlobsDA,
+} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
@@ -479,14 +493,29 @@ export async function runGossipValidationTest(
         clock.setSlot(slot);
         chain.forkChoice.updateTime(slot);
 
-        const blockImport = BlockInputPreData.createFromBlock({
+        const blockProps = {
           forkName: fork,
-          block: signedBlock,
           blockRootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: 0,
-          daOutOfRange: false,
-        });
+          // Sidecar availability is outside these gossip-validation tests.
+          daOutOfRange: true,
+        };
+        const blockImport = isForkPostGloas(fork)
+          ? BlockInputNoData.createFromBlock({...blockProps, block: signedBlock as SignedBeaconBlock<ForkPostGloas>})
+          : isForkPostFulu(fork)
+            ? BlockInputColumns.createFromBlock({
+                ...blockProps,
+                block: signedBlock as SignedBeaconBlock<ForkName.fulu>,
+                sampledColumns: [],
+                custodyColumns: [],
+              })
+            : isForkPostDeneb(fork)
+              ? BlockInputBlobs.createFromBlock({...blockProps, block: signedBlock as SignedBeaconBlock<ForkBlobsDA>})
+              : BlockInputPreData.createFromBlock({
+                  ...blockProps,
+                  block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+                });
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,

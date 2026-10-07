@@ -3,10 +3,12 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -128,7 +130,10 @@ export function reconstructSignedBlockContents(
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null,
   blobsBundle: BlobsBundle | null
-): SignedBlockContents {
+): SignedBlockContents<ForkPreGloas> {
+  if (isForkPostGloas(fork)) {
+    throw new Error("Blinded block reconstruction is not supported after Gloas");
+  }
   const signedBlock = signedBlindedBlockToFull(fork, signedBlindedBlock, executionPayload);
 
   if (isForkPostDeneb(fork)) {
@@ -136,10 +141,10 @@ export function reconstructSignedBlockContents(
       throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
     return {
-      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
       kzgProofs: blobsBundle.proofs,
       blobs: blobsBundle.blobs,
     };
   }
-  return {signedBlock};
+  return {signedBlock: signedBlock as SignedBeaconBlock<ForkPreDeneb>};
 }

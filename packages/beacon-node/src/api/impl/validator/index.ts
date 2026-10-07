@@ -5,6 +5,8 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
@@ -167,8 +169,8 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: BlockContents;
-  version: ForkName;
+  data: BlockContents<ForkPreGloas>;
+  version: ForkPreGloas;
 };
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
@@ -511,6 +513,10 @@ export function getValidatorApi(
       parentBlock: ProtoBlock;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
+    const version = config.getForkName(slot);
+    if (isForkPostGloas(version)) {
+      throw new ApiError(400, `produceBlockV3 not supported for post-gloas fork=${version}`);
+    }
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -525,7 +531,6 @@ export function getValidatorApi(
         feeRecipient,
         commonBlockBodyPromise,
       });
-      const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
         if (blockFeeRecipient !== feeRecipient) {
@@ -563,7 +568,7 @@ export function getValidatorApi(
 
         return {
           data: {
-            block,
+            block: block as BeaconBlock<ForkPostDeneb & ForkPreGloas>,
             blobs: blobsBundle.blobs,
             kzgProofs: blobsBundle.proofs,
           },
@@ -574,7 +579,13 @@ export function getValidatorApi(
         };
       }
 
-      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {
+        data: {block: block as BeaconBlock<ForkPreDeneb>},
+        version,
+        executionPayloadValue,
+        consensusBlockValue,
+        shouldOverrideBuilder,
+      };
     } finally {
       if (timer) timer({source});
     }

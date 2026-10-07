@@ -1,7 +1,7 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
-import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateHeze, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
@@ -16,7 +16,10 @@ import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/vali
  *
  * TODO Electra: Update ssz library to support batch push to `pendingDeposits`
  */
-export function processPendingDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+export function processPendingDeposits(
+  state: CachedBeaconStateElectra | CachedBeaconStateHeze,
+  cache: EpochTransitionCache
+): void {
   const fork = state.config.getForkSeq(state.slot);
   const nextEpoch = state.epochCtx.epoch + 1;
   const churnLimit =
@@ -43,7 +46,8 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
         // Is deposit request
         deposit.slot > GENESIS_SLOT &&
         // There are pending Eth1 bridge deposits
-        state.eth1DepositIndex < state.depositRequestsStartIndex
+        (state as CachedBeaconStateElectra).eth1DepositIndex <
+          (state as CachedBeaconStateElectra).depositRequestsStartIndex
       ) {
         break outer;
       }
@@ -110,7 +114,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 }
 
 function applyPendingDeposit(
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateHeze,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
 ): void {

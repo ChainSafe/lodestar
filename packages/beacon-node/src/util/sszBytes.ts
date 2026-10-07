@@ -6,10 +6,12 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
   ForkPostDeneb,
+  ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
@@ -435,7 +437,7 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
 }
 
 /**
- * Extract parentBlockHash from a GLOAS SignedBeaconBlock by navigating the SSZ offset pointer
+ * Extract parentBlockHash from a post-Gloas SignedBeaconBlock by navigating the SSZ offset pointer
  * to the embedded SignedExecutionPayloadBid.
  *
  * Layout (bytes from start of SignedBeaconBlock):
@@ -451,26 +453,32 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  *
  * The 4-byte pointer at byte 568 (= 184+384) gives the offset of SignedExecutionPayloadBid
  * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
+ * Heze removes eth1Data (72 B) and the deposits offset (4 B), moving the pointer to byte 492.
  */
 // BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
 const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
   VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + VARIABLE_FIELD_OFFSET; // = 184
 const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + 160 + 4; // = 384
-const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK =
-  GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY; // = 568
+const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY - 72 - VARIABLE_FIELD_OFFSET;
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
-// CAUTION: update offsets if BeaconBlockBody fixed fields change after Gloas
-export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + VARIABLE_FIELD_OFFSET) {
+// CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
+export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
+  data: Uint8Array,
+  fork: ForkPostGloas = ForkName.gloas
+): RootHex | null {
+  const bidOffsetPointer =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK +
+    (isForkPostHeze(fork) ? HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY : GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY);
+  if (data.length < bidOffsetPointer + VARIABLE_FIELD_OFFSET) {
     return null;
   }
   const bidOffset =
-    data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK] |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 1] << 8) |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 2] << 16) |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 3] << 24);
+    data[bidOffsetPointer] |
+    (data[bidOffsetPointer + 1] << 8) |
+    (data[bidOffsetPointer + 2] << 16) |
+    (data[bidOffsetPointer + 3] << 24);
 
   const parentBlockHashStart =
     GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;

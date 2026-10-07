@@ -78,7 +78,7 @@ describe("BlockDutiesService", () => {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
+      message: block as typeof signedBlock.message,
       signature: signedBlock.signature,
     }));
     validatorStore.getBuilderSelectionParams.mockReturnValue({
@@ -161,7 +161,7 @@ describe("BlockDutiesService", () => {
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
+      message: block as typeof signedBlock.message,
       signature: signedBlock.signature,
     }));
     api.validator.produceBlockV3.mockResolvedValue(
@@ -232,7 +232,7 @@ describe("BlockDutiesService", () => {
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
+      message: block as typeof signedBlock.message,
       signature: signedBlock.signature,
     }));
     validatorStore.getBuilderSelectionParams.mockReturnValue({
