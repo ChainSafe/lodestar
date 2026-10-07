@@ -77,3 +77,21 @@ forced-GC check confirmed collection and collector cleanup.
 
 The prior live devnet result above predates this lifecycle fix. The four-case
 collector interoperability suite was rerun after the fix.
+
+## Middleware API compatibility revision, 2026-10-07
+
+The libp2p change now preserves replacement semantics for
+`use(protocol, middleware)` and removal semantics for `unuse(protocol)`.
+Protocol strings, including `"*"`, remain literal. New `use(middleware)` and
+`unuse(middleware)` overloads independently register and remove global observers.
+The per-stream middleware array isolation fix is retained.
+
+- js-libp2p `14b63af`: 44 targeted registrar, public API, and connection tests pass,
+  including compatibility checks for protocol replacement, literal `"*"`, and
+  existing `Parameters<Libp2p["use"]>` / `Parameters<Libp2p["unuse"]>` types.
+  Builds and changed-file lint pass for the affected packages.
+- Xray `a69f9e7`: all 11 SDK tests, build, type checks, and formatting pass with the
+  global overloads.
+- The SDK archive and runtime/type patches match their companion source and builds.
+  Frozen installation, beacon-node and CLI type checks, and all four real-collector
+  transport/worker combinations pass. The live devnet was not rerun for this API revision.

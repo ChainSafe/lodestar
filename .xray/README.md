@@ -36,9 +36,12 @@ Regenerate it from the companion Xray checkout with:
 .xray/stage-probe.sh /path/to/xray
 ```
 
-`patches/libp2p@3.3.9.patch` contains the companion upstream changes: global stream
-middleware, per-stream middleware array copies, append registration, and selective
-removal. The copy fixes repeated inbound handlers mutating the registered chain.
+`patches/libp2p@3.3.9.patch` contains the companion upstream changes: global
+`use(middleware)` and `unuse(middleware)` overloads and per-stream middleware array
+copies. Existing protocol registrations still replace their middleware, and `"*"`
+is a literal protocol name. The copy fixes repeated inbound handlers mutating the
+registered chain. `patches/@libp2p__interface@3.3.0.patch` supplies the corresponding
+public type declarations until the interface package is released.
 
 This Lodestar PR remains a draft until the upstream dependencies are released:
 
@@ -66,8 +69,8 @@ the CLI's `options/beaconNodeOptions.test.ts`.
 
 Companion commits used for validation:
 
-- Xray: `3bd6994` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
-- js-libp2p: `75a531e` from [libp2p/js-libp2p#3650](https://github.com/libp2p/js-libp2p/pull/3650)
+- Xray: `a69f9e7` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
+- js-libp2p: `14b63af` from [libp2p/js-libp2p#3650](https://github.com/libp2p/js-libp2p/pull/3650)
 - Lodestar base: `unstable` at `01cc10ce70bc3c6cd3f6d6169a740330f5882f3d`
 
 `devnet/main.star` runs two Lodestar/geth pairs with 256 validators on Fulu using
