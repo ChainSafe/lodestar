@@ -166,7 +166,9 @@ export const eventTestData: EventData = {
   [EventType.chainReorg]: {
     slot: 200,
     depth: 50,
+    oldHeadHash: "0x03b2a1c9d8e7f6054a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f60543b2a1c9d",
     oldHeadBlock: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+    newHeadHash: "0xe4d3c2b1a0f9e8d7c6b5a49382716054f3e2d1c0b9a8f7e6d5c4b3a291807162",
     newHeadBlock: "0x76262e91970d375a19bfe8a867288d7b9cde43c8635f598d93d39d041706fc76",
     oldHeadState: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     newHeadState: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",

@@ -80,6 +80,8 @@ runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, 
 
 const ignoredTopics: string[] = [
   "execution_payload_bid",
+  // TODO: unskip once the spec release includes the execution hashes from beacon-APIs#585
+  "chain_reorg",
   // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
   // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
   "fast_confirmation",

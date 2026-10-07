@@ -346,13 +346,15 @@ export async function importBlock(
       // CommonAncestor = chain reorg, old head and new head not direct descendants
 
       const forkChoiceReorgEventData: ReorgEventData = {
-        depth: ancestorResult.depth,
-        epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
+        depth: ancestorResult.depth,
+        oldHeadHash: oldHead.executionPayloadBlockHash ?? ZERO_HASH_HEX,
         oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
+        newHeadHash: newHead.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+        newHeadBlock: newHead.blockRoot,
         oldHeadState: oldHead.stateRoot,
+        newHeadState: newHead.stateRoot,
+        epoch: computeEpochAtSlot(newHead.slot),
         executionOptimistic: isOptimisticBlock(newHead),
       };
 

@@ -223,7 +223,9 @@ export type EventData = {
   [EventType.chainReorg]: {
     slot: Slot;
     depth: UintNum64;
+    oldHeadHash: RootHex;
     oldHeadBlock: RootHex;
+    newHeadHash: RootHex;
     newHeadBlock: RootHex;
     oldHeadState: RootHex;
     newHeadState: RootHex;
@@ -410,7 +412,9 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {
         slot: ssz.Slot,
         depth: ssz.UintNum64,
+        oldHeadHash: stringType,
         oldHeadBlock: stringType,
+        newHeadHash: stringType,
         newHeadBlock: stringType,
         oldHeadState: stringType,
         newHeadState: stringType,
