@@ -1,7 +1,7 @@
 # Validation, 2026-10-07
 
-The local integration works across Lodestar, the Node.js probe, and the Go
-collector. No branches have been pushed and no PRs have been opened.
+The integration was validated across Lodestar, the Node.js probe, and the Go
+collector before the upstream PRs and Lodestar draft were opened.
 
 ## Automated checks
 
@@ -43,16 +43,16 @@ breakdowns exactly from the probes' replay buffers. The dashboard built and was
 served successfully over HTTP. A browser was unavailable for visual inspection.
 
 The test enclave is stopped. The acceptance report, reference slot, and collector
-SQLite data are saved in `/home/cayman/Code/xray-integration-validation`.
+SQLite data were retained locally.
 The final handshake guard also passes the real-collector TCP/QUIC worker matrix.
 
 ## Upstream dependencies
 
 - Lodestar base: `unstable`, `01cc10ce70bc3c6cd3f6d6169a740330f5882f3d`.
-- js-libp2p: `75a531e`, branch `xray-stream-middleware`.
+- js-libp2p: `75a531e`, branch `wemeetagain/xray-stream-middleware`.
 - Xray: `3bd6994`, branch `wemeetagain/lodestar-probe`.
 
 The SDK remains unpublished. The local archive and libp2p patch make this branch
-self-contained for testing. Replace them with upstream releases before preparing
-an upstream Lodestar PR. Gloas decoding is tested against pinned SSZ fixtures;
+self-contained for testing. Replace them with upstream releases before marking
+the Lodestar draft ready for review. Gloas decoding is tested against pinned SSZ fixtures;
 the live devnet exercised Fulu.

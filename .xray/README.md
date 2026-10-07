@@ -40,10 +40,14 @@ Regenerate it from the companion Xray checkout with:
 middleware, per-stream middleware array copies, append registration, and selective
 removal. The copy fixes repeated inbound handlers mutating the registered chain.
 
-Before an upstream Lodestar PR, publish the SDK and release the libp2p changes,
-then replace the archive and patch with those dependencies and remove this local
-staging directory and its Dockerfile copy. No PR is needed to reproduce the local
-integration now.
+This Lodestar PR remains a draft until the upstream dependencies are released:
+
+- [Xray Node.js probe and collector support](https://github.com/ethp2p/xray/pull/1)
+- [js-libp2p global stream middleware](https://github.com/libp2p/js-libp2p/pull/3650)
+
+Before marking it ready for review, replace the archive and patch with released
+dependencies and remove this staging directory and its Dockerfile copy. The local
+archive and patch allow reviewers to reproduce the integration in the meantime.
 
 ## Validation
 
@@ -62,8 +66,8 @@ the CLI's `options/beaconNodeOptions.test.ts`.
 
 Companion commits used for validation:
 
-- Xray: `3bd6994` in `/home/cayman/Code/xray-lodestar-integration`
-- js-libp2p: `75a531e` in `/home/cayman/Code/js-libp2p-xray`
+- Xray: `3bd6994` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
+- js-libp2p: `75a531e` from [libp2p/js-libp2p#3650](https://github.com/libp2p/js-libp2p/pull/3650)
 - Lodestar base: `unstable` at `01cc10ce70bc3c6cd3f6d6169a740330f5882f3d`
 
 `devnet/main.star` runs two Lodestar/geth pairs with 256 validators on Fulu using
