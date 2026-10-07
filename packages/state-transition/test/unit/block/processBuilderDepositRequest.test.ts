@@ -10,6 +10,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {IndexedBuilderState} from "../../../src/block/indexedBuilderState.js";
 
 const isValidBuilderDepositSignatureMock = vi.hoisted(() =>
   // Treat the first byte of the BLS signature as the verification flag so each test can opt in
@@ -102,7 +103,7 @@ describe("processBuilderDepositRequest", () => {
 
     expect(state.builders.length).toBe(0);
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     expect(isValidBuilderDepositSignatureMock).toHaveBeenCalledTimes(1);
     expect(state.builders.length).toBe(1);
@@ -117,7 +118,7 @@ describe("processBuilderDepositRequest", () => {
     const state = buildGloasState(1);
     const request = makeBuilderDepositRequest({prefix: 0x01});
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     expect(isValidBuilderDepositSignatureMock).not.toHaveBeenCalled();
     expect(state.builders.length).toBe(0);
@@ -127,7 +128,7 @@ describe("processBuilderDepositRequest", () => {
     const state = buildGloasState(1);
     const request = makeBuilderDepositRequest({signatureFirstByte: 0});
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     expect(isValidBuilderDepositSignatureMock).toHaveBeenCalledTimes(1);
     expect(state.builders.length).toBe(0);
@@ -159,7 +160,7 @@ describe("processBuilderDepositRequest", () => {
       signatureFirstByte: 0, // would be rejected as invalid PoP, but mustn't be checked
     });
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     expect(isValidBuilderDepositSignatureMock).not.toHaveBeenCalled();
     expect(state.builders.length).toBe(1);
@@ -191,7 +192,7 @@ describe("processBuilderDepositRequest", () => {
       prefix: 0x01,
     });
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     expect(isValidBuilderDepositSignatureMock).not.toHaveBeenCalled();
     expect(state.builders.length).toBe(1);
@@ -221,7 +222,7 @@ describe("processBuilderDepositRequest", () => {
 
     const request = makeBuilderDepositRequest({pubkey, executionAddress, amount: 1_000_000_000});
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(1_000_000_000);
@@ -250,10 +251,65 @@ describe("processBuilderDepositRequest", () => {
 
     const request = makeBuilderDepositRequest({pubkey, executionAddress, amount: 1_000_000_000});
 
-    processBuilderDepositRequest(state, request);
+    processBuilderDepositRequest(new IndexedBuilderState(state), request);
 
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(2_000_000_000);
     expect(builder.withdrawableEpoch).toBe(1);
+  });
+});
+
+describe("indexed builder deposit sequences", () => {
+  function reusableBuilder(pubkey: Uint8Array) {
+    return ssz.gloas.Builder.toViewDU({
+      pubkey,
+      version: PAYLOAD_BUILDER_VERSION,
+      executionAddress: new Uint8Array(20),
+      balance: 0,
+      depositEpoch: 0,
+      withdrawableEpoch: 0,
+    });
+  }
+
+  it.each([0, 1_000_000_000])("skips a candidate after a top-up of %i", (amount) => {
+    const state = buildGloasState(SLOTS_PER_EPOCH * 2);
+    const oldPubkey = new Uint8Array(48).fill(1);
+    const newPubkey = new Uint8Array(48).fill(2);
+    state.builders.push(reusableBuilder(oldPubkey));
+    state.builders.push(reusableBuilder(new Uint8Array(48).fill(3)));
+    const indexed = new IndexedBuilderState(state);
+
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: oldPubkey, amount}));
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: newPubkey}));
+    processBuilderDepositRequest(
+      indexed,
+      makeBuilderDepositRequest({pubkey: newPubkey, amount: 7, signatureFirstByte: 0})
+    );
+
+    expect(state.builders.length).toBe(2);
+    expect(indexed.findBuilderIndexByPubkey(oldPubkey)).toBe(0);
+    expect(indexed.findBuilderIndexByPubkey(newPubkey)).toBe(1);
+    expect(indexed.findBuilderIndexByPubkey(new Uint8Array(48).fill(3))).toBeNull();
+    expect(state.builders.getReadonly(0).balance).toBe(amount);
+    expect(state.builders.getReadonly(1).balance).toBe(makeBuilderDepositRequest().amount + 7);
+  });
+
+  it("does not consume candidates for invalid deposits and re-registers replaced pubkeys", () => {
+    const state = buildGloasState(SLOTS_PER_EPOCH * 2);
+    const oldPubkey = new Uint8Array(48).fill(1);
+    const newPubkey = new Uint8Array(48).fill(2);
+    state.builders.push(reusableBuilder(oldPubkey));
+    const indexed = new IndexedBuilderState(state);
+
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: newPubkey, signatureFirstByte: 0}));
+    expect(indexed.findBuilderIndexByPubkey(oldPubkey)).toBe(0);
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: newPubkey, amount: 0}));
+    expect(indexed.findBuilderIndexByPubkey(oldPubkey)).toBeNull();
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: oldPubkey, signatureFirstByte: 0}));
+    expect(state.builders.length).toBe(1);
+    processBuilderDepositRequest(indexed, makeBuilderDepositRequest({pubkey: oldPubkey}));
+    expect(indexed.findBuilderIndexByPubkey(oldPubkey)).toBe(1);
+    expect(state.builders.length).toBe(2);
+    expect(state.builders.getReadonly(0).withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
 });

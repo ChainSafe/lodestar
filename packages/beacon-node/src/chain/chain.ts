@@ -71,7 +71,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
-import {ReconstructMismatchPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
+import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
@@ -244,6 +244,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   protected readonly db: IBeaconDb;
+  private genesisStateRoot?: RootHex | null;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
@@ -432,6 +433,7 @@ export class BeaconChain implements IBeaconChain {
       blockStateCache,
       checkpointStateCache,
       seenBlockInputCache: this.seenBlockInputCache,
+      serializedCache: this.serializedCache,
       db,
       metrics,
       validatorMonitor,
@@ -611,7 +613,7 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -702,6 +704,37 @@ export class BeaconChain implements IBeaconChain {
     stateRoot: RootHex,
     opts?: StateGetOpts
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    // Checkpoint state only equals the block post-state if the block is at the epoch start slot
+    if (
+      finalizedBlock.stateRoot === stateRoot &&
+      finalizedBlock.slot === computeStartSlotAtEpoch(finalizedCheckpoint.epoch)
+    ) {
+      const state = this.regen.getCheckpointStateSync({
+        epoch: finalizedCheckpoint.epoch,
+        rootHex: finalizedCheckpoint.rootHex,
+      });
+      if (state) {
+        return {
+          state,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+          finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH,
+        };
+      }
+    }
+
+    if (this.genesisStateRoot === undefined) {
+      const genesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
+      this.genesisStateRoot = genesisBlock ? toRootHex(genesisBlock.message.stateRoot) : null;
+    }
+    if (this.genesisStateRoot === stateRoot) {
+      const state = await this.db.stateArchive.getBinary(GENESIS_SLOT);
+      if (state) {
+        return {state, executionOptimistic: false, finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH};
+      }
+    }
+
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlockDefaultStatus(
@@ -934,12 +967,13 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Batch variant: archived header envelopes are rebuilt 32 per EL round-trip. Aligned with `requests`.
-   * A body root mismatch is a local inconsistency: `"throw"` surfaces it, `"omit"` logs it and
-   * returns null for that entry, for peer-facing paths where the spec allows omission.
+   * An archived envelope that cannot be rebuilt (EL-unavailable body or body root mismatch) is not the
+   * same as an unknown one: `"throw"` surfaces it, `"omit"` returns null for that entry, for
+   * peer-facing paths where the spec allows omission.
    */
   async getSerializedExecutionPayloadEnvelopes(
     requests: {blockSlot: Slot; blockRootHex: RootHex}[],
-    onMismatch: ReconstructMismatchPolicy = "throw"
+    onMiss: ReconstructMissPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
     const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
@@ -978,14 +1012,14 @@ export class BeaconChain implements IBeaconChain {
       for (let j = 0; j < rebuilt.length; j++) {
         const result = rebuilt[j];
         if (isRebuildMiss(result)) {
-          if (result.reason === "mismatch") {
-            if (onMismatch === "throw") throw result.error;
-            this.logger.debug(
-              "Archived envelope failed body root check against EL bodies",
-              {slot: result.slot},
-              result.error
-            );
-          }
+          if (onMiss === "throw") throw result.error;
+          this.logger.debug(
+            result.reason === "mismatch"
+              ? "Archived envelope failed body root check against EL bodies"
+              : "EL cannot serve bodies for archived envelope, omitting",
+            {slot: result.slot},
+            result.error
+          );
           continue;
         }
         out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
@@ -1016,10 +1050,7 @@ export class BeaconChain implements IBeaconChain {
     const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
       archived.headerEnvelope,
     ]);
-    if (isRebuildMiss(result)) {
-      if (result.reason === "mismatch") throw result.error;
-      return null;
-    }
+    if (isRebuildMiss(result)) throw result.error;
     return result;
   }
 
@@ -1329,13 +1360,13 @@ export class BeaconChain implements IBeaconChain {
       };
 
       try {
-        await validateApiProposerSlashing(this, proposerSlashing);
+        const verifiedDomain = await validateApiProposerSlashing(this, proposerSlashing);
+        this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       } catch (e) {
         this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
         return;
       }
 
-      this.opPool.insertProposerSlashing(proposerSlashing);
       this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();
@@ -1503,6 +1534,22 @@ export class BeaconChain implements IBeaconChain {
       const sszType = this.config.getForkTypes(slot).BeaconBlock;
       void this.persistSszObject("BeaconBlock", sszType.serialize(data), toRootHex(sszType.hashTreeRoot(data)), suffix);
     }
+  }
+
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void {
+    const blockRoot = toRootHex(envelope.beaconBlockRoot);
+    void this.persistSszObject(
+      "ExecutionPayloadEnvelope",
+      ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope),
+      blockRoot,
+      "produced_execution_payload_envelope"
+    ).catch((e) => {
+      this.logger.error(
+        "Error persisting produced execution payload envelope",
+        {slot: envelope.payload.slotNumber, blockRoot},
+        e as Error
+      );
+    });
   }
 
   /**
@@ -1700,7 +1747,7 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
+    this.logger.debug("Persisted SSZ object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {

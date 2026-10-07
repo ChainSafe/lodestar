@@ -276,6 +276,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
     },
   },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.gloas.BuilderPendingPayments.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.gloas.BuilderPendingWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
 
   // rewards
 
@@ -331,5 +345,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getGenesis: {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
+  },
+  getProposerPreferences: {
+    args: {slot: 1, dependentRoot: new Uint8Array(32).fill(1)},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
   },
 };
