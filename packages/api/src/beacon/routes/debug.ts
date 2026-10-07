@@ -87,8 +87,8 @@ const ForkChoiceNodeV2Type = new ContainerType(
     payloadStatus: payloadStatusType,
     parentRoot: stringType,
     parentPayloadStatus: new OptionalType(payloadStatusType),
-    justifiedEpoch: ssz.Epoch,
-    finalizedEpoch: ssz.Epoch,
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
     weight: ssz.Gwei,
     validity: new StringType<"valid" | "invalid" | "optimistic">(),
     executionBlockHash: stringType,
@@ -145,7 +145,7 @@ export type Endpoints = {
   >;
 
   /**
-   * Retrieves fork choice nodes with payload branches and PTC vote counts
+   * Retrieves all current fork choice context (v2: per (root, payload_status) with PTC vote tallies)
    */
   getDebugForkChoiceV2: Endpoint<
     // ⏎

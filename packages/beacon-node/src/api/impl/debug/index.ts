@@ -11,7 +11,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -98,13 +98,10 @@ export function getDebugApi({
                   ? node.blockRoot
                   : node.parentRoot,
               parentPayloadStatus: parent === undefined ? null : toPayloadStatusName(parent.payloadStatus),
-              justifiedEpoch: node.justifiedEpoch,
-              finalizedEpoch: node.finalizedEpoch,
+              justifiedCheckpoint: {epoch: node.justifiedEpoch, root: fromHex(node.justifiedRoot)},
+              finalizedCheckpoint: {epoch: node.finalizedEpoch, root: fromHex(node.finalizedRoot)},
               weight: node.weight,
-              validity:
-                node.executionStatus === ExecutionStatus.PreMerge
-                  ? "valid"
-                  : toForkChoiceValidity(node.executionStatus),
+              validity: toForkChoiceValidity(node.executionStatus),
               executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
               payloadAttesterCount: ptc?.attesterCount ?? 0,
               payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,

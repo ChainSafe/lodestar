@@ -17,7 +17,6 @@ describe("getDebugForkChoiceV2", () => {
   beforeEach(() => {
     modules = getApiTestModules();
     api = getDebugApi(modules);
-    protoArray = ProtoArray.initialize(generateProtoBlock({blockRoot: root(1)}), 0);
     const checkpoint = {epoch: 0, root: new Uint8Array(32), rootHex: ZERO_HASH_HEX};
     modules.forkChoice.getAllNodes = vi.fn(() => protoArray.nodes);
     modules.forkChoice.getPTCVoteCounts = vi.fn((blockRoot) => protoArray.getPTCVoteCounts(blockRoot));
@@ -40,8 +39,11 @@ describe("getDebugForkChoiceV2", () => {
       executionPayloadGasLimit: 30_000_000,
       executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      justifiedEpoch: 1,
+      justifiedRoot: root(21),
+      finalizedRoot: root(22),
     });
-    protoArray.onBlock(block, 1, null);
+    protoArray = ProtoArray.initialize(block, 1);
     protoArray.onBlock(
       {...block, slot: 2, blockRoot: root(3), parentRoot: root(2), parentBlockHash: root(12)},
       2,
@@ -92,8 +94,7 @@ describe("getDebugForkChoiceV2", () => {
         node.validity,
       ])
     ).toEqual([
-      [root(1), "full", ZERO_HASH_HEX, null, ZERO_HASH_HEX, "valid"],
-      [root(2), "full", root(1), "full", root(12), "valid"],
+      [root(2), "full", root(1), null, root(12), "valid"],
       [root(3), "pending", root(2), "full", root(12), "valid"],
       [root(3), "empty", root(3), "pending", root(12), "valid"],
       [root(3), "full", root(3), "pending", root(13), "optimistic"],
@@ -104,8 +105,8 @@ describe("getDebugForkChoiceV2", () => {
     ]);
     for (const node of data.forkChoiceNodes) {
       expect(node, `${node.blockRoot}/${node.payloadStatus}`).toMatchObject({
-        justifiedEpoch: 0,
-        finalizedEpoch: 0,
+        justifiedCheckpoint: {epoch: 1, root: new Uint8Array(32).fill(21)},
+        finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32).fill(22)},
         payloadAttesterCount: node.blockRoot === root(3) ? 3 : 0,
         payloadAvailabilityYesCount: node.blockRoot === root(3) ? 2 : 0,
         payloadDataAvailabilityYesCount: node.blockRoot === root(3) ? 1 : 0,
