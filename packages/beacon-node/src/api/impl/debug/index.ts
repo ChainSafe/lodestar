@@ -101,15 +101,19 @@ export function getDebugApi({
               payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,
               payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? 0,
               extraData: {
+                attestationScore: node.attestationScore,
                 executionOptimistic: isOptimisticBlock(node),
                 gasLimit:
                   node.payloadStatus === PayloadStatus.FULL && node.executionStatus !== ExecutionStatus.PreMerge
                     ? node.executionPayloadGasLimit
                     : null,
                 timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
+                stateRoot: node.stateRoot,
                 target: node.targetRoot,
                 unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
+                unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
                 unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
+                unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
               },
             };
           }),
