@@ -1,4 +1,10 @@
-import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  GENESIS_SLOT,
+  MAX_PENDING_DEPOSITS_PER_EPOCH,
+} from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
@@ -71,7 +77,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
       if (isValidatorWithdrawn) {
         // Deposited balance will never become active. Increase balance but do not consume churn
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       } else if (isValidatorExited) {
         // Validator is exiting, postpone the deposit until after withdrawable epoch
         depositsToPostpone.push(deposit);
@@ -83,7 +89,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
         }
         // Consume churn and apply deposit.
         processedAmount += deposit.amount;
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       }
 
       // Regardless of how the deposit was handled, we move on in the queue.
@@ -110,6 +116,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 }
 
 function applyPendingDeposit(
+  fork: ForkSeq,
   state: CachedBeaconStateElectra,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
@@ -119,6 +126,9 @@ function applyPendingDeposit(
   const cachedBalances = cache.balances;
 
   if (!isValidatorKnown(state, validatorIndex)) {
+    if (fork >= ForkSeq.heze && withdrawalCredentials[0] === BLS_WITHDRAWAL_PREFIX) {
+      return;
+    }
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
