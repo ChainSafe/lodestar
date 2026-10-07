@@ -57,13 +57,35 @@ describe("getStatePtc", () => {
   it.each([firstSlot - 1, lastSlot + 1])("rejects slot %i outside the state's PTC window", async (slot) => {
     await expect(api.getStatePtc({stateId, slot})).rejects.toMatchObject({
       statusCode: 400,
-      message: "Slot is outside the PTC window of the state",
+      message: `Slot ${slot} is outside the PTC window of state epoch 3`,
     });
   });
 
   it("rejects pre-Gloas slots even within the state's PTC window", async () => {
     modules.config.GLOAS_FORK_EPOCH = 3;
-    await expect(api.getStatePtc({stateId, slot: firstSlot})).rejects.toMatchObject({statusCode: 400});
+    await expect(api.getStatePtc({stateId, slot: firstSlot})).rejects.toMatchObject({
+      statusCode: 400,
+      message: `Cannot retrieve PTC for pre-gloas slot=${firstSlot}`,
+    });
+  });
+
+  it("serves the genesis slot when Gloas starts at genesis", async () => {
+    const config = getConfig(ForkName.gloas, 0);
+    const state = generateState({slot: 0}, config, true) as BeaconStateGloas;
+    state.ptcWindow.set(SLOTS_PER_EPOCH, ssz.gloas.PayloadTimelinessCommittee.toViewDU(validators));
+    const view = new BeaconStateView(
+      createCachedBeaconState(state, {config: createBeaconConfig(config, state.genesisValidatorsRoot), pubkeyCache})
+    );
+    vi.mocked(stateUtils.getStateResponseWithRegen).mockResolvedValue({
+      state: view,
+      executionOptimistic: false,
+      finalized: true,
+    });
+    const genesisApi = getBeaconStateApi(getApiTestModules({config}));
+    expect(await genesisApi.getStatePtc({stateId, slot: 0})).toEqual({
+      data: {slot: 0, validators},
+      meta: {executionOptimistic: false, finalized: true},
+    });
   });
 
   it("rejects pre-Gloas states", async () => {

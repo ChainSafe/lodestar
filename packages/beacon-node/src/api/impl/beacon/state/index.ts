@@ -389,10 +389,10 @@ export function getBeaconStateApi({
       const epoch = computeEpochAtSlot(usedSlot);
       const stateEpoch = computeEpochAtSlot(state.slot);
       if (epoch < config.GLOAS_FORK_EPOCH) {
-        throw new ApiError(400, "Cannot retrieve PTC for pre-gloas slot");
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas slot=${usedSlot}`);
       }
       if (epoch < stateEpoch - 1 || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
-        throw new ApiError(400, "Slot is outside the PTC window of the state");
+        throw new ApiError(400, `Slot ${usedSlot} is outside the PTC window of state epoch ${stateEpoch}`);
       }
 
       return {
