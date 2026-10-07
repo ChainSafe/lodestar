@@ -1118,10 +1118,13 @@ export function getBeaconBlockApi({
           : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
       } catch (e) {
         if (e instanceof EnvelopeReconstructionError) {
-          throw new ApiError(
-            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ? 503 : 500,
-            `Failed to reconstruct execution payload envelope: ${e.message}`
-          );
+          // The envelope is archived but our EL cannot serve it right now (EL down, or it does not
+          // have the body / block access list): 503 so clients retry or ask another node, rather than
+          // 500 for what is not a beacon node fault. A body root mismatch is a local inconsistency.
+          const unavailable =
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ||
+            e.type.code === EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE;
+          throw new ApiError(unavailable ? 503 : 500, `Failed to reconstruct execution payload envelope: ${e.message}`);
         }
         throw e;
       }

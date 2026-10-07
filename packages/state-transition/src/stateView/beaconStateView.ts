@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -71,7 +69,7 @@ import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
-  ComputeNewStateRootInput,
+  BlockSTFInput,
   ComputeNewStateRootResult,
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -83,31 +81,35 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
   // Cached values extracted from the tree
   // phase0
-  private _fork: Fork | null = null;
-  private _latestBlockHeader: phase0.BeaconBlockHeader | null = null;
+  private cachedFork: Fork | null = null;
+  private cachedLatestBlockHeader: phase0.BeaconBlockHeader | null = null;
   // altair
-  private _currentSyncCommittee: SyncCommittee | null = null;
-  private _nextSyncCommittee: SyncCommittee | null = null;
-  private _previousEpochParticipation: Uint8Array | null = null;
-  private _currentEpochParticipation: Uint8Array | null = null;
+  private cachedCurrentSyncCommittee: SyncCommittee | null = null;
+  private cachedNextSyncCommittee: SyncCommittee | null = null;
+  private cachedPreviousEpochParticipation: Uint8Array | null = null;
+  private cachedCurrentEpochParticipation: Uint8Array | null = null;
   // bellatrix
-  private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
+  private cachedLatestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
   // capella
-  private _historicalSummaries: capella.HistoricalSummaries | null = null;
+  private cachedHistoricalSummaries: capella.HistoricalSummaries | null = null;
   // electra
-  private _pendingPartialWithdrawals: electra.PendingPartialWithdrawals | null = null;
-  private _pendingConsolidations: electra.PendingConsolidations | null = null;
-  private _pendingDeposits: electra.PendingDeposits | null = null;
+  private cachedPendingPartialWithdrawals: electra.PendingPartialWithdrawals | null = null;
+  private cachedPendingConsolidations: electra.PendingConsolidations | null = null;
+  private cachedPendingDeposits: electra.PendingDeposits | null = null;
   // fulu
-  private _proposerLookahead: fulu.ProposerLookahead | null = null;
+  private cachedProposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
-  private _executionPayloadAvailability: BitArray | null = null;
-  private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
-  private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private cachedExecutionPayloadAvailability: BitArray | null = null;
+  private cachedLatestExecutionPayloadBid: ExecutionPayloadBid | null = null;
+  private cachedPayloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private cachedBuilderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private cachedBuilderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
   }
+
+  release(): void {}
 
   // phase0
 
@@ -124,10 +126,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get fork(): Fork {
-    if (this._fork === null) {
-      this._fork = this.cachedState.fork.toValue();
+    if (this.cachedFork === null) {
+      this.cachedFork = this.cachedState.fork.toValue();
     }
-    return this._fork;
+    return this.cachedFork;
   }
 
   get epoch(): number {
@@ -147,10 +149,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
-    if (this._latestBlockHeader === null) {
-      this._latestBlockHeader = this.cachedState.latestBlockHeader.toValue();
+    if (this.cachedLatestBlockHeader === null) {
+      this.cachedLatestBlockHeader = this.cachedState.latestBlockHeader.toValue();
     }
-    return this._latestBlockHeader;
+    return this.cachedLatestBlockHeader;
   }
 
   get previousJustifiedCheckpoint(): Checkpoint {
@@ -186,13 +188,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("previousEpochParticipation is not available before Altair");
     }
 
-    if (this._previousEpochParticipation === null) {
-      this._previousEpochParticipation = (
+    if (this.cachedPreviousEpochParticipation === null) {
+      this.cachedPreviousEpochParticipation = (
         this.cachedState as CachedBeaconStateAltair
       ).previousEpochParticipation.serialize();
     }
 
-    return this._previousEpochParticipation;
+    return this.cachedPreviousEpochParticipation;
   }
 
   // altair
@@ -202,13 +204,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("currentEpochParticipation is not available before Altair");
     }
 
-    if (this._currentEpochParticipation === null) {
-      this._currentEpochParticipation = (
+    if (this.cachedCurrentEpochParticipation === null) {
+      this.cachedCurrentEpochParticipation = (
         this.cachedState as CachedBeaconStateAltair
       ).currentEpochParticipation.serialize();
     }
 
-    return this._currentEpochParticipation;
+    return this.cachedCurrentEpochParticipation;
   }
 
   getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number {
@@ -236,13 +238,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("latestExecutionPayloadHeader is not available after Gloas");
     }
 
-    if (this._latestExecutionPayloadHeader === null) {
-      this._latestExecutionPayloadHeader = (
+    if (this.cachedLatestExecutionPayloadHeader === null) {
+      this.cachedLatestExecutionPayloadHeader = (
         this.cachedState as CachedBeaconStateExecutions
       ).latestExecutionPayloadHeader.toValue();
     }
 
-    return this._latestExecutionPayloadHeader;
+    return this.cachedLatestExecutionPayloadHeader;
   }
 
   /**
@@ -268,11 +270,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Historical summaries are not supported before Capella");
     }
 
-    if (this._historicalSummaries === null) {
-      this._historicalSummaries = (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
+    if (this.cachedHistoricalSummaries === null) {
+      this.cachedHistoricalSummaries = (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
     }
 
-    return this._historicalSummaries;
+    return this.cachedHistoricalSummaries;
   }
 
   // electra
@@ -282,11 +284,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Pending deposits are not supported before Electra");
     }
 
-    if (this._pendingDeposits === null) {
-      this._pendingDeposits = (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
+    if (this.cachedPendingDeposits === null) {
+      this.cachedPendingDeposits = (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
     }
 
-    return this._pendingDeposits;
+    return this.cachedPendingDeposits;
   }
 
   get pendingDepositsCount(): number {
@@ -302,13 +304,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Pending partial withdrawals are not supported before Electra");
     }
 
-    if (this._pendingPartialWithdrawals === null) {
-      this._pendingPartialWithdrawals = (
+    if (this.cachedPendingPartialWithdrawals === null) {
+      this.cachedPendingPartialWithdrawals = (
         this.cachedState as CachedBeaconStateElectra
       ).pendingPartialWithdrawals.toValue();
     }
 
-    return this._pendingPartialWithdrawals;
+    return this.cachedPendingPartialWithdrawals;
   }
 
   get pendingPartialWithdrawalsCount(): number {
@@ -324,11 +326,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Pending consolidations are not supported before Electra");
     }
 
-    if (this._pendingConsolidations === null) {
-      this._pendingConsolidations = (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
+    if (this.cachedPendingConsolidations === null) {
+      this.cachedPendingConsolidations = (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
     }
 
-    return this._pendingConsolidations;
+    return this.cachedPendingConsolidations;
   }
 
   get pendingConsolidationsCount(): number {
@@ -346,11 +348,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("Proposer lookahead is not supported before Fulu");
     }
 
-    if (this._proposerLookahead === null) {
-      this._proposerLookahead = (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
+    if (this.cachedProposerLookahead === null) {
+      this.cachedProposerLookahead = (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
     }
 
-    return this._proposerLookahead;
+    return this.cachedProposerLookahead;
   }
 
   preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
@@ -379,13 +381,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("executionPayloadAvailability is not available before Gloas");
     }
 
-    if (this._executionPayloadAvailability === null) {
-      this._executionPayloadAvailability = (
+    if (this.cachedExecutionPayloadAvailability === null) {
+      this.cachedExecutionPayloadAvailability = (
         this.cachedState as CachedBeaconStateGloas
       ).executionPayloadAvailability.toValue();
     }
 
-    return this._executionPayloadAvailability;
+    return this.cachedExecutionPayloadAvailability;
   }
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
@@ -393,12 +395,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("latestExecutionPayloadBid is not available before Gloas");
     }
 
-    if (this._latestExecutionPayloadBid === null) {
-      this._latestExecutionPayloadBid = (
+    if (this.cachedLatestExecutionPayloadBid === null) {
+      this.cachedLatestExecutionPayloadBid = (
         this.cachedState as CachedBeaconStateGloas
       ).latestExecutionPayloadBid.toValue();
     }
-    return this._latestExecutionPayloadBid;
+    return this.cachedLatestExecutionPayloadBid;
   }
 
   get payloadExpectedWithdrawals(): capella.Withdrawal[] {
@@ -406,12 +408,36 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("payloadExpectedWithdrawals is not available before Gloas");
     }
 
-    if (this._payloadExpectedWithdrawals === null) {
-      this._payloadExpectedWithdrawals = (
+    if (this.cachedPayloadExpectedWithdrawals === null) {
+      this.cachedPayloadExpectedWithdrawals = (
         this.cachedState as CachedBeaconStateGloas
       ).payloadExpectedWithdrawals.toValue();
     }
-    return this._payloadExpectedWithdrawals;
+    return this.cachedPayloadExpectedWithdrawals;
+  }
+
+  get builderPendingPayments(): gloas.BuilderPendingPayments {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder payments are not supported before Gloas");
+    }
+
+    if (this.cachedBuilderPendingPayments === null) {
+      this.cachedBuilderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+    }
+    return this.cachedBuilderPendingPayments;
+  }
+
+  get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Pending builder withdrawals are not supported before Gloas");
+    }
+
+    if (this.cachedBuilderPendingWithdrawals === null) {
+      this.cachedBuilderPendingWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).builderPendingWithdrawals.toValue();
+    }
+    return this.cachedBuilderPendingWithdrawals;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {
@@ -562,11 +588,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("currentSyncCommittee is not available before Altair");
     }
 
-    if (this._currentSyncCommittee === null) {
-      this._currentSyncCommittee = (this.cachedState as CachedBeaconStateAltair).currentSyncCommittee.toValue();
+    if (this.cachedCurrentSyncCommittee === null) {
+      this.cachedCurrentSyncCommittee = (this.cachedState as CachedBeaconStateAltair).currentSyncCommittee.toValue();
     }
 
-    return this._currentSyncCommittee;
+    return this.cachedCurrentSyncCommittee;
   }
 
   get nextSyncCommittee(): SyncCommittee {
@@ -574,11 +600,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw new Error("nextSyncCommittee is not available before Altair");
     }
 
-    if (this._nextSyncCommittee === null) {
-      this._nextSyncCommittee = (this.cachedState as CachedBeaconStateAltair).nextSyncCommittee.toValue();
+    if (this.cachedNextSyncCommittee === null) {
+      this.cachedNextSyncCommittee = (this.cachedState as CachedBeaconStateAltair).nextSyncCommittee.toValue();
     }
 
-    return this._nextSyncCommittee;
+    return this.cachedNextSyncCommittee;
   }
 
   get currentSyncCommitteeIndexed(): SyncCommitteeCache {
@@ -846,7 +872,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // State transition
 
-  computeNewStateRoot({block}: ComputeNewStateRootInput, modules: StateTransitionModules): ComputeNewStateRootResult {
+  computeNewStateRoot({block}: BlockSTFInput, modules: StateTransitionModules): ComputeNewStateRootResult {
     const postState = new BeaconStateView(
       stateTransition(this.cachedState, block, computeNewStateRootStateTransitionOpts, modules)
     );
@@ -854,12 +880,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    {block}: BlockSTFInput,
     options: StateTransitionOpts,
-    {metrics, validatorMonitor}: StateTransitionModules
+    modules: StateTransitionModules
   ): IBeaconStateView {
-    const newState = stateTransition(this.cachedState, signedBlock, options, {metrics, validatorMonitor});
-    return new BeaconStateView(newState);
+    return new BeaconStateView(stateTransition(this.cachedState, block, options, modules));
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, modules?: StateTransitionModules): IBeaconStateView {

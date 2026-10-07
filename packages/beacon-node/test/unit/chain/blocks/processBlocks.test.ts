@@ -66,7 +66,7 @@ describe("chain / blocks / processBlocks", () => {
     block.message.proposerIndex = proposerIndex;
     const blockRoot = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
     blockInput = new MockBlockInput({forkName: ForkName.deneb, slot, blockRootHex: blockRoot});
-    blockInput._block = block;
+    blockInput.block = block;
 
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
       relevantBlocks: [blockInput],
