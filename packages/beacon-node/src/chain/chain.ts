@@ -5,6 +5,7 @@ import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
+  AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
   ForkChoiceStateGetter,
@@ -58,7 +59,7 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
@@ -90,7 +91,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
-import {ChainEvent, ChainEventEmitter} from "./emitter.js";
+import {ChainEvent, ChainEventEmitter, ReorgEventData} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
@@ -1419,7 +1420,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
+   * Emit head and reorg events when the fork choice head differs between two observations. Every caller that
    * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
    */
   private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
@@ -1467,6 +1468,49 @@ export class BeaconChain implements IBeaconChain {
         {slot: head.slot, root: head.blockRoot, headRootChanged},
         e as Error
       );
+    }
+
+    try {
+      const ancestorResult = this.forkChoice.getCommonAncestorDepth(prevHead, head);
+      // EMPTY -> FULL extends the execution chain. Dropping a previously selected FULL payload reorgs it.
+      const payloadReorg =
+        ancestorResult.code === AncestorStatus.Descendant &&
+        prevHead.executionPayloadBlockHash !== null &&
+        prevHead.executionPayloadBlockHash !== head.executionPayloadBlockHash &&
+        (head.slot < prevHead.slot ||
+          (prevHead.payloadStatus === PayloadStatus.FULL &&
+            !this.forkChoice.isDescendant(
+              prevHead.blockRoot,
+              prevHead.payloadStatus,
+              head.blockRoot,
+              head.payloadStatus
+            )));
+
+      if (ancestorResult.code === AncestorStatus.CommonAncestor || payloadReorg) {
+        const depth =
+          ancestorResult.code === AncestorStatus.CommonAncestor
+            ? ancestorResult.depth
+            : Math.max(prevHead.slot - head.slot, 0);
+        const forkChoiceReorgEventData: ReorgEventData = {
+          slot: head.slot,
+          depth,
+          oldHeadHash: prevHead.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          oldHeadBlock: prevHead.blockRoot,
+          newHeadHash: head.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          newHeadBlock: head.blockRoot,
+          oldHeadState: prevHead.stateRoot,
+          newHeadState: head.stateRoot,
+          epoch: computeEpochAtSlot(head.slot),
+          executionOptimistic: isOptimisticBlock(head),
+        };
+
+        this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
+        this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
+        this.metrics?.forkChoice.reorg.inc();
+        this.metrics?.forkChoice.reorgDistance.observe(depth);
+      }
+    } catch (e) {
+      this.logger.debug("Error emitting chain_reorg event", {slot: head.slot, root: head.blockRoot}, e as Error);
     }
   }
 

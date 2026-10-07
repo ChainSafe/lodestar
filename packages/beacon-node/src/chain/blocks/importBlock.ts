@@ -1,7 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
-  AncestorStatus,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
@@ -42,7 +41,7 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ChainEvent} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -340,30 +339,6 @@ export async function importBlock(
     this.onNewHead(newHead);
 
     this.metrics?.forkChoice.changedHead.inc();
-
-    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
-    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
-      // CommonAncestor = chain reorg, old head and new head not direct descendants
-
-      const forkChoiceReorgEventData: ReorgEventData = {
-        slot: newHead.slot,
-        depth: ancestorResult.depth,
-        oldHeadHash: oldHead.executionPayloadBlockHash ?? ZERO_HASH_HEX,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadHash: newHead.executionPayloadBlockHash ?? ZERO_HASH_HEX,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadState: oldHead.stateRoot,
-        newHeadState: newHead.stateRoot,
-        epoch: computeEpochAtSlot(newHead.slot),
-        executionOptimistic: isOptimisticBlock(newHead),
-      };
-
-      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
-      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
-
-      this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
-    }
 
     // Lightclient server support (only after altair)
     // - Persist state witness
