@@ -7,7 +7,7 @@ import {
 } from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
-import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateHeze, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
@@ -117,7 +117,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
 function applyPendingDeposit(
   fork: ForkSeq,
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateHeze,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
 ): void {
