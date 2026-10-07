@@ -11,9 +11,8 @@ import {LodestarError, Logger, MapDef} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
 /**
- * Keep the 4 highest epochs: next, current, previous and current - 2. The last one is needed in the last slot of an epoch,
- * when the next epoch shuffling is already precomputed while attestations of the previous epoch are still valid.
- * Older epochs are always pruned first, so inserting shufflings of old or side-fork states never evicts these epochs.
+ * Lookahead duties, gossip validation, and block production need epochs n-1, n, and n+1 for current epoch n.
+ * Keep the 4 highest epochs so that it works for epoch rotation.
  **/
 const MAX_EPOCHS = 4;
 
@@ -54,10 +53,8 @@ export type ShufflingCacheOpts = {
 };
 
 /**
- * A shuffling cache to help:
- * - get committee quickly for attestation verification
- * - if a shuffling is not available, track a promise to make sure we don't compute the same shuffling twice
- * - skip computing shuffling when loading state bytes from disk
+ * Cache recent epoch shufflings for lookahead duties, gossip validation, and block production.
+ * Pending promises deduplicate computation of missing shufflings.
  */
 export class ShufflingCache {
   /** Pruned to the `maxEpochs` highest epochs every time we add a shuffling */

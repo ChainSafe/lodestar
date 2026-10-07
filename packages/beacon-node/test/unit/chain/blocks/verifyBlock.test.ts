@@ -1,9 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -54,6 +55,17 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
       Buffer.alloc(48, 0x77)
     );
+    const attestation = ssz.gloas.Attestation.defaultValue();
+    attestation.committeeBits.set(0, true);
+    attestation.aggregationBits = BitArray.fromBoolArray([true, false, true]);
+    block.message.body.attestations = [attestation];
+    const shuffling: EpochShuffling = {
+      epoch: 0,
+      activeIndices: Uint32Array.from([10, 20, 30]),
+      shuffling: Uint32Array.from([30, 20, 10]),
+      committees: [[Uint32Array.from([30, 20, 10])]],
+      committeesPerSlot: 1,
+    };
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
     const blockInput = BlockInputNoData.createFromBlock({
@@ -97,6 +109,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     const preState = {
       slot: 0,
       isStateValidatorsNodesPopulated: () => true,
+      getShufflingAtEpoch: () => shuffling,
     } as unknown as IBeaconStateView;
     chain.regen.getPreState.mockResolvedValue(preState);
     Object.defineProperty(chain, "seenBlockProposers", {value: new SeenBlockProposers()});
@@ -120,6 +133,11 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       {verifyOnly: true}
     );
 
+    expect(result.indexedAttestationsByBlock).toEqual([
+      [{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}],
+    ]);
+    expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
+    expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
     expect(result.payloadDAStatuses).toEqual(
       new Map(expectedPayloadDA === undefined ? [] : [[block.message.slot, expectedPayloadDA]])

@@ -22,6 +22,7 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getBeaconCommittees,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
@@ -657,8 +658,7 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
-    const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
+    const committees = getBeaconCommittees(state.getShufflingAtEpoch(attEpoch), attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {
