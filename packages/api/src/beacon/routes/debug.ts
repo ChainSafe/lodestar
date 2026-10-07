@@ -80,12 +80,16 @@ const ForkChoiceResponseType = new ContainerType(
 
 const ForkChoiceNodeV2ExtraDataType = new ContainerType(
   {
+    attestationScore: ssz.Gwei,
     executionOptimistic: ssz.Boolean,
     gasLimit: new OptionalType(ssz.UintNum64),
     timestamp: ssz.UintNum64,
+    stateRoot: stringType,
     target: stringType,
     unrealizedJustifiedEpoch: ssz.Epoch,
+    unrealizedJustifiedRoot: stringType,
     unrealizedFinalizedEpoch: ssz.Epoch,
+    unrealizedFinalizedRoot: stringType,
   },
   {jsonCase: "eth2"}
 );
