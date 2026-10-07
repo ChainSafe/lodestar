@@ -78,7 +78,8 @@ describe("cmds / builder / args handler", () => {
       runBuilderHandler({
         "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
         beaconNodeUrl: "http://localhost:9596",
-        "bid.enabled": enabled,
+        "execution.url": "http://localhost:8551",
+        bid: enabled,
       })
     ).rejects.toBe(failure);
 
@@ -87,5 +88,29 @@ describe("cmds / builder / args handler", () => {
     expect(options.bidRuntime).toBe(bidRuntime);
     expect(getBidOptions.mock.calls[0][2]).toBe(options.abortController.signal);
     expect(options.abortController.signal.aborted).toBe(true);
+  });
+
+  it("does not repeat cleanup when a signal follows initialization failure", async () => {
+    const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
+    vi.spyOn(loadKeypair, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
+    const abort = vi.fn();
+    const failure = Error("initialization failed");
+    vi.spyOn(Builder, "init").mockImplementation(async (options) => {
+      options.abortController.signal.addEventListener("abort", abort);
+      const originalAbort = options.abortController.abort.bind(options.abortController);
+      vi.spyOn(options.abortController, "abort").mockImplementation(originalAbort);
+      throw failure;
+    });
+    await expect(
+      runBuilderHandler({
+        "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
+        beaconNodeUrl: "http://localhost:9596",
+      })
+    ).rejects.toBe(failure);
+    const controller = vi.mocked(Builder.init).mock.calls[0][0].abortController;
+    process.emit("SIGINT");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(controller.abort).toHaveBeenCalledOnce();
+    expect(abort).toHaveBeenCalledOnce();
   });
 });

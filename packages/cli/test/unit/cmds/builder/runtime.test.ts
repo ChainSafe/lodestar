@@ -2,12 +2,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import yargs from "yargs";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MIN_DEPOSIT_AMOUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {LogLevel, toHex} from "@lodestar/utils";
-import type {IBuilderCliArgs} from "../../../../src/cmds/builder/options.js";
+import {type IBuilderCliArgs, builderOptions} from "../../../../src/cmds/builder/options.js";
 import {getBuilderBidOptions} from "../../../../src/cmds/builder/runtime.js";
+import {rcConfigOption} from "../../../../src/options/globalOptions.js";
+import {YargsError} from "../../../../src/util/errors.js";
 
 describe("Builder bid runtime configuration", () => {
   const config = getConfig(ForkName.gloas);
@@ -28,7 +31,7 @@ describe("Builder bid runtime configuration", () => {
       keystorePassword: "unused.txt",
       executionFeeRecipient: "0x" + "22".repeat(20),
       requestTimeout: 1000,
-      "bid.enabled": true,
+      bid: true,
       "execution.url": "http://localhost:8551",
       jwtSecret,
       "bid.shareBps": 8000,
@@ -46,21 +49,72 @@ describe("Builder bid runtime configuration", () => {
   });
 
   it("leaves observation-only startup unchanged when bidding is disabled", () => {
-    args["bid.enabled"] = false;
+    args.bid = false;
     args.jwtSecret = "missing";
     expect(getBuilderBidOptions(args, config, controller.signal)).toBeUndefined();
   });
 
-  it.each([
-    "execution.url",
-    "jwtSecret",
-    "bid.shareBps",
-    "bid.getPayloadAtBps",
-    "bid.getPayloadTimeout",
-    "bid.revealCutoffBps",
-  ] as const)("requires %s before constructing the runtime", (option) => {
+  it.each(["execution.url", "jwtSecret"] as const)("requires %s before constructing the runtime", (option) => {
     delete args[option];
     expect(() => getBuilderBidOptions(args, config, controller.signal)).toThrow();
+  });
+
+  it("enables bidding through the normal rc-config loader", () => {
+    const configPath = path.join(directory, "builder.json");
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({
+        bid: {enabled: true, shareBps: 8500},
+        keystore: args.keystore,
+        keystorePassword: args.keystorePassword,
+        executionFeeRecipient: args.executionFeeRecipient,
+        execution: {url: args["execution.url"]},
+        jwtSecret: args.jwtSecret,
+      })
+    );
+    const parsed = yargs(["--rcConfig", configPath])
+      .exitProcess(false)
+      .strict()
+      .parserConfiguration({"dot-notation": false})
+      .options(builderOptions)
+      .config(...rcConfigOption)
+      .parseSync();
+    expect(parsed.bid).toBe(true);
+    expect(parsed["bid.shareBps"]).toBe(8500);
+    const runtime = getBuilderBidOptions(
+      {...args, bid: parsed.bid, "bid.shareBps": parsed["bid.shareBps"]},
+      config,
+      controller.signal
+    );
+    expect(runtime?.policy.computeValue({payloadValueGwei: 100, coverableGwei: 100})).toBe(85);
+  });
+
+  it("uses useful defaults and the configured payload-attestation cutoff", () => {
+    delete args["bid.shareBps"];
+    delete args["bid.getPayloadAtBps"];
+    delete args["bid.getPayloadTimeout"];
+    delete args["bid.revealCutoffBps"];
+    const runtime = getBuilderBidOptions(args, config, controller.signal);
+    expect(runtime?.inputs.deadlineBps).toBe(9500);
+    expect(runtime?.orchestration.getPayloadTimeout).toBe(1000);
+    expect(runtime?.reveal.cutoffBps).toBe(config.PAYLOAD_ATTESTATION_DUE_BPS);
+    expect(runtime?.policy.computeValue({payloadValueGwei: 100, coverableGwei: 100})).toBe(90);
+  });
+
+  it("does not impose the current producer's event timing on explicit configuration", () => {
+    expect(
+      getBuilderBidOptions({...args, "bid.getPayloadAtBps": 6000}, config, controller.signal)?.inputs.deadlineBps
+    ).toBe(6000);
+  });
+
+  it.each([
+    ["bid.getPayloadTimeout", 0],
+    ["bid.shareBps", 0.5],
+    ["bid.minOperatingBalanceGwei", -1],
+  ] as const)("reports an option-specific CLI error for %s", (option, value) => {
+    const create = () => getBuilderBidOptions({...args, [option]: value}, config, controller.signal);
+    expect(create).toThrow(YargsError);
+    expect(create).toThrow(option.startsWith("bid.") ? option.slice(4) : option);
   });
 
   it.each([0, -1, NaN, Infinity, 1.5, 10000])("rejects invalid slot timing %s", (value) => {

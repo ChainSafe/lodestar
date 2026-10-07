@@ -8,6 +8,12 @@ export const builderMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
+export const builderBidDefaultOptions = {
+  shareBps: 9000,
+  getPayloadAtBps: 9500,
+  getPayloadTimeout: 1000,
+};
+
 export type IBuilderCliArgs = LogArgs & {
   beaconNodeUrl: string;
   keystore: string;
@@ -16,7 +22,7 @@ export type IBuilderCliArgs = LogArgs & {
   executionFeeRecipient: string;
   requestTimeout: number;
 
-  "bid.enabled"?: boolean;
+  bid?: boolean;
   "execution.url"?: string;
   jwtSecret?: string;
   "bid.shareBps"?: number;
@@ -71,9 +77,8 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     default: defaultOptions.requestTimeout,
   },
 
-  "bid.enabled": {
-    description:
-      "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL, JWT secret and explicit bid timing.",
+  bid: {
+    description: "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL and JWT secret.",
     type: "boolean",
     default: false,
     group: "bid",
@@ -90,8 +95,9 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     group: "bid",
   },
   "bid.shareBps": {
-    description: "Share of payload value offered to the proposer, in basis points. Required when bidding is enabled.",
+    description: "Share of payload value offered to the proposer, in basis points",
     type: "number",
+    default: builderBidDefaultOptions.shareBps,
     group: "bid",
   },
   "bid.fixedCostGwei": {
@@ -115,20 +121,21 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     group: "bid",
   },
   "bid.getPayloadAtBps": {
-    description:
-      "Retrieve the built payload at this fraction of the slot BEFORE proposal, in basis points. Required when bidding is enabled.",
+    description: "Retrieve the built payload at this fraction of the slot BEFORE proposal, in basis points",
     type: "number",
+    default: builderBidDefaultOptions.getPayloadAtBps,
     group: "bid",
   },
   "bid.getPayloadTimeout": {
-    description: "Payload retrieval timeout in milliseconds. Required when bidding is enabled.",
+    description: "Payload retrieval timeout in milliseconds",
     type: "number",
+    default: builderBidDefaultOptions.getPayloadTimeout,
     group: "bid",
   },
   "bid.revealCutoffBps": {
-    description:
-      "Stop reveal publication at this fraction of the selected block's slot, in basis points. Required when bidding is enabled.",
+    description: "Stop reveal publication at this fraction of the selected block's slot, in basis points",
     type: "number",
+    defaultDescription: "PAYLOAD_ATTESTATION_DUE_BPS from the chain configuration",
     group: "bid",
   },
 

@@ -47,9 +47,20 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
-  onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
-  }, logger.info.bind(logger));
+  let shutdownPromise: Promise<void> | undefined;
+  const shutdown = (): Promise<void> => {
+    shutdownPromise ??= (async () => {
+      for (const cb of onGracefulShutdownCbs) {
+        try {
+          await cb();
+        } catch (error) {
+          logger.error("Failed to shut down Builder resource", {}, error as Error);
+        }
+      }
+    })();
+    return shutdownPromise;
+  };
+  onGracefulShutdown(shutdown, logger.info.bind(logger));
 
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
@@ -73,6 +84,15 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   );
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
+  if (bidRuntime) {
+    logger.info("Builder bidding enabled", {
+      executionUrl: toPrintableUrl(args["execution.url"] ?? ""),
+      getPayloadAtBps: bidRuntime.inputs.deadlineBps,
+      getPayloadTimeout: bidRuntime.orchestration.getPayloadTimeout,
+      revealCutoffBps: bidRuntime.reveal.cutoffBps,
+      minOperatingBalanceGwei: bidRuntime.minOperatingBalanceGwei,
+    });
+  }
 
   const builder = await Builder.init({
     keypair,
@@ -84,9 +104,13 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     metrics,
     bidRuntime,
   }).catch(async (error: unknown) => {
-    await Promise.allSettled(onGracefulShutdownCbs.map(async (cb) => cb()));
+    await shutdown();
     throw error;
   });
 
-  onGracefulShutdownCbs.push(() => builder.close());
+  if (abortController.signal.aborted) {
+    await builder.close();
+  } else {
+    onGracefulShutdownCbs.push(() => builder.close());
+  }
 }
