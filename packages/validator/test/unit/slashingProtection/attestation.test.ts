@@ -11,6 +11,7 @@ import {
   SlashingProtection,
   SlashingProtectionAttestation,
 } from "../../../src/slashingProtection/index.js";
+import {SurroundAttestationErrorCode} from "../../../src/slashingProtection/minMaxSurround/index.js";
 import {testLogger} from "../../utils/logger.js";
 
 /**
@@ -59,8 +60,21 @@ describe("SlashingProtection attestation min-span lookback", () => {
     );
   }
 
-  function rejectsWith(promise: Promise<void>, code: InvalidAttestationErrorCode): Promise<void> {
+  function rejectsWith(
+    promise: Promise<void>,
+    code: InvalidAttestationErrorCode | SurroundAttestationErrorCode
+  ): Promise<void> {
     return expect(promise).rejects.toThrow(expect.objectContaining({type: expect.objectContaining({code})}));
+  }
+
+  function exportAttestations(): Promise<[source: number, target: number][]> {
+    return slashingProtection
+      .exportInterchange(ssz.Root.defaultValue(), [pubkey], {version: "5"})
+      .then((interchange) =>
+        interchange.data[0].signed_attestations.map(
+          ({source_epoch, target_epoch}) => [Number(source_epoch), Number(target_epoch)] as [number, number]
+        )
+      );
   }
 
   it("accepts the next attestation of an honest chain", async () => {
@@ -130,5 +144,51 @@ describe("SlashingProtection attestation min-span lookback", () => {
   it("rejects a source epoch just outside the min-max span lookback window", async () => {
     await sign(10_000, 10_001);
     await rejectsWith(sign(5_902, 10_000), InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK);
+  });
+  /**
+   * An import is rejected while inserting min-max spans, after the attestation rows of the whole file are stored.
+   * A rejected file must leave the db untouched, leftover spans reject attestations that are safe against
+   * everything actually signed. See https://github.com/ChainSafe/lodestar/issues/10001
+   */
+  describe("atomicity of a rejected interchange import", () => {
+    beforeEach(async () => {
+      await sign(10, 11);
+      await sign(11, 12);
+    });
+
+    it("leaves no rows and no spans when the file surrounds its own attestation", async () => {
+      const before = await exportAttestations();
+
+      // (12, 30) surrounds (13, 14), detected only once the spans of (12, 30) are inserted. The highest target
+      // attestation (20, 40) carries the highest source epoch, so the pre-import invariant check passes.
+      await rejectsWith(
+        importInterchange([
+          [12, 30],
+          [13, 14],
+          [20, 40],
+        ]),
+        SurroundAttestationErrorCode.IS_SURROUNDED
+      );
+
+      expect(await exportAttestations()).toEqual(before);
+      // Surrounds neither recorded attestation, both share its source epoch, but the min-span entries left
+      // behind by the rejected file put a shorter span on source 11
+      await expect(sign(11, 31)).resolves.toBeUndefined();
+    });
+
+    it("leaves no rows and no spans when the file surrounds a recorded attestation", async () => {
+      const before = await exportAttestations();
+
+      await rejectsWith(
+        importInterchange([
+          [12, 13],
+          [9, 14],
+        ]),
+        InvalidAttestationErrorCode.NEW_SURROUNDS_PREV
+      );
+
+      expect(await exportAttestations()).toEqual(before);
+      await expect(sign(11, 14)).resolves.toBeUndefined();
+    });
   });
 });
