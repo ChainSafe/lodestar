@@ -111,7 +111,13 @@ const ForkChoiceNodeV2Type = new ContainerType(
 );
 const ForkChoiceExtraDataType = new ContainerType(
   {
-    head: new ContainerType({blockRoot: stringType, payloadStatus: payloadStatusType}, {jsonCase: "eth2"}),
+    head: new ContainerType(
+      {
+        blockRoot: stringType,
+        payloadStatus: payloadStatusType,
+      },
+      {jsonCase: "eth2"}
+    ),
     proposerBoostRoot: stringType,
     previousProposerBoostRoot: stringType,
     unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
