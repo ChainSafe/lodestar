@@ -81,39 +81,47 @@ const ForkChoiceResponseType = new ContainerType(
 const ForkChoiceNodeV2ExtraDataType = new ContainerType(
   {
     executionOptimistic: ssz.Boolean,
+    gasLimit: new OptionalType(ssz.UintNum64),
     timestamp: ssz.UintNum64,
     target: stringType,
-    justifiedEpoch: ssz.Epoch,
-    finalizedEpoch: ssz.Epoch,
     unrealizedJustifiedEpoch: ssz.Epoch,
     unrealizedFinalizedEpoch: ssz.Epoch,
-    payloadAttesterCount: new OptionalType(ssz.UintNum64),
-    payloadAvailabilityYesCount: new OptionalType(ssz.UintNum64),
-    payloadDataAvailabilityYesCount: new OptionalType(ssz.UintNum64),
-    gasLimit: new OptionalType(ssz.UintNum64),
   },
   {jsonCase: "eth2"}
 );
+const payloadStatusType = new StringType<"pending" | "empty" | "full">();
 const ForkChoiceNodeV2Type = new ContainerType(
   {
-    payloadStatus: new StringType<"pending" | "empty" | "full">(),
     slot: ssz.Slot,
     blockRoot: stringType,
+    payloadStatus: payloadStatusType,
     parentRoot: stringType,
+    parentPayloadStatus: new OptionalType(payloadStatusType),
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
     weight: ssz.Gwei,
     validity: new StringType<"valid" | "invalid" | "optimistic">(),
     executionBlockHash: stringType,
+    payloadAttesterCount: ssz.UintNum64,
+    payloadAvailabilityYesCount: ssz.UintNum64,
+    payloadDataAvailabilityYesCount: ssz.UintNum64,
     extraData: ForkChoiceNodeV2ExtraDataType,
   },
   {jsonCase: "eth2"}
 );
 const ForkChoiceExtraDataType = new ContainerType(
   {
-    unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
-    unrealizedFinalizedCheckpoint: ssz.phase0.Checkpoint,
+    head: new ContainerType(
+      {
+        blockRoot: stringType,
+        payloadStatus: payloadStatusType,
+      },
+      {jsonCase: "eth2"}
+    ),
     proposerBoostRoot: stringType,
     previousProposerBoostRoot: stringType,
-    headRoot: stringType,
+    unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    unrealizedFinalizedCheckpoint: ssz.phase0.Checkpoint,
   },
   {jsonCase: "eth2"}
 );
@@ -255,14 +263,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: ForkChoiceResponseV2Type,
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
-        transform: {
-          toResponse: (data) => ({
-            ...(data as ForkChoiceResponseV2),
-          }),
-          fromResponse: (resp) => ({
-            data: resp as ForkChoiceResponseV2,
-          }),
-        },
       },
     },
     getProtoArrayNodes: {
