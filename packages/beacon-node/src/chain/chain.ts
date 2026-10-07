@@ -1536,6 +1536,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void {
+    const blockRoot = toRootHex(envelope.beaconBlockRoot);
+    void this.persistSszObject(
+      "ExecutionPayloadEnvelope",
+      ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope),
+      blockRoot,
+      "produced_execution_payload_envelope"
+    ).catch((e) => {
+      this.logger.error(
+        "Error persisting produced execution payload envelope",
+        {slot: envelope.payload.slotNumber, blockRoot},
+        e as Error
+      );
+    });
+  }
+
   /**
    * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
    * persist preState, postState and block for further investigation.
@@ -1731,7 +1747,7 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
+    this.logger.debug("Persisted SSZ object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
