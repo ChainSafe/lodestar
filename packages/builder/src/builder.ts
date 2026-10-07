@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {LodestarError, Logger, isErrorAborted, toHex, toRootHex, withTimeout} from "@lodestar/utils";
+import {LodestarError, Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -11,11 +11,10 @@ import {BidLedger} from "./services/bidLedger.js";
 import type {BidPolicy} from "./services/bidPolicy.js";
 import {BidPublisher} from "./services/bidPublisher.js";
 import {BidSelector} from "./services/bidSelector.js";
-import {BlockObserver, type ObservedBlock} from "./services/blockObserver.js";
+import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 import {EnvelopePublisher} from "./services/envelopePublisher.js";
-import {createExecutionPayloadEnvelopeContents} from "./services/executionPayloadEnvelope.js";
 import {
   PayloadAttributesConsumer,
   type PayloadAttributesConsumerOptions,
@@ -24,6 +23,7 @@ import {PayloadOrchestrator, type PayloadOrchestratorOptions} from "./services/p
 import type {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
+import {Revealer, type RevealerOptions} from "./services/revealer.js";
 import {SlotBidder} from "./services/slotBidder.js";
 
 export type BuilderModules = {
@@ -46,12 +46,7 @@ export type BuilderBidOptions = {
   orchestration: PayloadOrchestratorOptions;
   inputs: Omit<PayloadAttributesConsumerOptions, "executionFeeRecipient">;
   minOperatingBalanceGwei: number;
-  reveal: {
-    /** Publication cutoff within the selected block's slot, not the earlier build slot. */
-    cutoffBps: number;
-    /** Optional policy override; otherwise reveal promptly after a matching import. */
-    shouldReveal?: (block: ObservedBlock, signal: AbortSignal) => Promise<boolean>;
-  };
+  reveal: RevealerOptions;
 };
 
 export type BuilderOptions = {
@@ -82,6 +77,7 @@ export class Builder {
   private readonly payloadStore: PayloadStore;
   private readonly payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
   private readonly bidLedger: BidLedger | undefined;
+  private readonly metrics: Metrics | null;
 
   constructor({
     opts,
@@ -106,6 +102,7 @@ export class Builder {
     this.payloadStore = payloadStore;
     this.payloadAttributesConsumer = payloadAttributesConsumer;
     this.bidLedger = bidLedger;
+    this.metrics = opts.metrics;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
@@ -211,43 +208,21 @@ export class Builder {
         ledger,
         builderIndex: index,
       });
-      blockObserver.runOnBlock(async (observed) => {
-        const signal = opts.abortController.signal;
-        signal.throwIfAborted();
-        const selected = selector.match(observed);
-        if (selected.status !== "selected") return;
-        const cutoff = config.getSlotComponentDurationMs(reveal.cutoffBps);
-        const remaining = cutoff - clock.msFromSlot(observed.slot);
-        if (remaining <= 0 || clock.getCurrentSlot() < observed.slot) return;
-        await withTimeout(
-          async (timeoutSignal) => {
-            const publicationSignal = timeoutSignal ?? signal;
-            if (reveal.shouldReveal && !(await reveal.shouldReveal(observed, publicationSignal))) return;
-            publicationSignal.throwIfAborted();
-            if (clock.msFromSlot(observed.slot) >= cutoff) return;
-            const storedPayload = payloadStore.get(selected.bid.blockHash);
-            if (storedPayload === null) {
-              logger.warn("Selected payload expired before reveal", {
-                code: "BUILDER_REVEAL_PAYLOAD_EXPIRED",
-                slot: observed.slot,
-                blockRoot: observed.blockRoot,
-              });
-              return;
-            }
-            await envelopePublisher.publish(
-              createExecutionPayloadEnvelopeContents({
-                blockRoot: selected.blockRoot,
-                builderIndex: index,
-                selectedBid: observed.block.message.body.signedExecutionPayloadBid.message,
-                storedPayload,
-              }),
-              publicationSignal
-            );
-          },
-          remaining,
-          signal
-        );
-      });
+      const revealer = new Revealer(
+        {
+          config,
+          clock,
+          logger,
+          metrics: opts.metrics,
+          builderIndex: index,
+          ledger,
+          selector,
+          publisher: envelopePublisher,
+          store: payloadStore,
+        },
+        reveal
+      );
+      blockObserver.runOnBlock((observed) => revealer.onBlock(observed, opts.abortController.signal));
     }
     opts.abortController.signal.throwIfAborted();
 
@@ -321,12 +296,22 @@ export class Builder {
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
-          await this.payloadAttributesConsumer?.onEvent(event, signal);
           break;
         case routes.events.EventType.headV2:
         case routes.events.EventType.payloadAttributes:
-          await this.payloadAttributesConsumer?.onEvent(event, signal);
           break;
+      }
+      if (event.type !== routes.events.EventType.block) {
+        const result = await this.payloadAttributesConsumer?.onEvent(event, signal);
+        if (result?.status === "published") {
+          this.metrics?.bids.inc({result: "published"});
+          this.logger.info("Published execution payload bid", result);
+        } else if (result?.status === "not_published") {
+          this.metrics?.bids.inc({result: result.reason});
+          this.logger.debug("Execution payload bid not published", result);
+        } else if (result?.status === "ignored") {
+          this.logger.debug("Payload input deferred or ignored", {eventType: event.type, reason: result.reason});
+        }
       }
     } catch (error) {
       if (!signal.aborted && !isErrorAborted(error)) {
