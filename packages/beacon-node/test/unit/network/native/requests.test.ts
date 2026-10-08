@@ -73,7 +73,9 @@ it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
 it.each([
   ["negotiation_failed", "negotiation", "timeout", RequestErrorCode.DIAL_TIMEOUT, PeerAction.HighToleranceError],
   ["negotiation_rejected", "negotiation", null, RequestErrorCode.DIAL_ERROR, PeerAction.LowToleranceError],
-  ["timeout", "response", null, RequestErrorCode.RESP_TIMEOUT, PeerAction.MidToleranceError],
+  ["timeout", "negotiation", null, RequestErrorCode.DIAL_TIMEOUT, PeerAction.HighToleranceError],
+  ["timeout", "request", null, RequestErrorCode.REQUEST_TIMEOUT, null],
+  ["timeout", "response", null, RequestErrorCode.RESP_TIMEOUT, null],
   ["invalid_response", "response", null, RequestErrorCode.INVALID_RESPONSE_SSZ, PeerAction.LowToleranceError],
   ["host_timeout", "response", null, RequestErrorCode.REQUEST_ERROR, null],
   ["quota_timeout", "response", null, RequestErrorCode.REQUEST_ERROR, null],
@@ -113,10 +115,14 @@ it.each([
   else expect(report).toHaveBeenCalledExactlyOnceWith(action, code);
 });
 
-it.each(["protocol", "non_completion"])("does not score a native %s fault twice", async (peerFault) => {
-  const failure = Object.assign(new Error("invalid response"), {
+it.each([
+  ["protocol", "invalid_response", RequestErrorCode.INVALID_RESPONSE_SSZ],
+  ["non_completion", "timeout", RequestErrorCode.RESP_TIMEOUT],
+] as const)("does not score a native %s fault twice", async (peerFault, reason, code) => {
+  const failure = Object.assign(new Error(reason), {
     code: "NetworkRequestFailed",
-    reason: "invalid_response",
+    reason,
+    phase: "response",
     peerFault,
   });
   const report = vi.fn();
@@ -131,8 +137,39 @@ it.each(["protocol", "non_completion"])("does not score a native %s fault twice"
     {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
     report
   );
-  await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ}});
+  await expect(iterator.next()).rejects.toMatchObject({type: {code}});
   expect(report).not.toHaveBeenCalled();
+});
+
+it.each([
+  [RespStatus.SERVER_ERROR, RequestErrorCode.SERVER_ERROR, PeerAction.MidToleranceError],
+  [RespStatus.INVALID_REQUEST, RequestErrorCode.INVALID_REQUEST, PeerAction.LowToleranceError],
+  [RespStatus.RESOURCE_UNAVAILABLE, RequestErrorCode.RESOURCE_UNAVAILABLE, null],
+] as const)("preserves application error scoring for status %s", async (peerStatus, code, action) => {
+  const failure = Object.assign(new Error("peer error"), {
+    code: "NetworkRequestFailed",
+    reason: "peer_error",
+    phase: "response",
+    peerFault: null,
+    peerStatus,
+    peerMessage: new Uint8Array(),
+  });
+  const response: AsyncIterableIterator<NativeResponseChunk> = {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(failure),
+  };
+  const report = vi.fn();
+  const iterator = outgoingNativeRequest(
+    {request: () => response},
+    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+    report
+  );
+  await expect(iterator.next()).rejects.toMatchObject({type: {code}});
+  await expect(iterator.next()).rejects.toMatchObject({type: {code}});
+  if (action === null) expect(report).not.toHaveBeenCalled();
+  else expect(report).toHaveBeenCalledExactlyOnceWith(action, code);
 });
 
 it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "slots_exhausted"])(

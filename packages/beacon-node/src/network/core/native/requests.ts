@@ -115,7 +115,9 @@ export function outgoingNativeRequest(
       const nativeFault = error instanceof Error && "peerFault" in error && error.peerFault !== null;
       if (score && !reported && !nativeFault && mapped instanceof RequestError) {
         reported = true;
-        const action = onOutgoingReqRespError(mapped, data.method);
+        // Native owns response-timeout attribution, including when local delays rule out a peer penalty.
+        const action =
+          mapped.type.code === RequestErrorCode.RESP_TIMEOUT ? null : onOutgoingReqRespError(mapped, data.method);
         if (action !== null) report(action, mapped.type.code);
       }
       throw mapped;
