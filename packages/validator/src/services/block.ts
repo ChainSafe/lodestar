@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, ZERO_HASH, isForkPostGloas} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -14,7 +14,15 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyGweiToEth, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {
+  byteArrayEquals,
+  extendError,
+  prettyBytes,
+  prettyGweiToEth,
+  prettyWeiToEth,
+  toPubkeyHex,
+  toRootHex,
+} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {LoggerVc} from "../util/index.js";
@@ -305,7 +313,10 @@ export class BlockProposingService {
 
     const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
-    if (isSelfBuild) {
+    if (isSelfBuild && byteArrayEquals(block.body.signedExecutionPayloadBid.message.blockHash, ZERO_HASH)) {
+      // Beacon node did not produce an execution payload in time, the block commits to none so there is nothing to reveal
+      this.logger.warn("Published block without execution payload", {...logCtx, blockRoot: blockRootHex});
+    } else if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope
       const flow = executionPayloadIncluded ? "stateless" : "stateful";
       if (executionPayloadIncluded) {

@@ -2,9 +2,9 @@ import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
+import {BeaconStateView, G2_POINT_AT_INFINITY, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
@@ -125,6 +125,57 @@ describe("Fulu builder body", () => {
       modules.chain.executionBuilder.getHeader.mockResolvedValue({...response, [field]: undefined});
       await expect(produce()).rejects.toThrow(`missing ${field}`);
     });
+  }
+});
+
+describe("Gloas empty bid body", () => {
+  for (const fork of [ForkName.gloas, ForkName.heze] as const) {
+    for (const fullParent of [true, false]) {
+      it(`${fork} commits to no execution payload when building on a ${fullParent ? "full" : "empty"} parent`, async () => {
+        const {state, modules, chain, attrs, common, parentBlockRoot, slot} = setup(fork);
+        const latestBid = {
+          ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
+          blockHash: new Uint8Array(32).fill(5),
+          parentBlockHash: new Uint8Array(32).fill(6),
+          gasLimit: 30_000_000n,
+        };
+        vi.spyOn(state, "latestExecutionPayloadBid", "get").mockReturnValue(latestBid);
+        modules.forkChoice.shouldBuildOnFull.mockReturnValue(fullParent);
+        const getParentExecutionRequests = vi.fn().mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
+        Object.assign(chain, {getParentExecutionRequests});
+        Object.assign(modules.chain.payloadAttestationPool, {getPayloadAttestationsForBlock: vi.fn().mockReturnValue([])});
+        const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
+
+        const {body, executionPayloadValue} = await produceBlockBody.call(chain, BlockType.Full, state, {
+          ...attrs,
+          feeRecipient,
+          proposerIndex: 0,
+          proposerPubKey: new Uint8Array(48),
+          commonBlockBodyPromise: Promise.resolve(common),
+          emptyBid: true,
+        });
+
+        const {message: bid, signature} = (body as gloas.BeaconBlockBody).signedExecutionPayloadBid;
+        expect(bid).toMatchObject({
+          parentBlockHash: fullParent ? latestBid.blockHash : latestBid.parentBlockHash,
+          parentBlockRoot,
+          blockHash: new Uint8Array(32),
+          prevRandao: state.getRandaoMix(state.epoch),
+          feeRecipient: fromHex(feeRecipient),
+          gasLimit: latestBid.gasLimit,
+          builderIndex: BUILDER_INDEX_SELF_BUILD,
+          slot,
+          value: 0,
+          executionPayment: 0n,
+          blobKzgCommitments: [],
+          executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue()),
+        });
+        expect(signature).toEqual(G2_POINT_AT_INFINITY);
+        expect(executionPayloadValue).toBe(0n);
+        expect(modules.chain.executionEngine.getPayload).not.toHaveBeenCalled();
+        expect(getParentExecutionRequests).toHaveBeenCalledTimes(fullParent ? 1 : 0);
+      });
+    }
   }
 });
 

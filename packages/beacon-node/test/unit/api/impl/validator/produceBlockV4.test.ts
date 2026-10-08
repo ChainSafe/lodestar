@@ -50,6 +50,9 @@ describe("api/validator - produceBlockV4", () => {
   const bidBlock = ssz.gloas.BeaconBlock.defaultValue();
   bidBlock.slot = slot;
   bidBlock.proposerIndex = 2;
+  const emptyBidBlock = ssz.gloas.BeaconBlock.defaultValue();
+  emptyBidBlock.slot = slot;
+  emptyBidBlock.proposerIndex = 3;
 
   const builderBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
   builderBid.message.value = 1;
@@ -630,6 +633,75 @@ describe("api/validator - produceBlockV4", () => {
       expect.objectContaining({reason: EngineBlockSelectionReason.BuilderCircuitBreaker})
     );
     expect(modules.chain.logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("produces a block without execution payload when local production fails and no bid is available", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.produceBlock.mockImplementation(async (attrs: {emptyBid?: boolean}) => {
+      if (!attrs.emptyBid) {
+        throw new Error("Local block production failed");
+      }
+      return {block: emptyBidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
+    });
+
+    const {data: block, meta} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: true,
+      builderConfig: getBuilderConfig(),
+    });
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(modules.chain.produceBlock).toHaveBeenLastCalledWith(expect.objectContaining({emptyBid: true}));
+    expect(block).toEqual(emptyBidBlock);
+    expect(meta.executionPayloadIncluded).toBe(false);
+    expect(modules.chain.logger.warn).toHaveBeenCalledWith(
+      "Produced block without execution payload: no local or builder bid block produced in time",
+      expect.objectContaining({reason: EngineBlockSelectionReason.NoPayload})
+    );
+  });
+
+  it("produces a block without execution payload when the local block misses the cutoff", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(2_000);
+    const pendingEngineBlock = defer<never>();
+    modules.chain.produceBlock.mockImplementation((attrs: {emptyBid?: boolean}) =>
+      attrs.emptyBid
+        ? Promise.resolve({block: emptyBidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n})
+        : pendingEngineBlock.promise
+    );
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
+    });
+
+    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
+    expect(block).toEqual(emptyBidBlock);
+  });
+
+  it("does not produce a block without execution payload when the local block is produced", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: getBuilderConfig(),
+    });
+
+    expect(modules.chain.produceBlock).not.toHaveBeenCalledWith(expect.objectContaining({emptyBid: true}));
+    expect(block).toEqual(engineBlock);
   });
 
   it("prefers the builder bid with the maximum builder boost factor", async () => {

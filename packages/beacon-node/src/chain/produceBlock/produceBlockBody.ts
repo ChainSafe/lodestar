@@ -25,6 +25,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
@@ -71,7 +72,7 @@ import {
   toPubkeyHex,
   toRootHex,
 } from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -115,6 +116,8 @@ export type BlockAttributes = {
   strictFeeRecipientCheck?: boolean;
   /** When provided, build block with this builder bid instead of a self-build bid */
   builderBid?: gloas.SignedExecutionPayloadBid;
+  /** Build block with a self-build bid that commits to no execution payload, the payload is never revealed */
+  emptyBid?: boolean;
 };
 
 export enum BlockType {
@@ -196,6 +199,42 @@ function maybeFilterInvalidatedVoluntaryExits(
   );
 }
 
+/**
+ * Self-build bid that commits to no execution payload. The payload is never revealed, the block
+ * still gets included but the slot ends up without an execution payload.
+ */
+function getEmptySelfBuildBid(
+  fork: ForkName,
+  state: IBeaconStateViewGloas,
+  {
+    slot,
+    parentBlockRoot,
+    isBuildingOnFull,
+    feeRecipient,
+  }: {slot: Slot; parentBlockRoot: Root; isBuildingOnFull: boolean; feeRecipient: Bytes32}
+): gloas.SignedExecutionPayloadBid {
+  const {latestExecutionPayloadBid} = state;
+  const bid: gloas.ExecutionPayloadBid = {
+    parentBlockHash: isBuildingOnFull ? latestExecutionPayloadBid.blockHash : latestExecutionPayloadBid.parentBlockHash,
+    parentBlockRoot,
+    // Must differ from the parent block hash, no execution payload exists with this block hash
+    blockHash: ZERO_HASH,
+    prevRandao: state.getRandaoMix(state.epoch),
+    feeRecipient,
+    gasLimit: latestExecutionPayloadBid.gasLimit,
+    builderIndex: BUILDER_INDEX_SELF_BUILD,
+    slot,
+    value: 0,
+    executionPayment: 0n,
+    blobKzgCommitments: [],
+    executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue()),
+  };
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+  }
+  return {message: bid, signature: G2_POINT_AT_INFINITY};
+}
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -219,8 +258,9 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
-    builderBid,
+    emptyBid,
   } = blockAttr;
+  let {builderBid} = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
   const parentBlockRoot = fromHex(parentBlock.blockRoot);
@@ -239,6 +279,18 @@ export async function produceBlockBody<T extends BlockType>(
     slot: blockSlot,
   };
   this.logger.verbose("Producing beacon block body", logMeta);
+
+  if (emptyBid) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for empty bid block production");
+    }
+    builderBid = getEmptySelfBuildBid(fork, currentState, {
+      slot: blockSlot,
+      parentBlockRoot,
+      isBuildingOnFull: this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot),
+      feeRecipient: fromHex(requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex)),
+    });
+  }
 
   if (builderBid !== undefined) {
     if (!isStatePostGloas(currentState)) {

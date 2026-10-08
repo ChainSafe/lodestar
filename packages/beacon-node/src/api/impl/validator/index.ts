@@ -121,6 +121,7 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
+const EMPTY_BID_NOT_REQUIRED = "Empty bid block not required";
 
 type BidCandidate = {
   signedBid: gloas.SignedExecutionPayloadBid;
@@ -193,6 +194,8 @@ export enum EngineBlockSelectionReason {
   BuilderCensorship = "builder_censorship",
   BlockValue = "block_value",
   EnginePreferred = "engine_preferred",
+  /** Neither a local nor a builder bid block was produced in time, the block commits to no execution payload */
+  NoPayload = "no_payload",
 }
 
 /**
@@ -1121,14 +1124,33 @@ export function getValidatorApi(
         );
       });
 
-      const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
-        resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        signal: controller.signal,
+      // Fall back to a block without an execution payload if neither the local block nor a bid block
+      // is produced by the cutoff, missing the proposal is worse than a slot without execution payload
+      const emptyBidBlockPromise: ReturnType<typeof chain.produceBlock> = Promise.race([
+        Promise.any([enginePromise, bidBlockPromise]).then(
+          () => true,
+          () => false
+        ),
+        sleep(cutoffMs, controller.signal).then(() => false),
+      ]).then((blockProduced) => {
+        if (blockProduced) {
+          throw new Error(EMPTY_BID_NOT_REQUIRED);
+        }
+        return timed(ProducedBlockSource.engine, () => chain.produceBlock({...baseAttrs, emptyBid: true}));
       });
+
+      const [engineResult, bidBlockResult, emptyBidBlockResult] = await resolveOrRacePromises(
+        [enginePromise, bidBlockPromise, emptyBidBlockPromise],
+        {
+          resolveTimeoutMs: cutoffMs,
+          raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+          signal: controller.signal,
+        }
+      );
 
       let bestResult: typeof engineResult | null = null;
       let source: ProducedBlockSource = ProducedBlockSource.engine;
+      let isEmptyBid = false;
 
       // Resolved instantly whenever the bid branch produced a block
       const bestBid = bidBlockResult.status === "fulfilled" ? await bestBidPromise : null;
@@ -1240,6 +1262,21 @@ export function getValidatorApi(
           ...getBlockValueLogInfo(engineResult.value),
           error: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : undefined,
         });
+      } else if (emptyBidBlockResult.status === "fulfilled") {
+        source = ProducedBlockSource.engine;
+        bestResult = emptyBidBlockResult;
+        isEmptyBid = true;
+        metrics?.blockProductionSelectionResults.inc({
+          source: ProducedBlockSource.engine,
+          reason: EngineBlockSelectionReason.NoPayload,
+        });
+        logger.warn("Produced block without execution payload: no local or builder bid block produced in time", {
+          reason: EngineBlockSelectionReason.NoPayload,
+          ...logCtx,
+          durationMs: emptyBidBlockResult.durationMs,
+          engineError: engineResult.status === "rejected" ? (engineResult.reason as Error).message : engineResult.status,
+          bidError: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : bidBlockResult.status,
+        });
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
@@ -1276,7 +1313,7 @@ export function getValidatorApi(
 
       // Include the payload for self-builds unless disabled (stateless flow)
       const isSelfBuild = source === ProducedBlockSource.engine;
-      if (isSelfBuild && includePayload) {
+      if (isSelfBuild && !isEmptyBid && includePayload) {
         const produceResult = chain.blockProductionCache.get(blockRoot);
         if (
           produceResult === undefined ||
