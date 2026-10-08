@@ -104,8 +104,7 @@ export class SlashingProtection implements ISlashingProtection {
     }
 
     // Checks for keys in the file wait for the whole import, a key that is already signing must not sign against
-    // a history the import is still extending. Per-key queues alone only cover the key currently being imported.
-    // Imports run one after another so a later import cannot release a key an earlier one has not reached yet.
+    // a history the import is still extending. Imports run one after another so a later one cannot release a key early.
     const pubkeyHexes = data.map((validator) => toPubkeyHex(validator.pubkey));
     const previous = this.lastImport;
     const {promise, resolve} = defer<void>();
