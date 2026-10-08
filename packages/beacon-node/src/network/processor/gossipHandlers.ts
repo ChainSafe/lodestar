@@ -1519,9 +1519,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       );
 
       const timer = metrics?.inclusionListsValidationTime.startTimer();
-      let committeeIndex: number;
+      let committeeIndices: number[];
       try {
-        ({committeeIndex} = await validateGossipInclusionList(chain, signedInclusionList));
+        ({committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList));
       } finally {
         timer?.({source: InclusionListSource.gossip});
       }
@@ -1531,7 +1531,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.inclusionListArrivalTime.observe(secFromSlot);
       const isTimely = secFromSlot * 1000 < config.getInclusionListDueMs();
 
-      const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndex, isTimely);
+      const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
       metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});
       metrics?.opPool.inclusionListStore.size.set(chain.inclusionListStore.size);
 

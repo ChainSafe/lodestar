@@ -32,8 +32,8 @@ export enum InvalidInclusionListReason {
 }
 
 export type InclusionListValidationResult = {
-  /** Position of `validator_index` in `get_inclusion_list_committee(state, slot)` */
-  committeeIndex: number;
+  /** Positions of `validator_index` in `get_inclusion_list_committee(state, slot)`, several when the committee cycles */
+  committeeIndices: number[];
 };
 
 export async function validateApiInclusionList(
@@ -166,8 +166,14 @@ async function validateInclusionList(
       epoch,
     });
   }
-  const committeeIndex = getInclusionListCommittee(shuffling, slot).indexOf(validatorIndex);
-  if (committeeIndex === -1) {
+  const committee = getInclusionListCommittee(shuffling, slot);
+  const committeeIndices: number[] = [];
+  for (let i = 0; i < committee.length; i++) {
+    if (committee[i] === validatorIndex) {
+      committeeIndices.push(i);
+    }
+  }
+  if (committeeIndices.length === 0) {
     reject(InvalidInclusionListReason.validatorNotInCommittee, {
       code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE,
       validatorIndex,
@@ -190,7 +196,7 @@ async function validateInclusionList(
   chain.metrics?.inclusionListsValid.inc({source});
   chain.metrics?.inclusionListsValidSize.inc(inclusionListSize);
 
-  return {committeeIndex};
+  return {committeeIndices};
 }
 
 /** The shuffling of `epoch` on the branch of `dependentBlock`, regenerated only on a branch the head has not seen */

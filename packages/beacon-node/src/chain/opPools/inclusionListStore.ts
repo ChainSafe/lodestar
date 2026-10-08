@@ -19,8 +19,8 @@ export enum InclusionListInsertOutcome {
 
 type InclusionListEntry = {
   signedInclusionList: heze.SignedInclusionList;
-  /** Position of the validator in `get_inclusion_list_committee(state, slot)` for this `(slot, dependent_root)`. */
-  committeeIndex: number;
+  /** Positions of the validator in `get_inclusion_list_committee(state, slot)`, several when the committee cycles */
+  committeeIndices: number[];
   /** Received before the inclusion list deadline of its slot. */
   timely: boolean;
 };
@@ -65,7 +65,7 @@ export class InclusionListStore {
    */
   process(
     signedInclusionList: heze.SignedInclusionList,
-    committeeIndex: number,
+    committeeIndices: number[],
     timely: boolean
   ): InclusionListInsertOutcome {
     const inclusionList = signedInclusionList.message;
@@ -94,7 +94,7 @@ export class InclusionListStore {
       return InclusionListInsertOutcome.Equivocating;
     }
 
-    stored.set(validatorIndex, {signedInclusionList, committeeIndex, timely});
+    stored.set(validatorIndex, {signedInclusionList, committeeIndices, timely});
     return InclusionListInsertOutcome.New;
   }
 
@@ -124,16 +124,18 @@ export class InclusionListStore {
   /** Bit `i` is set iff committee member `i` submitted a valid, non-equivocating inclusion list. */
   getInclusionListBits(slot: Slot, dependentRoot: RootHex, onlyTimely = true): BitArray {
     const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
-    for (const {committeeIndex} of this.getEligible(slot, dependentRoot, onlyTimely)) {
-      bits.set(committeeIndex, true);
+    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+      for (const committeeIndex of committeeIndices) {
+        bits.set(committeeIndex, true);
+      }
     }
     return bits;
   }
 
   /** True iff `bits` has a bit set for every bit set in the local inclusion list bits. */
   isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {
-    for (const {committeeIndex} of this.getEligible(slot, dependentRoot, onlyTimely)) {
-      if (!bits.get(committeeIndex)) {
+    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+      if (committeeIndices.some((committeeIndex) => !bits.get(committeeIndex))) {
         return false;
       }
     }
@@ -143,8 +145,8 @@ export class InclusionListStore {
   /** Inclusion lists for the given committee positions, to serve InclusionListsByIndices. */
   getByIndices(slot: Slot, dependentRoot: RootHex, indices: BitArray): heze.SignedInclusionList[] {
     const out: heze.SignedInclusionList[] = [];
-    for (const {signedInclusionList, committeeIndex} of this.getEligible(slot, dependentRoot, false)) {
-      if (indices.get(committeeIndex)) {
+    for (const {signedInclusionList, committeeIndices} of this.getEligible(slot, dependentRoot, false)) {
+      if (committeeIndices.some((committeeIndex) => indices.get(committeeIndex))) {
         out.push(signedInclusionList);
       }
     }

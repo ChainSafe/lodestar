@@ -12,7 +12,10 @@ describe("chain / opPools / InclusionListStore", () => {
   const dependentRootHex = toRootHex(dependentRoot);
   // Distinct validator indices, one per committee position: validator i + 1 sits at position i
   const committee = Uint32Array.from(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i + 1));
-  const committeeIndexOf = (validatorIndex: ValidatorIndex): number => committee.indexOf(validatorIndex);
+  const committeeIndicesOf = (validatorIndex: ValidatorIndex): number[] =>
+    Array.from(committee.entries())
+      .filter(([, index]) => index === validatorIndex)
+      .map(([position]) => position);
 
   const config = {MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1} as BeaconConfig;
 
@@ -35,7 +38,7 @@ describe("chain / opPools / InclusionListStore", () => {
 
   let store: InclusionListStore;
   const process = (signedInclusionList: heze.SignedInclusionList, timely: boolean): InclusionListInsertOutcome =>
-    store.process(signedInclusionList, committeeIndexOf(signedInclusionList.message.validatorIndex), timely);
+    store.process(signedInclusionList, committeeIndicesOf(signedInclusionList.message.validatorIndex), timely);
 
   beforeEach(() => {
     store = new InclusionListStore(config);
@@ -107,6 +110,32 @@ describe("chain / opPools / InclusionListStore", () => {
     expect(process(makeInclusionList(1, [txA], {dependentRoot: otherRoot}), true)).toBe(InclusionListInsertOutcome.New);
     expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([]);
     expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot))).toEqual([txA]);
+  });
+
+  describe("a validator holding several committee positions", () => {
+    // get_inclusion_list_committee cycles over the slot's committees, so a validator can fill more than one position
+    const positions = [0, 5];
+
+    it("sets every position in the bits and requires every position to be covered", () => {
+      store.process(makeInclusionList(1, [txA]), positions, true);
+
+      expect(store.getInclusionListBits(slot, dependentRootHex).getTrueBitIndexes()).toEqual(positions);
+
+      const partial = BitArray.fromBoolArray(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 0));
+      expect(store.isInclusionListBitsInclusive(slot, dependentRootHex, partial)).toBe(false);
+      const full = BitArray.fromBoolArray(
+        Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => positions.includes(i))
+      );
+      expect(store.isInclusionListBitsInclusive(slot, dependentRootHex, full)).toBe(true);
+    });
+
+    it("serves the list for any of its positions", () => {
+      const list = makeInclusionList(1, [txA]);
+      store.process(list, positions, true);
+
+      const indices = BitArray.fromBoolArray(Array.from({length: INCLUSION_LIST_COMMITTEE_SIZE}, (_, i) => i === 5));
+      expect(store.getByIndices(slot, dependentRootHex, indices)).toEqual([list]);
+    });
   });
 
   describe("isInclusionListBitsInclusive", () => {

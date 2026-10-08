@@ -2253,16 +2253,16 @@ export function getValidatorApi(
       }
 
       const timer = metrics?.inclusionListsValidationTime.startTimer();
-      let committeeIndex: number;
+      let committeeIndices: number[];
       try {
-        ({committeeIndex} = await validateApiInclusionList(chain, signedInclusionList));
+        ({committeeIndices} = await validateApiInclusionList(chain, signedInclusionList));
       } finally {
         timer?.({source: InclusionListSource.api});
       }
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs();
-      chain.inclusionListStore.process(signedInclusionList, committeeIndex, isTimely);
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: chain.config.getForkName(slot),
