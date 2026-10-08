@@ -9,7 +9,16 @@ import {
   ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+  capella,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
@@ -73,7 +82,13 @@ export type ExecutePayloadResponse =
       latestValidHash: null;
       validationError: null;
     }
-  | {status: ExecutionPayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {
+      status: ExecutionPayloadStatus.VALID;
+      latestValidHash: RootHex;
+      validationError: null;
+      /** PayloadStatusV2: whether the payload satisfied the inclusion list constraints */
+      inclusionListSatisfied?: boolean | null;
+    }
   | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
       status:
@@ -99,9 +114,17 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
   targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  /** Transactions the built payload must include (PayloadAttributesV5, HEZE:EIP-7805) */
+  inclusionListTransactions?: bellatrix.Transactions;
 };
 
 export type VersionedHashes = Uint8Array[];
+
+export type ForkchoiceUpdateResult = {
+  payloadId: PayloadId | null;
+  /** PayloadStatusV2 verdict for the head payload, null pre-heze or until the engine has validated it */
+  inclusionListSatisfied: boolean | null;
+};
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -129,8 +152,15 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse>;
+
+  /**
+   * Transactions the execution layer wants included in the next payload. Parameterless since
+   * execution-apis#609: the execution layer builds against its own view of the head.
+   */
+  getInclusionList(): Promise<bellatrix.Transactions>;
 
   /**
    * Signal fork choice updates
@@ -150,7 +180,7 @@ export interface IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null>;
+  ): Promise<ForkchoiceUpdateResult>;
 
   /**
    * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built

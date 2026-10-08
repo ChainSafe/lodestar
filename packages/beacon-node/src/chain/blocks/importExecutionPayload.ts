@@ -5,11 +5,14 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {getInclusionListDependentRootFromState} from "../../util/dependentRoot.js";
+import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -172,6 +175,16 @@ export async function importExecutionPayload(
     );
   }
 
+  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch
+  const inclusionListSlot = protoBlock.slot - 1;
+  const inclusionListTransactions = isStatePostHeze(blockState)
+    ? this.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getInclusionListDependentRootFromState(blockState, inclusionListSlot),
+        true
+      )
+    : undefined;
+
   // 4a. Run EL and signature verification in parallel
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
   this.logger.debug("Call engine api newPayload", logCtx);
@@ -182,7 +195,8 @@ export async function importExecutionPayload(
       envelope.payload,
       payloadInput.getVersionedHashes(),
       envelope.parentBeaconBlockRoot,
-      envelope.executionRequests
+      envelope.executionRequests,
+      inclusionListTransactions
     ),
 
     opts.validSignature === true
@@ -250,6 +264,20 @@ export async function importExecutionPayload(
     }
   });
 
+  // Recorded before the payload enters fork choice so should_extend_payload never sees a delivered
+  // payload without a verdict. A VALID response carries one, an optimistically imported payload counts
+  // as satisfied until the engine validates it, anything else as unsatisfied
+  if (inclusionListTransactions !== undefined) {
+    const satisfied =
+      execResult.status === ExecutionPayloadStatus.VALID
+        ? (execResult.inclusionListSatisfied ?? false)
+        : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
+    this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
+    if (!satisfied) {
+      this.logger.verbose("Payload did not satisfy inclusion list constraints", {slot, blockRoot: blockRootHex});
+    }
+  }
+
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(
@@ -266,11 +294,19 @@ export async function importExecutionPayload(
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
-      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-      }
-    });
+    this.executionEngine
+      .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
+      .then(({inclusionListSatisfied}) => {
+        const fullVariant = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
+        if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fullVariant, inclusionListSatisfied)) {
+          this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
+        }
+      })
+      .catch((e) => {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+        }
+      });
   }
 
   // 8. Record metrics for payload envelope and column sources

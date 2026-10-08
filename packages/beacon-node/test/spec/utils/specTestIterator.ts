@@ -88,8 +88,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
-    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [],
   skippedRunners: [],
@@ -102,7 +100,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
-    "gossip_inclusion_list",
   ],
 };
 

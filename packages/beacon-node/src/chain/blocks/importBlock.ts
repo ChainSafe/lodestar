@@ -39,7 +39,7 @@ import {
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isOptimisticBlock, recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
@@ -457,7 +457,8 @@ export async function importBlock(
      * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const fcuHead = this.forkChoice.getHead();
+    const headBlockHash = fcuHead.executionPayloadBlockHash ?? ZERO_HASH_HEX;
     /**
      * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
@@ -467,12 +468,12 @@ export async function importBlock(
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(
-          this.config.getForkName(this.forkChoice.getHead().slot),
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash
-        )
+        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
+        .then(({inclusionListSatisfied}) => {
+          if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fcuHead, inclusionListSatisfied)) {
+            this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
+          }
+        })
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);

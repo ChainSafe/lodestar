@@ -10,7 +10,12 @@ import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
-import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {
+  AggregatedAttestationPool,
+  InclusionListStore,
+  OpPool,
+  SyncContributionAndProofPool,
+} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
@@ -56,6 +61,8 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHead: vi.fn(),
       getHeadRoot: vi.fn(),
       getDependentRoot: vi.fn(),
+      recordPayloadInclusionListSatisfaction: vi.fn(),
+      isPayloadInclusionListSatisfied: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
@@ -148,7 +155,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       clock,
       forkChoice: getMockedForkChoice(),
       executionEngine: {
-        notifyForkchoiceUpdate: vi.fn(),
+        notifyForkchoiceUpdate: vi.fn().mockResolvedValue({payloadId: "0x", inclusionListSatisfied: null}),
         getPayload: vi.fn(),
         getClientVersion: vi.fn(),
       },
@@ -168,6 +175,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         checkStatus: vi.fn().mockResolvedValue(undefined),
       },
       opPool: new OpPool(config as BeaconConfig),
+      inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       payloadAttestationPool: {

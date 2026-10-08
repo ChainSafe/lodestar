@@ -88,6 +88,12 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  [GossipType.inclusion_list]: {
+    // Two lists per committee member and slot under the first-or-second-message rule, with headroom
+    maxLength: 1024,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
 };
 
 const indexedGossipQueueOpts: {

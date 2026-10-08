@@ -5,6 +5,7 @@ import {
   SLOTS_PER_EPOCH,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -185,6 +186,22 @@ export class ForkChoice implements IForkChoice {
     // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
 
     this.voteNextSlots = new Array(validatorCount).fill(0);
+
+    // should_extend_payload runs inside protoArray's variant selection, which has neither the store
+    // nor the fork schedule, so hand it a closure with both
+    this.protoArray.isPayloadInclusionListSatisfied = (blockRoot: RootHex): boolean => {
+      const variant = this.protoArray.getDefaultVariant(blockRoot);
+      const block = variant === undefined ? undefined : this.protoArray.getBlock(blockRoot, variant);
+      if (block === undefined || !isForkPostHeze(this.config.getForkName(block.slot))) {
+        return true;
+      }
+
+      const satisfied = this.isPayloadInclusionListSatisfied(blockRoot);
+      if (!satisfied) {
+        this.logger?.verbose("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
+      }
+      return satisfied;
+    };
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
@@ -420,6 +437,24 @@ export class ForkChoice implements IForkChoice {
    */
   shouldExtendPayload(blockRoot: RootHex): boolean {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
+  }
+
+  /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const previous = this.fcStore.payloadInclusionListSatisfaction.get(blockRoot);
+    if (!satisfied && previous !== false) {
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+    }
+    this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+    return previous !== satisfied;
+  }
+
+  /** True only once the payload is delivered and recorded satisfied */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    if (!this.protoArray.hasPayload(blockRoot)) {
+      return false;
+    }
+    return this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) === true;
   }
 
   /** Spec: should_build_on_full(store, head, slot) */
@@ -1350,6 +1385,9 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
+    for (const node of prunedNodes) {
+      this.fcStore.payloadInclusionListSatisfaction.delete(node.blockRoot);
+    }
     for (let i = 0; i < this.voteNextSlots.length; i++) {
       const currentIndex = this.voteCurrentIndices[i];
 

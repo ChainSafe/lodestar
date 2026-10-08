@@ -45,6 +45,8 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  /** Execution engine inclusion list verdict by block root, post-heze only */
+  payloadInclusionListSatisfaction: Map<RootHex, boolean>;
   notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
   notifyPtcQuorum?(data: PtcQuorumEvent): void;
 }
@@ -58,6 +60,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
+  payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
 

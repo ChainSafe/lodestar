@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
@@ -14,6 +14,7 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
+  ForkchoiceUpdateResult,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
@@ -37,10 +38,12 @@ import {
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBodyV2,
+  deserializeInclusionList,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
   serializeExecutionRequests,
+  serializeInclusionList,
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
@@ -115,6 +118,8 @@ const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+// The spec gives engine_getInclusionListV1 a 1s timeout so a slow execution layer does not stall the duty
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList", timeout: 1000};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -212,18 +217,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_newPayloadV5"
-        : ForkSeq[fork] >= ForkSeq.electra
-          ? "engine_newPayloadV4"
-          : ForkSeq[fork] >= ForkSeq.deneb
-            ? "engine_newPayloadV3"
-            : ForkSeq[fork] >= ForkSeq.capella
-              ? "engine_newPayloadV2"
-              : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.heze
+        ? "engine_newPayloadV6"
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_newPayloadV5"
+          : ForkSeq[fork] >= ForkSeq.electra
+            ? "engine_newPayloadV4"
+            : ForkSeq[fork] >= ForkSeq.deneb
+              ? "engine_newPayloadV3"
+              : ForkSeq[fork] >= ForkSeq.capella
+                ? "engine_newPayloadV2"
+                : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -244,16 +252,33 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
         }
         const serializedExecutionRequests = serializeExecutionRequests(fork, executionRequests);
-        engineRequest = {
-          method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
-          params: [
-            serializedExecutionPayload,
-            serializedVersionedHashes,
-            parentBeaconBlockRoot,
-            serializedExecutionRequests,
-          ],
-          methodOpts: notifyNewPayloadOpts,
-        };
+        if (ForkSeq[fork] >= ForkSeq.heze) {
+          if (inclusionListTransactions === undefined) {
+            throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+          }
+          engineRequest = {
+            method: "engine_newPayloadV6",
+            params: [
+              serializedExecutionPayload,
+              serializedVersionedHashes,
+              parentBeaconBlockRoot,
+              serializedExecutionRequests,
+              serializeInclusionList(inclusionListTransactions),
+            ],
+            methodOpts: notifyNewPayloadOpts,
+          };
+        } else {
+          engineRequest = {
+            method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
+            params: [
+              serializedExecutionPayload,
+              serializedVersionedHashes,
+              parentBeaconBlockRoot,
+              serializedExecutionRequests,
+            ],
+            methodOpts: notifyNewPayloadOpts,
+          };
+        }
       } else {
         engineRequest = {
           method: "engine_newPayloadV3",
@@ -270,20 +295,36 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       };
     }
 
-    const {status, latestValidHash, validationError} = await (
+    const {status, latestValidHash, validationError, inclusionListSatisfied} = await (
       this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
     ).catch((e: Error) => {
       if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
-        return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        return {
+          status: ExecutionPayloadStatus.ELERROR,
+          latestValidHash: null,
+          validationError: e.message,
+          inclusionListSatisfied: null,
+        };
       }
-      return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+      return {
+        status: ExecutionPayloadStatus.UNAVAILABLE,
+        latestValidHash: null,
+        validationError: e.message,
+        inclusionListSatisfied: null,
+      };
     });
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
     switch (status) {
       case ExecutionPayloadStatus.VALID:
-        return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
+        return {
+          status,
+          latestValidHash: latestValidHash ?? "0x0",
+          validationError: null,
+          // null on pre-heze forks, which return PayloadStatusV1
+          inclusionListSatisfied: inclusionListSatisfied ?? null,
+        };
 
       case ExecutionPayloadStatus.INVALID:
         // As per latest specs if latestValidHash can be null and it would mean only
@@ -345,17 +386,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null> {
+  ): Promise<ForkchoiceUpdateResult> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_forkchoiceUpdatedV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_forkchoiceUpdatedV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_forkchoiceUpdatedV2"
-            : "engine_forkchoiceUpdatedV1";
+      ForkSeq[fork] >= ForkSeq.heze
+        ? "engine_forkchoiceUpdatedV5"
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_forkchoiceUpdatedV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_forkchoiceUpdatedV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_forkchoiceUpdatedV2"
+              : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -369,7 +412,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
     const {
-      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
+      payloadStatus: {status, latestValidHash: _latestValidHash, validationError, inclusionListSatisfied},
       payloadId,
     } = await request;
 
@@ -387,14 +430,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
           void this.prunePayloadIdCache();
         }
-        return payloadId !== "0x" ? payloadId : null;
+        return {
+          payloadId: payloadId !== "0x" ? payloadId : null,
+          inclusionListSatisfied: inclusionListSatisfied ?? null,
+        };
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
         }
-        return null;
+        return {payloadId: null, inclusionListSatisfied: null};
 
       case ExecutionPayloadStatus.INVALID:
         throw Error(
@@ -496,6 +542,22 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       return await this.getBlobsV2(versionedHashesHex, buffers);
     }
     return await this.getBlobsV1(versionedHashesHex);
+  }
+
+  /** `engine_getInclusionListV1` */
+  async getInclusionList(): Promise<bellatrix.Transactions> {
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes["engine_getInclusionListV1"],
+      EngineApiRpcParamTypes["engine_getInclusionListV1"]
+    >(
+      {
+        method: "engine_getInclusionListV1",
+        params: [],
+      },
+      getInclusionListOpts
+    );
+
+    return deserializeInclusionList(response);
   }
 
   private async getBlobsV1(versionedHashesHex: string[]) {

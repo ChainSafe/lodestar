@@ -931,6 +931,9 @@ export class ProtoArray {
     return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
   }
 
+  /** Set by ForkChoice, null pre-heze */
+  isPayloadInclusionListSatisfied: ((blockRoot: RootHex) => boolean) | null = null;
+
   /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
@@ -946,6 +949,10 @@ export class ProtoArray {
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    if (this.isPayloadInclusionListSatisfied !== null && !this.isPayloadInclusionListSatisfied(blockRoot)) {
       return false;
     }
 
