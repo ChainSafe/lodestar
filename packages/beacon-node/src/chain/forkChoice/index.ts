@@ -24,7 +24,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -124,6 +124,7 @@ export function initializeForkChoiceFromFinalizedState(
         // engine can't emit into the JS emitter). Only fast-confirmation stays wired here for now.
         onFastConfirmation: ({block, slot, currentSlot}) =>
           emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
       }
     ),
 
@@ -223,6 +224,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       // TODO - beacon engine: remove this
       onFastConfirmation: ({block, slot, currentSlot}) =>
         emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
     }
   );
 

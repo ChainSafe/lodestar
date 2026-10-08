@@ -18,6 +18,8 @@ import {
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {processInactivityUpdates} from "../epoch/processInactivityUpdates.js";
+import {processJustificationAndFinalization} from "../epoch/processJustificationAndFinalization.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
@@ -45,8 +47,13 @@ export async function computeAttestationsRewards(
     throw Error("Unsupported fork. Attestations rewards calculation is not available in phase0");
   }
 
-  const stateAltair = state as CachedBeaconStateAltair;
+  // Rewards are computed after justification and inactivity updates in epoch processing, so apply both to a clone
+  // before reading finality and inactivity scores, see
+  // https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.2/specs/altair/beacon-chain.md#epoch-processing
+  const stateAltair = state.clone() as CachedBeaconStateAltair;
   const transitionCache = beforeProcessEpoch(stateAltair);
+  processJustificationAndFinalization(stateAltair, transitionCache);
+  processInactivityUpdates(stateAltair, transitionCache);
 
   const [idealRewards, penalties] = computeIdealAttestationsRewardsAndPenaltiesAltair(
     config,

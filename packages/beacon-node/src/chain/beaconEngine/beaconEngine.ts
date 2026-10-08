@@ -18,6 +18,7 @@ import {
   ForkName,
   ForkSeq,
   GENESIS_SLOT,
+  MIN_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -75,6 +76,7 @@ import {
   getBuilderStatus,
   getValidatorStatus,
   gloas,
+  mapToGeneralStatus,
   phase0,
   rewards,
   ssz,
@@ -330,6 +332,7 @@ export class BeaconEngine implements IBeaconEngine {
   private pendingPersistence?: Promise<void>;
   private anchorState?: IBeaconStateView;
   private anchorStateBytes?: Uint8Array;
+  private genesisStateRoot?: RootHex | null;
 
   constructor(private readonly modules: BeaconEngineModules) {
     const {opts, config, logger, metrics, clock, pubkeyCache, signal, db} = modules;
@@ -357,7 +360,7 @@ export class BeaconEngine implements IBeaconEngine {
       const state = createBeaconStateView({
         config: this.config,
         stateBytes,
-        useNative: this.opts.nativeStateView ?? false,
+        nativeStateTransition: this.opts.nativeStateTransition ?? false,
       });
       const anchor = {
         slot: state.slot,
@@ -1726,8 +1729,8 @@ export class BeaconEngine implements IBeaconEngine {
     this.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
   }
 
-  getPoolProposerPreferences(slot?: Slot): gloas.SignedProposerPreferences[] {
-    return this.proposerPreferencesPool.getAll(slot);
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[] {
+    return this.proposerPreferencesPool.getAll(slot, dependentRoot);
   }
 
   getPoolAttesterSlashings(): AttesterSlashing[] {
@@ -2201,7 +2204,7 @@ export class BeaconEngine implements IBeaconEngine {
           genesisTime: this.clock.genesisTime,
           dbLocation: this.dbName,
           dataColumnDir: this.dataColumnDir,
-          nativeStateView: this.opts.nativeStateView ?? false,
+          nativeStateTransition: this.opts.nativeStateTransition ?? false,
         },
         config: this.config,
         metrics: this.metrics,
@@ -2534,7 +2537,8 @@ export class BeaconEngine implements IBeaconEngine {
         const resp = this.resolveStateValidatorIndex(vid, state);
         if (resp.valid) {
           const validator = state.getValidator(resp.validatorIndex);
-          if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+          const status = getValidatorStatus(validator, currentEpoch);
+          if (statuses.length && !statuses.includes(status) && !statuses.includes(mapToGeneralStatus(status))) {
             continue;
           }
           data.push(
@@ -2686,6 +2690,32 @@ export class BeaconEngine implements IBeaconEngine {
     return {data, executionOptimistic, finalized};
   }
 
+  /** Source: unstable@ba0411b482 api/impl/beacon/state/index.ts#getStatePtc. */
+  async getStatePtc(id: ApiStateId, slot?: Slot): Promise<ApiStateResult<{slot: Slot; validators: ValidatorIndex[]}>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    if (!isStatePostGloas(state)) {
+      return {invalid: {code: 400, message: `Cannot retrieve PTC for pre-gloas state fork=${state.forkName}`}};
+    }
+
+    const usedSlot = slot ?? state.slot;
+    const epoch = computeEpochAtSlot(usedSlot);
+    const stateEpoch = computeEpochAtSlot(state.slot);
+    if (epoch < this.config.GLOAS_FORK_EPOCH) {
+      return {invalid: {code: 400, message: `Cannot retrieve PTC for pre-gloas slot=${usedSlot}`}};
+    }
+    if (epoch < stateEpoch - 1 || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+      return {invalid: {code: 400, message: `Slot ${usedSlot} is outside the PTC window of state epoch ${stateEpoch}`}};
+    }
+
+    return {
+      data: {slot: usedSlot, validators: Array.from(state.getPayloadTimelinessCommittee(usedSlot))},
+      executionOptimistic,
+      finalized,
+    };
+  }
+
   async getEpochSyncCommittees(
     id: ApiStateId,
     epoch?: Epoch
@@ -2815,10 +2845,42 @@ export class BeaconEngine implements IBeaconEngine {
     );
   }
 
+  /** Source: unstable@ba0411b482 chain/chain.ts#getStateByStateRoot. */
   private async getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    // Checkpoint state only equals the block post-state if the block is at the epoch start slot
+    if (
+      finalizedBlock.stateRoot === stateRoot &&
+      finalizedBlock.slot === computeStartSlotAtEpoch(finalizedCheckpoint.epoch)
+    ) {
+      const state = this.regen.getCheckpointStateSync({
+        epoch: finalizedCheckpoint.epoch,
+        rootHex: finalizedCheckpoint.rootHex,
+      });
+      if (state) {
+        return {
+          state,
+          executionOptimistic: isOptimisticBlock(finalizedBlock),
+          finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH,
+        };
+      }
+    }
+
+    if (this.genesisStateRoot === undefined) {
+      const genesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
+      this.genesisStateRoot = genesisBlock ? toRootHex(genesisBlock.message.stateRoot) : null;
+    }
+    if (this.genesisStateRoot === stateRoot) {
+      const state = await this.db.stateArchive.getBinary(GENESIS_SLOT);
+      if (state) {
+        return {state, executionOptimistic: false, finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH};
+      }
+    }
+
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.getBlockDefaultStatus(ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader));

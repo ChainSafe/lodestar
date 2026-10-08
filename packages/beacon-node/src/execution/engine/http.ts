@@ -31,13 +31,11 @@ import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  ExecutionPayloadBody,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
-  deserializeExecutionPayloadBody,
   deserializeExecutionPayloadBodyV2,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
@@ -46,7 +44,7 @@ import {
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
-import {bytesToData, getExecutionEngineState, numToQuantity} from "./utils.js";
+import {bytesToData, getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -114,7 +112,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
@@ -468,16 +465,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.payloadIdCache.prune();
   }
 
-  async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
-    assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
-    return response.map(deserializeExecutionPayloadBody);
-  }
-
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
     const method = "engine_getPayloadBodiesByHashV2";
     assertReqSizeLimit(blockHashes.length, 32);
@@ -486,22 +473,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBodyV2);
-  }
-
-  async getPayloadBodiesByRange(
-    _fork: ForkName,
-    startBlockNumber: number,
-    blockCount: number
-  ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
-    assertReqSizeLimit(blockCount, 32);
-    const start = numToQuantity(startBlockNumber);
-    const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
-    return response.map(deserializeExecutionPayloadBody);
   }
 
   async getBlobs(

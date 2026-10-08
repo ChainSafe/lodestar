@@ -73,11 +73,12 @@ export async function prepareGenesisInitialization(
       }
     },
     shouldPersist: true,
-    log(state) {
+    log(state, nativeStateTransition) {
       logger.info("Initialized genesis state", {
         slot: state.slot,
         stateRoot: toRootHex(state.stateRoot),
         isFinalized: true,
+        nativeStateTransition,
       });
     },
   };

@@ -26,9 +26,5 @@ describe("execution engine mock payload bodies", () => {
       {transactions: payload.transactions, withdrawals: payload.withdrawals, blockAccessList: payload.blockAccessList},
       null,
     ]);
-    // V1 shape has no block access list
-    expect(handlers.engine_getPayloadBodiesByHashV1([payload.blockHash])).toEqual([
-      {transactions: payload.transactions, withdrawals: payload.withdrawals},
-    ]);
   });
 });

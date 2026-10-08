@@ -29,6 +29,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       preState,
       [blockInput],
       [DataAvailabilityStatus.Available],
+      [ssz.deneb.SignedBeaconBlock.serialize(ssz.deneb.SignedBeaconBlock.defaultValue())],
       testLogger(),
       null,
       null,

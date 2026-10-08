@@ -8,5 +8,5 @@ export type StateInitialization = {
   isFinalized: boolean;
   shouldPersist: boolean;
   validate(anchor: AnchorSummary): void;
-  log(anchor: AnchorSummary): void;
+  log(anchor: AnchorSummary, nativeStateTransition: boolean): void;
 };

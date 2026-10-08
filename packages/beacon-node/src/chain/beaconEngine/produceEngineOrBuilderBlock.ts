@@ -93,6 +93,7 @@ export enum EngineBlockSelectionReason {
   BuilderTimeout = "builder_timeout",
   BuilderPending = "builder_pending",
   BuilderNoBid = "builder_no_bid",
+  BuilderCircuitBreaker = "builder_circuit_breaker",
   BuilderCensorship = "builder_censorship",
   BlockValue = "block_value",
   EnginePreferred = "engine_preferred",
@@ -603,7 +604,7 @@ export async function produceEngineOrBuilderBlock(
   throw Error("Unreachable error occurred during the builder and execution block production");
 }
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
+ * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockV4(
@@ -860,8 +861,21 @@ export async function produceBlockV4(
       : {}),
   };
 
-  // handle shouldOverrideBuilder separately
-  if (
+  if (circuitBreakerActive && engineResult.status === "fulfilled") {
+    source = ProducedBlockSource.engine;
+    bestResult = engineResult;
+    metrics?.blockProductionSelectionResults.inc({
+      source: ProducedBlockSource.engine,
+      reason: EngineBlockSelectionReason.BuilderCircuitBreaker,
+    });
+    logger.info("Selected local block: builder circuit breaker is active", {
+      reason: EngineBlockSelectionReason.BuilderCircuitBreaker,
+      ...logCtx,
+      durationMs: engineResult.durationMs,
+      ...getBlockValueLogInfo(engineResult.value),
+    });
+  } else if (
+    // handle shouldOverrideBuilder separately
     engineResult.status === "fulfilled" &&
     engineResult.value.shouldOverrideBuilder &&
     (builderBidExpected || bidBlockResult.status === "fulfilled")

@@ -326,6 +326,9 @@ export function getValidatorApi(
         builderConfig,
       });
       const {data, meta, produceResult, executionPayloadSource} = unwrapProductionResult(result);
+      if (chain.opts.persistProducedPayloadEnvelopes && "executionPayloadEnvelope" in data) {
+        chain.persistExecutionPayloadEnvelope(data.executionPayloadEnvelope);
+      }
       cacheProducedBlock("block" in data ? data.block : data, produceResult, executionPayloadSource);
       return {data, meta};
     },
@@ -1048,6 +1051,10 @@ export function getValidatorApi(
         transactions: executionPayload.transactions.length,
         blockHash: toRootHex(executionPayload.blockHash),
       });
+
+      if (chain.opts.persistProducedPayloadEnvelopes) {
+        chain.persistExecutionPayloadEnvelope(envelope);
+      }
 
       return {
         data: envelope,

@@ -116,7 +116,7 @@ describe("engine block production", () => {
         });
         const block = (full.data as {block: electra.BeaconBlock}).block;
         const expected = state.processSlots(1).stateTransition(
-          {message: block, signature: Buffer.alloc(96)},
+          {block: {message: block, signature: Buffer.alloc(96)}},
           {
             verifyProposer: false,
             verifySignatures: false,

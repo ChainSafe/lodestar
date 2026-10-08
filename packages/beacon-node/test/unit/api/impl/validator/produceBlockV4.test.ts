@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
-import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
+import {defer, fromHex} from "@lodestar/utils";
+import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BlockAttributes, BlockType, ProduceFullGloas} from "../../../../../src/chain/produceBlock/index.js";
@@ -618,6 +618,12 @@ describe("api/validator - produceBlockV4", () => {
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    produceFull.mockResolvedValue({
+      block: engineBlock,
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
+      shouldOverrideBuilder: true,
+    });
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getPubkeyBytesOrThrow").mockReturnValue(new Uint8Array(48));
 
@@ -647,6 +653,11 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(produceFull).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
+    expect(modules.chain.logger.info).toHaveBeenCalledWith(
+      "Selected local block: builder circuit breaker is active",
+      expect.objectContaining({reason: EngineBlockSelectionReason.BuilderCircuitBreaker})
+    );
+    expect(modules.chain.logger.warn).not.toHaveBeenCalled();
   });
 
   it("prefers the builder bid with the maximum builder boost factor", async () => {
@@ -676,6 +687,7 @@ describe("api/validator - produceBlockV4", () => {
     const persistBlock = vi.fn();
     Object.defineProperty(modules.chain, "persistBlock", {value: persistBlock});
     modules.chain.opts.persistProducedBlocks = true;
+    modules.chain.opts.persistProducedPayloadEnvelopes = true;
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
@@ -690,6 +702,57 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(block).toEqual(bidBlock);
     expect(persistBlock).toHaveBeenCalledWith(bidBlock, "produced_builder_block");
+    expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, false, true])("produced envelope persistence with flag=%s", async (enabled) => {
+    modules.chain.opts.persistProducedPayloadEnvelopes = enabled;
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    const beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(engineBlock);
+    const payload = ssz.gloas.ExecutionPayload.defaultValue();
+    payload.slotNumber = slot;
+    const produceResult: ProduceFullGloas = {
+      type: BlockType.Full,
+      fork: ForkName.gloas,
+      executionPayload: payload,
+      executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+      blobsBundle: ssz.gloas.BlobsBundle.defaultValue(),
+      cells: [],
+      parentBlockRoot: fromHex(parentBlock.blockRoot),
+    };
+    modules.chain.produceBlockWrapper.mockResolvedValue({
+      block: engineBlock,
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
+      produceResult,
+    });
+    const expectedEnvelope: gloas.ExecutionPayloadEnvelope = {
+      payload,
+      executionRequests: produceResult.executionRequests,
+      builderIndex: BUILDER_INDEX_SELF_BUILD,
+      beaconBlockRoot,
+      parentBeaconBlockRoot: produceResult.parentBlockRoot,
+    };
+
+    const blockResponse = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: true,
+      builderConfig: getBuilderConfig(),
+    });
+    expect(blockResponse.data).toMatchObject({executionPayloadEnvelope: expectedEnvelope});
+
+    const envelopeResponse = await api.getExecutionPayloadEnvelope({slot, beaconBlockRoot});
+    expect(envelopeResponse.data).toEqual(expectedEnvelope);
+    if (enabled) {
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(1, expectedEnvelope);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(2, expectedEnvelope);
+    } else {
+      expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects block production if parent block is optimistic", async () => {

@@ -27,5 +27,5 @@ export async function persistInvalidSszObject(
   // remove date suffixes in file name, and check duplicate to avoid redundant persistence
   await writeIfNotExist(filepath, bytes);
 
-  logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
+  logger.debug("Persisted SSZ object", {id: logStr, filepath});
 }

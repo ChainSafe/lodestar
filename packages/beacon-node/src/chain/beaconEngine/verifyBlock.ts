@@ -13,7 +13,7 @@ import {RegenCaller} from "../regen/index.js";
 import {BeaconEngine} from "./beaconEngine.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
+ * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocks(
@@ -81,6 +81,8 @@ export async function verifyBlocks(
         blockInputs,
         // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
         blocks.map(() => DataAvailabilityStatus.Available),
+        // [beacon-engine] deviation: use the bytes already passed by the facade instead of its SerializedCache.
+        blockBytes,
         this.logger,
         this.metrics,
         this.validatorMonitor,

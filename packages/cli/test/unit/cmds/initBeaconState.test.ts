@@ -165,7 +165,7 @@ describe("initBeaconState", () => {
     await executeStateInitialization(modules.beaconEngine, {
       ...stateInit,
       log(anchor) {
-        stateInit.log(anchor);
+        stateInit.log(anchor, false);
         summary = {slot: anchor.slot, stateRoot: toRootHex(anchor.stateRoot), isFinalized: stateInit.isFinalized};
       },
     });

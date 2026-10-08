@@ -1,14 +1,16 @@
+import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
-import {IBeaconStateView} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
+import {NativeBeaconStateView} from "./nativeBeaconStateView.js";
 
 // ---- createBeaconStateView (startup path) ----
 
 type CreateBeaconStateViewOpts = {
-  useNative: boolean;
+  nativeStateTransition: boolean;
   config: BeaconConfig;
   stateBytes: Uint8Array;
 };
@@ -18,12 +20,11 @@ type CreateBeaconStateViewOpts = {
  *
  * Caller must reserve pubkey capacity before calling this function.
  *
- * Set `useNative: true` to use the native (Zig) implementation once available.
+ * Set `nativeStateTransition: true` to use the native (Zig) implementation.
  */
 export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconStateView {
-  if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
-    // TODO: return a new instance of NativeBeaconStateView
+  if (opts.nativeStateTransition) {
+    return createNativeBeaconStateView(opts.config, opts.stateBytes);
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
@@ -34,28 +35,36 @@ export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconS
 // ---- createBeaconStateViewForHistoricalRegen (regen path) ----
 
 type RegenNodeJSOpts = {
-  useNative: false;
+  nativeStateTransition: false;
   config: BeaconConfig;
   stateBytes: Uint8Array;
 };
 
 type RegenNativeOpts = {
-  useNative: true;
+  nativeStateTransition: true;
+  config: BeaconConfig;
   stateBytes: Uint8Array;
 };
 
 /**
  * Create a BeaconStateView from raw SSZ bytes. Used in the historical state regen worker thread.
  *
- * Set `useNative: true` to use the native (Zig) implementation once available.
+ * Set `nativeStateTransition: true` to use the native (Zig) implementation.
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
-  if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
-    // TODO: return a new instance of NativeBeaconStateView
+  if (opts.nativeStateTransition) {
+    return createNativeBeaconStateView(opts.config, opts.stateBytes);
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
   const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
   return new BeaconStateView(cachedState);
+}
+
+function createNativeBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+  const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
+  return new NativeBeaconStateView(
+    config,
+    bindings.BeaconStateView.createFromBytes(stateBytes, nativeConfig) as IBeaconStateViewNative
+  );
 }

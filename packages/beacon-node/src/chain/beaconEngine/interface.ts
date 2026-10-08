@@ -393,6 +393,7 @@ export interface IBeaconEngine {
     id: ApiStateId,
     filters: {epoch?: Epoch; index?: CommitteeIndex; slot?: Slot}
   ): Promise<ApiStateResult<routes.beacon.EpochCommitteeResponse[]>>;
+  getStatePtc(id: ApiStateId, slot?: Slot): Promise<ApiStateResult<{slot: Slot; validators: ValidatorIndex[]}>>;
   getEpochSyncCommittees(
     id: ApiStateId,
     epoch?: Epoch
@@ -560,7 +561,7 @@ export interface IBeaconEngine {
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
   ): Promise<void>;
-  getPoolProposerPreferences(slot?: Slot): gloas.SignedProposerPreferences[];
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[];
   getPoolAttesterSlashings(): AttesterSlashing[];
   getPoolProposerSlashings(): phase0.ProposerSlashing[];
   getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[];

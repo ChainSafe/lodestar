@@ -57,6 +57,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
+  proposerPreferencesPool: ProposerPreferencesPool;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
   builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
@@ -274,6 +275,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       processBlock: vi.fn(),
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
+      persistExecutionPayloadEnvelope: vi.fn(),
       persistInvalidSszBytes: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
@@ -343,6 +345,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getPoolAggregatedAttestations",
     "getSyncCommitteeContribution",
     "getPoolPayloadAttestations",
+    "getPoolProposerPreferences",
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
     "getIrrecoverableError",

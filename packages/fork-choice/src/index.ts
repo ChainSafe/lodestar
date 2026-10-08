@@ -27,6 +27,7 @@ export {
   type IForkChoice,
   type IForkChoiceRead,
   NotReorgedReason,
+  type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";
 export {
@@ -44,6 +45,13 @@ export type {
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, type LVHExecResponse, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
+export {
+  ExecutionStatus,
+  type LVHExecResponse,
+  PayloadStatus,
+  getPtcVerdict,
+  isGloasBlock,
+} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

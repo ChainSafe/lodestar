@@ -223,7 +223,7 @@ function prepareCheckpointInitialization(
       }
     },
     shouldPersist,
-    log(state) {
+    log(state, nativeStateTransition) {
       const {checkpoint} = state;
       logger.info("Initialized checkpoint state", {
         source,
@@ -234,6 +234,7 @@ function prepareCheckpointInitialization(
         checkpointRoot: toRootHex(checkpoint.root),
         isFinalized,
         ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockSlot}),
+        nativeStateTransition,
       });
     },
   };

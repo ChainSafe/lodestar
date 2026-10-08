@@ -1005,6 +1005,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void {
+    const blockRoot = toRootHex(envelope.beaconBlockRoot);
+    void this.persistSszObject(
+      "ExecutionPayloadEnvelope",
+      ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope),
+      blockRoot,
+      "produced_execution_payload_envelope"
+    ).catch((e) => {
+      this.logger.error(
+        "Error persisting produced execution payload envelope",
+        {slot: envelope.payload.slotNumber, blockRoot},
+        e as Error
+      );
+    });
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(

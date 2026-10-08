@@ -18,8 +18,8 @@ export type IChainOptions = IBeaconEngineOptions &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
     blacklistedBlocks?: string[];
-    // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
+    persistProducedPayloadEnvelopes?: boolean;
     skipCreateStateCacheIfAvailable?: boolean;
     /** Archive execution-valid envelopes as headers. */
     dedupePayloads?: boolean;
@@ -32,7 +32,6 @@ export type IChainOptions = IBeaconEngineOptions &
     broadcastValidationStrictness?: string;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
-    nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
@@ -92,7 +91,7 @@ export const defaultChainOptions: IChainOptions = {
   //   - users can prune the persisted checkpoint state files manually to save disc space
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
-  nativeStateView: false,
+  nativeStateTransition: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,

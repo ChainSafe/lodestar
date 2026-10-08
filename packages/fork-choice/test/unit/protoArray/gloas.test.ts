@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode, getPtcVerdict} from "../../../src/index.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -810,6 +810,83 @@ describe("Gloas Fork Choice", () => {
 
       // notifyPtcMessages should be no-op
       expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot - 1, [0], true, true)).not.toThrow();
+    });
+  });
+
+  describe("getPtcQuorum()", () => {
+    let protoArray: ProtoArray;
+    const majority = Array.from({length: Math.floor(PTC_SIZE / 2) + 1}, (_, i) => i);
+    const exactlyThreshold = majority.slice(0, -1);
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), gloasForkSlot, null);
+    });
+
+    it("returns null for unknown and pre-Gloas roots", () => {
+      expect(protoArray.getPtcQuorum("0x99")).toBeNull();
+
+      protoArray.onBlock(createTestBlock(gloasForkSlot - 1, "0x03", genesisRoot), gloasForkSlot - 1, null);
+      expect(protoArray.getPtcQuorum("0x03")).toBeNull();
+    });
+
+    it("has no majority for either field before any votes", () => {
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+    });
+
+    it("needs strictly more than PTC_SIZE / 2 votes for a majority", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, exactlyThreshold, true, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: true});
+    });
+
+    it("counts only explicit false votes towards a negative majority", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, exactlyThreshold, false, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, false, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: false, blobDataAvailable: false});
+    });
+
+    it("tracks payloadPresent and blobDataAvailable independently", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: false});
+    });
+
+    it("does not require the payload to be locally available, unlike isPayloadTimely()", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: true});
+    });
+
+    it("drops a majority when a member's later vote flips it", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [majority[0]], false, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: true});
+    });
+  });
+
+  describe("getPtcVerdict()", () => {
+    it.each<[boolean | null, boolean | null, boolean | null]>([
+      [null, null, null],
+      [true, null, null],
+      [null, true, null],
+      [true, true, true],
+      [false, null, false],
+      [null, false, false],
+      [true, false, false],
+      [false, true, false],
+      [false, false, false],
+    ])("payloadPresent=%s blobDataAvailable=%s -> %s", (payloadPresent, blobDataAvailable, verdict) => {
+      expect(getPtcVerdict({payloadPresent, blobDataAvailable})).toBe(verdict);
     });
   });
 

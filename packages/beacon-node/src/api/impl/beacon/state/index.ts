@@ -131,6 +131,15 @@ export function getBeaconStateApi({
       return {data, meta: {executionOptimistic, finalized}};
     },
 
+    async getStatePtc({stateId, slot}) {
+      const id = resolveStateId(chain, stateId, chain, sync);
+      const {data, executionOptimistic, finalized} = unwrapStateResult(
+        await chain.beaconEngine.getStatePtc(id, slot),
+        stateId
+      );
+      return {data, meta: {executionOptimistic, finalized}};
+    },
+
     async getPendingDeposits({stateId}, context) {
       const id = resolveStateId(chain, stateId, chain, sync);
       const {data, executionOptimistic, finalized, fork} = unwrapStateResultWithFork(

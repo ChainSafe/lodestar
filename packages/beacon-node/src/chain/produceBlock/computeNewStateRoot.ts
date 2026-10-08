@@ -20,7 +20,7 @@ export function computeNewStateRoot(
   const signedBlock = {message: block, signature: EMPTY_SIGNATURE};
   const {newStateRoot, proposerReward, postState, hashTreeRootTime} = state.computeNewStateRoot(
     {block: signedBlock},
-    {metrics}
+    {metrics: metrics?.stateTransition}
   );
 
   metrics?.stateHashTreeRootTime.observe({source: StateHashTreeRootSource.computeNewStateRoot}, hashTreeRootTime);

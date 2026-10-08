@@ -4,6 +4,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {IndexedBuilderState} from "../../../src/block/indexedBuilderState.js";
 import {processBuilderExitRequest} from "../../../src/block/processBuilderExitRequest.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 
@@ -77,7 +78,7 @@ describe("processBuilderExitRequest", () => {
   it("drops request for unknown builder pubkey", () => {
     const {state} = buildGloasState();
 
-    processBuilderExitRequest(state, exitRequest());
+    processBuilderExitRequest(new IndexedBuilderState(state), exitRequest());
 
     expect(state.builders.length).toBe(0);
   });
@@ -88,7 +89,7 @@ describe("processBuilderExitRequest", () => {
     const {state} = buildGloasState({finalizedEpoch: 0});
     pushBuilder(state, {depositEpoch: 0});
 
-    processBuilderExitRequest(state, exitRequest());
+    processBuilderExitRequest(new IndexedBuilderState(state), exitRequest());
 
     expect(state.builders.get(0).withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
@@ -97,7 +98,7 @@ describe("processBuilderExitRequest", () => {
     const {state} = buildGloasState({finalizedEpoch: 5});
     pushBuilder(state, {depositEpoch: 0});
 
-    processBuilderExitRequest(state, exitRequest({sourceAddress: OTHER_EXEC_ADDRESS}));
+    processBuilderExitRequest(new IndexedBuilderState(state), exitRequest({sourceAddress: OTHER_EXEC_ADDRESS}));
 
     expect(state.builders.get(0).withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
@@ -114,7 +115,7 @@ describe("processBuilderExitRequest", () => {
       })
     );
 
-    processBuilderExitRequest(state, exitRequest());
+    processBuilderExitRequest(new IndexedBuilderState(state), exitRequest());
 
     expect(state.builders.get(0).withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
@@ -125,7 +126,7 @@ describe("processBuilderExitRequest", () => {
     const {state, config} = buildGloasState({slot: SLOTS_PER_EPOCH * currentEpoch, finalizedEpoch: 5});
     pushBuilder(state, {depositEpoch: 0});
 
-    processBuilderExitRequest(state, exitRequest());
+    processBuilderExitRequest(new IndexedBuilderState(state), exitRequest());
 
     expect(state.builders.get(0).withdrawableEpoch).toBe(currentEpoch + config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
   });

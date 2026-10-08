@@ -13,6 +13,7 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   isGloasBlock,
 } from "./interface.js";
 
@@ -50,6 +51,12 @@ export function countNoVotes(attended: BitArray, yes: BitArray): number {
     }
   }
   return count;
+}
+
+function majorityVote(attended: BitArray, yes: BitArray, threshold: number): boolean | null {
+  if (bitCount(yes.uint8Array) > threshold) return true;
+  if (countNoVotes(attended, yes) > threshold) return false;
+  return null;
 }
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
@@ -798,6 +805,23 @@ export class ProtoArray {
       attesterCount: bitCount(attended.uint8Array),
       payloadPresentCount: bitCount(timelinessVotes.uint8Array),
       dataAvailableCount: bitCount(daVotes.uint8Array),
+    };
+  }
+
+  /**
+   * PTC majority per vote field from the raw tallies, regardless of whether the payload is locally
+   * available. Returns `null` for pre-Gloas (or pruned) roots, which have no vote maps.
+   */
+  getPtcQuorum(blockRoot: RootHex): PtcQuorum | null {
+    const attended = this.ptcAttested.get(blockRoot);
+    const timelinessVotes = this.payloadTimelinessVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
+    if (attended === undefined || timelinessVotes === undefined || daVotes === undefined) {
+      return null;
+    }
+    return {
+      payloadPresent: majorityVote(attended, timelinessVotes, PAYLOAD_TIMELY_THRESHOLD),
+      blobDataAvailable: majorityVote(attended, daVotes, DATA_AVAILABILITY_TIMELY_THRESHOLD),
     };
   }
 

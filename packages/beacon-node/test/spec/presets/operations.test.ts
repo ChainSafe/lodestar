@@ -11,6 +11,7 @@ import {
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
   ExecutionPayloadStatus,
+  IndexedBuilderState,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
@@ -131,11 +132,17 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   builder_deposit_request: (state, testCase: {builder_deposit_request: gloas.BuilderDepositRequest}) => {
-    blockFns.processBuilderDepositRequest(state as CachedBeaconStateGloas, testCase.builder_deposit_request);
+    blockFns.processBuilderDepositRequest(
+      new IndexedBuilderState(state as CachedBeaconStateGloas),
+      testCase.builder_deposit_request
+    );
   },
 
   builder_exit_request: (state, testCase: {builder_exit_request: gloas.BuilderExitRequest}) => {
-    blockFns.processBuilderExitRequest(state as CachedBeaconStateGloas, testCase.builder_exit_request);
+    blockFns.processBuilderExitRequest(
+      new IndexedBuilderState(state as CachedBeaconStateGloas),
+      testCase.builder_exit_request
+    );
   },
 };
 

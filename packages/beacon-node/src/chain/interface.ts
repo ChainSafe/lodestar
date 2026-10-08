@@ -195,6 +195,7 @@ export interface IBeaconChain extends IChainView {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
 
