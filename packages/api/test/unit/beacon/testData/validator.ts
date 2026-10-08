@@ -9,6 +9,10 @@ const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const builderAuth = {
+  ...ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+  message: {data: new TextEncoder().encode("builder.example.com"), slot: 32000},
+};
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -94,7 +98,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         builders: [
           {
             url: new TextEncoder().encode("https://builder.example.com"),
-            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+            auth: builderAuth,
             builderPubkeys: [],
             maxExecutionPayment: 0n,
             minBid: 0n,
@@ -182,7 +186,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         {
           proposerPubkey: new Uint8Array(48).fill(1),
           url: new TextEncoder().encode("https://builder.example.com"),
-          auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+          auth: builderAuth,
           maxExecutionPayment: 0n,
         },
       ],

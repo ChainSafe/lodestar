@@ -1,16 +1,20 @@
+import {readFileSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {beforeAll, describe, expect, it} from "vitest";
+import {Type} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ssz} from "@lodestar/types";
 import {routes} from "../../../src/beacon/index.js";
-import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
+import {IgnoredProperty, runTestCheckAgainstSpec, validateSchema} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
+import {OpenApiFile, OpenApiJson} from "../../utils/parseOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";
 import {testData as debugTestData} from "./testData/debug.js";
 import {eventTestData, testData as eventsTestData} from "./testData/events.js";
+import {componentTestData, testData as gloasTestData} from "./testData/gloas.js";
 import {testData as lightclientTestData} from "./testData/lightclient.js";
 import {testData as nodeTestData} from "./testData/node.js";
 import {testData as proofsTestData} from "./testData/proofs.js";
@@ -20,7 +24,9 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v5.0.0-alpha.2";
+const version = "v5.0.0-beta.0";
+// BEACON_API_SPEC must point to a dereferenced JSON bundle.
+const localSpecPath = process.env.BEACON_API_SPEC;
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -28,6 +34,7 @@ const openApiFile: OpenApiFile = {
 };
 
 const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+const preGloasConfig = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: Infinity});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
@@ -38,6 +45,7 @@ const definitions = {
   ...routes.node.getDefinitions(config),
   ...routes.proof.getDefinitions(config),
   ...routes.validator.getDefinitions(config),
+  publishBlindedBlockV2: routes.beacon.getDefinitions(preGloasConfig).publishBlindedBlockV2,
 };
 
 const testDatas = {
@@ -51,22 +59,6 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const ignoredOperations = [
-  // TODO GLOAS: not yet implemented
-  "getExecutionPayloadBid",
-  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#626
-  // (slot path param -> query param). Pinned v5.0.0-alpha.2 still defines slot as a
-  // path param, so ignore this op to avoid a false conformance mismatch until the bump.
-  "producePayloadAttestationData",
-  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
-  // (GET -> POST with a required BuilderConfig request body)
-  "produceBlockV4",
-  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
-  "submitBuilderPreferences",
-  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#659
-  "getProposerPreferences",
-];
-
 const ignoredProperties: Record<string, IgnoredProperty> = {
   /*
    https://github.com/ChainSafe/lodestar/issues/6168
@@ -75,18 +67,39 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getHealth: {request: ["query.syncing_status"]},
 };
 
-const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
+const openApiJson: OpenApiJson = localSpecPath
+  ? JSON.parse(readFileSync(localSpecPath, "utf8"))
+  : await fetchOpenApiSpec(openApiFile);
+runTestCheckAgainstSpec(openApiJson, definitions, testDatas, [], ignoredProperties);
 
-const ignoredTopics: string[] = [
-  "execution_payload_bid",
-  // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
-  // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
-  "fast_confirmation",
-  // TODO: unskip once the spec release adds `builder_index` and `block_hash` to the block event
-  // (tracked in https://github.com/ethereum/beacon-APIs/issues/599)
-  "block",
-];
+describe("Gloas", () => {
+  const gloasTestDatas: typeof testDatas = {...testDatas, ...gloasTestData};
+  const ignoredOperations = Object.keys(testDatas).filter((operation) => !(operation in gloasTestData));
+  runTestCheckAgainstSpec(openApiJson, definitions, gloasTestDatas, ignoredOperations, ignoredProperties);
+});
+
+describe("Gloas components", () => {
+  const types: Record<string, Type<unknown>> = {
+    ...ssz.gloas,
+    BuilderEntry: routes.validator.BuilderEntryType,
+    BuilderConfig: routes.validator.BuilderConfigType,
+    BuilderPreferencesEntry: routes.validator.BuilderPreferencesEntryType,
+  };
+  const schemas = Object.entries(openApiJson.components?.schemas ?? {}).filter(([name]) => name.startsWith("Gloas."));
+
+  it("includes Gloas schemas", () => {
+    expect(schemas.length).toBeGreaterThan(0);
+  });
+
+  for (const [name, schema] of schemas) {
+    it(name, () => {
+      const typeName = name.slice("Gloas.".length);
+      const type = types[typeName];
+      expect(type, `No Lodestar type for ${name}`).toBeDefined();
+      validateSchema(schema, type.toJson(componentTestData[typeName] ?? type.defaultValue()), name);
+    });
+  }
+});
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -111,9 +124,7 @@ describe("eventstream event data", () => {
   const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
-  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(
-    ([topic]) => !ignoredTopics.includes(topic)
-  )) {
+  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {
     it(topic, () => {
       if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);

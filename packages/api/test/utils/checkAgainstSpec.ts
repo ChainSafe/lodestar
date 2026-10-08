@@ -187,7 +187,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
   }
 }
 
-function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown, id: string): void {
+export function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown, id: string): void {
   let validate: ReturnType<typeof ajv.compile>;
 
   try {

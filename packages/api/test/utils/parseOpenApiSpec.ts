@@ -24,6 +24,7 @@ export type JsonSchema = {
 
 export type OpenApiJson = {
   paths: Record<RouteUrl, Record<HttpMethod, RouteDefinition>>;
+  components?: {schemas: Record<string, JsonSchema>};
   info: {
     version: string;
   };
@@ -54,7 +55,7 @@ type RouteDefinition = {
     /** `"200"` | `"500"` */
     [statusCode: string]:
       | {
-          headers?: Record<string, {schema: JsonSchema}>;
+          headers?: Record<string, {schema: JsonSchema; required?: boolean}>;
           content?: Content;
         }
       | undefined;
@@ -244,11 +245,13 @@ function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
   // },
 
   if (responseOk?.headers) {
-    Object.entries(responseOk.headers).map(([header, {schema}]) => {
-      if (!respSchema.headers) respSchema.headers = {type: "object", properties: {}};
-      if (!respSchema.headers.properties) respSchema.headers.properties = {};
-      respSchema.headers.properties[header] = schema;
-    });
+    respSchema.headers = {
+      type: "object",
+      properties: Object.fromEntries(Object.entries(responseOk.headers).map(([header, {schema}]) => [header, schema])),
+      required: Object.entries(responseOk.headers)
+        .filter(([, header]) => header.required === true)
+        .map(([header]) => header),
+    };
   }
 
   const responseJsonSchema = responseOk?.content?.[ContentType.json]?.schema;
