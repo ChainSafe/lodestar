@@ -245,6 +245,7 @@ export class AggregatedAttestationPool {
     const consolidations = new Map<AttestationsConsolidation, number>();
     let scannedSlots = 0;
     let stopReason: ScannedSlotsTerminationReason | null = null;
+    const missingShufflingCommitteesByEpoch = new Map<Epoch, number>();
     slot: for (const slot of slots) {
       const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
@@ -298,14 +299,7 @@ export class AggregatedAttestationPool {
           const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
           if (notSeenCommitteeMembers === null) {
             // skip this committee instead of failing the whole block production, other epochs may still have shuffling
-            this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.missingShufflingCommittees.inc();
-            this.logger?.debug("Missing shuffling when packing attestations, skipping committee", {
-              slot,
-              committeeIndex,
-              stateSlot,
-              epoch,
-              decisionRoot: state.getShufflingDecisionRoot(epoch),
-            });
+            missingShufflingCommitteesByEpoch.set(epoch, (missingShufflingCommitteesByEpoch.get(epoch) ?? 0) + 1);
             continue;
           }
           if (notSeenCommitteeMembers.size === 0) {
@@ -397,6 +391,18 @@ export class AggregatedAttestationPool {
 
       // finished processing a slot
       scannedSlots++;
+    }
+
+    for (const [epoch, missingCommittees] of missingShufflingCommitteesByEpoch) {
+      this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.missingShufflingCommittees.inc(
+        missingCommittees
+      );
+      this.logger?.debug("Missing shuffling when packing attestations, skipped committees", {
+        slot: stateSlot,
+        epoch,
+        decisionRoot: state.getShufflingDecisionRoot(epoch),
+        missingCommittees,
+      });
     }
 
     this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.totalConsolidations.set(consolidations.size);
@@ -790,6 +796,9 @@ export function getNotSeenValidatorsFn(
     const decisionRoot = state.getShufflingDecisionRoot(computeEpochAtSlot(slot));
     const committee = shufflingCache.getBeaconCommitteeOrNull(epoch, decisionRoot, slot, committeeIndex);
     if (committee === null) {
+      // attestations in the pool were validated against a cached shuffling of the previous or current epoch,
+      // so a miss is a ShufflingCache bug. Return null so the caller tracks it via metrics/logs without failing
+      // block production. Don't fall back to the state's shuffling, that would hide the bug
       return null;
     }
     notSeenCommitteeMembers = new Set<number>();
