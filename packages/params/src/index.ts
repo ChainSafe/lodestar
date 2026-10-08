@@ -173,6 +173,7 @@ export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_EXECUTION_PROOF = Uint8Array.from([15, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains
@@ -378,3 +379,8 @@ export const MAX_BUILDER_ENTRIES = 64;
 export const MAX_BUILDER_URL_SIZE = 2048;
 export const MAX_BUILDER_PUBKEYS = 64;
 export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;
+
+// EIP-8025 execution proofs
+export const MAX_PROOF_SIZE = 4194304;
+export const STATELESS_INPUT_SCHEMA_ID = 0x1501;
+export const MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE = 4194449;

@@ -7,6 +7,7 @@ export * from "./dataColumnSidecarError.js";
 export * from "./envelopeReconstructionError.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
+export * from "./executionProof.js";
 export * from "./gossipValidation.js";
 export * from "./payloadAttestation.js";
 export * from "./proposerPreferences.js";
