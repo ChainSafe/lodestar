@@ -274,6 +274,8 @@ type EventstreamArgs = {
   onOpen?: () => void;
   onError?: (err: Error) => void;
   onClose?: () => void;
+  /** Connection interruption, distinct from an event decoding or consumer error. */
+  onDisconnect?: () => void;
 };
 
 export type Endpoints = {

@@ -24,6 +24,7 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       onOpen,
       onError,
       onClose,
+      onDisconnect,
     }): Promise<ApiResponse<Endpoints["eventstream"]>> => {
       const query = stringifyQuery({topics});
       const url = `${urlJoin(baseUrl, definitions.eventstream.url)}?${query}`;
@@ -40,7 +41,9 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       };
       signal.addEventListener("abort", close, {once: true});
 
-      eventSource.onopen = () => onOpen?.();
+      eventSource.onopen = () => {
+        if (!signal.aborted) onOpen?.();
+      };
 
       for (const topic of topics) {
         eventSource.addEventListener(topic, (event: MessageEvent) => {
@@ -58,6 +61,8 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       // `eventSource.onerror` events are informative but don't indicate the EventSource closed
       // The only way to abort the connection from the client is via eventSource.close()
       eventSource.onerror = function onerror(err): void {
+        if (signal.aborted) return;
+        onDisconnect?.();
         const errEs = err as unknown as EventSourceError;
 
         // Ignore noisy errors due to beacon node being offline

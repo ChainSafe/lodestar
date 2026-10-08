@@ -3,7 +3,8 @@ import type {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {type IClock, computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {type ExecutionAddress, type gloas, ssz} from "@lodestar/types";
-import {ErrorAborted, LodestarError, toHex, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LodestarError, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import type {Metrics} from "../metrics.js";
 import type {ProposerPreferencesTracker} from "./proposerPreferencesTracker.js";
 import type {SlotBidResult, SlotBidder} from "./slotBidder.js";
 
@@ -15,6 +16,7 @@ export type PayloadAttributesConsumerModules = {
   clock: IClock;
   preferences: Pick<ProposerPreferencesTracker, "get">;
   bidder: Pick<SlotBidder, "run">;
+  metrics?: Pick<Metrics, "bids"> | null;
 };
 
 export type PayloadAttributesConsumerOptions = {
@@ -98,6 +100,20 @@ export class PayloadAttributesConsumer {
     this.slot = slot;
   }
 
+  onDisconnect(): void {
+    this.active?.controller.abort(new ErrorAborted("Payload input connection lost"));
+    this.active = undefined;
+    this.pending = undefined;
+    this.head = undefined;
+  }
+
+  async onPreferences(signal: AbortSignal): Promise<ConsumerResult> {
+    signal.throwIfAborted();
+    if (this.closed) return {status: "ignored", reason: "closed"};
+    this.onSlot(this.modules.clock.getCurrentSlot());
+    return this.tryBuild(signal);
+  }
+
   close(): void {
     this.closed = true;
     this.active?.controller.abort(new ErrorAborted("Payload input consumer closed"));
@@ -170,7 +186,12 @@ export class PayloadAttributesConsumer {
       )
       .then((result) => {
         jobSignal.throwIfAborted();
+        this.modules.metrics?.bids.inc({result: result.status === "published" ? "published" : result.reason});
         return result;
+      })
+      .catch((error: unknown) => {
+        if (!jobSignal.aborted && !isErrorAborted(error)) this.modules.metrics?.bids.inc({result: "error"});
+        throw error;
       });
     this.active = {id, controller, promise};
     try {
