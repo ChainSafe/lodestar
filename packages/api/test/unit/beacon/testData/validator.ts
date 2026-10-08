@@ -116,6 +116,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         consensusBlockValue: ssz.Wei.defaultValue(),
         executionPayloadValue: ssz.Wei.defaultValue(),
         executionPayloadIncluded: true,
+        builderUrl: "https://builder.example.com",
       },
     },
   },

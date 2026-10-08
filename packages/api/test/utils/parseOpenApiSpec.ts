@@ -54,7 +54,7 @@ type RouteDefinition = {
     /** `"200"` | `"500"` */
     [statusCode: string]:
       | {
-          headers?: Record<string, {schema: JsonSchema; required?: boolean}>;
+          headers?: Record<string, {schema: JsonSchema}>;
           content?: Content;
         }
       | undefined;
@@ -244,13 +244,11 @@ function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
   // },
 
   if (responseOk?.headers) {
-    respSchema.headers = {
-      type: "object",
-      properties: Object.fromEntries(Object.entries(responseOk.headers).map(([header, {schema}]) => [header, schema])),
-      required: Object.entries(responseOk.headers)
-        .filter(([, header]) => header.required === true)
-        .map(([header]) => header),
-    };
+    Object.entries(responseOk.headers).map(([header, {schema}]) => {
+      if (!respSchema.headers) respSchema.headers = {type: "object", properties: {}};
+      if (!respSchema.headers.properties) respSchema.headers.properties = {};
+      respSchema.headers.properties[header] = schema;
+    });
   }
 
   const responseJsonSchema = responseOk?.content?.[ContentType.json]?.schema;
