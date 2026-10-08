@@ -17,6 +17,14 @@ describe("LevelDB controller", () => {
     await LevelDbController.destroy(dbLocation);
   });
 
+  it.each(["keys", "values", "entries"] as const)(
+    "%s rejects after close instead of throwing synchronously",
+    async (method) => {
+      await db.close();
+      await expect(db[method]()).rejects.toMatchObject({code: "DatabaseClosed"});
+    }
+  );
+
   it("test get not found", async () => {
     const key = Buffer.from("not-existing-key");
     expect(await db.get(key)).toBe(null);

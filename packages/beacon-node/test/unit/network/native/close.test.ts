@@ -16,6 +16,8 @@ function fixture() {
   const nativeClosed = defer<CloseResult>();
   const network = {
     closed: nativeClosed.promise,
+    setDirectPeer: vi.fn(async () => {}),
+    connect: vi.fn(async () => {}),
     stopDelivery: vi.fn(),
     close: vi.fn((): Promise<CloseResult> => {
       nativeClosed.resolve({reason: "requested"});
@@ -27,6 +29,43 @@ function fixture() {
 }
 
 describe("native core close", () => {
+  it.each(["NetworkClosed", "Stopped"])("ignores %s from direct-peer registration during close", async (code) => {
+    const {core, network} = fixture();
+    const registration = defer<void>();
+    network.setDirectPeer.mockReturnValue(registration.promise);
+    const starting = core["connectConfiguredPeers"](
+      [{peerId: "direct", addresses: []}],
+      [{peerId: "boot", addresses: []}]
+    );
+    expect(network.setDirectPeer).toHaveBeenCalledOnce();
+    const closing = core.close();
+    registration.reject(Object.assign(new Error(code), {code}));
+    await expect(starting).resolves.toBeUndefined();
+    await closing;
+    await expect(core.terminated).resolves.toBeNull();
+    expect(network.connect).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("preserves direct-peer registration failures, closing: %s", async (closing) => {
+    const {core, network} = fixture();
+    const registration = defer<void>();
+    network.setDirectPeer.mockReturnValue(registration.promise);
+    const starting = core["connectConfiguredPeers"]([{peerId: "direct", addresses: []}], []);
+    const failure = Object.assign(new Error("owner failed"), {code: "OwnerFailed"});
+    if (closing) await core.close();
+    registration.reject(failure);
+    await expect(starting).rejects.toBe(failure);
+    await core.close();
+  });
+
+  it("preserves an unexpected NetworkClosed while running", async () => {
+    const {core, network} = fixture();
+    const failure = Object.assign(new Error("NetworkClosed"), {code: "NetworkClosed"});
+    network.setDirectPeer.mockRejectedValue(failure);
+    await expect(core["connectConfiguredPeers"]([{peerId: "direct", addresses: []}], [])).rejects.toBe(failure);
+    await core.close();
+  });
+
   it("stops delivery before cleanup and the final snapshot, then closes native with one shared completion", async () => {
     const {core, remembered, network, clock, onSlot, gossip, requests, peers, intent} = fixture();
     const snapshot = defer<void>();

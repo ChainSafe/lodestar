@@ -2,8 +2,8 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
 import {IncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
-import {RequestErrorCode, RespStatus} from "@lodestar/reqresp";
-import {defer, toRootHex} from "@lodestar/utils";
+import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
+import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {NativeRequests, outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
@@ -13,6 +13,7 @@ import {HostServingBudget} from "../../../../src/network/reqresp/serving/budget.
 import * as handlers from "../../../../src/network/reqresp/serving/handler.js";
 import {resolveServingPolicy} from "../../../../src/network/reqresp/serving/policy.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/types.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {servingConfig} from "../../../utils/network/reqresp/servingCases.js";
 
 afterEach(() => {
@@ -175,7 +176,7 @@ async function incoming() {
       return closed.promise;
     }),
     cancel: vi.fn(() => {
-      permission.reject(Error("cancelled"));
+      permission.reject(Object.assign(Error("cancelled"), {code: "NetworkIncomingClosed"}));
       closed.resolve();
       return closed.promise;
     }),
@@ -210,7 +211,7 @@ it("produces after native credit and keeps capacity charged past stream close un
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   const {request, closed, permission, written} = await incoming();
   try {
     const served = owner.serve(request);
@@ -277,7 +278,7 @@ it("reports a cancelled request's serving charges, to a later adapter too, until
         yield {data, boundary: {fork: config.getForkName(0), epoch: 0}};
       })()
     );
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   expect(servingGauges(owner.metrics())).toEqual({total: 0, source: 0, pending: 0});
   const {request, permission} = await incoming();
   const served = owner.serve(request);
@@ -291,7 +292,7 @@ it("reports a cancelled request's serving charges, to a later adapter too, until
   // The adapter closes, cancelling the request while its source read is held; a successor reports the same charges.
   owner.close();
   expect(request.cancel).toHaveBeenCalledOnce();
-  const successor = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const successor = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   await vi.waitFor(() => expect(budget.snapshot().outstandingRetirements).toBe(1));
   expect(servingGauges(successor.metrics())).toEqual(charged);
   held.resolve(new Uint8Array(1));
@@ -300,7 +301,104 @@ it("reports a cancelled request's serving charges, to a later adapter too, until
   expect(request.respond).not.toHaveBeenCalled();
 });
 
-it("answers a stored block exceeding its native read bound with SERVER_ERROR", async () => {
+it.each(["factory", "prepare", "next"] as const)(
+  "logs the original %s failure once even if the error response cannot be sent",
+  async (phase) => {
+    const config = servingConfig();
+    const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+    const logger = getMockedLogger();
+    const error = Object.assign(new Error("archive checksum mismatch"), {code: "Corruption"});
+    const factory: handlers.BoundedReqRespHandlers = () => () => {
+      if (phase === "factory") throw error;
+      const handler = handlers.startServingHandler(budget, async function* () {
+        yield await Promise.reject(error);
+      });
+      if (phase === "prepare") vi.spyOn(handler, "prepare").mockRejectedValue(error);
+      return handler;
+    };
+    const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, logger);
+    const {request, permission} = await incoming();
+    vi.mocked(request.fail).mockRejectedValue(Object.assign(new Error("closed"), {code: "NetworkIncomingClosed"}));
+    permission.resolve();
+    await owner.serve(request);
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+      "Native request serving failed",
+      {protocol: request.protocol, peer: request.peerId},
+      error
+    );
+    expect(request.fail).toHaveBeenCalledExactlyOnceWith(
+      RespStatus.SERVER_ERROR,
+      new TextEncoder().encode("Local serving failure")
+    );
+    expect(budget.snapshot().occupancy).toBe(0);
+  }
+);
+
+it.each([
+  new ResponseError(RespStatus.SERVER_ERROR, "Invalid stored block"),
+  new ResponseError(RespStatus.INVALID_REQUEST, "Invalid range"),
+  new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "Unknown root"),
+  new ResponseError(RespStatus.RATE_LIMITED, "Local serving capacity exhausted"),
+])("logs only local server errors among protocol responses: $status", async (error) => {
+  const config = servingConfig();
+  const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+  const logger = getMockedLogger();
+  const factory: handlers.BoundedReqRespHandlers = () => () =>
+    handlers.startServingHandler(budget, async function* () {
+      yield await Promise.reject(error);
+    });
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, logger);
+  const {request, permission} = await incoming();
+  permission.resolve();
+  await owner.serve(request);
+  if (error.status === RespStatus.SERVER_ERROR) {
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+      "Native request serving failed",
+      {protocol: request.protocol, peer: request.peerId},
+      error
+    );
+  } else expect(logger.error).not.toHaveBeenCalled();
+  expect(request.fail).toHaveBeenCalledExactlyOnceWith(error.status, new TextEncoder().encode(error.errorMessage));
+  expect(budget.snapshot().occupancy).toBe(0);
+});
+
+it.each(["NetworkIncomingClosed", "NetworkClosed", "NetworkIncomingFailed"])(
+  "does not log a native stream failure as a local serving failure: %s",
+  async (code) => {
+    const config = servingConfig();
+    const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+    const logger = getMockedLogger();
+    const factory: handlers.BoundedReqRespHandlers = () => () =>
+      handlers.startServingHandler(budget, async function* () {});
+    const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, logger);
+    const {request} = await incoming();
+    vi.mocked(request.ready).mockRejectedValue(Object.assign(new Error(code), {code, failure: "stream_closed"}));
+    await owner.serve(request);
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(budget.snapshot().occupancy).toBe(0);
+  }
+);
+
+it.each([Object.assign(new Error("Serving cancelled"), {code: "HOST_SERVING_CANCELLED"}), new ErrorAborted()])(
+  "does not log serving cancellation as a local failure: $message",
+  async (error) => {
+    const config = servingConfig();
+    const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
+    const logger = getMockedLogger();
+    const factory: handlers.BoundedReqRespHandlers = () => () =>
+      handlers.startServingHandler(budget, async function* () {
+        yield await Promise.reject(error);
+      });
+    const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, logger);
+    const {request, permission} = await incoming();
+    permission.resolve();
+    await owner.serve(request);
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(budget.snapshot().occupancy).toBe(0);
+  }
+);
+
+it("answers a stored block exceeding its native read bound with RESOURCE_UNAVAILABLE", async () => {
   const config = servingConfig();
   const budget = HostServingBudget.forEnvironment(resolveServingPolicy(config, 1, 0));
   const root = new Uint8Array(32).fill(3);
@@ -319,7 +417,7 @@ it("answers a stored block exceeding its native read bound with SERVER_ERROR", a
       onBeaconBlocksByRoot([root], chain as unknown as IBeaconChain, context)
     );
   const {request, permission} = await incoming();
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   permission.resolve();
   await owner.serve(request);
   expect(request.fail).toHaveBeenCalledExactlyOnceWith(RespStatus.RESOURCE_UNAVAILABLE, expect.any(Uint8Array));
@@ -347,7 +445,8 @@ it("reports no serving capacity while an earlier adapter holds the shared budget
         throw Error("No request available");
       },
     },
-    32
+    32,
+    getMockedLogger()
   );
   try {
     expect(owner.capacity()).toBe(0);
@@ -371,13 +470,13 @@ it("cancels a handler when its stream closes, and every served request at close"
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   const [first, second] = await Promise.all([incoming(), incoming()]);
   const served = [owner.serve(first.request), owner.serve(second.request)];
   expect(owner.capacity()).toBe(0);
   // The first stream closes before native credit arrives: its handler retires without producing.
   first.closed.resolve();
-  first.permission.reject(Error("closed"));
+  first.permission.reject(Object.assign(Error("closed"), {code: "NetworkIncomingClosed"}));
   await served[0];
   expect(first.request.respond).not.toHaveBeenCalled();
   expect(owner.capacity()).toBe(1);
@@ -407,7 +506,7 @@ it("two peers waiting on eight response writes do not prevent a third peer from 
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 32, getMockedLogger());
   try {
     for (const input of inputs) void owner.serve(input.request);
     expect(budget.snapshot()).toMatchObject({occupancy: 9, working: 0});
@@ -452,7 +551,7 @@ it("requests waiting for retained memory leave native credit available to existi
     active.push(handler);
     return handler;
   };
-  const owner = new NativeRequests(config, {getHandler: factory, budget}, 3);
+  const owner = new NativeRequests(config, {getHandler: factory, budget}, 3, getMockedLogger());
   try {
     for (const input of inputs) void owner.serve(input.request);
     inputs[0].permission.resolve();
@@ -495,7 +594,7 @@ it("waits for initial credit once and each response before producing the next ch
       yield {data: new Uint8Array(1), boundary: {fork: config.getForkName(0), epoch: 0}};
     }
   });
-  const owner = new NativeRequests(config, {getHandler: () => () => handler, budget}, 1);
+  const owner = new NativeRequests(config, {getHandler: () => () => handler, budget}, 1, getMockedLogger());
   const served = owner.serve(input.request);
   try {
     expect(await settled(served)).toBe(false);

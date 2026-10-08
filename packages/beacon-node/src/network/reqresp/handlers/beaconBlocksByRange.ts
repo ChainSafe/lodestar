@@ -111,6 +111,9 @@ export function validateBeaconBlocksByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained blocks to allow genesis sync.
@@ -123,6 +126,10 @@ export function validateBeaconBlocksByRangeRequest(
 
   if (count > maxRequestBlocks) {
     count = maxRequestBlocks;
+  }
+
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
   }
 
   return {startSlot, count};

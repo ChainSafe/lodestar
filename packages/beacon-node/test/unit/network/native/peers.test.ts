@@ -58,6 +58,38 @@ async function fixture() {
 }
 
 describe("native peer projection", () => {
+  it("skips unrelated updates while preserving status, custody and client updates", async () => {
+    const node = await fixture();
+    let state = node.state;
+    let sequence = 1n;
+    const update = (changes: Partial<NativePeerState>) => {
+      state = {...structuredClone(state), ...changes};
+      node.drain({type: "updated", state, ownerSequence: ++sequence});
+    };
+    node.drain({type: "ready", state, ownerSequence: sequence});
+    update({endpoint: {...state.endpoint, port: 9002}});
+    update({score: 10, metadataAtMs: 20n, samplingGroups: [1]});
+    expect(node.connected).toHaveBeenCalledOnce();
+    expect(node.disconnected).not.toHaveBeenCalled();
+    update({statusAtMs: 30n});
+    expect(node.connected).toHaveBeenCalledTimes(2);
+    if (!state.status) throw Error("Missing test status");
+    update({status: {...state.status, headSlot: 10n}});
+    expect(node.connected).toHaveBeenCalledTimes(3);
+    update({custodyGroups: [0]});
+    expect(node.connected).toHaveBeenCalledTimes(4);
+    expect(node.connected.mock.lastCall?.[0].custodyColumns.length).toBeGreaterThan(0);
+    update({identify: {agent: "Lighthouse/v8.2.2", protocolVersion: null, protocols: []}});
+    expect(node.connected).toHaveBeenCalledTimes(5);
+    update({identify: {agent: "Lighthouse/v8.2.3", protocolVersion: "eth2/1.0.0", protocols: []}});
+    expect(node.connected).toHaveBeenCalledTimes(5);
+    update({relevant: false});
+    expect(node.disconnected).toHaveBeenCalledOnce();
+    update({relevant: true});
+    expect(node.connected).toHaveBeenCalledTimes(6);
+    node.peers.close();
+  });
+
   it.each([
     ["Lighthouse/v8.2.2", "Lighthouse"],
     ["peer-controlled-unique-agent", "Unknown"],

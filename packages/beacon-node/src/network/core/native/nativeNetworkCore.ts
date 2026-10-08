@@ -85,7 +85,7 @@ export class NativeNetworkCore implements INetworkCore {
       );
       core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
-      core.requests = new NativeRequests(config, modules.serving, core.network.limits.incomingCapacity);
+      core.requests = new NativeRequests(config, modules.serving, core.network.limits.incomingCapacity, logger);
       core.reports = new NativePeerReports(core.network);
       void core.network.closed
         .then((result) => {
@@ -121,7 +121,18 @@ export class NativeNetworkCore implements INetworkCore {
   ): Promise<void> {
     for (const peer of directPeers) {
       if (this.closed) return;
-      await this.network.setDirectPeer(peer.peerId, peer.addresses);
+      try {
+        await this.network.setDirectPeer(peer.peerId, peer.addresses);
+      } catch (error) {
+        if (
+          this.closed &&
+          error instanceof Error &&
+          "code" in error &&
+          (error.code === "NetworkClosed" || error.code === "Stopped")
+        )
+          return;
+        throw error;
+      }
     }
     for (const peer of bootPeers) {
       if (this.closed) return;

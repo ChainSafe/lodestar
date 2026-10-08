@@ -12,6 +12,7 @@ import {
   RpcResponseStatusError,
   responseStatusErrorToRequestError,
 } from "@lodestar/reqresp";
+import {Logger, isErrorAborted} from "@lodestar/utils";
 import {PeerAction} from "../../peers/score/index.js";
 import {onOutgoingReqRespError} from "../../reqresp/score.js";
 import {BoundedServing, ServingHandler} from "../../reqresp/serving/handler.js";
@@ -130,9 +131,20 @@ export function outgoingNativeRequest(
   };
 }
 
-function fail(request: IncomingRequest, error: unknown): Promise<void> {
+function fail(request: IncomingRequest, error: unknown, logger: Logger): Promise<void> {
   const status = error instanceof ResponseError ? error.status : RespStatus.SERVER_ERROR;
   const message = error instanceof ResponseError ? error.errorMessage : "Local serving failure";
+  const code = error instanceof Error && "code" in error ? error.code : undefined;
+  if (
+    status === RespStatus.SERVER_ERROR &&
+    !isErrorAborted(error) &&
+    code !== "HOST_SERVING_CANCELLED" &&
+    code !== "NetworkClosed" &&
+    code !== "NetworkIncomingClosed" &&
+    code !== "NetworkIncomingFailed"
+  ) {
+    logger.error("Native request serving failed", {protocol: request.protocol, peer: request.peerId}, error as Error);
+  }
   return request.fail(status, new TextEncoder().encode(message.slice(0, 256)).subarray(0, 256)).catch(() => {});
 }
 
@@ -175,7 +187,8 @@ export class NativeRequests {
   constructor(
     private readonly config: BeaconConfig,
     serving: BoundedServing,
-    capacity: number
+    capacity: number,
+    private readonly logger: Logger
   ) {
     nativeInteger(capacity, "incoming route capacity", 32, 1);
     this.budget = serving.budget;
@@ -212,7 +225,8 @@ export class NativeRequests {
   async serve(request: IncomingRequest): Promise<void> {
     if (this.closed) return request.cancel();
     const protocol = nativeProtocols.get(request.protocol);
-    if (!protocol) return fail(request, new ResponseError(RespStatus.SERVER_ERROR, "Unsupported serving protocol"));
+    if (!protocol)
+      return fail(request, new ResponseError(RespStatus.SERVER_ERROR, "Unsupported serving protocol"), this.logger);
     let handler: ServingHandler;
     try {
       handler = this.getHandler(protocol.method)(
@@ -221,14 +235,14 @@ export class NativeRequests {
         "unknown"
       );
     } catch (error) {
-      return fail(request, error);
+      return fail(request, error, this.logger);
     }
     this.serving.set(handler, request);
     void request.closed.then(() => handler.cancel());
     try {
       await respond(request, handler, this.config, this.maxChunks);
     } catch (error) {
-      await fail(request, error);
+      await fail(request, error, this.logger);
     } finally {
       handler.cancel();
       await handler.retired;

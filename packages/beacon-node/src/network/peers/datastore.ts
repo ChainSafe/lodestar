@@ -68,13 +68,22 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
   }
 
   async close(): Promise<void> {
+    const errors: unknown[] = [];
     try {
       if (this.dirtyItems.size > 0) await this._commitData();
-    } finally {
+    } catch (error) {
+      errors.push(error);
+    }
+    try {
       await this.dbDatastore.close();
+    } catch (error) {
+      errors.push(error);
+    } finally {
       this.dirtyItems.clear();
       this.memoryDatastore.clear();
     }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Peer datastore close failed");
   }
 
   async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {

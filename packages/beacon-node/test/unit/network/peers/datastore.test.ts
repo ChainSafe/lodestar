@@ -32,6 +32,21 @@ describe("Eth2PeerDataStore", () => {
     vi.useRealTimers();
   });
 
+  it.each(["flush", "close", "both"])("preserves %s failures during close", async (failed) => {
+    const flushError = new Error("flush failed");
+    const closeError = new Error("close failed");
+    await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
+    const batch = dbDatastoreStub.batch();
+    if (failed !== "close") vi.mocked(batch.commit).mockRejectedValue(flushError);
+    const close = vi.spyOn(dbDatastoreStub, "close");
+    if (failed !== "flush") close.mockRejectedValue(closeError);
+    else close.mockResolvedValue();
+    const result = eth2Datastore.close();
+    if (failed === "both") await expect(result).rejects.toMatchObject({errors: [flushError, closeError]});
+    else await expect(result).rejects.toBe(failed === "flush" ? flushError : closeError);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("should persist to db after threshold put", async () => {
     await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
     expect(dbDatastoreStub.batch).not.toHaveBeenCalledTimes(1);

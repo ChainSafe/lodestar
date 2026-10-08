@@ -141,11 +141,11 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     return this.metricsIterator(this.db.iterator(levelIteratorOptions(opts)), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+  async keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     return Array.fromAsync(this.keysStream(opts));
   }
 
-  values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+  async values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     return Array.fromAsync(this.valuesStream(opts));
   }
 

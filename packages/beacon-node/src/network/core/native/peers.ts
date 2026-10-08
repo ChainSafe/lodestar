@@ -1,3 +1,4 @@
+import {isDeepStrictEqual} from "node:util";
 import {NativeNetwork, NativePeerObservation, NativePeerState, NetworkStatus} from "@chainsafe/lodestar-z/network";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -131,6 +132,16 @@ export class NativePeers {
     }
     this.peers.set(peer, {state, sequence: event.ownerSequence});
     if (status) {
+      const clientAgent = getKnownClientFromAgentVersion(state.identify?.agent ?? "") ?? ClientKind.Unknown;
+      if (
+        previous?.state.relevant &&
+        sameConnection(previous.state, state) &&
+        previous.state.statusAtMs === state.statusAtMs &&
+        isDeepStrictEqual(previous.state.status, state.status) &&
+        isDeepStrictEqual(previous.state.custodyGroups ?? [], state.custodyGroups ?? []) &&
+        (getKnownClientFromAgentVersion(previous.state.identify?.agent ?? "") ?? ClientKind.Unknown) === clientAgent
+      )
+        return;
       const custodyColumns = (state.custodyGroups ?? []).flatMap((group) =>
         computeColumnsForCustodyGroup(this.config, group)
       );
@@ -138,7 +149,7 @@ export class NativePeers {
         peer,
         status,
         custodyColumns,
-        clientAgent: getKnownClientFromAgentVersion(state.identify?.agent ?? "") ?? ClientKind.Unknown,
+        clientAgent,
       });
     } else if (previous?.state.relevant) {
       this.events.emit(NetworkEvent.peerDisconnected, {peer});

@@ -381,6 +381,8 @@ export function createNativeConfig(
       ];
     })
   ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
+  const otherItems = kinds.reduce((sum, kind) => sum + (kind === "beacon_attestation" ? 0 : processor[kind].items), 0);
+  processor.beacon_attestation.items = Math.min(processor.beacon_attestation.items, 65535 - otherItems);
   nativeInteger(
     Object.values(processor).reduce((sum, limit) => sum + limit.items, 0),
     "gossip work capacity",

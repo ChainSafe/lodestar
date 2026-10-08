@@ -64,9 +64,9 @@ describe("native configuration boundary", () => {
     }
   );
 
-  it("fits the fixed native plan for a million-validator Fulu workload", async () => {
+  it("fits the fixed native plan at maximum gossip work capacity", async () => {
     const node = await fixture();
-    const application = node.create({}, 0, 1_000_000);
+    const application = node.create({}, 0, 3_000_000);
     // Initialization refuses a plan past its native or bridge budget.
     const network = createSettlingNetwork(application);
     try {
@@ -74,12 +74,30 @@ describe("native configuration boundary", () => {
         (items, limit) => items + limit.items,
         0
       );
-      expect(capacity).toBeGreaterThan(34_375);
+      expect(capacity).toBe(65535);
     } finally {
       application.identitySecretKey.fill(0);
       await network.close();
     }
   });
+  it.each([1_700_000, 1_800_000, 3_000_000])("bounds gossip work capacity for %i validators", async (validators) => {
+    const node = await fixture();
+    const application = node.create({}, 0, validators);
+    try {
+      const {processor} = application.gossipPolicy;
+      const otherItems = kinds.reduce(
+        (sum, kind) => sum + (kind === "beacon_attestation" ? 0 : processor[kind].items),
+        0
+      );
+      expect(processor.beacon_attestation.items).toBe(
+        Math.min(Math.ceil((validators / SLOTS_PER_EPOCH) * 1.1), 65535 - otherItems)
+      );
+      expect(otherItems + processor.beacon_attestation.items).toBeLessThanOrEqual(65535);
+    } finally {
+      application.identitySecretKey.fill(0);
+    }
+  });
+
   it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {
     const node = await fixture();
     const application = node.create({}, -1);
