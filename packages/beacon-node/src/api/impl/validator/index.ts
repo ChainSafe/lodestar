@@ -1300,6 +1300,10 @@ export function getValidatorApi(
           blobs: blobsBundle.blobs,
         };
 
+        if (chain.opts.persistProducedPayloadEnvelopes) {
+          chain.persistExecutionPayloadEnvelope(blockContents.executionPayloadEnvelope);
+        }
+
         return {
           data: blockContents,
           meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: true},
@@ -2186,6 +2190,10 @@ export function getValidatorApi(
         transactions: executionPayload.transactions.length,
         blockHash: toRootHex(executionPayload.blockHash),
       });
+
+      if (chain.opts.persistProducedPayloadEnvelopes) {
+        chain.persistExecutionPayloadEnvelope(envelope);
+      }
 
       return {
         data: envelope,
