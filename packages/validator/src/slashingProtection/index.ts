@@ -35,6 +35,7 @@ export class SlashingProtection implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;
   private readonly importing = new Map<PubkeyHex, Promise<void>>();
+  private lastImport: Promise<void> | null = null;
 
   constructor(protected db: LodestarValidatorDatabaseController) {
     const blockBySlotRepository = new BlockBySlotRepository(db);
@@ -104,13 +105,19 @@ export class SlashingProtection implements ISlashingProtection {
 
     // Checks for keys in the file wait for the whole import, a key that is already signing must not sign against
     // a history the import is still extending. Per-key queues alone only cover the key currently being imported.
+    // Imports run one after another so a later import cannot release a key an earlier one has not reached yet.
     const pubkeyHexes = data.map((validator) => toPubkeyHex(validator.pubkey));
+    const previous = this.lastImport;
     const {promise, resolve} = defer<void>();
+    this.lastImport = promise;
     for (const pubkeyHex of pubkeyHexes) {
       this.importing.set(pubkeyHex, promise);
     }
 
     try {
+      if (previous !== null) {
+        await previous;
+      }
       for (const validator of data) {
         logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
         await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
@@ -118,6 +125,9 @@ export class SlashingProtection implements ISlashingProtection {
       }
     } finally {
       resolve();
+      if (this.lastImport === promise) {
+        this.lastImport = null;
+      }
       for (const pubkeyHex of pubkeyHexes) {
         if (this.importing.get(pubkeyHex) === promise) {
           this.importing.delete(pubkeyHex);

@@ -312,6 +312,75 @@ describe("SlashingProtection overlapping attestation checks", () => {
     expect(await attestations.getAll(pubkey)).toEqual([conflict]);
   });
 
+  it("defers checks until every overlapping import covering the key is done", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+
+    const genesisValidatorsRoot = ssz.Root.defaultValue();
+    const metadata = {interchange_format_version: "5" as const, genesis_validators_root: toHex(genesisValidatorsRoot)};
+    const first = slashingProtection.importInterchange(
+      {
+        metadata,
+        data: [
+          {
+            pubkey: toHex(Buffer.alloc(48, 1)),
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32, 1))}],
+            signed_attestations: [],
+          },
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [],
+            signed_attestations: [
+              {
+                source_epoch: String(conflict.sourceEpoch),
+                target_epoch: String(conflict.targetEpoch),
+                signing_root: toHex(conflict.signingRoot),
+              },
+            ],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    await started.promise;
+
+    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: Buffer.alloc(32, 2)};
+    const second = slashingProtection.importInterchange(
+      {
+        metadata,
+        data: [
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [],
+            signed_attestations: [
+              {
+                source_epoch: String(next.sourceEpoch),
+                target_epoch: String(next.targetEpoch),
+                signing_root: toHex(next.signingRoot),
+              },
+            ],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    // A second import that does not wait for the first releases the key before the first import has reached it
+    await Promise.race([second, sleep(10)]);
+    const pending = slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+    await Promise.race([pending, sleep(10)]);
+    release.resolve();
+    await Promise.all([first, second]);
+
+    await expect(pending).rejects.toMatchObject({type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE}});
+    expect(await attestations.getAll(pubkey)).toEqual([conflict, next]);
+  });
+
   it("does not defer checks for keys outside a running import", async () => {
     const started = defer<void>();
     const release = defer<void>();
