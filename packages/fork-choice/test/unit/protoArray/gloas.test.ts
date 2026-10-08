@@ -624,6 +624,89 @@ describe("Gloas Fork Choice", () => {
       );
     });
 
+    it("keeps blocks building on a still SYNCING payload optimistic when an ancestor payload turns VALID", () => {
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x0a", genesisRoot, genesisRoot), gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x0a",
+        gloasForkSlot,
+        "0xa1",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // 0x0b builds on A's SYNCING payload and reveals its own SYNCING payload, 0x0c builds on that one
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 1, "0x0b", "0x0a", "0xa1"),
+          executionPayloadBlockHash: "0xa1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 1,
+        null
+      );
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 2, "0x0c", "0x0b", "0xb1"),
+          executionPayloadBlockHash: "0xb1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 2,
+        null
+      );
+      // 0x0d is a sibling of 0x0b on A's payload, its VALID payload validates A's payload only
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 1, "0x0d", "0x0a", "0xa1"),
+          executionPayloadBlockHash: "0xa1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 1,
+        null
+      );
+      protoArray.onExecutionPayload(
+        "0x0d",
+        gloasForkSlot + 1,
+        "0xd1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x0a", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      // 0x0b's own payload and everything building on it is still unverified
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+
     it("throws for pre-Gloas blocks", () => {
       const block = createTestBlock(gloasForkSlot - 1, "0x02", genesisRoot);
       protoArray.onBlock(block, gloasForkSlot - 1, null);
