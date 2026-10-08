@@ -35,12 +35,13 @@ export function prepareArchivedStateInitialization(
       }
     },
     persist: null,
-    log(state) {
+    log(state, nativeStateTransition) {
       logger.info("Initialized state from db", {
         slot: state.slot,
         epoch: computeEpochAtSlot(state.slot),
         stateRoot: toRootHex(state.hashTreeRoot()),
         isFinalized: true,
+        nativeStateTransition,
       });
     },
   };

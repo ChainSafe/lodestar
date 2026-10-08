@@ -188,6 +188,7 @@ export async function verifyBlocksInEpoch(
         blockInputs,
         // hack availability for state transition eval as availability is separately determined
         blocks.map(() => DataAvailabilityStatus.Available),
+        this.serializedCache,
         this.logger,
         this.metrics,
         this.validatorMonitor,

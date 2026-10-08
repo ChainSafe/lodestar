@@ -339,4 +339,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
   },
+  getProposerPreferences: {
+    args: {slot: 1, dependentRoot: new Uint8Array(32).fill(1)},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
+  },
 };
