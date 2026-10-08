@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
+  PayloadStatus,
   ProtoBlock,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
@@ -327,18 +328,19 @@ export async function produceBlockBody<T extends BlockType>(
     };
 
     let prepared = await prepareOnParent(parentBlock);
-    // The forkchoiceUpdated verdict may have rejected the parent's payload, after which fork choice
-    // selects the parent's EMPTY variant and the proposal must build on that instead
-    if (prepared.prepareRes.inclusionListVerdictChanged) {
-      const head = this.forkChoice.getHead();
-      if (head.blockRoot === parentBlock.blockRoot && head.payloadStatus !== parentBlock.payloadStatus) {
-        this.logger.warn("Parent payload rejected by its inclusion list verdict, rebuilding on the selected variant", {
-          slot: blockSlot,
-          parentBlockRoot: parentBlock.blockRoot,
-          payloadStatus: head.payloadStatus,
-        });
-        prepared = await prepareOnParent(head);
-      }
+    // An inclusion list verdict recorded while preparing, by this forkchoiceUpdated or a concurrent
+    // one, can make fork choice select the parent's EMPTY variant; the proposal must build on that
+    const head = this.forkChoice.getHead();
+    if (
+      prepared.isBuildingOnFull &&
+      head.blockRoot === parentBlock.blockRoot &&
+      head.payloadStatus === PayloadStatus.EMPTY
+    ) {
+      this.logger.warn("Fork choice no longer extends the parent payload, rebuilding on its EMPTY variant", {
+        slot: blockSlot,
+        parentBlockRoot: parentBlock.blockRoot,
+      });
+      prepared = await prepareOnParent(head);
     }
     const {isBuildingOnFull, parentBlockHash, parentExecutionRequests, stateAfterParentPayload, prepareRes} = prepared;
 
@@ -777,7 +779,7 @@ export async function prepareExecutionPayload(
   suggestedFeeRecipient: string,
   /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
   payloadAttributes?: PayloadAttributes
-): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId; inclusionListVerdictChanged: boolean}> {
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -809,7 +811,6 @@ export async function prepareExecutionPayload(
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
   let payloadId: PayloadId | null;
   let prepType: PayloadPreparationType;
-  let inclusionListVerdictChanged = false;
 
   if (payloadIdCached) {
     payloadId = payloadIdCached;
@@ -835,12 +836,9 @@ export async function prepareExecutionPayload(
       toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash)
     );
-    inclusionListVerdictChanged = recordHeadPayloadInclusionListVerdict(
-      chain.forkChoice,
-      parentVariant,
-      forkchoiceUpdate.inclusionListSatisfied
-    );
-    if (inclusionListVerdictChanged) {
+    if (
+      recordHeadPayloadInclusionListVerdict(chain.forkChoice, parentVariant, forkchoiceUpdate.inclusionListSatisfied)
+    ) {
       logger.warn("Inclusion list verdict of the parent payload changed while preparing a payload", {
         parentBlockRoot: toRootHex(parentBlockRoot),
         inclusionListSatisfied: forkchoiceUpdate.inclusionListSatisfied,
@@ -859,7 +857,7 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {payloadId, prepType, inclusionListVerdictChanged};
+  return {payloadId, prepType};
 }
 
 async function prepareExecutionPayloadHeader(
