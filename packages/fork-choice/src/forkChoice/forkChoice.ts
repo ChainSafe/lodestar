@@ -198,7 +198,6 @@ export class ForkChoice implements IForkChoice {
 
       const satisfied = this.isPayloadInclusionListSatisfied(blockRoot);
       if (!satisfied) {
-        this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
         this.logger?.verbose("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
       }
       return satisfied;
@@ -447,6 +446,9 @@ export class ForkChoice implements IForkChoice {
    * constraints, as reported by the execution engine.
    */
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {
+    if (!satisfied && this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) !== false) {
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+    }
     this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
   }
 

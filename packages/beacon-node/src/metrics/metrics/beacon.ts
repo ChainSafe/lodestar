@@ -467,7 +467,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
       name: "beacon_inclusion_lists_validation_time_seconds",
       help: "Time taken to validate inclusion lists",
-      buckets: [0.1, 0.25, 0.5, 0.75, 1, 2],
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       labelNames: ["source"],
     }),
     inclusionListArrivalTime: register.histogram({

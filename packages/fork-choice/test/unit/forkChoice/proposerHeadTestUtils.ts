@@ -5,6 +5,7 @@ import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceMetrics,
   IForkChoiceStore,
   PayloadStatus,
   ProtoArray,
@@ -151,6 +152,7 @@ export function setup({
   parentVotes = 0,
   proposerBoost = null,
   store = makeStore(),
+  metrics = null,
 }: {
   isGloas: boolean;
   config: ChainForkConfig;
@@ -158,6 +160,7 @@ export function setup({
   parentVotes?: number;
   proposerBoost?: {root: RootHex; score: bigint} | null;
   store?: IForkChoiceStore;
+  metrics?: ForkChoiceMetrics | null;
 }): {forkChoice: ForkChoice; headRoot: RootHex; parentRoot: RootHex} {
   const genesisRoot = getBlockRoot(genesisSlot);
   const protoArray = ProtoArray.initialize(toProtoBlock(genesisSlot, genesisRoot, false), genesisSlot);
@@ -166,7 +169,7 @@ export function setup({
 
   // The ForkChoice constructor calls updateHead(), which re-runs applyScoreChanges with whatever boost
   // it holds (none). Build it first, then apply the scores, so the boost under test survives.
-  const forkChoice = new ForkChoice(config, store, protoArray, VALIDATOR_COUNT, null);
+  const forkChoice = new ForkChoice(config, store, protoArray, VALIDATOR_COUNT, metrics);
 
   const headRoot = getBlockRoot(headSlot);
   const parentRoot = getBlockRoot(parentSlot);

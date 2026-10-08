@@ -1,7 +1,7 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ForkChoice, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, ProtoArray} from "../../../src/index.js";
 import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, setup} from "./proposerHeadTestUtils.js";
 
 /** Deliver the execution payload envelope for a block, creating its FULL variant. */
@@ -46,6 +46,29 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
 
       expect(forkChoice.isPayloadInclusionListSatisfied(headRoot)).toBe(false);
+    });
+  });
+
+  describe("unsatisfied inclusion list metric", () => {
+    it("counts a block once when its payload is recorded unsatisfied, not per head evaluation", () => {
+      const inc = vi.fn();
+      const metrics = {
+        forkChoice: {votes: {addCollect: vi.fn()}, unsatisfiedInclusionListBlocks: {inc}},
+      } as unknown as ForkChoiceMetrics;
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig, metrics});
+      deliverPayload(forkChoice, headRoot);
+
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
+      expect(inc).not.toHaveBeenCalled();
+
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      expect(inc).toHaveBeenCalledTimes(1);
+
+      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
+      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
+      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
+      expect(inc).toHaveBeenCalledTimes(1);
     });
   });
 
