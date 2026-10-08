@@ -4,8 +4,8 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {BeaconStateView, createCachedBeaconState, isStatePostFulu, isStatePostGloas} from "@lodestar/state-transition";
+import {heze, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
@@ -127,6 +127,82 @@ describe("Fulu builder body", () => {
       await expect(produce()).rejects.toThrow(`missing ${field}`);
     });
   }
+});
+
+describe("Heze self-build parent variant", () => {
+  it("rebuilds on the EMPTY parent when the forkchoiceUpdated verdict rejects the FULL parent payload", async () => {
+    const {state, modules, chain, attrs, common, parentBlockRoot, slot} = setup(ForkName.heze);
+    const fullParentHash = new Uint8Array(32).fill(5);
+    const emptyParentHash = new Uint8Array(32).fill(6);
+    const fullParent = generateProtoBlock({
+      slot: slot - 1,
+      blockRoot: toRootHex(parentBlockRoot),
+      payloadStatus: PayloadStatus.FULL,
+      executionPayloadBlockHash: toRootHex(fullParentHash),
+      executionPayloadGasLimit: 30_000_000,
+    });
+    const emptyParent = generateProtoBlock({
+      slot: slot - 1,
+      blockRoot: toRootHex(parentBlockRoot),
+      payloadStatus: PayloadStatus.EMPTY,
+      executionPayloadBlockHash: toRootHex(emptyParentHash),
+      executionPayloadGasLimit: 30_000_000,
+    });
+
+    vi.spyOn(state, "latestExecutionPayloadBid", "get").mockReturnValue({
+      ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
+      blockHash: fullParentHash,
+      parentBlockHash: emptyParentHash,
+    });
+    vi.spyOn(state, "latestBlockHash", "get").mockReturnValue(fullParentHash);
+    vi.spyOn(state, "payloadExpectedWithdrawals", "get").mockReturnValue([]);
+    if (!isStatePostGloas(state)) throw new Error("Expected a post-gloas state");
+    vi.spyOn(state, "withParentPayloadApplied").mockReturnValue(state);
+    vi.spyOn(state, "getExpectedWithdrawals").mockReturnValue({
+      expectedWithdrawals: [],
+      processedBuilderWithdrawalsCount: 0,
+      processedPartialWithdrawalsCount: 0,
+      processedBuildersSweepCount: 0,
+      processedValidatorSweepCount: 0,
+    });
+
+    modules.chain.beaconProposerCache.getOrDefault.mockReturnValue("0xccccccccccccccccccccccccccccccccccccccbb");
+    modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+    modules.chain.getParentExecutionRequests = vi.fn().mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
+    modules.chain.payloadAttestationPool.getPayloadAttestationsForBlock = vi.fn().mockReturnValue([]);
+    modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    modules.forkChoice.getBlockHexAndBlockHash.mockImplementation((_root, hash) =>
+      hash === toRootHex(fullParentHash) ? fullParent : emptyParent
+    );
+    // The proposer head is the FULL parent; once its verdict is rejected fork choice selects EMPTY
+    modules.forkChoice.shouldBuildOnFull.mockImplementation((parent) => parent.payloadStatus === PayloadStatus.FULL);
+    modules.forkChoice.recordPayloadInclusionListSatisfaction.mockReturnValue(true);
+    modules.forkChoice.getHead.mockReturnValue(emptyParent);
+    modules.chain.executionEngine.notifyForkchoiceUpdate
+      .mockResolvedValueOnce({payloadId: "0x1111", inclusionListSatisfied: false})
+      .mockResolvedValueOnce({payloadId: "0x2222", inclusionListSatisfied: null});
+    modules.chain.executionEngine.getPayload.mockResolvedValue({
+      executionPayload: ssz.gloas.ExecutionPayload.defaultValue(),
+      executionPayloadValue: 456n,
+      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+      executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+    });
+
+    const result = await produceBlockBody.call(chain, BlockType.Full, state, {
+      ...attrs,
+      parentBlock: fullParent,
+      proposerIndex: 0,
+      proposerPubKey: new Uint8Array(48),
+      commonBlockBodyPromise: Promise.resolve(common),
+    });
+
+    const fcuHeads = modules.chain.executionEngine.notifyForkchoiceUpdate.mock.calls.map((call) => call[1]);
+    expect(fcuHeads).toEqual([toRootHex(fullParentHash), toRootHex(emptyParentHash)]);
+    expect(modules.chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(modules.chain.executionEngine.getPayload).toHaveBeenCalledWith(ForkName.heze, "0x2222");
+    const bid = (result.body as heze.BeaconBlockBody).signedExecutionPayloadBid.message;
+    expect(bid.parentBlockHash).toEqual(emptyParentHash);
+  });
 });
 
 describe("Fulu engine body", () => {

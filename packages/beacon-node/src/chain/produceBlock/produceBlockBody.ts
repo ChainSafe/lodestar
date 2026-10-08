@@ -295,33 +295,52 @@ export async function produceBlockBody<T extends BlockType>(
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
     // Get execution payload from EL
-    let parentBlockHash: Bytes32;
-    let parentExecutionRequests: gloas.ExecutionRequests;
-    // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
-    let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
-    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
-    // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
-    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
-    if (isBuildingOnFull) {
-      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
-      stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
-    } else {
-      parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+    const prepareOnParent = async (parent: ProtoBlock) => {
+      let parentBlockHash: Bytes32;
+      let parentExecutionRequests: gloas.ExecutionRequests;
+      // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
+      let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
+      // Spec: should_build_on_full(store, head, slot). `parent` is the proposer's head
+      // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
+      // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
+      const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parent, blockSlot);
+      if (isBuildingOnFull) {
+        parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+        parentExecutionRequests = await this.getParentExecutionRequests(parent.slot, parent.blockRoot);
+        stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
+      } else {
+        parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
+        parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      }
+      const prepareRes = await prepareExecutionPayload(
+        this,
+        this.logger,
+        fork,
+        parentBlockRoot,
+        parentBlockHash,
+        safeBlockHash,
+        finalizedBlockHash ?? ZERO_HASH_HEX,
+        stateAfterParentPayload,
+        feeRecipient
+      );
+      return {isBuildingOnFull, parentBlockHash, parentExecutionRequests, stateAfterParentPayload, prepareRes};
+    };
+
+    let prepared = await prepareOnParent(parentBlock);
+    // The forkchoiceUpdated verdict may have rejected the parent's payload, after which fork choice
+    // selects the parent's EMPTY variant and the proposal must build on that instead
+    if (prepared.prepareRes.inclusionListVerdictChanged) {
+      const head = this.forkChoice.getHead();
+      if (head.blockRoot === parentBlock.blockRoot && head.payloadStatus !== parentBlock.payloadStatus) {
+        this.logger.warn("Parent payload rejected by its inclusion list verdict, rebuilding on the selected variant", {
+          slot: blockSlot,
+          parentBlockRoot: parentBlock.blockRoot,
+          payloadStatus: head.payloadStatus,
+        });
+        prepared = await prepareOnParent(head);
+      }
     }
-    const prepareRes = await prepareExecutionPayload(
-      this,
-      this.logger,
-      fork,
-      parentBlockRoot,
-      parentBlockHash,
-      safeBlockHash,
-      finalizedBlockHash ?? ZERO_HASH_HEX,
-      stateAfterParentPayload,
-      feeRecipient
-    );
+    const {isBuildingOnFull, parentBlockHash, parentExecutionRequests, stateAfterParentPayload, prepareRes} = prepared;
 
     const {prepType, payloadId} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
@@ -758,7 +777,7 @@ export async function prepareExecutionPayload(
   suggestedFeeRecipient: string,
   /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
   payloadAttributes?: PayloadAttributes
-): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId; inclusionListVerdictChanged: boolean}> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -790,6 +809,7 @@ export async function prepareExecutionPayload(
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
   let payloadId: PayloadId | null;
   let prepType: PayloadPreparationType;
+  let inclusionListVerdictChanged = false;
 
   if (payloadIdCached) {
     payloadId = payloadIdCached;
@@ -815,9 +835,12 @@ export async function prepareExecutionPayload(
       toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash)
     );
-    if (
-      recordHeadPayloadInclusionListVerdict(chain.forkChoice, parentVariant, forkchoiceUpdate.inclusionListSatisfied)
-    ) {
+    inclusionListVerdictChanged = recordHeadPayloadInclusionListVerdict(
+      chain.forkChoice,
+      parentVariant,
+      forkchoiceUpdate.inclusionListSatisfied
+    );
+    if (inclusionListVerdictChanged) {
       logger.warn("Inclusion list verdict of the parent payload changed while preparing a payload", {
         parentBlockRoot: toRootHex(parentBlockRoot),
         inclusionListSatisfied: forkchoiceUpdate.inclusionListSatisfied,
@@ -836,7 +859,7 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {payloadId, prepType};
+  return {payloadId, prepType, inclusionListVerdictChanged};
 }
 
 async function prepareExecutionPayloadHeader(
