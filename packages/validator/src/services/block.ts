@@ -43,7 +43,7 @@ type BlockProposalOpts = {
   payloadLocal: boolean;
 };
 
-/** Minimum bid value that excludes p2p bids from selection, top-level `minBid` only applies to p2p bids */
+/** The top-level `minBid` only applies to p2p bids, setting it to the max value excludes all of them */
 const EXECUTION_ONLY_MIN_BID = 2n ** 64n - 1n;
 
 /**
