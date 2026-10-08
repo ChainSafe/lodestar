@@ -1,5 +1,6 @@
+import {digest} from "@chainsafe/as-sha256";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {pruneSetToMax} from "@lodestar/utils";
+import {pruneSetToMax, toHex} from "@lodestar/utils";
 import {PayloadAttributesRpc} from "./types.js";
 import {DATA, QUANTITY} from "./utils.js";
 
@@ -22,8 +23,18 @@ type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<Payl
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
 
-  getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
-    return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
+  getFullKey({
+    headBlockHash,
+    finalizedBlockHash,
+    timestamp,
+    prevRandao,
+    suggestedFeeRecipient,
+    inclusionListTransactions,
+  }: FcuAttributes): string {
+    const inclusionListsKey = inclusionListTransactions
+      ? toHex(digest(Buffer.from(inclusionListTransactions.join(","), "utf8")))
+      : "";
+    return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}-${inclusionListsKey}`;
   }
   getKey({timestamp}: Pick<FcuAttributes, "timestamp">): string {
     return timestamp;

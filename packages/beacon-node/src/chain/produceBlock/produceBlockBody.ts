@@ -70,12 +70,15 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {serializeInclusionList} from "../../execution/engine/types.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -739,6 +742,7 @@ export async function prepareExecutionPayload(
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
     inclusionListStore: InclusionListStore;
+    recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -758,12 +762,27 @@ export async function prepareExecutionPayload(
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
+  // Computed before the cache lookup: inclusion lists keep arriving after a payload was prepared in
+  // advance, and a payload built without them would not satisfy the constraints
+  const attributes: PayloadAttributes =
+    payloadAttributes ??
+    preparePayloadAttributes(fork, chain, {
+      prepareState: state,
+      prepareSlot: state.slot,
+      parentBlockRoot,
+      parentBlockHash,
+      feeRecipient: suggestedFeeRecipient,
+    });
+
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
     headBlockHash: toRootHex(parentBlockHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,
+    inclusionListTransactions: attributes.inclusionListTransactions
+      ? serializeInclusionList(attributes.inclusionListTransactions)
+      : undefined,
   });
 
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
@@ -784,16 +803,6 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes =
-      payloadAttributes ??
-      preparePayloadAttributes(fork, chain, {
-        prepareState: state,
-        prepareSlot: state.slot,
-        parentBlockRoot,
-        parentBlockHash,
-        feeRecipient: suggestedFeeRecipient,
-      });
-
     const forkchoiceUpdate = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentBlockHash),
@@ -802,11 +811,18 @@ export async function prepareExecutionPayload(
       attributes
     );
     payloadId = forkchoiceUpdate.payloadId;
-    if (forkchoiceUpdate.inclusionListSatisfied !== null) {
-      chain.forkChoice.recordPayloadInclusionListSatisfaction(
-        toRootHex(parentBlockRoot),
-        forkchoiceUpdate.inclusionListSatisfied
-      );
+    const parentVariant = chain.forkChoice.getBlockHexAndBlockHash(
+      toRootHex(parentBlockRoot),
+      toRootHex(parentBlockHash)
+    );
+    if (
+      recordHeadPayloadInclusionListVerdict(chain.forkChoice, parentVariant, forkchoiceUpdate.inclusionListSatisfied)
+    ) {
+      logger.warn("Inclusion list verdict of the parent payload changed while preparing a payload", {
+        parentBlockRoot: toRootHex(parentBlockRoot),
+        inclusionListSatisfied: forkchoiceUpdate.inclusionListSatisfied,
+      });
+      chain.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
     }
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }

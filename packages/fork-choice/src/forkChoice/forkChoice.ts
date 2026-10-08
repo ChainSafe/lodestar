@@ -440,11 +440,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
-  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {
-    if (!satisfied && this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) !== false) {
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const previous = this.fcStore.payloadInclusionListSatisfaction.get(blockRoot);
+    if (!satisfied && previous !== false) {
       this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
     }
     this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+    return previous !== satisfied;
   }
 
   /** True only once the payload is delivered and recorded satisfied */

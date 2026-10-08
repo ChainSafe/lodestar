@@ -58,11 +58,11 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig, metrics});
       deliverPayload(forkChoice, headRoot);
 
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
+      expect(forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true)).toBe(true);
       expect(inc).not.toHaveBeenCalled();
 
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      expect(forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false)).toBe(true);
+      expect(forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false)).toBe(false);
       expect(inc).toHaveBeenCalledTimes(1);
 
       const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;

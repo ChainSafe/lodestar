@@ -9,8 +9,10 @@ import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodest
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {getInclusionListDependentRootFromState} from "../../util/dependentRoot.js";
+import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -295,8 +297,9 @@ export async function importExecutionPayload(
     this.executionEngine
       .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
       .then(({inclusionListSatisfied}) => {
-        if (inclusionListSatisfied !== null) {
-          this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, inclusionListSatisfied);
+        const fullVariant = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
+        if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fullVariant, inclusionListSatisfied)) {
+          this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
         }
       })
       .catch((e) => {

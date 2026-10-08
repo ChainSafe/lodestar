@@ -2,6 +2,7 @@ import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -129,33 +130,49 @@ describe("Fulu builder body", () => {
 });
 
 describe("Fulu engine body", () => {
-  it("records the forkchoiceUpdated inclusion list verdict for the parent payload", async () => {
-    const {state, modules, chain, attrs, common, parentBlockRoot} = setup();
-    modules.chain.beaconProposerCache.getOrDefault.mockReturnValue("0xccccccccccccccccccccccccccccccccccccccbb");
-    modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
-      payloadId: "0x1234",
-      inclusionListSatisfied: false,
-    });
-    modules.chain.executionEngine.getPayload.mockResolvedValue({
-      executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
-      executionPayloadValue: 456n,
-      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
-      executionRequests: ssz.electra.ExecutionRequests.defaultValue(),
-    });
+  for (const [variant, recorded] of [
+    [PayloadStatus.FULL, true],
+    [PayloadStatus.EMPTY, false],
+  ] as const) {
+    it(`${recorded ? "records" : "ignores"} the forkchoiceUpdated inclusion list verdict when the parent is ${variant}`, async () => {
+      const {state, modules, chain, attrs, common, parentBlockRoot} = setup();
+      modules.chain.beaconProposerCache.getOrDefault.mockReturnValue("0xccccccccccccccccccccccccccccccccccccccbb");
+      modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
+        payloadId: "0x1234",
+        inclusionListSatisfied: false,
+      });
+      modules.chain.executionEngine.getPayload.mockResolvedValue({
+        executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
+        executionPayloadValue: 456n,
+        blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+        executionRequests: ssz.electra.ExecutionRequests.defaultValue(),
+      });
+      // The parent variant that owns the submitted block hash: its own payload when FULL, an ancestor's when EMPTY
+      modules.forkChoice.getBlockHexAndBlockHash.mockReturnValue(
+        generateProtoBlock({slot: attrs.slot - 1, blockRoot: toRootHex(parentBlockRoot), payloadStatus: variant})
+      );
+      modules.forkChoice.recordPayloadInclusionListSatisfaction.mockReturnValue(true);
 
-    await produceBlockBody.call(chain, BlockType.Full, state, {
-      ...attrs,
-      proposerIndex: 0,
-      proposerPubKey: new Uint8Array(48),
-      commonBlockBodyPromise: Promise.resolve(common),
-    });
+      await produceBlockBody.call(chain, BlockType.Full, state, {
+        ...attrs,
+        proposerIndex: 0,
+        proposerPubKey: new Uint8Array(48),
+        commonBlockBodyPromise: Promise.resolve(common),
+      });
 
-    expect(modules.forkChoice.recordPayloadInclusionListSatisfaction).toHaveBeenCalledExactlyOnceWith(
-      toRootHex(parentBlockRoot),
-      false
-    );
-  });
+      if (recorded) {
+        expect(modules.forkChoice.recordPayloadInclusionListSatisfaction).toHaveBeenCalledExactlyOnceWith(
+          toRootHex(parentBlockRoot),
+          false
+        );
+        expect(modules.chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      } else {
+        expect(modules.forkChoice.recordPayloadInclusionListSatisfaction).not.toHaveBeenCalled();
+        expect(modules.chain.recomputeForkChoiceHead).not.toHaveBeenCalled();
+      }
+    });
+  }
 
   for (const requested of [true, false]) {
     it(`uses the ${requested ? "requested" : "cached"} fee recipient for payload preparation`, async () => {
