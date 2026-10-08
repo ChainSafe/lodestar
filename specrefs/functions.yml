@@ -4777,8 +4777,6 @@
   sources:
     - file: packages/state-transition/src/util/shuffling.ts
       search: export function getInclusionListCommittee(
-    - file: packages/state-transition/src/util/shuffling.ts
-      search: export function computeInclusionListCommittee(
   spec: |
     <spec fn="get_inclusion_list_committee" fork="heze" hash="012e9fad">
     def get_inclusion_list_committee(state: BeaconState, slot: Slot) -> InclusionListCommittee:
