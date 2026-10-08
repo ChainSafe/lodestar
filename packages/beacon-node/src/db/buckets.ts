@@ -72,6 +72,7 @@ export enum Bucket {
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
   gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope, or 0x00 + SignedExecutionPayloadHeaderEnvelope
+  earliestAvailableSlot = 61, // singleton -> Slot
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

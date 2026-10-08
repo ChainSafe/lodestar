@@ -16,6 +16,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -62,6 +63,7 @@ export type DownloadByRangeRequests = {
 export type ParentPayloadCommitments = {
   blockRoot: Uint8Array;
   blockRootHex: RootHex;
+  blockHash: Uint8Array;
   kzgCommitments: deneb.BlobKzgCommitments;
 };
 
@@ -1171,6 +1173,8 @@ export enum DownloadByRangeErrorCode {
 
   /** Envelope beaconBlockRoot does not match the block's root */
   INVALID_ENVELOPE_BEACON_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BEACON_BLOCK_ROOT",
+  /** Envelope payload.blockHash does not match the block's bid */
+  INVALID_ENVELOPE_BLOCK_HASH = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BLOCK_HASH",
 
   /** Block segment + envelopes failed chain-segment linearity / FULL-chain checks */
   INVALID_CHAIN_SEGMENT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CHAIN_SEGMENT",
@@ -1273,6 +1277,12 @@ export type DownloadByRangeErrorType =
       actual: string;
     }
   | {
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH;
+      slot: Slot;
+      expected: string;
+      actual: string;
+    }
+  | {
       code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT;
       slot: Slot;
       reason: string;
@@ -1295,47 +1305,76 @@ export function validateEnvelopesByRangeResponse(
   payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[],
   parentPayloadCommitments?: ParentPayloadCommitments
 ): Map<Slot, gloas.SignedExecutionPayloadEnvelope> {
-  // Build a map of slot -> blockRoot for all blocks in the batch
-  const batchBlockRoots = new Map<Slot, Uint8Array>();
+  // Build a map of slot -> block root and bid block hash for all blocks in the batch
+  const batchBlocksBySlot = new Map<Slot, {blockRoot: Uint8Array; block: SignedBeaconBlock | null}>();
   if (batchBlocks) {
     for (const blockInput of batchBlocks) {
-      batchBlockRoots.set(blockInput.slot, fromHex(blockInput.blockRootHex));
+      batchBlocksBySlot.set(blockInput.slot, {
+        blockRoot: fromHex(blockInput.blockRootHex),
+        block: blockInput.hasBlock() ? blockInput.getBlock() : null,
+      });
     }
   }
   for (const {block, blockRoot} of validatedBlocks) {
-    batchBlockRoots.set(block.message.slot, blockRoot);
+    batchBlocksBySlot.set(block.message.slot, {blockRoot, block});
   }
 
   const payloadEnvelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
 
   for (const payloadEnvelope of payloadEnvelopes) {
     const slot = payloadEnvelope.message.payload.slotNumber;
-    const batchBlockRoot = batchBlockRoots.get(slot);
+    const batchBlock = batchBlocksBySlot.get(slot);
 
-    if (batchBlockRoot === undefined) {
+    if (batchBlock === undefined) {
       // Keep the requested dangling-parent envelope only when its beaconBlockRoot matches
       // exactly. All other unrelated envelopes are dropped.
       if (
         parentPayloadCommitments !== undefined &&
         byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, parentPayloadCommitments.blockRoot)
       ) {
+        assertEnvelopeBlockHash(payloadEnvelope, parentPayloadCommitments.blockHash);
         payloadEnvelopeMap.set(slot, payloadEnvelope);
       }
       continue;
     }
 
     // Verify beaconBlockRoot matches the block's root
-    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlockRoot)) {
+    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlock.blockRoot)) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT,
         slot,
-        expected: toRootHex(batchBlockRoot),
+        expected: toRootHex(batchBlock.blockRoot),
         actual: toRootHex(payloadEnvelope.message.beaconBlockRoot),
       });
+    }
+
+    if (batchBlock.block !== null && isGloasBeaconBlock(batchBlock.block.message)) {
+      assertEnvelopeBlockHash(
+        payloadEnvelope,
+        batchBlock.block.message.body.signedExecutionPayloadBid.message.blockHash
+      );
     }
 
     payloadEnvelopeMap.set(slot, payloadEnvelope);
   }
 
   return payloadEnvelopeMap;
+}
+
+/**
+ * Rejected before it is cached. In-batch, `assertLinearChainSegment` fails on a wrong hash without evicting the
+ * envelope. For the dangling parent, the import evicts the parent's entry and range sync cannot recreate it.
+ */
+function assertEnvelopeBlockHash(
+  payloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  bidBlockHash: Uint8Array
+): void {
+  if (!byteArrayEquals(payloadEnvelope.message.payload.blockHash, bidBlockHash)) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH,
+      slot: payloadEnvelope.message.payload.slotNumber,
+      expected: toRootHex(bidBlockHash),
+      actual: toRootHex(payloadEnvelope.message.payload.blockHash),
+    });
+  }
 }

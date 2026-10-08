@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode, getPtcVerdict} from "../../../src/index.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -555,6 +555,158 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode).toBeDefined();
     });
 
+    it("validates all blocks building on a payload once it turns VALID, not only one chain", () => {
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x0a", genesisRoot, genesisRoot), gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x0a",
+        gloasForkSlot,
+        "0xa1",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // 0x0b and 0x0c build on A's SYNCING payload, 0x0d builds on EMPTY(0x0c) and so on A's payload too
+      const children = [
+        [gloasForkSlot + 1, "0x0b", "0x0a"],
+        [gloasForkSlot + 1, "0x0c", "0x0a"],
+        [gloasForkSlot + 2, "0x0d", "0x0c"],
+      ] as const;
+      for (const [slot, root, parentRoot] of children) {
+        protoArray.onBlock(
+          {
+            ...createTestBlock(slot, root, parentRoot, "0xa1"),
+            executionPayloadBlockHash: "0xa1",
+            executionStatus: ExecutionStatus.Syncing,
+          } as ProtoBlock,
+          slot,
+          null
+        );
+      }
+      protoArray.onExecutionPayload(
+        "0x0c",
+        gloasForkSlot + 1,
+        "0xc1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // 0x0b's payload is VALID, which implies A's payload is
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x0a", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      for (const [, root] of children) {
+        expect(getNodeByPayloadStatus(protoArray, root, PayloadStatus.PENDING)?.executionStatus).toBe(
+          ExecutionStatus.Valid
+        );
+        expect(getNodeByPayloadStatus(protoArray, root, PayloadStatus.EMPTY)?.executionStatus).toBe(
+          ExecutionStatus.Valid
+        );
+      }
+      // 0x0c's own payload has not been validated
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+
+    it("keeps blocks building on a still SYNCING payload optimistic when an ancestor payload turns VALID", () => {
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x0a", genesisRoot, genesisRoot), gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x0a",
+        gloasForkSlot,
+        "0xa1",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // 0x0b builds on A's SYNCING payload and reveals its own SYNCING payload, 0x0c builds on that one
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 1, "0x0b", "0x0a", "0xa1"),
+          executionPayloadBlockHash: "0xa1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 1,
+        null
+      );
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 2, "0x0c", "0x0b", "0xb1"),
+          executionPayloadBlockHash: "0xb1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 2,
+        null
+      );
+      // 0x0d is a sibling of 0x0b on A's payload, its VALID payload validates A's payload only
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 1, "0x0d", "0x0a", "0xa1"),
+          executionPayloadBlockHash: "0xa1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 1,
+        null
+      );
+      protoArray.onExecutionPayload(
+        "0x0d",
+        gloasForkSlot + 1,
+        "0xd1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x0a", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      // 0x0b's own payload and everything building on it is still unverified
+      expect(getNodeByPayloadStatus(protoArray, "0x0b", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x0c", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+
     it("throws for pre-Gloas blocks", () => {
       const block = createTestBlock(gloasForkSlot - 1, "0x02", genesisRoot);
       protoArray.onBlock(block, gloasForkSlot - 1, null);
@@ -810,6 +962,83 @@ describe("Gloas Fork Choice", () => {
 
       // notifyPtcMessages should be no-op
       expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot - 1, [0], true, true)).not.toThrow();
+    });
+  });
+
+  describe("getPtcQuorum()", () => {
+    let protoArray: ProtoArray;
+    const majority = Array.from({length: Math.floor(PTC_SIZE / 2) + 1}, (_, i) => i);
+    const exactlyThreshold = majority.slice(0, -1);
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), gloasForkSlot, null);
+    });
+
+    it("returns null for unknown and pre-Gloas roots", () => {
+      expect(protoArray.getPtcQuorum("0x99")).toBeNull();
+
+      protoArray.onBlock(createTestBlock(gloasForkSlot - 1, "0x03", genesisRoot), gloasForkSlot - 1, null);
+      expect(protoArray.getPtcQuorum("0x03")).toBeNull();
+    });
+
+    it("has no majority for either field before any votes", () => {
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+    });
+
+    it("needs strictly more than PTC_SIZE / 2 votes for a majority", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, exactlyThreshold, true, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: true});
+    });
+
+    it("counts only explicit false votes towards a negative majority", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, exactlyThreshold, false, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: null});
+
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, false, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: false, blobDataAvailable: false});
+    });
+
+    it("tracks payloadPresent and blobDataAvailable independently", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: false});
+    });
+
+    it("does not require the payload to be locally available, unlike isPayloadTimely()", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: true, blobDataAvailable: true});
+    });
+
+    it("drops a majority when a member's later vote flips it", () => {
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, majority, true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [majority[0]], false, true);
+      expect(protoArray.getPtcQuorum("0x02")).toEqual({payloadPresent: null, blobDataAvailable: true});
+    });
+  });
+
+  describe("getPtcVerdict()", () => {
+    it.each<[boolean | null, boolean | null, boolean | null]>([
+      [null, null, null],
+      [true, null, null],
+      [null, true, null],
+      [true, true, true],
+      [false, null, false],
+      [null, false, false],
+      [true, false, false],
+      [false, true, false],
+      [false, false, false],
+    ])("payloadPresent=%s blobDataAvailable=%s -> %s", (payloadPresent, blobDataAvailable, verdict) => {
+      expect(getPtcVerdict({payloadPresent, blobDataAvailable})).toBe(verdict);
     });
   });
 
