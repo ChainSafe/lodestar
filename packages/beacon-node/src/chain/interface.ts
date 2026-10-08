@@ -30,6 +30,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
+import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
@@ -96,7 +97,7 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly earliestAvailableSlot: Slot;
+  earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
@@ -236,6 +237,10 @@ export interface IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMiss?: ReconstructMissPolicy
+  ): Promise<(Uint8Array | null)[]>;
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
@@ -285,13 +290,14 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
   persistInvalidStateRoot(
     preState: IBeaconStateView,
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,

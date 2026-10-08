@@ -241,6 +241,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false},
     },
   },
+  getStatePtc: {
+    args: {stateId: "head", slot: 2},
+    res: {
+      data: {slot: 2, validators: ssz.gloas.PayloadTimelinessCommittee.defaultValue()},
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   getPendingDeposits: {
     args: {stateId: "head"},
     res: {
@@ -267,6 +274,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: ssz.fulu.ProposerLookahead.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.gloas.BuilderPendingPayments.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.gloas.BuilderPendingWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
 
@@ -324,5 +345,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getGenesis: {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
+  },
+  getProposerPreferences: {
+    args: {slot: 1, dependentRoot: new Uint8Array(32).fill(1)},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
   },
 };

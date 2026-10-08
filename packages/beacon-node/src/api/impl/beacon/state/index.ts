@@ -1,6 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   computeEpochAtSlot,
@@ -11,7 +16,7 @@ import {
   isStatePostFulu,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, getBuilderStatus, getValidatorStatus, ssz} from "@lodestar/types";
+import {ValidatorIndex, getBuilderStatus, getValidatorStatus, mapToGeneralStatus, ssz} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -100,7 +105,8 @@ export function getBeaconStateApi({
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = state.getValidator(validatorIndex);
-            if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            const status = getValidatorStatus(validator, currentEpoch);
+            if (statuses.length && !statuses.includes(status) && !statuses.includes(mapToGeneralStatus(status))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
@@ -374,6 +380,28 @@ export function getBeaconStateApi({
       };
     },
 
+    async getStatePtc({stateId, slot}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas state fork=${state.forkName}`);
+      }
+
+      const usedSlot = slot ?? state.slot;
+      const epoch = computeEpochAtSlot(usedSlot);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas slot=${usedSlot}`);
+      }
+      if (epoch < stateEpoch - 1 || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+        throw new ApiError(400, `Slot ${usedSlot} is outside the PTC window of state epoch ${stateEpoch}`);
+      }
+
+      return {
+        data: {slot: usedSlot, validators: Array.from(state.getPayloadTimelinessCommittee(usedSlot))},
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
     async getPendingDeposits({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const fork = state.forkName;
@@ -438,6 +466,42 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? ssz.fulu.ProposerLookahead.serialize(proposerLookahead) : proposerLookahead,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBuilderPendingPayments({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder payments for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingPayments = state.builderPendingPayments;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingPayments.serialize(builderPendingPayments)
+          : builderPendingPayments,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBuilderPendingWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder withdrawals for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingWithdrawals = state.builderPendingWithdrawals;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingWithdrawals.serialize(builderPendingWithdrawals)
+          : builderPendingWithdrawals,
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

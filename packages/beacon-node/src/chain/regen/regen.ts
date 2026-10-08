@@ -14,6 +14,7 @@ import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
@@ -28,6 +29,7 @@ export type RegenModules = {
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
   seenBlockInputCache: SeenBlockInput;
+  serializedCache: SerializedCache;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
   logger: Logger;
@@ -235,7 +237,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
         state = state.stateTransition(
-          block,
+          {block, ssz: this.modules.serializedCache.get(block)},
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -245,7 +247,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifySignatures: false,
             dontTransferCache: false,
           },
-          this.modules
+          {metrics: this.modules.metrics?.stateTransition, validatorMonitor: this.modules.validatorMonitor}
         );
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
@@ -316,7 +318,10 @@ async function processSlotsByCheckpoint(
 ): Promise<IBeaconStateView> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = postState.processSlots(slot, opts, modules);
+    postState = postState.processSlots(slot, opts, {
+      metrics: modules.metrics?.stateTransition,
+      validatorMonitor: modules.validatorMonitor,
+    });
   }
   return postState;
 }
@@ -361,7 +366,10 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = postState.processSlots(nextEpochSlot, opts, modules);
+    postState = postState.processSlots(nextEpochSlot, opts, {
+      metrics: metrics?.stateTransition,
+      validatorMonitor: modules.validatorMonitor,
+    });
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block

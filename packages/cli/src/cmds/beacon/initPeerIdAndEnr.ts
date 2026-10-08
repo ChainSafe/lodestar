@@ -9,7 +9,7 @@ import {SignableENR} from "@chainsafe/enr";
 import {defaultOptions} from "@lodestar/beacon-node";
 import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPrivateKey} from "../../config/index.js";
-import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
+import {hasGlobalIPv6Address, parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
 
@@ -67,9 +67,18 @@ export function overwriteEnrWithCliArgs(
   opts?: {newEnr?: boolean; bootnode?: boolean}
 ): void {
   const preSeq = enr.seq;
-  const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
+  const {port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
   const tcp = args.tcp ?? defaultOptions.network.tcp;
   const quic = args.quic ?? defaultOptions.network.quic;
+  const ipv6Keys = ["ip6", "udp6", "tcp6", "quic6"] as const;
+  const advertiseIp6 = listenAddress6 !== undefined || ipv6Keys.some((key) => args[`enr.${key}`] !== undefined);
+  if (!advertiseIp6 && ipv6Keys.some((key) => enr.kvs.has(key))) {
+    for (const key of ipv6Keys) {
+      enr.delete(key);
+    }
+    logger.warn("Cleared IPv6 fields from ENR because no IPv6 listener is configured");
+  }
+
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
@@ -89,11 +98,9 @@ export function overwriteEnrWithCliArgs(
       }
     } else {
       if (!isLocal) {
-        logger.warn(
-          `Configured ENR ${ip4 ? "IPv4" : "IPv6"} address is not local, clearing ENR ${ip4 ? "ip" : "ip6"} and ${
-            ip4 ? "udp" : "udp6"
-          }. Set the --nat flag to prevent this`
-        );
+        logger.warn("Clearing non-local ENR address and ports. Set --nat to allow non-local addresses", {
+          ipVersion: ip4 ? 4 : 6,
+        });
         if (ip4) {
           enr.delete("ip");
           enr.delete("udp");
@@ -142,6 +149,12 @@ export async function initPrivateKeyAndEnr(
   bootnode?: boolean
 ): Promise<{privateKey: PrivateKey; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
+
+  if (!args.listenAddress && !args.listenAddress6 && !hasGlobalIPv6Address()) {
+    logger.warn(
+      "Not listening on IPv6: no global IPv6 address found. Set --listenAddress for IPv4 only or --listenAddress6 to enable IPv6 explicitly"
+    );
+  }
 
   const newPrivateKeyAndENR = async (): Promise<{privateKey: PrivateKey; enr: SignableENR}> => {
     const privateKey = await generateKeyPair("secp256k1");

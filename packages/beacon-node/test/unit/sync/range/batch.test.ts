@@ -452,6 +452,61 @@ describe("sync / range / batch", async () => {
         expect(batch.requests.columnsRequest?.startSlot).toBe(bi2.slot);
         expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
       });
+
+      it.each([
+        {name: "processing error", err: new Error("processing failed")},
+        {
+          name: "execution engine error",
+          err: new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "el is down",
+          }),
+        },
+      ])("requests the whole batch again after a $name following a partial download", ({err}) => {
+        // count=1 so the first round returns every block of the batch
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
+        const initialRequests = batch.requests;
+
+        // first round returns the block and envelope but not its columns
+        const sampledColumns = [0, 1];
+        const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+          slot: batch.startSlot,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: false,
+        });
+        const payloadEnvelopes = new Map([[blockInput.slot, payloadInput]]);
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.requests.blocksRequest).toBeUndefined();
+        expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
+
+        // second round completes the columns
+        for (const index of sampledColumns) {
+          const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+          columnSidecar.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(blockInput.getBlock().message);
+          columnSidecar.slot = blockInput.slot;
+          columnSidecar.index = index;
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.byRange,
+            seenTimestampSec,
+            peerIdStr: peer,
+          });
+        }
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+
+        batch.startProcessing();
+        batch.processingError(err);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.state.blocks).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
+      });
     });
 
     describe("Fulu (pre-Gloas)", () => {

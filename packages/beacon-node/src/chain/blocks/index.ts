@@ -104,7 +104,7 @@ export async function processBlocks(
         payloadEnvelopesToImport.delete(orphaned.slot);
         // never validated, drop it from the shared cache so it is not served to peers, by-root sync reloads the
         // entry from db if the payload is ever needed
-        this.seenPayloadEnvelopeInputCache.prune(orphaned.payloadEnvelopeInput.blockRootHex);
+        this.seenPayloadEnvelopeInputCache.remove(orphaned.payloadEnvelopeInput.blockRootHex);
       }
     }
 
@@ -209,8 +209,19 @@ export async function processBlocks(
         const blockSlot = signedBlock.message.slot;
         const {state} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
+        const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+        this.persistInvalidSszValue(
+          forkTypes.SignedBeaconBlock,
+          signedBlock,
+          `${blockSlot}_invalid_signature`,
+          blockRootHex
+        );
+        this.persistInvalidSszBytes(
+          "BeaconState",
+          state.serialize(),
+          toRootHex(state.hashTreeRoot()),
+          `${state.slot}_invalid_signature`
+        );
       } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
@@ -267,7 +278,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
       this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
-      this.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+      this.seenPayloadEnvelopeInputCache.remove(blockRootHex);
       orphaned.push({slot, payloadEnvelopeInput: payloadInput});
       continue;
     }

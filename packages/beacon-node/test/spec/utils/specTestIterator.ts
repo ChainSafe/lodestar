@@ -2,9 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
+
+let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+
+async function resetNativeStateTransition(): Promise<void> {
+  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  const nativeStateTransition = await nativeStateTransitionPromise;
+  nativeStateTransition.deinitReusedEpochTransitionCache();
+}
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -62,41 +71,39 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip8148"],
+  skippedForks: [],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
-    // TODO: capella
-    // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
-    // Skip them for now to enable subsequently
-    /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
+    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
+    /^.+\/networking\/gossip_beacon_block\/.*$/,
+    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
+    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
+    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO GLOAS: enable this after gloas fork choice is ready
-    /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
-  skippedTests: [
-    /\/heze_fork$/,
-    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
-    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
-    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
-    // so skip rather than raise the timeout and hide the regression.
-    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
-    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
+  skippedTests: [],
+  skippedRunners: [],
+  // Gossip handlers not implemented in the spec runner.
+  skippedHandlers: [
+    "gossip_blob_sidecar",
+    "gossip_data_column_sidecar",
+    "gossip_partial_data_column_sidecar",
+    "gossip_execution_payload_bid",
+    "gossip_execution_payload_envelope",
+    "gossip_payload_attestation_message",
+    "gossip_proposer_preferences",
+    "gossip_inclusion_list",
   ],
-  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["networking"],
 };
 
 /**
@@ -130,13 +137,15 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
+      // lodestar-z does not support Gloas state transition yet
+      (nativeStateTransition && isForkPostGloas(fork)) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;
     }
-    const fork = forkStr as ForkName;
 
     const forkDirpath = path.join(configDirpath, forkStr);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
@@ -198,7 +207,10 @@ export function specTestIterator(
               describeDirectorySpecTest(
                 testId,
                 testSuiteDirpath,
-                (testCase, directoryName, testCaseName) => {
+                async (testCase, directoryName, testCaseName) => {
+                  if (nativeStateTransition) {
+                    await resetNativeStateTransition();
+                  }
                   pubkeyCache.reset();
                   return testFunction(testCase, directoryName, testCaseName);
                 },

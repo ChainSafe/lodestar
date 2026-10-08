@@ -1,4 +1,4 @@
-import {MIN_SEED_LOOKAHEAD} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateGloas, EpochTransitionCache} from "../types.js";
 import {computeEpochShuffling} from "../util/epochShuffling.js";
@@ -22,17 +22,24 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
     state,
     nextEpoch,
     nextEpochShuffling.committees,
+    nextEpochShuffling.shuffling,
     state.epochCtx.effectiveBalanceIncrements
   );
 
   // Stash for finalProcessEpoch to shift into epoch cache
   cache.nextEpochPayloadTimelinessCommittees = newNextPayloadTimelinessCommittees;
 
-  // Write shifted window to state: current(N) + next(N+1) + newlyComputed(N+2)
-  // From the perspective of upcoming epoch N+1, this is previous + current + next
-  state.ptcWindow = ssz.gloas.PayloadTimelinessCommitteeWindow.toViewDU([
-    ...state.epochCtx.payloadTimelinessCommittees,
-    ...state.epochCtx.nextPayloadTimelinessCommittees,
-    ...newNextPayloadTimelinessCommittees,
-  ]);
+  // Shift the current and next epochs forward by reusing their SSZ subtrees and cached hashes.
+  // Only the newly computed epoch needs new subtrees.
+  const ptcWindow = state.ptcWindow;
+  const retainedLength = ptcWindow.length - SLOTS_PER_EPOCH;
+  for (let i = 0; i < retainedLength; i++) {
+    ptcWindow.set(i, ptcWindow.getReadonly(i + SLOTS_PER_EPOCH));
+  }
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    ptcWindow.set(
+      retainedLength + i,
+      ssz.gloas.PayloadTimelinessCommittee.toViewDU(newNextPayloadTimelinessCommittees[i])
+    );
+  }
 }

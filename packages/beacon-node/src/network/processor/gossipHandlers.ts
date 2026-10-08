@@ -12,9 +12,10 @@ import {
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   Root,
+  RootHex,
   SignedBeaconBlock,
   SingleAttestation,
   Slot,
@@ -27,7 +28,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputColumns,
@@ -78,6 +79,7 @@ import {
   validateGossipSyncCommittee,
   validateGossipVoluntaryExit,
   validateSyncCommitteeGossipContributionAndProof,
+  verifyBlockProposerSignature,
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
@@ -148,37 +150,16 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
 
-  async function validateBeaconBlock(
+  /**
+   * Add a gossip block to the seen caches. The proposer signature of the block MUST be verified.
+   */
+  function cacheSignatureVerifiedBlock(
     signedBlock: SignedBeaconBlock,
+    blockRootHex: RootHex,
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<IBlockInput> {
-    const slot = signedBlock.message.slot;
-    const forkTypes = config.getForkTypes(slot);
-    const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-    const blockShortHex = prettyBytes(blockRootHex);
-    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
-
-    // always set block to seen cache for all forks so that we don't need to download it
-    // TODO: validate block before adding to cache
-    // tracked in https://github.com/ChainSafe/lodestar/issues/7957
-
-    const logCtx = {
-      slot,
-      currentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-      recvToValLatency,
-    };
-
-    logger.debug("Received gossip block", {...logCtx});
-
-    // optimistically add gossip block to the seen cache
-    // if validation fails, we will NOT forward this gossip block to peers
-    //   - if PARENT_BLOCK_UNKNOWN error, blockInput will then be queued inside BlockInputSync. If the gossip block is really invalid, it will be pruned there
-    //   - if other validator errors, blockInput will stay in the seen cache and will be pruned on finalization
+  ): BlockInput {
     const blockInput = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       blockRootHex,
@@ -187,8 +168,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
     });
 
-    // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
-    // This ensures we have PayloadEnvelopeInput, even through "PARENT_BLOCK_UNKNOWN" error
+    // Also seed the payload-envelope cache, so we have PayloadEnvelopeInput even through "PARENT_BLOCK_UNKNOWN" error
     // see https://github.com/ChainSafe/lodestar/issues/9475
     if (isForkPostGloas(fork)) {
       chain.seenPayloadEnvelopeInputCache.add({
@@ -202,8 +182,37 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     }
 
+    return blockInput;
+  }
+
+  async function validateBeaconBlock(
+    signedBlock: SignedBeaconBlock,
+    fork: ForkName,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): Promise<IBlockInput> {
+    const slot = signedBlock.message.slot;
+    const forkTypes = config.getForkTypes(slot);
+    const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
+
+    const logCtx = {
+      slot,
+      root: blockRootHex,
+      currentSlot: chain.clock.currentSlot,
+      peerId: peerIdStr,
+      delaySec,
+      recvToValLatency,
+    };
+
+    logger.debug("Received gossip block", {...logCtx});
+
+    chain.seenBlockInputCache.markValidatingBlock(blockRootHex);
+
     try {
       const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
+      const blockInput = cacheSignatureVerifiedBlock(signedBlock, blockRootHex, fork, peerIdStr, seenTimestampSec);
 
       const blockInputMeta = blockInput.getLogMeta();
 
@@ -227,39 +236,56 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
-        logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
+        logger.debug("Gossip block has error", {slot, root: blockRootHex, code: e.type.code});
         if (
-          (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-            e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
-          blockInput
+          e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+          e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
         ) {
+          // The block is retained for unknown parent sync without full validation. Authenticate it first, this
+          // does not need the parent state
+          const proposerIndex = signedBlock.message.proposerIndex;
+          await verifyBlockProposerSignature(chain, signedBlock, blockRootHex);
+          chain.seenBlockProposers.observeBlockRoot(
+            slot,
+            proposerIndex,
+            blockRootHex,
+            signedBlockToSignedHeader(config, signedBlock)
+          );
+
+          // Check again after the signature verification so concurrent proposals cannot both be retained
+          if (chain.seenBlockProposers.isKnown(slot, proposerIndex)) {
+            if (chain.seenBlockProposers.isRepeatProposal(slot, proposerIndex, blockRootHex)) {
+              throw new BlockGossipError(GossipAction.IGNORE, {
+                code: BlockErrorCode.REPEAT_PROPOSAL,
+                proposerIndex,
+                root: blockRootHex,
+              });
+            }
+            throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
+          }
+          chain.seenBlockProposers.add(slot, proposerIndex, blockRootHex);
+
+          const blockInput = cacheSignatureVerifiedBlock(signedBlock, blockRootHex, fork, peerIdStr, seenTimestampSec);
           chain.emitter.emit(ChainEvent.blockUnknownParent, {
             blockInput,
             peer: peerIdStr,
             source: BlockInputSource.gossip,
           });
-          // throw error (don't prune the blockInput)
           throw e;
         }
 
-        // IGNORE means the block is acceptable (e.g. FUTURE_SLOT, ALREADY_KNOWN), just not propagated.
-        // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
-        // (provably invalid) and unexpected errors prune below.
-        if (e.action === GossipAction.IGNORE) {
-          throw e;
+        if (e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(
+            forkTypes.SignedBeaconBlock,
+            signedBlock,
+            `gossip_reject_slot_${slot}`,
+            blockRootHex
+          );
         }
-
-        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
-      }
-
-      // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
-      // both caches, keeping them consistent.
-      chain.seenBlockInputCache.prune(blockRootHex);
-      if (isForkPostGloas(fork)) {
-        chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
       }
       throw e;
     } finally {
+      chain.seenBlockInputCache.unmarkValidatingBlock(blockRootHex);
       // The block received from the network may have established an equivocation, either by conflicting
       // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
       const proposerIndex = signedBlock.message.proposerIndex;
@@ -279,7 +305,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader));
-    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -332,7 +357,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
-          logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
+          logger.debug("Gossip blob has error", {slot, root: blockRootHex, code: e.type.code});
           // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
           //
           // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
@@ -696,11 +721,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel](
-          "Error processing block",
-          {slot, peer: peerIdStr, blockRoot: prettyBytes(blockInput.blockRootHex)},
-          e as Error
-        );
+        logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
@@ -738,19 +759,25 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (
           e instanceof BlockGossipError &&
           e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
-          // this is make sure the block's proposer signature was verified, it should be true anyway
-          chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root)
+          // Only a signature-verified sibling recorded in the seen cache is imported. The cache holds at most two
+          // roots per proposer and slot, which bounds full imports over gossip to one alternate
+          chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
+          // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
+          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null
         ) {
-          // blockInput was optimistically seeded in validateBeaconBlock and retained on IGNORE
-          const blockInput = chain.seenBlockInputCache.get(e.type.root);
-          if (blockInput) {
-            // We're returning IGNORE (thrown below), so this block is not forwarded to peers. Unlike the
-            // happy path there is no rush to forward, so we don't need to wrap in callInNextEventLoop.
-            chain.serializedCache.set(signedBlock, serializedData);
-            // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
-            // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
-            handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
-          }
+          const blockInput = cacheSignatureVerifiedBlock(
+            signedBlock,
+            e.type.root,
+            topic.boundary.fork,
+            peerIdStr,
+            seenTimestampSec
+          );
+          // We're returning IGNORE (thrown below), so this block is not forwarded to peers. Unlike the
+          // happy path there is no rush to forward, so we don't need to wrap in callInNextEventLoop.
+          chain.serializedCache.set(signedBlock, serializedData);
+          // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
+          // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
+          handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
         }
         // rethrow so gossipValidatorFn maps IGNORE -> TopicValidatorResult.Ignore (message not forwarded)
         throw e;
@@ -1052,12 +1079,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
-      await validateGossipAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+          chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
           chain.forkChoice.onAttesterSlashing(attesterSlashing);
           chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
         } catch (e) {
@@ -1076,12 +1103,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
       const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
-      await validateGossipProposerSlashing(chain, proposerSlashing);
+      const verifiedDomain = await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.opPool.insertProposerSlashing(proposerSlashing);
+          chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
           chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         } catch (e) {
           logger.debug(
@@ -1328,6 +1355,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
                   core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  // The builder may have signed another envelope that is valid, keeping this one would make
+                  // by-root and range sync reuse it and never import the payload
+                  chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
                   // Misbehaving peer, but could highlight an issue in another client
                   logLevel = LogLevel.warn;
                   break;

@@ -12,11 +12,13 @@ export type ChainArgs = {
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
+  "chain.persistProducedPayloadEnvelopes"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.persistOrphanedBlocks"?: boolean;
+  "chain.dedupePayloads"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
@@ -24,7 +26,6 @@ export type ChainArgs = {
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
-  "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
@@ -35,7 +36,7 @@ export type ChainArgs = {
   "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
-  "chain.nativeStateView"?: boolean;
+  "chain.nativeStateTransition"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -53,10 +54,12 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
+    persistProducedPayloadEnvelopes: args["chain.persistProducedPayloadEnvelopes"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
     persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
+    dedupePayloads: args["chain.dedupePayloads"],
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
@@ -66,7 +69,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
-    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -79,7 +81,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
-    nativeStateView: args["chain.nativeStateView"] ?? defaultOptions.chain.nativeStateView,
+    nativeStateTransition: args["chain.nativeStateTransition"] ?? defaultOptions.chain.nativeStateTransition,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -170,6 +172,13 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.persistProducedPayloadEnvelopes": {
+    hidden: true,
+    type: "boolean",
+    description: "Persist produced execution payload envelopes as SSZ files for debugging",
+    group: "chain",
+  },
+
   "chain.persistInvalidSszObjects": {
     hidden: true,
     type: "boolean",
@@ -181,6 +190,14 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Whether to persist orphaned blocks",
+    group: "chain",
+  },
+
+  "chain.dedupePayloads": {
+    type: "boolean",
+    description:
+      "Archive finalized Gloas execution payload envelopes in header form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list. Set to false to keep full envelopes on disk.",
+    defaultDescription: String(defaultOptions.chain.dedupePayloads),
     group: "chain",
   },
 
@@ -232,7 +249,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.fastConfirmation": {
     type: "boolean",
-    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    description: "Enable Fast Confirmation Rule for faster block confirmation",
     defaultDescription: String(defaultOptions.chain.fastConfirmation),
     group: "chain",
   },
@@ -250,13 +267,6 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
     defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
-    group: "chain",
-  },
-
-  "chain.assertCorrectProgressiveBalances": {
-    hidden: true,
-    description: "Enable asserting the progressive balances",
-    type: "boolean",
     group: "chain",
   },
 
@@ -317,11 +327,11 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.nativeStateView": {
+  "chain.nativeStateTransition": {
     hidden: true,
-    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    description: "Use native (Zig) state transition instead of JS implementation",
     type: "boolean",
-    default: defaultOptions.chain.nativeStateView,
+    default: defaultOptions.chain.nativeStateTransition,
     group: "chain",
   },
 
@@ -352,7 +362,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
 This is useful to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",

@@ -2,11 +2,10 @@ import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import jsyaml from "js-yaml";
-import snappy from "snappy";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
+import snappyWasm from "@chainsafe/snappy-wasm";
+import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -45,7 +44,7 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
+import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 
 /**
  * A test clock that models gossip clock disparity from a millisecond timestamp.
@@ -122,9 +121,9 @@ class GossipTestClock extends EventEmitter implements IClock {
     return (toMs ?? this.currentTimeMs) - slotTimeMs;
   }
 
-  /** Set the current time in milliseconds since genesis */
+  /** Set the current Unix time in milliseconds */
   setCurrentTimeMs(ms: number): void {
-    this.currentTimeMs = this.genesisTime * 1000 + ms;
+    this.currentTimeMs = ms;
   }
 
   /** Also support setSlot for block import phases */
@@ -139,9 +138,8 @@ interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
-  current_time_ms?: bigint;
   messages: {
-    offset_ms?: bigint;
+    current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
@@ -177,32 +175,9 @@ function loadMeta(testCaseDir: string): MetaYaml {
   return loadYaml<MetaYaml>(raw);
 }
 
-function loadTestCaseChainConfig(testCaseDir: string, fork: ForkName) {
-  const configPath = path.join(testCaseDir, "config.yaml");
-  if (!fs.existsSync(configPath)) return getConfig(fork);
-
-  // Parse config scalars as raw strings so byte values such as `0x00000001`
-  // keep their leading zeros before passing through `chainConfigFromJson()`.
-  // FAILSAFE_SCHEMA produces strings for scalars and preserves arrays/objects
-  // (e.g. `BLOB_SCHEDULE`) as-is for `chainConfigFromJson` to deserialize.
-  const parsed = jsyaml.load(fs.readFileSync(configPath, "utf8"), {
-    schema: jsyaml.FAILSAFE_SCHEMA,
-  }) as Record<string, unknown>;
-  const configJson: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(parsed)) {
-    if (key in chainConfigTypes) {
-      configJson[key] = value;
-    }
-  }
-
-  return {...getConfig(fork), ...chainConfigFromJson(configJson)};
-}
-
 function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
   const compressed = fs.readFileSync(path.join(testCaseDir, `${name}.ssz_snappy`));
-  const decompressed = snappy.uncompressSync(compressed);
-  return typeof decompressed === "string" ? Buffer.from(decompressed) : decompressed;
+  return snappyWasm.decompress(compressed);
 }
 
 function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {
@@ -294,7 +269,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -340,11 +315,6 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   if (e instanceof GossipActionError) {
     return e.action === GossipAction.IGNORE ? "ignore" : "reject";
   }
-  // Some validation paths throw raw errors instead of GossipActionError
-  // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError) {
-    return "reject";
-  }
   throw e;
 }
 
@@ -360,7 +330,7 @@ export async function runGossipValidationTest(
   }
 
   const anchorState = loadState(testCaseDir, fork);
-  const testCaseConfig = loadTestCaseChainConfig(testCaseDir, fork);
+  const testCaseConfig = {...getConfig(fork), ...loadSpecTestConfig(testCaseDir)};
   const beaconConfig = createBeaconConfig(testCaseConfig, anchorState.genesisValidatorsRoot);
 
   const genesisTimeSec = Number(anchorState.genesisTime);
@@ -399,7 +369,6 @@ export async function runGossipValidationTest(
       disableLightClientServerOnImportBlockHead: true,
       disableOnBlockError: true,
       disablePrepareNextSlot: true,
-      assertCorrectProgressiveBalances,
       proposerBoost: true,
       proposerBoostReorg: true,
     },
@@ -417,6 +386,7 @@ export async function runGossipValidationTest(
       validatorMonitor: null,
       anchorState: anchorStateView,
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
       executionBuilder: undefined,
     }
@@ -545,10 +515,10 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
-      clock.setCurrentTimeMs(messageTimeMs);
+      if (message.current_time_ms !== undefined) {
+        clock.setCurrentTimeMs(Number(message.current_time_ms));
+      }
 
       let result: "valid" | "ignore" | "reject";
       try {
@@ -673,17 +643,17 @@ async function validateMessageForTopic(
 
     case GossipType.proposer_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
-      await validateGossipProposerSlashing(chain, slashing);
+      const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing);
+      chain.opPool.insertProposerSlashing(slashing, verifiedDomain);
       break;
     }
 
     case GossipType.attester_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
-      await validateGossipAttesterSlashing(chain, slashing);
+      const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing);
+      chain.opPool.insertAttesterSlashing(fork, slashing, verifiedDomains);
       chain.forkChoice.onAttesterSlashing(slashing);
       break;
     }

@@ -1,11 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
-import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
+import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BlockType, ProduceFullGloas} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
@@ -408,8 +409,10 @@ describe("api/validator - produceBlockV4", () => {
     };
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     apiBid.message.value = 1;
+    apiBid.message.builderIndex = 1;
     const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     p2pBid.message.value = 1;
+    p2pBid.message.builderIndex = 2;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
@@ -428,6 +431,8 @@ describe("api/validator - produceBlockV4", () => {
       builderConfig: {minBid: 0n, builderBoostFactor: 150n, builders: [entry]},
     });
 
+    // The bids only differ by a boost factor of 150 vs 100, truncating the boosted total would
+    // tie them and hand it to the api bid
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
   });
 
@@ -464,6 +469,51 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
+
+    // The ranking log must agree with the selection, ranking by boosted value alone would put the
+    // zero value max boost bid last even though it wins
+    const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
+    expect(candidateLogs[0]?.[1]).toMatchObject({rank: 1, source: builderUrl});
+  });
+
+  it("logs the bid value and execution payment of each candidate", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 3_000_000_000n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    apiBid.message.value = 0;
+    apiBid.message.executionPayment = 5_000_000_000n;
+    const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    p2pBid.message.value = 1_000_000_000;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(p2pBid));
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
+      {url: builderUrl, entry, signedBid: apiBid, receivedMs: 0},
+    ]);
+
+    await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
+    expect(candidateLogs.map(([, ctx]) => ctx)).toMatchObject([
+      {source: builderUrl, value: "0.00000 ETH", executionPayment: "5.00000 ETH", total: "3.00000 ETH"},
+      {source: "p2p", value: "1.00000 ETH", executionPayment: "0.00000 ETH", total: "1.00000 ETH"},
+    ]);
   });
 
   it("falls back to the p2p bid when the builder API bid fails validation", async () => {
@@ -540,6 +590,12 @@ describe("api/validator - produceBlockV4", () => {
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    modules.chain.produceBlock.mockResolvedValue({
+      block: engineBlock,
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
+      shouldOverrideBuilder: true,
+    });
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
     vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
 
@@ -569,6 +625,11 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
+    expect(modules.chain.logger.info).toHaveBeenCalledWith(
+      "Selected local block: builder circuit breaker is active",
+      expect.objectContaining({reason: EngineBlockSelectionReason.BuilderCircuitBreaker})
+    );
+    expect(modules.chain.logger.warn).not.toHaveBeenCalled();
   });
 
   it("prefers the builder bid with the maximum builder boost factor", async () => {
@@ -598,6 +659,7 @@ describe("api/validator - produceBlockV4", () => {
     const persistBlock = vi.fn();
     Object.defineProperty(modules.chain, "persistBlock", {value: persistBlock});
     modules.chain.opts.persistProducedBlocks = true;
+    modules.chain.opts.persistProducedPayloadEnvelopes = true;
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
 
@@ -612,6 +674,52 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(block).toEqual(bidBlock);
     expect(persistBlock).toHaveBeenCalledWith(bidBlock, "produced_builder_block");
+    expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, false, true])("produced envelope persistence with flag=%s", async (enabled) => {
+    modules.chain.opts.persistProducedPayloadEnvelopes = enabled;
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    const beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(engineBlock);
+    const payload = ssz.gloas.ExecutionPayload.defaultValue();
+    payload.slotNumber = slot;
+    const produceResult: ProduceFullGloas = {
+      type: BlockType.Full,
+      fork: ForkName.gloas,
+      executionPayload: payload,
+      executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+      blobsBundle: ssz.gloas.BlobsBundle.defaultValue(),
+      cells: [],
+      parentBlockRoot: fromHex(parentBlock.blockRoot),
+    };
+    Object.assign(modules.chain, {blockProductionCache: new Map([[toRootHex(beaconBlockRoot), produceResult]])});
+    const expectedEnvelope: gloas.ExecutionPayloadEnvelope = {
+      payload,
+      executionRequests: produceResult.executionRequests,
+      builderIndex: BUILDER_INDEX_SELF_BUILD,
+      beaconBlockRoot,
+      parentBeaconBlockRoot: produceResult.parentBlockRoot,
+    };
+
+    const blockResponse = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: true,
+      builderConfig: getBuilderConfig(),
+    });
+    expect(blockResponse.data).toMatchObject({executionPayloadEnvelope: expectedEnvelope});
+
+    const envelopeResponse = await api.getExecutionPayloadEnvelope({slot, beaconBlockRoot});
+    expect(envelopeResponse.data).toEqual(expectedEnvelope);
+    if (enabled) {
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(1, expectedEnvelope);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(2, expectedEnvelope);
+    } else {
+      expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects block production if parent block is optimistic", async () => {
@@ -728,6 +836,37 @@ describe("api/validator - produceBlockV4", () => {
       p2pValue: null,
       engineValueGwei: 0,
       expected: 1,
+    },
+    {
+      // ⏎
+      id: "max boost between builders compares value",
+      entries: [
+        {value: 1, boostFactor: maxBuilderBoostFactor},
+        {value: 2, boostFactor: maxBuilderBoostFactor},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max boost tie prefers the earlier received api bid",
+      entries: [
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 2000},
+        {value: 2, boostFactor: maxBuilderBoostFactor, receivedMs: 1500},
+      ],
+      p2pValue: null,
+      engineValueGwei: 0,
+      expected: 1,
+    },
+    {
+      // ⏎
+      id: "max p2p boost wins over a higher api bid",
+      entries: [{value: 5}],
+      p2pValue: 1,
+      builderBoostFactor: maxBuilderBoostFactor,
+      engineValueGwei: 0,
+      expected: "p2p",
     },
     {
       // ⏎

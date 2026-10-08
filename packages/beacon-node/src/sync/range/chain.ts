@@ -225,6 +225,9 @@ export class SyncChain {
       Math.floor((localFinalizedEpoch - this.lastEpochWithProcessBlocks) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
     this.advanceChain(lastEpochWithProcessBlocksAligned);
 
+    // stopSyncing() cleared the retry timer, but peers can still be in rate limit backoff
+    this.scheduleRateLimitBackoffRetry();
+
     // Potentially download new batches and process pending
     this.triggerBatchDownloader();
     this.triggerBatchProcessor();
@@ -417,8 +420,10 @@ export class SyncChain {
     this.rateLimitBackoffTimeout = setTimeout(
       () => {
         this.rateLimitBackoffTimeout = undefined;
-        this.triggerBatchDownloader();
+        // Must run before the downloader, it drops expired peers without triggering a download. If it ran
+        // after, a backoff expiring in between would leave the peer idle with no retry scheduled.
         this.scheduleRateLimitBackoffRetry();
+        this.triggerBatchDownloader();
       },
       Math.max(0, retryAt - now)
     );
@@ -581,6 +586,7 @@ export class SyncChain {
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH:
           case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
           case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
           case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
