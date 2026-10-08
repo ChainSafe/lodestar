@@ -1526,10 +1526,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         timer?.({source: InclusionListSource.gossip});
       }
 
-      // Late lists are still stored, marked untimely
+      // Timely only if received within its own slot before the deadline, so a list for the next slot that
+      // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
       const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.inclusionListArrivalTime.observe(secFromSlot);
-      const isTimely = secFromSlot * 1000 < config.getInclusionListDueMs();
+      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs();
 
       const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
       metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});

@@ -2261,7 +2261,7 @@ export function getValidatorApi(
       }
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs();
+      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs();
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
