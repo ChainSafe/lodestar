@@ -13,9 +13,17 @@ function fixture() {
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
   const remembered = {close: vi.fn(async () => {})};
-  const network = {stopDelivery: vi.fn(), close: vi.fn(async (): Promise<CloseResult> => ({reason: "requested"}))};
+  const nativeClosed = defer<CloseResult>();
+  const network = {
+    closed: nativeClosed.promise,
+    stopDelivery: vi.fn(),
+    close: vi.fn((): Promise<CloseResult> => {
+      nativeClosed.resolve({reason: "requested"});
+      return nativeClosed.promise;
+    }),
+  };
   Object.assign(core, {modules: {clock}, onSlot, gossip, requests, peers, intent, remembered, network});
-  return {core, clock, onSlot, gossip, requests, peers, intent, remembered, network};
+  return {core, clock, onSlot, gossip, requests, peers, intent, remembered, network, nativeClosed};
 }
 
 describe("native core close", () => {
@@ -85,11 +93,28 @@ describe("native core close", () => {
     expect(network.close).toHaveBeenCalledOnce();
   });
 
-  it("rejects a requested close if native fails while joining", async () => {
-    const {core, network} = fixture();
+  it("reports a failure during close through terminated while cleanup succeeds", async () => {
+    const {core, network, nativeClosed} = fixture();
     const error = new Error("owner failed during close");
-    network.close.mockResolvedValue({reason: "failed", error});
-    await expect(core.close()).rejects.toBe(error);
+    network.close.mockReturnValue(nativeClosed.promise);
+    const terminated = core.terminated;
+    const closing = core.close();
+    await Promise.resolve();
+    expect(network.close).toHaveBeenCalledOnce();
+    nativeClosed.resolve({reason: "failed", error});
+    await expect(closing).resolves.toBeUndefined();
+    await expect(terminated).resolves.toBe(error);
+  });
+
+  it("reports the host failure separately from a cleanup failure", async () => {
+    const {core, remembered, nativeClosed} = fixture();
+    const failure = new Error("host failed");
+    const cleanupError = new Error("snapshot failed");
+    Object.assign(core, {failure});
+    remembered.close.mockRejectedValue(cleanupError);
+    nativeClosed.resolve({reason: "requested"});
+    await expect(core.close()).rejects.toBe(cleanupError);
+    await expect(core.terminated).resolves.toBe(failure);
   });
 
   it("latches completion before a reentrant cleanup", async () => {

@@ -133,7 +133,7 @@ export class NativeNetworkCore implements INetworkCore {
     }
   }
 
-  /** The failure that ended the network, the host's first, or null after a requested close. */
+  /** Reports the host's first failure, the native failure, or null after a clean shutdown. */
   get terminated(): Promise<Error | null> {
     return this.network.closed.then((result) => this.failure ?? (result.reason === "failed" ? result.error : null));
   }
@@ -190,6 +190,7 @@ export class NativeNetworkCore implements INetworkCore {
     } catch {}
   };
 
+  /** Releases resources. Operational failure is reported by terminated. */
   close(): Promise<void> {
     if (this.closePromise) return this.closePromise;
     const completion = defer<void>();
@@ -218,12 +219,10 @@ export class NativeNetworkCore implements INetworkCore {
         errors.push(error);
       }
       try {
-        const result = await this.network?.close();
-        if (result?.reason === "failed") this.failure ??= result.error;
+        await this.network?.close();
       } catch (error) {
         errors.push(error);
       }
-      if (this.failure) errors.push(this.failure);
       if (errors.length === 1) throw errors[0];
       if (errors.length > 1) throw new AggregateError(errors, "Native network cleanup failed");
     })().then(() => completion.resolve(), completion.reject);

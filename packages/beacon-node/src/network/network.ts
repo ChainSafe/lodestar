@@ -270,7 +270,7 @@ export class Network implements INetwork {
               await network?.close();
             }
           })
-          .catch((error: unknown) => logger.error("Native network stopped unexpectedly", {}, error as Error));
+          .catch((error: unknown) => logger.error("Native network shutdown failed", {}, error as Error));
       }
       return network;
     } catch (error) {
