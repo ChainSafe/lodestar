@@ -275,10 +275,11 @@ describe("block archiver task", () => {
       }
     }
 
-    // Payload-level: sibling variants are still pruned (the losing FULL payload of the EMPTY-finalized block)
-    expect(dbStub.dataColumnSidecar.deleteMany).toBeCalledWith(
-      nonCanonicalBlocks.map((block) => fromHexString(block.blockRoot))
-    );
+    // Payload-level: the losing FULL payload of the EMPTY-finalized block and the orphan are pruned
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
+      {slot: boundaryFull.slot, blockRoot: boundaryFull.blockRoot},
+      {slot: orphan.slot, blockRoot: orphan.blockRoot},
+    ]);
 
     // Keep light client data of canonical blocks, prune the orphan and the canonical non-checkpoint block
     expect(pruneSpy).toHaveBeenCalledTimes(1);
