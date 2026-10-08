@@ -457,7 +457,8 @@ export async function importBlock(
      * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const fcuHead = this.forkChoice.getHead();
+    const headBlockHash = fcuHead.executionPayloadBlockHash ?? ZERO_HASH_HEX;
     /**
      * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
@@ -467,12 +468,12 @@ export async function importBlock(
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(
-          this.config.getForkName(this.forkChoice.getHead().slot),
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash
-        )
+        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
+        .then(({inclusionListSatisfied}) => {
+          if (inclusionListSatisfied !== null) {
+            this.forkChoice.recordPayloadInclusionListSatisfaction(fcuHead.blockRoot, inclusionListSatisfied);
+          }
+        })
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);

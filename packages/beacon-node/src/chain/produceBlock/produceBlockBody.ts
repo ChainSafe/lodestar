@@ -794,13 +794,20 @@ export async function prepareExecutionPayload(
         feeRecipient: suggestedFeeRecipient,
       });
 
-    payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+    const forkchoiceUpdate = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
       attributes
     );
+    payloadId = forkchoiceUpdate.payloadId;
+    if (forkchoiceUpdate.inclusionListSatisfied !== null) {
+      chain.forkChoice.recordPayloadInclusionListSatisfaction(
+        toRootHex(parentBlockRoot),
+        forkchoiceUpdate.inclusionListSatisfied
+      );
+    }
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 

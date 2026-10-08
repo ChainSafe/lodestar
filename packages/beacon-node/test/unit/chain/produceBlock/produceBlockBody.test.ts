@@ -129,6 +129,34 @@ describe("Fulu builder body", () => {
 });
 
 describe("Fulu engine body", () => {
+  it("records the forkchoiceUpdated inclusion list verdict for the parent payload", async () => {
+    const {state, modules, chain, attrs, common, parentBlockRoot} = setup();
+    modules.chain.beaconProposerCache.getOrDefault.mockReturnValue("0xccccccccccccccccccccccccccccccccccccccbb");
+    modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
+      payloadId: "0x1234",
+      inclusionListSatisfied: false,
+    });
+    modules.chain.executionEngine.getPayload.mockResolvedValue({
+      executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
+      executionPayloadValue: 456n,
+      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+      executionRequests: ssz.electra.ExecutionRequests.defaultValue(),
+    });
+
+    await produceBlockBody.call(chain, BlockType.Full, state, {
+      ...attrs,
+      proposerIndex: 0,
+      proposerPubKey: new Uint8Array(48),
+      commonBlockBodyPromise: Promise.resolve(common),
+    });
+
+    expect(modules.forkChoice.recordPayloadInclusionListSatisfaction).toHaveBeenCalledExactlyOnceWith(
+      toRootHex(parentBlockRoot),
+      false
+    );
+  });
+
   for (const requested of [true, false]) {
     it(`uses the ${requested ? "requested" : "cached"} fee recipient for payload preparation`, async () => {
       const {state, modules, chain, attrs, common, parentBlockRoot} = setup();
@@ -136,7 +164,10 @@ describe("Fulu engine body", () => {
       const cachedRecipient = "0xccccccccccccccccccccccccccccccccccccccbb";
       modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
       modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
+      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
+        payloadId: "0x1234",
+        inclusionListSatisfied: null,
+      });
       modules.chain.executionEngine.getPayload.mockResolvedValue({
         executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
         executionPayloadValue: 456n,

@@ -14,6 +14,7 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
+  ForkchoiceUpdateResult,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
@@ -385,7 +386,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null> {
+  ): Promise<ForkchoiceUpdateResult> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
@@ -411,7 +412,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
     const {
-      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
+      payloadStatus: {status, latestValidHash: _latestValidHash, validationError, inclusionListSatisfied},
       payloadId,
     } = await request;
 
@@ -429,14 +430,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
           void this.prunePayloadIdCache();
         }
-        return payloadId !== "0x" ? payloadId : null;
+        return {
+          payloadId: payloadId !== "0x" ? payloadId : null,
+          inclusionListSatisfied: inclusionListSatisfied ?? null,
+        };
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
         }
-        return null;
+        return {payloadId: null, inclusionListSatisfied: null};
 
       case ExecutionPayloadStatus.INVALID:
         throw Error(

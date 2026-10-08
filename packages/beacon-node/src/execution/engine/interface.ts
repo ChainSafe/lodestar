@@ -120,6 +120,12 @@ export type PayloadAttributes = {
 
 export type VersionedHashes = Uint8Array[];
 
+export type ForkchoiceUpdateResult = {
+  payloadId: PayloadId | null;
+  /** PayloadStatusV2 verdict for the head payload, null pre-heze or until the engine has validated it */
+  inclusionListSatisfied: boolean | null;
+};
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -174,7 +180,7 @@ export interface IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null>;
+  ): Promise<ForkchoiceUpdateResult>;
 
   /**
    * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built

@@ -61,6 +61,8 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHead: vi.fn(),
       getHeadRoot: vi.fn(),
       getDependentRoot: vi.fn(),
+      recordPayloadInclusionListSatisfaction: vi.fn(),
+      isPayloadInclusionListSatisfied: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
@@ -153,7 +155,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       clock,
       forkChoice: getMockedForkChoice(),
       executionEngine: {
-        notifyForkchoiceUpdate: vi.fn(),
+        notifyForkchoiceUpdate: vi.fn().mockResolvedValue({payloadId: "0x", inclusionListSatisfied: null}),
         getPayload: vi.fn(),
         getClientVersion: vi.fn(),
       },
