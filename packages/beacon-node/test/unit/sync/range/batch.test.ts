@@ -17,6 +17,7 @@ import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
+import {ParentPayload} from "../../../../src/sync/utils/downloadByRange.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -307,12 +308,16 @@ describe("sync / range / batch", async () => {
 
       function buildGloasBlockWithEnvelope({
         slot,
+        parentRoot,
+        parentBlockHash,
         blobCount = 0,
         sampledColumns = [],
         addEnvelope = true,
         addAllColumns = true,
       }: {
         slot: number;
+        parentRoot?: Uint8Array;
+        parentBlockHash?: Uint8Array;
         blobCount?: number;
         sampledColumns?: number[];
         addEnvelope?: boolean;
@@ -320,6 +325,8 @@ describe("sync / range / batch", async () => {
       }): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} {
         const block = ssz.gloas.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
+        if (parentRoot) block.message.parentRoot = parentRoot;
+        if (parentBlockHash) block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
         block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
           Buffer.alloc(48, 0x11)
         );
@@ -371,6 +378,65 @@ describe("sync / range / batch", async () => {
         }
         return {blockInput, payloadInput};
       }
+
+      it("requests the dangling parent payload only if the first block builds on the FULL variant of the parent", () => {
+        const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
+        parentBid.blockHash = Buffer.alloc(32, 0x22);
+        const parentRoot = Buffer.alloc(32, 0x33);
+        const parentPayload: ParentPayload = {
+          blockRoot: parentRoot,
+          blockRootHex: toRootHex(parentRoot),
+          slot: getBatchSlotRange(startEpoch).startSlot - 1,
+          proposerIndex: 0,
+          forkName: ForkName.gloas,
+          bid: parentBid,
+        };
+        const testCases = [
+          {
+            name: "parent root and parent block hash match",
+            parentRoot,
+            parentBlockHash: parentBid.blockHash,
+            expected: true,
+          },
+          {
+            name: "parent block hash matches but parent root does not",
+            parentRoot: Buffer.alloc(32, 0x44),
+            parentBlockHash: parentBid.blockHash,
+            expected: false,
+          },
+          {
+            name: "parent root matches but the block builds on the EMPTY variant",
+            parentRoot,
+            parentBlockHash: Buffer.alloc(32, 0x55),
+            expected: false,
+          },
+        ];
+
+        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+          const batch = new Batch(
+            startEpoch,
+            config,
+            clock,
+            custodyConfig,
+            true,
+            parentPayload,
+            Number.MAX_SAFE_INTEGER
+          );
+          batch.startDownloading(peerSyncMeta);
+          const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+            slot: batch.startSlot + 1,
+            parentRoot,
+            parentBlockHash,
+          });
+
+          batch.downloadingSuccess(peer, [blockInput], new Map([[blockInput.slot, payloadInput]]));
+
+          expect(batch.requests.parentPayloadRequest !== undefined, name).toBe(expected);
+          expect(batch.state.status, name).toBe(
+            expected ? BatchStatus.AwaitingDownload : BatchStatus.AwaitingProcessing
+          );
+        }
+      });
 
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
