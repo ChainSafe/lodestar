@@ -100,7 +100,7 @@ export class WorkerNetworkCore implements INetworkCore {
       this.modules.logger.error("Network worker thread error", {}, err);
     });
 
-    const {metrics} = modules;
+    const metrics = modules.metrics?.networkJs;
     if (metrics) {
       metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.addCollect(() => {
         metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.set(this.reqRespBridgeReqCaller.pendingCount);

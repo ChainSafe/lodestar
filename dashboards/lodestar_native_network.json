@@ -73,12 +73,12 @@
       "id": 662,
       "targets": [
         {
-          "expr": "lodestar_native_quic_connections_active",
-          "legendFormat": "open (handshakes included)",
+          "expr": "lodestar_quic_connection_slots_count",
+          "legendFormat": "occupied slots (handshakes and retiring included)",
           "refId": "A"
         },
         {
-          "expr": "lodestar_native_quic_connections_handshaking",
+          "expr": "lodestar_quic_connections_handshaking_count",
           "legendFormat": "handshaking",
           "refId": "B"
         }
@@ -161,13 +161,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_native_peer_below_target",
+          "expr": "lodestar_peers_below_target_bool",
           "interval": "",
           "legendFormat": "below peer target",
           "refId": "C"
         },
         {
-          "expr": "lodestar_native_peer_outbound_deficit",
+          "expr": "lodestar_peer_outbound_deficit_count",
           "legendFormat": "relevant outbound deficit",
           "refId": "D"
         }
@@ -243,7 +243,7 @@
       "pluginVersion": "8.2.2",
       "targets": [
         {
-          "expr": "lodestar_native_gossip_score_peers{scope=\"connected\"}",
+          "expr": "lodestar_gossip_peer_score_by_threshold_count",
           "legendFormat": "{{threshold}}",
           "refId": "B"
         }
@@ -326,9 +326,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_beacon_attestation_subnet_count)",
+          "expr": "sum by (job, instance, digest) (label_replace((gossipsub_mesh_peer_count{topicStr=~\"/eth2/[^/]+/beacon_attestation_[0-9]+/ssz_snappy\"} == bool 0) * gossipsub_topic_subscription_status, \"digest\", \"$1\", \"topicStr\", \"/eth2/([^/]+)/.*\"))",
           "interval": "",
-          "legendFormat": "attnet {{boundary}}",
+          "legendFormat": "attnet {{digest}}",
           "refId": "A"
         },
         {
@@ -337,9 +337,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_sync_committee_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_sync_committee_subnet_count)",
+          "expr": "sum by (job, instance, digest) (label_replace((gossipsub_mesh_peer_count{topicStr=~\"/eth2/[^/]+/sync_committee_[0-9]+/ssz_snappy\"} == bool 0) * gossipsub_topic_subscription_status, \"digest\", \"$1\", \"topicStr\", \"/eth2/([^/]+)/.*\"))",
           "interval": "",
-          "legendFormat": "syncnet {{boundary}}",
+          "legendFormat": "syncnet {{digest}}",
           "refId": "B"
         },
         {
@@ -348,9 +348,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (boundary) ((lodestar_gossip_mesh_peers_by_data_column_subnet_count == bool 0) * lodestar_native_gossip_subscriptions_by_data_column_subnet_count)",
+          "expr": "sum by (job, instance, digest) (label_replace((gossipsub_mesh_peer_count{topicStr=~\"/eth2/[^/]+/data_column_sidecar_[0-9]+/ssz_snappy\"} == bool 0) * gossipsub_topic_subscription_status, \"digest\", \"$1\", \"topicStr\", \"/eth2/([^/]+)/.*\"))",
           "interval": "",
-          "legendFormat": "column {{boundary}}",
+          "legendFormat": "column {{digest}}",
           "refId": "C"
         }
       ],
@@ -459,12 +459,12 @@
       "id": 664,
       "targets": [
         {
-          "expr": "rate(lodestar_native_quic_udp_received_bytes_total[$rate_interval])",
+          "expr": "rate(lodestar_quic_udp_received_bytes_total[$rate_interval])",
           "legendFormat": "received",
           "refId": "A"
         },
         {
-          "expr": "rate(lodestar_native_quic_udp_sent_bytes_total[$rate_interval])",
+          "expr": "rate(lodestar_quic_udp_sent_bytes_total[$rate_interval])",
           "legendFormat": "sent",
           "refId": "B"
         }
@@ -492,12 +492,27 @@
       "id": 652,
       "targets": [
         {
-          "expr": "lodestar_native_gossip_processor_items",
-          "legendFormat": "{{kind}} {{state}}",
+          "expr": "lodestar_gossip_validation_queue_length",
+          "legendFormat": "{{topic}} queued",
           "refId": "A"
+        },
+        {
+          "expr": "lodestar_gossip_validation_waiting_block_count",
+          "legendFormat": "{{topic}} waiting",
+          "refId": "B"
+        },
+        {
+          "expr": "lodestar_gossip_validation_dependency_checks_count",
+          "legendFormat": "{{topic}} checking",
+          "refId": "C"
+        },
+        {
+          "expr": "lodestar_gossip_validation_queue_concurrency",
+          "legendFormat": "{{topic}} executing",
+          "refId": "D"
         }
       ],
-      "title": "Gossip work by kind and state",
+      "title": "Gossip work by topic and state",
       "type": "timeseries"
     },
     {
@@ -520,12 +535,12 @@
       "id": 655,
       "targets": [
         {
-          "expr": "rate(lodestar_native_gossip_processor_refusals_total[$rate_interval])",
-          "legendFormat": "{{kind}} {{reason}}",
+          "expr": "rate(lodestar_gossip_validation_refusals_total[$rate_interval])",
+          "legendFormat": "{{topic}} {{reason}}",
           "refId": "A"
         },
         {
-          "expr": "rate(lodestar_native_gossipsub_storage_refusals_total[$rate_interval])",
+          "expr": "rate(gossipsub_storage_refusals_total[$rate_interval])",
           "legendFormat": "storage {{reason}}",
           "refId": "B"
         }
@@ -581,12 +596,12 @@
       "id": 660,
       "targets": [
         {
-          "expr": "lodestar_native_host_serving_reserved_bytes",
+          "expr": "beacon_reqresp_host_serving_reserved_bytes",
           "legendFormat": "reserved {{scope}}",
           "refId": "A"
         },
         {
-          "expr": "lodestar_native_host_serving_source_pending_bytes",
+          "expr": "beacon_reqresp_host_serving_source_pending_bytes",
           "legendFormat": "source reads pending",
           "refId": "B"
         }
@@ -614,7 +629,7 @@
       "id": 517,
       "targets": [
         {
-          "expr": "rate(lodestar_native_gossip_data_recipients_total{origin=~\"publication|forward\"}[$rate_interval])",
+          "expr": "rate(gossipsub_data_recipients_total{origin=~\"publication|forward\"}[$rate_interval])",
           "legendFormat": "{{origin}} {{outcome}}",
           "refId": "A"
         }
@@ -642,7 +657,7 @@
       "id": 666,
       "targets": [
         {
-          "expr": "rate(lodestar_native_udp_socket_drops_total[$rate_interval])",
+          "expr": "rate(lodestar_udp_socket_drops_total[$rate_interval])",
           "legendFormat": "{{role}} {{family}}",
           "refId": "A"
         }
@@ -670,17 +685,17 @@
       "id": 565,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, rate(lodestar_native_network_step_seconds_bucket[$rate_interval]))",
+          "expr": "histogram_quantile(0.5, rate(lodestar_network_step_seconds_bucket[$rate_interval]))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(lodestar_native_network_step_seconds_bucket[$rate_interval]))",
+          "expr": "histogram_quantile(0.99, rate(lodestar_network_step_seconds_bucket[$rate_interval]))",
           "legendFormat": "p99",
           "refId": "B"
         },
         {
-          "expr": "rate(lodestar_native_network_step_seconds_sum[$rate_interval])\n/\nrate(lodestar_native_network_step_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_network_step_seconds_sum[$rate_interval])\n/\nrate(lodestar_network_step_seconds_count[$rate_interval])",
           "legendFormat": "mean",
           "refId": "C"
         }
@@ -761,7 +776,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "time() - lodestar_native_network_metrics_updated_timestamp_seconds",
+          "expr": "time() - lodestar_network_metrics_updated_timestamp_seconds",
           "interval": "",
           "legendFormat": "{{instance}} export age",
           "refId": "A"

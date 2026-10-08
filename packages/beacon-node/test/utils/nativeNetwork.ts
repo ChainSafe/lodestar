@@ -11,6 +11,7 @@ import {BeaconChain} from "../../src/chain/chain.js";
 import {BeaconDb} from "../../src/db/beacon.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
+import {Metrics, createMetrics} from "../../src/metrics/index.js";
 import {NativeBackendOptions} from "../../src/network/core/native/options.js";
 import {Network} from "../../src/network/network.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
@@ -34,6 +35,7 @@ export async function nativeNetworkFixture(
   let controller: LevelDbController | undefined;
   let chain: BeaconChain | undefined;
   let network: Network | undefined;
+  let metrics: Metrics | undefined;
   const close = async (): Promise<void> => {
     try {
       await network?.close();
@@ -44,6 +46,7 @@ export async function nativeNetworkFixture(
         try {
           await controller?.close();
         } finally {
+          metrics?.close();
           await rm(directory, {recursive: true, force: true});
         }
       }
@@ -60,6 +63,10 @@ export async function nativeNetworkFixture(
     const cached = createCachedBeaconState(state, {config: beaconConfig, pubkeyCache}, {skipSyncPubkeys: true});
     const clock = new ClockStopped(0);
     clock.genesisTime = state.genesisTime;
+    metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
+      includeNetworkJsMetrics: backend !== "native",
+      collectNodeMetrics: false,
+    });
     chain = new BeaconChain(
       {
         archiveStateEpochFrequency: 0,
@@ -82,7 +89,7 @@ export async function nativeNetworkFixture(
         logger,
         processShutdownCallback: () => {},
         clock,
-        metrics: null,
+        metrics,
         validatorMonitor: null,
         anchorState: new BeaconStateView(cached),
         isAnchorStateFinalized: true,
@@ -108,13 +115,13 @@ export async function nativeNetworkFixture(
       config: beaconConfig,
       privateKey,
       logger,
-      metrics: null,
+      metrics,
       chain,
       db,
       getReqRespHandler: nativeServing.getHandler,
       nativeServing,
     });
-    return {network, chain, db, clock, privateKey, budget, close};
+    return {network, chain, db, clock, privateKey, budget, metrics, close};
   } catch (error) {
     await close();
     throw error;

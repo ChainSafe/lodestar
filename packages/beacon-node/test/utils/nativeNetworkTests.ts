@@ -50,6 +50,38 @@ async function nativeRuntimeReleased(): Promise<void> {
 
 describe("native Lodestar integration", () => {
   beforeEach(nativeRuntimeReleased);
+  it("combines beacon and native metrics without duplicate families", async () => {
+    const node = await nativeNetworkFixture(fuluConfig());
+    try {
+      const text = (await node.metrics.register.metrics()) + (await node.network.scrapeMetrics());
+      const names = [...text.matchAll(/^# TYPE (\S+) /gm)].map((match) => match[1]);
+      expect(names.length).toBe(new Set(names).size);
+      for (const name of [
+        "lodestar_gossip_validation_queue_length",
+        "lodestar_gossip_validation_queue_concurrency",
+        "lodestar_awaiting_block_gossip_messages_per_slot_total",
+        "lodestar_gossip_validation_waiting_block_count",
+        "lodestar_gossip_validation_queue_job_time_seconds",
+        "gossipsub_topic_subscription_status",
+        "gossipsub_msg_received_prevalidation_total",
+        "gossipsub_pre_validation_duplicate_total",
+        "gossipsub_msg_publish_count_total",
+        "lodestar_gossip_peer_score_by_threshold_count",
+        "lodestar_gossip_score_avg_min_max_avg",
+        "beacon_reqresp_rate_limiter_errors_total",
+        "lodestar_peers_report_peer_count",
+      ]) {
+        expect(names, name).toContain(name);
+      }
+      expect(text).not.toContain("lodestar_native_");
+      expect(text).not.toContain("lodestar_network_processor_execute_work_calls_total");
+      expect(text).not.toContain("lodestar_network_worker_");
+      expect(node.metrics.networkJs).toBeNull();
+    } finally {
+      await node.close();
+    }
+  }, 15000);
+
   it("requests node shutdown once with the original host failure", async () => {
     const shutdown = vi.fn();
     const node = await nativeNetworkFixture(fuluConfig(), "native", {}, undefined, shutdown);
@@ -159,9 +191,9 @@ describe("native Lodestar integration", () => {
     try {
       node = await nativeNetworkFixture(fuluConfig());
       const metrics = await node.network.scrapeMetrics();
-      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="loaded"} 1\n');
-      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="expired"} 1\n');
-      expect(metrics).toContain('lodestar_native_remembered_peer_seeds_total{outcome="duplicate"} 1\n');
+      expect(metrics).toContain('lodestar_peer_remembered_seeds_total{outcome="loaded"} 1\n');
+      expect(metrics).toContain('lodestar_peer_remembered_seeds_total{outcome="expired"} 1\n');
+      expect(metrics).toContain('lodestar_peer_remembered_seeds_total{outcome="duplicate"} 1\n');
       await node.network.close();
       expect(readFileSync(file, "utf8")).toBe(written);
     } finally {
@@ -306,7 +338,7 @@ describe("native Lodestar integration", () => {
       await vi.waitFor(
         async () =>
           // The host refused the Status and closed the peer
-          expect(await node.network.scrapeMetrics()).toContain('lodestar_native_peer_closes_total{reason="host"} 1\n'),
+          expect(await node.network.scrapeMetrics()).toContain('lodestar_peer_closes_total{reason="host"} 1\n'),
         {timeout: 5000}
       );
       await vi.waitFor(async () => expect((await remote.getPeers()).counts.connected).toBe(0), {timeout: 5000});
@@ -487,8 +519,8 @@ describe("native Lodestar integration", () => {
             expect(metrics).toMatch(
               /gossipsub_topic_peer_count\{topicStr="\/eth2\/[0-9a-f]{8}\/proposer_slashing\/ssz_snappy"\} 1\n/
             );
-            expect(metrics).toMatch(/lodestar_native_quic_udp_sent_bytes_total [1-9]\d*\n/);
-            expect(metrics).toMatch(/lodestar_native_quic_udp_received_bytes_total [1-9]\d*\n/);
+            expect(metrics).toMatch(/lodestar_quic_udp_sent_bytes_total [1-9]\d*\n/);
+            expect(metrics).toMatch(/lodestar_quic_udp_received_bytes_total [1-9]\d*\n/);
             expect(metrics).toContain("libp2p_peers 1\n");
             expect(
               infoLogs.mock.calls.some(
@@ -496,18 +528,16 @@ describe("native Lodestar integration", () => {
               )
             ).toBe(true);
             // The binding renders the family once
-            expect(metrics.match(/^# TYPE lodestar_native_log_delivery_errors_total counter$/gm)).toHaveLength(1);
-            expect(metrics).toContain("lodestar_native_log_delivery_errors_total 0\n");
+            expect(metrics.match(/^# TYPE lodestar_network_log_delivery_errors_total counter$/gm)).toHaveLength(1);
+            expect(metrics).toContain("lodestar_network_log_delivery_errors_total 0\n");
             // The adapter renders its serving gauges once, and the served request returned its charges
-            expect(metrics.match(/^# TYPE lodestar_native_host_serving_reserved_bytes gauge$/gm)).toHaveLength(1);
-            expect(metrics.match(/^# TYPE lodestar_native_host_serving_source_pending_bytes gauge$/gm)).toHaveLength(1);
-            expect(metrics).toContain('lodestar_native_host_serving_reserved_bytes{scope="total"} 0\n');
-            expect(metrics).toContain("lodestar_native_host_serving_source_pending_bytes 0\n");
+            expect(metrics.match(/^# TYPE beacon_reqresp_host_serving_reserved_bytes gauge$/gm)).toHaveLength(1);
+            expect(metrics.match(/^# TYPE beacon_reqresp_host_serving_source_pending_bytes gauge$/gm)).toHaveLength(1);
+            expect(metrics).toContain('beacon_reqresp_host_serving_reserved_bytes{scope="total"} 0\n');
+            expect(metrics).toContain("beacon_reqresp_host_serving_source_pending_bytes 0\n");
             // The adapter renders its report counter once, with the report above
-            expect(metrics.match(/^# TYPE lodestar_native_peer_reports_total counter$/gm)).toHaveLength(1);
-            expect(metrics).toContain(
-              'lodestar_native_peer_reports_total{reason="InvalidResponseSsz",action="high_tolerance"} 1\n'
-            );
+            expect(metrics.match(/^# TYPE lodestar_peers_report_peer_count counter$/gm)).toHaveLength(1);
+            expect(metrics).toContain('lodestar_peers_report_peer_count{reason="InvalidResponseSsz"} 1\n');
           },
           {timeout: 5000}
         );
@@ -527,7 +557,7 @@ describe("native Lodestar integration", () => {
             expect(left.network.getConnectedPeerCount()).toBe(0);
             const metrics = await left.network.scrapeMetrics();
             expect(metrics).toContain('gossipsub_rejected_messages_total{topic="proposer_slashing"} 1\n');
-            expect(metrics).toContain('lodestar_native_peer_reports_total{reason="other",action="fatal"} 1\n');
+            expect(metrics).toContain('lodestar_peers_report_peer_count{reason="other"} 1\n');
           },
           {timeout: 5000}
         );

@@ -242,8 +242,8 @@ it("produces after native credit and keeps capacity charged past stream close un
 /** The serving gauges' samples, after checking their families and types. */
 function servingGauges(text: string): {total: number; source: number; pending: number} {
   expect(text.match(/^# TYPE .*$/gm)).toEqual([
-    "# TYPE lodestar_native_host_serving_reserved_bytes gauge",
-    "# TYPE lodestar_native_host_serving_source_pending_bytes gauge",
+    "# TYPE beacon_reqresp_host_serving_reserved_bytes gauge",
+    "# TYPE beacon_reqresp_host_serving_source_pending_bytes gauge",
   ]);
   const samples = new Map(
     text
@@ -255,14 +255,14 @@ function servingGauges(text: string): {total: number; source: number; pending: n
       })
   );
   expect([...samples.keys()]).toEqual([
-    'lodestar_native_host_serving_reserved_bytes{scope="total"}',
-    'lodestar_native_host_serving_reserved_bytes{scope="source"}',
-    "lodestar_native_host_serving_source_pending_bytes",
+    'beacon_reqresp_host_serving_reserved_bytes{scope="total"}',
+    'beacon_reqresp_host_serving_reserved_bytes{scope="source"}',
+    "beacon_reqresp_host_serving_source_pending_bytes",
   ]);
   return {
-    total: samples.get('lodestar_native_host_serving_reserved_bytes{scope="total"}') ?? NaN,
-    source: samples.get('lodestar_native_host_serving_reserved_bytes{scope="source"}') ?? NaN,
-    pending: samples.get("lodestar_native_host_serving_source_pending_bytes") ?? NaN,
+    total: samples.get('beacon_reqresp_host_serving_reserved_bytes{scope="total"}') ?? NaN,
+    source: samples.get('beacon_reqresp_host_serving_reserved_bytes{scope="source"}') ?? NaN,
+    pending: samples.get("beacon_reqresp_host_serving_source_pending_bytes") ?? NaN,
   };
 }
 

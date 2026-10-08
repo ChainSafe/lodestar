@@ -160,8 +160,8 @@ async function respond(
   }
 }
 
-const RESERVED_NAME = "lodestar_native_host_serving_reserved_bytes";
-const PENDING_NAME = "lodestar_native_host_serving_source_pending_bytes";
+const RESERVED_NAME = "beacon_reqresp_host_serving_reserved_bytes";
+const PENDING_NAME = "beacon_reqresp_host_serving_source_pending_bytes";
 
 export class NativeRequests {
   /** Each request's handler until it retires, with the stream it answers. */
