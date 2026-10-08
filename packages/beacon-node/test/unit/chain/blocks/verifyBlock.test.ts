@@ -109,6 +109,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     const preState = {
       slot: 0,
       isStateValidatorsNodesPopulated: () => true,
+      getShufflingDecisionRoot: () => toRootHex(Buffer.alloc(32)),
       getShufflingAtEpoch: () => shuffling,
     } as unknown as IBeaconStateView;
     chain.regen.getPreState.mockResolvedValue(preState);

@@ -110,12 +110,16 @@ export async function verifyBlocksInEpoch(
           } as SegmentExecStatus);
 
     // Store indexed attestations for each block to avoid recomputing them during import
-    // Use pre-state's shufflings directly because ShufflingCache would immediately prune lowest epoch
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        return getIndexedAttestation(preState0.getShufflingAtEpoch(attEpoch), fork, attestation);
+        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+        // we should have the shuffling inside ShufflingCache most of the time
+        const shuffling =
+          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+          preState0.getShufflingAtEpoch(attEpoch);
+        return getIndexedAttestation(shuffling, fork, attestation);
       });
     }
 

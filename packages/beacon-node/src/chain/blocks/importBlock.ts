@@ -658,7 +658,12 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const committees = getBeaconCommittees(state.getShufflingAtEpoch(attEpoch), attSlot, committeeIndices);
+    // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+    // we should have the shuffling inside ShufflingCache most of the time
+    const shuffling =
+      this.shufflingCache.getSync(attEpoch, state.getShufflingDecisionRoot(attEpoch)) ??
+      state.getShufflingAtEpoch(attEpoch);
+    const committees = getBeaconCommittees(shuffling, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {
