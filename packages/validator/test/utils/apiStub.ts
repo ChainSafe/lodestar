@@ -23,6 +23,7 @@ export function getApiClientStub(): ApiClientStub {
       getProposerDuties: vi.fn(),
       getProposerDutiesV2: vi.fn(),
       getAttesterDuties: vi.fn(),
+      getInclusionListCommitteeDuties: vi.fn(),
       getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
       produceBlockV3: vi.fn(),
