@@ -384,23 +384,29 @@ describe("validateEnvelopesByRangeResponse", () => {
     seenTimestampSec: 0,
   });
 
-  function envelope(payloadBlockHash: Uint8Array, slot = block.message.slot): gloas.SignedExecutionPayloadEnvelope {
+  function envelope(payloadBlockHash: Uint8Array): gloas.SignedExecutionPayloadEnvelope {
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     signedEnvelope.message.beaconBlockRoot = blockRoot;
-    signedEnvelope.message.payload.slotNumber = slot;
+    signedEnvelope.message.payload.slotNumber = block.message.slot;
     signedEnvelope.message.payload.blockHash = payloadBlockHash;
     return signedEnvelope;
   }
 
-  it("accepts an envelope whose payload block hash matches the bid", () => {
-    const result = validateEnvelopesByRangeResponse([{block, blockRoot}], undefined, [envelope(blockHash)]);
+  const blockCases = [
+    {name: "a block downloaded in this attempt", validated: true},
+    {name: "a block cached from a previous attempt", validated: false},
+  ];
+
+  it.each(blockCases)("accepts an envelope whose payload block hash matches the bid of $name", ({validated}) => {
+    const result = validateEnvelopesByRangeResponse(
+      validated ? [{block, blockRoot}] : [],
+      validated ? undefined : [blockInput],
+      [envelope(blockHash)]
+    );
     expect(result.get(block.message.slot)).toBeDefined();
   });
 
-  it.each([
-    {name: "a block downloaded in this attempt", validated: true},
-    {name: "a block cached from a previous attempt", validated: false},
-  ])("rejects an envelope whose payload block hash does not match the bid of $name", ({validated}) => {
+  it.each(blockCases)("rejects an envelope whose payload block hash does not match the bid of $name", ({validated}) => {
     expect(() =>
       validateEnvelopesByRangeResponse(validated ? [{block, blockRoot}] : [], validated ? undefined : [blockInput], [
         envelope(Buffer.alloc(32, 0xee)),
@@ -412,7 +418,7 @@ describe("validateEnvelopesByRangeResponse", () => {
     );
   });
 
-  it("rejects a dangling parent envelope whose payload block hash does not match the parent bid", () => {
+  it("checks the payload block hash of a dangling parent envelope against the parent bid", () => {
     const parentPayloadCommitments = {
       blockRoot,
       blockRootHex: toRootHex(blockRoot),

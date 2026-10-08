@@ -1362,9 +1362,8 @@ export function validateEnvelopesByRangeResponse(
 }
 
 /**
- * The envelope is cached without verifying it, and `assertLinearChainSegment` tracks the execution chain by its
- * payload block hash. An envelope with a wrong hash fails the segment with a `BlockError` before the payload import
- * would reject it, so the cached envelope is never evicted and every retry of the batch fails the same way.
+ * Rejected before it is cached. In-batch, `assertLinearChainSegment` fails on a wrong hash without evicting the
+ * envelope. For the dangling parent, the import evicts the parent's entry and range sync cannot recreate it.
  */
 function assertEnvelopeBlockHash(
   payloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
