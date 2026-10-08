@@ -237,16 +237,30 @@ describe("block archiver task", () => {
     const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
 
     const root = (i: number): string => toHexString(Buffer.alloc(32, i));
-    // Canonical chain:
-    // slot 32 (epoch boundary, finalized via EMPTY),
-    // slot 31 (finalized via FULL),
-    // slot 30 orphaned block
-    const boundaryEmpty = generateProtoBlock({slot: 32, blockRoot: root(1), payloadStatus: PayloadStatus.EMPTY});
-    const boundaryFull = generateProtoBlock({slot: 32, blockRoot: root(1), payloadStatus: PayloadStatus.FULL});
+    // The finalized checkpoint at slot 64 builds on the EMPTY variant at slot 32 after skipped slots.
+    // This finalizes the EMPTY payload choice while slot 32 remains a checkpoint block.
+    const finalizedPending = generateProtoBlock({
+      slot: 64,
+      blockRoot: root(4),
+      parentRoot: root(1),
+      payloadStatus: PayloadStatus.PENDING,
+    });
+    const boundaryEmpty = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      payloadStatus: PayloadStatus.EMPTY,
+    });
+    const boundaryFull = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      payloadStatus: PayloadStatus.FULL,
+    });
     const parentFull = generateProtoBlock({slot: 31, blockRoot: root(2), payloadStatus: PayloadStatus.FULL});
     const parentEmpty = generateProtoBlock({slot: 31, blockRoot: root(2), payloadStatus: PayloadStatus.EMPTY});
     const orphan = generateProtoBlock({slot: 30, blockRoot: root(3), payloadStatus: PayloadStatus.FULL});
-    const canonicalBlocks = [boundaryEmpty, parentFull];
+    const canonicalBlocks = [finalizedPending, boundaryEmpty, parentFull];
     const nonCanonicalBlocks = [boundaryFull, parentEmpty, orphan];
 
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
@@ -260,8 +274,8 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: 1, root: fromHexString(root(1)), rootHex: root(1)},
-      2,
+      {epoch: 2, root: fromHexString(finalizedPending.blockRoot), rootHex: finalizedPending.blockRoot},
+      3,
       null,
       false
     );
