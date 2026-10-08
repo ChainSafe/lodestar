@@ -1274,20 +1274,27 @@ export function getValidatorApi(
           reason: EngineBlockSelectionReason.NoPayload,
           ...logCtx,
           durationMs: emptyBidBlockResult.durationMs,
-          engineError: engineResult.status === "rejected" ? (engineResult.reason as Error).message : engineResult.status,
-          bidError: bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : bidBlockResult.status,
+          engineError:
+            engineResult.status === "rejected" ? (engineResult.reason as Error).message : engineResult.status,
+          bidError:
+            bidBlockResult.status === "rejected" ? (bidBlockResult.reason as Error).message : bidBlockResult.status,
         });
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
         const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
+        const emptyBidReason =
+          emptyBidBlockResult.status === "rejected" ? emptyBidBlockResult.reason : emptyBidBlockResult.status;
         logger.error("Block production failed", {
           ...logCtx,
           engineReason: String(engineReason),
           bidReason: String(bidReason),
+          emptyBidReason: String(emptyBidReason),
         });
-        throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
+        throw Error(
+          `Block production failed: engine=${String(engineReason)} builder=${String(bidReason)} emptyBid=${String(emptyBidReason)}`
+        );
       }
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;

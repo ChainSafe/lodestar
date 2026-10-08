@@ -72,7 +72,7 @@ import {
   toPubkeyHex,
   toRootHex,
 } from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -218,7 +218,7 @@ function getEmptySelfBuildBid(
     parentBlockHash: isBuildingOnFull ? latestExecutionPayloadBid.blockHash : latestExecutionPayloadBid.parentBlockHash,
     parentBlockRoot,
     // Must differ from the parent block hash, no execution payload exists with this block hash
-    blockHash: ZERO_HASH,
+    blockHash: new Uint8Array(32),
     prevRandao: state.getRandaoMix(state.epoch),
     feeRecipient,
     gasLimit: latestExecutionPayloadBid.gasLimit,

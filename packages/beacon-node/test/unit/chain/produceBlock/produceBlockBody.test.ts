@@ -3,7 +3,12 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
-import {BeaconStateView, G2_POINT_AT_INFINITY, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
+import {
+  BeaconStateView,
+  G2_POINT_AT_INFINITY,
+  createCachedBeaconState,
+  isStatePostFulu,
+} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
@@ -143,7 +148,9 @@ describe("Gloas empty bid body", () => {
         modules.forkChoice.shouldBuildOnFull.mockReturnValue(fullParent);
         const getParentExecutionRequests = vi.fn().mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
         Object.assign(chain, {getParentExecutionRequests});
-        Object.assign(modules.chain.payloadAttestationPool, {getPayloadAttestationsForBlock: vi.fn().mockReturnValue([])});
+        Object.assign(modules.chain.payloadAttestationPool, {
+          getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
+        });
         const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
         const {body, executionPayloadValue} = await produceBlockBody.call(chain, BlockType.Full, state, {
