@@ -307,8 +307,6 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
 /** Heze+ state fields — use isStatePostHeze() guard */
 export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
   forkName: ForkPostHeze;
-  /** Inclusion list committee for `slot`, cycling over that slot's concatenated beacon committees. */
-  getInclusionListCommittee(slot: Slot): Uint32Array;
 }
 
 /**
@@ -346,7 +344,6 @@ export type IBeaconStateViewNative = Omit<
   | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
-  | "getInclusionListCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
   | "getPayloadTimelinessCommittee"
   | "loadOtherState"

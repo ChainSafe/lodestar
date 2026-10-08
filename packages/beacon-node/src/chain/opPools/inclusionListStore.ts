@@ -9,8 +9,6 @@ export enum InclusionListInsertOutcome {
   New = "New",
   /** Slot is older than the prune horizon. */
   Old = "Old",
-  /** `(slot, dependent_root)` is at capacity. */
-  ReachLimit = "ReachLimit",
   /** Identical inclusion list already stored. */
   Seen = "Seen",
   /** New equivocation evidence: this validator already has a different inclusion list stored. */
@@ -94,10 +92,6 @@ export class InclusionListStore {
       }
       equivocators.add(validatorIndex);
       return InclusionListInsertOutcome.Equivocating;
-    }
-
-    if (stored.size >= INCLUSION_LIST_COMMITTEE_SIZE) {
-      return InclusionListInsertOutcome.ReachLimit;
     }
 
     stored.set(validatorIndex, {signedInclusionList, committeeIndex, timely});

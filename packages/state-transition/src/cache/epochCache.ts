@@ -50,7 +50,6 @@ import {
   calculateCommitteeAssignments,
   getAttestingIndices,
   getBeaconCommittees,
-  getInclusionListCommittee,
   getIndexedAttestation,
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
@@ -772,10 +771,6 @@ export class EpochCache {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
     return getBeaconCommittees(this.getShufflingAtSlot(slot), slot, indices);
-  }
-
-  getInclusionListCommittee(slot: Slot): Uint32Array {
-    return getInclusionListCommittee(this.getShufflingAtSlot(slot), slot);
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {

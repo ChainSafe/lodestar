@@ -37,10 +37,8 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {EMPTY_SIGNATURE} from "../constants/constants.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
-import {computeEpochAtSlot} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
-import {getInclusionListCommittee} from "../util/shuffling.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
   BlockSTFInput,
@@ -328,11 +326,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this.cachedBeaconCommitteeCountPerSlot.set(epoch, cached);
     }
     return cached;
-  }
-
-  // The binding exposes no inclusion list committee accessor; getShufflingAtEpoch is cached per epoch
-  getInclusionListCommittee(slot: Slot): Uint32Array {
-    return getInclusionListCommittee(this.getShufflingAtEpoch(computeEpochAtSlot(slot)), slot);
   }
 
   get previousDecisionRoot(): RootHex {

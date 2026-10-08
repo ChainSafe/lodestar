@@ -201,7 +201,7 @@ export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: 
   return computeInclusionListCommittee(epochShuffling.committees[slot % SLOTS_PER_EPOCH]);
 }
 
-export function computeInclusionListCommittee(slotCommittees: Uint32Array[]): Uint32Array {
+function computeInclusionListCommittee(slotCommittees: Uint32Array[]): Uint32Array {
   let totalLen = 0;
   for (const committee of slotCommittees) {
     totalLen += committee.length;
