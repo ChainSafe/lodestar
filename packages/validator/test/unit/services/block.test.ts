@@ -272,4 +272,82 @@ describe("BlockDutiesService", () => {
       builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
     });
   });
+
+  it("Should not use builder bids when producing a Gloas block with executiononly", async () => {
+    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      dutiesService,
+      null,
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        blindedLocal: false,
+        payloadLocal: false,
+      }
+    );
+
+    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    // Beacon node ignored the configuration and selected a builder bid
+    signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      boostFactor: BigInt(0),
+    });
+    validatorStore.getBuilderMinBid.mockReturnValue(0n);
+    validatorStore.getGraffiti.mockReturnValue("aaaa");
+    validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
+    validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+
+    api.validator.produceBlockV4.mockResolvedValue(
+      mockApiResponse({
+        data: signedBlock.message,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(1),
+          executionPayloadIncluded: false,
+        },
+      })
+    );
+
+    const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+    notifyBlockProductionFn(1, [pubkeys[0]]);
+    await sleep(20, controller.signal);
+
+    expect(validatorStore.getResolvedBuilderEntries).not.toHaveBeenCalled();
+    expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
+      slot: 1,
+      randaoReveal: signedBlock.message.body.randaoReveal,
+      graffiti: "aaaa",
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {minBid: 2n ** 64n - 1n, builderBoostFactor: 0n, builders: []},
+    });
+    expect(validatorStore.signBlock).not.toHaveBeenCalled();
+    expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+  });
 });

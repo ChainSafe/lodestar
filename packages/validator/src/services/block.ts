@@ -42,6 +42,10 @@ type BlockProposalOpts = {
   blindedLocal: boolean;
   payloadLocal: boolean;
 };
+
+/** Minimum bid value that excludes p2p bids from selection, top-level `minBid` only applies to p2p bids */
+const EXECUTION_ONLY_MIN_BID = 2n ** 64n - 1n;
+
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -194,8 +198,12 @@ export class BlockProposingService {
     const {broadcastValidation, payloadLocal} = this.opts;
     const {selection: builderSelection, boostFactor: builderBoostFactor} =
       this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
-    const builderMinBid = this.validatorStore.getBuilderMinBid(pubkeyHex);
-    const builderEntries = this.validatorStore.getResolvedBuilderEntries(pubkeyHex, builderBoostFactor);
+    // `executiononly` never uses a builder bid, neither from builder APIs nor received over p2p
+    const isExecutionOnly = builderSelection === routes.validator.BuilderSelection.ExecutionOnly;
+    const builderMinBid = isExecutionOnly ? EXECUTION_ONLY_MIN_BID : this.validatorStore.getBuilderMinBid(pubkeyHex);
+    const builderEntries = isExecutionOnly
+      ? []
+      : this.validatorStore.getResolvedBuilderEntries(pubkeyHex, builderBoostFactor);
 
     this.logger.debug("Producing block", {
       ...debugLogCtx,
@@ -271,6 +279,13 @@ export class BlockProposingService {
     });
     this.metrics?.blocksProduced.inc();
 
+    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
+    if (isExecutionOnly && !isSelfBuild) {
+      throw Error(
+        `Block not produced as per desired builderSelection=${builderSelection} builderIndex=${block.body.signedExecutionPayloadBid.message.builderIndex}`
+      );
+    }
+
     // Step 2: Sign and publish the beacon block
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
@@ -302,8 +317,6 @@ export class BlockProposingService {
     });
     this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
     this.metrics?.blocksPublished.inc();
-
-    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
     if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope
