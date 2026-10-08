@@ -169,7 +169,7 @@ export async function archiveBlocks(
     }
   }
 
-  // Index canonical fork-choice variants by block root. 
+  // Index canonical fork-choice variants by block root.
   // Gloas EMPTY and FULL variants share a block root,
   // and block-level data is stored once per root.
   const canonicalBlockRootHexes = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
