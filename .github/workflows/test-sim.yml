@@ -49,7 +49,6 @@ jobs:
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests multifork
         run: DEBUG='${{github.event.inputs.debug}}' pnpm test:sim:multifork
         working-directory: packages/cli
@@ -78,7 +77,6 @@ jobs:
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests endpoints
         run: DEBUG='${{github.event.inputs.debug}}'  pnpm test:sim:endpoints
         working-directory: packages/cli
@@ -107,7 +105,6 @@ jobs:
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests backup eth provider
         run: DEBUG='${{github.event.inputs.debug}}' pnpm test:sim:backup_eth_provider
         working-directory: packages/cli
@@ -136,7 +133,6 @@ jobs:
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          # docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests mixed client
         run: DEBUG='${{github.event.inputs.debug}}' pnpm test:sim:mixedclient
         working-directory: packages/cli

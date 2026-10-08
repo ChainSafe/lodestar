@@ -1,6 +1,6 @@
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
+import {BeaconClient, BeaconNode, ExecutionNode, NodePair} from "../interfaces.js";
 import {Simulation} from "../simulation.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";
 
@@ -55,9 +55,7 @@ export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionN
   for (const node of nodes) {
     if (node === newNode) continue;
 
-    // Nethermind had a bug in admin_addPeer RPC call
-    // https://github.com/NethermindEth/nethermind/issues/4876
-    if (node.provider !== null && node.client !== ExecutionClient.Nethermind && elIdentity) {
+    if (node.provider !== null && elIdentity) {
       // `web3.admin` here refers to the Web3 plugin `Web3AdminPlugin`
       await node.provider.admin.addPeer(elIdentity.enode);
     }

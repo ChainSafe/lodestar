@@ -42,7 +42,6 @@ export enum ValidatorClient {
 export enum ExecutionClient {
   Mock = "execution-mock",
   Geth = "execution-geth",
-  Nethermind = "execution-nethermind",
 }
 
 export type BeaconClientsOptions = {
@@ -58,7 +57,6 @@ export type ValidatorClientsOptions = {
 export type ExecutionClientsOptions = {
   [ExecutionClient.Mock]: string[];
   [ExecutionClient.Geth]: string[];
-  [ExecutionClient.Nethermind]: string[];
 };
 
 export type ExecutionNodeDefinition<E extends ExecutionClient> =
@@ -384,15 +382,6 @@ export interface AssertionError {
   data?: Record<string, unknown>;
 }
 export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
-
-export type Eth1GenesisBlock = {
-  config: {
-    chainId: number;
-    clique: Record<string, unknown>;
-    terminalTotalDifficulty: string;
-  };
-  alloc: Record<string, {balance: string}>;
-};
 
 export abstract class SimulationReporter<T extends Assertion[]> {
   constructor(

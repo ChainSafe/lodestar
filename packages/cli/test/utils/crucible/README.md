@@ -7,8 +7,7 @@ Lodestar simulation tests allows to setup a small, local devnet for the variety 
 **EL CLinents**
 
 1. Geth
-2. Nethermind
-3. Mock (only for specific use case testing)
+2. Mock (only for specific use case testing)
 
 **CL Clients**
 
@@ -23,7 +22,6 @@ You can run any of npm task prefixed with `test:sim:*`. There are different scen
 | ---------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Geth       | GETH_DOCKER_IMAGE       | Use it if you want to run the Geth in the docker. Preferred approach.                                                                                                                                                 |
 | Geth       | GETH_BINARY_DIR         | If you want to test something locally which is not yet published on Geth, you can set this variable to point to geth binary directory. Remember point it to directory containing `geth` binary not the binary itself. |
-| Nethermind | NETHERMIND_DOCKER_IMAGE | Use it to set the Nethermind docker image. Currently only docker is supported for this client.                                                                                                                        |
 | Lighthouse | LIGHTHOUSE_DOCKER_IMAGE | Similar to other clients use it to set Lighouse docker image. Make use you use `-dev` suffixed image tags as these are the only one supporting `minimal` preset.                                                      |
 | Lighthouse | LIGHTHOUSE_BINARY_PATH  | Use local compiled binary. Make sure it's compiled with the `minimal` spec enabled.                                                                                                                                   |
 

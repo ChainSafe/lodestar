@@ -63,7 +63,6 @@ export function defineSimTestConfig(
       genesisDelaySeconds,
       secondsPerSlot: SIM_TESTS_SLOT_DURATION_MS / 1000,
       runTill: opts.runTillEpoch,
-      // After adding Nethermind its took longer to complete
       graceExtraTimeFraction: opts.graceExtraTimeFraction ?? 0.3,
     }) * 1000;
 

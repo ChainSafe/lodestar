@@ -12,7 +12,6 @@ import {getEstimatedForkTime} from "../../utils/index.js";
 import {ensureDirectories} from "../../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";
-import {generateNethermindNode} from "./nethermind.js";
 
 export async function createExecutionNode<E extends ExecutionClient>(
   client: E,
@@ -70,9 +69,6 @@ export async function createExecutionNode<E extends ExecutionClient>(
     }
     case ExecutionClient.Geth: {
       return generateGethNode(opts as ExecutionGeneratorOptions<ExecutionClient.Geth>, runner);
-    }
-    case ExecutionClient.Nethermind: {
-      return generateNethermindNode(opts as ExecutionGeneratorOptions<ExecutionClient.Nethermind>, runner);
     }
     default:
       throw new Error(`Execution Client "${client}" not supported`);

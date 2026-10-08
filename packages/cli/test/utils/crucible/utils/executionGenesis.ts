@@ -1,5 +1,5 @@
-import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {Eth1GenesisBlock, ExecutionGenesisOptions} from "../interfaces.js";
+import {SIM_ENV_CHAIN_ID} from "../constants.js";
+import {ExecutionGenesisOptions} from "../interfaces.js";
 
 export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<string, unknown> => {
   const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime, pragueTime} = options;
@@ -61,59 +61,4 @@ export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<st
   };
 
   return genesis;
-};
-
-export const getNethermindChainSpec = (options: ExecutionGenesisOptions): Record<string, unknown> => {
-  const {ttd, shanghaiTime} = options;
-  const genesis = getGethGenesisBlock(options) as Eth1GenesisBlock;
-
-  return {
-    name: "simulation-dev",
-    dataDir: "goerli",
-    engine: {clique: {params: genesis.config.clique}},
-    params: {
-      accountStartNonce: "0x0",
-      chainID: SIM_ENV_CHAIN_ID,
-      networkID: SIM_ENV_NETWORK_ID,
-      eip140Transition: "0x0",
-      eip145Transition: "0x0",
-      eip150Transition: "0x0",
-      eip155Transition: "0x0",
-      eip160Transition: "0x0",
-      eip161abcTransition: "0x0",
-      eip161dTransition: "0x0",
-      eip211Transition: "0x0",
-      eip214Transition: "0x0",
-      eip658Transition: "0x0",
-      eip1014Transition: "0x0",
-      eip1052Transition: "0x0",
-      eip1283Transition: "0x0",
-      eip1283DisableTransition: "0x0",
-      eip152Transition: "0x0",
-      eip1108Transition: "0x0",
-      eip1344Transition: "0x0",
-      eip1884Transition: "0x0",
-      eip2028Transition: "0x0",
-      eip2200Transition: "0x0",
-      eip2565Transition: "0x0",
-      eip2929Transition: "0x0",
-      eip2930Transition: "0x0",
-      eip1559Transition: "0x0",
-      eip3198Transition: "0x0",
-      eip3529Transition: "0x0",
-      eip3541Transition: "0x0",
-      terminalTotalDifficulty: Number(ttd as bigint),
-      gasLimitBoundDivisor: "0x400",
-      maxCodeSize: "0x6000",
-      maxCodeSizeTransition: "0x0",
-      maximumExtraDataSize: "0xfff",
-      minGasLimit: "0x0",
-      eip4895TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
-      eip3855TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
-      eip3651TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
-      eip3860TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
-    },
-    accounts: genesis.alloc,
-    genesis: genesis,
-  };
 };
