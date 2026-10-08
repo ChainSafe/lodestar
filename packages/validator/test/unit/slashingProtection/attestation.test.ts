@@ -2,10 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {rimraf} from "rimraf";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {defer, sleep, toHex} from "@lodestar/utils";
+import {AttestationByTargetRepository} from "../../../src/slashingProtection/attestation/index.js";
 import {
   InvalidAttestationErrorCode,
   SlashingProtection,
@@ -130,5 +131,159 @@ describe("SlashingProtection attestation min-span lookback", () => {
   it("rejects a source epoch just outside the min-max span lookback window", async () => {
     await sign(10_000, 10_001);
     await rejectsWith(sign(5_902, 10_000), InvalidAttestationErrorCode.SOURCE_BELOW_MIN_SPAN_LOOKBACK);
+  });
+});
+
+describe("SlashingProtection overlapping attestation checks", () => {
+  const pubkey = ssz.BLSPubkey.defaultValue();
+  const attestation = {sourceEpoch: 9, targetEpoch: 10, signingRoot: Buffer.alloc(32, 1)};
+  const conflict = {sourceEpoch: 9, targetEpoch: 10, signingRoot: Buffer.alloc(32, 2)};
+  let dbLocation: string;
+  let db: LevelDbController;
+  let slashingProtection: SlashingProtection;
+  let attestations: AttestationByTargetRepository;
+
+  beforeEach(async () => {
+    dbLocation = fs.mkdtempSync(path.join(os.tmpdir(), "lodestar-attestation-slashing-protection-"));
+    db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
+    slashingProtection = new SlashingProtection(db);
+    attestations = new AttestationByTargetRepository(db);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await db.close();
+    rimraf.sync(dbLocation);
+  });
+
+  it("rejects a double vote when checks for the same public key bytes overlap", async () => {
+    const results = await Promise.allSettled([
+      slashingProtection.checkAndInsertAttestation(pubkey, attestation),
+      slashingProtection.checkAndInsertAttestation(Uint8Array.from(pubkey), conflict),
+    ]);
+
+    expect(results).toMatchObject([
+      {status: "fulfilled"},
+      {status: "rejected", reason: {type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE}}},
+    ]);
+    expect(await attestations.getAll(pubkey)).toEqual([attestation]);
+  });
+
+  it("accepts overlapping checks for the same attestation", async () => {
+    await Promise.all([
+      slashingProtection.checkAndInsertAttestation(pubkey, attestation),
+      slashingProtection.checkAndInsertAttestation(pubkey, attestation),
+    ]);
+
+    expect(await attestations.getAll(pubkey)).toEqual([attestation]);
+  });
+
+  it("rejects a surround vote when checks for different targets overlap", async () => {
+    const surrounding = {sourceEpoch: 8, targetEpoch: 11, signingRoot: Buffer.alloc(32, 3)};
+    const results = await Promise.allSettled([
+      slashingProtection.checkAndInsertAttestation(pubkey, attestation),
+      slashingProtection.checkAndInsertAttestation(pubkey, surrounding),
+    ]);
+
+    expect(results).toMatchObject([
+      {status: "fulfilled"},
+      {status: "rejected", reason: {type: {code: InvalidAttestationErrorCode.NEW_SURROUNDS_PREV}}},
+    ]);
+    expect(await attestations.getAll(pubkey)).toEqual([attestation]);
+  });
+
+  it("continues queued checks after a double vote is rejected", async () => {
+    await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: Buffer.alloc(32, 1)};
+    const results = await Promise.allSettled([
+      slashingProtection.checkAndInsertAttestation(pubkey, conflict),
+      slashingProtection.checkAndInsertAttestation(pubkey, next),
+    ]);
+
+    expect(results).toMatchObject([
+      {status: "rejected", reason: {type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE}}},
+      {status: "fulfilled"},
+    ]);
+    expect(await attestations.getAll(pubkey)).toEqual([attestation, next]);
+  });
+
+  it("continues queued checks after a database write fails", async () => {
+    const writeError = new Error("database write failed");
+    vi.spyOn(db, "batchPut").mockRejectedValueOnce(writeError);
+    const results = await Promise.allSettled([
+      slashingProtection.checkAndInsertAttestation(pubkey, attestation),
+      slashingProtection.checkAndInsertAttestation(pubkey, conflict),
+    ]);
+
+    expect(results).toEqual([
+      {status: "rejected", reason: writeError},
+      {status: "fulfilled", value: undefined},
+    ]);
+    expect(await attestations.getAll(pubkey)).toEqual([conflict]);
+  });
+
+  it("does not lose an imported attestation when an import overlaps a check for the same target", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+    const pending = slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+    await started.promise;
+
+    const genesisValidatorsRoot = ssz.Root.defaultValue();
+    const imported = slashingProtection.importInterchange(
+      {
+        metadata: {interchange_format_version: "5", genesis_validators_root: toHex(genesisValidatorsRoot)},
+        data: [
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [],
+            signed_attestations: [
+              {
+                source_epoch: String(conflict.sourceEpoch),
+                target_epoch: String(conflict.targetEpoch),
+                signing_root: toHex(conflict.signingRoot),
+              },
+            ],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    // An import that does not wait for the pending check writes its attestation before the check does
+    await Promise.race([imported, sleep(10)]);
+    release.resolve();
+    await Promise.all([pending, imported]);
+
+    expect(await attestations.getAll(pubkey)).toEqual([{...attestation, signingRoot: Buffer.alloc(32)}]);
+    await expect(slashingProtection.checkAndInsertAttestation(pubkey, conflict)).rejects.toMatchObject({
+      type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE},
+    });
+  });
+
+  it("does not block other validators while a write is pending", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+    const pending = slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+
+    try {
+      await started.promise;
+      const otherPubkey = Buffer.alloc(48, 1);
+      await slashingProtection.checkAndInsertAttestation(otherPubkey, conflict);
+      expect(await attestations.getAll(otherPubkey)).toEqual([conflict]);
+    } finally {
+      release.resolve();
+      await pending;
+    }
   });
 });
