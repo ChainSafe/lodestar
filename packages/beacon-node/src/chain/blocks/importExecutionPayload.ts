@@ -263,10 +263,13 @@ export async function importExecutionPayload(
   });
 
   // Recorded before the payload enters fork choice so should_extend_payload never sees a delivered
-  // payload without a verdict. Only a VALID response carries one, anything else counts as unsatisfied.
+  // payload without a verdict. A VALID response carries one, an optimistically imported payload counts
+  // as satisfied until the engine validates it, anything else as unsatisfied
   if (inclusionListTransactions !== undefined) {
     const satisfied =
-      execResult.status === ExecutionPayloadStatus.VALID ? (execResult.inclusionListSatisfied ?? false) : false;
+      execResult.status === ExecutionPayloadStatus.VALID
+        ? (execResult.inclusionListSatisfied ?? false)
+        : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
     this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
     if (!satisfied) {
       this.logger.verbose("Payload did not satisfy inclusion list constraints", {slot, blockRoot: blockRootHex});

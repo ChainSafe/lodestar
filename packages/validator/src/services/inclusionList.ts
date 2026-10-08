@@ -49,12 +49,26 @@ export class InclusionListService {
       return;
     }
     // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
-    // local head. Wait for the slot's payload import so the execution layer's mempool view is post-slot,
-    // or fall back to the deadline for empty or late slots.
+    // local head. Wait until the beacon node reports the slot's payload available, which it emits before
+    // execution validation, or fall back to the deadline for empty or late slots.
     const dueMs = Math.max(0, this.config.getInclusionListDueMs() - this.clock.msFromSlot(slot));
     // Publish ahead of the deadline so the list still counts as timely for peers
     const beforeDueMs = 1000;
-    await Promise.race([sleep(Math.max(0, dueMs - beforeDueMs), signal), this.waitForPayloadAvailable(slot, signal)]);
+    let resolvePayloadAvailable = (): void => {};
+    const payloadAvailable = new Promise<void>((resolve) => {
+      resolvePayloadAvailable = resolve;
+    });
+    const onPayloadAvailable = (payload: ExecutionPayloadAvailableEventData): void => {
+      if (payload.slot === slot) {
+        resolvePayloadAvailable();
+      }
+    };
+    this.emitter.on(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+    try {
+      await Promise.race([sleep(Math.max(0, dueMs - beforeDueMs), signal), payloadAvailable]);
+    } finally {
+      this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+    }
 
     const inclusionListTransactions = await this.produceInclusionList(slot);
 
@@ -66,23 +80,6 @@ export class InclusionListService {
 
     await this.signAndPublishInclusionList(inclusionListTransactions, duties);
   };
-
-  private waitForPayloadAvailable(slot: Slot, signal: AbortSignal): Promise<void> {
-    return new Promise((resolve) => {
-      const onPayloadAvailable = (payload: ExecutionPayloadAvailableEventData): void => {
-        if (payload.slot === slot) {
-          this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
-          resolve();
-        }
-      };
-      signal.addEventListener(
-        "abort",
-        () => this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable),
-        {once: true}
-      );
-      this.emitter.on(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
-    });
-  }
 
   private async produceInclusionList(slot: Slot): Promise<bellatrix.Transactions> {
     return (await this.api.validator.produceInclusionList({slot})).value();

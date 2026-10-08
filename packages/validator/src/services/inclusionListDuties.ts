@@ -23,7 +23,7 @@ type InclusionListDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<Va
  *   - No handling and maintaining subnet subscription
  */
 export class InclusionListDutiesService {
-  /** Maps a validator public key to their duties for each epoch */
+  /** Maps a validator index to its duty for each epoch */
   private readonly dutiesByIndexByEpoch = new Map<Epoch, InclusionListDutiesAtEpoch>();
   /**
    * We may receive new dependentRoot of an epoch but it's not the last slot of epoch
@@ -132,15 +132,6 @@ export class InclusionListDutiesService {
     this.pruneOldDuties(epoch);
   };
 
-  /**
-   * Query the beacon node for inclusion list duties for any known validators.
-   *
-   * This function will perform (in the following order):
-   *
-   * 1. Poll for current-epoch duties and update the local duties map.
-   * 2. As above, but for the next-epoch.
-   * 3. Prune old entries from duties.
-   */
   private async pollInclusionListCommittee(currentEpoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     const nextEpoch = currentEpoch + 1;
 
