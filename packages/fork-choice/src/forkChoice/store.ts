@@ -2,7 +2,7 @@ import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-tran
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.js";
-import {CheckpointWithBalance, CheckpointWithTotalBalance} from "./interface.js";
+import {CheckpointWithBalance, CheckpointWithTotalBalance, PtcQuorumEvent} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -51,6 +51,7 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
    */
   payloadInclusionListSatisfaction: Map<RootHex, boolean>;
   notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
+  notifyPtcQuorum?(data: PtcQuorumEvent): void;
 }
 
 /**
@@ -91,6 +92,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
       onFastConfirmation?: (data: {block: RootHex; slot: Slot; currentSlot: Slot}) => void;
+      onPtcQuorum?: (data: PtcQuorumEvent) => void;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
@@ -147,6 +149,10 @@ export class ForkChoiceStore implements IForkChoiceStore {
    */
   notifyFastConfirmation(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void {
     this.events?.onFastConfirmation?.(data);
+  }
+
+  notifyPtcQuorum(data: PtcQuorumEvent): void {
+    this.events?.onPtcQuorum?.(data);
   }
 }
 

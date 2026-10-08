@@ -1303,6 +1303,10 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
             help: "Total number of committees for which all members are seen when producing packed attestations",
           }),
+          missingShufflingCommittees: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_missing_shuffling_committees_total",
+            help: "Total number of committees skipped due to missing shuffling when producing packed attestations",
+          }),
         },
       },
       attestationPool: {

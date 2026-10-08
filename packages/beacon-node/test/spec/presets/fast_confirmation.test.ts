@@ -1,6 +1,6 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {expect} from "vitest";
+import {expect, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
@@ -73,6 +73,17 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
+// bls_setting=2 vectors carry placeholder deposit signatures; mocks the built lib module that epoch processing imports
+const shouldVerifyDepositSignatures = vi.hoisted(() => ({value: true}));
+vi.mock("../../../../state-transition/lib/block/processDeposit.js", async (importOriginal) => {
+  const actual = await importOriginal<{isValidDepositSignature: (...args: unknown[]) => boolean}>();
+  return {
+    ...actual,
+    isValidDepositSignature: (...args: unknown[]) =>
+      !shouldVerifyDepositSignatures.value || actual.isValidDepositSignature(...args),
+  };
+});
+
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
@@ -90,6 +101,7 @@ const fastConfirmationTest =
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
+        shouldVerifyDepositSignatures.value = testcase.meta?.bls_setting === BigInt(1);
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
         // const state = createCachedBeaconStateTest(anchorState, config);
@@ -157,6 +169,7 @@ const fastConfirmationTest =
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
+            earliestAvailableSlot: cachedState.slot,
             executionEngine,
             executionBuilder: undefined,
           }
@@ -704,14 +717,6 @@ const fastConfirmationTest =
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
         timeout: 15000,
         expectFunc: () => {},
-        // Prefer adding skips in packages/beacon-node/test/spec/utils/specTestIterator.ts.
-        shouldSkip: (_testcase, name, _index) =>
-          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
-          // be applied. Passing them requires skipping deposit signature verification inside epoch
-          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
-          // real, or if full bls_setting=2 support is ever added.
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };

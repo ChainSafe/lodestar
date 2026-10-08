@@ -41,6 +41,8 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // These are preset values, not config values - they're tested separately
   "PRESET_BASE",
   "CONFIG_NAME",
+  // EIP-8198 quick slots are not implemented.
+  "MIN_BLOB_DATA_RETENTION_MS" as keyof ChainConfig,
 ];
 
 /**

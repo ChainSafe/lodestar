@@ -9,7 +9,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -122,9 +122,9 @@ class GossipTestClock extends EventEmitter implements IClock {
     return (toMs ?? this.currentTimeMs) - slotTimeMs;
   }
 
-  /** Set the current time in milliseconds since genesis */
+  /** Set the current Unix time in milliseconds */
   setCurrentTimeMs(ms: number): void {
-    this.currentTimeMs = this.genesisTime * 1000 + ms;
+    this.currentTimeMs = ms;
   }
 
   /** Also support setSlot for block import phases */
@@ -139,10 +139,7 @@ interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
-  current_time_ms?: bigint;
   messages: {
-    offset_ms?: bigint;
-    /** Absolute receive time. TODO: temporary, not in the documented format, see messageTimeMs below */
     current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
@@ -256,7 +253,17 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
 }
 
 function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatus {
-  return isForkPostDeneb(fork) ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData;
+  switch (fork) {
+    case ForkName.deneb:
+    case ForkName.electra:
+    case ForkName.fulu:
+    case ForkName.gloas:
+    case ForkName.heze:
+      return DataAvailabilityStatus.Available;
+
+    default:
+      return DataAvailabilityStatus.PreData;
+  }
 }
 
 function computePostState(
@@ -382,6 +389,7 @@ export async function runGossipValidationTest(
       validatorMonitor: null,
       anchorState: anchorStateView,
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
       executionBuilder: undefined,
     }
@@ -510,18 +518,10 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      // TODO: the format only documents `offset_ms`
-      // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.2/tests/formats/networking/gossip_validation.md?plain=1#L58),
-      // but since consensus-specs#5294 the gloas and later generators also write an absolute per-message
-      // `current_time_ms`. Accepting both is temporary until upstream clarifies. If `current_time_ms` stays,
-      // upstream this to unstable; if the generators revert to `offset_ms`, drop the per-message branch.
-      const messageTimeMs =
-        message.current_time_ms !== undefined
-          ? Number(message.current_time_ms)
-          : baseCurrentTimeMs + Number(message.offset_ms ?? 0);
-      clock.setCurrentTimeMs(messageTimeMs);
+      if (message.current_time_ms !== undefined) {
+        clock.setCurrentTimeMs(Number(message.current_time_ms));
+      }
 
       let result: "valid" | "ignore" | "reject";
       try {

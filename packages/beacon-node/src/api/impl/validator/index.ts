@@ -194,6 +194,7 @@ export enum EngineBlockSelectionReason {
   BuilderTimeout = "builder_timeout",
   BuilderPending = "builder_pending",
   BuilderNoBid = "builder_no_bid",
+  BuilderCircuitBreaker = "builder_circuit_breaker",
   BuilderCensorship = "builder_censorship",
   BlockValue = "block_value",
   EnginePreferred = "engine_preferred",
@@ -1193,8 +1194,21 @@ export function getValidatorApi(
           : {}),
       };
 
-      // handle shouldOverrideBuilder separately
-      if (
+      if (circuitBreakerActive && engineResult.status === "fulfilled") {
+        source = ProducedBlockSource.engine;
+        bestResult = engineResult;
+        metrics?.blockProductionSelectionResults.inc({
+          source: ProducedBlockSource.engine,
+          reason: EngineBlockSelectionReason.BuilderCircuitBreaker,
+        });
+        logger.info("Selected local block: builder circuit breaker is active", {
+          reason: EngineBlockSelectionReason.BuilderCircuitBreaker,
+          ...logCtx,
+          durationMs: engineResult.durationMs,
+          ...getBlockValueLogInfo(engineResult.value),
+        });
+      } else if (
+        // handle shouldOverrideBuilder separately
         engineResult.status === "fulfilled" &&
         engineResult.value.shouldOverrideBuilder &&
         (builderBidExpected || bidBlockResult.status === "fulfilled")
@@ -1318,6 +1332,10 @@ export function getValidatorApi(
           kzgProofs: blobsBundle.proofs,
           blobs: blobsBundle.blobs,
         };
+
+        if (chain.opts.persistProducedPayloadEnvelopes) {
+          chain.persistExecutionPayloadEnvelope(blockContents.executionPayloadEnvelope);
+        }
 
         return {
           data: blockContents,
@@ -2314,6 +2332,10 @@ export function getValidatorApi(
         transactions: executionPayload.transactions.length,
         blockHash: toRootHex(executionPayload.blockHash),
       });
+
+      if (chain.opts.persistProducedPayloadEnvelopes) {
+        chain.persistExecutionPayloadEnvelope(envelope);
+      }
 
       return {
         data: envelope,

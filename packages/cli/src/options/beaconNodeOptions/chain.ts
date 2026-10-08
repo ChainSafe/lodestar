@@ -12,6 +12,7 @@ export type ChainArgs = {
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
+  "chain.persistProducedPayloadEnvelopes"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
@@ -53,6 +54,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
+    persistProducedPayloadEnvelopes: args["chain.persistProducedPayloadEnvelopes"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
@@ -167,6 +169,13 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Persist produced blocks or not for debugging purpose",
+    group: "chain",
+  },
+
+  "chain.persistProducedPayloadEnvelopes": {
+    hidden: true,
+    type: "boolean",
+    description: "Persist produced execution payload envelopes as SSZ files for debugging",
     group: "chain",
   },
 

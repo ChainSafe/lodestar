@@ -111,6 +111,9 @@ export class SeenBlockInput {
   // there should only 1 block root per slot but we need to always compare against rootHex
   // and the signature to ensure we only skip verification if both match
   private verifiedProposerSignatures = new Map<Slot, Map<RootHex, BLSSignature>>();
+  // Roots of gossip blocks under validation, counted because blocks with the same root but different signatures
+  // can be validated concurrently
+  private validatingBlockRoots = new Map<RootHex, number>();
 
   constructor({
     config,
@@ -151,6 +154,26 @@ export class SeenBlockInput {
 
   hasBlock(rootHex: RootHex): boolean {
     return this.blockInputs.get(rootHex)?.hasBlock() ?? false;
+  }
+
+  /**
+   * Mark a gossip block root as under validation, every call MUST be paired with `unmarkValidatingBlock()`
+   */
+  markValidatingBlock(rootHex: RootHex): void {
+    this.validatingBlockRoots.set(rootHex, (this.validatingBlockRoots.get(rootHex) ?? 0) + 1);
+  }
+
+  unmarkValidatingBlock(rootHex: RootHex): void {
+    const count = this.validatingBlockRoots.get(rootHex) ?? 0;
+    if (count <= 1) {
+      this.validatingBlockRoots.delete(rootHex);
+    } else {
+      this.validatingBlockRoots.set(rootHex, count - 1);
+    }
+  }
+
+  isValidatingBlock(rootHex: RootHex): boolean {
+    return this.validatingBlockRoots.has(rootHex);
   }
 
   get(rootHex: RootHex): IBlockInput | undefined {

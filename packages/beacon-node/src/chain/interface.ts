@@ -292,6 +292,7 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
   persistInvalidStateRoot(
     preState: IBeaconStateView,
     postState: IBeaconStateView,
