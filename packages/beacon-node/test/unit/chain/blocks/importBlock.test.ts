@@ -19,7 +19,12 @@ describe("chain / blocks / importBlock", () => {
   const parentBlockHash = Buffer.alloc(32, 2);
   const stopAfterOnBlock = new Error("stop after onBlock");
 
-  function runImportBlock(config: ChainForkConfig, blockInput: IBlockInput, parentVariant: ProtoBlock | null) {
+  function runImportBlock(
+    config: ChainForkConfig,
+    blockInput: IBlockInput,
+    parentVariant: ProtoBlock | null,
+    seenTimestampSec: number
+  ) {
     const forkChoice = {
       getTime: vi.fn().mockReturnValue(1),
       getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
@@ -49,6 +54,7 @@ describe("chain / blocks / importBlock", () => {
       proposerBalanceDelta: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.NotRequired,
       indexedAttestations: [],
+      seenTimestampSec,
       executionStatus: ExecutionStatus.Valid,
     };
 
@@ -69,7 +75,7 @@ describe("chain / blocks / importBlock", () => {
       seenTimestampSec: 0,
     });
 
-    return runImportBlock(config, blockInput, parentVariant);
+    return runImportBlock(config, blockInput, parentVariant, 0);
   }
 
   it.each([ExecutionStatus.Syncing, ExecutionStatus.Valid])(
@@ -110,7 +116,7 @@ describe("chain / blocks / importBlock", () => {
     });
     const slotStartSec = computeTimeAtSlot(denebConfig, 1, 0);
 
-    function importDenebBlock(blockSeenSec: number, blobSeenSec: number) {
+    function importDenebBlock(blockSeenSec: number, blobSeenSec: number, processedSec = blockSeenSec) {
       const block = ssz.deneb.SignedBeaconBlock.defaultValue();
       block.message.slot = 1;
       const kzgCommitment = Buffer.alloc(48, 1);
@@ -128,17 +134,21 @@ describe("chain / blocks / importBlock", () => {
       blobSidecar.kzgCommitment = kzgCommitment;
       blockInput.addBlob({blobSidecar, blockRootHex, source: BlockInputSource.gossip, seenTimestampSec: blobSeenSec});
 
-      return runImportBlock(denebConfig, blockInput, null);
+      return runImportBlock(denebConfig, blockInput, null, processedSec);
     }
 
-    it.each([
-      ["before", 3],
-      ["after", 5],
-    ])("is measured from data availability, blobs %s the attestation deadline", async (_, blobDelaySec) => {
+    it.each([3, 5])("is measured from data availability, blob seen %ss into the slot", async (blobDelaySec) => {
       const {forkChoice, result} = importDenebBlock(slotStartSec + 1, slotStartSec + blobDelaySec);
 
       await expect(result).rejects.toThrow(stopAfterOnBlock);
       expect(forkChoice.onBlock.mock.calls[0][2]).toBe(blobDelaySec);
+    });
+
+    it("keeps the later processing time of a block held back by unknown block sync", async () => {
+      const {forkChoice, result} = importDenebBlock(slotStartSec + 1, slotStartSec + 3, slotStartSec + 6);
+
+      await expect(result).rejects.toThrow(stopAfterOnBlock);
+      expect(forkChoice.onBlock.mock.calls[0][2]).toBe(6);
     });
   });
 });

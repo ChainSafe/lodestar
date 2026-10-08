@@ -397,6 +397,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     }
 
     const hasAllData = this.blobsCache.size === block.message.body.blobKzgCommitments.length;
+    const timeCompleteSec = Math.max(
+      seenTimestampSec,
+      ...[...this.blobsCache.values()].map((blob) => blob.seenTimestampSec)
+    );
 
     this.state = {
       ...this.state,
@@ -409,7 +413,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         seenTimestampSec,
         peerIdStr,
       },
-      timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? timeCompleteSec : undefined,
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
@@ -468,7 +472,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       this.state = {
         ...this.state,
         hasAllData: true,
-        timeCompleteSec: seenTimestampSec,
+        timeCompleteSec: Math.max(
+          this.state.source.seenTimestampSec,
+          ...[...this.blobsCache.values()].map((blob) => blob.seenTimestampSec)
+        ),
       };
       this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
     }
@@ -603,6 +610,7 @@ type BlockInputColumnsState =
       hasAllData: true;
       hasComputedAllData: boolean;
       versionedHashes: VersionedHashes;
+      timeCompleteSec: number;
     }
   | {
       hasBlock: false;
@@ -693,12 +701,13 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   ): BlockInputColumns {
     const hasAllData =
       props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
-    const state: BlockInputColumnsState = {
+    const state = {
       hasBlock: false,
       hasAllData,
-      hasComputedAllData: hasAllData as false,
+      hasComputedAllData: hasAllData,
       versionedHashes: props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash),
-    };
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
+    } as BlockInputColumnsState;
     const init: BlockInputInit = {
       daOutOfRange: false,
       timeCreated: props.seenTimestampSec,
@@ -761,6 +770,9 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       this.state.hasAllData;
     const hasComputedAllData =
       props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasComputedAllData;
+    const timeCompleteSec = this.state.hasAllData
+      ? Math.max(props.seenTimestampSec, this.state.timeCompleteSec)
+      : props.seenTimestampSec;
 
     this.state = {
       ...this.state,
@@ -773,7 +785,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
         seenTimestampSec: props.seenTimestampSec,
         peerIdStr: props.peerIdStr,
       },
-      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? timeCompleteSec : undefined,
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);
@@ -826,7 +838,12 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       // has all sampled columns
       sampledColumns.length === this.sampledColumns.length;
 
-    const timeCompleteSec = this.state.hasBlock && this.state.hasAllData ? this.state.timeCompleteSec : seenTimestampSec;
+    const timeCompleteSec = this.state.hasAllData
+      ? this.state.timeCompleteSec
+      : Math.max(
+          this.state.hasBlock ? this.state.source.seenTimestampSec : 0,
+          ...[...this.columnsCache.values()].map((column) => column.seenTimestampSec)
+        );
 
     this.state = {
       ...this.state,

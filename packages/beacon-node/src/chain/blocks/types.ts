@@ -106,6 +106,8 @@ export type FullyVerifiedBlock = {
   dataAvailabilityStatus: DataAvailabilityStatus;
   /** Pre-computed indexed attestations from signature verification to avoid duplicate work */
   indexedAttestations: IndexedAttestation[];
+  /** Seen timestamp seconds */
+  seenTimestampSec: number;
   /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
   executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
 };

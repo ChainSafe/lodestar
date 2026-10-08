@@ -104,9 +104,11 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  // timeliness is recorded once the block is data available, blobs/columns may complete after the body
+  // timeliness is recorded once the block is data available, blobs/columns may complete after the body.
+  // Unknown block sync holds blocks past the proposer boost window, the later processing time they get must win.
   const receiveDelaySec =
-    blockInput.getTimeComplete() - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+    Math.max(fullyVerifiedBlock.seenTimestampSec, blockInput.getTimeComplete()) -
+    computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
