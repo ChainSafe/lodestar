@@ -266,6 +266,14 @@ export class BlockProposingService {
     const block = executionPayloadIncluded
       ? (blockOrContents as BlockContents<ForkPostGloas>).block
       : (blockOrContents as BeaconBlock<ForkPostGloas>);
+    const {builderIndex} = block.body.signedExecutionPayloadBid.message;
+    const isSelfBuild = builderIndex === BUILDER_INDEX_SELF_BUILD;
+    if (isExecutionOnly && !isSelfBuild) {
+      this.metrics?.blockProposingErrors.inc({error: "produce"});
+      throw Error(
+        `Block not produced as per desired builderSelection=${builderSelection} builderIndex=${builderIndex}`
+      );
+    }
     const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(beaconBlockRoot);
 
@@ -278,13 +286,6 @@ export class BlockProposingService {
       blockRoot: blockRootHex,
     });
     this.metrics?.blocksProduced.inc();
-
-    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
-    if (isExecutionOnly && !isSelfBuild) {
-      throw Error(
-        `Block not produced as per desired builderSelection=${builderSelection} builderIndex=${block.body.signedExecutionPayloadBid.message.builderIndex}`
-      );
-    }
 
     // Step 2: Sign and publish the beacon block
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);

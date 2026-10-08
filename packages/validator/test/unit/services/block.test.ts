@@ -4,7 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
@@ -273,81 +273,92 @@ describe("BlockDutiesService", () => {
     });
   });
 
-  it("Should not use builder bids when producing a Gloas block with executiononly", async () => {
-    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
-    api.validator.getProposerDuties.mockResolvedValue(
-      mockApiResponse({
-        data: [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}],
-        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
-      })
-    );
+  it.each([
+    {builderIndex: 1, published: false},
+    {builderIndex: BUILDER_INDEX_SELF_BUILD, published: true},
+  ])(
+    "Should not use builder bids when producing a Gloas block with executiononly builderIndex=$builderIndex",
+    async ({builderIndex, published}) => {
+      const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+      api.validator.getProposerDuties.mockResolvedValue(
+        mockApiResponse({
+          data: [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}],
+          meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+        })
+      );
 
-    const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(
-      gloasConfig,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      chainHeaderTracker,
-      null
-    );
-    const blockService = new BlockProposingService(
-      gloasConfig,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      dutiesService,
-      null,
-      {
-        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
-        blindedLocal: false,
-        payloadLocal: false,
-      }
-    );
+      const clock = new ClockMock();
+      const dutiesService = new BlockDutiesService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        chainHeaderTracker,
+        null
+      );
+      const blockService = new BlockProposingService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        dutiesService,
+        null,
+        {
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+          blindedLocal: false,
+          payloadLocal: false,
+        }
+      );
 
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    // Beacon node ignored the configuration and selected a builder bid
-    signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
-    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
-    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.getBuilderSelectionParams.mockReturnValue({
-      selection: routes.validator.BuilderSelection.ExecutionOnly,
-      boostFactor: BigInt(0),
-    });
-    validatorStore.getBuilderMinBid.mockReturnValue(0n);
-    validatorStore.getGraffiti.mockReturnValue("aaaa");
-    validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
-    validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex;
+      const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+      validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+      validatorStore.signBlock.mockImplementation(async (_, block) => ({
+        message: block,
+        signature: signedBlock.signature,
+      }));
+      validatorStore.getBuilderSelectionParams.mockReturnValue({
+        selection: routes.validator.BuilderSelection.ExecutionOnly,
+        boostFactor: BigInt(0),
+      });
+      validatorStore.getBuilderMinBid.mockReturnValue(0n);
+      validatorStore.getGraffiti.mockReturnValue("aaaa");
+      validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
+      validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
 
-    api.validator.produceBlockV4.mockResolvedValue(
-      mockApiResponse({
-        data: signedBlock.message,
-        meta: {
-          version: ForkName.gloas,
-          executionPayloadValue: BigInt(1),
-          consensusBlockValue: BigInt(1),
-          executionPayloadIncluded: false,
-        },
-      })
-    );
+      api.validator.produceBlockV4.mockResolvedValue(
+        mockApiResponse({
+          data: signedBlock.message,
+          meta: {
+            version: ForkName.gloas,
+            executionPayloadValue: BigInt(1),
+            consensusBlockValue: BigInt(1),
+            executionPayloadIncluded: false,
+          },
+        })
+      );
 
-    const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
-    notifyBlockProductionFn(1, [pubkeys[0]]);
-    await sleep(20, controller.signal);
+      api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
 
-    expect(validatorStore.getResolvedBuilderEntries).not.toHaveBeenCalled();
-    expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
-      slot: 1,
-      randaoReveal: signedBlock.message.body.randaoReveal,
-      graffiti: "aaaa",
-      feeRecipient,
-      strictFeeRecipientCheck: true,
-      includePayload: true,
-      builderConfig: {minBid: 2n ** 64n - 1n, builderBoostFactor: 0n, builders: []},
-    });
-    expect(validatorStore.signBlock).not.toHaveBeenCalled();
-    expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
-  });
+      const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+      notifyBlockProductionFn(1, [pubkeys[0]]);
+      await sleep(20, controller.signal);
+
+      expect(validatorStore.getResolvedBuilderEntries).not.toHaveBeenCalled();
+      expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
+        slot: 1,
+        randaoReveal: signedBlock.message.body.randaoReveal,
+        graffiti: "aaaa",
+        feeRecipient,
+        strictFeeRecipientCheck: true,
+        includePayload: true,
+        builderConfig: {minBid: 2n ** 64n - 1n, builderBoostFactor: 0n, builders: []},
+      });
+      expect(validatorStore.signBlock).toHaveBeenCalledTimes(published ? 1 : 0);
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(published ? 1 : 0);
+    }
+  );
 });
