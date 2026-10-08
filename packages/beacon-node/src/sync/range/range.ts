@@ -1,14 +1,9 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  IBeaconStateViewGloas,
-  computeStartSlotAtEpoch,
-  getLatestBlockRoot,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
-import {Epoch, Status, fulu} from "@lodestar/types";
-import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
+import {Epoch, Status, fulu, ssz} from "@lodestar/types";
+import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
@@ -387,7 +382,11 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       const headState = this.chain.getHeadState();
       let parentPayload: ParentPayload | undefined;
       if (isStatePostGloas(headState) && headState.latestBlockHeader.slot > 0) {
-        const headRoot = getLatestBlockRoot(headState);
+        const header = ssz.phase0.BeaconBlockHeader.clone(headState.latestBlockHeader);
+        if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) {
+          header.stateRoot = headState.hashTreeRoot();
+        }
+        const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
         const headSlot = headState.latestBlockHeader.slot;
         parentPayload = {
           blockRoot: headRoot,
