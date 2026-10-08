@@ -1,8 +1,8 @@
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
-import {Logger, toPubkeyHex} from "@lodestar/utils";
+import {Logger, defer, toPubkeyHex} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
-import {LodestarValidatorDatabaseController} from "../types.js";
+import {LodestarValidatorDatabaseController, PubkeyHex} from "../types.js";
 import {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
@@ -34,6 +34,7 @@ export type {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBl
 export class SlashingProtection implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;
+  private readonly importing = new Map<PubkeyHex, Promise<void>>();
 
   constructor(protected db: LodestarValidatorDatabaseController) {
     const blockBySlotRepository = new BlockBySlotRepository(db);
@@ -51,10 +52,26 @@ export class SlashingProtection implements ISlashingProtection {
   }
 
   async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
+    if (this.importing.size !== 0) {
+      const pubkeyHex = toPubkeyHex(pubKey);
+      let importing = this.importing.get(pubkeyHex);
+      while (importing !== undefined) {
+        await importing;
+        importing = this.importing.get(pubkeyHex);
+      }
+    }
     await this.blockService.checkAndInsertBlockProposal(pubKey, block);
   }
 
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
+    if (this.importing.size !== 0) {
+      const pubkeyHex = toPubkeyHex(pubKey);
+      let importing = this.importing.get(pubkeyHex);
+      while (importing !== undefined) {
+        await importing;
+        importing = this.importing.get(pubkeyHex);
+      }
+    }
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
   }
 
@@ -84,10 +101,28 @@ export class SlashingProtection implements ISlashingProtection {
         }
       }
     }
-    for (const validator of data) {
-      logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
-      await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
-      await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
+
+    // Checks for keys in the file wait for the whole import, a key that is already signing must not sign against
+    // a history the import is still extending. Per-key queues alone only cover the key currently being imported.
+    const pubkeyHexes = data.map((validator) => toPubkeyHex(validator.pubkey));
+    const {promise, resolve} = defer<void>();
+    for (const pubkeyHex of pubkeyHexes) {
+      this.importing.set(pubkeyHex, promise);
+    }
+
+    try {
+      for (const validator of data) {
+        logger?.info("Importing slashing protection", {pubkey: toPubkeyHex(validator.pubkey)});
+        await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
+        await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
+      }
+    } finally {
+      resolve();
+      for (const pubkeyHex of pubkeyHexes) {
+        if (this.importing.get(pubkeyHex) === promise) {
+          this.importing.delete(pubkeyHex);
+        }
+      }
     }
   }
 
