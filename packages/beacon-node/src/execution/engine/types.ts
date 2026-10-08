@@ -103,7 +103,6 @@ export type EngineApiRpcParamTypes = {
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
 
-  /** Takes no parameters, see execution-apis#609 */
   engine_getInclusionListV1: [];
 };
 
@@ -111,10 +110,7 @@ export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
-  /**
-   * PayloadStatusV2, [New in Heze:EIP7805]. Whether the payload satisfied the inclusion list
-   * constraints when it is VALID, null otherwise.
-   */
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
   inclusionListSatisfied?: boolean | null;
 };
 

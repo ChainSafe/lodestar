@@ -54,10 +54,9 @@ export function getShufflingDependentRoot(
 }
 
 /**
- * Spec `get_shuffling_dependent_root(store, block.root, compute_epoch_at_slot(inclusionListSlot))`:
- * the ancestor of `block` at `compute_shuffling_dependent_slot(epoch)`, the last block before the
- * start of `epoch - MIN_SEED_LOOKAHEAD`. Unlike `getShufflingDependentRoot`, `block` may sit at or
- * after `epoch`: a payload is checked against the inclusion lists of the slot preceding its block.
+ * Spec `get_shuffling_dependent_root(store, block.root, compute_epoch_at_slot(inclusionListSlot))`.
+ * Unlike `getShufflingDependentRoot`, `block` may be at or after `epoch`: a payload is checked
+ * against the inclusion lists of the slot preceding its block.
  */
 export function getInclusionListDependentRoot(
   forkChoice: IForkChoice,
@@ -73,9 +72,8 @@ export function getInclusionListDependentRoot(
 }
 
 /**
- * Same as `getInclusionListDependentRoot` but resolved from `block_roots` of a state on the block's branch at or
- * after the block. Fork choice cannot resolve ancestors below its anchor, which the payloads of the first blocks
- * after checkpoint sync or a restart need.
+ * Same as `getInclusionListDependentRoot` but resolved from the `block_roots` of a state on the block's branch,
+ * which unlike fork choice can reach ancestors below the anchor after checkpoint sync or a restart.
  */
 export function getInclusionListDependentRootFromState(state: IBeaconStateView, inclusionListSlot: Slot): RootHex {
   const epoch = computeEpochAtSlot(inclusionListSlot);

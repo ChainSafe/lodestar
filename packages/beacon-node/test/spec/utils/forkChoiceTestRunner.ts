@@ -590,10 +590,7 @@ export const forkChoiceTestRunner =
                   validationError: null,
                 });
 
-                // [New in Heze:EIP7805] on_execution_payload_envelope calls
-                // record_payload_inclusion_list_satisfaction before storing the payload. These
-                // vectors carry no inclusion lists, so the constraint set is empty and every
-                // payload satisfies it trivially.
+                // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
                 (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
 
                 (chain.forkChoice as ForkChoice).onExecutionPayload(

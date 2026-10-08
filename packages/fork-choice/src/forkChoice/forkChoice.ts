@@ -187,8 +187,8 @@ export class ForkChoice implements IForkChoice {
 
     this.voteNextSlots = new Array(validatorCount).fill(0);
 
-    // [New in Heze:EIP7805] should_extend_payload runs inside protoArray's variant selection,
-    // which has access to neither the store nor the fork schedule. Hand it a closure owning both.
+    // should_extend_payload runs inside protoArray's variant selection, which has neither the store
+    // nor the fork schedule, so hand it a closure with both
     this.protoArray.isPayloadInclusionListSatisfied = (blockRoot: RootHex): boolean => {
       const variant = this.protoArray.getDefaultVariant(blockRoot);
       const block = variant === undefined ? undefined : this.protoArray.getBlock(blockRoot, variant);
@@ -436,15 +436,10 @@ export class ForkChoice implements IForkChoice {
    * corresponding to the beacon block `blockRoot`.
    */
   shouldExtendPayload(blockRoot: RootHex): boolean {
-    // The heze inclusion list gate lives inside protoArray.shouldExtendPayload, which is the
-    // path variant selection actually takes; see the closure wired in the constructor.
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
-  /**
-   * Record whether the execution payload for `blockRoot` satisfied its inclusion list
-   * constraints, as reported by the execution engine.
-   */
+  /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {
     if (!satisfied && this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) !== false) {
       this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
@@ -452,10 +447,7 @@ export class ForkChoice implements IForkChoice {
     this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
   }
 
-  /**
-   * A payload counts as satisfying its inclusion list constraints only once it has been locally
-   * delivered and verified, so an undelivered payload is never treated as satisfied.
-   */
+  /** True only once the payload is delivered and recorded satisfied */
   isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
     if (!this.protoArray.hasPayload(blockRoot)) {
       return false;

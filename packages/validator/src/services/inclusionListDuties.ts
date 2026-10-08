@@ -108,9 +108,7 @@ export class InclusionListDutiesService {
   };
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    // pollInclusionListCommittee also covers epoch + 1, so from the epoch before the fork onward
-    // there is a heze epoch worth polling. Per-epoch skipping happens in
-    // pollInclusionListCommitteeForEpoch, so the pre-fork epoch is never requested.
+    // pollInclusionListCommittee also polls epoch + 1, so start one epoch before the fork
     if (epoch + 1 < this.config.HEZE_FORK_EPOCH) {
       return;
     }

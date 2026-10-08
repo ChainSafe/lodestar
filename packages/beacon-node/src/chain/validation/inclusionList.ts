@@ -70,7 +70,7 @@ async function validateInclusionList(
     throw new InclusionListError(GossipAction.IGNORE, type);
   };
 
-  // Inclusion lists only exist post-heze; a pre-heze slot has no committee to validate against
+  // A pre-heze slot has no inclusion list committee to validate against
   if (!isForkPostHeze(chain.config.getForkName(slot))) {
     ignore(InvalidInclusionListReason.preHezeSlot, {
       code: InclusionListErrorCode.PRE_HEZE_SLOT,
@@ -121,8 +121,7 @@ async function validateInclusionList(
   }
 
   // [IGNORE] The block with root message.dependent_root has been seen
-  // Thrown inline rather than via ignore() so the type guard narrows dependentBlock below;
-  // control-flow analysis does not follow never-returning arrow functions.
+  // Thrown inline so the null check narrows dependentBlock, which a never-returning arrow function cannot do
   const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
   if (dependentBlock === null) {
     chain.metrics?.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.unknownDependentRoot});
@@ -133,9 +132,8 @@ async function validateInclusionList(
   }
 
   // [REJECT] The slot of the block with root message.dependent_root is strictly less than
-  // compute_start_slot_at_epoch(compute_epoch_at_slot(message.slot) - MIN_SEED_LOOKAHEAD).
-  // Clamped to genesis like compute_shuffling_dependent_slot, which returns GENESIS_SLOT for the
-  // first MIN_SEED_LOOKAHEAD epochs.
+  // compute_start_slot_at_epoch(compute_epoch_at_slot(message.slot) - MIN_SEED_LOOKAHEAD),
+  // clamped to genesis like compute_shuffling_dependent_slot
   const epoch = computeEpochAtSlot(slot);
   const dependentEpoch = epoch - MIN_SEED_LOOKAHEAD;
   const maxDependentSlot = Math.max(GENESIS_SLOT, computeStartSlotAtEpoch(dependentEpoch) - 1);
@@ -158,8 +156,7 @@ async function validateInclusionList(
   }
 
   // [REJECT] validatorIndex is in get_inclusion_list_committee(state, message.slot), where state is the
-  // state of the block with root message.dependent_root processed up to message.slot. That committee is
-  // the shuffling of `epoch` keyed by `dependent_root`.
+  // state of the block with root message.dependent_root, i.e. the shuffling of `epoch` keyed by `dependent_root`
   const shuffling = await getShuffling(chain, epoch, dependentRootHex, dependentBlock);
   if (shuffling === null) {
     chain.metrics?.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.missingShuffling});
@@ -178,8 +175,7 @@ async function validateInclusionList(
   }
 
   // [REJECT] The signature is valid with respect to the validator's public key
-  // Derive the domain from the list's own slot: a list for the first Heze slot must verify with the Heze fork
-  // version even if the clock is still in the last Gloas slot
+  // Domain from the list's own slot, so a list for the first Heze slot verifies while the clock is still in Gloas
   const signatureSet = getInclusionListSignatureSet(
     chain.config,
     signedInclusionList.message.slot,
@@ -197,10 +193,7 @@ async function validateInclusionList(
   return {committeeIndex};
 }
 
-/**
- * The shuffling of `epoch` on the branch of `dependentBlock`. Head states populate the cache with
- * their current and next shufflings, so this only regenerates on a branch the head has not seen.
- */
+/** The shuffling of `epoch` on the branch of `dependentBlock`, regenerated only on a branch the head has not seen */
 async function getShuffling(
   chain: IBeaconChain,
   epoch: Epoch,

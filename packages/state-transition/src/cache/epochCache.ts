@@ -774,9 +774,6 @@ export class EpochCache {
     return getBeaconCommittees(this.getShufflingAtSlot(slot), slot, indices);
   }
 
-  /**
-   * Return the inclusion list committee at slot.
-   */
   getInclusionListCommittee(slot: Slot): Uint32Array {
     return getInclusionListCommittee(this.getShufflingAtSlot(slot), slot);
   }

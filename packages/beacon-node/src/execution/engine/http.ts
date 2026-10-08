@@ -117,8 +117,7 @@ const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
-// The inclusion list must be requested and signed inside a single slot component, so a slow
-// execution layer must not stall the duty; the spec gives this method a 1s timeout.
+// The spec gives engine_getInclusionListV1 a 1s timeout so a slow execution layer does not stall the duty
 const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList", timeout: 1000};
 
 /**
@@ -322,7 +321,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           status,
           latestValidHash: latestValidHash ?? "0x0",
           validationError: null,
-          // [New in Heze:EIP7805] null on pre-heze forks, which do not return PayloadStatusV2
+          // null on pre-heze forks, which return PayloadStatusV1
           inclusionListSatisfied: inclusionListSatisfied ?? null,
         };
 
@@ -541,12 +540,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return await this.getBlobsV1(versionedHashesHex);
   }
 
-  /**
-   * `engine_getInclusionListV1`
-   *
-   * Parameterless as merged in execution-apis#609: the execution layer builds the inclusion list
-   * against its own view of the head rather than a caller-supplied parent hash.
-   */
+  /** `engine_getInclusionListV1` */
   async getInclusionList(): Promise<bellatrix.Transactions> {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getInclusionListV1"],

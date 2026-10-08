@@ -86,7 +86,7 @@ export type ExecutePayloadResponse =
       status: ExecutionPayloadStatus.VALID;
       latestValidHash: RootHex;
       validationError: null;
-      /** [New in Heze:EIP7805] whether the payload satisfied the inclusion list constraints */
+      /** PayloadStatusV2: whether the payload satisfied the inclusion list constraints */
       inclusionListSatisfied?: boolean | null;
     }
   | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
@@ -151,10 +151,8 @@ export interface IExecutionEngine {
   ): Promise<ExecutePayloadResponse>;
 
   /**
-   * Retrieve the transactions the execution layer wants included, to build an inclusion list.
-   *
-   * Takes no parameters: execution-apis#609 merged engine_getInclusionListV1 as parameterless,
-   * with the execution layer building against its own view of the head.
+   * Transactions the execution layer wants included in the next payload. Parameterless since
+   * execution-apis#609: the execution layer builds against its own view of the head.
    */
   getInclusionList(): Promise<bellatrix.Transactions>;
 

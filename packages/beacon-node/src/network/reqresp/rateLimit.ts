@@ -110,8 +110,7 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
   [ReqRespMethod.InclusionListsByIndices]: {
-    // At most INCLUSION_LIST_COMMITTEE_SIZE lists exist per slot, and peers only backfill what
-    // gossip missed, so a small per-slot allowance is enough.
+    // Peers only backfill what gossip missed, so a small per-slot allowance is enough
     byPeer: {quota: 5, quotaTimeMs: 12_000},
   },
   [ReqRespMethod.LightClientOptimisticUpdate]: {

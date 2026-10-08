@@ -28,18 +28,10 @@ type InclusionListEntry = {
 };
 
 /**
- * Pool of inclusion lists, keyed by `(slot, dependent_root)` with one entry per validator index
- * (spec `InclusionListStore`).
- *
- * The committee of a `(slot, dependent_root)` is fixed, so the validator's committee position is
- * recorded at insert time (gossip validation already resolves the committee) and the bit-oriented
- * read paths need no shuffling lookup.
- *
- * Signed inclusion lists are retained rather than unwrapped messages so InclusionListsByIndices
- * can serve them back to peers.
- *
- * The first inclusion list of a validator stays stored; an equivocation marks the validator so the
- * read paths skip it, as in spec `process_inclusion_list`.
+ * Spec `InclusionListStore`: inclusion lists keyed by `(slot, dependent_root)`, one per validator index.
+ * The committee position is recorded at insert time (gossip validation resolves it) so the bit-oriented
+ * reads need no shuffling lookup. Signed lists are kept so InclusionListsByIndices can serve them.
+ * A validator's first list stays stored and an equivocation marks the validator so reads skip it.
  */
 export class InclusionListStore {
   /** slot -> dependent_root -> validator index -> entry */
@@ -70,10 +62,8 @@ export class InclusionListStore {
   }
 
   /**
-   * Store a signed inclusion list along with the locally observed timeliness.
-   *
-   * Late inclusion lists are stored with `timely=false` rather than dropped: they still count
-   * toward the non-timely view used when validating another node's `inclusion_list_bits`.
+   * Late lists are stored with `timely=false` rather than dropped: they still count toward the
+   * non-timely view used to validate another node's `inclusion_list_bits`.
    */
   process(
     signedInclusionList: heze.SignedInclusionList,
@@ -114,10 +104,7 @@ export class InclusionListStore {
     return InclusionListInsertOutcome.New;
   }
 
-  /**
-   * Used by gossip validation to enforce "the message is either the first or second valid message
-   * received from the validator with index validator_index" for the `(slot, dependent_root)`.
-   */
+  /** Gossip rule: at most two valid messages per validator for a `(slot, dependent_root)` */
   seenTwice(slot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
     return (this.validatorIlCounts.get(slot)?.get(dependentRoot)?.get(validatorIndex) ?? 0) >= 2;
   }
@@ -170,10 +157,7 @@ export class InclusionListStore {
     return out;
   }
 
-  /**
-   * Inclusion lists MUST be retained for at least MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots
-   * beyond their slot so InclusionListsByIndices can still serve them.
-   */
+  /** Lists are retained for MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots so InclusionListsByIndices can serve them */
   prune(clockSlot: Slot): void {
     const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS;
 

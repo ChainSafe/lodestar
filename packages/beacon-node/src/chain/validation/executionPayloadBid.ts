@@ -567,10 +567,8 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] [New in Heze:EIP7805] bid.inclusionListBits covers our view of the inclusion lists
-  // for the slot preceding the bid, restricted to the ones that arrived before the deadline. A
-  // builder that saw fewer lists than we did cannot have built a payload satisfying ours. Our view
-  // is keyed by `(bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))`.
+  // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
+  // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))
   if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;

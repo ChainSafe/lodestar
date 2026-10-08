@@ -173,10 +173,7 @@ export async function importExecutionPayload(
     );
   }
 
-  // [New in Heze:EIP7805] The payload is checked against the inclusion lists observed for the
-  // slot preceding the block, keyed by that slot's shuffling dependent root on the block's branch
-  // and restricted to those that arrived before the inclusion list deadline. The engine reports
-  // the outcome on the newPayload response.
+  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch
   const inclusionListSlot = protoBlock.slot - 1;
   const inclusionListTransactions = isStatePostHeze(blockState)
     ? this.inclusionListStore.getInclusionListTransactions(
@@ -265,10 +262,8 @@ export async function importExecutionPayload(
     }
   });
 
-  // [New in Heze:EIP7805] Record whether the payload satisfied the inclusion list constraints
-  // before the payload enters fork choice, so should_extend_payload never sees a delivered
-  // payload with no recorded outcome. A VALID response always carries the flag; anything else
-  // has no verdict yet, so treat it as unsatisfied rather than assuming compliance.
+  // Recorded before the payload enters fork choice so should_extend_payload never sees a delivered
+  // payload without a verdict. Only a VALID response carries one, anything else counts as unsatisfied.
   if (inclusionListTransactions !== undefined) {
     const satisfied =
       execResult.status === ExecutionPayloadStatus.VALID ? (execResult.inclusionListSatisfied ?? false) : false;

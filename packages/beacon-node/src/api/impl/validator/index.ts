@@ -1052,11 +1052,8 @@ export function getValidatorApi(
           });
         }
 
-        // [New in Heze:EIP7805] A proposer must not include a bid whose inclusion_list_bits misses
-        // an inclusion list it has seen. Filtered here so it covers both p2p and builder API bids.
-        // Unlike bid gossip validation this uses the proposer's full view including untimely lists
-        // (only_timely=False), so a bid kept here also satisfies the timely-only view every other
-        // validator enforces.
+        // Filtered here to cover both p2p and builder API bids. Uses the full view including untimely
+        // lists (only_timely=False), a superset of the timely-only view other validators enforce.
         const eligibleCandidates = isForkPostHeze(fork)
           ? candidates.filter((candidate) => {
               const {inclusionListBits} = candidate.signedBid.message as heze.ExecutionPayloadBid;
@@ -2181,8 +2178,6 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // engine_getInclusionListV1 takes no parameters as merged in execution-apis#609; the
-      // execution layer builds against its own view of the head.
       const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
       const transactions = await chain.executionEngine.getInclusionList();
       timer?.();
@@ -2217,13 +2212,10 @@ export function getValidatorApi(
       const epochStartSlot = computeStartSlotAtEpoch(epoch);
       const shuffling = state.getShufflingAtEpoch(epoch);
 
-      // The shuffling dependent root of `epoch`, which the validator sets as `dependent_root` on its
-      // inclusion lists (spec `get_signed_inclusion_list`) and the `dependent_root` the duties are
-      // reported against.
+      // Validators set this as `dependent_root` on their inclusion lists
       const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
 
-      // A validator can sit on several slots' committees within an epoch; the duty for the
-      // earliest such slot is the one reported, matching how attester duties are served.
+      // A validator can be on several slots' committees in an epoch; report the earliest, as for attester duties
       const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         const slot = epochStartSlot + i;

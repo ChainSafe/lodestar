@@ -330,8 +330,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
-  // Derived here rather than delegated to the binding, which exposes no inclusion list committee
-  // accessor. getShufflingAtEpoch() is already cached per epoch, so this costs one array walk.
+  // The binding exposes no inclusion list committee accessor; getShufflingAtEpoch is cached per epoch
   getInclusionListCommittee(slot: Slot): Uint32Array {
     return getInclusionListCommittee(this.getShufflingAtEpoch(computeEpochAtSlot(slot)), slot);
   }

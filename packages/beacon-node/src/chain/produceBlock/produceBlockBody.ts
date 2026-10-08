@@ -384,13 +384,8 @@ export async function produceBlockBody<T extends BlockType>(
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
-      // [New in Heze:EIP7805] Advertise the inclusion lists we actually observed for the preceding
-      // slot. Left empty, peers applying the `is_inclusion_list_bits_inclusive` bid gossip rule
-      // would ignore this bid as soon as they had seen any timely inclusion list.
-      //
-      // Built from the full view (only_timely=false) rather than the timely-only one: the bits are
-      // a claim about what this node saw, and a superset can only help the receiver's
-      // timely-only check pass.
+      // Built from the full view (only_timely=False), a superset of the receiver's timely-only
+      // is_inclusion_list_bits_inclusive check
       const inclusionListSlot = blockSlot - 1;
       (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
         inclusionListSlot,
@@ -975,11 +970,8 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    // The payload built for prepareSlot must satisfy the inclusion lists observed for the
-    // preceding slot, keyed by the shuffling dependent root of that slot on the parent's branch.
-    // Unlike validation, the proposer builds against its full view including untimely lists
-    // (only_timely=False in prepare_execution_payload), so the payload also satisfies the
-    // timely-only subset every validator enforces.
+    // Built from the full view including untimely lists (only_timely=False in prepare_execution_payload),
+    // a superset of the timely-only set every validator enforces
     const parentBlockRootHex = toRootHex(parentBlockRoot);
     const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
     if (parentBlock === null) {

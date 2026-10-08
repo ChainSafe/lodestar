@@ -7,12 +7,8 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 /**
- * Serve inclusion lists a peer missed on gossip, e.g. while producing a payload for a slot whose
- * lists are incomplete.
- *
- * Only lists that passed gossip validation are stored, and equivocators are filtered out by the
- * store, so the spec's "SHOULD NOT respond with lists that fail gossip validation / are from
- * equivocators" holds by construction.
+ * Only lists that passed gossip validation are stored and the store skips equivocators, so the spec's
+ * "SHOULD NOT respond with lists that fail gossip validation or are from equivocators" holds by construction.
  */
 export async function* onInclusionListsByIndices(
   requestBody: heze.InclusionListsByIndicesRequest,

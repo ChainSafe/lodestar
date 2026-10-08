@@ -1526,8 +1526,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         timer?.({source: InclusionListSource.gossip});
       }
 
-      // Spec on_inclusion_list: timely iff the arrival time into the slot is before the
-      // inclusion list deadline. Late lists are still stored, marked untimely.
+      // Late lists are still stored, marked untimely
       const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.inclusionListArrivalTime.observe(secFromSlot);
       const isTimely = secFromSlot * 1000 < config.getInclusionListDueMs();

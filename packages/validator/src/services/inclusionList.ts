@@ -11,9 +11,6 @@ import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
-/**
- * Service that sets up and handles validator inclusion list duties.
- */
 export class InclusionListService {
   private readonly dutiesService: InclusionListDutiesService;
 
@@ -51,24 +48,17 @@ export class InclusionListService {
     if (duties.length === 0) {
       return;
     }
-    // Spec heze/validator.md: broadcast the signed inclusion list by `get_inclusion_list_due_ms()`
-    // (~67% of slot) "built against the block for the current slot if it has been processed and
-    // confirmed as head, or against the local head returned by `get_head()` otherwise". Submit on
-    // whichever fires first:
-    //   (a) `executionPayloadImported` for `slot` — the EL has applied the slot's payload, so the
-    //       mempool view we'll query is post-slot. Note: if the import already completed before we
-    //       were scheduled, the helper short-circuits via its tracked latest-imported slot.
-    //   (b) the IL submission deadline — fallback for empty / missed slots, or when import is late.
+    // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
+    // local head. Wait for the slot's payload import so the execution layer's mempool view is post-slot,
+    // or fall back to the deadline for empty or late slots.
     const dueMs = Math.max(0, this.config.getInclusionListDueMs() - this.clock.msFromSlot(slot));
     // Publish ahead of the deadline so the list still counts as timely for peers
     const beforeDueMs = 1000;
     await Promise.race([sleep(Math.max(0, dueMs - beforeDueMs), signal), this.waitForPayloadAvailable(slot, signal)]);
 
-    // If there is more than one duty, all validators on duty will sign and publish the same IL
     const inclusionListTransactions = await this.produceInclusionList(slot);
 
-    // An empty inclusion list is IGNOREd by gossip validation and rejected by on_inclusion_list
-    // per https://github.com/ethereum/consensus-specs/pull/5576, so there is nothing to publish
+    // Empty lists are ignored by gossip validation (consensus-specs#5576)
     if (inclusionListTransactions.length === 0) {
       this.logger.debug("Produced inclusion list has no transactions, skipping publish", {slot});
       return;
@@ -77,10 +67,6 @@ export class InclusionListService {
     await this.signAndPublishInclusionList(inclusionListTransactions, duties);
   };
 
-  /**
-   * Resolve once the execution payload for `slot` is available, so the transactions we ask the
-   * execution layer for reflect a post-slot mempool view.
-   */
   private waitForPayloadAvailable(slot: Slot, signal: AbortSignal): Promise<void> {
     return new Promise((resolve) => {
       const onPayloadAvailable = (payload: ExecutionPayloadAvailableEventData): void => {
@@ -98,16 +84,11 @@ export class InclusionListService {
     });
   }
 
-  /** One inclusion list is produced per slot and signed by every validator on duty. */
   private async produceInclusionList(slot: Slot): Promise<bellatrix.Transactions> {
     return (await this.api.validator.produceInclusionList({slot})).value();
   }
 
-  /**
-   * Only one `InclusionList` is downloaded from the BN. It is then signed by each
-   * validator and the list of individually-signed `InclusionList` objects is returned to the BN.
-   */
-
+  /** One inclusion list per slot, signed by every validator on duty */
   private async signAndPublishInclusionList(
     inclusionListTransactions: bellatrix.Transactions,
     duties: routes.validator.InclusionListDutyList
@@ -130,7 +111,6 @@ export class InclusionListService {
       })
     );
 
-    // Publish ILs right away
     for (const signedInclusionList of signedInclusionLists) {
       const {slot, validatorIndex, transactions} = signedInclusionList.message;
       try {
