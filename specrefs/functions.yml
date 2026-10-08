@@ -12671,7 +12671,7 @@
 - name: record_payload_inclusion_list_satisfaction#heze
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {"
+      search: "recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {"
   spec: |
     <spec fn="record_payload_inclusion_list_satisfaction" fork="heze" hash="c05f1180">
     def record_payload_inclusion_list_satisfaction(
